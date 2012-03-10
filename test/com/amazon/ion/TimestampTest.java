@@ -3,7 +3,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static com.amazon.ion.Timestamp.UTC_OFFSET;
-import static com.amazon.ion.impl.IonImplUtils.UTC;
+import static com.amazon.ion.impl._Private_Utils.UTC;
 
 import com.amazon.ion.Timestamp.Precision;
 import java.math.BigDecimal;

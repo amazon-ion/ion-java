@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -9,7 +9,7 @@ import com.amazon.ion.ValueVisitor;
 /**
  *
  */
-public class IonNullLite
+final class IonNullLite
     extends IonValueLite
     implements IonNull
 {
@@ -41,7 +41,7 @@ public class IonNullLite
     @Override
     public IonNullLite clone()
     {
-        IonNullLite clone = new IonNullLite(_context.getSystemLite());
+        IonNullLite clone = new IonNullLite(_context.getSystem());
 
         clone.copyValueContentFrom(this);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 
-public interface SystemValueIterator
+interface SystemValueIterator
     extends Iterator<IonValue>, Closeable
 {
     /********************************************************************

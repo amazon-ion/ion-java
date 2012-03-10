@@ -1,6 +1,10 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidClob;
 
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonType;
@@ -14,14 +18,13 @@ import java.nio.charset.Charset;
 /**
  * Implements the Ion <code>clob</code> type.
  */
-public final class IonClobImpl
+final class IonClobImpl
     extends IonLobImpl
     implements IonClob
 {
 
     static final int NULL_CLOB_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidClob,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidClob, lnIsNullAtom);
 
     static private final int HASH_SIGNATURE =
         IonType.CLOB.toString().hashCode();
@@ -41,7 +44,7 @@ public final class IonClobImpl
     public IonClobImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidClob;
+        assert pos_getType() == _Private_IonConstants.tidClob;
     }
 
     /**
@@ -95,7 +98,7 @@ public final class IonClobImpl
         byte[] bytes = getBytes();
         if (bytes == null) return null;
 
-        return IonImplUtils.decode(bytes, cs);
+        return _Private_Utils.decode(bytes, cs);
     }
 
 

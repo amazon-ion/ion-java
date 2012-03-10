@@ -1,16 +1,17 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,7 +24,7 @@ import java.util.Set;
 /**
  *
  */
-public class IonStructLite
+final class IonStructLite
     extends IonContainerLite
     implements IonStruct
 {
@@ -48,7 +49,7 @@ public class IonStructLite
     @Override
     public IonStruct clone()
     {
-       IonStructLite clone = new IonStructLite(_context.getSystemLite(), false);
+       IonStructLite clone = new IonStructLite(_context.getSystem(), false);
 
        try {
           // copy from won't update the map, now call transition to large
@@ -95,8 +96,9 @@ public class IonStructLite
 
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
-            IonValueLite v = get_child_lite(ii);
-            String name = v.getFieldName();
+            IonValueLite v = get_child(ii);
+            SymbolToken fieldNameSymbol = v.getFieldNameSymbol();
+            String name = fieldNameSymbol.getText();
             if (_field_map.get(name) != null) {
                 _field_map_duplicate_count++;
             }
@@ -126,12 +128,9 @@ public class IonStructLite
         _field_map.remove(fieldName);
         _field_map_duplicate_count -= (copies - 1);
     }
-    private void remove_field(String fieldName, int idx)
-    {
-        if (_field_map == null) {
-            return;
-        }
 
+    private void remove_field_from_field_map(String fieldName, int idx)
+    {
         Integer field_idx = _field_map.get(fieldName);
         assert(field_idx != null);
 
@@ -179,12 +178,9 @@ public class IonStructLite
         }
 
         for (int ii=removed_idx; ii<get_child_count(); ii++) {
-            IonValueLite value = get_child_lite(ii);
+            IonValueLite value = get_child(ii);
             String  field_name = value.getFieldName();
             Integer map_idx = _field_map.get(field_name);
-            if (map_idx == null) {
-                assert(map_idx != null);
-            }
             if (map_idx.intValue() != ii) {
                 // if this is a field that to the right of
                 // the removed (in process of removing) value
@@ -194,26 +190,32 @@ public class IonStructLite
         }
     }
 
-    public void debug_print_map()
+    @Override
+    public void dump(PrintWriter out)
     {
+        super.dump(out);
+
         if (_field_map == null) {
             return;
         }
+
+        out.println("   dups: "+_field_map_duplicate_count);
         Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
-        System.out.print("   map: [");
+        out.print("   map: [");
         boolean first = true;
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
             if (!first) {
-                System.out.print(",");
+                out.print(",");
             }
-            System.out.print(""+e.getKey()+":"+e.getValue());
+            out.print(e.getKey()+":"+e.getValue());
             first = false;
         }
-        System.out.println("]");
+        out.println("]");
     }
 
-    public String debug_check_map()
+    @Override
+    public String validate()
     {
         if (_field_map == null) {
             return null;
@@ -223,7 +225,7 @@ public class IonStructLite
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
             int idx = e.getValue().intValue();
-            IonValueLite v = (idx >= 0 && idx < get_child_count()) ? get_child_lite(idx) : null;
+            IonValueLite v = (idx >= 0 && idx < get_child_count()) ? get_child(idx) : null;
             if (v == null || idx != v._elementid() || (e.getKey().equals(v.getFieldName()) == false)) {
                 error += "map entry ["+e+"] doesn't match list value ["+v+"]\n";
             }
@@ -236,7 +238,7 @@ public class IonStructLite
     {
         for (int ii=existing_idx; ii>0; ) {
             ii--;
-            IonValueLite field = get_child_lite(ii);
+            IonValueLite field = get_child(ii);
             if (fieldName.equals(field.getFieldName())) {
                 return ii;
             }
@@ -248,7 +250,7 @@ public class IonStructLite
     {
         int count = 0;
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueLite v = get_child_lite(ii);
+            IonValueLite v = get_child(ii);
             if (v.getFieldName().equals(fieldName)) {
                 count++;
             }
@@ -326,15 +328,16 @@ public class IonStructLite
                 new HashSet<String>(Arrays.asList(fieldNames));
             for (IonValue value : this)
             {
-                String fieldName = value.getFieldName();
+                SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
+                String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
-                    clone.add(fieldName, value.clone());
+                    clone.add(fieldNameSymbol, value.clone());
                 }
             }
         }
 
-        clone.setTypeAnnotations(getTypeAnnotations());
+        clone.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
 
         return clone;
     }
@@ -346,10 +349,6 @@ public class IonStructLite
         return IonType.STRUCT;
     }
 
-    public IonValue get(IonSymbol fieldName)
-    {
-        return get(fieldName.stringValue());
-    }
 
     public boolean containsKey(Object fieldName)
     {
@@ -415,16 +414,23 @@ public class IonStructLite
         throws NullPointerException, IllegalArgumentException,
         ContainedValueException
     {
-        String field_name = child.getFieldName();
-        add(field_name, child);
+        // TODO validate in struct.setFieldName
+        String text = child.getFieldNameSymbol().getText();
+        if (text != null)
+        {
+            validateFieldName(text);
+        }
 
-        return true; // add always works, or throws, since we allow dupicate fields
+        IonValueLite concrete = (IonValueLite) child;
+        _add(text, concrete);
+
+        return true;
     }
 
 
     public ValueFactory add(final String fieldName)
     {
-        return new CurriedValueFactoryLite(_context.getSystemLite())
+        return new CurriedValueFactoryLite(_context.getSystem())
         {
             @Override
             void handle(IonValue newValue)
@@ -434,31 +440,71 @@ public class IonStructLite
         };
     }
 
+
+    /**
+     * Validates the child and checks locks.
+     *
+     * @param fieldName may be null
+     * @param child must be validated and have field name or id set
+     */
+    private void _add(String fieldName, IonValueLite child)
+    {
+        int size = get_child_count();
+
+        // add this to the Container child collection
+        add(size, child);
+
+        // if we have a hash map we need to update it now
+        if (_field_map != null) {
+            add_field(fieldName, child._elementid());
+        }
+    }
+
     public void add(String fieldName, IonValue value)
     {
+        // Validate everything before altering the child
+        checkForLock();
         validateNewChild(value);
         validateFieldName(fieldName);
 
         IonValueLite concrete = (IonValueLite) value;
-        int size = get_child_count();
 
         // set the fieldname first so that setFieldName
         // doesn't complain that we're changing the name
         // of a field that's already in a struct somewhere.
         concrete.setFieldName(fieldName);
 
-        // add this to the Container child collection
-        add(size, concrete);
-
-        // if we have a hash map we need to update it now
-        if (_field_map != null) {
-            add_field(fieldName, concrete._elementid());
-        }
+        _add(fieldName, concrete);
     }
+
+    public void add(SymbolToken fieldName, IonValue child)
+    {
+        String text = fieldName.getText();
+        if (text != null)
+        {
+            // Ignoring the sid is safe, but perhaps not the most efficient.
+            add(text, child);
+            return;
+        }
+
+        if (fieldName.getSid() < 1)
+        {
+            throw new IllegalArgumentException("fieldName has no text or ID");
+        }
+
+        // Validate everything before altering the child
+        checkForLock();
+        validateNewChild(child);
+
+        IonValueLite concrete = (IonValueLite) child;
+        concrete.setFieldNameSymbol(fieldName);
+        _add(text, concrete);
+    }
+
 
     public ValueFactory put(final String fieldName)
     {
-        return new CurriedValueFactoryLite(_context.getSystemLite())
+        return new CurriedValueFactoryLite(_context.getSystem())
         {
             @Override
             void handle(IonValue newValue)
@@ -504,7 +550,7 @@ public class IonStructLite
             Integer idx = _field_map.get(fieldName);
             if (idx != null) {
                 lowestRemovedIndex = idx.intValue();
-                remove_field(fieldName, lowestRemovedIndex);
+                remove_field_from_field_map(fieldName, lowestRemovedIndex);
                 remove_child(lowestRemovedIndex);
                 any_removed = true;
             }
@@ -519,8 +565,8 @@ public class IonStructLite
             for (int ii = get_child_count(); ii > 0; )
             {
                 ii--;
-                IonValueLite child = get_child_lite(ii);
-                if (fieldName.equals(child.getFieldName()))
+                IonValueLite child = get_child(ii);
+                if (fieldName.equals(child.getFieldNameSymbol().getText()))
                 {
                     // done by remove_child: child.detachFromContainer();
                     remove_child(ii);
@@ -579,7 +625,7 @@ public class IonStructLite
                 assert(concrete_idx == idx);
 
                 if (_field_map != null) {
-                    remove_field(concrete.getFieldName(), idx);
+                    remove_field_from_field_map(concrete.getFieldName(), idx);
                 }
                 super.remove();
 
@@ -598,7 +644,7 @@ public class IonStructLite
         if (field == null) {
             return null;
         }
-        assert(field instanceof IonValueLite);
+
         int idx = ((IonValueLite)field)._elementid();
 
         // update the hash map first we don't want
@@ -607,7 +653,7 @@ public class IonStructLite
         // index value of the remove field to be
         // correct and unchanged.
         if (_field_map != null) {
-            remove_field(fieldName, idx);
+            remove_field_from_field_map(fieldName, idx);
         }
 
         super.remove(field);
@@ -625,7 +671,6 @@ public class IonStructLite
         if (element == null) {
             throw new NullPointerException();
         }
-        assert (element instanceof IonValueLite);
 
         checkForLock();
 
@@ -642,7 +687,7 @@ public class IonStructLite
         // index value of the remove field to be
         // correct and unchanged.
         if (_field_map != null) {
-            remove_field(concrete.getFieldName(), idx);
+            remove_field_from_field_map(concrete.getFieldName(), idx);
         }
 
         super.remove(concrete);

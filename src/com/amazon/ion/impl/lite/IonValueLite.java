@@ -1,10 +1,10 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
@@ -18,12 +18,14 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonValuePrivate;
-import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  *  Base class of the light weight implementation of
@@ -35,8 +37,8 @@ import java.io.IOException;
  *  implementation may be more expensive than the
  *  original implementation.
  */
-public abstract class IonValueLite
-    implements IonValuePrivate
+abstract class IonValueLite
+    implements _Private_IonValue
 {
     /**
      * this hold all the various boolean flags we have
@@ -152,7 +154,7 @@ public abstract class IonValueLite
         return flag;
     }
 
-    /**
+    /*
      * KEEP ALL MEMBER VALUES HERE
      *
      * This impl is intended to have a very light
@@ -164,16 +166,22 @@ public abstract class IonValueLite
      *
      * Thank you.
      *
+     * When this is not a field,
+     *   _fieldId = UNKNOWN_SYMBOL_ID  and  _fieldName = null
+     * Otherwise at least one must be defined.
      */
     private   int              _flags;
+    private   int              _fieldId = UNKNOWN_SYMBOL_ID;
+
+    /** Not null. */
     protected IonContext       _context;
     private   String           _fieldName;
 
     /**
      * The annotation sequence. This array is overallocated and may have
-     * nulls at the end.
+     * nulls at the end denoting unused slots.
      */
-    private   String[]         _annotations;
+    private   SymbolToken[] _annotations;
 
     // current size 32 bit: 3*4 + 4 +  8 = 24 (32 bytes allocated)
     //              64 bit: 3*8 + 4 + 16 = 52 (56 bytes allocated)
@@ -183,8 +191,9 @@ public abstract class IonValueLite
      * simply sets the context and may or may not set the null
      * bit in the flags member.
      */
-    protected IonValueLite(IonContext context, boolean isNull)
+    IonValueLite(IonContext context, boolean isNull)
     {
+        assert context != null;
         _context = context;
         if (isNull) {
             set_flag(IS_NULL_VALUE);
@@ -204,25 +213,25 @@ public abstract class IonValueLite
         // we don't add duplicate annotations
         if (hasTypeAnnotation(annotation)) return;
 
+        SymbolToken sym = newSymbolToken(annotation, UNKNOWN_SYMBOL_ID);
+
         int old_len = (_annotations == null) ? 0 : _annotations.length;
         if (old_len > 0) {
             for (int ii=0; ii<old_len; ii++) {
                 if (_annotations[ii] == null) {
-                    _annotations[ii] = annotation;
+                    _annotations[ii] = sym;
                     return;
                 }
             }
         }
 
         int new_len = (old_len == 0) ? 1 : old_len * 2;
-        String temp[] = new String[new_len];
+        SymbolToken temp[] = new SymbolToken[new_len];
         if (old_len > 0) {
             System.arraycopy(_annotations, 0, temp, 0, old_len);
         }
         _annotations = temp;
-        _annotations[old_len] = annotation;
-        return;
-
+        _annotations[old_len] = sym;
     }
 
     public final /* synchronized */ void clearTypeAnnotations()
@@ -263,28 +272,24 @@ public abstract class IonValueLite
      *
      * @param original value
      */
-    protected final void copyValueContentFrom(IonValueLite original)
+    final void copyValueContentFrom(IonValueLite original)
     {
+         assert _context instanceof IonSystemLite; // Baby I was born this way
+
         // values we copy
         this._flags        = original._flags;
-        this._annotations  = original.getTypeAnnotationStrings();
-        if (original._context instanceof IonConcreteContext) {
+        this._annotations  = original.getTypeAnnotationSymbols();
+        if (original._context instanceof TopLevelContext) {
             // if the original value had context, we need to
             // copy that too, so we attach our copy to its
             // system owner through a fresh concrete context
-            IonConcreteContext.attachWithConcreteContext(
-                                   this.getSystemLite()
-                                 , this
-                                 , original.getAssignedSymbolTable()
-            );
-        }
-        else {
-            // otherwise we attach the copy to its system directly
-            this._context = this.getSystemLite();
+            TopLevelContext.wrap(getSystem(),
+                                 original.getAssignedSymbolTable(),
+                                 this);
         }
 
         // and now values we don't copy
-        this._fieldName = null;
+        assert _fieldName == null && _fieldId == UNKNOWN_SYMBOL_ID;
 
         // IonValue.clone() is specified to return a modifiable copy, but the
         // flag assignment above copies all the flags, including locked.
@@ -308,18 +313,24 @@ public abstract class IonValueLite
         return;
     }
 
-    public IonContainer getContainer()
+    public IonContainerLite getContainer()
     {
-        return _context.getParentThroughContext();
+        return _context.getContextContainer();
     }
 
-    public IonValuePrivate getRoot()
+    public IonValueLite topLevelValue()
     {
-        IonValuePrivate parent = _context.getParentThroughContext();
-        if (parent == null || parent instanceof IonDatagram) {
-            return this;
+        assert ! (this instanceof IonDatagram);
+
+        IonValueLite value = this;
+        for (;;) {
+            IonContainerLite c = value._context.getContextContainer();
+            if (c == null || c instanceof IonDatagram) {
+                break;
+            }
+            value = c;
         }
-        return parent.getRoot();
+        return value;
     }
 
 
@@ -328,20 +339,51 @@ public abstract class IonValueLite
         return this._elementid();
     }
 
-    public final int getFieldId()
+    private int findSymbol(String text)
     {
         SymbolTable symbolTable = getSymbolTable();
-        if (_fieldName == null || symbolTable == null || _isLocked()) {
-            return UNKNOWN_SYMBOL_ID;
+        if (symbolTable != null)
+        {
+            SymbolToken tok = symbolTable.find(_fieldName);
+            if (tok != null) return tok.getSid();
         }
-        int sid = symbolTable.findSymbol(_fieldName);
-        if (sid < 1) {
-            checkForLock();
-            symbolTable = _context.getLocalSymbolTable(this);
-            sid = symbolTable.addSymbol(_fieldName);
+        return UNKNOWN_SYMBOL_ID;
+    }
+
+    public final int getFieldId()
+    {
+        if (_fieldId != UNKNOWN_SYMBOL_ID || _fieldName == null)
+        {
+            return _fieldId;
         }
+
+        int sid = findSymbol(_fieldName);
         return sid;
     }
+
+
+    public final SymbolToken getFieldNameSymbol()
+    {
+        int sid = _fieldId;
+        String text;
+        if (_fieldName != null) {
+            text = _fieldName;
+            if (sid == UNKNOWN_SYMBOL_ID) {
+                sid = findSymbol(_fieldName);
+            }
+        }
+        else if (sid > 0) {
+            text = getSymbolTable().findKnownSymbol(sid);
+            // TODO memoize interned text?
+        }
+        else {
+            // not a field
+            return null;
+        }
+
+        return _Private_Utils.newSymbolToken(text, sid);
+    }
+
 
     public SymbolTable populateSymbolValues(SymbolTable symbols)
     {
@@ -362,11 +404,16 @@ public abstract class IonValueLite
 
             if (_annotations != null) {
                 for (int ii=0; ii<_annotations.length; ii++) {
-                    String name = _annotations[ii];
-                    if (name == null) {
+                    SymbolToken sym = _annotations[ii];
+                    if (sym == null) {
                         break;
                     }
-                    symbols = resolve_symbol(symbols, name);
+                    String text = sym.getText();
+                    if (text != null) {
+                        symbols = resolve_symbol(symbols, text);
+
+                        // TODO we've interned the symbol but forgotten the sid
+                    }
                 }
             }
         }
@@ -382,30 +429,44 @@ public abstract class IonValueLite
         return;
     }
 
-    protected final SymbolTable resolve_symbol(SymbolTable symbols, String name)
+    /** Attempts to intern the given symbol */
+    final SymbolTable resolve_symbol(SymbolTable symbols, String name)
     {
         assert(name != null && symbols != null);
 
         int sid = symbols.findSymbol(name);
 
-        if (sid == UnifiedSymbolTable.UNKNOWN_SYMBOL_ID) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             if (!symbols.isLocalTable()) {
-                symbols = this._context.getLocalSymbolTable(this);
+                symbols = this._context.ensureLocalSymbolTable(this);
             }
             sid = symbols.addSymbol(name);
         }
         return symbols;
     }
 
-    protected final void setFieldName(String name)
+    final void setFieldName(String name)
     {
         assert(this.getContainer() == null);
+        assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name;
+    }
+
+    /** Both parts of the symbol are trusted! */
+    final void setFieldNameSymbol(SymbolToken name)
+    {
+        assert(this.getContainer() == null);
+        assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
+        _fieldName = name.getText();
+        _fieldId   = name.getSid();
     }
 
     public final String getFieldName()
     {
-        return _fieldName;
+        if (_fieldName != null) return _fieldName;
+        if (_fieldId < 0) return null;
+
+        throw new UnknownSymbolException(_fieldId);
     }
 
     public final int getFieldNameId()
@@ -415,49 +476,42 @@ public abstract class IonValueLite
 
     public SymbolTable getSymbolTable()
     {
-        SymbolTable symbols;
-        IonValueLite root = (IonValueLite)getRoot(); // this saves us two trips up the chain
+        assert ! (this instanceof IonDatagram);
 
-        if (root != null) {
-            symbols = root.getAssignedSymbolTable();
-            if (symbols != null) {
-                return symbols;
-            }
+        IonValueLite top = topLevelValue();
+        SymbolTable symbols = top._context.getContextSymbolTable();
+        if (symbols != null) {
+            return symbols;
         }
 
-        IonContainer container = root.getContainer();
-        if (container instanceof IonDatagramLite) {
-            symbols = ((IonDatagramLite)container).getChildsSymbolTable(root);
+        IonContainer container = top.getContainer();
+        if (container != null) {
+            // A symtab wasn't found above since the datagram doesn't force
+            // all children to have symtabs directly assigned.
+            symbols = ((IonDatagramLite)container).getChildsSymbolTable(top);
         }
         else {
-            symbols = _context.getSystemLite().getSystemSymbolTable();
+            // TODO ION-258 bad assumption about system symtab context
+            symbols = _context.getSystem().getSystemSymbolTable();
         }
         return symbols;
     }
 
     public SymbolTable getAssignedSymbolTable()
     {
-        IonValuePrivate root = this.getRoot();
+        assert ! (this instanceof IonDatagram);
 
-        if (root == null) {
-            return null;
-        }
-        assert(root instanceof IonValueLite);
-
-        SymbolTable symbols = ((IonValueLite)root)._context.getContextSymbolTable();
+        SymbolTable symbols = _context.getContextSymbolTable();
         return symbols;
     }
 
     public SymbolTable getUpdatableSymbolTable()
     {
         SymbolTable symbols = getSymbolTable();
-        if (UnifiedSymbolTable.isLocalTable(symbols)) {
-            return symbols;
-        }
-        if (symbols == null) {
+        if (symbols == null || ! symbols.isLocalTable()) {
             IonSystem system = getSystem();
             symbols = system.getSystemSymbolTable();
-            symbols = makeNewLocalSymbolTable(system, symbols);
+            symbols = _Private_Utils.newLocalSymtab(system, symbols);
         }
         return symbols;
     }
@@ -466,7 +520,7 @@ public abstract class IonValueLite
     {
         SymbolTable symbols = getSymbolTable();
         if (symbols == null) {
-            return UnifiedSymbolTable.UNKNOWN_SID;
+            return UNKNOWN_SYMBOL_ID;
         }
         int sid = symbols.findSymbol(name);
         return sid;
@@ -485,7 +539,7 @@ public abstract class IonValueLite
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);
-        if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
+        if (sid != UNKNOWN_SYMBOL_ID) {
             return sid;
         }
         checkForLock();
@@ -495,13 +549,9 @@ public abstract class IonValueLite
         return sid;
     }
 
-    public IonSystem getSystem()
+    public IonSystemLite getSystem()
     {
-        return _context.getSystemLite();
-    }
-    public IonSystemLite getSystemLite()
-    {
-        return _context.getSystemLite();
+        return _context.getSystem();
     }
 
     public IonType getType()
@@ -528,13 +578,51 @@ public abstract class IonValueLite
             return EMPTY_STRING_ARRAY;
         }
 
+        return _Private_Utils.toStrings(_annotations, count);
+    }
+
+    public final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
+    {
+        // first we have to count the number of non-null
+        // elements there are in the annotations array
+        int count = 0;
+        if (_annotations != null) {
+            for (int ii=0; ii<_annotations.length; ) {
+                if (_annotations[ii] == null) {
+                    break;
+                }
+                ii++;
+                count = ii;
+            }
+        }
+        // if there aren't any, we're done
+        if (count == 0) {
+            return SymbolToken.EMPTY_ARRAY;
+        }
+
         // it there are we allocate a user array and
         // copy the references into it. Note that our
         // count above lets us use arraycopy
-        String [] users_copy = new String[count];
+        SymbolToken[] users_copy = new SymbolToken[count];
+        // TODO should try to fill in sids
         System.arraycopy(_annotations, 0, users_copy, 0, count);
-
         return users_copy;
+    }
+
+    public void setTypeAnnotationSymbols(SymbolToken... annotations)
+    {
+        checkForLock();
+
+        if (annotations == null || annotations.length == 0)
+        {
+            // Normalize all empty lists to the same instance.
+            _annotations = SymbolToken.EMPTY_ARRAY;
+        }
+        else
+        {
+            _Private_Utils.ensureNonEmptySymbols(annotations);
+            _annotations = annotations.clone();
+        }
     }
 
     public final String[] getTypeAnnotations()
@@ -546,16 +634,8 @@ public abstract class IonValueLite
     {
         checkForLock();
 
-        if (annotations == null || annotations.length == 0)
-        {
-            // Normalize all empty lists to the same instance.
-            _annotations = EMPTY_STRING_ARRAY;
-        }
-        else
-        {
-            IonImplUtils.ensureNonEmptySymbols(annotations);
-            _annotations = annotations.clone();
-        }
+        _annotations = _Private_Utils.newSymbolTokens(getSymbolTable(),
+                                                       annotations);
     }
 
     public final boolean hasTypeAnnotation(String annotation)
@@ -574,11 +654,11 @@ public abstract class IonValueLite
 
         if (_annotations != null) {
             for (int ii=0; ii<_annotations.length; ii++) {
-                String a = _annotations[ii];
+                SymbolToken a = _annotations[ii];
                 if (a == null) {
                     break;
                 }
-                if (annotation.equals(a)) {
+                if (annotation.equals(a.getText())) {
                     return ii;
                 }
             }
@@ -633,17 +713,12 @@ public abstract class IonValueLite
      * @throws ReadOnlyValueException
      *   if this value {@link #isReadOnly()}.
      */
-    protected final void checkForLock()
+    final void checkForLock()
         throws ReadOnlyValueException
     {
         if (_isLocked()) {
-            throwReadOnlyException();
+            throw new ReadOnlyValueException();
         }
-    }
-    private final void throwReadOnlyException()
-        throws ReadOnlyValueException
-    {
-        throw new ReadOnlyValueException();
     }
 
 
@@ -652,7 +727,7 @@ public abstract class IonValueLite
         checkForLock();
 
         boolean removed = false;
-        IonContainer parent = _context.getParentThroughContext();
+        IonContainer parent = _context.getContextContainer();
         if (parent != null) {
             removed = parent.remove(this);
         }
@@ -670,7 +745,7 @@ public abstract class IonValueLite
             }
             int ii;
             for (ii=pos; ii<_annotations.length - 1; ii++) {
-                String a = _annotations[ii+1];
+                SymbolToken a = _annotations[ii+1];
                 if (a == null) {
                     break;
                 }
@@ -697,9 +772,6 @@ public abstract class IonValueLite
 
     public void setSymbolTable(SymbolTable symbols)
     {
-        if (_context == null) {
-            throw new IllegalStateException("a symbol table cannot be set on a value unless it has a context");
-        }
         _context.setSymbolTableOfChild(symbols, this);
     }
 
@@ -708,19 +780,22 @@ public abstract class IonValueLite
      * IonValue.  This may occur when the value is into
      * or out of a container.  It may occur when the
      * symbol table state of a container changes.
-     * @param context
+     *
+     * @param context must not be null.
      */
-    protected void setContext(IonContext context)
+    final void setContext(IonContext context)
     {
+        assert context != null;
         checkForLock();
         _context = context;
     }
+
     /**
      * used to query the current context.
      *
-     * @return IonContext currently associated with this value
+     * @return this value's context. Not null.
      */
-    protected IonContext getContext()
+    IonContext getContext()
     {
         return _context;
     }
@@ -730,7 +805,7 @@ public abstract class IonValueLite
      * methods that have that precondition.
      * @throws NullValueException if <code>this.isNullValue()</code>
      */
-    protected final void validateThisNotNull()
+    final void validateThisNotNull()
         throws NullValueException
     {
         if (_isNullValue())
@@ -743,7 +818,7 @@ public abstract class IonValueLite
      * Removes this value from its container, ensuring that all data stays
      * available.  Dirties this value and it's original container.
      */
-    protected final void detachFromContainer() // throws IOException
+    final void detachFromContainer() // throws IOException
     {
         checkForLock();
 
@@ -756,9 +831,10 @@ public abstract class IonValueLite
         // in the values all the symbol value should be
         // represented by their string values so this should
         // not be an issue.
-        _context = this.getSystemLite();
+        _context = this.getSystem();
 
         _fieldName = null;
+        _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
     }
 
@@ -774,6 +850,17 @@ public abstract class IonValueLite
         {
             throw new IonException(e);
         }
+    }
+
+
+    public void dump(PrintWriter out)
+    {
+        out.println(this);
+    }
+
+    public String validate()
+    {
+        return null;
     }
 }
 

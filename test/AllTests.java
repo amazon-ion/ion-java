@@ -19,6 +19,7 @@ import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonExceptionTest;
 import com.amazon.ion.IonSystemTest;
+import com.amazon.ion.IonValueTest;
 import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
@@ -43,17 +44,21 @@ import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
-import com.amazon.ion.impl.ReaderTest;
+import com.amazon.ion.impl.LocalSymbolTableTest;
+import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
+import com.amazon.ion.streaming.InputStreamReaderTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
+import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanTests;
 import com.amazon.ion.system.IonSystemBuilderTest;
+import com.amazon.ion.system.IonTextWriterBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.IonStreamUtilsTest;
@@ -84,6 +89,7 @@ import org.junit.runners.Suite;
     SimpleCatalogTest.class,
 
     // Type-based DOM tests
+    IonValueTest.class,
     BlobTest.class,
     BoolTest.class,
     ClobTest.class,
@@ -114,9 +120,10 @@ import org.junit.runners.Suite;
     JarInfoTest.class,
     LoaderTest.class,
     IterationTest.class,
-    ReaderTest.class,
     PrinterTest.class,
     SymbolTableTest.class,
+    SharedSymbolTableTest.class,
+    LocalSymbolTableTest.class,
 
     // equality testing
     EquivalenceTest.class,
@@ -142,6 +149,7 @@ import org.junit.runners.Suite;
     MiscStreamingTest.class,
     BinaryStreamingTest.class,
     ReaderTest.class,
+    InputStreamReaderTest.class,
 
     BadIonStreamingTest.class,
     GoodIonStreamingTest.class,
@@ -150,7 +158,8 @@ import org.junit.runners.Suite;
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,
-    IonSystemBuilderTest.class
+    IonSystemBuilderTest.class,
+    IonTextWriterBuilderTest.class
 })
 public class AllTests
 {

@@ -1,10 +1,14 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.isTrivialTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonContainer;
@@ -19,17 +23,20 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  *
  */
-public abstract class IonValueImpl
-    implements IonValuePrivate
+abstract class IonValueImpl
+    implements _Private_IonValue
 {
     /**
      * We could multiplex this with member id, but it adds way more complexity
@@ -39,8 +46,15 @@ public abstract class IonValueImpl
      * the container may be mutable and have values added or removed.
      */
     protected int    _elementid;
+
+    /**
+     * The field-name symbol id, {@link SymbolTable#UNKNOWN_SYMBOL_ID} if this
+     * isn't a field (in which case {@link #_fieldName} must be null) or if we
+     * don't know the sid (in which case {@link #_fieldName} must not be null).
+     */
+    private int _fieldSid = UNKNOWN_SYMBOL_ID;
     private String   _fieldName;
-    private String[] _annotations;
+    private SymbolToken[] _annotations;
 
     //
     //      | td w vlen | value |
@@ -61,7 +75,6 @@ public abstract class IonValueImpl
     //             ^ [+ len(mid)]   value_content_start ^
     //                                               next_start ^
     //
-    private int _fieldSid;        // field symbol id in buffer
 
     /**
      * The actual TD byte of the value.
@@ -124,27 +137,15 @@ public abstract class IonValueImpl
 
     private final boolean is_true(int flag_bit)
     {
-        // FIXME: removed, dead code for debugging
-        if (flag_bit == IS_BOOL_TRUE) {
-            flag_bit = IS_BOOL_TRUE;
-        }
         return ((_flags & flag_bit) != 0);
     }
     private final void set_flag(int flag_bit)
     {
-        // FIXME: removed, dead code for debugging
-        if (flag_bit == IS_BOOL_TRUE) {
-            flag_bit = IS_BOOL_TRUE;
-        }
         assert(flag_bit != 0);
         _flags |= flag_bit;
     }
     private final void clear_flag(int flag_bit)
     {
-        // FIXME: removed, dead code for debugging
-        if (flag_bit == IS_BOOL_TRUE) {
-            flag_bit = IS_BOOL_TRUE;
-        }
         assert(flag_bit != 0);
         _flags &= ~flag_bit;
     }
@@ -337,7 +338,7 @@ public abstract class IonValueImpl
         _hasNativeValue(false);
         _isDirty(true);
         pos_setTypeDescriptorByte(typedesc);
-        boolean isnull = (IonConstants.getLowNibble(typedesc) == IonConstants.lnIsNull);
+        boolean isnull = (_Private_IonConstants.getLowNibble(typedesc) == _Private_IonConstants.lnIsNull);
         _isNullValue(isnull);
     }
 
@@ -386,7 +387,7 @@ public abstract class IonValueImpl
         // getting the type annotations will also force the
         // this instance to be "ready" (i.e. it will call
         // MakeReady()) which we'll want.
-        String[] a = source.getTypeAnnotations();
+        SymbolToken[] a = source.getTypeAnnotationSymbols();
         // underlying code relies on null for empty
         _annotations = a.length == 0 ? null : a;
     }
@@ -434,12 +435,14 @@ public abstract class IonValueImpl
                                                    IonSystemImpl system)
         throws IOException
     {
+        assert fieldSID > 0 || fieldSID == UNKNOWN_SYMBOL_ID;
+
         IonValueImpl value;
         int pos = reader.position();
         int tdb = reader.readActualTypeDesc();
 
         value = makeValue(tdb, system);
-        value._fieldSid    = fieldSID;
+//      value._fieldSid    = fieldSID; // Done in pos_load
         value._buffer      = buffer;
         value._container   = container;
         value._symboltable = symboltable;
@@ -455,54 +458,54 @@ public abstract class IonValueImpl
         assert system != null;
 
         IonValueImpl value = null;
-        int typeId = IonConstants.getTypeCode(typedesc);
+        int typeId = _Private_IonConstants.getTypeCode(typedesc);
 
         switch (typeId) {
-        case IonConstants.tidNull: // null(0)
+        case _Private_IonConstants.tidNull: // null(0)
             value = new IonNullImpl(system, typedesc);
             break;
-        case IonConstants.tidBoolean: // boolean(1)
+        case _Private_IonConstants.tidBoolean: // boolean(1)
             value = new IonBoolImpl(system, typedesc);
             break;
-        case IonConstants.tidPosInt: // 2
-        case IonConstants.tidNegInt: // 3
+        case _Private_IonConstants.tidPosInt: // 2
+        case _Private_IonConstants.tidNegInt: // 3
             value = new IonIntImpl(system, typedesc);
             break;
-        case IonConstants.tidFloat: // float(4)
+        case _Private_IonConstants.tidFloat: // float(4)
             value = new IonFloatImpl(system, typedesc);
             break;
-        case IonConstants.tidDecimal: // decimal(5)
+        case _Private_IonConstants.tidDecimal: // decimal(5)
             value = new IonDecimalImpl(system, typedesc);
             break;
-        case IonConstants.tidTimestamp: // timestamp(6)
+        case _Private_IonConstants.tidTimestamp: // timestamp(6)
             value = new IonTimestampImpl(system, typedesc);
             break;
-        case IonConstants.tidSymbol: // symbol(7)
+        case _Private_IonConstants.tidSymbol: // symbol(7)
             value = new IonSymbolImpl(system, typedesc);
             break;
-        case IonConstants.tidString: // string (8)
+        case _Private_IonConstants.tidString: // string (8)
             value = new IonStringImpl(system, typedesc);
             break;
-        case IonConstants.tidClob: // clob(9)
+        case _Private_IonConstants.tidClob: // clob(9)
             value = new IonClobImpl(system, typedesc);
             break;
-        case IonConstants.tidBlob: // blob(10)
+        case _Private_IonConstants.tidBlob: // blob(10)
             value = new IonBlobImpl(system, typedesc);
             break;
-        case IonConstants.tidList: // list(11)
+        case _Private_IonConstants.tidList: // list(11)
             value = new IonListImpl(system, typedesc);
             break;
-        case IonConstants.tidSexp: // 12
+        case _Private_IonConstants.tidSexp: // 12
             value = new IonSexpImpl(system, typedesc);
             break;
-        case IonConstants.tidStruct: // 13
+        case _Private_IonConstants.tidStruct: // 13
             value = new IonStructImpl(system, typedesc);
             break;
 
-        case IonConstants.tidTypedecl: // 14
+        case _Private_IonConstants.tidTypedecl: // 14
             // the only case where this is valid is if this is
             // really an IonVersionMaker
-            assert IonConstants.getLowNibble(typedesc) == 0;
+            assert _Private_IonConstants.getLowNibble(typedesc) == 0;
             value = system.newSystemIdSymbol(ION_1_0);
             break;
 
@@ -536,19 +539,20 @@ public abstract class IonValueImpl
     {
         if (this._fieldName != null) return this._fieldName;
         if (this._fieldSid < 1) return null;
-        _fieldName = this.getSymbolTable().findSymbol(this._fieldSid);
-        assert _fieldName != null;
+
+        String text = getSymbolTable().findKnownSymbol(_fieldSid);
+        if (text == null) {
+            throw new UnknownSymbolException(_fieldSid);
+        }
+        _fieldName = text;
         return _fieldName;
     }
 
     public int getFieldId()
     {
-        if (this._fieldSid == 0 && this._fieldName != null)
+        if (this._fieldSid == UNKNOWN_SYMBOL_ID && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
-            if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
-                this._fieldSid = this.addSymbol(this._fieldName);
-            }
         }
         return this._fieldSid;
     }
@@ -561,14 +565,15 @@ public abstract class IonValueImpl
     {
         assert symtab == this.getSymbolTable();
 
-        if (this._fieldSid == 0 && this._fieldName != null)
+        if (this._fieldSid <= 0 && this._fieldName != null)
         {
             this._fieldSid = this.resolveSymbol(this._fieldName);
-            if (this._fieldSid == UnifiedSymbolTable.UNKNOWN_SID) {
+            if (this._fieldSid == UNKNOWN_SYMBOL_ID) {
                 checkForLock();
                 symtab = this.addSymbol(this._fieldName, symtab);
                 this._fieldSid = symtab.findSymbol(this._fieldName);
-                assert( this._fieldSid != UnifiedSymbolTable.UNKNOWN_SID);
+                // Because we just added it:
+                assert( this._fieldSid != UNKNOWN_SYMBOL_ID);
             }
         }
         return symtab;
@@ -580,18 +585,46 @@ public abstract class IonValueImpl
         return getFieldId();
     }
 
-    public IonValuePrivate getRoot()
+
+    public final SymbolToken getFieldNameSymbol()
     {
-        IonValueImpl parent;
-        IonValueImpl value = this;
+        int sid = _fieldSid;
+        String text;
+
+        if (_fieldName != null) {
+            text = _fieldName;
+        }
+        else if (sid > 0) {
+            SymbolTable symtab = getSymbolTable();
+            if (symtab != null) {
+                text = symtab.findKnownSymbol(sid);
+                // TODO memoize interned text?
+            }
+            else {
+                text = null;
+            }
+        }
+        else {
+            // not a field
+            return null;
+        }
+
+        return new SymbolTokenImpl(text, sid);
+    }
+
+    public IonValueImpl topLevelValue()
+    {
+        assert ! (this instanceof IonDatagram);
+
+        IonValue value = this;
         for (;;) {
-            parent = (IonValueImpl)value.getContainer();
-            if (parent == null) {
+            IonValue parent = value.getContainer();
+            if (parent == null || parent instanceof IonDatagram) {
                 break;
             }
             value = parent;
         }
-        return value;
+        return (IonValueImpl) value;
     }
 
     public final IonContainer getContainer()
@@ -665,14 +698,10 @@ public abstract class IonValueImpl
         throws ReadOnlyValueException
     {
         if (_isLocked()) {
-            throwReadOnlyException();
+            throw new ReadOnlyValueException();
         }
     }
-    private final void throwReadOnlyException()
-        throws ReadOnlyValueException
-    {
-        throw new ReadOnlyValueException();
-    }
+
 
     /**
      * Marks this element, and it's container, dirty.  This forces the binary
@@ -698,29 +727,11 @@ public abstract class IonValueImpl
         this._isDirty(false);
     }
 
-    protected IonValueImpl get_symbol_table_root()
-    {
-        IonValueImpl prev = null;
-        IonValueImpl curr = this;
 
-        while (curr != null) {
-            prev = curr;
-            curr = curr._container;
-            if (curr == null || (curr instanceof IonDatagram)) {
-                break;
-            }
-        }
-        if (prev == null) {
-            return this;
-        }
-        return prev;
-    }
-
-    // Not really: overridden for struct, which really needs to have a
-    // symbol table.  Everyone needs to have a symbol table since they
-    // may have fieldnames or annotations (or this may be a symbol value)
     public SymbolTable getSymbolTable()
     {
+        assert ! (this instanceof IonDatagram);
+
         if (this._symboltable != null)  return this._symboltable;
         if (this._container != null)    return this._container.getSymbolTable();
 
@@ -743,19 +754,17 @@ public abstract class IonValueImpl
      */
     public SymbolTable getUpdatableSymbolTable()
     {
-        IonValueImpl parent = get_symbol_table_root();
-        SymbolTable symbols = parent.getSymbolTable();
-
-        if (UnifiedSymbolTable.isLocalTable(symbols)) {
-            return symbols;
-        }
+        IonValueImpl topLevel = topLevelValue();
+        SymbolTable symbols = topLevel.getSymbolTable();
 
         if (symbols == null) {
             symbols = _system.getSystemSymbolTable();
         }
 
-        symbols = makeNewLocalSymbolTable(_system, symbols);
-        parent.setSymbolTable(symbols);
+        if (! symbols.isLocalTable()) {
+            symbols = newLocalSymtab(_system, symbols);
+            topLevel.setSymbolTable(symbols);
+        }
 
         return symbols;
     }
@@ -774,7 +783,7 @@ public abstract class IonValueImpl
     {
         SymbolTable symbols = getSymbolTable();
         if (symbols == null) {
-            return UnifiedSymbolTable.UNKNOWN_SID;
+            return UNKNOWN_SYMBOL_ID;
         }
         int sid = symbols.findSymbol(name);
         return sid;
@@ -799,6 +808,24 @@ public abstract class IonValueImpl
         return name;
     }
 
+
+    public SymbolToken ensureSid(SymbolToken sym)
+    {
+        String text = sym.getText();
+        int currentSid = sym.getSid();
+
+        if (text != null && currentSid == UNKNOWN_SYMBOL_ID)
+        {
+            int internedSid = addSymbol(text);
+            if (internedSid > 0)
+            {
+                sym = new SymbolTokenImpl(text, internedSid);
+            }
+        }
+
+        return sym;
+    }
+
     /**
      * adds a symbol name to the current symbol
      * table.  This may change the current symbol
@@ -811,7 +838,7 @@ public abstract class IonValueImpl
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);
-        if (sid != UnifiedSymbolTable.UNKNOWN_SID) {
+        if (sid != UNKNOWN_SYMBOL_ID) {
             return sid;
         }
         checkForLock();
@@ -830,10 +857,10 @@ public abstract class IonValueImpl
      */
     protected SymbolTable addSymbol(String name, SymbolTable symbols)
     {
-        assert resolveSymbol(name) == UnifiedSymbolTable.UNKNOWN_SID;
+        assert resolveSymbol(name) == UNKNOWN_SYMBOL_ID;
         assert symbols == this.getSymbolTable();
 
-        if (UnifiedSymbolTable.isLocalTable(symbols) == false) {
+        if (symbols == null || ! symbols.isLocalTable()) {
             symbols = getUpdatableSymbolTable();
         }
         checkForLock();
@@ -842,28 +869,25 @@ public abstract class IonValueImpl
         return symbols;
     }
 
-    /**
-     *
-     * @param symtab must be local, system, or null.
-     */
+
     public void setSymbolTable(SymbolTable symtab) {
-        if (UnifiedSymbolTable.isAssignableTable(symtab) == false) {
+        if (_Private_Utils.symtabIsSharedNotSystem(symtab)) {
             throw new IllegalArgumentException("symbol table must be local or system");
         }
 
-        IonValueImpl parent = get_symbol_table_root();
-        SymbolTable  currentSymtab = parent.getSymbolTable();
+        IonValueImpl top = topLevelValue();
+        SymbolTable  currentSymtab = top.getSymbolTable();
         if (currentSymtab != symtab) {
             checkForLock();
-            if (UnifiedSymbolTable.isTrivialTable(currentSymtab) == false) {
-                parent.detachFromSymbolTable(); // Calls setDirty
+            if (isTrivialTable(currentSymtab) == false) {
+                top.detachFromSymbolTable(); // Calls setDirty
             }
             else {
-                parent.makeReady();
+                top.makeReady();
                 this.setDirty();
             }
-            parent._symboltable = symtab;
-            assert ((parent == this) || (this._symboltable == null));
+            top._symboltable = symtab;
+            assert ((top == this) || (this._symboltable == null));
         }
     }
 
@@ -876,13 +900,16 @@ public abstract class IonValueImpl
     void detachFromSymbolTable()
     {
         // Force reading of annotation text
-        getTypeAnnotations();
+        getTypeAnnotationSymbols();
 
         if (this._fieldSid > 0) {
             if (this._fieldName == null) {
                 this._fieldName = this.resolveSymbol(this._fieldSid);
             }
-            this._fieldSid = 0; // FIXME should be UNKNOWN_SYMBOL_ID
+            // Don't wipe out the SID if we have a name!
+            if (_fieldName != null) {
+                this._fieldSid = UNKNOWN_SYMBOL_ID;
+            }
         }
 
         this._symboltable = null;
@@ -914,29 +941,59 @@ public abstract class IonValueImpl
     public String[] getTypeAnnotations()
     {
         // if we have a list, then it's a good one
-        if (this._annotations != null) return this._annotations;
+        if (_annotations == null)
+        {
+            // if this has been materialized (and we clearly don't
+            // have a list) then there is no annotations
+            makeReady();
+        }
 
-        // if this has been materialized (and we clearly don't
-        // have a list) then there is no annotations
-        makeReady();
+        if (_annotations == null) return EMPTY_STRING_ARRAY;
 
-        return this._annotations == null ? EMPTY_STRING_ARRAY : this._annotations;
+        return _Private_Utils.toStrings(_annotations, _annotations.length);
+    }
+
+    public SymbolToken[] getTypeAnnotationSymbols()
+    {
+        // if we have a list, then it's a good one
+        if (_annotations == null)
+        {
+            // if this has been materialized (and we clearly don't
+            // have a list) then there is no annotations
+            makeReady();
+        }
+
+        if (_annotations == null) return SymbolToken.EMPTY_ARRAY;
+
+        SymbolTable symtab = getSymbolTable();
+        _Private_Utils.localize(symtab, _annotations);
+        return _annotations.clone();
     }
 
     public void setTypeAnnotations(String... annotations)
     {
         checkForLock();
         makeReady();
+        _annotations = newSymbolTokens(getSymbolTable(), annotations);
+        setDirty();
+    }
+
+    public void setTypeAnnotationSymbols(SymbolToken... annotations)
+    {
+        checkForLock();
 
         if (annotations == null || annotations.length == 0)
         {
             // Normalize all empty lists to the same instance.
-            _annotations = EMPTY_STRING_ARRAY;
+            _annotations = SymbolToken.EMPTY_ARRAY;
         }
         else
         {
-            IonImplUtils.ensureNonEmptySymbols(annotations);
+            _Private_Utils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
+
+            SymbolTable symtab = getSymbolTable();
+            _Private_Utils.localize(symtab, _annotations);
         }
         setDirty();
     }
@@ -951,10 +1008,13 @@ public abstract class IonValueImpl
 
     public boolean hasTypeAnnotation(String annotation)
     {
+        if (annotation == null) return false;
+
         makeReady();
         if (_annotations != null) {
-            for (String s : _annotations) {
-                if (s.equals(annotation)) return true;
+            for (SymbolToken s : _annotations) {
+                String text = s.getText();
+                if (annotation.equals(text)) return true;
             }
         }
         return false;
@@ -962,16 +1022,20 @@ public abstract class IonValueImpl
 
     public void removeTypeAnnotation(String annotation)
     {
-        checkForLock();
-        if (!this.hasTypeAnnotation(annotation)) return;
+        if (!hasTypeAnnotation(annotation)) return;
 
-        String[] temp = (_annotations.length == 1) ? null : new String[_annotations.length - 1];
-        for (int ii=0, jj=0; ii < _annotations.length; ii++) {
-            if (ii != jj || !_annotations[ii].equals(annotation)) {
+        checkForLock();
+
+        int count = _annotations.length;
+        SymbolToken[] temp =
+            (count == 1) ? null : new SymbolToken[count - 1];
+        for (int ii=0, jj=0; ii < count; ii++) {
+            if (ii != jj || !annotation.equals(_annotations[ii].getText())) {
                 temp[jj++] = _annotations[ii];
             }
         }
         _annotations = temp;
+        setDirty();
     }
 
     public void addTypeAnnotation(String annotation)
@@ -982,12 +1046,12 @@ public abstract class IonValueImpl
         // allocate a larger array and copy if necessary
         int oldlen = (_annotations == null) ? 0 : _annotations.length;
         int newlen = oldlen + 1;
-        String[] temp = new String[newlen];
+        SymbolToken[] temp = new SymbolToken[newlen];
         if (_annotations != null) {
             System.arraycopy(this._annotations, 0, temp, 0, oldlen);
         }
-        // load the new sid
-        temp[newlen - 1] = annotation;
+
+        temp[newlen - 1] = newSymbolToken(annotation, UNKNOWN_SYMBOL_ID);
         this._annotations = temp;
 
         setDirty();
@@ -995,7 +1059,9 @@ public abstract class IonValueImpl
 
     void pos_init()
     {
-        _fieldSid           =  0;
+        // TODO clear annotations?
+        _fieldName          = null;
+        _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -1019,8 +1085,8 @@ public abstract class IonValueImpl
     {
         // these calls force this ion value to be fully reified
         makeReady();
-        this.getFieldName();
-        this.getTypeAnnotations();
+//        this.getFieldName();
+//        this.getTypeAnnotations();
 
         _buffer = null;
         // cas removed (1 apr 2008): _symboltable = null;
@@ -1031,7 +1097,8 @@ public abstract class IonValueImpl
         _isPositionLoaded(false);
         _isDirty(true);
 
-        _fieldSid           =  0;
+        // Don't do this, we may not have text!
+//      _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _entry_start        = -1;
         _value_td_start     = -1;
         _value_content_start= -1;
@@ -1040,6 +1107,8 @@ public abstract class IonValueImpl
 
     void pos_initDatagram(int typeDesc, int length)
     {
+        assert this instanceof IonDatagram;
+
         _isMaterialized(false);
         _isPositionLoaded(true);
         _hasNativeValue(false);
@@ -1047,7 +1116,7 @@ public abstract class IonValueImpl
         // if we have a buffer, and it's not loaded, it has to be clean
         _isDirty(false);
 
-        _fieldSid           = 0;
+        _fieldSid           = UNKNOWN_SYMBOL_ID;
         _type_desc          = typeDesc;
         // FIXME verify or remove - cas: 22 apr 2008
         _entry_start        = 0; // BINARY_VERSION_MARKER_SIZE;
@@ -1062,7 +1131,7 @@ public abstract class IonValueImpl
         _isPositionLoaded(false);
         _isDirty(true);
 
-        _fieldSid           =  0;
+        _fieldSid           =  UNKNOWN_SYMBOL_ID;
         _type_desc          =  0;
         _entry_start        = -1;
         _value_td_start     = -1;
@@ -1098,19 +1167,19 @@ public abstract class IonValueImpl
         this._value_content_start = valueReader.position();
         this._next_start = this._value_content_start + vlen;
 
-        if (type == IonConstants.tidTypedecl) {
+        if (type == _Private_IonConstants.tidTypedecl) {
             // check for the special case of the typedecl that is a binary version marker
-            if (this._type_desc == (IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
+            if (this._type_desc == (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff)) {
                 // read the remaining (3) bytes of the IonVersionMarker
-                for (int ii=1; ii<IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
+                for (int ii=1; ii<_Private_IonConstants.BINARY_VERSION_MARKER_SIZE; ii++) {
                     int b = valueReader.read();
-                    if ((b & 0xff) != (IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
+                    if ((b & 0xff) != (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
                         throw new IonException("illegal value encoded at "+this._value_content_start);
                     }
                 }
                 // fixup the "next start" position, since when we set this
                 // the value length was "wrong"
-                vlen = IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
+                vlen = _Private_IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
                 this._next_start = this._value_content_start + vlen;
                 this._isSystemValue(true);
             }
@@ -1125,7 +1194,7 @@ public abstract class IonValueImpl
                 // TODO check that td != annotation (illegal nested annotation)
 
                 int ln = pos_getLowNibble();
-                if ((ln == IonConstants.lnIsVarLen)
+                if ((ln == _Private_IonConstants.lnIsVarLen)
                     || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
                 {
                     // Skip over the extended length to find the content start.
@@ -1147,32 +1216,23 @@ public abstract class IonValueImpl
     }
     public final int pos_getType()
     {
-        return IonConstants.getTypeCode(this._type_desc);
+        return _Private_IonConstants.getTypeCode(this._type_desc);
     }
 
     public final int pos_getLowNibble()
     {
-        return IonConstants.getLowNibble(this._type_desc);
+        return _Private_IonConstants.getLowNibble(this._type_desc);
     }
 
-    public final int pos_getFieldId()
-    {
-        return _fieldSid;
-    }
     public final int pos_getFieldIdLen()
     {
+        if (_fieldSid == UNKNOWN_SYMBOL_ID) return 0;
         return IonBinary.lenVarUInt(_fieldSid);
     }
     public final void pos_setFieldId(int fieldNameSid)
     {
-        assert fieldNameSid >= 0;
         int old_field_len = pos_getFieldIdLen();
-        if (fieldNameSid == 0) {
-            _fieldSid = 0;
-        }
-        else {
-            _fieldSid = fieldNameSid;
-        }
+        _fieldSid = fieldNameSid;
         int new_field_len = pos_getFieldIdLen();
         int delta = (new_field_len - old_field_len);
         // with more space taken by the field id, the actual
@@ -1192,7 +1252,7 @@ public abstract class IonValueImpl
     }
     public final boolean pos_isAnnotated()
     {
-        return (this._entry_start + IonBinary.lenVarUInt(this._fieldSid) != this._value_td_start);
+        return (this._entry_start + pos_getFieldIdLen() != this._value_td_start);
     }
     public final int pos_getOffsetAtAnnotationTD()
     {
@@ -1234,8 +1294,8 @@ public abstract class IonValueImpl
 
     static int getFieldLength(int td, IonBinary.Reader reader) throws IOException
     {
-        int ln = IonConstants.getLowNibble(td);
-        int hn = IonConstants.getTypeCode(td);
+        int ln = _Private_IonConstants.getLowNibble(td);
+        int hn = _Private_IonConstants.getTypeCode(td);
         int len = reader.readLength(hn, ln);
         return len;
     }
@@ -1320,7 +1380,7 @@ public abstract class IonValueImpl
             }
             assert symtab.isSystemTable();
             synchronized (this) {
-                symtab = makeNewLocalSymbolTable(_system, symtab);
+                symtab = newLocalSymtab(_system, symtab);
                 this.setSymbolTable(symtab);
             }
         }
@@ -1328,7 +1388,8 @@ public abstract class IonValueImpl
         return symtab;
     }
 
-    protected synchronized void materializeAnnotations(IonBinary.Reader reader) throws IOException
+    protected synchronized void materializeAnnotations(IonBinary.Reader reader)
+        throws IOException
     {
         assert this._isMaterialized() == false;
 
@@ -1339,10 +1400,10 @@ public abstract class IonValueImpl
 
         // skip over the annoation td and total length
         int td = reader.read();
-        if (IonConstants.getTypeCode(td) != IonConstants.tidTypedecl) {
+        if (_Private_IonConstants.getTypeCode(td) != _Private_IonConstants.tidTypedecl) {
             throw new IonException("invalid user type annotation");
         }
-        if (IonConstants.getLowNibble(td) == IonConstants.lnIsVarLen) {
+        if (_Private_IonConstants.getLowNibble(td) == _Private_IonConstants.lnIsVarLen) {
             // skip past the overall length, which we don't care about here
             reader.readVarIntAsInt();
         }
@@ -1353,12 +1414,13 @@ public abstract class IonValueImpl
 
         // and convert them to strings
         int len = sids.length;
-        this._annotations = new String[len];
+        this._annotations = new SymbolToken[len];
         SymbolTable symtab = getSymbolTable();
         assert symtab != null || len < 1 ;
         for (int ii=0; ii<len; ii++) {
-            int id = sids[ii];
-            this._annotations[ii] = symtab.findSymbol(id);
+            int sid = sids[ii];
+            String text = symtab.findKnownSymbol(sid);
+            this._annotations[ii] = new SymbolTokenImpl(text, sid);
         }
     }
 
@@ -1416,19 +1478,20 @@ public abstract class IonValueImpl
 
         _container = null;
         _fieldName = null;
-        assert _fieldSid == 0;
+        _fieldSid = UNKNOWN_SYMBOL_ID;
         _elementid = 0;
     }
 
     protected void setFieldName(String name)
     {
         assert this._fieldName == null;
+        assert name != null;
 
         // First materialize, because we're gonna mark ourselves dirty.
         makeReady();
         String oldname = this._fieldName;
         this._fieldName = name;
-        this._fieldSid  = 0;
+        this._fieldSid  = UNKNOWN_SYMBOL_ID;
         IonContainer container = this._container;
         if (container != null) {
             if (IonType.STRUCT.equals(container.getType())) {
@@ -1437,6 +1500,26 @@ public abstract class IonValueImpl
             }
         }
         this.setDirty();
+    }
+
+    final void setFieldNameSymbol(SymbolToken name)
+    {
+        assert _fieldName == null;
+        assert _container != null;
+
+        // Do these first on the odd chance that they throw an exception
+        // in which case we won't be in a halfway state.
+        String text = name.getText();
+        int sid = name.getSid();
+        assert text != null || sid != UNKNOWN_SYMBOL_ID;
+
+        // First materialize, because we're gonna mark ourselves dirty.
+        makeReady();
+
+        _fieldName = text;
+        _fieldSid  = sid;
+
+        setDirty();
     }
 
 
@@ -1495,10 +1578,8 @@ public abstract class IonValueImpl
     public int getAnnotationOverheadLength(int valueLen)
     {
         int len = 0;
-        String[] annotationStrings = this.getTypeAnnotations();
-        assert annotationStrings != null;
 
-        if (annotationStrings.length != 0)
+        if (getTypeAnnotationSymbols().length != 0)
         {
             len = getAnnotationLength();
 
@@ -1521,14 +1602,21 @@ public abstract class IonValueImpl
 
         // first add up the length of the annotations symbol id lengths
         for (int ii=0; ii<_annotations.length; ii++) {
-            int symId = resolveSymbol(_annotations[ii]);
-            if (symId <= 0) {
-                symId = addSymbol(_annotations[ii]);
+            SymbolToken sym = _annotations[ii];
+            int sid = sym.getSid();
+            if (sid == UNKNOWN_SYMBOL_ID)
+            {
+                sym = ensureSid(sym);
+                sid = sym.getSid();
+                if (sid != UNKNOWN_SYMBOL_ID)
+                {
+                    _annotations[ii] = sym;
+                }
             }
-            if (symId <= 0) {
+            if (sid <= 0) {
                 throw new IllegalStateException("the annotation must be in the symbol table");
             }
-            int vlen = IonBinary.lenVarUInt(symId);
+            int vlen = IonBinary.lenVarUInt(sid);
             len += vlen;
         }
         // then add the length of the symbol list which will preceed the symbols
@@ -1545,10 +1633,10 @@ public abstract class IonValueImpl
     {
         int len = 0;
 
-        // CAS: 14 jan 2010 changed fieldSid==0 to fieldSid<=0
         if (this._fieldSid <= 0 && this._fieldName != null)
         {
             // We haven't interned the symbol, do so now.
+            // TODO WRONG! this doesn't intern it.
             this._fieldSid = this.resolveSymbol(this._fieldName);
             if (this._fieldSid <= 0) {
                 throw new IonException("the field name must be in the symbol table, if you're using a name table");
@@ -1571,28 +1659,28 @@ public abstract class IonValueImpl
      */
     public int getTypeDescriptorAndLengthOverhead(int contentLength)
     {
-        int len = IonConstants.BB_TOKEN_LEN;
+        int len = _Private_IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue()) return len;
 
         switch (this.pos_getType()) {
-        case IonConstants.tidNull: // null(0)
-        case IonConstants.tidBoolean: // boolean(1)
+        case _Private_IonConstants.tidNull: // null(0)
+        case _Private_IonConstants.tidBoolean: // boolean(1)
             break;
-        case IonConstants.tidPosInt: // 2
-        case IonConstants.tidNegInt: // 3
-        case IonConstants.tidFloat: // float(4)
-        case IonConstants.tidDecimal: // decimal(5)
-        case IonConstants.tidTimestamp: // timestamp(6)
-        case IonConstants.tidSymbol: // symbol(7)
-        case IonConstants.tidString: // string (8)
-        case IonConstants.tidClob:   // 9
-        case IonConstants.tidBlob:   // 10
-        case IonConstants.tidList:   // 11
-        case IonConstants.tidSexp:   // 12
+        case _Private_IonConstants.tidPosInt: // 2
+        case _Private_IonConstants.tidNegInt: // 3
+        case _Private_IonConstants.tidFloat: // float(4)
+        case _Private_IonConstants.tidDecimal: // decimal(5)
+        case _Private_IonConstants.tidTimestamp: // timestamp(6)
+        case _Private_IonConstants.tidSymbol: // symbol(7)
+        case _Private_IonConstants.tidString: // string (8)
+        case _Private_IonConstants.tidClob:   // 9
+        case _Private_IonConstants.tidBlob:   // 10
+        case _Private_IonConstants.tidList:   // 11
+        case _Private_IonConstants.tidSexp:   // 12
             len += IonBinary.lenLenFieldWithOptionalNibble(contentLength);
             break;
-        case IonConstants.tidStruct: // Overridden
+        case _Private_IonConstants.tidStruct: // Overridden
         default:
             throw new IonException("this value has an illegal type descriptor id "+this.pos_getTypeDescriptorByte());
         }
@@ -1612,7 +1700,7 @@ public abstract class IonValueImpl
         if (this.isNullValue()) {
             // the raw non-annotated, non-fieldnamed, length
             // is 1 for a null container
-            len = IonConstants.BB_TOKEN_LEN;
+            len = _Private_IonConstants.BB_TOKEN_LEN;
         }
         else {
             // for non-null we start with the length of the
@@ -1658,16 +1746,17 @@ public abstract class IonValueImpl
         //             ^ + len(fid)                      next_start ^
 
         int fieldSidLen = 0;
-        int newFieldSid = 0;
-        if (_fieldName != null) {
+        if (_fieldName != null || _fieldSid != UNKNOWN_SYMBOL_ID) {
             assert this._container != null;
-            assert this._container.pos_getType() == IonConstants.tidStruct;
+            assert this._container.pos_getType() == _Private_IonConstants.tidStruct;
 
-            newFieldSid  = this.resolveSymbol(_fieldName);
-            if (newFieldSid < 1) {
-                newFieldSid = this.addSymbol(_fieldName);
+            if (_fieldSid == UNKNOWN_SYMBOL_ID) {
+                int newFieldSid  = addSymbol(_fieldName);
+                assert newFieldSid != UNKNOWN_SYMBOL_ID;
+                _fieldSid = newFieldSid;
             }
-            fieldSidLen  = IonBinary.lenVarUInt(newFieldSid);
+
+            fieldSidLen = IonBinary.lenVarUInt(_fieldSid);
         }
 
         int valuelen      = this.getNakedValueLength();
@@ -1691,9 +1780,6 @@ public abstract class IonValueImpl
 
         _type_desc = computeTypeDesc(valuelen);
 
-        // overwrite the sid as everything is computed on the new value
-        _fieldSid = newFieldSid;
-
         _isPositionLoaded(true);
 
         // and the delta is how far the end moved
@@ -1709,7 +1795,7 @@ public abstract class IonValueImpl
     {
         int hn = this.pos_getType();
         int ln = this.computeLowNibble(valuelen);
-        return IonConstants.makeTypeDescriptor(hn, ln);
+        return _Private_IonConstants.makeTypeDescriptor(hn, ln);
     }
 
 
@@ -1740,16 +1826,19 @@ public abstract class IonValueImpl
         // TODO can any of this be short-circuited?
 
         if (this._annotations != null) {
-            for (String s : this._annotations) {
-                int sid = this.resolveSymbol(s);
-                if (sid < 1) {
-                    checkForLock();
-                    symtab = this.addSymbol(s, symtab);
+            for (int i = 0; i < _annotations.length; i++)
+            {
+                SymbolToken sym = _annotations[i];
+                SymbolToken interned = ensureSid(sym);
+                if (sym != interned)
+                {
+                    _annotations[i] = interned;
                 }
+                symtab = getSymbolTable();
             }
         }
 
-        if (this._fieldName != null) {
+        if (this._fieldName != null || _fieldSid > 0) {
             symtab = this.getFieldId(symtab);
         }
 
@@ -1966,7 +2055,7 @@ public abstract class IonValueImpl
             int annotationlen = getAnnotationLength();
             int wrappedLength = valuelen + tdwithvlenlen + annotationlen;
 
-            writer.writeCommonHeader(IonConstants.tidTypedecl,
+            writer.writeCommonHeader(_Private_IonConstants.tidTypedecl,
                                                 wrappedLength);
             // this is depending on getAnnotationLength() to have
             // added all the symbols as necessary so that writeAnnotations
@@ -2003,11 +2092,11 @@ public abstract class IonValueImpl
         int vlen = this.getNativeValueLength();
         if (vlen > 0) {
             switch (this.pos_getLowNibble()) {
-            case IonConstants.lnIsNullAtom:
-            case IonConstants.lnNumericZero:
+            case _Private_IonConstants.lnIsNullAtom:
+            case _Private_IonConstants.lnNumericZero:
                 // we don't need to do anything here
                 break;
-            case IonConstants.lnIsVarLen:
+            case _Private_IonConstants.lnIsVarLen:
                 writer.writeVarUIntValue(vlen, true);
             default:
                 this.doWriteNakedValue(writer, vlen);
@@ -2041,5 +2130,16 @@ public abstract class IonValueImpl
             same = ionEquals(this, (IonValue) other);
         }
         return same;
+    }
+
+
+    public void dump(PrintWriter out)
+    {
+        out.println(this);
+    }
+
+    public String validate()
+    {
+        return null;
     }
 }

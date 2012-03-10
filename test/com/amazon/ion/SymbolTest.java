@@ -1,7 +1,8 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl._Private_Utils;
 import org.junit.Test;
 
 
@@ -15,6 +16,7 @@ public class SymbolTest
         assertSame(IonType.SYMBOL, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
+        assertNull("symbolValue() isn't null", value.symbolValue());
 
         try {
             value.getSymbolId();
@@ -31,13 +33,12 @@ public class SymbolTest
         assertFalse(modValue.equals(value.stringValue()));
 
         value.setValue(modValue);
-        assertEquals(modValue, value.stringValue());
-        assertFalse(value.isNullValue());
+        checkSymbol(modValue, value);
 //        assertTrue(value.intValue() > 0);
 
         String modValue1 = "dude!";
         value.setValue(modValue1);
-        assertEquals(modValue1, value.stringValue());
+        checkSymbol(modValue1, value);
         int sid = value.getSymbolId();
 
         try {
@@ -45,8 +46,7 @@ public class SymbolTest
             fail("Expected EmptySymbolException");
         }
         catch (EmptySymbolException e) { }
-        assertEquals(modValue1, value.stringValue());
-        assertEquals(sid, value.getSymbolId());
+        checkSymbol(modValue1, sid, value);
 
         value.setValue(null);
         checkNullSymbol(value);
@@ -74,6 +74,33 @@ public class SymbolTest
         value = system().newSymbol("hello");
     }
 
+    public void testFactorySymbolWithSid(ValueFactory vf)
+    {
+        final int sid = 99;
+        SymbolToken tok = _Private_Utils.newSymbolToken((String)null, sid);
+
+        IonSymbol value = vf.newSymbol(tok);
+        checkUnknownSymbol(99, value);
+
+        tok = _Private_Utils.newSymbolToken("text", sid);
+        value = vf.newSymbol(tok);
+        checkSymbol("text", value);
+        assertFalse(value.isNullValue());
+
+        // TODO this needs to be well-defined
+//        assertEquals(sid, value.getSymbolId());
+    }
+
+    @Test
+    public void testFactorySymbolWithSid()
+    {
+        ValueFactory vf = system();
+        testFactorySymbolWithSid(vf);
+
+        IonList list = system().newEmptyList();
+        vf = list.add();
+        testFactorySymbolWithSid(vf);
+    }
 
     @Test
     public void testNullSymbol()
@@ -101,21 +128,18 @@ public class SymbolTest
     public void testSymbols()
     {
         IonSymbol value = (IonSymbol) oneValue("foo");
-        assertSame(IonType.SYMBOL, value.getType());
-        assertEquals("foo", value.stringValue());
-        assertTrue(value.getSymbolId() > 0);
+        checkSymbol("foo", value);
+//        assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo'");
-        assertSame(IonType.SYMBOL, value.getType());
-        assertEquals("foo", value.stringValue());
-        assertTrue(value.getSymbolId() > 0);
+        checkSymbol("foo", value);
+//        assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
 
         value = (IonSymbol) oneValue("'foo bar'");
-        assertSame(IonType.SYMBOL, value.getType());
-        assertEquals("foo bar", value.stringValue());
-        assertTrue(value.getSymbolId() > 0);
+        checkSymbol("foo bar", value);
+//        assertTrue(value.getSymbolId() > 0);
         modifySymbol(value);
     }
 
@@ -125,8 +149,17 @@ public class SymbolTest
     {
         String symText = "$324";
         IonSymbol value = (IonSymbol) oneValue(symText);
-        checkSymbol(symText, value);
-        assertEquals(324, value.getSymbolId());
+        checkUnknownSymbol(324, value);
+
+        IonDatagram dg = loader().load(symText);
+        value = (IonSymbol) dg.get(0);
+        checkUnknownSymbol(324, value);
+
+        value.removeFromContainer();
+        checkUnknownSymbol(324, value);
+
+        value.makeReadOnly();
+        checkUnknownSymbol(324, value);
     }
 
 

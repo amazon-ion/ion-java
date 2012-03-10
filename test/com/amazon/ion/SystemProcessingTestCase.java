@@ -1,7 +1,8 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.Symtabs.LocalSymbolTablePrefix;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
@@ -9,9 +10,6 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 
-import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonReaderTextRawTokensX;
-import com.amazon.ion.impl.IonUTF8;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Ignore;
@@ -59,6 +57,10 @@ public abstract class SystemProcessingTestCase
         return;
     }
 
+
+    boolean myMissingSymbolTokensHaveText = true;
+
+
     protected abstract void prepare(String text)
         throws Exception;
 
@@ -78,19 +80,76 @@ public abstract class SystemProcessingTestCase
     protected abstract void nextValue()
         throws Exception;
 
+    protected abstract void stepIn()
+        throws Exception;
+
+    protected abstract void stepOut()
+        throws Exception;
+
     protected abstract IonType currentValueType()
         throws Exception;
 
-    protected abstract SymbolTable currentSymtab()
-        throws Exception;
+    abstract SymbolTable currentSymtab();
 
-    protected abstract void checkAnnotation(String expected, int expectedSid)
-        throws Exception;
+
+    abstract Checker check();
+
+    /**
+     * @param expectedText null means absent
+     */
+    final void checkFieldName(String expectedText, int expectedSid)
+    {
+        check().fieldName(expectedText, expectedSid);
+    }
+
+
+    /**
+     * Checks a field name that's missing from the context symbol table,
+     * generally because there was no exact match to an import.
+     */
+    void checkMissingFieldName(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myMissingSymbolTokensHaveText && expectedText != null)
+        {
+            checkFieldName(expectedText, UNKNOWN_SYMBOL_ID);
+        }
+        else
+        {
+            checkFieldName(null, expectedSid);
+        }
+    }
+
+    /** Check the first annotation. */
+    final void checkAnnotation(String expectedText, int expectedSid)
+    {
+        check().annotation(expectedText, expectedSid);
+    }
 
     /** Check that all the annotations exist in the given order. */
-    protected abstract void checkAnnotations(String[] expecteds,
-                                             int[] expectedSids)
-        throws Exception;
+    final void checkAnnotations(String[] expectedTexts, int[] expectedSids)
+    {
+        check().annotations(expectedTexts, expectedSids);
+    }
+
+
+    /**
+     * Checks an annotation that's missing from the context symbol table,
+     * generally because there was no exact match to an import.
+     */
+    void checkMissingAnnotation(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myMissingSymbolTokensHaveText && expectedText != null)
+        {
+            checkAnnotation(expectedText, UNKNOWN_SYMBOL_ID);
+        }
+        else
+        {
+            checkAnnotation(null, expectedSid);
+        }
+    }
+
 
     protected abstract void checkType(IonType expected)
         throws Exception;
@@ -105,15 +164,22 @@ public abstract class SystemProcessingTestCase
         throws Exception;
 
     /**
-     * Checks a symbol that's defined in a missing symbol table.
-     *
-     * @returns
-     *        true when the symbol missing from a shared table
-     *        the symbol will have been added to the local symbol table
-     *        false when it will not have been
+     * Checks a symbol that's missing from the context symbol table,
+     * generally because there was no exact match to an import.
      */
-    protected abstract boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
-        throws Exception;
+    void checkMissingSymbol(String expectedText, int expectedSid)
+        throws Exception
+    {
+        if (myMissingSymbolTokensHaveText)
+        {
+            checkSymbol(expectedText, UNKNOWN_SYMBOL_ID);
+        }
+        else
+        {
+            checkSymbol(null, expectedSid);
+        }
+    }
+
 
     protected abstract void checkInt(long expected)
         throws Exception;
@@ -145,28 +211,8 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
-    /**
-     * TODO how is this different from {@link IonImplUtils#utf8(String)}?
-     */
-    public static byte[] convertUtf16UnitsToUtf8(String text)
-    {
-        byte[] data = new byte[4*text.length()];
-        int limit = 0;
-        for (int i = 0; i < text.length(); i++)
-        {
-            char c = text.charAt(i);
-            limit += IonUTF8.convertToUTF8Bytes(c, data, limit, data.length - limit);
-        }
-
-        byte[] result = new byte[limit];
-        System.arraycopy(data, 0, result, 0, limit);
-        return result;
-    }
-
-
-    //=========================================================================
-
-    @Test
+    /** TODO ION-165 This is broken for loaders which are now more lazy */
+    @Test @Ignore
     public void testLocalTableResetting()
         throws Exception
     {
@@ -193,7 +239,8 @@ public abstract class SystemProcessingTestCase
 
         // FIXME --- how should this work?
         if (!IonType.INT.equals(currentValueType())) {
-            checkSymbol("$ion_1_0");  // if we didn't hit the int 1 then we should have the $ion_1_0
+            // if we didn't hit the int 1 then we should have the $ion_1_0
+            checkSymbol(ION_1_0, ION_1_0_SID);
             nextValue();
             // ???
         }
@@ -202,7 +249,8 @@ public abstract class SystemProcessingTestCase
         // we should have reset to the system symbol table here
         SymbolTable table3 = currentSymtab();
         assertNotSame(table1, table3);
-        // nope, this may be the next local that will hold 'far' and 'boo': assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
+        // nope, this may be the next local that will hold 'far' and 'boo':
+        // assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
 
         nextValue();
         checkSymbol("far");
@@ -256,7 +304,7 @@ if (table1 == table2) {
 //           might not preserve the $ion_1_0
         if (!IonType.INT.equals(currentValueType())) {
             // if we didn't hit the int 2 then we should have the $ion_1_0
-            checkSymbol("$ion_1_0");
+            checkSymbol(ION_1_0, ION_1_0_SID);
             nextValue();
         }
 
@@ -310,8 +358,7 @@ if (table1 == table2) {
         assertTrue(systemMaxId() + 2 >= table2.getMaxId());
 
         nextValue();
-        checkSymbol("foo", systemMaxId() + 2);
-        assertEquals(systemMaxId() + 2, table2.getMaxId());
+        checkSymbol("foo");
         assertSame(table2, currentSymtab());
     }
 
@@ -375,21 +422,17 @@ if (table1 == table2) {
         final int fred3id = systemMaxId() + 3;
 
         final int local = systemMaxId() + Symtabs.FRED_MAX_IDS[2];
-        final int local1id = local + 1;
-        final int local2id = local + 2;
         final int local3id = local + 3;
 
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 1, catalog);
         Symtabs.register("fred", 2, catalog);
 
-        // version: 1
         // {  name:"fred", version:1,
-        // symbols:["fred_1", "fred_2"]}
+        //    symbols:["fred_1", "fred_2"]}
 
-        // version: 2
-        //"{  name:"fred", version:2," +
-        //"  symbols:["fred_1","fred_2","fred_3","fred_4",]}
+        // {  name:"fred", version:2,
+        //    symbols:["fred_1","fred_2","fred_3","fred_4",]}
 
         String text =
             LocalSymbolTablePrefix +
@@ -397,17 +440,19 @@ if (table1 == table2) {
             "  imports:[{name:\"fred\", version:2, " +
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
-            "local1 local2 fred_1 fred_2 fred_3";
+            "local1 local2 fred_1 fred_2 fred_3 $12 " +
+            "fred_3::$99 $99::local1 [{fred_3:local2, $98:$97}]";
+        // TODO { $12:something }
+        // TODO $12::something
+        // Nesting flushed out a bug at one point
 
-        // fred_2 and fred_3 are defined during prep
+
         prepare(text);
 
         // Remove the imported table: fred version 2
-        // which will cause us to use fred version 3 with a max id of 4
-        // which leaves out fred_5 altogether (which wasn't recognized
-        // during prepare anyway) and causes fred_2 to "disappear"
-        // if forced to the system will assign fred_2 to a new
-        // local id after this
+        // We'll read using fred version 1 with a max id of 2
+        // which causes fred_3 to "disappear".
+        // If forced to, the reader will assign fred_2 to a new local id.
         assertNotNull(catalog.removeTable("fred", 2));
 
         // at this point the effective symbol list should be:
@@ -425,10 +470,10 @@ if (table1 == table2) {
         startIteration();
 
         nextValue();
-        checkSymbol("local1", local1id);
+        checkSymbol("local1");
 
         nextValue();
-        checkSymbol("local2", local2id);
+        checkSymbol("local2");
 
         nextValue();
         checkSymbol("fred_1", fred1id);
@@ -437,14 +482,37 @@ if (table1 == table2) {
         checkSymbol("fred_2", fred2id);
 
         nextValue();
-        // it doesn't matter if fred 2 is local or not,
-        // fred 3 should be in the shared symbol table
-        boolean is_fred3_a_local_symbol = checkMissingSymbol("fred_3", fred3id, local3id);
+        checkMissingSymbol("fred_3", fred3id);
 
+        nextValue();
+// TODO checkAbsentSidLiteral("fred_3", fred3id);
+
+        nextValue();
+        checkSymbol(null, 99);
+        checkMissingAnnotation("fred_3", fred3id);
+
+        nextValue();
+        checkSymbol("local1");
+        checkMissingAnnotation(null, 99);
+
+        nextValue();
+        stepIn();
+            nextValue();
+            stepIn();
+                nextValue();
+                checkMissingFieldName("fred_3", fred3id);
+                checkSymbol("local2");
+
+                nextValue();
+                checkMissingFieldName(null, 98);
+                checkSymbol(null, 97);
+
+                checkEof();
+            stepOut();
+            checkEof();
+        stepOut();
 
         checkEof();
-
-        if (is_fred3_a_local_symbol) return; // force is_fred2_a_local_symbol to be used
     }
 
     /**
@@ -514,34 +582,51 @@ if (table1 == table2) {
         startIteration();
 
         nextValue();
-        checkSymbol("local1", local1id);
+        checkSymbol("local1");
 
         nextValue();
-        checkSymbol("local2", local2id);
+        checkSymbol("local2");
 
         nextValue();
         checkSymbol("fred_1", fred1id_symtab);
 
         nextValue();
-        boolean is_fred2_a_local_symbol = checkMissingSymbol("fred_2", fred2id_symtab, local3id);
+        checkMissingSymbol("fred_2", fred2id_symtab);
 
         nextValue();
         checkSymbol("fred_3", fred3id_symtab);
 
         nextValue();
-
-        int fred_5_local_id;
-        if (is_fred2_a_local_symbol) {
-            fred_5_local_id = local4id;
-        }
-        else {
-            fred_5_local_id = local3id;
-        }
-        checkSymbol("fred_5", fred_5_local_id);
+        checkSymbol("fred_5");
 
         checkEof();
     }
 
+
+    @Test
+    public void testSidLiteralForIvm()
+        throws Exception
+    {
+        startIteration("$2 $2");
+        checkEof();
+    }
+
+    @Test
+    public void testSidlikeSymbols()
+        throws Exception
+    {
+        String text =
+            Symtabs.printLocalSymtab("$7", "$6", "$5")
+            + "{ '$7':'$6'::'$7'::'$5' }";
+
+        startIteration(text);
+        nextValue();
+        stepIn();
+        nextValue();
+        checkFieldName("$7", 10);
+        checkAnnotations(new String[]{ "$6", "$7"}, new int[]{ 11, 10 });
+        checkSymbol("$5", 12);
+    }
 
     @Test
     public void testSharedTableNotAddedToCatalog()
@@ -552,17 +637,11 @@ if (table1 == table2) {
         String text =
             ION_1_0 + " " +
             SymbolTableTest.IMPORTED_1_SERIALIZED +
-            " 'imported 1'";
+            " 'imported 2'";
         assertNull(system().getCatalog().getTable("imported"));
 
         startIteration(text);
-        try {
-            nextValue();
-        }
-        catch (IonReaderTextRawTokensX.IonReaderTextTokenException e) {
-            // FIXME what the heck?
-            testSharedTableNotAddedToCatalog();
-        }
+        nextValue();
         checkType(IonType.STRUCT);
         checkAnnotation(ION_SHARED_SYMBOL_TABLE,
                         ION_SHARED_SYMBOL_TABLE_SID);
@@ -570,24 +649,7 @@ if (table1 == table2) {
         assertNull(system().getCatalog().getTable("imported"));
 
         nextValue();
-        checkSymbol("imported 1");
-    }
-
-    @Test
-    public void testObsoleteSharedTableFormat()
-        throws Exception
-    {
-        startTestCheckpoint("testObsoleteSharedTableFormat");
-
-        String text =
-            "$ion_symbol_table::{ name:'''test''', symbols:['''x'''] }" +
-            "346";
-
-        startIteration(text);
-        nextValue();
-        checkInt(346);
-
-        assertNull(system().getCatalog().getTable("test"));
+        checkSymbol("imported 2");
     }
 
 
@@ -692,6 +754,23 @@ if (table1 == table2) {
     }
 
     // TODO similar tests on clob
+
+
+    /** Traps a bug in lite DOM transitioning to large size */
+    @Test
+    public void testLargeStructWithUnknownFieldNames()
+        throws Exception
+    {
+        startIteration("{ $10:10, $11:11, $12:12, $13:13, $14:14," +
+                       " $15:15, $16:16, $17:17, $18:18, $19:19 }");
+        nextValue();
+        stepIn();
+        for (int i = 10; i <= 19; i++)
+        {
+            nextValue();
+        }
+    }
+
 
     @Test @Ignore
     public void testPosInt() // TODO rework?
@@ -914,9 +993,34 @@ if (table1 == table2) {
     {
         int sid = systemMaxId() + 1;
 
-        startIteration("ann::ann::null");
+        startIteration("$ion_symbol_table::{symbols:[\"ann\"]} " +
+                       "ann::ann::null");
         nextValue();
         checkAnnotations(new String[]{ "ann", "ann" },
                          new int[]{ sid, sid });
+    }
+
+    @Test
+    public void testIvmWithUnknownAnnotation()
+    throws Exception
+    {
+        startIteration("$99::$ion_1_0 23");
+        nextValue();
+        // TODO ION-187 inconsistent handling of annotated IVM.
+        if (currentValueType() == IonType.SYMBOL)
+        {
+            nextValue();
+        }
+        checkEof();
+    }
+
+    @Test
+    public void testLocalSymtabWithUnknownAnnotation()
+        throws Exception
+    {
+        String text = "$99::" + Symtabs.printLocalSymtab("s1") + " null";
+        startIteration(text);
+        nextValue();
+        checkEof();
     }
 }

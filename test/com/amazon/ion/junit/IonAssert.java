@@ -1,7 +1,8 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.junit;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -14,8 +15,14 @@ import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.NullValueException;
+import com.amazon.ion.ReaderChecker;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.util.Equivalence;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,7 +50,8 @@ public class IonAssert
 
         if (! inStruct) {
             assertEquals("reader field name", null, in.getFieldName());
-            assertTrue("reader shouldn't have fieldId", in.getFieldId() < 1);
+            assertEquals("reader fieldId", UNKNOWN_SYMBOL_ID, in.getFieldId());
+            assertEquals("reader field symbol", null, in.getFieldNameSymbol());
         }
 
         try {
@@ -63,6 +71,7 @@ public class IonAssert
 
         assertEquals(null, in.getFieldName());
         assertTrue(in.getFieldId() < 0);
+        assertEquals(null, in.getFieldNameSymbol());
 
         // TODO ION-213 Text reader doesn't throw, but others do.
         try {
@@ -92,6 +101,12 @@ public class IonAssert
 //            fail("expected exception");
         }
         catch (IllegalStateException e) { }
+
+        try {
+            in.stringValue();
+            fail("expected exception");
+        }
+        catch (IllegalStateException e) { }
     }
 
 
@@ -116,6 +131,122 @@ public class IonAssert
     }
 
 
+    /**
+     * @deprecated Use {@link ReaderChecker}.
+     */
+    @Deprecated
+    public static void expectField(IonReader in, String name)
+    {
+        IonTestCase.check(in).fieldName(name);
+    }
+
+    /**
+     * Move to the next value and check the field name.
+     * @deprecated Use {@link ReaderChecker}.
+     */
+    @Deprecated
+    public static void expectNextField(IonReader in, String name)
+    {
+        in.next();
+        expectField(in, name);
+    }
+
+
+    /**
+     * @param expectedText null means absent
+     */
+    public static void checkSymbol(IonReader in,
+                                   String expectedText,
+                                   int expectedSid)
+    {
+        assertSame(IonType.SYMBOL, in.getType());
+
+        assertFalse(in.isNullValue());
+
+        if (expectedText == null)
+        {
+            try {
+                in.stringValue();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(expectedSid, e.getSid());
+            }
+        }
+        else
+        {
+            assertEquals("IonReader.stringValue()",
+                         expectedText, in.stringValue());
+        }
+
+        assertEquals(expectedSid, in.getSymbolId());
+
+        SymbolToken sym = in.symbolValue();
+        IonTestCase.checkSymbol(expectedText, expectedSid, sym);
+    }
+
+    /**
+     * @param expectedText null means null.symbol
+     */
+    public static void checkSymbol(String expectedText,
+                                   IonReader in)
+    {
+        assertEquals("getType", IonType.SYMBOL, in.getType());
+        assertEquals("isNullValue", expectedText == null, in.isNullValue());
+        assertEquals("stringValue", expectedText, in.stringValue());
+
+        SymbolToken is = in.symbolValue();
+        if (expectedText == null)
+        {
+            assertEquals("symbolValue", null, is);
+            try {
+                in.getSymbolId();
+                fail("expected exception on " + in.getType());
+            }
+            catch (NullValueException e) { }
+        }
+        else
+        {
+            assertEquals("symbolValue.text", expectedText, is.getText());
+            in.getSymbolId(); // Shouldn't throw, at least
+        }
+    }
+
+    public static void checkNullSymbol(IonReader in)
+    {
+        checkSymbol(null, in);
+    }
+
+
+    public static void assertSymbolEquals(String path,
+                                          SymbolToken expected,
+                                          SymbolToken actual)
+    {
+        String expectedText = expected.getText();
+        String actualText   = actual.getText();
+        assertEquals(path + " text", expectedText, actualText);
+
+        if (expectedText == null)
+        {
+            assertEquals(path + " sid", expected.getSid(), actual.getSid());
+        }
+    }
+
+    public static void assertSymbolEquals(String path,
+                                          SymbolToken[] expecteds,
+                                          SymbolToken[] actuals)
+    {
+        assertEquals(path + " count", expecteds.length, actuals.length);
+
+        for (int i = 0; i < expecteds.length; i++)
+        {
+            assertSymbolEquals(path + "[" + i + "]",
+                               expecteds[i], actuals[i]);
+        }
+    }
+
+
     //========================================================================
     // DOM assertions
 
@@ -137,12 +268,7 @@ public class IonAssert
     public static void assertEqualAnnotations(IonValue expected,
                                               IonValue actual)
     {
-        if (expected == actual) return;
-
-        String[] expectedAnn = expected.getTypeAnnotations();
-        String[] actualAnn   = actual.getTypeAnnotations();
-
-        assertArrayEquals("Ion annotations", expectedAnn, actualAnn);
+        assertEqualAnnotations("IonValue", expected, actual);
     }
 
     private static void assertEqualAnnotations(String path,
@@ -151,11 +277,10 @@ public class IonAssert
     {
         if (expected == actual) return;
 
-        String[] expectedAnn = expected.getTypeAnnotations();
-        String[] actualAnn   = actual.getTypeAnnotations();
+        SymbolToken[] expecteds = expected.getTypeAnnotationSymbols();
+        SymbolToken[] actuals   = actual.getTypeAnnotationSymbols();
 
-        assertArrayEquals(path + " annotations",
-                          expectedAnn, actualAnn);
+        assertSymbolEquals(path + " annotation", expecteds, actuals);
     }
 
 
@@ -207,6 +332,7 @@ public class IonAssert
             IonValue actualValue   = actual.next();
             doAssertIonEquals("iterator[" + i + ']',
                               expectedValue, actualValue);
+            i++;
         }
 
         assertFalse("unexpected next value [" + i + ']',
@@ -244,7 +370,8 @@ public class IonAssert
             case SYMBOL:
             case TIMESTAMP:
             {
-                assertEquals(path, expected, actual);
+                // "Normal" IonValue.equals()
+                assertEquals(path + " IonValue", expected, actual);
                 break;
             }
 
@@ -307,6 +434,14 @@ public class IonAssert
                                            IonStruct expected,
                                            IonStruct actual)
     {
+        int expectedSize = expected.size();
+        int actualSize = actual.size();
+        if (expectedSize != actualSize)
+        {
+            fail(path + " size, expected:" + expectedSize
+                 + " actual:" + actualSize);
+        }
+
         HashMap<String,List<IonValue>> expectedFields = sortFields(expected);
         HashMap<String,List<IonValue>> actualFields   = sortFields(actual);
 
@@ -330,17 +465,26 @@ public class IonAssert
         }
     }
 
+    /**
+     * Problematic with unknown field names.
+     * See {@link Equivalence} for another use of this idiom.
+     */
     private static HashMap<String,List<IonValue>> sortFields(IonStruct s)
     {
         HashMap<String,List<IonValue>> sorted =
             new HashMap<String,List<IonValue>>();
         for (IonValue v : s)
         {
-            List<IonValue> fields = sorted.get(v.getFieldName());
+            SymbolToken tok = v.getFieldNameSymbol();
+            String text = tok.getText();
+            if (text == null) {
+                text = " --UNKNOWN SYMBOL-- $" + tok.getSid(); // TODO ION-272
+            }
+            List<IonValue> fields = sorted.get(text);
             if (fields == null)
             {
                 fields = new ArrayList<IonValue>(2);
-                sorted.put(v.getFieldName(), fields);
+                sorted.put(text, fields);
             }
             fields.add(v);
         }

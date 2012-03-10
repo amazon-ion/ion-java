@@ -1,22 +1,28 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.IonConstants.tidList;
-import static com.amazon.ion.impl.IonConstants.tidSexp;
-import static com.amazon.ion.impl.IonConstants.tidStruct;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.impl.IonWriterUserText.builderFor;
+import static com.amazon.ion.impl._Private_IonConstants.tidList;
+import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
+import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
+import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.util.IonTextUtils;
+import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -29,13 +35,15 @@ import java.nio.CharBuffer;
 /**
  *
  */
-public class IonWriterSystemText
-    extends IonWriterBaseImpl
+class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
+    extends IonWriterSystem
 {
     /** Not null. */
-    final private Appendable _output;
+    private final Appendable _output;
     /** Not null. */
-    final private TextOptions _options;
+    private final _Private_IonTextWriterBuilder _options;
+    /** At least one. */
+    private final int _long_string_threshold;
 
     BufferManager _manager;
 
@@ -43,6 +51,13 @@ public class IonWriterSystemText
     private boolean _closed;
     boolean     _in_struct;
     boolean     _pending_separator;
+
+    /**
+     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
+     * data.
+     */
+    private boolean _finished_and_requiring_version_marker;
+
     int         _separator_character;
 
     int         _top;
@@ -54,40 +69,52 @@ public class IonWriterSystemText
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    protected IonWriterSystemText(IonSystem system,
-                                  SymbolTable defaultSystemSymtab,
-                                  OutputStream out, TextOptions options)
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  _Private_IonTextWriterBuilder options,
+                                  OutputStream out)
     {
-        super(system, defaultSystemSymtab);
-
-        out.getClass(); // Efficient null check
-        options.getClass(); // Efficient null check
-
-        if (out instanceof Appendable) {
-            _output = (Appendable)out;
-        }
-        else {
-            _output = new IonUTF8.CharToUTF8(out);
-        }
-        _options = options;
-        set_separator_character();
+        this(defaultSystemSymtab,
+             options,
+             (out instanceof Appendable
+                 ? (Appendable) out
+                 : new IonUTF8.CharToUTF8(out)));
     }
 
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    protected IonWriterSystemText(IonSystem system,
-                                  SymbolTable defaultSystemSymtab,
-                                  Appendable out, TextOptions options)
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  _Private_IonTextWriterBuilder options,
+                                  Appendable out)
     {
-        super(system, defaultSystemSymtab);
+        super(defaultSystemSymtab);
 
         out.getClass(); // Efficient null check
-        options.getClass(); // Efficient null check
 
         _output = out;
         _options = options;
-        set_separator_character();
+
+        if (_options.isPrettyPrintOn()) {
+            _separator_character = '\n';
+        }
+        else {
+            _separator_character = ' ';
+        }
+
+        int threshold = _options.getLongStringThreshold();
+        if (threshold < 1) threshold = Integer.MAX_VALUE;
+        _long_string_threshold = threshold;
+    }
+
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    IonWriterSystemText(IonSystem sys,
+                        SymbolTable defaultSystemSymtab,
+                        Appendable out,
+                        IonWriterUserText.TextOptions options)
+    {
+        this(defaultSystemSymtab,
+             builderFor(sys.getCatalog(), options),
+             out);
     }
 
     /**
@@ -99,44 +126,17 @@ public class IonWriterSystemText
         return _output;
     }
 
+    @Deprecated // TODO ION-271 remove after IMS is migrated
     TextOptions getOptions()
+    {
+        return new TextOptions(_options.isPrettyPrintOn(),
+                               ASCII.equals(_options.getCharset()));
+    }
+
+    _Private_IonTextWriterBuilder getBuilder()
     {
         return _options;
     }
-
-    void set_separator_character()
-    {
-        if (_options.isPrettyPrintOn()) {
-            _separator_character = '\n';
-        }
-        else {
-            _separator_character = ' ';
-        }
-    }
-
-
-    @Override
-    protected void resetSystemContext() throws IOException
-    {
-        setSymbolTable(_default_system_symbol_table);
-    }
-
-    @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
-    {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        UnifiedSymbolTable symbols
-            = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _symbol_table);
-        return symbols;
-    }
-
-
-    //@Override
-    //public void setSymbolTable(SymbolTable symbols)
-    // it is unnecessary to override setSymbolTable
-    // for the system text writer since it doesn't
-    // need any work beyond the base method
 
     @Override
     public int getDepth()
@@ -155,16 +155,16 @@ public class IonWriterSystemText
         }
         else {
             switch(_stack_parent_type[_top-1]) {
-            case IonConstants.tidDATAGRAM:
+            case _Private_IonConstants.tidDATAGRAM:
                 container = IonType.DATAGRAM;
                 break;
-            case IonConstants.tidSexp:
+            case _Private_IonConstants.tidSexp:
                 container = IonType.SEXP;
                 break;
-            case IonConstants.tidList:
+            case _Private_IonConstants.tidList:
                 container = IonType.LIST;
                 break;
-            case IonConstants.tidStruct:
+            case _Private_IonConstants.tidStruct:
                 container = IonType.STRUCT;
                 break;
             default:
@@ -182,11 +182,11 @@ public class IonWriterSystemText
         _stack_in_struct[_top] = _in_struct;
         _stack_pending_comma[_top] = _pending_separator;
         switch (typeid) {
-        case IonConstants.tidSexp:
+        case _Private_IonConstants.tidSexp:
             _separator_character = ' ';
             break;
-        case IonConstants.tidList:
-        case IonConstants.tidStruct:
+        case _Private_IonConstants.tidList:
+        case _Private_IonConstants.tidStruct:
             _separator_character = ',';
             break;
         default:
@@ -217,11 +217,11 @@ public class IonWriterSystemText
         int parentid = (_top > 0) ? _stack_parent_type[_top - 1] : -1;
         switch (parentid) {
         case -1:
-        case IonConstants.tidSexp:
+        case _Private_IonConstants.tidSexp:
             _separator_character = ' ';
             break;
-        case IonConstants.tidList:
-        case IonConstants.tidStruct:
+        case _Private_IonConstants.tidList:
+        case _Private_IonConstants.tidStruct:
             _separator_character = ',';
             break;
         default:
@@ -231,9 +231,15 @@ public class IonWriterSystemText
 
         return typeid;
     }
+
+    /**
+     * @return a tid
+     * @throws ArrayIndexOutOfBoundsException if _top < 1
+     */
     int topType() {
         return _stack_parent_type[_top - 1];
     }
+
     boolean topInStruct() {
         if (_top == 0) return false;
         return _stack_in_struct[_top - 1];
@@ -242,6 +248,21 @@ public class IonWriterSystemText
         if (_top == 0) return false;
         return _stack_pending_comma[_top - 1];
     }
+
+    private boolean containerIsListOrStruct()
+    {
+        if (_top == 0) return false;
+        int topType = topType();
+        return (topType == tidList || topType == tidStruct);
+    }
+
+    private boolean containerIsSexp()
+    {
+        if (_top == 0) return false;
+        int topType = topType();
+        return (topType == tidSexp);
+    }
+
     void printLeadingWhiteSpace() throws IOException {
         for (int ii=0; ii<_top; ii++) {
             _output.append(' ');
@@ -255,8 +276,86 @@ public class IonWriterSystemText
        }
        _output.append(closeChar);
     }
+
+
+    private void writeSidLiteral(int sid)
+        throws IOException
+    {
+        assert sid > 0;
+
+        // No extra handling needed for JSON strings, this is already legal.
+
+        boolean asString = _options._symbol_as_string;
+        if (asString) _output.append('"');
+
+        _output.append('$');
+        // TODO optimize to avoid intermediate string
+        _output.append(Integer.toString(sid));
+
+        if (asString) _output.append('"');
+    }
+
+
+    /**
+     * @param value must not be null.
+     */
+    private void writeSymbolToken(String value) throws IOException
+    {
+        if (_options._symbol_as_string)
+        {
+            if (_options._string_as_json)
+            {
+                IonTextUtils.printJsonString(_output, value);
+            }
+            else
+            {
+                IonTextUtils.printString(_output, value);
+            }
+        }
+        else
+        {
+            SymbolVariant variant = IonTextUtils.symbolVariant(value);
+            switch (variant)
+            {
+                case IDENTIFIER:
+                {
+                    _output.append(value);
+                    break;
+                }
+                case OPERATOR:
+                {
+                    if (containerIsSexp())
+                    {
+                        _output.append(value);
+                        break;
+                    }
+                    // else fall through...
+                }
+                case QUOTED:
+                {
+                    IonTextUtils.printQuotedSymbol(_output, value);
+                    break;
+                }
+            }
+        }
+    }
+
+
     void startValue() throws IOException
     {
+        if (_finished_and_requiring_version_marker)
+        {
+            assert getDepth() == 0;
+
+            // TODO if caller is writing an IVM this will output an extra one.
+
+            // Clear the flag first, since writeSymbol will call back here.
+            _finished_and_requiring_version_marker = false;
+
+            // This MUST always be $ion_1_0
+            writeSymbol(SystemSymbols.ION_1_0_SID);
+        }
+
         if (_options.isPrettyPrintOn()) {
             if (_pending_separator && _separator_character != '\n') {
                 _output.append((char)_separator_character);
@@ -270,31 +369,97 @@ public class IonWriterSystemText
 
         // write field name
         if (_in_struct) {
-            String name = getFieldName();
+            SymbolToken sym = assumeFieldNameSymbol();
+            String name = sym.getText();
             if (name == null) {
-                throw new IllegalStateException(ERROR_MISSING_FIELD_NAME);
+                int sid = sym.getSid();
+                writeSidLiteral(sid);
             }
-            IonTextUtils.printSymbol(_output, name);
+            else {
+                writeSymbolToken(name);
+            }
             _output.append(':');
-            super.clearFieldName();
+            clearFieldName();
         }
 
         // write annotations
-        int annotation_count = super._annotation_count;
-        if (annotation_count > 0) {
-            String[] annotations = getTypeAnnotations();
-            for (int ii=0; ii<annotation_count; ii++) {
-                String name = annotations[ii];
-                IonTextUtils.printSymbol(_output, name);
-                _output.append("::");
+        if (hasAnnotations()) {
+            if (! _options._skip_annotations) {
+                SymbolToken[] annotations = getTypeAnnotationSymbols();
+                for (SymbolToken ann : annotations) {
+                    String name = ann.getText();
+                    if (name == null) {
+                        _output.append('$');
+                        _output.append(Integer.toString(ann.getSid()));
+                    }
+                    else {
+                        IonTextUtils.printSymbol(_output, name);
+                    }
+                    _output.append("::");
+                }
             }
-            super.clearAnnotations();
+            clearAnnotations();
         }
     }
 
     void closeValue() {
         _pending_separator = true;
     }
+
+
+
+    @Override
+    void writeIonVersionMarker(SymbolTable systemSymtab)
+        throws IOException
+    {
+        writeSymbol(systemSymtab.getIonVersionId());
+        super.writeIonVersionMarker(systemSymtab);
+    }
+
+    @Override
+    void writeLocalSymtab(SymbolTable symtab)
+        throws IOException
+    {
+        // TODO implement _filter_symbol_tables
+
+        // TODO ION-274 this always suppresses local symtabs w/o imports
+        SymbolTable[] imports = symtab.getImportedTables();
+        if (imports.length > 0) {
+            IonReader reader = new UnifiedSymbolTableReader(symtab);
+
+            // move onto and write the struct header
+            IonType t = reader.next();
+            assert(IonType.STRUCT.equals(t));
+            SymbolToken[] a = reader.getTypeAnnotationSymbols();
+            // you (should) always have the $ion_symbol_table annotation
+            assert(a != null && a.length >= 1);
+
+            // now we'll start a local symbol table struct
+            // in the underlying system writer
+            setTypeAnnotationSymbols(a);
+            stepIn(IonType.STRUCT);
+
+            // step into the symbol table struct and
+            // write the values - EXCEPT the symbols field
+            reader.stepIn();
+            for (;;) {
+                t = reader.next();
+                if (t == null) break;
+                // get the field name and skip over 'symbols'
+                String name = reader.getFieldName();
+                if (SYMBOLS.equals(name)) {
+                    continue;
+                }
+                writeValue(reader);
+            }
+
+            // we're done step out and move along
+            stepOut();
+        }
+
+        super.writeLocalSymtab(symtab);
+    }
+
 
     public void stepIn(IonType containerType) throws IOException
     {
@@ -304,8 +469,15 @@ public class IonWriterSystemText
         char opener;
         switch (containerType)
         {
+            case SEXP:
+            {
+                if (!_options._sexp_as_list)
+                {
+                    tid = tidSexp; _in_struct = false; opener = '('; break;
+                }
+                // else fall through and act just like list
+            }
             case LIST:   tid = tidList;   _in_struct = false; opener = '['; break;
-            case SEXP:   tid = tidSexp;   _in_struct = false; opener = '('; break;
             case STRUCT: tid = tidStruct; _in_struct = true;  opener = '{'; break;
             default:
                 throw new IllegalArgumentException();
@@ -339,6 +511,10 @@ public class IonWriterSystemText
 
     }
 
+
+    //========================================================================
+
+
     @Override
     public void writeNull()
         throws IOException
@@ -351,24 +527,31 @@ public class IonWriterSystemText
     {
         startValue();
 
-        String nullimage = null;
+        String nullimage;
 
-        switch (type) {
-        case NULL:      nullimage = "null";           break;
-        case BOOL:      nullimage = "null.bool";      break;
-        case INT:       nullimage = "null.int";       break;
-        case FLOAT:     nullimage = "null.float";     break;
-        case DECIMAL:   nullimage = "null.decimal";   break;
-        case TIMESTAMP: nullimage = "null.timestamp"; break;
-        case SYMBOL:    nullimage = "null.symbol";    break;
-        case STRING:    nullimage = "null.string";    break;
-        case BLOB:      nullimage = "null.blob";      break;
-        case CLOB:      nullimage = "null.clob";      break;
-        case SEXP:      nullimage = "null.sexp";      break;
-        case LIST:      nullimage = "null.list";      break;
-        case STRUCT:    nullimage = "null.struct";    break;
+        if (_options._untyped_nulls)
+        {
+            nullimage = "null";
+        }
+        else
+        {
+            switch (type) {
+                case NULL:      nullimage = "null";           break;
+                case BOOL:      nullimage = "null.bool";      break;
+                case INT:       nullimage = "null.int";       break;
+                case FLOAT:     nullimage = "null.float";     break;
+                case DECIMAL:   nullimage = "null.decimal";   break;
+                case TIMESTAMP: nullimage = "null.timestamp"; break;
+                case SYMBOL:    nullimage = "null.symbol";    break;
+                case STRING:    nullimage = "null.string";    break;
+                case BLOB:      nullimage = "null.blob";      break;
+                case CLOB:      nullimage = "null.clob";      break;
+                case SEXP:      nullimage = "null.sexp";      break;
+                case LIST:      nullimage = "null.list";      break;
+                case STRUCT:    nullimage = "null.struct";    break;
 
-        default: throw new IllegalStateException("unexpected type " + type);
+                default: throw new IllegalStateException("unexpected type " + type);
+            }
         }
 
         _output.append(nullimage);
@@ -385,27 +568,30 @@ public class IonWriterSystemText
         throws IOException
     {
         startValue();
-        _output.append(value+"");
+        _output.append(Integer.toString(value));
         closeValue();
     }
+
     public void writeInt(long value)
         throws IOException
     {
         startValue();
-        _output.append(value+"");
+        _output.append(Long.toString(value));
         closeValue();
     }
+
     public void writeInt(BigInteger value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.INT);
+            return;
         }
-        else {
-            startValue();
-            _output.append(value.toString());
-            closeValue();
-        }
+
+        startValue();
+        _output.append(value.toString());
+        closeValue();
     }
+
     public void writeFloat(double value)
         throws IOException
     {
@@ -451,96 +637,134 @@ public class IonWriterSystemText
     {
         if (value == null) {
             writeNull(IonType.DECIMAL);
+            return;
         }
-        else {
-            startValue();
-            BigDecimal decimal = value;
-            BigInteger unscaled = decimal.unscaledValue();
 
-            int signum = decimal.signum();
-            if (signum < 0)
+        startValue();
+        BigDecimal decimal = value;
+        BigInteger unscaled = decimal.unscaledValue();
+
+        int signum = decimal.signum();
+        if (signum < 0)
+        {
+            _output.append('-');
+            unscaled = unscaled.negate();
+        }
+        else if (decimal instanceof Decimal
+             && ((Decimal)decimal).isNegativeZero())
+        {
+            // for the various forms of negative zero we have to
+            // write the sign ourselves, since neither BigInteger
+            // nor BigDecimal recognize negative zero, but Ion does.
+            _output.append('-');
+        }
+
+        final String unscaledText = unscaled.toString();
+        final int significantDigits = unscaledText.length();
+
+        final int scale = decimal.scale();
+        final int exponent = -scale;
+
+        if (_options._decimal_as_float)
+        {
+            _output.append(unscaledText);
+            _output.append('e');
+            _output.append(Integer.toString(exponent));
+        }
+        else if (exponent == 0)
+        {
+            _output.append(unscaledText);
+            _output.append('.');
+        }
+        else if (0 < scale)
+        {
+            int wholeDigits;
+            int remainingScale;
+            if (significantDigits > scale)
             {
-                _output.append('-');
-                unscaled = unscaled.negate();
+                wholeDigits = significantDigits - scale;
+                remainingScale = 0;
             }
-            else if (decimal instanceof Decimal
-                 && ((Decimal)decimal).isNegativeZero())
+            else
             {
-                // for the various forms of negative zero we have to
-                // write the sign ourselves, since neither BigInteger
-                // nor BigDecimal recognize negative zero, but Ion does.
-                _output.append('-');
+                wholeDigits = 1;
+                remainingScale = scale - significantDigits + 1;
             }
 
-            final String unscaledText = unscaled.toString();
-            final int significantDigits = unscaledText.length();
-
-            final int scale = decimal.scale();
-            final int exponent = -scale;
-
-            if (exponent == 0)
+            _output.append(unscaledText, 0, wholeDigits);
+            if (wholeDigits < significantDigits)
             {
-                _output.append(unscaledText);
                 _output.append('.');
+                _output.append(unscaledText, wholeDigits,
+                             significantDigits);
             }
-            else if (0 < scale)
-            {
-                int wholeDigits;
-                int remainingScale;
-                if (significantDigits > scale)
-                {
-                    wholeDigits = significantDigits - scale;
-                    remainingScale = 0;
-                }
-                else
-                {
-                    wholeDigits = 1;
-                    remainingScale = scale - significantDigits + 1;
-                }
 
-                _output.append(unscaledText, 0, wholeDigits);
-                if (wholeDigits < significantDigits)
-                {
-                    _output.append('.');
-                    _output.append(unscaledText, wholeDigits,
-                                 significantDigits);
-                }
-
-                if (remainingScale != 0)
-                {
-                    _output.append("d-");
-                    _output.append(Integer.toString(remainingScale));
-                }
-            }
-            else // (exponent > 0)
+            if (remainingScale != 0)
             {
-                // We cannot move the decimal point to the right, adding
-                // rightmost zeros, because that would alter the precision.
-                _output.append(unscaledText);
-                _output.append('d');
-                _output.append(Integer.toString(exponent));
+                _output.append("d-");
+                _output.append(Integer.toString(remainingScale));
             }
-            closeValue();
         }
+        else // (exponent > 0)
+        {
+            // We cannot move the decimal point to the right, adding
+            // rightmost zeros, because that would alter the precision.
+            _output.append(unscaledText);
+            _output.append('d');
+            _output.append(Integer.toString(exponent));
+        }
+        closeValue();
     }
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.TIMESTAMP);
+            return;
         }
-        else {
-            startValue();
+
+        startValue();
+
+        if (_options._timestamp_as_millis)
+        {
+            long millis = value.getMillis();
+            _output.append(Long.toString(millis));
+        }
+        else if (_options._timestamp_as_string)
+        {
+            // Timestamp is ASCII-safe so this is easy
+            _output.append('"');
             value.print(_output);
-            closeValue();
+            _output.append('"');
         }
+        else
+        {
+            value.print(_output);
+        }
+
+        closeValue();
     }
 
     public void writeString(String value)
         throws IOException
     {
         startValue();
-        IonTextUtils.printString(_output, value);
+        if (value != null
+            && containerIsListOrStruct()
+            && _long_string_threshold < value.length())
+        {
+            // TODO This can lead to mixed newlines in the output.
+            // It assumes NL line separators, but _options could use CR+NL
+            IonTextUtils.printLongString(_output, value);
+        }
+        else if (_options._string_as_json)
+        {
+            IonTextUtils.printJsonString(_output, value);
+        }
+        else
+        {
+            IonTextUtils.printString(_output, value);
+        }
         closeValue();
     }
 
@@ -562,27 +786,38 @@ public class IonWriterSystemText
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
 
+    @Deprecated
     public void writeSymbol(int symbolId)
         throws IOException
     {
-        if (_symbol_table == null) {
-            throw new IllegalStateException("a symbol table is required if you use symbol ids");
+        // TODO ION-165 this should handle IVMs
+        SymbolTable symtab = getSymbolTable();
+        String text = symtab.findKnownSymbol(symbolId);
+        if (text != null)
+        {
+            writeSymbol(text);
         }
-        writeSymbol(_symbol_table.findSymbol(symbolId));
+        else
+        {
+            startValue();
+            writeSidLiteral(symbolId);
+            closeValue();
+        }
     }
 
     public void writeSymbol(String value)
         throws IOException
     {
-        startValue();
-        IonTextUtils.printSymbol(_output, value);
-        closeValue();
-    }
+        // TODO ION-165 this should handle IVMs
+        if (value == null)
+        {
+            writeNull(IonType.SYMBOL);
+            return;
+        }
 
-    @Override
-    public void writeIonVersionMarker() throws IOException
-    {
-        writeSymbol(ION_1_0);
+        startValue();
+        writeSymbolToken(value);
+        closeValue();
     }
 
     public void writeBlob(byte[] value, int start, int len)
@@ -596,24 +831,40 @@ public class IonWriterSystemText
 
         TextStream ts = new TextStream(new ByteArrayInputStream(value, start, len));
 
-        startValue();
-        _output.append("{{");
         // base64 encoding is 6 bits per char so
         // it evens out at 3 bytes in 4 characters
         char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
         CharBuffer cb = CharBuffer.wrap(buf);
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+
+        startValue();
+
+        if (_options._blob_as_string) {
+            _output.append('"');
         }
+        else {
+            _output.append("{{");
+            if (_options.isPrettyPrintOn()) {
+                _output.append(' ');
+            }
+        }
+
         for (;;) {
+            // TODO is it better to fill up the CharBuffer before outputting?
             int clen = ts.read(buf, 0, buf.length);
             if (clen < 1) break;
             _output.append(cb, 0, clen);
         }
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+
+
+        if (_options._blob_as_string) {
+            _output.append('"');
         }
-        _output.append("}}");
+        else {
+            if (_options.isPrettyPrintOn()) {
+                _output.append(' ');
+            }
+            _output.append("}}");
+        }
         closeValue();
     }
 
@@ -627,31 +878,52 @@ public class IonWriterSystemText
         }
 
         startValue();
-        _output.append("{{");
 
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+        if (! _options._clob_as_string) {
+            _output.append("{{");
+
+            if (_options.isPrettyPrintOn()) {
+                _output.append(" ");
+            }
         }
-        _output.append('"');
 
-        boolean just_ascii = _options.isAsciiOutputOn();
+        final boolean json =
+            _options._clob_as_string && _options._string_as_json;
+
+        boolean longString = (_long_string_threshold < value.length);
+
+        if (longString) {
+            _output.append("'''");
+        } else {
+            _output.append('"');
+        }
+
         int end = start + len;
         for (int ii=start; ii<end; ii++) {
             char c = (char)(value[ii] & 0xff);
             if (c < 32 ) {
-                _output.append(lowEscapeSequence(c));
+                if (json) {
+                    IonTextUtils.printJsonCodePoint(_output, c);
+                }
+                else if (c == '\n' && longString) {
+                    // TODO account for NL versus CR+NL streams
+                    _output.append(c);
+                } else {
+                    _output.append(lowEscapeSequence(c));
+                }
             }
             else if (c > 127) {
-                if (just_ascii) {
-                    // ascii uses backslash-X hex encoding
-                    _output.append("\\x");
-                    assert (c > 0x7f && c <= 0xff); // this should always be 2 hex chars
-                    _output.append(Integer.toHexString(c));
+                if (json) {
+                    // JSON uses u00HH
+                    IonTextUtils.printJsonCodePoint(_output, c);
                 }
-                else {
-                    // non-ascii (utf8) uses a 2 byte utf8 sequence (it's always 2 bytes)
-                    _output.append((char)(IonUTF8.getByte1Of2(c) & 0xff));
-                    _output.append((char)(IonUTF8.getByte2Of2(c) & 0xff));
+                else
+                {
+                    // Ion uses \xHH
+                    _output.append("\\x");
+                    // this should always be 2 hex chars
+                    assert (c > 0x7f && c <= 0xff);
+                    _output.append(Integer.toHexString(c));
                 }
             }
             else {
@@ -666,11 +938,20 @@ public class IonWriterSystemText
                 _output.append(c);
             }
         }
-        _output.append('"');
-        if (_options.isPrettyPrintOn()) {
-            _output.append(" ");
+
+        if (longString) {
+            _output.append("'''");
+        } else {
+            _output.append('"');
         }
-        _output.append("}}");
+
+        if (! _options._clob_as_string) {
+            if (_options.isPrettyPrintOn()) {
+                _output.append(" ");
+            }
+            _output.append("}}");
+        }
+
         closeValue();
     }
 
@@ -688,6 +969,13 @@ public class IonWriterSystemText
                 ((Flushable)_output).flush();
             }
         }
+    }
+
+    @Override
+    public void finish() throws IOException
+    {
+        super.finish();
+        _finished_and_requiring_version_marker = true;
     }
 
     public void close() throws IOException

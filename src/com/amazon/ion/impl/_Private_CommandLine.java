@@ -1,15 +1,14 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.system.IonSystemBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.JarInfo;
 import java.io.IOException;
 
-public class IonBuild
+public final class _Private_CommandLine
 {
     static final int argid_VERSION = 2;
     static final int argid_HELP    = 3;
@@ -103,18 +102,12 @@ public class IonBuild
 
     private static void doPrintVersion() throws IOException
     {
-        IonSystem sys = IonSystemBuilder.standard().build();
-
-        IonWriterUserText.TextOptions options = new IonWriterUserText.TextOptions(
-                 true  // boolean prettyPrint
-                ,true  // boolean printAscii
-                ,true  // boolean filterOutSymbolTables
-                ,false // boolean suppressIonVersionMarker
-        );
+        IonTextWriterBuilder b = IonTextWriterBuilder.pretty();
+        b.setCharset(IonTextWriterBuilder.ASCII);
 
         JarInfo info = new JarInfo();
 
-        IonWriter w = IonWriterFactory.makeWriter(sys, (Appendable)System.out, options);
+        IonWriter w = b.build((Appendable)System.out);
         w.stepIn(IonType.STRUCT);
         {
             w.setFieldName("release_label");

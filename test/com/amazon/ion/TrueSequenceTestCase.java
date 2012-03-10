@@ -1,8 +1,8 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonValuePrivate;
+import com.amazon.ion.impl._Private_IonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -188,7 +188,7 @@ public abstract class TrueSequenceTestCase
         assertSame(origElement, removed);
         assertEquals(null, removed.getContainer());
 
-        assertEquals(index, ((IonValuePrivate)newElement).getElementId());
+        assertEquals(index, ((_Private_IonValue)newElement).getElementId());
 
         assertEquals(expectedElements, s);
     }

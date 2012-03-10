@@ -1,7 +1,8 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_BRACE;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
@@ -10,9 +11,11 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.ValueVariant;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -35,7 +38,7 @@ import java.util.Iterator;
  *
  * This reader scan skip values and in doing so it does not
  * materialize the contents and it does not validate the contents.
- * TODO: We may want to make validation on skip optional.
+ * TODO ION-161 We may want to make validation on skip optional.
  *
  * This manages the value buffer (_v ValueVariant) and the lob
  * content (_lob_*) which is cached in some cases.  It's main
@@ -54,7 +57,7 @@ import java.util.Iterator;
  * performance gain (<sigh>).  Logically these are the same.
  *
  */
-public abstract class IonReaderTextRawX
+abstract class IonReaderTextRawX
     implements IonTextReader
 {
     public abstract BigInteger bigIntegerValue();
@@ -152,7 +155,7 @@ public abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_TIMESTAMP]          = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE]= ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE]= ACTION_LOAD_SCALAR;
-        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_BASIC]       = ACTION_LOAD_ANNOTATION;
+        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]  = ACTION_LOAD_ANNOTATION;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]      = ACTION_LOAD_ANNOTATION;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_PAREN]         = ACTION_START_SEXP;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_BRACE]         = ACTION_START_STRUCT;
@@ -181,16 +184,16 @@ public abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_SQUARE]        = ACTION_FINISH_CONTAINER;
 
         actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_EOF]                   = 0;
-        actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_SYMBOL_BASIC]          = ACTION_LOAD_SCALAR;
+        actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]     = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_VALUE_CONTENT][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]         = ACTION_LOAD_SCALAR;
 
         actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_EOF]              = 0;
-        actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_BASIC]     = ACTION_LOAD_SCALAR;
+        actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]= ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]    = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_VALUE_CONTENT_SEXP][IonTokenConstsX.TOKEN_SYMBOL_OPERATOR]  = ACTION_LOAD_SCALAR;
 
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_EOF]                      = 0;
-        actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_SYMBOL_BASIC]             = ACTION_LOAD_FIELD_NAME;
+        actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]        = ACTION_LOAD_FIELD_NAME;
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]            = ACTION_LOAD_FIELD_NAME;
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE]      = ACTION_LOAD_FIELD_NAME;
         actions[STATE_BEFORE_FIELD_NAME][IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE]      = ACTION_LOAD_FIELD_NAME;
@@ -257,8 +260,9 @@ public abstract class IonReaderTextRawX
     int                 _value_keyword;
     IonType             _null_type;
     String              _field_name;
+    int                 _field_name_sid = UNKNOWN_SYMBOL_ID;
     int                 _annotation_count;
-    String[]            _annotations;
+    SymbolToken[]    _annotations;
 
     boolean             _current_value_save_point_loaded;
     SavePoint           _current_value_save_point;
@@ -299,7 +303,7 @@ public abstract class IonReaderTextRawX
 
     protected final void init_once() {
         _current_value_buffer = new StringBuilder();
-        _annotations = new String[DEFAULT_ANNOTATION_COUNT];
+        _annotations = new SymbolToken[DEFAULT_ANNOTATION_COUNT];
     }
 
     protected final void init(UnifiedInputStreamX iis, IonType parent)
@@ -339,6 +343,7 @@ public abstract class IonReaderTextRawX
         _value_keyword = 0;
         _null_type = null;
         _field_name = null;
+        _field_name_sid = UNKNOWN_SYMBOL_ID;
         _annotation_count = 0;
         _current_value_save_point_loaded = false;
         _current_value_buffer_loaded = false;
@@ -390,7 +395,7 @@ public abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = _null_type;
         _v.setValueToNull(null_type);
-        _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.null_value);
+        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.null_value);
     }
 
     private final void current_value_is_bool(boolean value)
@@ -398,30 +403,34 @@ public abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = IonType.BOOL;
         _v.setValue(value);
-        _v.setAuthoritativeType(IonScalarConversionsX.AS_TYPE.boolean_value);
+        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.boolean_value);
     }
 
-    private final void set_fieldname(String fieldname) {
-        if (fieldname == null || fieldname.length() < 1) {
+    private final void set_fieldname(SymbolToken sym) {
+        String text = sym.getText();
+        int sid = sym.getSid();
+        if (text != null && text.length() < 1) {
             parse_error("empty strings are not valid field names");
         }
-        clear_fieldname();
-        _field_name = fieldname;
+        _field_name = text;
+        _field_name_sid = sid;
     }
 
     private final void clear_fieldname() {
         _field_name = null;
+        _field_name_sid = UNKNOWN_SYMBOL_ID;
     }
 
-    private final void append_annotation(String name) {
+    private final void append_annotation(SymbolToken sym) {
+        // empty text is checked by caller
         int oldlen = _annotations.length;
         if (_annotation_count >= oldlen) {
             int newlen = oldlen * 2;
-            String[] temp = new String[newlen];
+            SymbolToken[] temp = new SymbolToken[newlen];
             System.arraycopy(_annotations, 0, temp, 0, oldlen);
             _annotations = temp;
         }
-        _annotations[_annotation_count++] = name;
+        _annotations[_annotation_count++] = sym;
     }
 
     private final void clear_annotation_list() {
@@ -598,7 +607,7 @@ public abstract class IonReaderTextRawX
                            + _scanner.input_position();
             throw new IonException(message);
         }
-        if (_nesting_parent != null) {
+        if (_nesting_parent != null && getDepth() == 0) {
             state_after_scalar = STATE_EOF;
         }
         return state_after_scalar;
@@ -695,6 +704,9 @@ public abstract class IonReaderTextRawX
                         + _scanner.input_position();
                     throw new IonException(message);
             }
+            if (_nesting_parent != null && getDepth() == 0) {
+                new_state = STATE_EOF;
+            }
         }
         return new_state;
     }
@@ -737,6 +749,47 @@ public abstract class IonReaderTextRawX
         }
         return new_state;
     }
+
+
+    private final SymbolToken parseSymbolToken(String context,
+                                                  StringBuilder sb,
+                                                  int t)
+        throws IOException
+    {
+        String text;
+        int sid;
+
+        if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
+            int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
+            switch (kw) {
+                case IonTokenConstsX.KEYWORD_FALSE:
+                case IonTokenConstsX.KEYWORD_TRUE:
+                case IonTokenConstsX.KEYWORD_NULL:
+                case IonTokenConstsX.KEYWORD_NAN:
+                    // keywords are not ok unless they're quoted
+                    String reason =
+                    "Cannot use unquoted keyword " +
+                        sb.toString() + " as " + context;
+                    parse_error(reason);
+                case IonTokenConstsX.KEYWORD_sid:
+                    text = null;
+                    sid = IonTokenConstsX.decodeSid(sb);
+                    break;
+                default:
+                    text = sb.toString();
+                    sid = UNKNOWN_SYMBOL_ID;
+                    break;
+            }
+        }
+        else {
+            text = sb.toString();
+            sid = UNKNOWN_SYMBOL_ID;
+        }
+
+        return new SymbolTokenImpl(text, sid);
+    }
+
+
     protected final void parse_to_next_value() throws IOException
     {
         int t;
@@ -770,6 +823,7 @@ public abstract class IonReaderTextRawX
             switch (action) {
             case ACTION_NOT_DEFINED:
                 {
+                    // TODO why would we get here?
                     boolean span_eof = false;
 
                     if (_nesting_parent != null) {
@@ -810,6 +864,7 @@ public abstract class IonReaderTextRawX
                 _eof = true;
                 return;
             case ACTION_LOAD_FIELD_NAME:
+            {
                 if (!is_in_struct_internal()) {
                     throw new IllegalStateException("field names have to be in structs");
                 }
@@ -818,28 +873,10 @@ public abstract class IonReaderTextRawX
 
                 sb = token_contents_load(t);
 
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_BASIC) {
-                    // for a basic (unquoted) token we can use an simple loader
-                    // and we'll have to check to make sure the symbol isn't
-                    // one of the keywords
-                    int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
-                    switch (kw) {
-                    case IonTokenConstsX.KEYWORD_FALSE:
-                    case IonTokenConstsX.KEYWORD_TRUE:
-                    case IonTokenConstsX.KEYWORD_NULL:
-                    case IonTokenConstsX.KEYWORD_NAN:
-                        // keywords are not OK unless they're quoted
-                        String reason = "Cannot use unquoted keyword "
-                                        + sb.toString()
-                                        + " as a field name";
-                        parse_error(reason);
-                    default:
-                        break;
-                    }
-                }
+                SymbolToken sym = parseSymbolToken("a field name", sb, t);
+                set_fieldname(sym);
+                clear_current_value_buffer();
 
-                set_fieldname(sb.toString());
-                clear_current_value_buffer();  // token_contents_consumed();
                 t = _scanner.nextToken();
                 if (t != IonTokenConstsX.TOKEN_COLON) {
                     String message = "field name must be followed by a colon, not a "
@@ -850,7 +887,9 @@ public abstract class IonReaderTextRawX
                 set_state(STATE_BEFORE_ANNOTATION_CONTAINED);
                 t = _scanner.nextToken();
                 break;
+            }
             case ACTION_LOAD_ANNOTATION:
+            {
                 sb = token_contents_load(t);
                 if (sb.length() < 1) {
                     // this is the case for an empty symbol
@@ -866,30 +905,21 @@ public abstract class IonReaderTextRawX
                     set_state(temp_state);
                     break;
                 }
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_BASIC) {
-                    int kw = IonTokenConstsX.keyword(sb, 0, sb.length());
-                    switch (kw) {
-                    case IonTokenConstsX.KEYWORD_FALSE:
-                    case IonTokenConstsX.KEYWORD_TRUE:
-                    case IonTokenConstsX.KEYWORD_NULL:
-                    case IonTokenConstsX.KEYWORD_NAN:
-                        // keywords are not ok unless they're quoted
-                        String reason =
-                            "Cannot use unquoted keyword " +
-                            sb.toString() + " as an annotation";
-                        parse_error(reason);
-                    default:
-                        break;
-                    }
-                }
-                append_annotation(sb.toString());
+
+                // We have an annotation!
+                SymbolToken sym = parseSymbolToken("an annotation", sb, t);
+                append_annotation(sym);
                 clear_current_value_buffer();
+
+                // Consumed the annotation, move on.
                 // note: that peekDoubleColon() consumed the two colons
                 // so nextToken won't see them
                 t = _scanner.nextToken();
                 switch(t) {
-                case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+                case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
                 case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
+                    // This may be another annotation, so stay in this state
+                    // and come around the horn again to check it out.
                     break;
                 default:
                     // we leave the error handling to the transition
@@ -898,6 +928,7 @@ public abstract class IonReaderTextRawX
                     break;
                 }
                 break;
+            }
             case ACTION_START_STRUCT:
                 _value_type = IonType.STRUCT;
                 temp_state = STATE_BEFORE_FIELD_NAME;
@@ -933,7 +964,7 @@ public abstract class IonReaderTextRawX
                 }
                 return;
             case ACTION_LOAD_SCALAR:
-                if (t == IonTokenConstsX.TOKEN_SYMBOL_BASIC) {
+                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     sb = token_contents_load(t);
                     int _value_keyword = IonTokenConstsX.keyword(sb, 0, sb.length());
                     switch (_value_keyword) {
@@ -971,29 +1002,20 @@ public abstract class IonReaderTextRawX
                         _value_type = IonType.BOOL;
                         current_value_is_bool(false);
                         break;
-                    case IonTokenConstsX.KEYWORD_PLUS_INF:
-                        // TODO: this case probably can't be encountered since it is now
-                        //       recognized as a special case in tokens starting with '+'
-                        _value_type = IonType.FLOAT;
-                        clear_current_value_buffer();
-                        _v.setValue(Double.POSITIVE_INFINITY);
-                        _v.setAuthoritativeType(AS_TYPE.double_value);
-                        break;
-                    case IonTokenConstsX.KEYWORD_MINUS_INF:
-                        // TODO: it's may be that this case can't be encountered since it is now
-                        //       recognized as a special case in tokens starting with '-'
-                        _value_type = IonType.FLOAT;
-                        clear_current_value_buffer();
-                        _v.setValue(Double.NEGATIVE_INFINITY);
-                        _v.setAuthoritativeType(AS_TYPE.double_value);
-                        break;
                     case IonTokenConstsX.KEYWORD_NAN:
                         _value_type = IonType.FLOAT;
                         clear_current_value_buffer();
                         _v.setValue(Double.NaN);
                         _v.setAuthoritativeType(AS_TYPE.double_value);
                         break;
+                    case IonTokenConstsX.KEYWORD_sid:
+                    {
+                        int sid = IonTokenConstsX.decodeSid(sb);
+                        _v.setValue(sid);
+                        _v.setAuthoritativeType(AS_TYPE.int_value);
+                    }
                     default:
+                        // We don't care about any other 'keywords'
                         _value_type = IonType.SYMBOL;
                         break;
                     }
@@ -1082,8 +1104,8 @@ public abstract class IonReaderTextRawX
             default:
                 _scanner.load_raw_characters(sb);
                 break;
-            case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
-                _scanner.load_symbol(sb);
+            case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
+                _scanner.load_symbol_identifier(sb);
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
@@ -1120,8 +1142,8 @@ public abstract class IonReaderTextRawX
             case IonTokenConstsX.TOKEN_TIMESTAMP:
                 _value_type = _scanner.load_number(sb);
                 break;
-            case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
-                _scanner.load_symbol(sb);
+            case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
+                _scanner.load_symbol_identifier(sb);
                 _value_type = IonType.SYMBOL;
                 break;
             case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
@@ -1275,34 +1297,56 @@ if (depth == debugging_depth) {
         }
         return depth;
     }
+
     public String getFieldName()
     {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return null;
+
         String name = _field_name;
-        if (name != null) {
-            if (getDepth() == 0 && is_in_struct_internal()) {
-                name = null;
-            }
+        if (name == null && _field_name_sid > 0)
+        {
+            throw new UnknownSymbolException(_field_name_sid);
         }
         return name;
     }
 
+    final String getRawFieldName()
+    {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return null;
+        return _field_name;
+    }
+
+    public int getFieldId()
+    {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return UNKNOWN_SYMBOL_ID;
+        return _field_name_sid;
+    }
+
+    public SymbolToken getFieldNameSymbol()
+    {
+        // For hoisting
+        if (getDepth() == 0 && is_in_struct_internal()) return null;
+
+        String name = _field_name;
+        int sid = getFieldId();
+        if (name == null && sid == UNKNOWN_SYMBOL_ID) return null;
+        return new SymbolTokenImpl(name, sid);
+    }
+
     public Iterator<String> iterateTypeAnnotations()
     {
-        return IonImplUtils.stringIterator(_annotations, _annotation_count);
+        return _Private_Utils.stringIterator(getTypeAnnotations());
     }
 
     public String[] getTypeAnnotations()
     {
-        String[] annotations;
-        if (_annotation_count > 0) {
-            annotations = new String[_annotation_count];
-            System.arraycopy(_annotations, 0, annotations, 0, _annotation_count);
-        }
-        else {
-            annotations = IonImplUtils.EMPTY_STRING_ARRAY;
-        }
-        return annotations;
+        return _Private_Utils.toStrings(_annotations, _annotation_count);
     }
+
+
     public void stepIn()
     {
         if (_value_type == null || _eof) {

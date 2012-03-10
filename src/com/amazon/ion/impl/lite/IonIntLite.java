@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -13,7 +13,7 @@ import java.math.BigInteger;
 /**
  *
  */
-public class IonIntLite
+final class IonIntLite
     extends IonValueLite
     implements IonInt
 {
@@ -49,7 +49,7 @@ public class IonIntLite
     @Override
     public IonIntLite clone()
     {
-        IonIntLite clone = new IonIntLite(this._context.getSystemLite(), false);
+        IonIntLite clone = new IonIntLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         if (this._big_int_value != null)

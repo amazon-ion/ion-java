@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
@@ -160,6 +160,10 @@ public class IonSystemTest
         s.add("field1", v2);
     }
 
+
+    //========================================================================
+    // newLoader(...)
+
     @Test
     public void testNewLoaderDefaultCatalog()
     {
@@ -175,6 +179,9 @@ public class IonSystemTest
         assertSame(catalog(), loader.getCatalog());
     }
 
+
+    //========================================================================
+    // newDatagram(...)
 
     @Test
     public void testNewDatagramImporting()
@@ -200,13 +207,22 @@ public class IonSystemTest
 
         IonDatagram dg2 = loader().load(bytes);
         IonSymbol s1 = (IonSymbol) dg2.get(0);
-        assertEquals(systemMaxId() + 1, s1.getSymbolId());
+        checkUnknownSymbol(systemMaxId() + 1, s1);
 
         SymbolTable symbolTable = s1.getSymbolTable();
         assertEquals("foobar", symbolTable.getImportedTables()[0].getName());
+        checkSymbol("l1", 11, symbolTable);
+    }
 
-        Iterator<String> declared = symbolTable.iterateDeclaredSymbolNames();
-        assertEquals("local symbol", "l1", declared.next());
-        assertFalse(declared.hasNext());
+
+    //========================================================================
+    // newValue(IonReader)
+
+    @Test(expected = IonException.class)
+    public void testNewValueFailsWhenNoCurrentValue()
+    {
+        IonReader r = system().newReader("hi");
+        // we don't call next()!
+        system().newValue(r);
     }
 }

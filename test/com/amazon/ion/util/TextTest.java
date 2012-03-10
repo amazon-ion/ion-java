@@ -16,8 +16,14 @@ public class TextTest
     {
         unquotedAnywhere("hello");
         unquotedAnywhere("$hello");
-        unquotedAnywhere("$123");
         unquotedAnywhere("$$123");
+        unquotedAnywhere("$1234d678");
+        unquotedAnywhere("$");
+
+        quotedEverywhere("$0");
+        quotedEverywhere("$00000");
+        quotedEverywhere("$123");
+        quotedEverywhere("$1234567890");
 
         quotedEverywhere("hi there");
         quotedEverywhere("'hi there'");

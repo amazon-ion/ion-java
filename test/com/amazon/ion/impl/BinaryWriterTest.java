@@ -17,7 +17,6 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.junit.IonAssert;
 import java.io.OutputStream;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -30,6 +29,7 @@ public class BinaryWriterTest
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
+        myOutputForm = OutputForm.BINARY;
         return system().newBinaryWriter(out, imports);
     }
 
@@ -156,6 +156,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
+        iw.writeSymbol("force a local symtab"); // TODO ION-165
         PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
         iw.writeSymbol("s");
     }
@@ -165,6 +166,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
+        iw.writeSymbol("force a local symtab"); // TODO ION-165
         PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
         iw.addTypeAnnotation("a");
         iw.writeNull();
@@ -175,6 +177,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
+        iw.writeSymbol("force a local symtab"); // TODO ION-165
         PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("f");
@@ -187,6 +190,7 @@ public class BinaryWriterTest
     throws Exception
     {
         iw = makeWriter();
+        iw.writeSymbol("force a local symtab"); // TODO ION-165
         SymbolTable symtab = iw.getSymbolTable();
         symtab.addSymbol("fred_1");
         symtab.addSymbol("fred_2");
@@ -209,7 +213,7 @@ public class BinaryWriterTest
         assertEquals(0, bytes.length);
     }
 
-    @Test @Ignore // TODO ION-218  and see below for another case
+    @Test
     public void testMinimalSymtab()
     throws Exception
     {
@@ -225,25 +229,24 @@ public class BinaryWriterTest
     public void testBinaryWriterReuseWithNoSymbols()
         throws Exception
     {
-        testBinaryWriterReuseWithSymbols(null, false);
+        testBinaryWriterReuseWithSymbols(null);
     }
 
     @Test
     public void testBinaryWriterReuseWithSystemSymbols()
         throws Exception
     {
-        testBinaryWriterReuseWithSymbols("name", false);
+        testBinaryWriterReuseWithSymbols("name");
     }
 
     @Test
     public void testBinaryWriterReuseWithUserSymbols()
         throws Exception
     {
-        testBinaryWriterReuseWithSymbols("s", true);
+        testBinaryWriterReuseWithSymbols("s");
     }
 
-    public void testBinaryWriterReuseWithSymbols(String symbol,
-                                                 boolean fixedIon218)
+    public void testBinaryWriterReuseWithSymbols(String symbol)
         throws Exception
     {
         iw = makeWriter();
@@ -261,10 +264,7 @@ public class BinaryWriterTest
         IonValue dg2 = loader().load(bytes2);
 
         IonAssert.assertIonEquals(dg1, dg2);
-        // FIXME ION-218 this fails because bytes1 has an empty local symtab.
-        if (fixedIon218) {
-            Assert.assertArrayEquals(bytes1, bytes2);
-        }
+        Assert.assertArrayEquals(bytes1, bytes2);
 
         iw.writeSymbol(symbol);
         iw.finish();

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -17,6 +17,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonNull;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
@@ -25,8 +26,14 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl._Private_IonTextWriterBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -398,7 +405,55 @@ public class Printer
             options = myOptions.clone();
         }
 
-        _print(value, makeVisitor(options, out));
+        if (true)
+        {
+            _print(value, makeVisitor(options, out));
+        }
+        else
+        {
+            // Bridge to the configurable test writer. This is here for
+            // testing purposes. It *almost* works except for some wonkyness
+            // at the IVM/symtab level where the two paths behave differently.
+
+            boolean dg = value instanceof IonDatagram;
+
+            _Private_IonTextWriterBuilder o =
+                _Private_IonTextWriterBuilder.standard();
+            o.setCharset(IonTextWriterBuilder.ASCII);
+            if (dg)
+            {
+                if (options.skipSystemValues)
+                {
+                    o.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+                }
+                else if (options.simplifySystemValues) {
+                    // TODO minimize distant IVMs
+                    // TODO discard LST open content
+                    // TODO shrink LSTs
+                }
+            }
+//          o._filter_symbol_tables = options.skipSystemValues;
+
+            o._blob_as_string      = options.blobAsString;
+            o._clob_as_string      = options.clobAsString;
+            o._decimal_as_float    = options.decimalAsFloat;
+            // TODO datagram as list
+            o._sexp_as_list        = options.sexpAsList;
+            o._skip_annotations    = options.skipAnnotations;
+            o._string_as_json      = options.stringAsJson;
+            o._symbol_as_string    = options.symbolAsString;
+            o._timestamp_as_millis = options.timestampAsMillis;
+            o._timestamp_as_string = options.timestampAsString;
+            o._untyped_nulls       = options.untypedNulls;
+
+            IonWriter writer = o.build(out);
+            // TODO doesn't work for datagram since it skips system values
+            // value.writeTo(writer);
+            _Private_IonSystem system = (_Private_IonSystem) value.getSystem();
+            IonReader reader = system.newSystemReader(value);
+            writer.writeValues(reader);
+            writer.finish();
+        }
     }
 
     /**
@@ -513,11 +568,18 @@ public class Printer
         {
             if (! myOptions.skipAnnotations)
             {
-                String[] anns = value.getTypeAnnotations();
+                SymbolToken[] anns = value.getTypeAnnotationSymbols();
                 if (anns != null)
                 {
-                    for (String ann : anns) {
-                        IonTextUtils.printSymbol(myOut, ann);
+                    for (SymbolToken ann : anns) {
+                        String text = ann.getText();
+                        if (text == null) {
+                            myOut.append('$');
+                            myOut.append(Integer.toString(ann.getSid()));
+                        }
+                        else {
+                            IonTextUtils.printSymbol(myOut, text);
+                        }
                         myOut.append("::");
                     }
                 }
@@ -562,6 +624,32 @@ public class Printer
             myOut.append(close);
         }
 
+        public void writeSymbolToken(SymbolToken sym) throws IOException
+        {
+            String text = sym.getText();
+            if (text != null)
+            {
+                writeSymbol(text);
+            }
+            else
+            {
+                int sid = sym.getSid();
+                if (sid < 1)
+                {
+                    throw new IllegalArgumentException("Bad SID " + sid);
+                }
+
+                text = "$" + sym.getSid();
+                if (myOptions.symbolAsString)
+                {
+                    writeString(text);
+                }
+                else
+                {
+                    myOut.append(text);  // SID literal is never quoted
+                }
+            }
+        }
 
         public void writeSymbol(String text) throws IOException
         {
@@ -592,6 +680,9 @@ public class Printer
         }
 
 
+        /**
+         * @param text may be null
+         */
         public void writeString(String text) throws IOException
         {
             if (myOptions.stringAsJson)
@@ -713,7 +804,8 @@ public class Printer
 
             boolean hitOne = false;
 
-            // If we're skipping system values we don't need to simplify them.
+            // If we're skipping system values at the iterator level,
+            // we don't need to bother trying to simplify them.
             final boolean simplify_system_values =
                 myOptions.simplifySystemValues && ! myOptions.skipSystemValues;
 
@@ -726,7 +818,7 @@ public class Printer
                 if (simplify_system_values)
                 {
                     SymbolTable new_symbols = child.getSymbolTable();
-                    child = simplify(child, previous_symbols, new_symbols);
+                    child = simplify(child, previous_symbols);
                     previous_symbols = new_symbols;
                 }
 
@@ -748,17 +840,12 @@ public class Printer
         }
 
         private final IonValue simplify(IonValue child,
-                                        SymbolTable previous_symbols,
-                                        SymbolTable new_symbols)
+                                        SymbolTable previous_symbols)
         {
             IonType t = child.getType();
             switch (t) {
             case STRUCT:
                 if (child.hasTypeAnnotation(ION_SYMBOL_TABLE)) {
-                    // TODO What keeps us from having this struct as first thing
-                    // in the datagram?  It could be manually constructed.
-                    assert(previous_symbols != null && new_symbols != null);
-
                     if (symbol_table_struct_has_imports(child))
                     {
                         return ((IonStruct)child).cloneAndRemove(SYMBOLS);
@@ -1026,7 +1113,8 @@ public class Printer
                     }
                     hitOne = true;
 
-                    writeSymbol(child.getFieldName());
+                    SymbolToken sym = child.getFieldNameSymbol();
+                    writeSymbolToken(sym);
                     myOut.append(':');
                     writeChild(child, true);
                 }
@@ -1040,13 +1128,14 @@ public class Printer
         {
             writeAnnotations(value);
 
-            if (value.isNullValue())
+            SymbolToken is = value.symbolValue();
+            if (is == null)
             {
                 writeNull("symbol");
             }
             else
             {
-                writeSymbol(value.stringValue());
+                writeSymbolToken(is);
             }
         }
 

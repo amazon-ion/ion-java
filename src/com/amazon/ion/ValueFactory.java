@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,7 +9,10 @@ import java.util.Collection;
 /**
  * The factory for all {@link IonValue}s.
  * <p>
- * This interface is not intended to be used as an application extension point.
+ * <b>
+ * This interface changes frequently and is not intended to be used as an
+ * application extension point; do not extend or implement it.
+ * </b>
  */
 public interface ValueFactory
 {
@@ -518,6 +521,20 @@ public interface ValueFactory
      * @throws EmptySymbolException if <code>value</code> is the empty string.
      */
     public IonSymbol newSymbol(String value);
+
+
+    /**
+     * Constructs a new Ion symbol with the given symbol token.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
+     * @param value the text and/or SID of the symbol;
+     * may be <code>null</code> to make <code>null.symbol</code>.
+     *
+     * @since IonJava R15
+     */
+    public IonSymbol newSymbol(SymbolToken value);
 
 
     //-------------------------------------------------------------------------

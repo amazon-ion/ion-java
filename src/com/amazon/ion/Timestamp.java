@@ -1,10 +1,10 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Calendar;
@@ -939,7 +939,7 @@ public final class Timestamp
      */
     public Calendar calendarValue()
     {
-        Calendar cal = new GregorianCalendar(IonImplUtils.UTC);
+        Calendar cal = new GregorianCalendar(_Private_Utils.UTC);
 
         long millis = getMillis();
         Integer offset = _offset;

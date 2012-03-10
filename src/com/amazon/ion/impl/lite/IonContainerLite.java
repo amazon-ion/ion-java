@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,26 +7,22 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonConstants;
-import com.amazon.ion.impl.IonContainerPrivate;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.impl._Private_IonContainer;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-/**listIterator
- *
- */
-public abstract class IonContainerLite
+abstract class IonContainerLite
     extends IonValueLite
-    implements IonContainerPrivate, IonContext
+    implements _Private_IonContainer, IonContext
 {
 
     protected int            _child_count;
@@ -46,19 +42,15 @@ public abstract class IonContainerLite
     @Override
     public abstract IonContainer clone();
 
-    /**
-     * IonContainer methods
-     */
+
     public void clear()
     {
         checkForLock();
 
         if (_isNullValue())
         {
-            _children = null;
-            _child_count = 0;
-            // TO DO: really?  Yes, for back compat.
-            //        makeNull() is the alternative
+            assert _children == null;
+            assert _child_count == 0;
             _isNullValue(false);
         }
         else if (!isEmpty())
@@ -88,7 +80,7 @@ public abstract class IonContainerLite
         throws NullValueException
     {
         validateThisNotNull();
-        IonValueLite value = get_child_lite(index);
+        IonValueLite value = get_child(index);
         assert(value._isAutoCreated() == false);
         return value;
     }
@@ -109,7 +101,7 @@ public abstract class IonContainerLite
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return IonImplUtils.<IonValue>emptyIterator();
+            return _Private_Utils.<IonValue>emptyIterator();
         }
 
         return new SequenceContentIterator(index, isReadOnly());
@@ -142,7 +134,7 @@ public abstract class IonContainerLite
                 throw new IllegalStateException("you can't open an updatable iterator on a read only value");
             }
             if (index < 0 || index > _child_count) {
-                throw new IndexOutOfBoundsException(""+index);
+                throw new IndexOutOfBoundsException(Integer.toString(index));
             }
             __pos = index;
             __readOnly = readOnly;
@@ -333,7 +325,7 @@ public abstract class IonContainerLite
         IonValueLite concrete = (IonValueLite) element;
 
         int pos = concrete._elementid();
-        IonValueLite child = get_child_lite(pos);
+        IonValueLite child = get_child(pos);
         if (child == concrete) // Yes, instance identity.
         {
             // no, this is done in remove_child and will
@@ -411,35 +403,36 @@ public abstract class IonContainerLite
      * we are contained in.
      *
      */
-    public IonContainerLite getParentThroughContext()
+
+    public final IonContainerLite getContextContainer()
     {
         return this;
     }
 
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+    /**
+     * Always throws, since our children already have a container.
+     */
+    public final void setContextContainer(IonContainerLite context,
+                                          IonValueLite child)
     {
-        return _context.getLocalSymbolTable(this);
+        throw new UnsupportedOperationException();
     }
 
-    public SymbolTable getContextSymbolTable()
+
+    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
+    {
+        return _context.ensureLocalSymbolTable(this);
+    }
+
+    public final SymbolTable getContextSymbolTable()
     {
         return null;
     }
 
-    public void setParentThroughContext(IonValueLite child, IonContext context)
-    {
-        assert(context == this);
-        checkForLock();
-        child.setContext(this);
-    }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        checkForLock();
-        // we inherit our symbol table from out container
-        // ultimately the datagram will create a context
-        // or a concrete context will store the symbol table
-        _context.setSymbolTableOfChild(symbols, this);
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -454,7 +447,7 @@ public abstract class IonContainerLite
             // everyone and his brother
             symbols = super.populateSymbolValues(symbols);
             for (int ii=0; ii<get_child_count(); ii++) {
-                IonValueLite child = get_child_lite(ii);
+                IonValueLite child = get_child(ii);
                 symbols = child.populateSymbolValues(symbols);
             }
         }
@@ -466,7 +459,7 @@ public abstract class IonContainerLite
     {
         super.clearSymbolIDValues();
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueLite child = get_child_lite(ii);
+            IonValueLite child = get_child(ii);
             child.clearSymbolIDValues();
         }
         return;
@@ -474,9 +467,9 @@ public abstract class IonContainerLite
 
     public void clearLocalSymbolTable()
     {
-        if (_context != null) {
+//        if (_context != null) {
             _context.clearLocalSymbolTable();
-        }
+//        }
     }
 
     /**
@@ -486,13 +479,9 @@ public abstract class IonContainerLite
         throws NullPointerException, IllegalArgumentException,
         ContainedValueException
     {
-        checkForLock();
-
-        validateNewChild(child);
-
         int size = get_child_count();
 
-        add(size, child);
+        add(size, (IonValueLite) child);
 
         // updateElementIds - not needed since we're adding at the end
         // this.patch_elements_helper(size);
@@ -513,19 +502,11 @@ public abstract class IonContainerLite
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      */
-    protected static void validateNewChild(IonValue child)
+    void validateNewChild(IonValue child)
         throws ContainedValueException, NullPointerException,
                IllegalArgumentException
     {
-        if (child == null) {
-            throw new NullPointerException();
-        }
-
-        assert(child instanceof IonValueLite);
-
-        // FIX ME should this recognize system container?
-        //        no need, system returns null
-        if (child.getContainer() != null && !(child.getContainer() instanceof IonSystem))            // Also checks for null.
+        if (child.getContainer() != null)            // Also checks for null.
         {
             throw new ContainedValueException();
         }
@@ -538,26 +519,35 @@ public abstract class IonContainerLite
                 "IonDatagram can not be inserted into another IonContainer.";
             throw new IllegalArgumentException(message);
         }
+
+        assert child instanceof IonValueLite
+            : "Child was not created by the same ValueFactory";
+
+        assert getSystem() == child.getSystem()
+            || getSystem().getClass().equals(child.getSystem().getClass());
     }
 
     /**
-     * @param element
+     * Validates the child and checks locks.
+     *
+     * @param child
      *        must not be null.
      * @throws NullPointerException
      *         if the element is <code>null</code>.
      */
-    protected void add(int index, IonValue element)
+    void add(int index, IonValueLite child)
         throws ContainedValueException, NullPointerException
     {
-        final IonValueLite concrete = (IonValueLite)element;
+        checkForLock();
+        validateNewChild(child);
 
-        this.checkForLock();
-        concrete.checkForLock();
-
-        add_child(index, concrete);
+        add_child(index, child);
         patch_elements_helper(index + 1);
 
-        assert((index >= 0) && (index < get_child_count()) && (concrete == get_child(index)) && (concrete._elementid() == index));
+        assert((index >= 0)
+               && (index < get_child_count())
+               && (child == get_child(index))
+               && (child._elementid() == index));
     }
 
 
@@ -575,7 +565,7 @@ public abstract class IonContainerLite
      * @throws NullPointerException
      * @throws ContainedValueException
      */
-    protected void copyFrom(IonContainerLite source)
+    final void copyFrom(IonContainerLite source)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException, IOException
     {
@@ -602,28 +592,22 @@ public abstract class IonContainerLite
             assert(source._isNullValue() == false);
             _isNullValue(false);
 
-            // and we'll need a contents array to hold at least 0
-            // children
-            int current_size = (source._children == null) ? 0 : source._children.length;
-            if (current_size < source._children.length) {
-                int next_size = this.nextSize(current_size, false);
-                this._children = new IonValueLite[next_size];
-            }
-
             // we should have an empty content list at this point
-            assert this.get_child_count() == 0;
+            assert _children == null && get_child_count() == 0;
 
-            // if this is not buffer backed, we just have to
-            // do a deep copy
             final boolean cloningFields = (this instanceof IonStruct);
 
-            IonValueLite[] sourceContents = source._children;
-            int size = source.get_child_count();
+            final IonValueLite[] sourceContents = source._children;
+            final int size = source.get_child_count();
+
+            // Preallocate so add() doesn't reallocate repeatedly
+            _children = new IonValueLite[size];
 
             for (int i = 0; i < size; i++)
             {
                 IonValueLite child = sourceContents[i];
-                IonValueLite copy = (IonValueLite)child.clone();  // TODO: remove when we upgrade the Java compiler
+                // TODO: remove when we upgrade the Java compiler (???)
+                IonValueLite copy = (IonValueLite)child.clone();
                 if (cloningFields) {
                     String name = child.getFieldName();
                     copy.setFieldName(name);
@@ -632,6 +616,7 @@ public abstract class IonContainerLite
                 // no need to patch the element id's since
                 // this is adding to the end
             }
+            assert get_child_count() == size;
         }
     }
 
@@ -650,20 +635,20 @@ public abstract class IonContainerLite
      */
     static final int[] INITIAL_SIZE = make_initial_size_array();
     static int[] make_initial_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 1;
-        sizes[IonConstants.tidSexp]     = 4;
-        sizes[IonConstants.tidStruct]   = 5;
-        sizes[IonConstants.tidDATAGRAM] = 3;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 1;
+        sizes[_Private_IonConstants.tidSexp]     = 4;
+        sizes[_Private_IonConstants.tidStruct]   = 5;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
     static final int[] NEXT_SIZE = make_next_size_array();
     static int[] make_next_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 4;
-        sizes[IonConstants.tidSexp]     = 8;
-        sizes[IonConstants.tidStruct]   = 8;
-        sizes[IonConstants.tidDATAGRAM] = 10;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 4;
+        sizes[_Private_IonConstants.tidSexp]     = 8;
+        sizes[_Private_IonConstants.tidStruct]   = 8;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
     final protected int initialSize()
@@ -705,66 +690,49 @@ public abstract class IonContainerLite
 
         return next_size;
     }
-    // this is overridden in IonStructImpl to add the hashmap
-    // of field names when the struct becomes modestly large
-    protected void transitionToLargeSize(int size)
+
+    /**
+     * this is overridden in IonStructImpl to add the hashmap
+     * of field names when the struct becomes modestly large
+     */
+    void transitionToLargeSize(int size)
     {
         return;
     }
 
-    public int get_child_count() {
+    public final int get_child_count() {
         return _child_count;
     }
-    public IonValue get_child(int idx) {
-        return get_child_lite(idx);
-    }
-    public IonValueLite get_child_lite(int idx)
-    {
+
+    public final IonValueLite get_child(int idx) {
         if (idx < 0 || idx >= _child_count) {
-            throw new IndexOutOfBoundsException(""+idx);
+            throw new IndexOutOfBoundsException(Integer.toString(idx));
         }
         return _children[idx];
     }
-    public IonValue set_child(int idx, IonValue child)
-    {
-        if (child == null) {
-            throw new NullPointerException();
-        }
-        assert(child instanceof IonValueLite);
-        return set_child_lite(idx, (IonValueLite)child);
-    }
-    public IonValueLite set_child_lite(int idx, IonValueLite child)
+
+
+    final IonValueLite set_child(int idx, IonValueLite child)
     {
         if (idx < 0 || idx >= _child_count) {
-            throw new IndexOutOfBoundsException(""+idx);
+            throw new IndexOutOfBoundsException(Integer.toString(idx));
         }
         if (child == null) {
             throw new NullPointerException();
         }
         IonValueLite prev = _children[idx];
         _children[idx] = child;
+
+        // FIXME this doesn't update the child's context or index
+        // which is done by add_child() above
         return prev;
     }
-    public int add_child(int idx, IonValue child)
-    {
-        return add_child(idx, (IonValueLite)child);
-    }
-    public int add_child(int idx, IonValueLite child)
-    {
-        if (child == null) {
-            throw new NullValueException();
-        }
-        if (child instanceof IonDatagram) {
-            throw new IllegalArgumentException();
-        }
-        if (child._context.getParentThroughContext() != null)
-        {
-            throw new ContainedValueException();
-        }
-        assert(this.getSystem() == child.getSystem())
-            || this.getSystem().getClass().equals(child.getSystem().getClass()
-        );
 
+    /**
+     * Does not validate the child or check locks.
+     */
+    private int add_child(int idx, IonValueLite child)
+    {
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
@@ -782,18 +750,23 @@ public abstract class IonContainerLite
         _child_count++;
         _children[idx] = child;
 
-        child._context.setParentThroughContext(child, this);
+        assert child._context instanceof TopLevelContext
+            || child._context instanceof IonSystemLite;
+
+        child._context.setContextContainer(this, child);
+
         child._elementid(idx);
         return idx;
     }
-    public void remove_child(int idx)
+
+    /**
+     * Does not check locks.
+     */
+    void remove_child(int idx)
     {
         assert(idx >=0);
         assert(idx < get_child_count()); // this also asserts child count > 0
-
-if (get_child(idx) == null) {
-            assert(get_child(idx) != null);
-}
+        assert get_child(idx) != null : "No child at index " + idx;
 
         _children[idx].detachFromContainer();
         int children_to_move = _child_count - idx - 1;
@@ -803,25 +776,13 @@ if (get_child(idx) == null) {
         _child_count--;
         _children[_child_count] = null;
     }
-    public int find_Child(IonValue child)
-    {
-        return find_Child((IonValueLite)child);
-    }
-    public int find_Child(IonValueLite child) {
 
-        for (int ii=0; ii<_child_count; ii++) {
-            if (_children[ii] == child) {
-                return ii;
-            }
-        }
-        return -1;
-    }
     public final void patch_elements_helper(int lowest_bad_idx)
     {
         // patch the element Id's for all the children from
         // the child who was earliest in the array (lowest index)
         for (int ii=lowest_bad_idx; ii<get_child_count(); ii++) {
-            IonValueLite child = get_child_lite(ii);
+            IonValueLite child = get_child(ii);
             child._elementid(ii);
         }
         return;

@@ -1,11 +1,11 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -14,7 +14,7 @@ import java.nio.charset.Charset;
 /**
  *
  */
-public class IonClobLite
+final class IonClobLite
     extends IonLobLite
     implements IonClob
 {
@@ -39,7 +39,7 @@ public class IonClobLite
     @Override
     public IonClobLite clone()
     {
-        IonClobLite clone = new IonClobLite(this._context.getSystemLite(), false);
+        IonClobLite clone = new IonClobLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
 
@@ -79,7 +79,7 @@ public class IonClobLite
         byte[] bytes = getBytes();
         if (bytes == null) return null;
 
-        return IonImplUtils.decode(bytes, cs);
+        return _Private_Utils.decode(bytes, cs);
     }
 
     @Override

@@ -11,13 +11,15 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     IteratorSystemProcessingTest.class,
+    TextByteArrayIteratorSystemProcessingTest.class,
+    BinaryByteArrayIteratorSystemProcessingTest.class,
+    JavaReaderIteratorSystemProcessingTest.class,
     BinaryStreamIteratorSystemProcessingTest.class,
     TextStreamIteratorSystemProcessingTest.class,
     LoadTextBytesSystemProcessingTest.class,
     LoadTextStreamSystemProcessingTest.class,
     LoadBinaryBytesSystemProcessingTest.class,
     LoadBinaryStreamSystemProcessingTest.class,
-    DatagramBytesSystemProcessingTest.class,
     DatagramIteratorSystemProcessingTest.class,
     BinaryReaderSystemProcessingTest.class,
     DatagramTreeReaderSystemProcessingTest.class,

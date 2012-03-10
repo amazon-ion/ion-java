@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -14,7 +14,7 @@ import java.util.Collection;
 /**
  *
  */
-public class IonListLite
+final class IonListLite
     extends IonSequenceLite
     implements IonList
 {
@@ -28,9 +28,9 @@ public class IonListLite
      * @param makeNull indicates whether this should be <code>null.list</code>
      * (if <code>true</code>) or an empty sequence (if <code>false</code>).
      */
-    public IonListLite(IonSystemLite system, boolean makeNull)
+    IonListLite(IonContext context, boolean makeNull)
     {
-        super(system, makeNull);
+        super(context, makeNull);
     }
 
     /**
@@ -43,11 +43,11 @@ public class IonListLite
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    public IonListLite(IonSystemLite system,
-                       Collection<? extends IonValue> elements)
+    IonListLite(IonContext context,
+                Collection<? extends IonValue> elements)
         throws ContainedValueException
     {
-        super(system, elements);
+        super(context, elements);
     }
 
     /**
@@ -58,7 +58,7 @@ public class IonListLite
     @Override
     public IonListLite clone()
     {
-        IonListLite clone = new IonListLite(this._context.getSystemLite(), false);
+        IonListLite clone = new IonListLite(this._context.getSystem(), false);
 
         try {
             clone.copyFrom(this);

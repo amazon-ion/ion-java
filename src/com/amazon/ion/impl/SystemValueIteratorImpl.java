@@ -1,10 +1,12 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_1_0;
-import static com.amazon.ion.impl.IonConstants.BINARY_VERSION_MARKER_SIZE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl.IonValueImpl.makeValueFromReader;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -22,7 +24,7 @@ import java.util.NoSuchElementException;
  * WARNING: Unless {@link #resetBuffer()} is called, this class will
  * incrementally accumulate data in its internal buffer!
  */
-public class SystemValueIteratorImpl
+final class SystemValueIteratorImpl
     implements SystemValueIterator
 {
     private final IonSystemImpl _system;
@@ -43,43 +45,37 @@ public class SystemValueIteratorImpl
     private IonValueImpl _curr;
     private IonValueImpl _next;
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system, String s)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  String s)
     {
         SystemValueIterator reader = new SystemValueIteratorImpl(system, s);
         return reader;
     }
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog, Reader input)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  Reader input)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, input);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, input);
         return reader;
     }
 
-    /**
-     * TODO Must correct ION-160 before exposing this or using from public API.
-     */
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog,
-                                         SymbolTable initialSymboltable,
-                                         Reader input)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  BufferManager buffer)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, initialSymboltable, input);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, buffer);
         return reader;
     }
 
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog,
-                                         BufferManager buffer)
+    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
+                                                  IonCatalog catalog,
+                                                  InputStream stream)
     {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, buffer);
-        return reader;
-    }
-
-    public static SystemValueIterator makeSystemReader(IonSystemImpl system,
-                                         IonCatalog catalog, InputStream stream)
-    {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, catalog, stream);
+        SystemValueIterator reader =
+            new SystemValueIteratorImpl(system, catalog, stream);
         return reader;
     }
 
@@ -195,8 +191,8 @@ public class SystemValueIteratorImpl
      * @throws NullPointerException if any parameter is null.
      */
     private SystemValueIteratorImpl(IonSystemImpl system,
-                        IonCatalog catalog,
-                        InputStream stream)
+                                    IonCatalog catalog,
+                                    InputStream stream)
     {
         if (catalog == null)  // Others are dereferenced below.
         {
@@ -239,7 +235,11 @@ public class SystemValueIteratorImpl
      * it has then the data isn't interesting any longer)
      */
     private static final int READ_AHEAD_LENGTH = 4096;
-    private static final int READ_AHEAD_MAX_PEEK_REQUIRED = IonBinary._ib_VAR_INT64_LEN_MAX + 1; // type desc byte + 64 bits 7 at a time
+
+    /** type desc byte + 64 bits 7 at a time */
+    private static final int READ_AHEAD_MAX_PEEK_REQUIRED =
+        IonBinary._ib_VAR_INT64_LEN_MAX + 1;
+
     private void loadBuffer(int bytes_requested) throws IOException
     {
         // we should only be loading the buffer if we're
@@ -282,7 +282,7 @@ public class SystemValueIteratorImpl
         // we'll try to read data in in reasonable sized chunks
         // (like a blocks worth)
         writer.setPosition(buffer_length);
-        int room_in_block = writer._curr.bytesAvailableToWrite(0); // .blockCapacity() - buffer_length;
+        int room_in_block = writer._curr.bytesAvailableToWrite(0);
         if (bytes_to_load < room_in_block) {
             bytes_to_load = room_in_block;
             // FIXME but now we may load too few bytes
@@ -332,10 +332,10 @@ public class SystemValueIteratorImpl
             len = BINARY_VERSION_MARKER_SIZE;
         }
         else {
-            int ln = IonConstants.getLowNibble(b);
-            int hn = IonConstants.getTypeCode(b);
+            int ln = _Private_IonConstants.getLowNibble(b);
+            int hn = _Private_IonConstants.getTypeCode(b);
             len = _buffer._reader.readLength(hn, ln);
-            if (ln == IonConstants.lnIsVarLen) {
+            if (ln == _Private_IonConstants.lnIsVarLen) {
                 // we need to count the length of the variable int len field too
                 // fixed ion binary reader bug manifesting in good/submission.10n
                 len += IonBinary.lenVarUInt(len);
@@ -370,7 +370,7 @@ public class SystemValueIteratorImpl
     {
         SymbolTable symbols = this.getSymbolTable();
         int sid = symbols.findSymbol(name);
-        if (sid < 1) {
+        if (sid == UNKNOWN_SYMBOL_ID) {
             symbols = this.getLocalSymbolTable();
             sid = symbols.addSymbol(name);
         }
@@ -392,7 +392,7 @@ public class SystemValueIteratorImpl
     {
         SymbolTable symbols = this.getSymbolTable();
         if (! symbols.isLocalTable()) {
-            symbols = makeNewLocalSymbolTable(_system, symbols);
+            symbols = newLocalSymtab(_system, symbols);
             _currentSymbolTable = symbols;
         }
         return symbols;
@@ -451,11 +451,11 @@ public class SystemValueIteratorImpl
                         // Start the buffer with the BVM.
                         IonBinary.Writer writer = buffer.openWriter();
                          writer.setPosition(_buffer_offset);
-                        writer.write(IonConstants.BINARY_VERSION_MARKER_1_0);
+                        writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
                         _just_wrote_ivm = true;
                     }
                     else {
-                        _parser.parse( this // was: getLocalSymbolTable() // _currentSymbolTable
+                        _parser.parse( this
                                       ,_buffer_offset
                                       ,_just_wrote_ivm
                                       ,0
@@ -469,14 +469,15 @@ public class SystemValueIteratorImpl
                 }
             }
 
-            // now that we've got a value in the buffer (well we have one if we're not at eof)
+            // now that we've got a value in the buffer
+            // (well we have one if we're not at eof)
             if (!_at_eof) {
                 // there is some sort a value, we'll get it and check it out
                 // until we find something we like
                 IonBinary.Reader reader = buffer.reader();
                 reader.sync();
                 reader.setPosition(_buffer_offset);
-                IonValueImpl value = IonValueImpl.makeValueFromReader(0
+                IonValueImpl value = makeValueFromReader(UNKNOWN_SYMBOL_ID
                                                         ,reader
                                                         ,buffer
                                                         ,_currentSymbolTable
@@ -520,7 +521,7 @@ public class SystemValueIteratorImpl
         {
             IonStruct struct = (IonStruct)curr;
             SymbolTable sys = _system.getSystemSymbolTable();
-            _currentSymbolTable = UnifiedSymbolTable.makeNewLocalSymbolTable(sys, _catalog, struct);
+            _currentSymbolTable = newLocalSymtab(sys, _catalog, struct);
             _currentIsHidden = true;
             _just_wrote_ivm = false;
         }
@@ -535,7 +536,8 @@ public class SystemValueIteratorImpl
 
             // we're leaving this for the next value since the
             // parser put the local symbol table on the $ion_1_0 (in error)
-            _currentSymbolTable = ((IonValuePrivate)curr).getAssignedSymbolTable();
+            _currentSymbolTable =
+                ((_Private_IonValue)curr).getAssignedSymbolTable();
             _currentIsHidden = true;
             _just_wrote_ivm = true;
         }

@@ -1,8 +1,10 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnNumericZero;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidList;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
@@ -14,7 +16,7 @@ import com.amazon.ion.impl.IonBinary.Writer;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class TemporaryList
+final class TemporaryList
     extends IonSequenceImpl
     implements IonList
 {
@@ -26,8 +28,7 @@ public class TemporaryList
      */
     public TemporaryList(IonSystemImpl system) {
         super(system,
-              IonConstants.makeTypeDescriptor(IonConstants.tidList,
-                                              IonConstants.lnNumericZero));
+              makeTypeDescriptor(tidList, lnNumericZero));
        _tmpelements = new ArrayList<IonValueImpl>();
        setClean();
     }

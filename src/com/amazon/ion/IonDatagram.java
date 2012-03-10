@@ -265,6 +265,8 @@ public interface IonDatagram
      * single symbol table used across the contents.  Each value contained by
      * the datagram may have its own symbol table.
      *
+     * @return nothing, always throws an exception.
+     *
      * @throws UnsupportedOperationException at every call.
      */
     public SymbolTable getSymbolTable();

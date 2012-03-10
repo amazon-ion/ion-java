@@ -2,7 +2,7 @@
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.impl._Private_Utils.utf8;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonBinaryWriter;
@@ -17,7 +17,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
@@ -247,7 +247,7 @@ public class MiscStreamingTest
     @SuppressWarnings("deprecation")
     private void testNullTextValue(IonReader reader, IonType textType)
     {
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) {
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) {
             assertTrue(reader.hasNext());
         }
         assertEquals(textType, reader.next());
@@ -322,6 +322,6 @@ public class MiscStreamingTest
         writer.writeValue(system().newSymbol("foo"));
         writer.close();
 
-        assertEquals("$ion_1_0 foo", utf8(out.toByteArray()));
+        assertEquals("foo", utf8(out.toByteArray()));
     }
 }

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+date
+
+echo "DIRECT"
+brazil vs -printDependencies --direct -package IonJava-1.0 -consumers -versionSet live \
+    | grep "Total dependencies"
+
+echo "TRANSITIVE"
+brazil vs -printDependencies -package IonJava-1.0 -consumers -versionSet live \
+    | grep "Total dependencies"

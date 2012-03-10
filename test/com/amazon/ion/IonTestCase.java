@@ -1,10 +1,11 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import com.amazon.ion.impl.IonSystemImpl;
-import com.amazon.ion.impl.IonSystemPrivate;
+
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -49,7 +50,7 @@ public abstract class IonTestCase
 
     private static boolean ourSystemPropertiesLoaded = false;
     protected SimpleCatalog    myCatalog;
-    protected IonSystemPrivate mySystem;
+    protected _Private_IonSystem mySystem;
     protected IonLoader        myLoader;
 
     //  FIXME: needs java docs
@@ -202,7 +203,7 @@ public abstract class IonTestCase
     // ========================================================================
     // Fixture Helpers
 
-    protected IonSystemPrivate system()
+    protected _Private_IonSystem system()
     {
         if (mySystem == null)
         {
@@ -214,19 +215,12 @@ public abstract class IonTestCase
     // added helper, this returns a separate system
     // every time since the user is passing in a catalog
     // which changes the state of the system object
-    protected IonSystemPrivate system(IonCatalog catalog)
+    protected _Private_IonSystem system(IonCatalog catalog)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
         BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
         IonSystem system = b.build();
-
-        if (system instanceof IonSystemImpl)
-        {
-            // TODO we really should phase this out...
-            ((IonSystemImpl) system).useNewReaders_UNSUPPORTED_MAGIC =
-                (getStreamingMode() == StreamingMode.NEW_STREAMING);
-        }
-        return (IonSystemPrivate) system;
+        return (_Private_IonSystem) system;
     }
 
     protected SimpleCatalog catalog()
@@ -253,7 +247,7 @@ public abstract class IonTestCase
      * For example, <code>makeEscapedCharString('n')</code> returns
      * (Java) <code>"\"\\n\""</code>, equivalent to Ion <code>"\n"</code>.
      */
-    protected String makeEscapedCharString(char escape)
+    protected static String makeEscapedCharString(char escape)
     {
         final String QT = "\"";
         final String BS = "\\";
@@ -306,7 +300,9 @@ public abstract class IonTestCase
 
 
     /**
-     * Materializes a shared symtab.  No catalog registration is performed.
+     * Materializes a shared symtab using
+     * {@link IonSystem#newSharedSymbolTable(IonReader)}.
+     * No catalog registration is performed.
      */
     public SymbolTable loadSharedSymtab(String serializedSymbolTable)
     {
@@ -423,6 +419,19 @@ public abstract class IonTestCase
     }
 
 
+    public void putParsedValue(IonStruct struct,
+                               String fieldName,
+                               String singleValue)
+    {
+        IonValue v = null;
+        if (singleValue != null)
+        {
+            IonSystem system = struct.getSystem();
+            v = system.singleValue(singleValue);
+        }
+        struct.put(fieldName, v);
+    }
+
 
     /**
      * Parse a broken value, expecting an IonException.
@@ -463,25 +472,47 @@ public abstract class IonTestCase
     }
 
 
-    public void checkBinaryHeader(byte[] datagram)
+    public static void checkBinaryHeader(byte[] datagram)
     {
-        assertTrue("datagram is too small", datagram.length >= 4);
+        if (datagram.length != 0) // Allow empty "binary" stream
+        {
+            assertTrue("datagram is too small", datagram.length >= 4);
 
-        assertEquals("datagram cookie byte 1", 0xE0, datagram[0] & 0xff );
-        assertEquals("datagram cookie byte 2", 0x01, datagram[1] & 0xff);
-        assertEquals("datagram cookie byte 3", 0x00, datagram[2] & 0xff);
-        assertEquals("datagram cookie byte 4", 0xEA, datagram[3] & 0xff);
+            assertEquals("datagram cookie byte 1", 0xE0, datagram[0] & 0xff );
+            assertEquals("datagram cookie byte 2", 0x01, datagram[1] & 0xff);
+            assertEquals("datagram cookie byte 3", 0x00, datagram[2] & 0xff);
+            assertEquals("datagram cookie byte 4", 0xEA, datagram[3] & 0xff);
+        }
     }
 
+
+    public static ReaderChecker check(IonReader reader)
+    {
+        return new ReaderChecker(reader);
+    }
+
+    public static IonValueChecker check(IonValue value)
+    {
+        return new IonValueChecker(value);
+    }
+
+
+    public static void checkType(IonType expected, IonValue actual)
+    {
+        if (actual.getType() != expected)
+        {
+            fail("Expected type " + expected + ", found IonValue: " + actual);
+        }
+    }
 
 
     /**
      * Checks that the value is an IonInt with the given value.
      * @param expected may be null to check for null.int
      */
-    public void checkInt(BigInteger expected, IonValue actual)
+    public static void checkInt(BigInteger expected, IonValue actual)
     {
-        assertSame(IonType.INT, actual.getType());
+        checkType(IonType.INT, actual);
         IonInt i = (IonInt) actual;
 
         if (expected == null) {
@@ -497,9 +528,9 @@ public abstract class IonTestCase
      * Checks that the value is an IonInt with the given value.
      * @param expected may be null to check for null.int
      */
-    public void checkInt(Long expected, IonValue actual)
+    public static void checkInt(Long expected, IonValue actual)
     {
-        assertSame(IonType.INT, actual.getType());
+        checkType(IonType.INT, actual);
         IonInt i = (IonInt) actual;
 
         if (expected == null) {
@@ -515,7 +546,7 @@ public abstract class IonTestCase
      * Checks that the value is an IonInt with the given value.
      * @param expected may be null to check for null.int
      */
-    public void checkInt(Integer expected, IonValue actual)
+    public static void checkInt(Integer expected, IonValue actual)
     {
         checkInt((expected == null ? null : expected.longValue()), actual);
     }
@@ -525,9 +556,9 @@ public abstract class IonTestCase
      * Checks that the value is an IonDecimal with the given value.
      * @param expected may be null to check for null.decimal
      */
-    public void checkDecimal(Double expected, IonValue actual)
+    public static void checkDecimal(Double expected, IonValue actual)
     {
-        assertSame(IonType.DECIMAL, actual.getType());
+        checkType(IonType.DECIMAL, actual);
         IonDecimal i = (IonDecimal) actual;
 
         if (expected == null) {
@@ -545,9 +576,9 @@ public abstract class IonTestCase
      * Checks that the value is an IonTimestamp with the given value.
      * @param expected may be null to check for null.timestamp
      */
-    public void checkTimestamp(Timestamp expected, IonValue actual)
+    public static void checkTimestamp(Timestamp expected, IonValue actual)
     {
-        assertSame(IonType.TIMESTAMP, actual.getType());
+        checkType(IonType.TIMESTAMP, actual);
         IonTimestamp v = (IonTimestamp) actual;
 
         Timestamp actualTime = v.timestampValue();
@@ -568,9 +599,9 @@ public abstract class IonTestCase
      * Checks that the value is an IonTimestamp with the given value.
      * @param expected may be null to check for null.timestamp
      */
-    public void checkTimestamp(String expected, IonValue actual)
+    public static void checkTimestamp(String expected, IonValue actual)
     {
-        assertSame(IonType.TIMESTAMP, actual.getType());
+        checkType(IonType.TIMESTAMP, actual);
         IonTimestamp v = (IonTimestamp) actual;
 
         if (expected == null) {
@@ -591,9 +622,9 @@ public abstract class IonTestCase
      * Checks that the value is an IonFloat with the given value.
      * @param expected may be null to check for null.float
      */
-    public void checkFloat(Double expected, IonValue actual)
+    public static void checkFloat(Double expected, IonValue actual)
     {
-        assertSame(IonType.FLOAT, actual.getType());
+        checkType(IonType.FLOAT, actual);
         IonFloat i = (IonFloat) actual;
 
         if (expected == null) {
@@ -606,13 +637,9 @@ public abstract class IonTestCase
         }
     }
 
-
-
-    public void checkNullNull(IonValue actual)
+    public static void checkNullNull(IonValue actual)
     {
-        assertSame(IonType.NULL, actual.getType());
-        IonNull n = (IonNull) actual;
-        assertNotNull(n);
+        checkType(IonType.NULL, actual);
     }
 
 
@@ -620,60 +647,215 @@ public abstract class IonTestCase
      * Checks that the value is an IonString with the given text.
      * @param text may be null to check for null.string
      */
-    public void checkString(String text, IonValue value)
+    public static void checkString(String text, IonValue value)
     {
-        assertSame(IonType.STRING, value.getType());
+        checkType(IonType.STRING, value);
         IonString str = (IonString) value;
         assertEquals("string content", text, str.stringValue());
     }
+
+
+    /**
+     * @param text null means text is unknown
+     */
+    public static void checkSymbol(String text, int sid, SymbolToken sym)
+    {
+        assertEquals("SymbolToken.text", text, sym.getText());
+        assertEquals("SymbolToken.id",   sid,  sym.getSid());
+
+        if (text != null)
+        {
+            assertEquals("SymbolToken.assumeText", text, sym.assumeText());
+        }
+        else
+        {
+            try
+            {
+                sym.assumeText();
+                fail("expected exception");
+            }
+            catch (RuntimeException e) { }
+        }
+    }
+
 
     /**
      * Checks that the value is an IonSymbol with the given name.
      * @param name may be null to check for null.symbol
      */
-    public void checkSymbol(String name, IonValue value)
+    public static void checkSymbol(String name, IonValue value)
     {
-        assertSame(IonType.SYMBOL, value.getType());
+        checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
         assertEquals("symbol name", name, sym.stringValue());
+        assertEquals("isNullValue", name == null, sym.isNullValue());
+
+        SymbolToken is = sym.symbolValue();
+        if (name == null)
+        {
+            assertEquals("IonSymbol.symbolValue()", null, is);
+        }
+        else
+        {
+            assertEquals("symbolValue.getText()", name, is.getText());
+        }
     }
 
     /**
      * Checks that the value is an IonSymbol with the given name.
-     * @param name shouldn't be null.
      */
-    public void checkSymbol(String name, int id, IonValue value)
+    public static void checkSymbol(String name, int id, IonValue value)
     {
-        assertSame(IonType.SYMBOL, value.getType());
+        checkType(IonType.SYMBOL, value);
         IonSymbol sym = (IonSymbol) value;
-        assertEquals("symbol name", name, sym.stringValue());
+
+        assertFalse(value.isNullValue());
+
+        if (name == null)
+        {
+            try {
+                sym.stringValue();
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(id, e.getSid());
+            }
+        }
+        else
+        {
+            assertEquals("symbol name", name, sym.stringValue());
+        }
+
         // just so we can set a break point on this before we lose all context
         int sid = sym.getSymbolId();
         if (sid != id) {
             assertEquals("symbol id", id, sym.getSymbolId());
         }
+
+        checkSymbol(name, id, sym.symbolValue());
     }
 
-    public void checkSymbol(String name, int id, SymbolTable symtab)
+    public static void checkUnknownSymbol(int id, IonValue value)
     {
-        assertEquals(id,   symtab.findSymbol(name));
-        assertEquals(name, symtab.findSymbol(id));
+        checkSymbol(null, id, value);
+    }
+
+
+    public static void checkSymbol(String text, int sid, boolean dupe,
+                                   SymbolTable symtab)
+    {
+        assert !dupe || text != null;
+
+        String msg = "text:" + text + " sid:" + sid;
+
+        if (text != null)
+        {
+            if (sid >= 0)
+            {
+                assertEquals(msg, text, symtab.findSymbol(sid));
+                assertEquals(msg, text, symtab.findKnownSymbol(sid));
+            }
+
+            // Can't do this stuff when we have a duplicate symbol.
+            if (! dupe)
+            {
+                assertEquals(msg, sid, symtab.findSymbol(text));
+                assertEquals(msg, sid, symtab.addSymbol(text));
+
+                SymbolToken sym = symtab.intern(text);
+                assertEquals(msg, sid, sym.getSid());
+
+                sym = symtab.find(text);
+                assertEquals(msg, sid, sym.getSid());
+            }
+        }
+        else // No text expected, must have sid
+        {
+            assertEquals(msg, text, symtab.findKnownSymbol(sid));
+
+            try
+            {
+                symtab.findSymbol(sid);
+                fail("Expected " + UnknownSymbolException.class);
+            }
+            catch (UnknownSymbolException e)
+            {
+                assertEquals(sid, e.getSid());
+            }
+        }
+    }
+
+    public static void checkSymbol(String text, int sid, SymbolTable symtab)
+    {
+        checkSymbol(text, sid, false, symtab);
+    }
+
+    public static void checkUnknownSymbol(int sid, SymbolTable symtab)
+    {
+        checkSymbol(null, sid, false, symtab);
+    }
+
+    /**
+     * Check that a specific symbol's text isn't known by a symtab.
+     * @param text must not be null.
+     */
+    public static void checkUnknownSymbol(String text, SymbolTable symtab)
+    {
+        assertEquals(null, symtab.find(text));
+        assertEquals(UNKNOWN_SYMBOL_ID, symtab.findSymbol(text));
+        if (symtab.isReadOnly())
+        {
+            try {
+                symtab.intern(text);
+                fail("Expected exception");
+            }
+            catch (ReadOnlyValueException e) { }
+
+            try {
+                symtab.addSymbol(text);
+                fail("Expected exception");
+            }
+            catch (ReadOnlyValueException e) { }
+        }
+    }
+
+    /**
+     * Check that a specific symbol's text isn't known by a symtab.
+     * @param text must not be null.
+     * @param sid can be {@link SymbolTable#UNKNOWN_SYMBOL_ID} if not known.
+     */
+    public static void checkUnknownSymbol(String text, int sid,
+                                          SymbolTable symtab)
+    {
+        checkUnknownSymbol(text, symtab);
+
+        if (sid != UNKNOWN_SYMBOL_ID)
+        {
+            checkUnknownSymbol(sid, symtab);
+        }
     }
 
 
     public static void checkAnnotation(String expectedAnnot, IonValue value)
     {
-        assertTrue("missing annotation",
-                   value.hasTypeAnnotation(expectedAnnot));
+        if (! value.hasTypeAnnotation(expectedAnnot))
+        {
+            fail("missing annotation " + expectedAnnot
+                 + " on IonValue " + value);
+        }
     }
 
 
-    public void checkLocalTable(SymbolTable symtab)
+    public static void checkLocalTable(SymbolTable symtab)
     {
         assertTrue("table isn't local", symtab.isLocalTable());
         assertFalse("table is shared",  symtab.isSharedTable());
         assertFalse("table is system",  symtab.isSystemTable());
+        assertFalse("table is substitute", symtab.isSubstitute());
         assertNotNull("table has imports", symtab.getImportedTables());
+
+        checkUnknownSymbol(" not defined ", UNKNOWN_SYMBOL_ID, symtab);
 
         SymbolTable system = symtab.getSystemSymbolTable();
         checkSystemTable(system);
@@ -683,7 +865,7 @@ public abstract class IonTestCase
     /**
      * @param symtab must be either system table or empty local table
      */
-    public void checkTrivialLocalTable(SymbolTable symtab)
+    public static void checkTrivialLocalTable(SymbolTable symtab)
     {
         SymbolTable system = symtab.getSystemSymbolTable();
 
@@ -699,18 +881,19 @@ public abstract class IonTestCase
         }
     }
 
-    public void checkSystemTable(SymbolTable symtab)
+    public static void checkSystemTable(SymbolTable symtab)
     {
         assertFalse(symtab.isLocalTable());
         assertTrue(symtab.isSharedTable());
         assertTrue(symtab.isSystemTable());
+        assertFalse("table is substitute", symtab.isSubstitute());
         assertSame(symtab, symtab.getSystemSymbolTable());
         assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
         assertEquals(ION_1_0, symtab.getIonVersionId());
     }
 
-    public SymbolTable findImportedTable(SymbolTable localTable,
-                                         String importName)
+    public static SymbolTable findImportedTable(SymbolTable localTable,
+                                                String importName)
     {
         SymbolTable[] imports = localTable.getImportedTables();
         if (imports == null) return null;

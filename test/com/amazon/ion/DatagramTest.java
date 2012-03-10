@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -8,8 +8,8 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 
-import com.amazon.ion.impl.IonSystemPrivate;
-import com.amazon.ion.impl.IonValueImpl;
+import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl._Private_IonValue;
 import java.io.ByteArrayOutputStream;
 import java.util.Collection;
 import java.util.Iterator;
@@ -110,10 +110,10 @@ public class DatagramTest
 
 
     @Test
-    public void testAutomaticSystemId()
+    public void testAutomaticIVM()
         throws Exception
     {
-        IonSystemPrivate system = system();
+        _Private_IonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -131,10 +131,10 @@ public class DatagramTest
     }
 
     @Test
-    public void testManualSystemId()
+    public void testManualIVM()
         throws Exception
     {
-        IonSystemPrivate system = system();
+        _Private_IonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -146,6 +146,9 @@ public class DatagramTest
         dg.add(sysId);
 
         assertSame(systemSymtab_1_0, sysId.getSymbolTable());
+
+        // TODO ION-261
+//        assertEquals(0, dg.size());
 
         // TODO adding $ion_1_1 should fail: unsupported version
     }
@@ -175,8 +178,7 @@ public class DatagramTest
         checkSymbol("swamp", datagram1.get(0));
 
         IonSymbol sym = (IonSymbol)datagram1.get(0);
-        sym.getSymbolId();
-        sym.stringValue();
+        checkSymbol("swamp", 10, sym);
 
         // System view should have IonVersionMarker(symbol), a symbol table then the symbol
         assertEquals(3, datagram1.systemSize()); // cas 22 apr 2008 was: 2
@@ -224,39 +226,6 @@ public class DatagramTest
         bytes = datagram1.getBytes();
         String s = datagram1.toString();
         s = ""+s;
-    }
-
-    @Test
-    public void testSystemDatagram()
-        throws Exception
-    {
-        IonSystem system = system();
-
-        IonInt i = system.newNullInt();
-        i.setValue(65);
-
-        IonStruct struct = system.newNullStruct();
-        SymbolTable sym = struct.getSymbolTable();
-        if (sym == null) {
-            sym = system.newLocalSymbolTable();
-            ((IonValueImpl)struct).setSymbolTable(sym);
-        }
-        struct.put("ii", i);
-
-        IonDatagram dg = system.newDatagram(struct);
-
-        assertSame(struct, dg.get(0));
-        IonStruct reloadedStruct = (IonStruct) dg.get(0);  // XXX
-        assertEquals(struct, reloadedStruct);  // XXX
-        assertSame(dg, reloadedStruct.getContainer());
-
-        i = (IonInt) reloadedStruct.get("ii");
-
-        for (int ival = -1000; ival <= 1000; ival++) {
-            i.setValue(ival);
-            byte[] bytes = dg.getBytes();
-            checkBinaryHeader(bytes);
-        }
     }
 
 
@@ -543,6 +512,7 @@ public class DatagramTest
     @Test
     public void testToString()
     {
+        // TODO ION-165 I think this is wrong, the datagram has injected IVM
         IonDatagram dg = loader().load("1");
         assertEquals("$ion_1_0 1", dg.toString());
 
@@ -624,5 +594,45 @@ public class DatagramTest
         IonList l = (IonList) dg.remove(0);
         l = (IonList) l.get(0);
         assertEquals(1, ((IonInt)l.get(0)).intValue());
+    }
+
+    @Test
+    public void testGetTopLevelValue()
+    {
+        IonDatagram dg = system().newDatagram();
+        IonValue tlv = dg.add().newInt(12);
+        assertSame(tlv, tlv.topLevelValue());
+
+        IonList list = dg.add().newEmptyList();
+        IonBool bool = list.add().newBool(true);
+
+        assertSame(list, list.topLevelValue());
+        assertSame(list, bool.topLevelValue());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetTopLevelValueOfDatagram()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.topLevelValue();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetAssignedSymbolTable()
+    {
+        IonDatagram dg = system().newDatagram();
+        ((_Private_IonValue)dg).getAssignedSymbolTable();
+    }
+
+    /**
+     * TODO ION-90 Datagram.set() should work, but it's documented to throw
+     * and doesn't work on lazy DOM.
+     */
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSet()
+    {
+        IonDatagram dg = system().newDatagram();
+        dg.add().newNull();
+        dg.set(0, system().newBool(true));
     }
 }

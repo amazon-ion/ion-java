@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -11,12 +11,12 @@ public class SurrogateEscapeTest extends IonTestCase {
     private StringBuilder buf = new StringBuilder();
 
     private IonDatagram load() {
-        byte[] utf8 = IonImplUtils.utf8(buf.toString());
+        byte[] utf8 = _Private_Utils.utf8(buf.toString());
         return loader().load(utf8);
     }
 
     private IonReader reader() {
-        byte[] utf8 = IonImplUtils.utf8(buf.toString());
+        byte[] utf8 = _Private_Utils.utf8(buf.toString());
         return system().newReader(utf8);
     }
 
@@ -37,7 +37,7 @@ public class SurrogateEscapeTest extends IonTestCase {
         assertSingleCodePoint(expectedCode, ((IonString) dg.get(0)).stringValue());
 
         final IonReader reader = reader();
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) {
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) {
             assertTrue(reader.hasNext());
         }
         assertEquals(IonType.STRING, reader.next());

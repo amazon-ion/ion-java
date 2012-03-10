@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,7 +7,7 @@ import com.amazon.ion.IonText;
 /**
  *
  */
-public abstract class IonTextLite
+abstract class IonTextLite
     extends IonValueLite
     implements IonText
 {

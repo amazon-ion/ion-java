@@ -1,8 +1,10 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidNull;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonNull;
@@ -13,14 +15,13 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>null</code> type.
  */
-public final class IonNullImpl
+final class IonNullImpl
     extends IonValueImpl
     implements IonNull
 {
 
     static final int NULL_NULL_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidNull,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidNull, lnIsNullAtom);
 
     private static final int HASH_SIGNATURE =
         IonType.NULL.toString().hashCode();
@@ -48,7 +49,7 @@ public final class IonNullImpl
         {
             throw new IonException("Invalid type descriptor byte " + typeDesc);
         }
-        assert pos_getType() == IonConstants.tidNull;
+        assert pos_getType() == _Private_IonConstants.tidNull;
     }
 
     /**
@@ -104,7 +105,7 @@ public final class IonNullImpl
     @Override
     protected int computeLowNibble(int valuelen)
     {
-        return IonConstants.lnIsNullAtom;
+        return _Private_IonConstants.lnIsNullAtom;
     }
 
 
@@ -118,7 +119,7 @@ public final class IonNullImpl
 
         // the reader will have been positioned for us
         assert reader.position() == this.pos_getOffsetAtValueTD();
-        assert this.pos_getType() == IonConstants.tidNull;
+        assert this.pos_getType() == _Private_IonConstants.tidNull;
 
         _hasNativeValue(true);
     }

@@ -1,18 +1,18 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.Base64Encoder;
+import com.amazon.ion.impl._Private_LazyDomTrampoline;
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
  *
  */
-public class IonBlobLite
+final class IonBlobLite
     extends IonLobLite
     implements IonBlob
 {
@@ -37,7 +37,7 @@ public class IonBlobLite
     @Override
     public IonBlobLite clone()
     {
-        IonBlobLite clone = new IonBlobLite(this._context.getSystemLite(), false);
+        IonBlobLite clone = new IonBlobLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
 
@@ -76,14 +76,7 @@ public class IonBlobLite
         InputStream byteStream = newInputStream();
         try
         {
-            Base64Encoder.TextStream ts =
-                new Base64Encoder.TextStream(byteStream);
-
-            for (;;) {
-                int c = ts.read();
-                if (c == -1) break;
-                out.append((char) c);
-            }
+            _Private_LazyDomTrampoline.writeAsBase64(byteStream, out);
         }
         finally
         {

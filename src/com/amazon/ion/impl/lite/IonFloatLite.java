@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 /**
  *
  */
-public class IonFloatLite
+final class IonFloatLite
     extends IonValueLite
     implements IonFloat
 {
@@ -41,7 +41,7 @@ public class IonFloatLite
     @Override
     public IonFloatLite clone()
     {
-        IonFloatLite clone = new IonFloatLite(this._context.getSystemLite(), false);
+        IonFloatLite clone = new IonFloatLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         clone.setValue(this._float_value);

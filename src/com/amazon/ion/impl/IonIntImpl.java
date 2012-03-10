@@ -1,8 +1,11 @@
-/*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.lnNumericZero;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidPosInt;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
@@ -19,7 +22,7 @@ import java.math.BigInteger;
  *
  * TODO: we don't properly handle values larger than Java long.
  */
-public final class IonIntImpl
+final class IonIntImpl
     extends IonValueImpl
     implements IonInt
 {
@@ -33,11 +36,9 @@ public final class IonIntImpl
         LONG_MIN_VALUE.abs();
 
     static final int NULL_INT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidPosInt, lnIsNullAtom);
     static final int ZERO_INT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidPosInt,
-                                        IonConstants.lnNumericZero);
+        makeTypeDescriptor(tidPosInt, lnNumericZero);
 
     private static final int HASH_SIGNATURE =
         IonType.INT.toString().hashCode();
@@ -63,8 +64,8 @@ public final class IonIntImpl
     {
         super(system, typeDesc);
         // _isNullValue(true);
-        assert pos_getType() == IonConstants.tidPosInt
-            || pos_getType() == IonConstants.tidNegInt
+        assert pos_getType() == _Private_IonConstants.tidPosInt
+            || pos_getType() == _Private_IonConstants.tidNegInt
         ;
     }
 
@@ -79,13 +80,13 @@ public final class IonIntImpl
     @Override
     public IonIntImpl clone()
     {
-    	IonIntImpl clone = new IonIntImpl(_system);
+        IonIntImpl clone = new IonIntImpl(_system);
 
-    	makeReady();
-    	clone.copyAnnotationsFrom(this);
+        makeReady();
+        clone.copyAnnotationsFrom(this);
         clone.doSetValue(this._long_value, this._isNullValue());
 
-    	return clone;
+        return clone;
     }
 
     /**
@@ -176,12 +177,12 @@ public final class IonIntImpl
     public void setValue(long value)
     {
         checkForLock();
-    	doSetValue(Long.valueOf(value), false);
+        doSetValue(Long.valueOf(value), false);
     }
 
     public void setValue(Number value)
     {
-    	checkForLock();
+        checkForLock();
         if (value == null)
         {
             doSetValue(0, true);
@@ -272,10 +273,10 @@ public final class IonIntImpl
             case 0:
                 return ZERO_INT_TYPEDESC;
             case -1:
-                hn = IonConstants.tidNegInt;
+                hn = _Private_IonConstants.tidNegInt;
                 break;
             case 1:
-                hn = IonConstants.tidPosInt;
+                hn = _Private_IonConstants.tidPosInt;
                 break;
             default:
                 // should never happen
@@ -290,14 +291,14 @@ public final class IonIntImpl
             {
                 return ZERO_INT_TYPEDESC;
             }
-            hn = (content > 0 ? IonConstants.tidPosInt : IonConstants.tidNegInt);
+            hn = (content > 0 ? _Private_IonConstants.tidPosInt : _Private_IonConstants.tidNegInt);
         }
 
-        if (ln > IonConstants.lnIsVarLen) {
-            ln = IonConstants.lnIsVarLen;
+        if (ln > _Private_IonConstants.lnIsVarLen) {
+            ln = _Private_IonConstants.lnIsVarLen;
         }
-        assert hn == IonConstants.tidPosInt || hn == IonConstants.tidNegInt;
-        return IonConstants.makeTypeDescriptor(hn, ln);
+        assert hn == _Private_IonConstants.tidPosInt || hn == _Private_IonConstants.tidNegInt;
+        return _Private_IonConstants.makeTypeDescriptor(hn, ln);
     }
 
     /**
@@ -327,8 +328,8 @@ public final class IonIntImpl
 
         int type = this.pos_getType();
         switch (type) {
-        case IonConstants.tidPosInt:
-        case IonConstants.tidNegInt:
+        case _Private_IonConstants.tidPosInt:
+        case _Private_IonConstants.tidNegInt:
             break;
         default:
             throw new IonException("invalid type desc encountered for int");
@@ -341,17 +342,17 @@ public final class IonIntImpl
 
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             _isNullValue(true);
             break;
         case 0:
             // no-op, we're already zeroed
             break;
-        case IonConstants.lnIsVarLen:
+        case _Private_IonConstants.lnIsVarLen:
             ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:
-            int signum = type == IonConstants.tidNegInt ? -1 : 1;
+            int signum = type == _Private_IonConstants.tidNegInt ? -1 : 1;
             if (ln <= 8)
             {
                 long val = reader.readUIntAsLong(ln);
@@ -362,7 +363,7 @@ public final class IonIntImpl
                 }
                 else
                 {
-                    if (type == IonConstants.tidNegInt) {
+                    if (type == _Private_IonConstants.tidNegInt) {
                         val = -val;
                     }
                     _long_value = val;

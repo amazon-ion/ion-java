@@ -3,16 +3,14 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
-import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
+import static com.amazon.ion.impl._Private_Utils.utf8;
 
-import com.amazon.ion.impl.UserValueIterator;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -349,7 +347,7 @@ public class LoaderTest
         IonStruct struct = (IonStruct) dg2.get(0);
         assertTrue(struct.hasTypeAnnotation("ann"));
         IonSymbol value = (IonSymbol) struct.get("field");
-        assertEquals("value", value.stringValue());
+        checkSymbol("value", value);
     }
 
     @Test
@@ -403,8 +401,7 @@ public class LoaderTest
         IonLoader new_loader = sys.newLoader(newCatalog);
         IonDatagram new_dg = new_loader.load(raw);
         IonSymbol sym = (IonSymbol)new_dg.get(0);
-        String found = sym.stringValue();
-        assertEquals("barney_1", found);
+        checkSymbol("barney_1", sym);
     }
 
 final static boolean _debug_long_test = false;
@@ -412,7 +409,7 @@ final static boolean _debug_long_test = false;
     @Test
     public void testIteratingVeryLongFile()
     throws Exception
-	{
+    {
     	TestTimer gc = new TestTimer("gc()", 10, 5);
     	TestTimer read = new TestTimer("read", 10, 2);
     	long loop_counter = 0;
@@ -422,12 +419,9 @@ final static boolean _debug_long_test = false;
 // TODO: turn this long test on someday
 if (!_debug_long_test) return;
 
-	    LongInputStream longStream = new LongInputStream("$ion_1_0 { this:is, a:struct } ");
+	LongInputStream longStream = new LongInputStream("$ion_1_0 { this:is, a:struct } ");
         Reader reader = new InputStreamReader(longStream, UTF8_CHARSET);
-        UserValueIterator r = (UserValueIterator)system().iterate(reader);
-        r.setBufferToRecycle();
-
-        Iterator<IonValue> i = r;
+        Iterator<IonValue> i = system().iterate(reader);
 
         for (;;)
         {
@@ -453,12 +447,12 @@ if (!_debug_long_test) return;
         	System.gc();
         	gc.finish(loop_counter);
         }
-	}
+    }
 
     static class TestTimer {
     	String _title;
     	long[] _samples;
-    	int	   _next;
+    	int    _next;
     	int    _sample_length;
     	long   _moving_average;  // really the moving total
     	long   _threshold;
@@ -539,28 +533,5 @@ if (!_debug_long_test) return;
     	    this._pos++;
     	    return c;
     	}
-    }
-
-    public static void main(String[] args)
-        throws Exception
-    {
-        File f = getTestdataFile("good/decimalNegativeOneDotZero.10n");
-        FileOutputStream out = new FileOutputStream(f);
-        try
-        {
-            int[] data = { 0x10, 0x14, 0x01, 0x00,  // binary version marker
-                           0x52, 0xC1, 0x8A
-            };
-
-            for (int i = 0; i < data.length; i++)
-            {
-                int b = data[i];
-                out.write(b);
-            }
-        }
-        finally
-        {
-            out.close();
-        }
     }
 }

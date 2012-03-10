@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,8 +7,8 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.Timestamp.Precision;
+import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -16,7 +16,7 @@ import java.util.Date;
 /**
  * Implements the Ion <code>timestamp</code> type.
  */
-public final class IonTimestampImpl
+final class IonTimestampImpl
     extends IonValueImpl
     implements IonTimestamp
 {
@@ -65,8 +65,8 @@ public final class IonTimestampImpl
 
 
     static final int NULL_TIMESTAMP_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
-                                        IonConstants.lnIsNullAtom);
+        _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidTimestamp,
+                                        _Private_IonConstants.lnIsNullAtom);
 
     private Timestamp _timestamp_value;
 
@@ -86,7 +86,7 @@ public final class IonTimestampImpl
     public IonTimestampImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidTimestamp;
+        assert pos_getType() == _Private_IonConstants.tidTimestamp;
     }
 
     /**
@@ -313,12 +313,12 @@ public final class IonTimestampImpl
         int ln = 0;
         // if (_timestamp_value == null) {
         if (_isNullValue()) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else {
             ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
+            if (ln > _Private_IonConstants.lnIsVarLen) {
+                ln = _Private_IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -340,13 +340,13 @@ public final class IonTimestampImpl
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
 
         int type = this.pos_getType();
-        if (type != IonConstants.tidTimestamp) {
+        if (type != _Private_IonConstants.tidTimestamp) {
             throw new IonException("invalid type desc encountered for value");
         }
 
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {   // TODO is the mask necessary?
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             _timestamp_value = null;
             _isNullValue(true);
             break;
@@ -354,7 +354,7 @@ public final class IonTimestampImpl
             _timestamp_value = new Timestamp(0, null);
             _isNullValue(false);
             break;
-        case IonConstants.lnIsVarLen:
+        case _Private_IonConstants.lnIsVarLen:
             ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:

@@ -2,10 +2,8 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonSystemPrivate;
-import java.util.Arrays;
+import com.amazon.ion.impl._Private_IonSystem;
 import java.util.Iterator;
-import org.junit.Assert;
 
 /**
  *
@@ -17,6 +15,7 @@ public class IteratorSystemProcessingTest
     private Iterator<IonValue> myIterator;
     private IonValue myCurrentValue;
 
+
     protected Iterator<IonValue> iterate()
         throws Exception
     {
@@ -26,7 +25,7 @@ public class IteratorSystemProcessingTest
     protected Iterator<IonValue> systemIterate()
         throws Exception
     {
-        IonSystemPrivate sys = system();
+        _Private_IonSystem sys = system();
         Iterator<IonValue> it = sys.systemIterate(myText);
         return it;
     }
@@ -58,6 +57,18 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
+    protected void stepIn() throws Exception
+    {
+        myIterator = ((IonContainer)myCurrentValue).iterator();
+    }
+
+    @Override
+    protected void stepOut() throws Exception
+    {
+
+    }
+
+    @Override
     protected IonType currentValueType() throws Exception
     {
         if (myCurrentValue == null) {
@@ -66,41 +77,13 @@ public class IteratorSystemProcessingTest
         return myCurrentValue.getType();
     }
 
-    @Override
-    protected void checkAnnotation(String expected, int expectedSid)
-    {
-        if (! myCurrentValue.hasTypeAnnotation(expected))
-        {
-            fail("Didn't find expected annotation: " + expected);
-        }
-
-        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
-        if (! Arrays.asList(typeAnnotations).contains(expected))
-        {
-            fail("Didn't find expected annotation: " + expected);
-        }
-
-        int foundSid = myCurrentValue.getSymbolTable().findSymbol(expected);
-        assertEquals("symbol id", expectedSid, foundSid);
-    }
 
     @Override
-    protected void checkAnnotations(String[] expecteds,
-                                    int[] expectedSids)
+    Checker check()
     {
-        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
-        Assert.assertArrayEquals(expecteds, typeAnnotations);
-
-        SymbolTable symtab = myCurrentValue.getSymbolTable();
-        for (int i = 0; i < expecteds.length; i++)
-        {
-            int foundSid = symtab.findSymbol(expecteds[i]);
-            if (foundSid != SymbolTable.UNKNOWN_SYMBOL_ID)
-            {
-                assertEquals("symbol id", expectedSids[i], foundSid);
-            }
-        }
+        return new IonValueChecker(myCurrentValue);
     }
+
 
     @Override
     protected void checkType(IonType expected)
@@ -145,16 +128,6 @@ public class IteratorSystemProcessingTest
         checkSymbol(expected, expectedSid, myCurrentValue);
     }
 
-    @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
-        throws Exception
-    {
-        checkSymbol(expected, expectedLocalSid, myCurrentValue);
-
-        // when missing from a shared table the symbol
-        // will have been added to the local symbols
-        return true;
-    }
 
     @Override
     protected void checkTimestamp(Timestamp expected) throws Exception
@@ -163,7 +136,7 @@ public class IteratorSystemProcessingTest
     }
 
     @Override
-    protected SymbolTable currentSymtab() throws Exception
+    SymbolTable currentSymtab()
     {
         return myCurrentValue.getSymbolTable();
     }

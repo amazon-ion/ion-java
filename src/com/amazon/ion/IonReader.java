@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -166,8 +166,20 @@ public interface IonReader
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
+     *
+     * @throws UnknownSymbolException if any annotation has unknown text.
      */
     public String[] getTypeAnnotations();
+
+    /**
+     * Gets the current value's annotations as symbol tokens (text + ID).
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
+     *
+     * @since IonJava R15
+     */
+    public SymbolToken[] getTypeAnnotationSymbols();
 
     /**
      * Return the symbol IDs of the annotations on the current value as an
@@ -178,13 +190,19 @@ public interface IonReader
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #getTypeAnnotationSymbols()} instead.
      */
+    @Deprecated
     public int[] getTypeAnnotationIds();
 
     /**
      * Return the annotations on the curent value as an iterator.  The
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
+     *
+     * @throws UnknownSymbolException if any annotation has unknown text.
      *
      * @return not null.
      */
@@ -199,7 +217,11 @@ public interface IonReader
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @return not null.
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #getTypeAnnotationSymbols()} instead.
      */
+    @Deprecated
     public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
@@ -212,14 +234,36 @@ public interface IonReader
      * field within a struct.
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #getFieldNameSymbol()} instead.
      */
+    @Deprecated
     public int getFieldId();
 
     /**
      * Return the field name of the current value. Or null if there is no valid
      * current value or if the current value is not a field of a struct.
+     *
+     * @throws UnknownSymbolException if the field name has unknown text.
      */
     public String getFieldName();
+
+    /**
+     * Gets the current value's field name as a symbol token (text + ID).
+     * If the text of the token isn't known, the result's
+     * {@link SymbolToken#getText()} will be null.
+     * If the symbol ID of the token isn't known, the result's
+     * {@link SymbolToken#getSid()} will be
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
+     * At least one of the two fields will be defined.
+     *
+     * @return null if there is no current value or if the current value is
+     *  not a field of a struct.
+     *
+     * @since IonJava R15
+     */
+    public SymbolToken getFieldNameSymbol();
 
 
     /**
@@ -319,8 +363,26 @@ public interface IonReader
      * Returns the current value as a Java String.
      * This is only valid when {@link #getType()} returns
      * {@link IonType#STRING} or {@link IonType#SYMBOL}.
+     *
+     * @throws UnknownSymbolException if the current value is a symbol
+     * with unknown text.
+     *
+     * @see #symbolValue()
      */
     public String stringValue();
+
+
+    /**
+     * Returns the current value as a symbol token (text + ID).
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#SYMBOL}.
+     *
+     * @return null if {@link #isNullValue()}
+     *
+     * @since IonJava R15
+     */
+    public SymbolToken symbolValue();
+
 
     /**
      * Returns the current value as an int symbol ID.
@@ -334,7 +396,11 @@ public interface IonReader
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @see #stringValue()
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #symbolValue()} instead.
      */
+    @Deprecated
     public int getSymbolId();
 
 

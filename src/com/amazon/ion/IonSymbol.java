@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,10 +9,12 @@ public interface IonSymbol
     extends IonText
 {
     /**
-     * Gets the characters that name this symbol.
+     * Gets the text content of this symbol.
      *
      * @return the text of the symbol, or <code>null</code> if this is
      * <code>null.symbol</code>.
+     *
+     * @throws UnknownSymbolException if this symbol has unknown text.
      */
     public String stringValue();
 
@@ -23,7 +25,8 @@ public interface IonSymbol
      * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
-     * @deprecated Use {@link #getSymbolId()} instead.
+     * @deprecated Since 2008.
+     * Use {@link #symbolValue()} instead.
      */
     @Deprecated
     public int intValue()
@@ -36,9 +39,23 @@ public interface IonSymbol
      * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
+     *
+     * @deprecated Since IonJava R15.
+     * Use {@link #symbolValue()} instead.
      */
+    @Deprecated
     public int getSymbolId()
         throws NullValueException;
+
+
+    /**
+     * Returns this value as a symbol token (text + ID).
+     *
+     * @return null if {@link #isNullValue()}
+     *
+     * @since IonJava R15
+     */
+    public SymbolToken symbolValue();
 
 
     /**

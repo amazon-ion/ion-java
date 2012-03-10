@@ -1,6 +1,8 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_ScalarConversions.getValueTypeName;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
@@ -14,17 +16,16 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
 import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
-import java.io.File;
-import java.io.FileInputStream;
+import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
@@ -40,80 +41,17 @@ import java.util.Iterator;
  *  the IonTextUserReader is responsible for that.
  *
  */
-public class IonReaderTextSystemX
+class IonReaderTextSystemX
     extends IonReaderTextRawX
-    implements IonReaderWriterPrivate
+    implements _Private_ReaderWriter
 {
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
     protected IonSystem _system;
 
-    protected IonReaderTextSystemX(IonSystem system, char[] chars, int offset, int length) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, CharSequence chars, int offset, int length) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(chars, offset, length);
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, Reader userChars) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        try {
-            iis = UnifiedInputStreamX.makeStream(userChars);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, byte[] bytes, int offset, int length) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        iis = UnifiedInputStreamX.makeStream(bytes, offset, length);
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, InputStream userBytes) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        try {
-            iis = UnifiedInputStreamX.makeStream(userBytes);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, File file) {
-        super();
-        _system = system;
-        UnifiedInputStreamX iis;
-        try {
-            InputStream userBytes = new FileInputStream(file);
-            iis = UnifiedInputStreamX.makeStream(userBytes);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        init_once();
-        init(iis, IonType.DATAGRAM);
-    }
-    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis) {
-        super();
+
+    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis)
+    {
         _system = system;
         init_once();
         init(iis, IonType.DATAGRAM);
@@ -304,7 +242,7 @@ public class IonReaderTextSystemX
             }
             _v.setValue(t);
             break;
-        case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
+        case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
             // this includes the various value keywords like true
             // and nan, in addition to "normal" unquoted symbols
 
@@ -321,18 +259,13 @@ public class IonReaderTextSystemX
             else {
                 switch(getType()) {
                 case SYMBOL:
+                    // TODO this is catching SIDs too, using wrong text.
                     _v.setValue(s);
                     break;
                 case FLOAT:
                     switch (_value_keyword) {
                     case IonTokenConstsX.KEYWORD_NAN:
                         _v.setValue(Double.NaN);
-                        break;
-                    case IonTokenConstsX.KEYWORD_PLUS_INF:
-                        _v.setValue(Double.POSITIVE_INFINITY);
-                        break;
-                    case IonTokenConstsX.KEYWORD_MINUS_INF:
-                        _v.setValue(Double.NEGATIVE_INFINITY);
                         break;
                     default:
                         String message = "unexpected keyword "
@@ -379,45 +312,45 @@ public class IonReaderTextSystemX
             parse_error("scalar token "+IonTokenConstsX.getTokenName(_scanner.getToken())+"isn't a recognized type");
         }
     }
-    private final void cast_cached_value(int value_type)
+    private final void cast_cached_value(int new_type)
     {
         // this should only be called when it actually has to do some work
-        assert !_v.hasValueOfType(value_type);
+        assert !_v.hasValueOfType(new_type);
 
         if (_v.isNull()) {
             return;
         }
 
         if (IonType.SYMBOL.equals(_value_type)) {
-            switch(value_type) {
-                case AS_TYPE.int_value:
-                    int sid = _v.getInt();
-                    String sym = getSymbolTable().findSymbol(sid);
-                    _v.setValue(sym);
-                    break;
+            switch(new_type) {
                 case AS_TYPE.string_value:
+                    int sid = _v.getInt();
+                    String sym = getSymbolTable().findKnownSymbol(sid);
+                    _v.addValue(sym);
+                    break;
+                case AS_TYPE.int_value:
                     sym = _v.getString();
                     sid = getSymbolTable().findSymbol(sym);
-                    _v.setValue(sid);
+                    _v.addValue(sid);
                     break;
                 default:
                 {   String message = "can't cast symbol from "
-                        +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                        +getValueTypeName(_v.getAuthoritativeType())
                         +" to "
-                        +IonScalarConversionsX.getValueTypeName(value_type);
+                        +getValueTypeName(new_type);
                     throw new CantConvertException(message);
                 }
             }
         }
         else {
-            if (!_v.can_convert(value_type)) {
+            if (!_v.can_convert(new_type)) {
                 String message = "can't cast from "
-                    +IonScalarConversionsX.getValueTypeName(_v.getAuthoritativeType())
+                    +getValueTypeName(_v.getAuthoritativeType())
                     +" to "
-                    +IonScalarConversionsX.getValueTypeName(value_type);
+                    +getValueTypeName(new_type);
                 throw new CantConvertException(message);
             }
-            int fnid = _v.get_conversion_fnid(value_type);
+            int fnid = _v.get_conversion_fnid(new_type);
             _v.cast(fnid);
         }
     }
@@ -426,31 +359,35 @@ public class IonReaderTextSystemX
     // public value routines
     //
 
-    public int getSymbolId()
+    public SymbolToken[] getTypeAnnotationSymbols()
     {
-        // TODO ION-233 implement sids for system readers
-        return SymbolTable.UNKNOWN_SYMBOL_ID;
-    }
+        final int count = _annotation_count;
+        if (count == 0) return SymbolToken.EMPTY_ARRAY;
 
-    public int getFieldId()
-    {
-        // TODO ION-233 implement sids for system readers
-        return -1;
-        // throw new UnsupportedOperationException("not supported - use UserReader");
+        SymbolTable symbols = getSymbolTable();
+
+        SymbolToken[] result = new SymbolToken[count];
+        for (int i = 0; i < count; i++)
+        {
+            SymbolToken sym = _annotations[i];
+            SymbolToken updated = _Private_Utils.localize(symbols, sym);
+            if (updated != sym) _annotations[i] = updated;
+            result[i] = updated;
+        }
+
+        return result;
     }
 
     public int[] getTypeAnnotationIds()
     {
-        // TODO ION-233 implement sids for system readers
-        return IonImplUtils.EMPTY_INT_ARRAY;
-//        throw new UnsupportedOperationException("not supported - use UserReader");
+        SymbolToken[] syms = getTypeAnnotationSymbols();
+        return _Private_Utils.toSids(syms, syms.length);
     }
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
-        // TODO ION-233 implement sids for system readers
-        return IonImplUtils.<Integer>emptyIterator();
-//        throw new UnsupportedOperationException("not supported - use UserReader");
+        int[] ids = getTypeAnnotationIds();
+        return _Private_Utils.intIterator(ids);
     }
 
 
@@ -473,18 +410,40 @@ public class IonReaderTextSystemX
 
     public int intValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         load_or_cast_cached_value(AS_TYPE.int_value);
         return _v.getInt();
     }
 
     public long longValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         load_or_cast_cached_value(AS_TYPE.long_value);
         return _v.getLong();
     }
 
+    @Override
     public BigInteger bigIntegerValue()
     {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.DECIMAL &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException();
+        }
+
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
         if (_v.isNull()) return null;
         return _v.getBigInteger();
@@ -517,11 +476,112 @@ public class IonReaderTextSystemX
         return _v.getTimestamp();
     }
 
-    public String stringValue()
+    public final String stringValue()
     {
-        load_or_cast_cached_value(AS_TYPE.string_value);
+        if (! IonType.isText(_value_type)) throw new IllegalStateException();
         if (_v.isNull()) return null;
-        return _v.getString();
+
+        load_or_cast_cached_value(AS_TYPE.string_value);
+        String text = _v.getString();
+        if (text == null) {
+            assert _value_type == IonType.SYMBOL;
+            int sid = _v.getInt();
+            assert sid > 0;
+            throw new UnknownSymbolException(sid);
+        }
+        return text;
+    }
+
+    /**
+     * Horrible temporary hack.
+     *
+     * @return not null.
+     */
+    @Override
+    public SymbolTable getSymbolTable()
+    {
+        SymbolTable symtab = super.getSymbolTable();
+        if (symtab == null)
+        {
+            symtab = _system.getSystemSymbolTable();
+        }
+        return symtab;
+    }
+
+
+    @Override
+    public final int getFieldId()
+    {
+        // Superclass handles hoisting logic
+        int id = super.getFieldId();
+        if (id == SymbolTable.UNKNOWN_SYMBOL_ID)
+        {
+            String fieldname = getRawFieldName();
+            if (fieldname != null)
+            {
+                SymbolTable symbols = getSymbolTable();
+                id = symbols.findSymbol(fieldname);
+            }
+        }
+        return id;
+    }
+
+    @Override
+    public final String getFieldName()
+    {
+        // Superclass handles hoisting logic
+        String text = getRawFieldName();
+        if (text == null)
+        {
+            int id = getFieldId();
+            if (id != SymbolTable.UNKNOWN_SYMBOL_ID)
+            {
+                SymbolTable symbols = getSymbolTable();
+                text = symbols.findKnownSymbol(id);
+                if (text == null)
+                {
+                    throw new UnknownSymbolException(id);
+                }
+            }
+        }
+        return text;
+    }
+
+    @Override
+    public final SymbolToken getFieldNameSymbol()
+    {
+        SymbolToken sym = super.getFieldNameSymbol();
+        if (sym != null)
+        {
+            sym = _Private_Utils.localize(getSymbolTable(), sym);
+        }
+        return sym;
+    }
+
+    @Deprecated
+    public final int getSymbolId()
+    {
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
+        if (_v.isNull()) throw new NullValueException();
+
+        load_or_cast_cached_value(AS_TYPE.int_value);
+        return _v.getInt();
+    }
+
+    public SymbolToken symbolValue()
+    {
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
+        if (_v.isNull()) return null;
+
+        load_or_cast_cached_value(AS_TYPE.string_value);
+        if (! _v.hasValueOfType(AS_TYPE.int_value))
+        {
+            cast_cached_value(AS_TYPE.int_value);
+        }
+
+        String text = _v.getString();
+        int    sid  = _v.getInt();
+        return new SymbolTokenImpl(text, sid);
     }
 
     //
@@ -557,7 +617,6 @@ public class IonReaderTextSystemX
             assert(!_current_value_save_point_loaded && _current_value_save_point.isClear());
             _scanner.save_point_start(_current_value_save_point);
             _scanner.skip_over_lob(_lob_token, _current_value_save_point);
-            _scanner.skip_lob_close_punctuation(_lob_token);
             _current_value_save_point_loaded = true;
             tokenValueIsFinished();
             _lob_loaded = LOB_STATE.READ;

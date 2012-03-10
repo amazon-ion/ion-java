@@ -20,6 +20,7 @@ public class OldBinaryWriterTest
     protected IonWriter makeWriter(SymbolTable... imports)
         throws Exception
     {
+        myOutputForm = OutputForm.BINARY;
         myWriter = system().newBinaryWriter(imports);
         return myWriter;
     }

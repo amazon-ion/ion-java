@@ -17,6 +17,12 @@ public class JarInfoTest
     {
         JarInfo info = new JarInfo();
 
+        // When running on a laptop that can't run our Ant targets (due to
+        // unavailable Brazil CLI and HappyTrails stuff) this test will fail.
+        // Adding -DNOBRAZIL to the Eclipse Installed JRE will allow us to
+        // succeed in that case.
+        if (System.getProperty("NOBRAZIL") != null) return;
+
         assertTrue(info.getReleaseLabel().startsWith("R1"));
         assertTrue(info.getBrazilMajorVersion().startsWith("1."));
         assertTrue(info.getBrazilPackageVersion().startsWith("IonJava-1."));

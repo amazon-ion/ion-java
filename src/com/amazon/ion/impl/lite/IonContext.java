@@ -1,19 +1,24 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 
 /**
- *  This interface is implemented by the various
- *  Ion containers and by a concrete IonConcreteContext.
- *  This is used to abstract the parent, system and
- *  symbol table definitions that are shared by all
- *  IonValues.
- *
- *  Generally top level values have a Concrete context
- *  and containers implement these interfaces.  Concrete
+ * Provides the parent, system and symbol table definitions that are shared
+ * by one or more hierarchies of IonValues.
+ * <p>
+ * The type of context used by a value depends on its position.
+ * <ul>
+ *   <li>Top-level values have either a {@link TopLevelContext} or an
+ *   {@link IonSystemLite} for a context.
+ *   <li>Non-top-level values have their {@link IonContainer} for a context.
+ *   <li>Datagrams have their {@link IonSystemLite} for a context.
+ * </ul>
+ * <p>
+ *  Concrete
  *  contexts simply return the correct values (and
  *  own them).  Containers return themselves as the
  *  parent and delegate to their parent for the
@@ -21,72 +26,72 @@ import com.amazon.ion.SymbolTable;
  *  contained directly by a datagram may store a
  *  symbol table locally as there may be more than
  *  one symbol table in a datagram.
- *
+ * <p>
  *  The IonSystemLite is a context too.  It returns
  *  null for parent, this for system, and the system symbol
  *  table.  For a local symbol table it constructs
  *  a local symbol table and attaches it to the calling
  *  child object ... how?
  */
-public interface IonContext
+interface IonContext
 {
     /**
-     * Return the IonValue that is the parent
-     * of the value associated with this context.  This name
-     * is a bit misleading in that the method is called
-     * from the contained value (the child) and
-     * in the case of most IonContainers (like IonStruct)
-     * the method simply returns this.
+     * Return the container of values associated with this context.
+     * If this context is an {@link IonContainerLite} it returns itself.
      *
-     * @return IonContainer that is the parent of the value
+     * @return the container of the value;
+     *  null for stand-alone top level values.
      */
-    abstract IonContainerLite getParentThroughContext();
+    abstract IonContainerLite getContextContainer();
+
+    /**
+     * Sets the container for the given child value, which must have this
+     * instance as its context.
+     *
+     * @param container the new container for the child; not null.
+     * @param child must not be null.
+     *
+     * @throws UnsupportedOperationException
+     *  if this is a container or a datagram.
+     */
+    abstract void setContextContainer(IonContainerLite container,
+                                      IonValueLite child);
+
 
     /**
      * Get the IonSystem concrete object that created
      * the IonValue that is associated with this context.
      * Generally this delegates to the parent.
      *
-     * @return IonSystem
+     * @return not null
      */
-    abstract IonSystemLite getSystemLite();
+    abstract IonSystemLite getSystem();
+
 
     /**
-     * Get the SymbolTable the associated IonValue
-     * needs to resolve symbols.
-     * Generally this delegates to the parent.
+     * Returns the symbol table that is directly assigned to this context.
+     * For {@link TopLevelContext} it is the symbol table member.
+     * For {@link IonContainerLite} and {@link IonSystemLite} it is null.
      *
-     * @return SymbolTable
-     */
-    abstract SymbolTable getSymbolTable();
-
-    /**
-     * Returns the symbol table that is directly assigned
-     * to this context.  For the concrete context
-     * this is the symbol table reference it has.  For
-     * containers acting as a context this is null.
-     * @return SymbolTable directly assigned symbol table
+     * @return the directly assigned symbol table, with no recursive lookup.
      */
     abstract SymbolTable getContextSymbolTable();
 
     /**
-     * Get a SymbolTable associated with this
-     * attached IonValue the can be used to
-     * define symbols.  A local symbol table
-     * as distinct from a read only symbol table,
-     * such as a system symbol table.
+     * Ensure that a local symtab (not a system symtab) is associated with
+     * this context.
+     * <p>
+     * Generally this delegates to the parent who may need to create a new
+     * symtab.
      *
-     * Generally this delegates to the parent
-     * who may need to create a new symbol
-     * table.
-     *
-     * @param child the IonValue of the child requesting the local symbol table, used to back patch
+     * @param child the IonValue of the child requesting the local symtab,
+     * used to back patch.
      *
      * @return SymbolTable updatable symbol table
      *
      * @throws ReadOnlyValueException if the IonValue is read only
      */
-    abstract SymbolTable getLocalSymbolTable(IonValueLite child);
+    abstract SymbolTable ensureLocalSymbolTable(IonValueLite child);
 
     /**
      *  Set the SymbolTable of the associated IonValue.
@@ -114,13 +119,4 @@ public interface IonContext
      * as read only.
      */
     abstract void clearLocalSymbolTable();
-
-    /**
-     * Sets the parent container for this values context object.  Generally
-     * used when a local symbol table is being created for a top level
-     * value and so an intermediate context is needed to find the value.
-     * @param newParent the parent of the value this context is bound to
-     */
-    abstract void setParentThroughContext(IonValueLite child, IonContext newParent);
-
 }

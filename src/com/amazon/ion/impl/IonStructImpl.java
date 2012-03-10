@@ -1,13 +1,18 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullStruct;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsOrderedStruct;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl.IonBinary.Reader;
@@ -22,18 +27,16 @@ import java.util.Set;
 /**
  * Implements the Ion <code>struct</code> type.
  */
-public final class IonStructImpl
+final class IonStructImpl
     extends IonContainerImpl
     implements IonStruct
 {
 
     private static final int NULL_STRUCT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
-                                        IonConstants.lnIsNullStruct);
+        makeTypeDescriptor(tidStruct, lnIsNullStruct);
 
     static final int ORDERED_STRUCT_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidStruct,
-                                        IonConstants.lnIsOrderedStruct);
+        makeTypeDescriptor(tidStruct, lnIsOrderedStruct);
 
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
@@ -57,7 +60,7 @@ public final class IonStructImpl
     public IonStructImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidStruct;
+        assert pos_getType() == _Private_IonConstants.tidStruct;
     }
 
     /**
@@ -88,7 +91,7 @@ public final class IonStructImpl
         _field_map = new HashMap<String, Integer>(size);
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
-            IonValueImpl v = (IonValueImpl)get_child(ii);
+            IonValueImpl v = get_child(ii);
             String name = v.getFieldName();
             _field_map.put(name, ii);
         }
@@ -98,7 +101,7 @@ public final class IonStructImpl
     {
         int size = get_child_count();
         for (int ii=0; ii<size; ii++) {
-            IonValueImpl field = (IonValueImpl)get_child(ii);
+            IonValueImpl field = get_child(ii);
             if (fieldName.equals(field.getFieldName())) {
                 return ii;
             }
@@ -189,15 +192,16 @@ public final class IonStructImpl
                 new HashSet<String>(Arrays.asList(fieldNames));
             for (IonValue value : this)
             {
-                String fieldName = value.getFieldName();
+                SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
+                String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
-                    clone.add(fieldName, value.clone());
+                    clone.add(fieldNameSymbol, value.clone());
                 }
             }
         }
 
-        clone.setTypeAnnotations(getTypeAnnotations());
+        clone.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
 
         return clone;
     }
@@ -208,23 +212,6 @@ public final class IonStructImpl
         return IonType.STRUCT;
     }
 
-
-    //public boolean oldisNullValue()
-    //{
-    //    if (_hasNativeValue() || !_isPositionLoaded()) {
-    //        return (_children == null);
-    //    }
-    //
-    //    int ln = this.pos_getLowNibble();
-    //    return (ln == IonConstants.lnIsNullStruct);
-    //}
-
-
-    public IonValue get(IonSymbol fieldName)
-    {
-        makeReady();
-        return get(fieldName.stringValue());
-    }
 
     public boolean containsKey(Object fieldName)
     {
@@ -287,7 +274,7 @@ public final class IonStructImpl
                 for (int i = get_child_count() - 1; i >= 0; i--)
                 {
                     IonValue child = get_child(i);
-                    if (fieldName.equals(child.getFieldName()))
+                    if (fieldName.equals(child.getFieldNameSymbol().getText()))
                     {
                         ((IonValueImpl)child).detachFromContainer();
                         this.remove_child(i);
@@ -360,6 +347,29 @@ public final class IonStructImpl
         if (_field_map != null) {
             add_field(fieldName, concrete._elementid);
         }
+    }
+
+    public void add(SymbolToken fieldName, IonValue child)
+    {
+        String text = fieldName.getText();
+        if (text != null)
+        {
+            // Ignoring the sid is safe, but perhaps not the most efficient.
+            add(text, child);
+            return;
+        }
+
+        if (fieldName.getSid() < 0)
+        {
+            throw new IllegalArgumentException("fieldName has no text or ID");
+        }
+
+//      validateNewChild(value);          // This is done by add() below.
+
+        IonValueImpl concrete = (IonValueImpl) child;
+        add(concrete);
+
+        concrete.setFieldNameSymbol(fieldName);
     }
 
     public ValueFactory add(final String fieldName)
@@ -477,7 +487,7 @@ public final class IonStructImpl
     @Override
     public int getTypeDescriptorAndLengthOverhead(int contentLength)
     {
-        int len = IonConstants.BB_TOKEN_LEN;
+        int len = _Private_IonConstants.BB_TOKEN_LEN;
 
         if (isNullValue() || isEmpty())
         {
@@ -485,7 +495,7 @@ public final class IonStructImpl
             return len;
         }
 
-        if (_isOrdered || contentLength >= IonConstants.lnIsVarLen)
+        if (_isOrdered || contentLength >= _Private_IonConstants.lnIsVarLen)
         {
             len += IonBinary.lenVarUInt(contentLength);
         }
@@ -498,16 +508,16 @@ public final class IonStructImpl
     {
         assert _hasNativeValue();
 
-        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
+        if (_isNullValue())    { return _Private_IonConstants.lnIsNullSequence; }
 
-        if (get_child_count() == 0) return IonConstants.lnIsEmptyContainer;
+        if (get_child_count() == 0) return _Private_IonConstants.lnIsEmptyContainer;
 
-        if (_isOrdered) return IonConstants.lnIsOrderedStruct;
+        if (_isOrdered) return _Private_IonConstants.lnIsOrderedStruct;
 
         int contentLength = this.getNativeValueLength();  // FIXME check nakedLength?
-        if (contentLength > IonConstants.lnIsVarLen)
+        if (contentLength > _Private_IonConstants.lnIsVarLen)
         {
-            return IonConstants.lnIsVarLen;
+            return _Private_IonConstants.lnIsVarLen;
         }
 
         return contentLength;
@@ -527,7 +537,7 @@ public final class IonStructImpl
             // TODO Rewrite this to avoid computing length again
             int vlen = this.getNativeValueLength();
 
-            if (_isOrdered || vlen >= IonConstants.lnIsVarLen)
+            if (_isOrdered || vlen >= _Private_IonConstants.lnIsVarLen)
             {
                 writer.writeVarUIntValue(vlen, true);
             }

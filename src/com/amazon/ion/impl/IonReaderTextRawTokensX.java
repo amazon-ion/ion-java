@@ -1,4 +1,5 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
@@ -40,7 +41,7 @@ import java.io.IOException;
  *  calling reader.
  *
  */
-public class IonReaderTextRawTokensX
+final class IonReaderTextRawTokensX
 {
 //////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;
@@ -405,15 +406,8 @@ public class IonReaderTextRawTokensX
         return IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE;
     }
 
-    protected final void skip_lob_close_punctuation(int lobToken) throws IOException {
-        switch (lobToken) {
-        case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
-        case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
-            break;
-        default:
-            return;
-        }
-
+    /** Expects optional whitespace then }} */
+    protected final void skip_lob_close_punctuation() throws IOException {
         int c = skip_over_whitespace();
         if (c == '}') {
             c = read_char();
@@ -464,8 +458,8 @@ public class IonReaderTextRawTokensX
         case IonTokenConstsX.TOKEN_TIMESTAMP:
             c = skip_over_timestamp(sp);
             break;
-        case IonTokenConstsX.TOKEN_SYMBOL_BASIC:
-            c = skip_over_symbol(sp);
+        case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
+            c = skip_over_symbol_identifier(sp);
             break;
         case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
             // Initial single-quote has been consumed!
@@ -630,7 +624,7 @@ public class IonReaderTextRawTokensX
         case 'Y': case 'Z':
         case '$': case '_':
             unread_char(c);
-            return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_BASIC, true);
+            return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER, true);
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             t = scan_for_numeric_type(c);
@@ -1113,24 +1107,26 @@ public class IonReaderTextRawTokensX
                 if (c == '{') {
                     // 2nd '{' - it's a lob of some sort - let's find out what sort
                     c = skip_over_lob_whitespace();
+
+                    int lobType;
                     if (c == '"') {
                         // clob, double quoted
-                        skip_double_quoted_string(null);
+                        lobType = IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE;
                     }
                     else if (c == '\'') {
-                     // clob, triple quoted - or error
+                        // clob, triple quoted - or error
                         if (!is_2_single_quotes_helper()) {
                             error("invalid single quote in lob content");
                         }
-                        skip_triple_quoted_string(null);
+                        lobType = IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE;
                     }
-                    else if (c == '}') {
-                        // blob, empty (closed immediately) - or error
-                        c = read_char();
-                        if (c != '}') {
-                            error("missing blob close");
-                        }
+                    else {
+                        // blob
+                        unread_char(c);
+                        lobType = IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE;
                     }
+
+                    skip_over_lob(lobType, null);
                 }
                 else if (c == '}') {
                     // do nothing, we just opened and closed an empty struct
@@ -1697,7 +1693,7 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
-    private final int skip_over_symbol(SavePoint sp) throws IOException
+    private final int skip_over_symbol_identifier(SavePoint sp) throws IOException
     {
         int c = read_char();
 
@@ -1710,61 +1706,19 @@ public class IonReaderTextRawTokensX
          }
         return c;
     }
-    protected void load_symbol(StringBuilder sb) throws IOException
-    {
-        int c = read_char();
-        if (c == '$') {
-            // since this *might* be a '$'<number> symbol it get special treatment
-            sb.append((char)c);
-            load_symbol_as_possible_id(sb);
-        }
-        else {
-            // as long as this isn't a '$'<number> symbol just load it
-            while(IonTokenConstsX.isValidSymbolCharacter(c)) {
-                sb.append((char)c);
-                c = read_char();
-            }
-            unread_char(c);
-        }
-        return;
-    }
-    private void load_symbol_as_possible_id(StringBuilder sb) throws IOException
-    {
-        // note the first character was a '$'
-        assert(sb.length() == 1 && sb.charAt(0) == '$');
 
-        boolean all_numeric = true;
-
+    protected void load_symbol_identifier(StringBuilder sb) throws IOException
+    {
         int c = read_char();
         while(IonTokenConstsX.isValidSymbolCharacter(c)) {
             sb.append((char)c);
-            if (!IonTokenConstsX.isDigit(c)) {
-                all_numeric = false;
-            }
             c = read_char();
         }
         unread_char(c);
-
-        if (all_numeric) {
-            // here we have to normalize (that is remove
-            // any leading '0's) the int value
-            // this should be an unusual case so the cost
-            // here isn't a major issue
-            while(sb.length() > 2) {
-                c = sb.charAt(1); // right after the '$'
-                if (c != '0') {
-                    break;
-                }
-                sb.deleteCharAt(1);
-            }
-        }
-
-        return;
     }
 
     private int skip_over_symbol_operator(SavePoint sp) throws IOException
     {
-        //int token_type;
         int c = read_char();
 
         // lookahead for +inf and -inf
@@ -2079,13 +2033,16 @@ public class IonReaderTextRawTokensX
         return c;
     }
 
+    /** Skips over the closing }} too. */
     protected void skip_over_lob(int lobToken, SavePoint sp) throws IOException {
         switch(lobToken) {
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
             skip_double_quoted_string(sp);
+            skip_lob_close_punctuation();
             break;
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
             skip_triple_quoted_string(sp);
+            skip_lob_close_punctuation();
             break;
         case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
             skip_over_blob(sp);
@@ -2157,10 +2114,10 @@ public class IonReaderTextRawTokensX
         if (_stream._is_byte_data) {
             return read_ut8_sequence(c);
         }
-        if (IonConstants.isHighSurrogate(c)) {
+        if (_Private_IonConstants.isHighSurrogate(c)) {
             int c2 = read_char();
-            if (IonConstants.isLowSurrogate(c2)) {
-                c = IonConstants.makeUnicodeScalar(c, c2);
+            if (_Private_IonConstants.isLowSurrogate(c2)) {
+                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
             }
             else {
                 // we don't always pair up surrogates here
@@ -2269,7 +2226,7 @@ public class IonReaderTextRawTokensX
                 bad_escape_sequence(c1);
             }
         }
-        if (!IonTokenConstsX.isValueEscapeStart(c1)) {
+        if (!IonTokenConstsX.isValidEscapeStart(c1)) {
             bad_escape_sequence(c1);
         }
         int c2 = IonTokenConstsX.escapeReplacementCharacter(c1);

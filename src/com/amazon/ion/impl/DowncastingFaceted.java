@@ -1,10 +1,14 @@
 // Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
+
+import com.amazon.ion.facet.Faceted;
+
 /**
- * Provides a simple implementation of {@link IonReaderPosition}
+ * Provides a simple implementation of {@link Faceted}
  * that delegates facet interpolation as a cast.
  */
-public abstract class IonReaderPositionBase implements IonReaderPosition
+abstract class DowncastingFaceted
+    implements Faceted
 {
     public final <T> T asFacet(final Class<T> type)
     {

@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import org.junit.Assert;
 
 
 
@@ -30,31 +29,5 @@ public class TextReaderSystemProcessingTest
     protected IonReader systemRead() throws Exception
     {
         return system().newSystemReader(myText);
-    }
-
-    @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
-        throws Exception
-    {
-        // When reading text and symtab is missing, we'll get the name right
-        // but we won't know the right sid.
-        // note that this form of checkSymbol does force a sid
-        // to be assigned to this symbol will have an id
-        checkSymbol(expected);
-
-        // when missing from a shared table the symbol
-        // will have been added to the local symbols
-        return true;
-    }
-
-    @Override
-    protected void checkAnnotations(String[] expecteds, int[] expectedSids)
-    {
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        Assert.assertArrayEquals(expecteds, typeAnnotations);
-
-        // TODO ION-172
-//        int[] sids = myReader.getTypeAnnotationIds();
-//        Assert.assertArrayEquals(expectedSids, sids);
     }
 }

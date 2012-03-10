@@ -4,11 +4,12 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.util.IonTextUtils.printString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.amazon.ion.impl.IonSystemPrivate;
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import java.util.Arrays;
@@ -26,21 +27,22 @@ public class Symtabs
 
     public static final SimpleCatalog CATALOG = new SimpleCatalog();
 
+    public static final String FRED_NAME = "fred";
 
-    public final static String[] FRED_SERIALIZED = {
+    public static final String[] FRED_SERIALIZED = {
         null,
 
         // version: 1
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''fred''', version:1," +
+        "  name:'''" + FRED_NAME + "''', version:1," +
         "  symbols:['''fred_1''', '''fred_2''']" +
         "}",
 
         // version: 2
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''fred''', version:2," +
+        "  name:'''" + FRED_NAME + "''', version:2," +
         "  symbols:[" +
         "    '''fred_1'''," +
         "    '''fred_2'''," +
@@ -52,7 +54,7 @@ public class Symtabs
         // version: 3
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''fred''', version:3," +
+        "  name:'''" + FRED_NAME + "''', version:3," +
         "  symbols:[" +
         "    '''fred_1'''," +
         "    null, /* Removed fred_2 */" +
@@ -63,20 +65,22 @@ public class Symtabs
         "}"
     };
 
-    public final static String[] GINGER_SERIALIZED = {
+    public static final String GINGER_NAME = "ginger";
+
+    public static final String[] GINGER_SERIALIZED = {
         null,
 
         // version: 1
         SharedSymbolTablePrefix +
         "{" +
-        "  name:'''ginger''', version:1," +
+        "  name:'''" + GINGER_NAME + "''', version:1," +
         "  symbols:['''g1''', '''g2''']" +
         "}",
     };
 
 
-    public final static int[] FRED_MAX_IDS;
-    public final static int[] GINGER_MAX_IDS;
+    public static final int[] FRED_MAX_IDS;
+    public static final int[] GINGER_MAX_IDS;
 
 
     static
@@ -89,7 +93,7 @@ public class Symtabs
     {
         int[] maxIds = new int[serializedTables.length];
 
-        IonSystemPrivate system = (IonSystemPrivate)
+        _Private_IonSystem system = (_Private_IonSystem)
             IonSystemBuilder.standard().withCatalog(CATALOG).build();
 
         for (int i = 1; i < serializedTables.length; i++)
@@ -129,5 +133,47 @@ public class Symtabs
                                  s2.getImportedTables()));
         assertEquals(s1.getImportedMaxId(), s2.getImportedMaxId());
         assertEquals(s1.getMaxId(), s2.getMaxId());
+    }
+
+    /**
+     * Constructs the DOM for a shared symtab.
+     *
+     * @param syms If null, so symbols list will be added.
+     */
+    public static IonStruct sharedSymtabStruct(ValueFactory factory,
+                                               String name, int version,
+                                               String... syms)
+    {
+        IonStruct s = factory.newEmptyStruct();
+        s.setTypeAnnotations(SystemSymbols.ION_SHARED_SYMBOL_TABLE);
+        s.add(SystemSymbols.NAME).newString(name);
+        s.add(SystemSymbols.VERSION).newInt(version);
+        if (syms != null)
+        {
+            IonList l = s.add(SystemSymbols.SYMBOLS).newEmptyList();
+            for (String sym : syms)
+            {
+                l.add().newString(sym);
+            }
+        }
+        return s;
+    }
+
+
+    public static String printLocalSymtab(String... symbols)
+    {
+        StringBuilder s = new StringBuilder(LocalSymbolTablePrefix);
+
+        s.append("{symbols:[");
+
+        for (String symbol : symbols)
+        {
+            s.append(printString(symbol));
+            s.append(',');
+        }
+
+        s.append("]} ");
+
+        return s.toString();
     }
 }

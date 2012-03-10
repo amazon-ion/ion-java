@@ -1,14 +1,15 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
+
+import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
+import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.newLiteSystem;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonSystemImpl;
-import com.amazon.ion.impl.lite.IonSystemLite;
 
 /**
  * The bootstrap builder for creating an {@link IonSystem}.
@@ -147,12 +148,28 @@ public class IonSystemBuilder
         return new IonSystemBuilder.Mutable(this);
     }
 
-    IonSystemBuilder immutable()
+    /**
+     * Returns an immutable builder configured exactly like this one.
+     *
+     * @return this instance, if immutable;
+     * otherwise an immutable copy of this instance.
+     *
+     * @since IonJava R15
+     */
+    public IonSystemBuilder immutable()
     {
         return this;
     }
 
-    IonSystemBuilder mutable()
+    /**
+     * Returns a mutable builder configured exactly like this one.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @since IonJava R15
+     */
+    public IonSystemBuilder mutable()
     {
         return copy();
     }
@@ -319,11 +336,11 @@ public class IonSystemBuilder
         IonSystem sys;
         if (isBinaryBacked())
         {
-            sys = new IonSystemImpl(catalog, myStreamCopyOptimized);
+            sys = newLazySystem(catalog, myStreamCopyOptimized);
         }
         else
         {
-            sys = new IonSystemLite(catalog, myStreamCopyOptimized);
+            sys = newLiteSystem(catalog, myStreamCopyOptimized);
         }
         return sys;
     }
@@ -339,13 +356,13 @@ public class IonSystemBuilder
         }
 
         @Override
-        IonSystemBuilder immutable()
+        public IonSystemBuilder immutable()
         {
             return new IonSystemBuilder(this);
         }
 
         @Override
-        IonSystemBuilder mutable()
+        public IonSystemBuilder mutable()
         {
             return this;
         }

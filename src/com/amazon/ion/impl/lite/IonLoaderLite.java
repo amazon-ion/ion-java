@@ -1,8 +1,8 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
-import static com.amazon.ion.impl.IonReaderFactoryX.makeReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -11,7 +11,7 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonWriterFactory;
+import com.amazon.ion.impl._Private_IonWriterFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -21,7 +21,7 @@ import java.io.Reader;
 /**
  *
  */
-public class IonLoaderLite
+final class IonLoaderLite
     implements IonLoader
 {
     private final IonSystemLite _system;
@@ -62,9 +62,8 @@ public class IonLoaderLite
     throws IOException
     {
         IonDatagramLite datagram = new IonDatagramLite(_system, _catalog);
-        IonWriter writer = IonWriterFactory.makeWriter(datagram);
+        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
         writer.writeValues(reader);
-        datagram.populateSymbolValues(null);
         return datagram;
     }
 

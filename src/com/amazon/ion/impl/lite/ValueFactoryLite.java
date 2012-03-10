@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -8,6 +8,7 @@ import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.math.BigDecimal;
@@ -22,7 +23,7 @@ import java.util.List;
  *  instance construction.
  *
  */
-public class ValueFactoryLite
+abstract class ValueFactoryLite
     implements ValueFactory
 {
     private IonSystemLite _system;
@@ -373,6 +374,11 @@ public class ValueFactoryLite
             ionValue.setValue(value);
         }
         return ionValue;
+    }
+
+    public IonSymbolLite newSymbol(SymbolToken value)
+    {
+        return new IonSymbolLite(_system, value);
     }
 
     public IonTimestampLite newTimestamp(Timestamp value)

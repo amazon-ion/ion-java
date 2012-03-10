@@ -1,8 +1,10 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidString;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonString;
@@ -14,14 +16,13 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>string</code> type.
  */
-public final class IonStringImpl
+final class IonStringImpl
     extends IonTextImpl
     implements IonString
 {
 
     static final int NULL_STRING_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidString,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidString, lnIsNullAtom);
 
     private static final int HASH_SIGNATURE =
         IonType.STRING.toString().hashCode();
@@ -42,7 +43,7 @@ public final class IonStringImpl
     public IonStringImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidString;
+        assert pos_getType() == _Private_IonConstants.tidString;
     }
 
     /**
@@ -109,12 +110,12 @@ public final class IonStringImpl
 
         int ln = 0;
         if (_get_value() == null) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else {
             ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
+            if (ln > _Private_IonConstants.lnIsVarLen) {
+                ln = _Private_IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -136,19 +137,19 @@ public final class IonStringImpl
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
 
         int type = this.pos_getType();
-        if (type != IonConstants.tidString) {
+        if (type != _Private_IonConstants.tidString) {
             throw new IonException("invalid type desc encountered for value");
         }
 
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             _set_value(null);
             break;
         case 0:
             _set_value("");
             break;
-        case IonConstants.lnIsVarLen:
+        case _Private_IonConstants.lnIsVarLen:
             ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:

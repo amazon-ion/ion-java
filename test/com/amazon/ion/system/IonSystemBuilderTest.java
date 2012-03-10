@@ -1,7 +1,9 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.impl._Private_LazyDomTrampoline.isLazySystem;
+import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.isLiteSystem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
@@ -10,9 +12,7 @@ import static org.junit.Assert.assertTrue;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonSystemImpl;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.lite.IonSystemLite;
 import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
@@ -28,13 +28,13 @@ public class IonSystemBuilderTest
     }
 
     @Test
-    public void testDefault()
+    public void testStandard()
     {
         assertEquals(false, IonSystemBuilder.standard().isBinaryBacked());
         assertEquals(null, IonSystemBuilder.standard().getCatalog());
 
         IonSystem ion = IonSystemBuilder.standard().build();
-        assertSame(IonSystemLite.class, ion.getClass());
+        assertTrue(isLiteSystem(ion));
         assertSame(SimpleCatalog.class, ion.getCatalog().getClass());
     }
 
@@ -111,7 +111,7 @@ public class IonSystemBuilderTest
         IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setBinaryBacked(false);
         IonSystem ion = b.build();
-        assertSame(IonSystemLite.class, ion.getClass());
+        assertTrue(isLiteSystem(ion));
     }
 
     @Test
@@ -120,7 +120,7 @@ public class IonSystemBuilderTest
         IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setBinaryBacked(true);
         IonSystem ion = b.build();
-        assertSame(IonSystemImpl.class, ion.getClass());
+        assertTrue(isLazySystem(ion));
     }
 
     @Test
@@ -129,7 +129,7 @@ public class IonSystemBuilderTest
         IonSystemBuilder b = IonSystemBuilder.standard().copy();
         b.setStreamCopyOptimized(true);
         IonSystem ion = b.build();
-        assertSame(IonSystemLite.class, ion.getClass());
+        assertTrue(isLiteSystem(ion));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter w = ion.newBinaryWriter(out);
         assertTrue(((IonWriterUserBinary)w).myStreamCopyOptimized);
@@ -145,7 +145,7 @@ public class IonSystemBuilderTest
                                         .withStreamCopyOptimized(true)
                                         .build();
         assertSame(catalog, ion.getCatalog());
-        assertSame(IonSystemImpl.class, ion.getClass());
+        assertTrue(isLazySystem(ion));
     }
 
     @Test

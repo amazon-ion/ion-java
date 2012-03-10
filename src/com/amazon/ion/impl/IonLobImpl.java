@@ -1,8 +1,8 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLob;
@@ -15,7 +15,7 @@ import java.util.zip.CRC32;
 /**
  * The abstract parent of all Ion lob types.
  */
-public abstract class IonLobImpl
+abstract class IonLobImpl
     extends IonValueImpl
     implements IonLob
 {
@@ -159,12 +159,12 @@ public abstract class IonLobImpl
 
         int ln = 0;
         if (_isNullValue()) { // if (_lob_value == null) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else {
             ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
-                ln = IonConstants.lnIsVarLen;
+            if (ln > _Private_IonConstants.lnIsVarLen) {
+                ln = _Private_IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -188,13 +188,13 @@ public abstract class IonLobImpl
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
 
         int type = this.pos_getType();
-        if (type != IonConstants.tidClob && type != IonConstants.tidBlob) {
+        if (type != _Private_IonConstants.tidClob && type != _Private_IonConstants.tidBlob) {
             throw new IonException("invalid type desc encountered for value");
         }
 
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             _lob_value = null;
             _isNullValue(true);
             break;
@@ -202,7 +202,7 @@ public abstract class IonLobImpl
             _lob_value = EMPTY_BYTE_ARRAY;
             _isNullValue(false);
             break;
-        case IonConstants.lnIsVarLen:
+        case _Private_IonConstants.lnIsVarLen:
             ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:

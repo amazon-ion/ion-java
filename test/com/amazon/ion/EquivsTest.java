@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.File;
@@ -35,7 +35,7 @@ public class EquivsTest
     public void testEquivsOverString()
     throws Exception
     {
-        String ionText = IonImplUtils.utf8FileToString(myTestFile);
+        String ionText = _Private_Utils.utf8FileToString(myTestFile);
         IonDatagram dg = loader().load(ionText);
         runEquivs(dg);
     }

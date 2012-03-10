@@ -5,7 +5,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +56,7 @@ extends IonTestCase
     {
         try
         {
-            byte[] buf = IonImplUtils.loadFileBytes(myTestFile);
+            byte[] buf = _Private_Utils.loadFileBytes(myTestFile);
             IonReader it = system().newReader(buf);
             TestUtils.deepRead(it, materializeScalars);
         }

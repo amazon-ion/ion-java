@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -11,24 +11,22 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl._Private_Utils;
 
 /**
  *
  */
-public class IonSymbolLite
+final class IonSymbolLite
     extends IonTextLite
     implements IonSymbol
 {
-    private static final int NULL_SYMBOL_ID = 0;
-
     private static final int HASH_SIGNATURE =
         IonType.SYMBOL.toString().hashCode();
 
-    /**
-     * SID is zero when this is null.symbol
-     */
-    private int     _sid = UNKNOWN_SYMBOL_ID;
+    private int _sid = UNKNOWN_SYMBOL_ID;
 
     /**
      * Constructs a <code>null.symbol</code> value.
@@ -37,6 +35,31 @@ public class IonSymbolLite
     {
         super(system, isNull);
     }
+
+    IonSymbolLite(IonSystemLite system, SymbolToken sym)
+    {
+        super(system, sym == null);
+        if (sym != null)
+        {
+            String text = sym.getText();
+            int sid = sym.getSid();
+            assert text != null || sid > 0;
+
+            if (text != null)
+            {
+                if ("".equals(text)) {
+                    throw new EmptySymbolException();
+                }
+                super.setValue(text);
+            }
+            else
+            {
+                _sid = sid;
+            }
+        }
+    }
+
+
     /**
      * makes a copy of this IonString. This calls up to
      * IonTextImpl to copy the string itself and that in
@@ -48,7 +71,7 @@ public class IonSymbolLite
     @Override
     public IonSymbolLite clone()
     {
-        IonSymbolLite clone = new IonSymbolLite(this._context.getSystemLite(), false);
+        IonSymbolLite clone = new IonSymbolLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
         clone._sid = UNKNOWN_SYMBOL_ID;
@@ -66,8 +89,19 @@ public class IonSymbolLite
     @Override
     public int hashCode() {
         int hash = HASH_SIGNATURE;
-        if (!isNullValue())  {
-            hash ^= stringValue().hashCode();
+        if (!isNullValue())
+        {
+            SymbolToken token = symbolValue();
+            String text = token.getText();
+            if (text != null)
+            {
+                hash ^= text.hashCode();
+            }
+            else
+            {
+                int sid = token.getSid();
+                hash ^= Integer.valueOf(sid).hashCode();
+            }
         }
         return hash;
     }
@@ -85,12 +119,13 @@ public class IonSymbolLite
         return getSymbolId();
     }
 
+    @Deprecated
     public int getSymbolId()
         throws NullValueException
     {
         validateThisNotNull();
 
-        if (_sid != UNKNOWN_SYMBOL_ID) {
+        if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
             return _sid;
         }
 
@@ -107,12 +142,57 @@ public class IonSymbolLite
             if (_sid > 0 || isReadOnly()) {
                 return _sid;
             }
-            symtab = _context.getLocalSymbolTable(this);
         }
-        _sid = symtab.addSymbol(name);
-        assert _sid > 0;
+        SymbolToken tok = symtab.find(name);
+        if (tok != null)
+        {
+            _sid = tok.getSid();
+            _set_value(tok.getText()); // Use the interned instance of the text
+        }
         return _sid;
     }
+
+
+    /**
+     * Get's the text of this NON-NULL symbol, finding it from our symbol
+     * table if it's not yet known (and caching the result if possible).
+     * <p>
+     * Caller must check {@link #isNullValue()}
+     *
+     * @return null if symbol text is unknown.
+     */
+    private String _stringValue()
+    {
+        String name = _get_value();
+        if (name == null)
+        {
+            assert _sid > 0;
+
+            SymbolTable symbols = getSymbolTable();
+            name = symbols.findKnownSymbol(_sid);
+            if (name != null)
+            {
+                // if this is a mutable value we'll hang onto
+                // our know known symbol table so we don't have
+                // to look it up again.
+                // If the value is immutable, honor that contract.
+                if (_isLocked() == false) {
+                    _set_value(name);
+                }
+            }
+        }
+        return name;
+    }
+
+    public SymbolToken symbolValue()
+    {
+        if (isNullValue()) return null;
+
+        int sid = getSymbolId();
+        String text = _stringValue();
+        return _Private_Utils.newSymbolToken(text, sid);
+    }
+
 
     @Override
     public void setValue(String value)
@@ -121,45 +201,8 @@ public class IonSymbolLite
             throw new EmptySymbolException();
         }
 
-        // check for a $<digits> form of the symbol name
-        // really this should be done down in the parser
-        boolean is_encoded_sid = false;
-        int sid = UNKNOWN_SYMBOL_ID;
-        if (value != null && value.length() > 1 && value.charAt(0) == '$') {
-            if (Character.isDigit(value.charAt(1))) {
-                is_encoded_sid = true;
-                for (int ii=2; ii<value.length(); ii++) {
-                    if (!Character.isDigit(value.charAt(ii))) {
-                        is_encoded_sid = false;
-                        break;
-                    }
-                }
-                if (is_encoded_sid) {
-                    sid = Integer.parseInt(value.substring(1));
-                    if (sid < 1) {
-                        // we reject $0 (as an encoded sid)
-                        is_encoded_sid = false;
-                    }
-                    else {
-                        value = null;
-                    }
-                }
-            }
-        }
-
-        super.setValue(value);  // Calls checkForLock
-        if (is_encoded_sid) {
-            _sid = sid;
-            _isNullValue(false);
-        }
-        else if (value != null) {
-            _isNullValue(false);
-            _sid = UNKNOWN_SYMBOL_ID;
-        }
-        else {
-            _isNullValue(true);
-            _sid = NULL_SYMBOL_ID;
-        }
+        super.setValue(value);  // Calls checkForLock and _isNullValue
+        _sid = UNKNOWN_SYMBOL_ID;
     }
 
     protected boolean isIonVersionMarker() {
@@ -198,7 +241,12 @@ public class IonSymbolLite
     void clearSymbolIDValues()
     {
         super.clearSymbolIDValues();
-        _sid = UNKNOWN_SYMBOL_ID;
+
+        // Don't lose the sid if that's all we have!
+        if (! isNullValue() && _stringValue() != null)
+        {
+            _sid = UNKNOWN_SYMBOL_ID;
+        }
     }
 
     protected void setIsIonVersionMarker(boolean isIVM)
@@ -218,23 +266,10 @@ public class IonSymbolLite
         if (isNullValue()) {
             return null;
         }
-        String name = _get_value();
+        String name = _stringValue();
         if (name == null) {
             assert(_sid > 0);
-            SymbolTable symbols = getSymbolTable();
-            name = symbols.findKnownSymbol(_sid);
-            if (name == null) {
-                name = symbols.findSymbol(_sid);
-            }
-            else {
-                // if this is a mutable value we'll hang onto
-                // our know known symbol table so we don't have
-                // to look it up again.
-                // If the value is immutable, honor that contract.
-                if (_isLocked() == false) {
-                    _set_value(name);
-                }
-            }
+            throw new UnknownSymbolException(_sid);
         }
         return name;
     }

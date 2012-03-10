@@ -1,6 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsEmptyContainer;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullSequence;
+import static com.amazon.ion.impl._Private_IonConstants.lnIsVarLen;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonDatagram;
@@ -19,7 +23,7 @@ import java.util.List;
 /**
  * Base class for list and sexp implementations.
  */
-public abstract class IonSequenceImpl
+abstract class IonSequenceImpl
     extends IonContainerImpl
     implements IonSequence
 {
@@ -59,7 +63,7 @@ public abstract class IonSequenceImpl
         else
         {
             _isNullValue(false);
-            _children = new IonValue[initialSize(typeDesc)];
+            _children = new IonValueImpl[initialSize(typeDesc)];
             _child_count = 0;
         }
         _hasNativeValue(true);
@@ -96,7 +100,7 @@ public abstract class IonSequenceImpl
 
         if (elements != null)
         {
-            _children = new IonValue[elements.size()];
+            _children = new IonValueImpl[elements.size()];
             for (Iterator i = elements.iterator(); i.hasNext();)
             {
                 IonValue element = (IonValue) i.next();
@@ -228,7 +232,7 @@ public abstract class IonSequenceImpl
 
         assert _children != null; // else index would be out of bounds above.
 
-        IonValueImpl removed = (IonValueImpl)set_child(index, concrete);
+        IonValueImpl removed = set_child(index, concrete);
         concrete._elementid = index;
         concrete._container = this;
 
@@ -383,13 +387,13 @@ public abstract class IonSequenceImpl
     {
         assert _hasNativeValue();
 
-        if (_isNullValue())    { return IonConstants.lnIsNullSequence; }
-        if (_children == null || _child_count == 0) { return IonConstants.lnIsEmptyContainer; }
+        if (_isNullValue())    { return lnIsNullSequence; }
+        if (_children == null || _child_count == 0) { return lnIsEmptyContainer; }
 
         int contentLength = getNakedValueLength();
-        if (contentLength > IonConstants.lnIsVarLen)
+        if (contentLength > _Private_IonConstants.lnIsVarLen)
         {
-            return IonConstants.lnIsVarLen;
+            return _Private_IonConstants.lnIsVarLen;
         }
 
         return contentLength;
@@ -409,7 +413,7 @@ public abstract class IonSequenceImpl
         int vlen = this.getNativeValueLength();
         if (vlen > 0)
         {
-            if (vlen >= IonConstants.lnIsVarLen)
+            if (vlen >= lnIsVarLen)
             {
                 writer.writeVarUIntValue(vlen, true);
                 // Fall through...

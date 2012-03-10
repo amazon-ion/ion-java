@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -9,7 +9,7 @@ import com.amazon.ion.ValueVisitor;
 /**
  *
  */
-public class IonStringLite
+final class IonStringLite
     extends IonTextLite
     implements IonString
 {
@@ -35,7 +35,7 @@ public class IonStringLite
     @Override
     public IonStringLite clone()
     {
-        IonStringLite clone = new IonStringLite(this._context.getSystemLite(), false);
+        IonStringLite clone = new IonStringLite(this._context.getSystem(), false);
 
         clone.copyFrom(this);
 

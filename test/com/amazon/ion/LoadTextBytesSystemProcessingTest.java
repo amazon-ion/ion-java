@@ -1,6 +1,8 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import com.amazon.ion.impl._Private_Utils;
 
 
 /**
@@ -15,7 +17,7 @@ public class LoadTextBytesSystemProcessingTest
     protected void prepare(String text)
         throws Exception
     {
-        myBytes = convertUtf16UnitsToUtf8(text);
+        myBytes = _Private_Utils.convertUtf16UnitsToUtf8(text);
     }
 
     @Override

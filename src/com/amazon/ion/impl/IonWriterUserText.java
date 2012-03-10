@@ -1,24 +1,23 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
-import java.io.IOException;
+import com.amazon.ion.ValueFactory;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.OutputStream;
 
 
 /**
- *
+ * NOT SUPPORTED FOR APPLICATION USE!
  */
-public class IonWriterUserText
+public class IonWriterUserText // TODO ION-271 protect after IMS is migrated
     extends IonWriterUser
 {
+    @Deprecated // TODO ION-271 remove after IMS is migrated
     static public class TextOptions
     {
         private final static CharSequence SPACE_CHARACTER = " ";
@@ -29,7 +28,6 @@ public class IonWriterUserText
         final CharSequence  _line_separator;
         final boolean       _filter_symbol_tables;
         final boolean       _suppress_ion_version_marker;
-
 
         public TextOptions(boolean prettyPrint, boolean printAscii)
         {
@@ -44,7 +42,8 @@ public class IonWriterUserText
             _filter_symbol_tables = false;
             _suppress_ion_version_marker = false;
         }
-        public TextOptions(boolean prettyPrint, boolean printAscii, boolean filterOutSymbolTables)
+        public TextOptions(boolean prettyPrint, boolean printAscii,
+                           boolean filterOutSymbolTables)
         {
             _pretty_print = prettyPrint;
             _ascii_only   = printAscii;
@@ -57,7 +56,9 @@ public class IonWriterUserText
             _filter_symbol_tables = filterOutSymbolTables;
             _suppress_ion_version_marker = false;
         }
-        public TextOptions(boolean prettyPrint, boolean printAscii, boolean filterOutSymbolTables, boolean suppressIonVersionMarker)
+        public TextOptions(boolean prettyPrint, boolean printAscii,
+                           boolean filterOutSymbolTables,
+                           boolean suppressIonVersionMarker)
         {
             _pretty_print = prettyPrint;
             _ascii_only   = printAscii;
@@ -88,98 +89,60 @@ public class IonWriterUserText
         }
     }
 
-    final private boolean _filter_symbol_tables;
-
-    protected IonWriterUserText(IonSystem sys, IonCatalog catalog, OutputStream out, TextOptions options) {
-        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(), out, options),
-              catalog, options.issuppressIonVersionMarkerOn());
-        _filter_symbol_tables = options.isFilterSymbolTablesOn();
-    }
-    protected IonWriterUserText(IonSystem sys, IonCatalog catalog, Appendable out, TextOptions options) {
-        super(sys, new IonWriterSystemText(sys, sys.getSystemSymbolTable(), out, options),
-              catalog, options.issuppressIonVersionMarkerOn());
-        _filter_symbol_tables = options.isFilterSymbolTablesOn();
-    }
-
-
-    @Override
-    public void set_symbol_table_helper(SymbolTable prev_symbols, SymbolTable new_symbols)
-        throws IOException
+    // TODO ION-271 remove after IMS is migrated
+    static _Private_IonTextWriterBuilder builderFor(IonCatalog catalog,
+                                                    TextOptions options)
     {
-        // for the text user writer if the symbol table
-        // isn't changing we don't care
-        if (prev_symbols == new_symbols) {
-            return;
+        _Private_IonTextWriterBuilder b =
+            _Private_IonTextWriterBuilder.standard();
+        if (options._pretty_print)
+        {
+            b.withPrettyPrinting();
         }
-
-        // cases are system symbol table - after an IVM (or not)
-        // local symbol table, with or without imports
-        boolean requires_this_local_table = false;
-        if (new_symbols.isLocalTable()) {
-            SymbolTable[] imports = new_symbols.getImportedTables();
-            if (imports != null && imports.length > 0) {
-                requires_this_local_table = true;
-            }
+        if (options._ascii_only)
+        {
+            b.setCharset(IonTextWriterBuilder.ASCII);
         }
-
-        boolean needs_ivm = !_after_ion_version_marker;
-        if (_filter_symbol_tables) {
-            if (!requires_this_local_table) {
-                needs_ivm = false;
-            }
+        if (options._suppress_ion_version_marker)
+        {
+            b.setInitialIvmHandling(SUPPRESS);
         }
-
-        assert(_system_writer == _current_writer);
-        if (needs_ivm) {
-            // system writer call won't recurse back on us
-            _system_writer.writeIonVersionMarker();
-            _after_ion_version_marker = true;
-            // and no other state needs updating as we're
-            // about to write and set the local table next anyway
-        }
-
-        if (requires_this_local_table) {
-            // TODO: remove cast below with update IonReader over symbol table
-            IonReader reader = ((UnifiedSymbolTable)new_symbols).getReader(this._system);
-            // move onto and write the struct header
-            IonType t = reader.next();
-            assert(IonType.STRUCT.equals(t));
-            String[] a = reader.getTypeAnnotations();
-            assert(a != null && a.length >= 1); // you (should) always have the $ion_symbol_table annotation
-
-            // now we'll start a local symbol table struct
-            // in the underlying system writer
-            _system_writer.setTypeAnnotations(a);
-            _system_writer.stepIn(IonType.STRUCT);
-
-            // step into the symbol table struct and
-            // write the values - EXCEPT the symbols field
-            reader.stepIn();
-            for (;;) {
-                t = reader.next();
-                if (t == null) break;
-                // get the field name and skip over 'symbols'
-                String name = reader.getFieldName();
-                if (SYMBOLS.equals(name)) {
-                    continue;
-                }
-                _system_writer.writeValue(reader);
-            }
-
-            // we're done step out and move along
-            _system_writer.stepOut();
-        }
+        b.setCatalog(catalog);
+        return b;
     }
 
-    @Override
-    UnifiedSymbolTable inject_local_symbol_table() throws IOException
+
+
+    IonWriterUserText(ValueFactory symtabValueFactory,
+                      IonWriterSystemText systemWriter)
     {
-        // no catalog since it doesn't matter as this is a
-        // pure local table, with no imports
-        // we let the system writer handle this work
-        assert(_system_writer instanceof IonWriterSystemText);
-        UnifiedSymbolTable symbols
-            = ((IonWriterSystemText)_system_writer).inject_local_symbol_table();
-        return symbols;
+        super(systemWriter.getBuilder().getCatalog(),
+              symtabValueFactory,
+              systemWriter,
+              systemWriter.getBuilder().getInitialIvmHandling() == SUPPRESS,
+              systemWriter.getBuilder().getImports());
+    }
+
+
+    /** @deprecated */
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
+                                OutputStream out, TextOptions options)
+    {
+        this(sys,
+             new IonWriterSystemText(sys.getSystemSymbolTable(),
+                                     builderFor(catalog, options),
+                                     out));
+    }
+
+    /** @deprecated */
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    protected IonWriterUserText(IonSystem sys, IonCatalog catalog,
+                                Appendable out, TextOptions options)
+    {
+        this(sys,
+             new IonWriterSystemText(sys.getSystemSymbolTable(),
+                                     builderFor(catalog, options),
+                                     out));
     }
 }

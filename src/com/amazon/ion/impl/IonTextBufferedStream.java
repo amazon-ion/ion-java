@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -12,7 +12,7 @@ import java.io.InputStream;
  * of the Iterator code to some of the base64 encoding (or decoding)
  * routins in ion.impl.
  */
-public abstract class IonTextBufferedStream extends InputStream
+abstract class IonTextBufferedStream extends InputStream
 {
     public static IonTextBufferedStream makeStream(byte[] bytes) {
         return new SimpleBufferStream(bytes);

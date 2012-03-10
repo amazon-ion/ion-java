@@ -2,8 +2,10 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -20,9 +22,9 @@ import com.amazon.ion.SymbolTable;
 /**
  *
  */
-class IonReaderTreeUserX
+final class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements _Private_ReaderWriter
 {
     IonCatalog _catalog;
 
@@ -78,7 +80,7 @@ class IonReaderTreeUserX
                         break;
                     }
                     int sid = sym.getSymbolId();
-                    if (sid == -1) {
+                    if (sid == UNKNOWN_SYMBOL_ID) {
                         String name = sym.stringValue();
                         if (name != null) {
                             sid = _system.getSystemSymbolTable().findSymbol(name);
@@ -98,7 +100,11 @@ class IonReaderTreeUserX
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
                     IonReader reader = new IonReaderTreeUserX(_next, _catalog);
-                    SymbolTable symtab = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, reader, false);
+                    SymbolTable symtab =
+                        newLocalSymtab(_system,
+                                       _system.getSystemSymbolTable(),
+                                       _system.getCatalog(),
+                                       reader, false);
                     set_symbol_table(symtab);
                     push_symbol_table(symtab);
                     _next = null;
@@ -152,13 +158,14 @@ class IonReaderTreeUserX
     }
 
 
-    private static class TreeSpan extends IonReaderPositionBase
+    private static final class TreeSpan
+        extends DowncastingFaceted
+        implements Span
     {
         IonValue _value;
     }
 
-    @Deprecated
-    public IonReaderPosition getCurrentPosition()
+    private final Span currentSpanImpl()
     {
         if (this._curr == null) {
             throw new IllegalStateException("Reader has no current value");
@@ -170,11 +177,6 @@ class IonReaderTreeUserX
         return span;
     }
 
-    @Deprecated
-    public void seek(IonReaderPosition position)
-    {
-        hoistImpl(position);
-    }
 
     private void hoistImpl(Span span)
     {
@@ -196,11 +198,6 @@ class IonReaderTreeUserX
     @Override
     public <T> T asFacet(Class<T> facetType)
     {
-        if (facetType == IonReaderWithPosition.class)
-        {
-            return facetType.cast(this);
-        }
-
         if ((facetType == SeekableReader.class) ||
             (facetType == SpanProvider.class))
         {
@@ -215,7 +212,7 @@ class IonReaderTreeUserX
     {
         public Span currentSpan()
         {
-            return getCurrentPosition();
+            return currentSpanImpl();
         }
 
         public void hoist(Span span)

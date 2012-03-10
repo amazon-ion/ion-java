@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -136,6 +136,34 @@ public interface IonStruct
      *   if {@code element} is an {@link IonDatagram}.
      */
     public void add(String fieldName, IonValue child)
+        throws ContainedValueException;
+
+
+    /**
+     * Adds a new field to this struct using a given name and/or SID.
+     * If this is <code>null.struct</code>, then it becomes a single-field
+     * struct.
+     * <p>
+     * If a field with the given name already exists in this struct,
+     * this call will result in repeated fields.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
+     * @param fieldName the name of the new field.
+     * @param child the value of the new field.
+     *
+     * @throws NullPointerException
+     *   if {@code fieldName} or {@code child} is <code>null</code>.
+     * @throws ContainedValueException
+     *   if {@code child} is already part of a container.
+     * @throws IllegalArgumentException
+     *   if {@code fieldName} is empty or
+     *   if {@code element} is an {@link IonDatagram}.
+     *
+     * @since IonJava R15
+     */
+    public void add(SymbolToken fieldName, IonValue child)
         throws ContainedValueException;
 
 

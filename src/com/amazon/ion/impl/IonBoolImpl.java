@@ -1,6 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidBoolean;
 
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonException;
@@ -13,13 +17,12 @@ import java.io.IOException;
 /**
  * Implements the Ion <code>bool</code> type.
  */
-public final class IonBoolImpl
+final class IonBoolImpl
     extends IonValueImpl
     implements IonBool
 {
     static final int NULL_BOOL_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidBoolean,
-                                        IonConstants.lnIsNullAtom);
+        makeTypeDescriptor(tidBoolean, lnIsNullAtom);
 
     private static final int HASH_SIGNATURE =
         IonType.BOOL.toString().hashCode();
@@ -43,7 +46,7 @@ public final class IonBoolImpl
     public IonBoolImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidBoolean;
+        assert pos_getType() == _Private_IonConstants.tidBoolean;
     }
 
     /**
@@ -144,13 +147,13 @@ public final class IonBoolImpl
 
         int ln = 0;
         if (_isNullValue()) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else if (_isBoolTrue()) {
-            ln = IonConstants.lnBooleanTrue;
+            ln = _Private_IonConstants.lnBooleanTrue;
         }
         else {
-            ln = IonConstants.lnBooleanFalse;
+            ln = _Private_IonConstants.lnBooleanFalse;
         }
         return ln;
     }
@@ -175,17 +178,17 @@ public final class IonBoolImpl
         // decode the low nibble to get the boolean value
         int ln = this.pos_getLowNibble();
         switch (ln) {
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             //_bool_value = null;
             _isNullValue(true);
             _isBoolTrue(false);
             break;
-        case IonConstants.lnBooleanFalse:
+        case _Private_IonConstants.lnBooleanFalse:
             //_bool_value = Boolean.FALSE;
             _isNullValue(false);
             _isBoolTrue(false);
             break;
-        case IonConstants.lnBooleanTrue:
+        case _Private_IonConstants.lnBooleanTrue:
             //_bool_value = Boolean.TRUE;
             _isNullValue(false);
             _isBoolTrue(true);

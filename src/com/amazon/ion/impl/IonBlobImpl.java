@@ -1,7 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidBlob;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
@@ -12,14 +15,13 @@ import java.io.InputStream;
 /**
  * Implements the Ion <code>blob</code> type.
  */
-public final class IonBlobImpl
+final class IonBlobImpl
     extends IonLobImpl
     implements IonBlob
 {
 
     static final int NULL_BLOB_TYPEDESC =
-         IonConstants.makeTypeDescriptor(IonConstants.tidBlob,
-                                         IonConstants.lnIsNullAtom);
+         makeTypeDescriptor(tidBlob, lnIsNullAtom);
 
     private static final int HASH_SIGNATURE =
         IonType.BLOB.toString().hashCode();
@@ -39,7 +41,7 @@ public final class IonBlobImpl
     public IonBlobImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidBlob;
+        assert pos_getType() == _Private_IonConstants.tidBlob;
     }
 
     /**
@@ -90,14 +92,7 @@ public final class IonBlobImpl
         InputStream byteStream = newInputStream();
         try
         {
-            Base64Encoder.TextStream ts =
-                new Base64Encoder.TextStream(byteStream);
-
-            for (;;) {
-                int c = ts.read();
-                if (c == -1) break;
-                out.append((char) c);
-            }
+            _Private_LazyDomTrampoline.writeAsBase64(byteStream, out);
         }
         finally
         {

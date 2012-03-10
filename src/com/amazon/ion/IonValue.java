@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -144,15 +144,28 @@ public interface IonValue
     /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
+     *
+     * @throws UnknownSymbolException if the field name has unknown text.
      */
     public String getFieldName();
+
+
+    /**
+     * Gets the field name attached to this value as an interned symbol
+     * (text + ID).
+     *
+     * @return null if this value isn't a struct field.
+     *
+     * @since IonJava R15
+     */
+    public SymbolToken getFieldNameSymbol();
 
 
     /**
      * Gets the field name attached to this value,
      * or <code>null</code> if this is not part of an {@link IonStruct}.
      *
-     * @deprecated Renamed to {@link #getFieldId()}.
+     * @deprecated Since 2008. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldNameId();
@@ -164,7 +177,10 @@ public interface IonValue
      * @return the symbol ID of the field name, if this is part of an
      * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
+     *
+     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
      */
+    @Deprecated
     public int getFieldId();
 
 
@@ -185,19 +201,52 @@ public interface IonValue
 
 
     /**
+     * Finds the top level value above this value.
+     * If this value has no container, or if it's immediate container is a
+     * datagram, then this value is returned.
+     *
+     * @return the top level value above this value, never null, and never an
+     * {@link IonDatagram}.
+     *
+     * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
+     *
+     * @since IonJava R15
+     */
+    public IonValue topLevelValue();
+
+
+    /**
      * Gets the user type annotations attached to this value
      * as strings.  This will return an empty array if there are no annotations.
-     * @deprecated Use {@link #getTypeAnnotations()} instead.
+     *
+     * @throws UnknownSymbolException if any annotation has unknown text.
+     *
+     * @deprecated Since 2008. Use {@link #getTypeAnnotations()} instead.
      */
     @Deprecated
     public String[] getTypeAnnotationStrings();
 
 
     /**
-     * Gets the user type annotations attached to this value
-     * as strings.  This will return an empty array if there are no annotations.
+     * Gets this value's user type annotations as text.
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
+     *
+     * @throws UnknownSymbolException if any annotation has unknown text.
      */
     public String[] getTypeAnnotations();
+
+
+    /**
+     * Gets this value's user type annotations as interned symbols (text + ID).
+     *
+     * @return the (ordered) annotations on the current value, or an empty
+     * array (not {@code null}) if there are none.
+     *
+     * @since IonJava R15
+     */
+    public SymbolToken[] getTypeAnnotationSymbols();
 
 
     /**
@@ -210,7 +259,7 @@ public interface IonValue
 
 
     /**
-     * Replaces all type annotations with the given ones.
+     * Replaces all type annotations with the given text.
      *
      * @param annotations the new annotations.  If null or empty array, then
      *  all annotations are removed.  Any duplicates are preserved.
@@ -222,6 +271,21 @@ public interface IonValue
      */
     public void setTypeAnnotations(String... annotations);
 
+    /**
+     * Replaces all type annotations with the given symbol tokens.
+     * The contents of the {@code annotations} array are copied into this
+     * writer, so the caller does not need to preserve the array.
+     * <p>
+     * <b>This is an "expert method": correct use requires deep understanding
+     * of the Ion binary format. You almost certainly don't want to use it.</b>
+     *
+     * @param annotations the new annotations.
+     * If null or empty array, then all annotations are removed.
+     * Any duplicates are preserved.
+     *
+     * @since IonJava R15
+     */
+    public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
     /**
      * Removes all the user type annotations attached to this value.

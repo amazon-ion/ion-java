@@ -1,16 +1,16 @@
-/*
- * Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
+import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.junit.IonAssert;
 import org.junit.Assert;
 
 /**
@@ -106,31 +106,25 @@ public class ReaderCompare
         assertEquals(what, s1, s2);
     }
 
-    public static void compareFieldNames(IonReader it1, IonReader it2) {
-        String f1 = it1.getFieldName();
-        String f2 = it2.getFieldName();
-        compareNonNullStrings("field name", f1, f2);
-        assertNotNull(f1);
-        assertNotNull(f2);
-        assertEquals(f1, f2);
+    public static void compareFieldNames(IonReader r1, IonReader r2) {
+        SymbolToken tok1 = r1.getFieldNameSymbol();
+        SymbolToken tok2 = r1.getFieldNameSymbol();
+        String fn = tok1.getText();
+        assertEquals(fn, tok2.getText());
+
+        if (fn != null) {
+            String f1 = r1.getFieldName();
+            String f2 = r2.getFieldName();
+            compareNonNullStrings("field name", fn, f1);
+            compareNonNullStrings("field name", fn, f2);
+        }
     }
 
     public static void compareAnnotations(IonReader it1, IonReader it2) {
-        String[] a1 = it1.getTypeAnnotations();
-        String[] a2 = it2.getTypeAnnotations();
-        if (a1 == null) {
-            assertNull(a2);
-        }
-        else {
-            assertEquals("annotation count", a1.length, a2.length);
-            for (int ii=0; ii<a1.length; ii++) {
-                String s1 = a1[ii];
-                String s2 = a2[ii];
-                compareNonNullStrings("annotation", s1, s2);
-                assert s1 != null && s2 != null;
-                assert s1.equals(s2);
-            }
-        }
+        SymbolToken[] syms1 = it1.getTypeAnnotationSymbols();
+        SymbolToken[] syms2 = it2.getTypeAnnotationSymbols();
+
+        IonAssert.assertSymbolEquals("annotation", syms1, syms2);
     }
 
     public static void compareScalars(IonType t, IonReader it1, IonReader it2) {
@@ -160,11 +154,28 @@ public class ReaderCompare
                 assertEquals(t1, t2);
                 break;
             case STRING:
-            case SYMBOL:
+            {
                 String s1 = it1.stringValue();
                 String s2 = it2.stringValue();
                 assertEquals(s1, s2);
                 break;
+            }
+            case SYMBOL:
+            {
+                SymbolToken tok1 = it1.symbolValue();
+                SymbolToken tok2 = it2.symbolValue();
+                if (tok1.getText() == null || tok2.getText() == null)
+                {
+                    assertEquals("sids", tok1.getSid(), tok2.getSid());
+                }
+                else
+                {
+                    String s1 = tok1.getText();
+                    String s2 = tok2.getText();
+                    assertEquals(s1, s2);
+                }
+                break;
+            }
             case BLOB:
             case CLOB:
                 byte[] b1 = it1.newBytes();

@@ -1,9 +1,9 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.impl._Private_IonConstants;
 import java.io.IOException;
 
 
@@ -124,6 +124,11 @@ public class IonTextUtils
         }
     }
 
+    private static boolean isDecimalDigit(int codePoint)
+    {
+        return (codePoint >= '0' && codePoint <= '9');
+    }
+
     public static boolean isDigit(int codePoint, int radix)
     {
         switch (codePoint) {
@@ -164,7 +169,7 @@ public class IonTextUtils
      * @param text the symbol to check.
      * @return <code>true</code> if the text is an identifier keyword.
      */
-    private static boolean isIdentifierKeyword(CharSequence text)
+    static boolean isIdentifierKeyword(CharSequence text)
     {
         int pos = 0;
         int valuelen = text.length();
@@ -172,6 +177,13 @@ public class IonTextUtils
 
         // there has to be at least 1 character or we wouldn't be here
         switch (text.charAt(pos++)) {
+        case '$':
+            if (valuelen == 1) return false;
+            while (pos < valuelen) {
+                char c = text.charAt(pos++);
+                if (! isDecimalDigit(c)) return false;
+            }
+            return true;
         case 'f':
             if (valuelen == 5 //      'f'
              && text.charAt(pos++) == 'a'
@@ -226,8 +238,8 @@ public class IonTextUtils
      *         if <code>symbol</code> is <code>null</code>.
      * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
-    private static boolean symbolNeedsQuoting(CharSequence symbol,
-                                              boolean      quoteOperators)
+    static boolean symbolNeedsQuoting(CharSequence symbol,
+                                      boolean      quoteOperators)
     {
         int length = symbol.length();
         if (length == 0) {
@@ -283,13 +295,13 @@ public class IonTextUtils
      *
      * @throws NullPointerException
      *         if <code>symbol</code> is <code>null</code>.
-     * @throws IllegalArgumentException if <code>symbol</code> is empty.
+     * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
     public static SymbolVariant symbolVariant(CharSequence symbol)
     {
         int length = symbol.length();
         if (length == 0) {
-            throw new IllegalArgumentException("symbol must be non-empty");
+            throw new EmptySymbolException();
         }
 
         // If the symbol's text matches an Ion keyword, we must quote it.
@@ -362,8 +374,7 @@ public class IonTextUtils
     }
 
     /**
-     * Prints a single character (Unicode code point) in JSON string format,
-     * escaping as necessary.
+     * Prints a single Unicode code point for use in an ASCII-safe JSON string.
      *
      * @param out the stream to receive the data.
      * @param codePoint a Unicode code point.
@@ -376,6 +387,9 @@ public class IonTextUtils
     }
 
 
+    /**
+     * Prints a single code point, ASCII safe.
+     */
     private static void printCodePoint(Appendable out, int c, EscapeMode mode)
         throws IOException
     {
@@ -855,13 +869,13 @@ public class IonTextUtils
         {
             int c = text.charAt(i);
 
-            if (IonConstants.isHighSurrogate(c))
+            if (_Private_IonConstants.isHighSurrogate(c))
             {
                 i++;
                 char c2;
                 // I apologize for the embedded assignment, but the alternative
                 // was worse.
-                if (i >= len || !IonConstants.isLowSurrogate(c2 = text.charAt(i)))
+                if (i >= len || !_Private_IonConstants.isLowSurrogate(c2 = text.charAt(i)))
                 {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +
@@ -869,9 +883,9 @@ public class IonTextUtils
                         " at index " + i;
                     throw new IllegalArgumentException(message);
                 }
-                c = IonConstants.makeUnicodeScalar(c, c2);
+                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
             }
-            else if (IonConstants.isLowSurrogate(c))
+            else if (_Private_IonConstants.isLowSurrogate(c))
             {
                 String message =
                     "text is invalid UTF-16. It contains an unmatched " +

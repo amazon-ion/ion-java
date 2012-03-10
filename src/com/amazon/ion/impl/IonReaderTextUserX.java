@@ -1,10 +1,10 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -14,11 +14,8 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TextSpan;
-import java.io.File;
-import java.io.InputStream;
-import java.io.Reader;
-import java.util.Iterator;
 
 /**
  *    The text user reader add support for symbols and recognizes,
@@ -41,9 +38,9 @@ import java.util.Iterator;
  *    undefined symbol value.
  *
  */
-public class IonReaderTextUserX
+class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements _Private_ReaderWriter
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -56,41 +53,23 @@ public class IonReaderTextUserX
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, char[] chars, int offset, int length) {
-        super(system, chars, offset, length);
-        _physical_start_offset = offset;
+
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog,
+                                 UnifiedInputStreamX uis,
+                                 int physicalStartOffset)
+    {
+        super(system, uis);
+        _physical_start_offset = physicalStartOffset;
         initUserReader(system, catalog);
     }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, CharSequence chars, int offset, int length) {
-        super(system, chars, offset, length);
-        _physical_start_offset = offset;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, Reader userChars) {
-        super(system, userChars);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
-        super(system, bytes, offset, length);
-        _physical_start_offset = offset;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
-        super(system, userBytes);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, File file) {
-        super(system, file);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX uis) {
+
+    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog,
+                                 UnifiedInputStreamX uis) {
         super(system, uis);
         _physical_start_offset = 0;
         initUserReader(system, catalog);
     }
+
     private void initUserReader(IonSystem system, IonCatalog catalog) {
         if (system == null) {
             throw new IllegalArgumentException();
@@ -156,9 +135,14 @@ public class IonReaderTextUserX
                 case STRUCT:
                     if (_annotation_count > 0) {
                         for (int ii=0; ii<_annotation_count; ii++) {
-                            String a = _annotations[ii];
-                            if (ION_SYMBOL_TABLE.equals(a)) {
-                                _symbols = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _catalog, this, true);
+                            SymbolToken a = _annotations[ii];
+                            // TODO SID only?
+                            if (ION_SYMBOL_TABLE.equals(a.getText())) {
+                                _symbols = newLocalSymtab(_system,
+                                                          _system.getSystemSymbolTable(),
+                                                          _catalog,
+                                                          this,
+                                                          true);
                                 push_symbol_table(_symbols);
                                 _has_next_called = false;
                                 break;
@@ -167,7 +151,8 @@ public class IonReaderTextUserX
                     }
                     break;
                 case SYMBOL:
-                    String sym = stringValue();
+                    SymbolToken is = symbolValue();
+                    String sym = is.getText();
                     if (ION_1_0.equals(sym)) {
                         symbol_table_reset();
                         push_symbol_table(_system.getSystemSymbolTable());
@@ -189,77 +174,15 @@ public class IonReaderTextUserX
         return;
     }
 
-    @Override
-    public int getFieldId()
-    {
-        String fieldname = getFieldName();
-        if (fieldname == null) {
-            return SymbolTable.UNKNOWN_SYMBOL_ID;
-        }
-
-        SymbolTable symbols = getSymbolTable();
-        int         id      = symbols.findSymbol(fieldname);
-        return id;
-    }
-
-    @Override
-    public int getSymbolId()
-    {
-        if (getType() != IonType.SYMBOL) {
-            throw new IllegalStateException("only valid if the value is a symbol");
-        }
-        String symbol = stringValue();
-        SymbolTable symbols   = getSymbolTable();
-        // if (!_symbols.isLocalTable()) {
-        //     UnifiedSymbolTable local;
-        //     if (_symbols.isSystemTable()) {
-        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable());
-        //     }
-        //     else { // if (_symbols.isSharedTable()) {
-        //         local = UnifiedSymbolTable.makeNewLocalSymbolTable(_system, _system.getSystemSymbolTable(), _symbols);
-        //     }
-        //     _symbols = local;
-        // }
-        int    id     = symbols.addSymbol(symbol);
-        return id;
-    }
 
     @Override
     public SymbolTable getSymbolTable()
     {
         if (_symbols == null) {
             SymbolTable system_symbols = _system.getSystemSymbolTable();
-            _symbols = makeNewLocalSymbolTable(_system, system_symbols);
+            _symbols = newLocalSymtab(_system, system_symbols);
         }
         return _symbols;
-    }
-
-    @Override
-    public int[] getTypeAnnotationIds()
-    {
-        int[]    ids;
-        String[] syms = getTypeAnnotations();
-        int      len  = syms.length;
-
-        if (len == 0) {
-            ids = IonImplUtils.EMPTY_INT_ARRAY;
-        }
-        else {
-            SymbolTable symbols = getSymbolTable();
-            ids  = new int[len];
-            for (int ii=0; ii<len; ii++) {
-                String sym = syms[ii];
-                ids[ii] = symbols.findSymbol(sym);
-            }
-        }
-        return ids;
-    }
-
-    @Override
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        int[] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
     }
 
 
@@ -304,9 +227,9 @@ public class IonReaderTextUserX
     }
 
 
-    static final class IonReaderTextPosition
-        extends IonReaderPositionBase
-        implements TextSpan, OffsetSpan
+    private static final class IonReaderTextSpan
+        extends DowncastingFaceted
+        implements Span, TextSpan, OffsetSpan
     {
         private final UnifiedDataPageX _data_page;
         private final IonType          _container_type;
@@ -315,7 +238,7 @@ public class IonReaderTextUserX
         private final long             _start_line;
         private final long             _start_column;
 
-        IonReaderTextPosition(IonReaderTextUserX reader)
+        IonReaderTextSpan(IonReaderTextUserX reader)
         {
             // TODO: convert _start_char_offset from a long and data page
             //       to be an abstract reference into the Unified* data source
@@ -379,21 +302,21 @@ public class IonReaderTextUserX
     }
 
 
-    public IonReaderPosition getCurrentPosition()
+    public Span currentSpanImpl()
     {
         if (getType() == null) {
             throw new IllegalStateException("must be on a value");
         }
-        IonReaderTextPosition pos = new IonReaderTextPosition(this);
+        IonReaderTextSpan pos = new IonReaderTextSpan(this);
         return pos;
     }
 
     private void hoistImpl(Span span)
     {
-        if (!(span instanceof IonReaderTextPosition)) {
+        if (!(span instanceof IonReaderTextSpan)) {
             throw new IllegalArgumentException("position must match the reader");
         }
-        IonReaderTextPosition text_span = (IonReaderTextPosition)span;
+        IonReaderTextSpan text_span = (IonReaderTextSpan)span;
 
         UnifiedInputStreamX current_stream = _scanner.getSourceStream();
         UnifiedDataPageX    curr_page      = text_span.getDataPage();
@@ -435,11 +358,6 @@ public class IonReaderTextUserX
         re_init(iis, container, text_span._start_line, text_span._start_column);
     }
 
-    public void seek(IonReaderPosition position)
-    {
-        hoistImpl(position);
-    }
-
 
     //========================================================================
 
@@ -447,11 +365,6 @@ public class IonReaderTextUserX
     @Override
     public <T> T asFacet(Class<T> facetType)
     {
-        if (facetType == IonReaderWithPosition.class)
-        {
-            return facetType.cast(this);
-        }
-
         if (facetType == SpanProvider.class)
         {
             return facetType.cast(new SpanProviderFacet());
@@ -471,7 +384,7 @@ public class IonReaderTextUserX
     {
         public Span currentSpan()
         {
-            return getCurrentPosition();
+            return currentSpanImpl();
         }
     }
 

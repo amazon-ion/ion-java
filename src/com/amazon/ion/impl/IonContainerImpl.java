@@ -1,6 +1,8 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonContainer;
@@ -22,9 +24,9 @@ import java.util.NoSuchElementException;
 /**
  *
  */
-abstract public class IonContainerImpl
+abstract class IonContainerImpl
     extends IonValueImpl
-    implements IonContainerPrivate
+    implements _Private_IonContainer
 {
     /**
      * sizes for the various types of containers
@@ -32,25 +34,25 @@ abstract public class IonContainerImpl
      */
     static final int[] INITIAL_SIZE = make_initial_size_array();
     static int[] make_initial_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 1;
-        sizes[IonConstants.tidSexp]     = 4;
-        sizes[IonConstants.tidStruct]   = 5;
-        sizes[IonConstants.tidDATAGRAM] = 3;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 1;
+        sizes[_Private_IonConstants.tidSexp]     = 4;
+        sizes[_Private_IonConstants.tidStruct]   = 5;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
     static final int[] NEXT_SIZE = make_next_size_array();
     static int[] make_next_size_array() {
-        int[] sizes = new int[IonConstants.tidDATAGRAM + 1];
-        sizes[IonConstants.tidList]     = 4;
-        sizes[IonConstants.tidSexp]     = 8;
-        sizes[IonConstants.tidStruct]   = 8;
-        sizes[IonConstants.tidDATAGRAM] = 10;
+        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
+        sizes[_Private_IonConstants.tidList]     = 4;
+        sizes[_Private_IonConstants.tidSexp]     = 8;
+        sizes[_Private_IonConstants.tidStruct]   = 8;
+        sizes[_Private_IonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
     static final protected int initialSize(int typeDesc)
     {
-        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+        int tid = _Private_IonConstants.getTypeCode(typeDesc & 0xff);
         if (tid < 0 || tid >= INITIAL_SIZE.length) {
             assert("this should never happen: type id's should be in range".length() < 0);
             return 4;
@@ -61,7 +63,7 @@ abstract public class IonContainerImpl
     final protected int nextSize(int current_size)
     {
         int typeDesc = pos_getTypeDescriptorByte();
-        int tid = IonConstants.getTypeCode(typeDesc & 0xff);
+        int tid = _Private_IonConstants.getTypeCode(typeDesc & 0xff);
 
         if (current_size == 0) {
             int new_size = initialSize(typeDesc);
@@ -94,39 +96,43 @@ abstract public class IonContainerImpl
     {
         return;
     }
+
     /**
      * Only meaningful if {@link #_hasNativeValue}.
      */
-    //protected ArrayList<IonValue> _contents;
     protected int        _child_count;
-    protected IonValue[] _children;
+    protected IonValueImpl[] _children;
+
     public int get_child_count() {
         return _child_count;
     }
-    public IonValue get_child(int idx)
+
+    public IonValueImpl get_child(int idx)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(""+idx);
         }
         return _children[idx];
     }
-    public IonValue set_child(int idx, IonValue child)
+
+    final IonValueImpl set_child(int idx, IonValueImpl child)
     {
         if (idx < 0 || idx >= _child_count) {
             throw new IndexOutOfBoundsException(""+idx);
         }
-        IonValue prev = _children[idx];
+        IonValueImpl prev = _children[idx];
         _children[idx] = child;
         return prev;
     }
-    public int add_child(int idx, IonValue child)
+
+    public int add_child(int idx, IonValueImpl child)
     {
         _isNullValue(false); // if we add children we're not null anymore
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
             int new_len = this.nextSize(old_len);
             assert(new_len > idx);
-            IonValue[] temp = new IonValue[new_len];
+            IonValueImpl[] temp = new IonValueImpl[new_len];
             if (old_len > 0) {
                 System.arraycopy(_children, 0, temp, 0, old_len);
             }
@@ -140,6 +146,7 @@ abstract public class IonContainerImpl
         _children[idx] = child;
         return idx;
     }
+
     public void remove_child(int idx) {
         assert(idx >=0 && idx < _child_count); // this also asserts child count > 0
         if (idx + 1 <= _child_count) {
@@ -147,14 +154,6 @@ abstract public class IonContainerImpl
         }
         _child_count--;
         _children[_child_count] = null;
-    }
-    public int find_Child(IonValue child) {
-        for (int ii=0; ii<_child_count; ii++) {
-            if (_children[ii] == child) {
-                return ii;
-            }
-        }
-        return -1;
     }
 
     protected IonContainerImpl(IonSystemImpl system, int typeDesc)
@@ -217,7 +216,7 @@ abstract public class IonContainerImpl
                 if (next_size < 1) {
                     next_size = initialSize(pos_getTypeDescriptorByte());
                 }
-                this._children = new IonValue[next_size];
+                this._children = new IonValueImpl[next_size];
                 if (next_size >= this.nextSize(next_size)) {
                     this.transitionToLargeSize(next_size);
                 }
@@ -275,7 +274,7 @@ abstract public class IonContainerImpl
         {
             assert _hasNativeValue() == true || _isPositionLoaded() == false;
             for (int ii=0; ii<get_child_count(); ii++) {
-                IonValueImpl aChild = (IonValueImpl) get_child(ii);
+                IonValueImpl aChild = get_child(ii);
                 length += aChild.getFullEncodedSize();
             }
         }
@@ -447,7 +446,7 @@ abstract public class IonContainerImpl
         throws IOException
     {
         assert reader.position() == this.pos_getOffsetAtActualValue();
-        assert this.pos_getType() != IonConstants.tidStruct;
+        assert this.pos_getType() != _Private_IonConstants.tidStruct;
 
         IonBinary.BufferManager buffer = this._buffer;
         SymbolTable symtab = this.getSymbolTable();
@@ -458,7 +457,8 @@ abstract public class IonContainerImpl
         {
             IonValueImpl child;
             reader.setPosition(pos);
-            child = IonValueImpl.makeValueFromReader(0, reader, buffer, symtab, this, _system);
+            child = makeValueFromReader(UNKNOWN_SYMBOL_ID, reader, buffer,
+                                        symtab, this, _system);
             child._elementid = get_child_count(); //_children.length;
             add_child(child._elementid, child);
             pos = child.pos_getOffsetofNextValue();
@@ -505,7 +505,7 @@ abstract public class IonContainerImpl
 
         for (int ii=0; ii<_child_count; ii++) {
             // Move our children's tokens.
-            IonValueImpl aChild = (IonValueImpl)get_child(ii);
+            IonValueImpl aChild = get_child(ii);
             aChild.shiftTokenAndChildren(delta);
         }
     }
@@ -602,7 +602,7 @@ abstract public class IonContainerImpl
     {
         // overriden in sexp and datagram to handle Ion Version Marker (magic cookie)
         for (int ii=0; ii<_child_count; ii++) {
-            IonValueImpl child = (IonValueImpl)get_child(ii);
+            IonValueImpl child = get_child(ii);
 
             cumulativePositionDelta =
                 child.updateBuffer2(writer, writer.position(),
@@ -773,11 +773,11 @@ abstract public class IonContainerImpl
 
         if (_children == null || _child_count == 0)
         {
-            _children = new IonValue[initialSize(pos_getTypeDescriptorByte())];
+            _children = new IonValueImpl[initialSize(pos_getTypeDescriptorByte())];
             _hasNativeValue(true);
         }
 
-        add_child(index, element);
+        add_child(index, concrete);
         //_contents.add(index, element);
         concrete._elementid = index;
         updateElementIds(index + 1); // start at the next element, this one is fine
@@ -795,7 +795,7 @@ abstract public class IonContainerImpl
     void updateElementIds(int startingIndex)
     {
         while (startingIndex<this.get_child_count()) {
-            IonValueImpl v = (IonValueImpl)this.get_child(startingIndex);
+            IonValueImpl v = get_child(startingIndex);
             v._elementid = startingIndex;
             startingIndex++;
         }
@@ -807,7 +807,7 @@ abstract public class IonContainerImpl
         makeReady();
 
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueImpl v = (IonValueImpl)get_child(ii);
+            IonValueImpl v = get_child(ii);
             v.clear_position_and_buffer();
         }
         super.clear_position_and_buffer();
@@ -818,7 +818,7 @@ abstract public class IonContainerImpl
     {
         assert _hasNativeValue(); // else we don't know if _contents is valid
         for (int ii=0; ii<get_child_count(); ii++) {
-            IonValueImpl v = (IonValueImpl)get_child(ii);
+            IonValueImpl v = get_child(ii);
             v.detachFromSymbolTable();
         }
         super.detachFromSymbolTable();
@@ -874,7 +874,7 @@ abstract public class IonContainerImpl
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return IonImplUtils.<IonValue>emptyIterator();
+            return _Private_Utils.<IonValue>emptyIterator();
         }
 
         makeReady();

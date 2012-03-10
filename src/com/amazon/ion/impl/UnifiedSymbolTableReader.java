@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -17,16 +17,19 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -276,7 +279,7 @@ S_SYMBOL_LIST_CLOSE(2)     system
 */
 
 
-public class UnifiedSymbolTableReader
+final class UnifiedSymbolTableReader
     implements IonReader
 {
 
@@ -419,7 +422,7 @@ public class UnifiedSymbolTableReader
     /**
      * this is the symbol table this reader iterators over
      */
-    final UnifiedSymbolTable _symbol_table;
+    final SymbolTable _symbol_table;
 
     /**
      * _state tracks the progress through the various
@@ -442,11 +445,12 @@ public class UnifiedSymbolTableReader
     int                          _flags;                  // has name, has ... optional top level values
     String                       _string_value;
     long                         _int_value;
-    Iterator<UnifiedSymbolTable> _import_iterator;
-    UnifiedSymbolTable           _current_import;
+    private SymbolTable[]        _imported_tables;
+    private Iterator<SymbolTable> _import_iterator;
+    private SymbolTable          _current_import;
     Iterator<String>             _local_symbols;
 
-    public UnifiedSymbolTableReader(UnifiedSymbolTable symbol_table)
+    public UnifiedSymbolTableReader(SymbolTable symbol_table)
     {
         _symbol_table = symbol_table;
         if (symbol_table.isLocalTable() == false) {
@@ -456,10 +460,11 @@ public class UnifiedSymbolTableReader
         if (symbol_table.getMaxId() > 0) {
             // FIXME: is this ever true?            set_flag(HAS_MAX_ID, true);
         }
-        if (_symbol_table.hasImports()) {
+        _imported_tables = _symbol_table.getImportedTables();
+        if (_imported_tables != null && _imported_tables.length != 0) {
             set_flag(HAS_IMPORT_LIST, true);
         }
-        if (_symbol_table.getLocalSymbolCount() > 0) {
+        if (_symbol_table.getImportedMaxId() < _symbol_table.getMaxId()) {
             set_flag(HAS_SYMBOL_LIST, true);
         }
     }
@@ -581,8 +586,8 @@ public class UnifiedSymbolTableReader
             return true;
 
         case S_IMPORT_VERSION:
-            if (_current_import.getMaxId() > 0) return true;
-            return false;
+            // we always have a max_id on imports
+            return true;
 
         case S_IMPORT_MAX_ID:
         case S_IMPORT_STRUCT_CLOSE:
@@ -816,12 +821,12 @@ public class UnifiedSymbolTableReader
             break;
 
         case S_AFTER_IMPORT_LIST:
-            assert(_symbol_table.getLocalSymbolCount() > 0);
+            assert(_symbol_table.getImportedMaxId() < _symbol_table.getMaxId());
             new_state = S_SYMBOL_LIST;
             break;
 
         case S_SYMBOL_LIST:
-            assert(_symbol_table.getLocalSymbolCount() > 0);
+            assert(_symbol_table.getImportedMaxId() < _symbol_table.getMaxId());
             new_state = stateFollowingLocalSymbols();
             break;
 
@@ -837,20 +842,13 @@ public class UnifiedSymbolTableReader
             // state do it's thing (which it will do every time
             // we move to the next symbol)
         case S_SYMBOL:
-            if (_local_symbols.hasNext() == true)
+            if (_local_symbols.hasNext())
             {
                 _string_value = _local_symbols.next();
-                // empty string means this symbol isn't defined which is a null
-                // in the actual list - so we switch it back from "" to null
-                // it is still included in the list since lists are accessed
-                // by location (ordinal) so we need the space holder
-                if (_string_value == "") {
-                    _string_value = null;
-                }
+                // null means this symbol isn't defined
                 new_state = S_SYMBOL;
             }
             else {
-                // null means the symbol iterator ran out of symbols
                 new_state = S_SYMBOL_LIST_CLOSE;
             }
             break;
@@ -939,7 +937,7 @@ public class UnifiedSymbolTableReader
             new_state = S_IN_STRUCT;
             break;
         case S_IMPORT_LIST:
-            _import_iterator = _symbol_table.getImportIterator();
+            _import_iterator = Arrays.asList(_imported_tables).iterator();
             new_state = S_IN_IMPORTS;
             break;
         case S_IMPORT_STRUCT:
@@ -947,7 +945,7 @@ public class UnifiedSymbolTableReader
             new_state = S_IN_IMPORT_STRUCT;
             break;
         case S_SYMBOL_LIST:
-            _local_symbols = _symbol_table.getLocalSymbolIterator();
+            _local_symbols = _symbol_table.iterateDeclaredSymbolNames();
             new_state = S_IN_SYMBOLS;
             break;
         default:
@@ -1057,7 +1055,32 @@ public class UnifiedSymbolTableReader
             }
             return new String[] { ION_SHARED_SYMBOL_TABLE };
         }
-        return IonImplUtils.EMPTY_STRING_ARRAY;
+        return _Private_Utils.EMPTY_STRING_ARRAY;
+    }
+
+    private static final SymbolToken ION_SYMBOL_TABLE_SYM =
+        newSymbolToken(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID);
+
+    private static final SymbolToken ION_SHARED_SYMBOL_TABLE_SYM =
+        newSymbolToken(ION_SHARED_SYMBOL_TABLE, ION_SHARED_SYMBOL_TABLE_SID);
+
+    public SymbolToken[] getTypeAnnotationSymbols()
+    {
+        if (_current_state == S_STRUCT) {
+            SymbolToken sym;
+            if (_symbol_table.isLocalTable() || _symbol_table.isSystemTable())
+            {
+                sym = ION_SYMBOL_TABLE_SYM;
+            }
+            else
+            {
+                sym = ION_SHARED_SYMBOL_TABLE_SYM;
+            }
+
+            // Must return a new array each time to prevent user from changing it
+            return new SymbolToken[] { sym };
+        }
+        return SymbolToken.EMPTY_ARRAY;
     }
 
 
@@ -1070,19 +1093,19 @@ public class UnifiedSymbolTableReader
             }
             return new int[] { ION_SHARED_SYMBOL_TABLE_SID };
         }
-        return IonImplUtils.EMPTY_INT_ARRAY;
+        return _Private_Utils.EMPTY_INT_ARRAY;
     }
 
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        return IonImplUtils.stringIterator(annotations);
+        return _Private_Utils.stringIterator(annotations);
     }
 
     public Iterator<Integer> iterateTypeAnnotationIds()
     {
         int[] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
+        return _Private_Utils.intIterator(ids);
     }
 
     public int getFieldId()
@@ -1103,7 +1126,7 @@ public class UnifiedSymbolTableReader
         case S_SYMBOL_LIST_CLOSE:
         case S_STRUCT_CLOSE:
         case S_EOF:
-            return UnifiedSymbolTable.UNKNOWN_SID;
+            return SymbolTable.UNKNOWN_SYMBOL_ID;
 
         case S_NAME:
         case S_IMPORT_NAME:
@@ -1164,6 +1187,48 @@ public class UnifiedSymbolTableReader
 
         case S_SYMBOL_LIST:
             return SYMBOLS;
+
+        default:
+            throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);
+        }
+    }
+
+    public SymbolToken getFieldNameSymbol()
+    {
+        switch (_current_state)
+        {
+        case S_STRUCT:
+        case S_IN_STRUCT:
+        case S_IN_IMPORTS:
+        case S_IMPORT_STRUCT:
+        case S_IN_IMPORT_STRUCT:
+        case S_IMPORT_STRUCT_CLOSE:
+        case S_IMPORT_LIST_CLOSE:
+        case S_AFTER_IMPORT_LIST:
+        case S_IN_SYMBOLS:
+        case S_SYMBOL:
+        case S_SYMBOL_LIST_CLOSE:
+        case S_STRUCT_CLOSE:
+        case S_EOF:
+            return null;
+
+        case S_NAME:
+        case S_IMPORT_NAME:
+            return new SymbolTokenImpl(NAME, NAME_SID);
+
+        case S_VERSION:
+        case S_IMPORT_VERSION:
+            return new SymbolTokenImpl(VERSION, VERSION_SID);
+
+        case S_MAX_ID:
+        case S_IMPORT_MAX_ID:
+            return new SymbolTokenImpl(MAX_ID, MAX_ID_SID);
+
+        case S_IMPORT_LIST:
+            return new SymbolTokenImpl(IMPORTS, IMPORTS_SID);
+
+        case S_SYMBOL_LIST:
+            return new SymbolTokenImpl(SYMBOLS, SYMBOLS_SID);
 
         default:
             throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);
@@ -1308,6 +1373,13 @@ public class UnifiedSymbolTableReader
         return _string_value;
     }
 
+    public SymbolToken symbolValue()
+    {
+        // TODO handle null
+        throw new UnsupportedOperationException();
+    }
+
+    @Deprecated
     public int getSymbolId()
     {
         throw new IllegalStateException("only valid if the value is a symbol");

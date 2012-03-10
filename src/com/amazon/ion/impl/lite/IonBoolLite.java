@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -10,7 +10,7 @@ import com.amazon.ion.ValueVisitor;
 /**
  *
  */
-public class IonBoolLite
+final class IonBoolLite
     extends IonValueLite
     implements IonBool
 {
@@ -48,7 +48,7 @@ public class IonBoolLite
     @Override
     public IonBoolLite clone()
     {
-        IonBoolLite clone = new IonBoolLite(this._context.getSystemLite(), this.isNullValue());
+        IonBoolLite clone = new IonBoolLite(this._context.getSystem(), this.isNullValue());
 
         // this copies the flags member which will
         // copy the is null and is bool true state

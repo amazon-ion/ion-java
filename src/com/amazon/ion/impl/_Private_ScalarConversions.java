@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -13,7 +13,7 @@ import java.util.Date;
 /**
  *
  */
-public class IonScalarConversionsX
+public class _Private_ScalarConversions
 {
     public static final class AS_TYPE {
 
@@ -576,7 +576,7 @@ public class IonScalarConversionsX
         }
 
         public final int get_conversion_fnid(int new_type) {
-            return IonScalarConversionsX.getConversionFnid(_authoritative_type_idx, new_type);
+            return _Private_ScalarConversions.getConversionFnid(_authoritative_type_idx, new_type);
         }
 
         public final void cast(int castfnid) {

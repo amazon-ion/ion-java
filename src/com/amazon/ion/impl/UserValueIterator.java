@@ -1,14 +1,11 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
-
-import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemReader;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
-import java.io.Reader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -35,20 +32,7 @@ public class UserValueIterator
     /**
      * Unless {@link #setBufferToRecycle()} is called, this iterator will
      * intrementally load the encode the whole input stream into a buffer!
-     *
-     * @param initialSymbolTable must be local, not shared.
-     * @throws NullPointerException if input is null.
      */
-    public UserValueIterator(IonSystemImpl system,
-                             SymbolTable initialSymbolTable,
-                             Reader input)
-    {
-        this(makeSystemReader(system,
-                              system.getCatalog(),
-                              initialSymbolTable,
-                              input));
-    }
-
     public UserValueIterator(SystemValueIterator systemReader)
     {
         _systemReader = systemReader;

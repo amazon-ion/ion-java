@@ -1,6 +1,4 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -15,10 +13,12 @@ public class LoadBinaryStreamSystemProcessingTest
 {
     private byte[] myBytes;
 
+
     @Override
     protected void prepare(String text)
         throws Exception
     {
+        myMissingSymbolTokensHaveText = false;
         myBytes = encode(text);
     }
 
@@ -30,16 +30,5 @@ public class LoadBinaryStreamSystemProcessingTest
         IonLoader loader = loader();
         IonDatagram datagram = loader.load(in);
         return datagram;
-    }
-
-    @Override
-    protected boolean checkMissingSymbol(String expected, int expectedSymbolTableSid, int expectedLocalSid)
-        throws Exception
-    {
-        checkSymbol("$" + expectedSymbolTableSid, expectedSymbolTableSid);
-
-        // when missing from a shared table the symbol
-        // will not have been added to the local symbols
-        return false;
     }
 }

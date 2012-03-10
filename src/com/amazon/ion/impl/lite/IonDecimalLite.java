@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -12,9 +12,9 @@ import java.math.BigDecimal;
 /**
  *
  */
-public class IonDecimalLite
-extends IonValueLite
-implements IonDecimal
+final class IonDecimalLite
+    extends IonValueLite
+    implements IonDecimal
 {
     private static final int HASH_SIGNATURE =
         IonType.DECIMAL.toString().hashCode();
@@ -57,7 +57,7 @@ implements IonDecimal
     @Override
     public IonDecimalLite clone()
     {
-        IonDecimalLite clone = new IonDecimalLite(this._context.getSystemLite(), false);
+        IonDecimalLite clone = new IonDecimalLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         clone.setValue(this._decimal_value);

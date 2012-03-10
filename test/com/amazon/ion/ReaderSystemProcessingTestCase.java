@@ -1,11 +1,11 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_INT_ARRAY;
-import static com.amazon.ion.impl.IonImplUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_INT_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
+import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.junit.IonAssert;
 import java.util.Date;
@@ -23,12 +23,14 @@ public abstract class ReaderSystemProcessingTestCase
     protected IonReader myReader;
     private IonType   myValueType;
 
+
     @After @Override
     public void tearDown() throws Exception
     {
         super.tearDown();
         if (myReader != null) myReader.close();
     }
+
 
     protected abstract IonReader read()
         throws Exception;
@@ -58,44 +60,36 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Override
+    protected void stepIn() throws Exception
+    {
+        myReader.stepIn();
+    }
+
+    @Override
+    protected void stepOut() throws Exception
+    {
+
+    }
+
+    @Override
     protected IonType currentValueType() throws Exception
     {
         return myValueType;
     }
 
     @Override
-    protected SymbolTable currentSymtab() throws Exception
+    SymbolTable currentSymtab()
     {
         return myReader.getSymbolTable();
     }
 
-    @Override
-    protected void checkAnnotation(String expected, int expectedSid)
-    {
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        int[] sids = myReader.getTypeAnnotationIds();
-
-        for (int i = 0; i < typeAnnotations.length; i++)
-        {
-            // FIXME ION-172 this assumes all annotations are known.
-            if (typeAnnotations[i].equals(expected))
-            {
-                assertEquals("symbol id", expectedSid, sids[i]);
-                return;
-            }
-        }
-        fail("Didn't find expected annotation: " + expected);
-    }
 
     @Override
-    protected void checkAnnotations(String[] expecteds, int[] expectedSids)
+    Checker check()
     {
-        String[] typeAnnotations = myReader.getTypeAnnotations();
-        Assert.assertArrayEquals(expecteds, typeAnnotations);
-
-        int[] sids = myReader.getTypeAnnotationIds();
-        Assert.assertArrayEquals(expectedSids, sids);
+        return new ReaderChecker(myReader);
     }
+
 
     @Override
     protected void checkType(IonType expected)
@@ -141,45 +135,22 @@ public abstract class ReaderSystemProcessingTestCase
     @Override
     protected void checkSymbol(String expected) throws Exception
     {
+        assert expected != null;
+
         assertSame(IonType.SYMBOL, myReader.getType());
+
+        assertFalse(myReader.isNullValue());
+
         assertEquals(expected, myReader.stringValue());
-        // we don't really care what this returns, but it forces
-        // any symbol table processing to occur, if necessary
-        myReader.getSymbolId();
+
+        SymbolToken sym = myReader.symbolValue();
+        assertEquals(expected, sym.getText());
     }
 
     @Override
-    protected void checkSymbol(String expected, int expectedSid)
-        throws Exception
+    protected final void checkSymbol(String expectedText, int expectedSid)
     {
-        assertSame(IonType.SYMBOL, myReader.getType());
-
-        // we'll use this to make sure we did check something here
-        boolean was_checked = false;
-
-        // first we check the text representation which all
-        // user readers and any non-binary readers will have
-        try {
-            String reader_name = myReader.stringValue();
-            assertEquals(expected, reader_name);
-            was_checked = true;
-        }
-        catch (UnsupportedOperationException e) { }
-
-        // now we check the binary value, which user readers
-        // and any non-text readers should understand
-        int sid = myReader.getSymbolId();
-        if (sid != UNKNOWN_SYMBOL_ID) {
-            if (expectedSid != sid) {
-                int reader_sid = myReader.getSymbolId();
-                assertEquals(expectedSid, reader_sid);
-            }
-            was_checked = true;
-        }
-
-        // finally we make sure we checked at least one of the
-        // two representations (symbol text or symbol id)
-        assertTrue("Didn't check symbol text or id", was_checked);
+        IonAssert.checkSymbol(myReader, expectedText, expectedSid);
     }
 
 
@@ -370,8 +341,7 @@ public abstract class ReaderSystemProcessingTestCase
                             assertEquals("D", reader.getTypeAnnotations()[0]);
                             reader.stepIn();
                             {
-                                reader.next();
-                                assertEquals("f4", reader.getFieldName());
+                                expectNextField(reader, "f4");
                                 reader.stepIn();
                                 {
                                     reader.next();
@@ -409,15 +379,12 @@ public abstract class ReaderSystemProcessingTestCase
         IonReader r = myReader;
         r.next();
         r.stepIn();
-        r.next();
-        assertEquals("a", r.getFieldName());
+        expectNextField(r, "a");
         r.stepIn();
-        r.next();
-        assertEquals("b", r.getFieldName());
+        expectNextField(r, "b");
         r.stepOut(); // skip c
         assertNoCurrentValue(r);
-        r.next();
-        assertEquals("d", r.getFieldName());
+        expectNextField(r, "d");
     }
 
 
@@ -462,8 +429,7 @@ public abstract class ReaderSystemProcessingTestCase
         IonReader r = myReader;
         r.next();
         r.stepIn();
-        r.next();
-        assertEquals("X", r.getFieldName());
+        expectNextField(r, "X");
         checkEof();
         r.stepOut();
         checkTopEof();

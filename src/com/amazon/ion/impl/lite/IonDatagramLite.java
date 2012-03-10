@@ -1,13 +1,13 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -16,11 +16,12 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl.IonReaderFactoryX;
-import com.amazon.ion.impl.IonWriterBinaryCompatibility;
-import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
+import com.amazon.ion.impl._Private_IonDatagram;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -63,18 +64,18 @@ import java.util.NoSuchElementException;
  *
  */
 
-public class IonDatagramLite
+final class IonDatagramLite
     extends IonSequenceLite
-    implements IonDatagram, IonContext
+    implements IonDatagram, IonContext, _Private_IonDatagram
 {
     private final IonSystemLite      _system;
-    private       IonCatalog         _catalog;
+    private final IonCatalog         _catalog;
     private       SymbolTable        _pending_symbol_table;
     private       int                _pending_symbol_table_idx;
     private       IonSymbolLite      _ivm;
 
     IonDatagramLite(IonSystemLite system, IonCatalog catalog) {
-        super(null, false);
+        super(/* context */ system, false);
         _system = system;
         _catalog = catalog;
         // these should be no-op's but just to be sure:
@@ -93,7 +94,14 @@ public class IonDatagramLite
     //////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+    public IonValueLite topLevelValue()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public final SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
         // otherwise the concrete context would have returned
         // it's already present local symbol table, there's
@@ -108,68 +116,51 @@ public class IonDatagramLite
         }
 
         // if not we make one here on this value
+        // TODO ION-158 must use correct system symtab
         symbols = _system.newLocalSymbolTable();
-        IonConcreteContext context = _system.allocateConcreteContext();
-        context.setParentThroughContext(child, this);
+        TopLevelContext context = _system.allocateConcreteContext(this, child);
         context.setSymbolTableOfChild(symbols, child);
         return symbols;
     }
 
-    // from IonContainerLite(returns this) IonContainerLite getParentThroughContext();
 
     @Override
     public SymbolTable getSymbolTable()
     {
-        if (_pending_symbol_table != null) {
-            return _pending_symbol_table;
-        }
-        return _system.getSystemSymbolTable();
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public SymbolTable getAssignedSymbolTable()
     {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
-    @Override
-    public IonSystemLite getSystemLite()
-    {
-        return _system;
-    }
-
-    @Override
-    public void setParentThroughContext(IonValueLite child, IonContext context)
-    {
-        assert(context == this);
-        child.setContext(this);
-    }
 
     @Override
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        assert child._context == this;
+
+        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
         }
-        //if (symbols.isSystemTable()) {
-        //    assert(symbols.getSystem() == getSystemLite());
-        //    return;
-        //}
-        assert(symbols.isLocalTable() || symbols.isSystemTable());
-        if (!(child._context instanceof IonConcreteContext)) {
-            IonContext context = new IonConcreteContext(_system);
-            context.setParentThroughContext(child, this);
-        }
-        child._context.setSymbolTableOfChild(symbols, child);
+
+        TopLevelContext context = _system.allocateConcreteContext(this, child);
+        context.setSymbolTableOfChild(symbols, child);
     }
 
     @Override
     public void setSymbolTable(SymbolTable symbols)
     {
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
-            throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
-        }
-        _pending_symbol_table = symbols;
+        throw new UnsupportedOperationException();
+    }
+
+    public void appendTrailingSymbolTable(SymbolTable symtab)
+    {
+        assert symtab.isLocalTable() || symtab.isSystemTable();
+
+        _pending_symbol_table = symtab;
         _pending_symbol_table_idx = get_child_count();
     }
 
@@ -217,6 +208,7 @@ public class IonDatagramLite
         if (!(element instanceof IonValueLite)) {
             throw new IllegalArgumentException("IonValue implementation can't be mixed");
         }
+        // TODO where do we validate that element isn't a datagram?
 
         IonValueLite concrete = (IonValueLite)element;
 
@@ -227,7 +219,8 @@ public class IonDatagramLite
         SymbolTable symbols = concrete.getAssignedSymbolTable();
         if (symbols == null && this._pending_symbol_table != null && this._pending_symbol_table_idx == concrete._elementid())
         {
-            concrete.setSymbolTable(_pending_symbol_table);
+            assert concrete._context == this;
+            setSymbolTableOfChild(_pending_symbol_table, concrete);
         }
 
         // the pending symbol table is only good for 1 use
@@ -303,11 +296,6 @@ public class IonDatagramLite
         return clone;
     }
 
-    // IonSequenceLite version of this is the right one
-    // public boolean contains(Object o)
-
-    // IonSequenceLite version of this is the right one
-    // public boolean containsAll(Collection<?> c)
 
     @Override
     public void deepMaterialize()
@@ -317,27 +305,17 @@ public class IonDatagramLite
 
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T extends IonValue> T[] extract(Class<T> type)
     {
         if (isNullValue()) return null;
+
+        @SuppressWarnings("unchecked")
         T[] array = (T[]) Array.newInstance(type, size());
         toArray(array);
         clear();
         return array;
     }
 
-    // from IonContainerLite
-    // public IonValue get(int index)
-
-    // from IonSequenceList
-    // public int indexOf(Object o)
-
-    // from IonSequenceLite
-    // public int lastIndexOf(Object o)
-
-    // uses IonContainerLite copy
-    // public ListIterator<IonValue> listIterator()
 
     @Override
     public ListIterator<IonValue> listIterator(int index)
@@ -357,7 +335,7 @@ public class IonDatagramLite
         // thereafter each child may have it's own symbol table
         for (int ii=0; ii<get_child_count(); ii++)
         {
-            IonValueLite child = get_child_lite(ii);
+            IonValueLite child = get_child(ii);
             SymbolTable child_symbols = child.getAssignedSymbolTable();
             if (child_symbols != null) {
                 symbols = child_symbols;
@@ -371,42 +349,49 @@ public class IonDatagramLite
         return symbols;
     }
 
-    protected SymbolTable getChildsSymbolTable(IonValueLite child)
+    /**
+     * Search backwards through previous children until we find one that
+     * is linked to a symbol table.
+     * <p>
+     * TODO I think it would be better if every child had an assigned symtab.
+     * Then we'd never have to search backwards.
+     * The downside might be additional work when symtabs change.
+     *
+     * @param child must not be null
+     * @return not null; defaults to the default system symtab.
+     */
+    final SymbolTable getChildsSymbolTable(IonValueLite child)
     {
         SymbolTable symbols = null;
         int idx = child._elementid();
 
         // the caller is supposed to check this and not waste our time
-        assert(child != null && child.getAssignedSymbolTable() == null);
+        assert child.getAssignedSymbolTable() == null;
 
         while (idx > 0 && symbols == null) {
             idx--;
-            IonValueLite prev_child = get_child_lite(idx);
+            IonValueLite prev_child = get_child(idx);
             symbols = prev_child.getAssignedSymbolTable();
         }
 
         if (symbols == null) {
+            // TODO ION-258 bad assumption about system symtab
             symbols = _system.getSystemSymbolTable();
         }
 
         return symbols;
     }
 
-    // from IonSequenceLite
-    // public IonValue remove(int index)
-
-    // from IonSequenceLite
-    // public boolean remove(Object o)
-
-    // from IonSequenceLite
-    // public boolean removeAll(Collection<?> c)
-
-    // from IonSequenceLite
-    // public boolean retainAll(Collection<?> c)
 
     @Override
     public IonValue set(int index, IonValue element)
     {
+        if (true)
+        {
+            // TODO JIRA ION-90
+            throw new UnsupportedOperationException("JIRA issue ION-90");
+        }
+
         IonValue previous = super.set(index, element);
         IonValueLite concrete = (IonValueLite)element;
 
@@ -419,7 +404,7 @@ public class IonDatagramLite
             }
             else {
                 // the preceding elements symbol table is our next
-                IonValueLite preceding = (index > 0) ? get_child_lite(index - 1) : null;
+                IonValueLite preceding = (index > 0) ? get_child(index - 1) : null;
                 if (preceding != null && preceding._context != this) {
                     concrete.setContext(preceding._context);
                 }
@@ -434,32 +419,6 @@ public class IonDatagramLite
         return previous;
     }
 
-    // from IonSequenceLite
-    // public List<IonValue> subList(int fromIndex, int toIndex)
-
-    // from IonSequenceLite
-    // public synchronized IonValue[] toArray()
-
-    // from IonSequenceLite
-    // public <T> T[] toArray(T[] a)
-
-    // from IonContainerLite
-    // public void clear()
-
-    // from IonContainerLite
-    // public boolean isEmpty() throws NullValueException
-
-    // just a cover for listIterator(0), defined in IonContainerLite
-    // public Iterator<IonValue> iterator()
-
-    // from IonContainerLite
-    // public void makeNull()
-
-    // from IonContainerLite
-    // public boolean remove(IonValue element)
-
-    // from IonContainerLite
-    // public int size()
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception
@@ -474,33 +433,15 @@ public class IonDatagramLite
         throw new UnsupportedOperationException(message);
     }
 
-    // defined in IonValueLite
-    // public void clearTypeAnnotations()
-
-    // defined in IonValueLite
-    // public void deepMaterialize()
 
     @Override
-    public IonContainer getContainer()
+    public IonContainerLite getContainer()
     {
         return null;
     }
 
-    // defined in IonValueLite
-    // public int getFieldId()
-
-    // defined in IonValueLite
-    // public String getFieldName()
-
-    // defined in IonValueLite
-    // public int getFieldNameId()
-
-    // Moved into the context methods list to
-    // live next to context symbol table logic.
-    // public SymbolTable getSymbolTable()
-
     @Override
-    public IonSystem getSystem()
+    public IonSystemLite getSystem()
     {
         return this._system;
     }
@@ -511,31 +452,6 @@ public class IonDatagramLite
         return IonType.DATAGRAM;
     }
 
-    // defined in IonValueLite - always the empty array
-    //public String[] getTypeAnnotationStrings()
-
-    // defined in IonValueLite - always the empty array
-    // public String[] getTypeAnnotations()
-
-    // defined in IonValueLite
-    // public boolean hasTypeAnnotation(String annotation)
-
-    // defined in IonValueLite - always false
-    // public boolean isNullValue()
-
-    // defined in IonValueLite
-    // public boolean isReadOnly()
-
-    // from IonContainerLite
-    // public void makeReadOnly()
-
-    // the base version of this is fine since datagrams have no
-    // container to be removed from
-    // public boolean removeFromContainer()
-
-    // the base version of this is fine since datagrams have no
-    // annotations to be removed from
-    // public void removeTypeAnnotation(String annotation)
 
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
@@ -548,14 +464,17 @@ public class IonDatagramLite
     /**
      * This doesn't wrap IOException because some callers need to propagate it.
      */
+    @SuppressWarnings("deprecation")
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
         boolean streamCopyOptimized = false;
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(_system, _catalog,
-                                                  streamCopyOptimized);
-        IonReader reader = IonReaderFactoryX.makeSystemReader(this);
+        _Private_IonBinaryWriterImpl writer =
+            new _Private_IonBinaryWriterImpl(_catalog,
+                                             _system.getSystemSymbolTable(),
+                                             _system,
+                                             streamCopyOptimized);
+        IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);
         writer.finish();
         return writer;
@@ -564,6 +483,7 @@ public class IonDatagramLite
     @SuppressWarnings("deprecation")
     public int byteSize() throws IonException
     {
+        // TODO this is horrible, users will end up encoding multiple times!
         try {
             IonBinaryWriter writer = make_filled_binary_writer();
             int size = writer.byteSize();
@@ -587,6 +507,7 @@ public class IonDatagramLite
         }
     }
 
+    @SuppressWarnings("deprecation")
     public int getBytes(byte[] dst) throws IonException
     {
         try {
@@ -599,6 +520,7 @@ public class IonDatagramLite
         }
     }
 
+    @SuppressWarnings("deprecation")
     public int getBytes(byte[] dst, int offset) throws IonException
     {
         try {
@@ -611,6 +533,7 @@ public class IonDatagramLite
         }
     }
 
+    @SuppressWarnings("deprecation")
     public int getBytes(OutputStream out) throws IOException, IonException
     {
         IonBinaryWriter writer = make_filled_binary_writer();
@@ -668,58 +591,9 @@ public class IonDatagramLite
 
     public ListIterator<IonValue> systemIterator()
     {
-
-/* test code  FIXME: remove this
-if (this.isReadOnly() && hasUnresolvedSymbols(this)) {
-    System.err.println("datagram lite has unresolved symbols at get systemIterator time !!");
-}
-*/
-        // read only values have already had their
-        // symbols updated, and should not be modified
-        if (isReadOnly() == false) {
-            populateSymbolValues(null);
-        }
-
-        ListIterator<IonValue> iterator = new SystemContentIterator(this.isReadOnly());
-        return iterator;
+        return new SystemContentIterator(isReadOnly());
     }
 
-/* more test code: FIXME: remove this
-private static boolean hasUnresolvedSymbols(IonValueLite value) {
-    if (value instanceof IonContainerLite ) {
-        IonContainerLite container = (IonContainerLite)value;
-        for (int ii=0; ii<container.get_child_count(); ii++) {
-            IonValueLite child = container.get_child_lite(ii);
-            if (hasUnresolvedSymbols(child)) {
-                return true;
-            }
-        }
-    }
-    else {
-        SymbolTable st = value.getAssignedSymbolTable();
-        String fieldname = value.getFieldName();
-        if (fieldname != null) {
-            int sid = st.findSymbol(fieldname);
-            if (sid < 1) {
-                return true;
-            }
-        }
-        if (value instanceof IonSymbolLite) {
-
-        }
-    }
-    String[] annotations = value.getTypeAnnotationStrings();
-    if (annotations != null && annotations.length > 0) {
-        SymbolTable st = value.getAssignedSymbolTable();
-        for (int ii=0; ii<annotations.length; ii++) {
-            if (st.findSymbol(annotations[ii]) < 1) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-*/
 
     // TODO: optimize this, if there's a real use case
     //       deprecate this is there isn't (which I suspect is actually the case)
@@ -728,12 +602,14 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
         int count = 0;
         ListIterator<IonValue> iterator = systemIterator();
         while (iterator.hasNext()) {
+            @SuppressWarnings("unused")
             IonValue value = iterator.next();
             count++;
         }
         return count;
     }
 
+    @SuppressWarnings("deprecation")
     public byte[] toBytes() throws IonException
     {
         byte[] bytes;
@@ -758,7 +634,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
     protected synchronized IonSymbolLite get_ivm()
     {
         if (_ivm == null) {
-            _ivm = (IonSymbolLite) getSystem().newSymbol(ION_1_0);
+            _ivm = getSystem().newSymbol(ION_1_0);
         }
         return _ivm;
     }
@@ -821,7 +697,12 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             __temp_pos = new SystemIteratorPosition(this); // we flip back and forth between two positions to avoid allocating these on every value (or more)
             __pos = new SystemIteratorPosition(this);
             __pos.load_initial_position();
-      }
+        }
+
+        private IonSystem getSystem()
+        {
+            return IonDatagramLite.this.getSystem();
+        }
 
         protected IonValueLite set_position(SystemIteratorPosition newPos)
         {
@@ -834,7 +715,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             return __current;
         }
 
-        protected void force_position_sync()
+        private void force_position_sync()
         {
             int user_index = __pos.__user_index;
             if (user_index < 0 || user_index >= _child_count) {
@@ -1038,7 +919,7 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
         }
         protected IonValueLite get_datagram_child(int idx)
         {
-            return get_child_lite(idx);
+            return get_child(idx);
         }
         protected IonSystem get_datagram_system()
         {
@@ -1233,17 +1114,14 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
                 SymbolTable new_symbol_table = curr_symtab;
                 while (new_symbol_table != null)
                 {
-                    if ((new_symbol_table instanceof UnifiedSymbolTable) == false) {
-                        throw new IonException("only UnifiedSymbolTable instances are currently supported by IonDatagramLite");
-                    }
-
                     final boolean new_symbol_table_is_system = new_symbol_table.isSystemTable();
                     IonValue rep;
                     if (new_symbol_table_is_system) {
                         rep = __iterator.get_datagram_ivm();
                     }
                     else {
-                        rep = ((UnifiedSymbolTable)new_symbol_table).getIonRepresentation(this.__iterator.get_datagram_system());
+                        IonSystem sys = __iterator.get_datagram_system();
+                        rep = _Private_Utils.symtabTree(sys, new_symbol_table);
                     }
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 
@@ -1277,10 +1155,10 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
         {
             if (value instanceof IonSymbol) {
                 IonSymbol sym = (IonSymbol)value;
-                if (!sym.isNullValue()) {
-                    if (sym.stringValue().equals(ION_1_0)) {
-                        return true;
-                    }
+                SymbolToken tok = sym.symbolValue();
+                if (tok != null && ION_1_0.equals(tok.getText()))
+                {
+                    return true;
                 }
             }
             return false;
@@ -1328,7 +1206,8 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
                 for (int ii=0; ii<new_index; ii--) {
                     curr = __iterator.get_datagram_child(ii).getSymbolTable();
                     if (curr != prev) {
-                        adjustment += count_system_values(prev, curr);
+                        IonSystem sys = __iterator.getSystem();
+                        adjustment += count_system_values(sys, prev, curr);
                     }
                     prev = curr;
                 }
@@ -1337,12 +1216,14 @@ private static boolean hasUnresolvedSymbols(IonValueLite value) {
             }
         }
 
-        static int count_system_values(SymbolTable prev, SymbolTable curr)
+        private static int count_system_values(IonSystem sys,
+                                               SymbolTable prev,
+                                               SymbolTable curr)
         {
             int count = 0;
             while (curr.isLocalTable()) {
                 count++;
-                curr = ((UnifiedSymbolTable)curr).getIonRepresentation().getSymbolTable();
+                curr = _Private_Utils.symtabTree(sys, curr).getSymbolTable();
             }
             // we should terminate when the symbol tables symbol table is the system symbol table
             assert(curr != null);

@@ -1,5 +1,7 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
+
+import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBinaryWriter;
@@ -13,8 +15,8 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.IonImplUtils;
-import com.amazon.ion.impl.IonTokenReader;
+import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -140,8 +142,7 @@ public class BinaryStreamingTest
                         wr.writeTimestampUTC((Date)value);
                     }
                     else if (value instanceof String) {
-                        Timestamp ti =
-                            IonTokenReader.Type.timeinfo.parse((String)value);
+                        Timestamp ti = Timestamp.valueOf((String)value);
                         wr.writeTimestamp(ti);
                     }
                     else if (value instanceof Timestamp) {
@@ -198,12 +199,8 @@ public class BinaryStreamingTest
         void readAndTestValue(IonReader r) throws IOException {
 
             IonType t = r.next();
-            String fieldname = r.getFieldName();
-            if (name.equals("bdd_d") || name.equals("bdd_c")) {
-                assertTrue( true );
-            }
+            IonAssert.expectField(r, name);
 
-            assertEquals(name, fieldname);
             if ( itype.equals(IonType.NULL) ) {
                 // nulls are typed so we test them differently
                 if (value != null) {
@@ -275,8 +272,7 @@ public class BinaryStreamingTest
                         assertEquals(Timestamp.UTC_OFFSET, actual.getLocalOffset());
                     }
                     else if (value instanceof String) {
-                        Timestamp ti2 =
-                            IonTokenReader.Type.timeinfo.parse((String)value);
+                        Timestamp ti2 = Timestamp.valueOf((String)value);
                         assertEquals(ti2, actual);
                     }
                     else if (value instanceof Timestamp) {
@@ -466,13 +462,13 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 //                   new TestValue("date_d3",       IonType.TIMESTAMP, new Date("1-23-2008T12:53:24") ),
 
 //                   new TestValue("date_t1",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02Z") ),
-               new TestValue("date_t2",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02-15") ),
-               new TestValue("date_t3",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("0001-01-01") ),
-               new TestValue("date_t4",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("9999-12-31") ),
+               new TestValue("date_t2",       IonType.TIMESTAMP, Timestamp.valueOf("2008-02-15") ),
+               new TestValue("date_t3",       IonType.TIMESTAMP, Timestamp.valueOf("0001-01-01") ),
+               new TestValue("date_t4",       IonType.TIMESTAMP, Timestamp.valueOf("9999-12-31") ),
 
-               new TestValue("date_t5",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("2008-02-15T12:59:59.100000-03:45") ),
-               new TestValue("date_t6",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("0001-01-01T00:00:00.000000-00:00") ),
-               new TestValue("date_t7",       IonType.TIMESTAMP, IonTokenReader.Type.timeinfo.parse("9999-12-31T23:59:59.999999+01:00") ),
+               new TestValue("date_t5",       IonType.TIMESTAMP, Timestamp.valueOf("2008-02-15T12:59:59.100000-03:45") ),
+               new TestValue("date_t6",       IonType.TIMESTAMP, Timestamp.valueOf("0001-01-01T00:00:00.000000-00:00") ),
+               new TestValue("date_t7",       IonType.TIMESTAMP, Timestamp.valueOf("9999-12-31T23:59:59.999999+01:00") ),
 
                new TestValue("string_1",       IonType.STRING, ""),
                new TestValue("string_2",       IonType.STRING, " "),
@@ -670,7 +666,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
         assertEquals(IonType.BOOL, ir.next());
-        assertEquals("Foo", ir.getFieldName());
+        expectField(ir, "Foo");
         //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
         String[] annotations = ir.getTypeAnnotations();
         assertTrue(annotations != null && annotations.length == 1);
@@ -684,7 +680,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
         assertEquals(IonType.BOOL, ir.next());
-        assertEquals("Foo", ir.getFieldName());
+        expectField(ir, "Foo");
         annotations = ir.getTypeAnnotations();
         assertNotNull(annotations);
         assertEquals(1, annotations.length);
@@ -718,7 +714,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             ir.stepIn();
             while (ir.hasNext()) {
                 assertEquals(ir.next(), IonType.BOOL);
-                assertEquals(ir.getFieldName(), "Foo");
+                expectField(ir, "Foo");
                 //assertEquals(ir.getAnnotations(), new String[] { "boolean" });
                 String[] annotations = ir.getTypeAnnotations();
                 assertTrue(annotations != null && annotations.length == 1);
@@ -779,42 +775,42 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             ir.stepIn();
             while (ir.next() != null) {
                 assertEquals(ir.getType(), IonType.BOOL);
-                assertEquals(ir.getFieldName(), "hello");
+                expectField(ir, "hello");
                 assertEquals(ir.booleanValue(), true);
 
                 assertEquals(ir.next(), IonType.BOOL);
-                assertEquals(ir.getFieldName(), "Almost Done.");
+                expectField(ir, "Almost Done.");
                 assertEquals(ir.booleanValue(), true);
 
                 assertEquals(ir.next(), IonType.BOOL);
-                assertEquals(ir.getFieldName(), "This is a test String.");
+                expectField(ir, "This is a test String.");
                 assertEquals(ir.booleanValue(), true);
 
                 assertEquals(ir.next(), IonType.FLOAT);
-                assertEquals(ir.getFieldName(), "12242.124598129");
+                expectField(ir, "12242.124598129");
                 assertEquals(ir.doubleValue(), 12242.124598129);
 
                 assertEquals(ir.next(), IonType.NULL);
-                assertEquals(ir.getFieldName(), "Something");
+                expectField(ir, "Something");
                 assertTrue(ir.isNullValue());
                 // not:
                 //assertEquals(ir.getValueAsString(), null);
 //                assertEquals(ir.valueToString(), "null");
 
                 assertEquals(ir.next(), IonType.BOOL);
-                assertEquals(ir.getFieldName(), "false");
+                expectField(ir, "false");
                 assertEquals(ir.booleanValue(), false);
 
                 assertEquals(ir.next(), IonType.BOOL);
-                assertEquals(ir.getFieldName(), "true");
+                expectField(ir, "true");
                 assertEquals(ir.booleanValue(), true);
 
                 assertEquals(ir.next(), IonType.INT);
-                assertEquals(ir.getFieldName(), "long");
+                expectField(ir, "long");
                 assertEquals(ir.longValue(), 9326L);
 
                 assertEquals(ir.next(), IonType.INT);
-                assertEquals(ir.getFieldName(), "12");
+                expectField(ir, "12");
                 assertEquals(ir.intValue(), -12);
             }
         }
@@ -864,45 +860,45 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
         assertEquals(IonType.STRUCT, ir.next());
         ir.stepIn();
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
-        assertEquals(ir.getFieldName(), "12");
+        expectField(ir, "12");
         assertEquals(ir.intValue(), -12);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.FLOAT);
-        assertEquals(ir.getFieldName(), "12242.124598129");
+        expectField(ir, "12242.124598129");
         assertEquals(ir.doubleValue(), 12242.124598129);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
-        assertEquals(ir.getFieldName(), "Almost Done.");
+        expectField(ir, "Almost Done.");
         assertEquals(ir.booleanValue(), true);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
-        assertEquals(ir.getFieldName(), "This is a test String.");
+        expectField(ir, "This is a test String.");
         assertEquals(ir.booleanValue(), true);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
-        assertEquals(ir.getFieldName(), "false");
+        expectField(ir, "false");
         assertEquals(ir.booleanValue(), false);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.INT);
-        assertEquals(ir.getFieldName(), "long");
+        expectField(ir, "long");
         assertEquals(ir.longValue(), 9326L);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertTrue(ir.hasNext());
         assertEquals(ir.next(), IonType.BOOL);
-        assertEquals(ir.getFieldName(), "true");
+        expectField(ir, "true");
         assertEquals(ir.booleanValue(), true);
 
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
         ir.stepOut();
-        if (! IonImplUtils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
+        if (! _Private_Utils.READER_HASNEXT_REMOVED) assertFalse(ir.hasNext());
         assertEquals(null, ir.next());
     }
 }

@@ -1,8 +1,7 @@
-/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.IonCatalog;
@@ -14,17 +13,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PushbackInputStream;
 import java.io.Reader;
-import java.io.StringReader;
 
 /**
  * Implementation of the {@link IonLoader} interface.
  * <p>
  * This is an internal implementation class that should not be used directly.
  */
-public class LoaderImpl
+final class LoaderImpl
     implements IonLoader
 {
     static final boolean USE_NEW_READERS = true;
@@ -84,29 +81,13 @@ public class LoaderImpl
     public IonDatagramImpl load(String ionText)
         throws IonException
     {
-        if (USE_NEW_READERS)
-        {
-            IonReader reader = mySystem.newSystemReader(ionText);
-            try
-            {
-                IonDatagramImpl dg =
-                    new IonDatagramImpl(mySystem, myCatalog, reader);
-
-                return dg;
-            }
-            catch (IOException e)
-            {
-                // Wrap this because it shouldn't happen and we don't want to
-                // propagate it.
-                String message = "Error reading from string: " + e.getMessage();
-                throw new IonException(message, e);
-            }
-        }
-
-        StringReader reader = new StringReader(ionText);
+        IonReader reader = mySystem.newSystemReader(ionText);
         try
         {
-            return load(reader);
+            IonDatagramImpl dg =
+                new IonDatagramImpl(mySystem, myCatalog, reader);
+
+            return dg;
         }
         catch (IOException e)
         {
@@ -114,12 +95,6 @@ public class LoaderImpl
             // propagate it.
             String message = "Error reading from string: " + e.getMessage();
             throw new IonException(message, e);
-        }
-        finally
-        {
-            // This may not be necessary, but for all I know StringReader will
-            // release some resources.
-            reader.close();
         }
     }
 
@@ -132,15 +107,10 @@ public class LoaderImpl
     {
         try
         {
-            if (USE_NEW_READERS)
-            {
-                IonReader reader = mySystem.newSystemReader(ionText);
-                IonDatagramImpl dg =
-                    new IonDatagramImpl(mySystem, myCatalog, reader);
-                return dg;
-            }
-            // TODO This does transcoding to binary first!
-            return new IonDatagramImpl(mySystem, myCatalog, ionText);
+            IonReader reader = mySystem.newSystemReader(ionText);
+            IonDatagramImpl dg =
+                new IonDatagramImpl(mySystem, myCatalog, reader);
+            return dg;
         }
         catch (IonException e)
         {
@@ -161,7 +131,7 @@ public class LoaderImpl
         try
         {
             boolean isBinary = isIonBinary(ionData);
-            if (USE_NEW_READERS && !isBinary) {
+            if (!isBinary) {
                 IonReader reader = mySystem.newSystemReader(ionData);
 
                 dg = new IonDatagramImpl(mySystem, myCatalog, reader);
@@ -169,9 +139,6 @@ public class LoaderImpl
             else {
                 dg = new IonDatagramImpl(mySystem, myCatalog, ionData);
             }
-
-            // Force symtab preparation  FIXME should not be necessary
-            dg.byteSize();
         }
         catch (IOException e)  // Not expected since we're reading a buffer.
         {
@@ -191,7 +158,7 @@ public class LoaderImpl
         try
         {
             PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-            if (IonImplUtils.streamIsIonBinary(pushback)) {
+            if (_Private_Utils.streamIsIonBinary(pushback)) {
                 if (USE_NEW_READERS)
                 {
                     // Nothing special to do. SystemReader works fine to
@@ -200,23 +167,17 @@ public class LoaderImpl
                 }
 
                 SystemValueIterator systemReader =
-                    mySystem.newBinarySystemReader(myCatalog, pushback);
+                    mySystem.newBinarySystemIterator(myCatalog, pushback);
                 return new IonDatagramImpl(mySystem, systemReader);
             }
 
             // Input is text
-            if (USE_NEW_READERS)
-            {
-                IonReader reader = mySystem.newSystemReader(pushback);
-                assert reader instanceof IonTextReader;
+            IonReader reader = mySystem.newSystemReader(pushback);
+            assert reader instanceof IonTextReader;
 
-                IonDatagramImpl dg =
-                    new IonDatagramImpl(mySystem, myCatalog, reader);
-                return dg;
-            }
-
-            Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
-            return load(reader);
+            IonDatagramImpl dg =
+                new IonDatagramImpl(mySystem, myCatalog, reader);
+            return dg;
         }
         catch (IonException e)
         {

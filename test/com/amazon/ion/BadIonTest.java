@@ -3,7 +3,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 import java.io.IOException;
@@ -50,14 +50,23 @@ public class BadIonTest
     {
         if (! myFileIsBinary)
         {
-            String ionText = IonImplUtils.utf8FileToString(myTestFile);
+            String ionText;
+            try
+            {
+                // This will fail if the file has bad UTF-8 data.
+                // That's OK, the other test will still do the right thing.
+                ionText = _Private_Utils.utf8FileToString(myTestFile);
+            }
+            catch (IonException e)
+            {
+                assert myTestFile.getPath().contains("bad/utf8");
+                return;
+            }
 
             try
             {
+                @SuppressWarnings("unused")
                 IonDatagram dg = loader().load(ionText);
-
-                // Flush out any encoding problems in the data.
-                //forceMaterialization(dg);
 
                 fail("Expected IonException");
             }

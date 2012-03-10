@@ -1,9 +1,10 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.junit.IonAssert.assertAnnotations;
 
+import com.amazon.ion.junit.IonAssert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -16,6 +17,71 @@ public class IonValueTest
     private final String ann = "ann";
     private final String ben = "ben";
 
+    @Test
+    public void testGetFieldNameSymbol()
+    {
+        IonValue v = system().newNull();
+        assertEquals(null, v.getFieldNameSymbol());
+
+        v.makeReadOnly();
+        assertEquals(null, v.getFieldNameSymbol());
+    }
+
+
+    @Test
+    public void testGetTypeAnnotationsImmutability()
+    {
+        IonValue v = system().newNull();
+        v.setTypeAnnotations(ann);
+
+        String[] anns = v.getTypeAnnotations();
+        assertEquals(ann, anns[0]);
+        anns[0] = ben;
+
+        anns = v.getTypeAnnotations();
+        assertEquals(ann, anns[0]);
+    }
+
+    @Test
+    public void testGetTypeAnnotationSymbols()
+    {
+        IonValue v = system().newNull();
+        SymbolToken[] anns = v.getTypeAnnotationSymbols();
+        assertArrayEquals(SymbolToken.EMPTY_ARRAY, anns);
+
+        v.setTypeAnnotations(ann, ben);
+        anns = v.getTypeAnnotationSymbols();
+        assertEquals(ann, anns[0].getText());
+        assertEquals(ben, anns[1].getText());
+    }
+
+    @Test
+    public void testGetTypeAnnotationSymbolsImmutability()
+    {
+        IonValue v = system().newNull();
+        v.setTypeAnnotations(ann);
+
+        SymbolToken[] anns = v.getTypeAnnotationSymbols();
+        assertEquals(ann, anns[0].getText());
+        anns[0] = new FakeSymbolToken("ben", SymbolTable.UNKNOWN_SYMBOL_ID);
+
+        SymbolToken[] anns2 = v.getTypeAnnotationSymbols();
+        assertEquals(ann, anns2[0].getText());
+    }
+
+    @Test
+    public void testHasTypeAnnotation()
+    {
+        IonValue v = system().newNull();
+        assertFalse(v.hasTypeAnnotation(null));
+        assertFalse(v.hasTypeAnnotation(""));
+        assertFalse(v.hasTypeAnnotation(ann));
+
+        v.addTypeAnnotation(ann);
+        assertFalse(v.hasTypeAnnotation(null));
+        assertFalse(v.hasTypeAnnotation(""));
+        assertTrue(v.hasTypeAnnotation(ann));
+    }
 
     @Test(expected = ReadOnlyValueException.class)
     public void testSetTypeAnnotationsOnReadOnlyValue()
@@ -49,6 +115,24 @@ public class IonValueTest
         v.setTypeAnnotations(ann);
         v.setTypeAnnotations((String[]) null);
         assertAnnotations(v);
+    }
+
+    @Test
+    public void testSetTypeAnnotationInterning()
+    {
+        SymbolTable systemSymtab = system().getSystemSymbolTable();
+        SymbolToken nameSym = systemSymtab.find(SystemSymbols.NAME);
+
+        String nameOrig = nameSym.getText();
+        String nameCopy = new String(nameOrig);
+        assertNotSame(nameOrig, nameCopy);
+
+        IonValue v = system().newNull();
+        v.setTypeAnnotations(nameCopy);
+
+        // TODO ION-267 fails because v doesn't have any symbol table at all
+//        assertSame(nameOrig, v.getTypeAnnotations()[0]);
+//        assertSame(nameOrig, v.getTypeAnnotationSymbols()[0].getText());
     }
 
     @Test(expected = EmptySymbolException.class)
@@ -144,6 +228,19 @@ public class IonValueTest
     }
 
 
+    @Test
+    public void testRemoveTypeAnnotationNull()
+    {
+        IonValue v = system().newNull();
+        v.removeTypeAnnotation(null);
+        v.removeTypeAnnotation("");
+
+        v.addTypeAnnotation(ann);
+        v.removeTypeAnnotation(null);
+        v.removeTypeAnnotation("");
+        assertTrue(v.hasTypeAnnotation(ann));
+    }
+
     /** Trap for ION-144 */
     @Test
     public void testRemoveDuplicateAnnotation()
@@ -153,4 +250,15 @@ public class IonValueTest
         v.removeTypeAnnotation(ann);
         assertAnnotations(v, ben, ann);
     }
+
+    @Test
+    public void testDetachWithUnknownAnnotation()
+    {
+        IonList list = (IonList) system().singleValue("[$99::null]");
+        IonValue child = list.get(0);
+        child.removeFromContainer();
+
+        IonAssert.assertIonEquals(system().singleValue("$99::null"), child);
+    }
+
 }

@@ -1,17 +1,17 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
+import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 
 
 /**
  * this is a collection of constants and some static helper functions
  * to support tokenizing Ion text
  */
-public class IonTokenConstsX
+final class IonTokenConstsX
 {
     public static class CharacterSequence {
         public static final int CHAR_SEQ_EOF                         = -1; // matches -1 (stream eof)
@@ -38,9 +38,16 @@ public class IonTokenConstsX
     public static final int TOKEN_FLOAT_MINUS_INF       =  7;
     public static final int TOKEN_TIMESTAMP             =  8;
 
-    public static final int TOKEN_SYMBOL_BASIC          =  9; // java identifier
-    public static final int TOKEN_SYMBOL_QUOTED         = 10; // single quoted string
-    public static final int TOKEN_SYMBOL_OPERATOR       = 11; // operator sequence for sexp
+    /**
+     * Unquoted identifier symbol, including keywords like {@code true} and
+     * {@code nan} as well as SIDs like {@code $123}
+     */
+    public static final int TOKEN_SYMBOL_IDENTIFIER     =  9;
+    /** Single-quoted symbol */
+    public static final int TOKEN_SYMBOL_QUOTED         = 10;
+    /** Unquoted operator sequence for sexp */
+    public static final int TOKEN_SYMBOL_OPERATOR       = 11;
+
     public static final int TOKEN_STRING_DOUBLE_QUOTE   = 12;
     public static final int TOKEN_STRING_TRIPLE_QUOTE   = 13;
 
@@ -80,8 +87,7 @@ public class IonTokenConstsX
     public static final int KEYWORD_SEXP      = 14;
     public static final int KEYWORD_STRUCT    = 15;
     public static final int KEYWORD_NAN       = 16;
-    public static final int KEYWORD_PLUS_INF  = 17;
-    public static final int KEYWORD_MINUS_INF = 18;
+    public static final int KEYWORD_sid       = 17;
 
     public final static String getTokenName(int t) {
         switch (t) {
@@ -97,7 +103,7 @@ public class IonTokenConstsX
         case TOKEN_FLOAT_MINUS_INF:    return "TOKEN_FLOAT_MINUS_INF";
         case TOKEN_TIMESTAMP:          return "TOKEN_TIMESTAMP";
 
-        case TOKEN_SYMBOL_BASIC:       return "TOKEN_SYMBOL_BASIC";
+        case TOKEN_SYMBOL_IDENTIFIER:  return "TOKEN_SYMBOL_IDENTIFIER";
         case TOKEN_SYMBOL_QUOTED:      return "TOKEN_SYMBOL_QUOTED";
         case TOKEN_SYMBOL_OPERATOR:    return "TOKEN_SYMBOL_OPERATOR";
         case TOKEN_STRING_DOUBLE_QUOTE:return "TOKEN_STRING_DOUBLE_QUOTE";
@@ -143,7 +149,7 @@ public class IonTokenConstsX
         case TOKEN_DECIMAL:             return IonType.DECIMAL;
         case TOKEN_FLOAT:               return IonType.FLOAT;
         case TOKEN_TIMESTAMP:           return IonType.TIMESTAMP;
-        case TOKEN_SYMBOL_BASIC:        return IonType.SYMBOL;
+        case TOKEN_SYMBOL_IDENTIFIER:   return IonType.SYMBOL;
         case TOKEN_SYMBOL_QUOTED:       return IonType.SYMBOL;
         case TOKEN_SYMBOL_OPERATOR:     return IonType.SYMBOL;
         case TOKEN_STRING_DOUBLE_QUOTE: return IonType.STRING;
@@ -243,7 +249,7 @@ public class IonTokenConstsX
     }
 */
     public final static boolean isDigit(int c) {
-    	return (c >= '0' && c <= '9');
+        return (c >= '0' && c <= '9');
     }
     public final static int decimalDigitValue(int c) {
         if (!isDigit(c)) {
@@ -320,13 +326,12 @@ public class IonTokenConstsX
         return escapeCharacterImage[c];
     }
 
-    // FIXME: this should be isValidEscapeStart (valid, not value)
-    public final static boolean isValueEscapeStart(int c) {
+    public final static boolean isValidEscapeStart(int c) {
         return (escapeCharactersValues[c & 0xff] != ESCAPE_NOT_DEFINED)
          && is8bitValue(c);
     }
     public final static int escapeReplacementCharacter(int c) {
-        if (!isValueEscapeStart(c)) {
+        if (!isValidEscapeStart(c)) {
             throw new IllegalArgumentException("not a valid escape sequence character: "+c);
         }
         return escapeCharactersValues[c];
@@ -478,12 +483,30 @@ public class IonTokenConstsX
         return (isValidStartSymbolCharacter[c & 0xff] && is8bitValue(c));
     }
 
+    public static int decodeSid(CharSequence sidToken)
+    {
+        assert sidToken.charAt(0) == '$';
+
+        int length = sidToken.length();
+        assert length > 1;
+
+        String digits = sidToken.subSequence(1, length).toString();
+        return Integer.parseInt(digits);
+    }
 
     static public int keyword(CharSequence word, int start_word, int end_word)
     {
         int c = word.charAt(start_word);
         int len = end_word - start_word; // +1 but we build that into the constants below
         switch (c) {
+        case '$':
+            if (len > 1) {
+                for (int i = start_word + 1; i < end_word; i++) {
+                    if (! isDigit(word.charAt(i))) return -1;
+                }
+                return KEYWORD_sid;
+            }
+            return -1;
         case 'b':
             if (len == 4) {
                 if (word.charAt(start_word+1) == 'o'

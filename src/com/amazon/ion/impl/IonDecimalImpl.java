@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -15,35 +15,35 @@ import java.math.BigDecimal;
 /**
  * Implements the Ion <code>decimal</code> type.
  */
-public final class IonDecimalImpl
+final class IonDecimalImpl
     extends IonValueImpl
     implements IonDecimal
 {
 
     static final int NULL_DECIMAL_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidDecimal,
-                                        IonConstants.lnIsNullAtom);
+        _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidDecimal,
+                                        _Private_IonConstants.lnIsNullAtom);
     static final int ZERO_DECIMAL_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidDecimal,
-                                        IonConstants.lnNumericZero);
+        _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidDecimal,
+                                        _Private_IonConstants.lnNumericZero);
 
     private static final int HASH_SIGNATURE =
         IonType.DECIMAL.toString().hashCode();
 
     public static boolean isNegativeZero(float value)
     {
-    	if (value != 0) return false;
+        if (value != 0) return false;
         // TODO perhaps use Float.compare() instead?
-    	if ((Float.floatToRawIntBits(value) & 0x80000000) == 0) return false; // test the sign bit
-    	return true;
+        if ((Float.floatToRawIntBits(value) & 0x80000000) == 0) return false; // test the sign bit
+        return true;
     }
 
     public static boolean isNegativeZero(double value)
     {
-    	if (value != 0) return false;
-    	// TODO perhaps use Double.compare() instead?
-    	if ((Double.doubleToLongBits(value) & 0x8000000000000000L) == 0) return false;
-    	return true;
+        if (value != 0) return false;
+        // TODO perhaps use Double.compare() instead?
+        if ((Double.doubleToLongBits(value) & 0x8000000000000000L) == 0) return false;
+        return true;
     }
 
     private BigDecimal _decimal_value;
@@ -72,7 +72,7 @@ public final class IonDecimalImpl
     public IonDecimalImpl(IonSystemImpl system, int typeDesc)
     {
         super(system, typeDesc);
-        assert pos_getType() == IonConstants.tidDecimal;
+        assert pos_getType() == _Private_IonConstants.tidDecimal;
     }
 
     /**
@@ -207,15 +207,15 @@ public final class IonDecimalImpl
 
         int ln = 0;
         if (_decimal_value == null) {
-            ln = IonConstants.lnIsNullAtom;
+            ln = _Private_IonConstants.lnIsNullAtom;
         }
         else {
             ln = getNativeValueLength();
-            if (ln > IonConstants.lnIsVarLen) {
+            if (ln > _Private_IonConstants.lnIsVarLen) {
                 // we get ln==VarLen for free, that is when len is 14 then
-            	// it will fill in the VarLen anyway, but for a length that
-            	// is greater ... we have to be explicit about VarLen
-                ln = IonConstants.lnIsVarLen;
+                // it will fill in the VarLen anyway, but for a length that
+                // is greater ... we have to be explicit about VarLen
+                ln = _Private_IonConstants.lnIsVarLen;
             }
         }
         return ln;
@@ -237,19 +237,19 @@ public final class IonDecimalImpl
         assert (byte)(0xff & td) == this.pos_getTypeDescriptorByte();
 
         int type = this.pos_getType();
-        if (type != IonConstants.tidDecimal) {
+        if (type != _Private_IonConstants.tidDecimal) {
             throw new IonException("invalid type desc encountered for value");
         }
 
         int ln = this.pos_getLowNibble();
         switch ((0xf & ln)) {
-        case IonConstants.lnIsNullAtom:
+        case _Private_IonConstants.lnIsNullAtom:
             _decimal_value = null;
             break;
         case 0:
             _decimal_value = Decimal.ZERO;
             break;
-        case IonConstants.lnIsVarLen:
+        case _Private_IonConstants.lnIsVarLen:
             ln = reader.readVarUIntAsInt();
             // fall through to default:
         default:

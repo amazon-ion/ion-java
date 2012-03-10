@@ -2,9 +2,9 @@
 package com.amazon.ion;
 
 
-import static com.amazon.ion.impl.IonImplUtils.UTF8_CHARSET;
+import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -17,7 +17,7 @@ public class ClobTest
 {
     public static final String SAMPLE_ASCII = "Wow!";
     public static final byte[] SAMPLE_ASCII_AS_UTF8 =
-        IonImplUtils.utf8(SAMPLE_ASCII);
+        _Private_Utils.utf8(SAMPLE_ASCII);
 
 
     public void checkNullClob(IonClob value)

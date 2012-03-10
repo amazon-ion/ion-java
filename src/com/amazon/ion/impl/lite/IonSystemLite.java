@@ -1,15 +1,17 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl.IonImplUtils.addAllNonNull;
-import static com.amazon.ion.impl.IonWriterFactory.makeWriter;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewSharedSymbolTable;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
+import static com.amazon.ion.impl._Private_Utils.initialSymtab;
+import static com.amazon.ion.impl._Private_Utils.systemSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -17,27 +19,23 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonReaderFactoryX;
-import com.amazon.ion.impl.IonReaderWriterPrivate;
-import com.amazon.ion.impl.IonScalarConversionsX.CantConvertException;
-import com.amazon.ion.impl.IonSystemPrivate;
-import com.amazon.ion.impl.IonWriterBaseImpl;
-import com.amazon.ion.impl.IonWriterBinaryCompatibility;
-import com.amazon.ion.impl.IonWriterFactory;
-import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
-import com.amazon.ion.impl.SystemValueIterator;
-import com.amazon.ion.impl.UnifiedSymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
+import com.amazon.ion.impl._Private_IonReaderFactory;
+import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl._Private_IonWriterFactory;
+import com.amazon.ion.impl._Private_ReaderWriter;
+import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
+import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,19 +49,22 @@ import java.util.NoSuchElementException;
 /**
  *
  */
-public final class IonSystemLite
+@SuppressWarnings("deprecation")
+final class IonSystemLite
     extends ValueFactoryLite
-    implements IonSystemPrivate, IonContext
+    implements _Private_IonSystem, IonContext
 {
     private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 
-    private final UnifiedSymbolTable _system_symbol_table = UnifiedSymbolTable.makeSystemSymbolTable(this, 1);
+    private final SymbolTable _system_symbol_table = systemSymtab(1);
 
     /** Not null. */
     private final IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
     private final boolean myStreamCopyOptimized;
+    /** Immutable. */
+    private final IonTextWriterBuilder myTextWriterBuilder;
 
 
     /**
@@ -89,6 +90,11 @@ public final class IonSystemLite
         _loader = new IonLoaderLite(this, catalog);
         myStreamCopyOptimized = streamCopyOptimized;
 
+        IonTextWriterBuilder twb =
+            IonTextWriterBuilder.standard().withCharsetAscii();
+        twb.setCatalog(catalog);
+        myTextWriterBuilder = twb.immutable();
+
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
         _value_factory.set_system(this);
@@ -108,8 +114,8 @@ public final class IonSystemLite
         }
 
         IonDatagram datagram = newDatagram();
-        IonWriter writer = IonWriterFactory.makeWriter(datagram);
-        IonReader reader = IonReaderFactoryX.makeSystemReader(value);
+        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+        IonReader reader = makeSystemReader(value.getSystem(), value);
 
         try {
             writer.writeValues(reader);
@@ -165,163 +171,123 @@ public final class IonSystemLite
 
     public Iterator<IonValue> iterate(Reader ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     @Deprecated
-    public com.amazon.ion.IonBinaryWriter newBinaryWriter()
+    public IonBinaryWriter newBinaryWriter()
     {
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog,
-                                                  myStreamCopyOptimized);
-        return writer;
+        SymbolTable[] imports = null;
+        return newBinaryWriter(imports);
     }
 
     @Deprecated
-    public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
+    public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
-        IonWriterBinaryCompatibility.User writer =
-            new IonWriterBinaryCompatibility.User(this, _catalog,
-                                                  myStreamCopyOptimized);
-        try {
-            writer.setSymbolTable(symbols);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
+        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
+        _Private_IonBinaryWriterImpl writer =
+            new _Private_IonBinaryWriterImpl(_catalog,
+                                             defaultSystemSymtab,
+                                             this,
+                                             myStreamCopyOptimized,
+                                             imports);
         return writer;
     }
 
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriterUserBinary writer =
-            IonWriterFactory.newBinaryWriter(this, getCatalog(),
-                                             myStreamCopyOptimized, out, imports);
+        IonWriter writer =
+            _Private_IonWriterFactory.newBinaryWriter(this, getCatalog(),
+                                                      myStreamCopyOptimized,
+                                                      out, imports);
         return writer;
     }
 
     public IonWriter newTextWriter(Appendable out)
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
-    }
-
-    public IonWriter newTextWriter(Appendable out, boolean pretty)
-    {
-        TextOptions options = new TextOptions(pretty /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
-    }
-
-    public IonWriterBaseImpl newTextWriter(Appendable out, TextOptions options)
-    {
-        IonWriterBaseImpl userWriter = makeWriter(this, out, options);
-        return userWriter;
+        return myTextWriterBuilder.build(out);
     }
 
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
-        IonWriter writer = newTextWriter(out, options, imports);
-        return writer;
-    }
-
-    public IonWriter newTextWriter(Appendable out, TextOptions options, SymbolTable... imports)
-        throws IOException
-    {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = newTextWriter(out, options);
-        writer.setSymbolTable(lst);
-        return writer;
+        return myTextWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out)
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
-        IonWriter userWriter = newTextWriter(out, options);
-        return userWriter;
+        return myTextWriterBuilder.build(out);
     }
 
-    public IonWriterBaseImpl newTextWriter(OutputStream out, TextOptions options)
+    @Deprecated // TODO ION-271 remove after IMS is migrated
+    public IonWriter newTextWriter(OutputStream out, boolean pretty)
     {
-        IonWriterBaseImpl userWriter = makeWriter(this, out, options);
-        return userWriter;
+        IonTextWriterBuilder b = myTextWriterBuilder;
+        if (pretty)
+        {
+            b = b.withPrettyPrinting();
+        }
+        return b.build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException
     {
-        TextOptions options = new TextOptions(false /* prettyPrint */, true /* printAscii */, true /* filterOutSymbolTables */);
-        IonWriter writer = newTextWriter(out, options, imports);
-        return writer;
+        return myTextWriterBuilder.withImports(imports).build(out);
     }
 
-    public IonWriter newTextWriter(OutputStream out, TextOptions options, SymbolTable... imports)
-        throws IOException
+
+    public SymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        UnifiedSymbolTable lst = newLocalSymbolTable(imports);
-        IonWriterBaseImpl writer = newTextWriter(out, options);
-        writer.setSymbolTable(lst);
-        return writer;
+        return _Private_Utils.newLocalSymtab(this,
+                                             getSystemSymbolTable(),
+                                             imports);
     }
 
-    public UnifiedSymbolTable newLocalSymbolTable(SymbolTable... imports)
+    public SymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        UnifiedSymbolTable st =
-            makeNewLocalSymbolTable(this, getSystemSymbolTable(), imports);
-        return st;
+        return _Private_Utils.newSharedSymtab(ionRep);
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonStruct ionRep)
+    public SymbolTable newSharedSymbolTable(IonReader reader)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
-        return st;
+        return _Private_Utils.newSharedSymtab(reader, false);
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader)
+    public SymbolTable newSharedSymbolTable(IonReader reader,
+                                                   boolean isOnStruct)
     {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, false);
-        return st;
+        return _Private_Utils.newSharedSymtab(reader, isOnStruct);
     }
 
-    public UnifiedSymbolTable newSharedSymbolTable(IonReader reader, boolean isOnStruct)
-    {
-        UnifiedSymbolTable st = UnifiedSymbolTable.makeNewSharedSymbolTable(this, reader, isOnStruct);
-        return st;
-    }
-
-    public UnifiedSymbolTable newSharedSymbolTable(String name,
-                                                   int version,
-                                                   Iterator<String> newSymbols,
-                                                   SymbolTable... imports)
+    public SymbolTable newSharedSymbolTable(String name,
+                                            int version,
+                                            Iterator<String> newSymbols,
+                                            SymbolTable... imports)
     {
         // TODO streamline to avoid making this collection
         ArrayList<String> syms = new ArrayList<String>();
@@ -348,25 +314,20 @@ public final class IonSystemLite
 
         addAllNonNull(syms, newSymbols);
 
-        UnifiedSymbolTable st =
-            makeNewSharedSymbolTable(this, name, version, prior, syms.iterator());
-
+        SymbolTable st =
+            _Private_Utils.newSharedSymtab(name, version, prior,
+                                           syms.iterator());
         return st;
     }
 
-    public IonValue newValue(IonReader reader)
-    {
-        IonValue value = load_value(reader);
-        return value;
-    }
-
-    private IonValueLite load_value(IonReader reader)
+    public IonValueLite newValue(IonReader reader)
     {
         IonValueLite value = load_value_helper(reader);
         if (value == null) {
-            return null;
+            throw new IonException("No value available");
         }
         if (value._isSymbolPresent()) {
+            // TODO why is this necessary?
             value.populateSymbolValues(null);
         }
         return value;
@@ -374,7 +335,7 @@ public final class IonSystemLite
 
     private IonValueLite load_value_helper(IonReader reader)
     {
-        boolean symbol_encountered = false;
+        boolean symbol_is_present = false;
 
         IonType t = reader.getType();
         if (t == null) {
@@ -406,8 +367,8 @@ public final class IonSystemLite
                 v = newTimestamp(reader.timestampValue());
                 break;
             case SYMBOL:
-                v = newSymbol(reader.stringValue());
-                symbol_encountered = true;
+                v = newSymbol(reader.symbolValue());
+                symbol_is_present = true;
                 break;
             case STRING:
                 v = newString(reader.stringValue());
@@ -431,14 +392,14 @@ public final class IonSystemLite
             }
         }
         if (reader.isInStruct()) {
-            String fieldName = reader.getFieldName();
-            v.setFieldName(fieldName);
-            symbol_encountered = true;
+            SymbolToken sym = reader.getFieldNameSymbol();
+            v.setFieldNameSymbol(sym);
+            symbol_is_present = true;
         }
-        String[] uta = reader.getTypeAnnotations();
+        SymbolToken[] uta = reader.getTypeAnnotationSymbols();
         if (uta.length > 0) {
-            v.setTypeAnnotations(uta);
-            symbol_encountered = true;
+            v.setTypeAnnotationSymbols(uta);
+            symbol_is_present = true;
         }
         if (!reader.isNullValue()) {
             switch (t) {
@@ -458,22 +419,26 @@ public final class IonSystemLite
                 // we have to load the children after we grabbed the
                 // fieldname and annotations off of the parent container
                 if (load_children((IonContainerLite)v, reader)) {
-                    symbol_encountered = true;
+                    symbol_is_present = true;
                 }
                 break;
             default:
                 throw new IonException("unexpected type encountered reading value: "+t.toString());
             }
         }
-        if (symbol_encountered) {
+        if (symbol_is_present) {
             v._isSymbolPresent(true);
         }
         return v;
     }
 
+    /**
+     * @return true iff any child contains a symbol
+     * (including field names and annotations)
+     */
     private boolean load_children(IonContainerLite container, IonReader reader)
     {
-        boolean contains_symbol = false;
+        boolean symbol_is_present = false;
 
         reader.stepIn();
         for (;;) {
@@ -486,12 +451,12 @@ public final class IonSystemLite
             container.add(child);
 
             if (child._isSymbolPresent()) {
-                contains_symbol = true;
+                symbol_is_present = true;
             }
         }
         reader.stepOut();
 
-        return contains_symbol;
+        return symbol_is_present;
     }
 
     IonValueLite newValue(IonType valueType)
@@ -524,7 +489,7 @@ public final class IonSystemLite
 
     public IonWriter newWriter(IonContainer container)
     {
-        IonWriter writer = IonWriterFactory.makeWriter(container);
+        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);
         return writer;
     }
 
@@ -555,10 +520,11 @@ public final class IonSystemLite
         return singleValue(it);
     }
 
-    /**
+    /*
      * IonContext methods
      */
-    public SymbolTable getLocalSymbolTable(IonValueLite child)
+
+    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
         // if this request makes it up to the system
         // it means there was no local symbol table
@@ -567,9 +533,7 @@ public final class IonSystemLite
         SymbolTable local = this.newLocalSymbolTable();
         IonContext context = child.getContext();
         if (context == this) {
-            context = new IonConcreteContext(this);
-            context.setParentThroughContext(child, this);
-            context.setSymbolTableOfChild(local, child);
+            context = TopLevelContext.wrap(this, local, child);
         }
         child.setContext(context);
         return local;
@@ -581,19 +545,28 @@ public final class IonSystemLite
         // a system symbol table.  Local symbol tables are
         // all owned by the children of system. (and often
         // shared with following siblings)
-        return;
     }
 
 
-    public IonContainerLite getParentThroughContext()
+    /**
+     * Always returns null, since values in this context are top-level and
+     * stand-alone.
+     */
+    public IonContainerLite getContextContainer()
     {
         return null;
     }
 
-    public SymbolTable getSymbolTable()
+    public void setContextContainer(IonContainerLite container,
+                                    IonValueLite child)
     {
-        return getSystemSymbolTable();
+        assert child._context == this;
+//        assert container.getSystem() == this : "system mismatch";
+
+        // The new container becomes the context, we replace ourself.
+        child.setContext(container);
     }
+
 
     public SymbolTable getAssignedSymbolTable()
     {
@@ -605,50 +578,35 @@ public final class IonSystemLite
         return null;
     }
 
-    public IonSystem getSystem()
+    public IonSystemLite getSystem()
     {
         return this;
-    }
-    public IonSystemLite getSystemLite()
-    {
-        return this;
-    }
-
-    public void setParentThroughContext(IonValueLite child, IonContext context)
-    {
-        assert(child != null);
-        child.setContext(context);
     }
 
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        assert(child != null);
-        if (UnifiedSymbolTable.isAssignableTable(symbols) == false) {
+        assert child._context == this;
+        assert ! (child instanceof IonDatagram);
+
+        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("shared symbol tables cannot be set as a current symbol table");
         }
-        if (child.getAssignedSymbolTable() == symbols) {
-            return;
-        }
-        IonContext context = child.getContext();
-        if (context == this) {
-            context = allocateConcreteContext();
-            context.setParentThroughContext(child, this);
-        }
-        else {
-            assert(context instanceof IonConcreteContext);
-        }
+
+        // Need a TLC to hold the symtab for the child.
+        TopLevelContext context = allocateConcreteContext(null, child);
         context.setSymbolTableOfChild(symbols, child);
     }
 
-    private static final IonConcreteContext[] EMPTY_CONTEXT_ARRAY = new IonConcreteContext[0];
-    private int                  _free_count;
-    private IonConcreteContext[] _free_contexts;
+    private static final TopLevelContext[] EMPTY_CONTEXT_ARRAY = new TopLevelContext[0];
+    private int               _free_count;
+    private TopLevelContext[] _free_contexts;
+
     protected final void set_context_free_list_max(int size) {
         if (size < 1) {
             _free_contexts = EMPTY_CONTEXT_ARRAY;
         }
         else if (_free_contexts == null || size != _free_contexts.length) {
-            IonConcreteContext[] temp = new IonConcreteContext[size];
+            TopLevelContext[] temp = new TopLevelContext[size];
             if (_free_count > 0) {
                 if (_free_count > size) {
                     _free_count = size;
@@ -658,9 +616,11 @@ public final class IonSystemLite
             _free_contexts = temp;
         }
     }
-    protected final IonConcreteContext allocateConcreteContext()
+
+    protected final TopLevelContext
+    allocateConcreteContext(IonDatagramLite datagram, IonValueLite child)
     {
-        IonConcreteContext context = null;
+        TopLevelContext context = null;
         if (_free_count > 0) {
             synchronized (this._free_contexts) {
                 if (_free_count > 0) {
@@ -671,11 +631,15 @@ public final class IonSystemLite
             }
         }
         if (context == null) {
-            context = new IonConcreteContext(this);
+            context = TopLevelContext.wrap(this, datagram, child);
+        }
+        else {
+            context.rewrap(datagram, child);
         }
         return context;
     }
-    protected final void releaseConcreteContext(IonConcreteContext context)
+
+    protected final void releaseConcreteContext(TopLevelContext context)
     {
         if (_free_contexts.length > 0) {
             synchronized (this._free_contexts) {
@@ -701,7 +665,7 @@ public final class IonSystemLite
     }
 
     static class ReaderIterator
-        implements SystemValueIterator, Iterator<IonValue>, Closeable
+        implements Iterator<IonValue>, Closeable
     {
         private final IonReader        _reader;
         private final IonSystemLite    _system;
@@ -717,10 +681,6 @@ public final class IonSystemLite
             _reader = reader;
             _system = system;
             _previous_symbols = _system.getSystemSymbolTable();
-        }
-
-        public SymbolTable getSymbolTable() {
-            return _reader.getSymbolTable();
         }
 
         public boolean hasNext()
@@ -743,7 +703,8 @@ public final class IonSystemLite
             }
 
             // make an ion value from our reader
-            IonValueLite value = _system.load_value(_reader);
+            // We called _reader.next() inside hasNext() above
+            IonValueLite value = _system.newValue(_reader);
 
             // we've used up the value now, force a _reader._next() the next time through
             _next = null;
@@ -758,7 +719,7 @@ public final class IonSystemLite
             // symbol table is the system symbol table
             if (value._isSymbolPresent()) {
                 if (symbols == null || !symbols.isLocalTable()) {
-                    symbols = value.getContext().getLocalSymbolTable(value);
+                    symbols = value.getContext().ensureLocalSymbolTable(value);
                 }
             }
 
@@ -775,8 +736,8 @@ public final class IonSystemLite
         {
             SymbolTable symbols;
 
-            if (_reader instanceof IonReaderWriterPrivate) {
-                symbols = ((IonReaderWriterPrivate)_reader).pop_passed_symbol_table();
+            if (_reader instanceof _Private_ReaderWriter) {
+                symbols = ((_Private_ReaderWriter)_reader).pop_passed_symbol_table();
                 if (symbols != null) {
                     _previous_symbols = symbols;
                 }
@@ -793,72 +754,6 @@ public final class IonSystemLite
         public void close() throws IOException
         {
             // TODO _reader.close();
-        }
-
-        //
-        //  Bonus methods to support old SystemReader iteration interface
-        //
-        public boolean canSetLocalSymbolTable()
-        {
-            return false;
-        }
-
-        public boolean currentIsHidden()
-        {
-            IonType t = _reader.getType();
-            if (t == null) {
-                return false;
-            }
-            switch(t) {
-            case SYMBOL:
-                String symbol = _reader.stringValue();
-                if (ION_1_0.equals(symbol)) {
-                    return true;
-                }
-                break;
-            case STRUCT:
-                String [] annotations = _reader.getTypeAnnotations();
-                for (int ii=0; ii<annotations.length; ii++) {
-                    if (ION_SYMBOL_TABLE.equals(annotations[ii])) {
-                        return true;
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-            return false;
-        }
-
-        public BufferManager getBuffer()
-        {
-            return null;
-        }
-
-        public IonCatalog getCatalog()
-        {
-            // TODO: get catalog from reader
-            return _system.getCatalog();
-        }
-
-        public SymbolTable getLocalSymbolTable()
-        {
-            return _reader.getSymbolTable();
-        }
-
-        public IonSystem getSystem()
-        {
-            return _system;
-        }
-
-        public void resetBuffer()
-        {
-            return;
-        }
-
-        public void setLocalSymbolTable(SymbolTable symbolTable)
-        {
-            throw new UnsupportedOperationException();
         }
     }
 
@@ -919,22 +814,23 @@ public final class IonSystemLite
 
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
-        UnifiedSymbolTable symbols =
-            makeNewLocalSymbolTable(this, this.getSystemSymbolTable(), imports);
+        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
+        SymbolTable symbols =
+            initialSymtab(this, defaultSystemSymtab, imports);
         IonDatagramLite dg = newDatagram(catalog);
-        dg.setSymbolTable(symbols);
+        dg.appendTrailingSymbolTable(symbols);
         return dg;
     }
 
     public IonTextReader newReader(String ionText)
     {
-        IonTextReader reader = IonReaderFactoryX.makeReader(this, ionText);
+        IonTextReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
         return reader;
     }
 
     public IonReader newReader(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, getCatalog(), ionData, 0, ionData.length);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, getCatalog(), ionData, 0, ionData.length);
         return reader;
     }
 
@@ -946,40 +842,39 @@ public final class IonSystemLite
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        IonReader reader = newReader(getCatalog(), ionData, offset, len);
+        IonReader reader = makeReader(this, _catalog, ionData, offset, len);
         return reader;
     }
 
     public IonReader newReader(IonCatalog catalog, byte[] ionData, int offset, int len)
     {
         if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(this, catalog, ionData, offset, len);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, catalog, ionData, offset, len);
         return reader;
     }
 
     public IonReader newReader(InputStream ionData)
     {
-        IonReader reader = newReader(this.getCatalog(), ionData);
-        return reader;
+        return makeReader(this, _catalog, ionData);
     }
 
     public IonReader newReader(IonCatalog catalog, InputStream ionData)
     {
         if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(this, catalog, ionData);
+        IonReader reader = makeReader(this, catalog, ionData);
         return reader;
     }
 
     public IonReader newReader(IonValue value)
     {
-        IonReader reader = newReader(this.getCatalog(), value);
+        IonReader reader = makeReader(this, _catalog, value);
         return reader;
     }
 
     public IonReader newReader(IonCatalog catalog, IonValue value)
     {
         if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(this, catalog, value);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, catalog, value);
         return reader;
     }
 
@@ -1008,96 +903,69 @@ public final class IonSystemLite
      *
      */
 
-    public SystemValueIterator newBinarySystemReader(IonCatalog catalog,
-                                                     InputStream ionBinary)
-        throws IOException
-    {
-        if (catalog == null) catalog = getCatalog();
-        // TODO: do something with the catalog - update readers
-        IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        SystemValueIterator sysreader = new ReaderIterator(this, reader);
-        return sysreader;
-    }
-
-    public SystemValueIterator newLegacySystemReader(IonCatalog catalog,
-                                                     byte[] ionData)
-    {
-        if (catalog == null) catalog = getCatalog();
-        // TODO: do something with the catalog - update readers
-        IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        SystemValueIterator sysreader = new ReaderIterator(this, reader);
-        return sysreader;
-    }
-
-    public SystemValueIterator newPagedBinarySystemReader(IonCatalog catalog,
-                                                          InputStream ionBinary)
-        throws IOException
-    {
-        if (catalog == null) catalog = getCatalog();
-        IonReader reader = IonReaderFactoryX.makeReader(ionBinary);
-        ReaderIterator iterator = new ReaderIterator(this, reader);
-        return iterator;
-    }
-
     public IonTextReader newSystemReader(String ionText)
     {
-        IonTextReader reader = IonReaderFactoryX.makeSystemReader(ionText);
-        return reader;
+        return makeSystemReader(this, ionText);
     }
 
     public IonTextReader newSystemReader(Reader ionText)
     {
-        IonTextReader reader = IonReaderFactoryX.makeSystemReader(ionText);
-        return reader;
+        return makeSystemReader(this, ionText);
     }
 
     public IonReader newSystemReader(byte[] ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        return reader;
+        return makeSystemReader(this, ionData);
     }
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(ionData, offset, len);
-        return reader;
+        return makeSystemReader(this, ionData, offset, len);
     }
 
     public IonReader newSystemReader(InputStream ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(ionData);
-        return reader;
+        return makeSystemReader(this, ionData);
     }
 
     public IonReader newSystemReader(IonValue value)
     {
-        IonReader reader = IonReaderFactoryX.makeSystemReader(value);
-        return reader;
+        return makeSystemReader(this, value);
     }
 
-    public IonWriter newTextWriter(OutputStream out, boolean pretty)
-    {
-        // prettyPrint, boolean printAscii, boolean filterOutSymbolTables
-        TextOptions options = new TextOptions(pretty, true, true);
-        IonWriter writer = IonWriterFactory.makeWriter(this, out, options);
-        return writer;
-    }
 
+    /**
+     * @param container must not be null.
+     */
     public IonWriter newTreeSystemWriter(IonContainer container)
     {
-        IonWriter writer = IonWriterFactory.makeSystemWriter(container);
+        IonWriter writer = _Private_IonWriterFactory.makeSystemWriter(container);
         return writer;
     }
 
+    /**
+     * @param container must not be null.
+     */
     public IonWriter newTreeWriter(IonContainer container)
     {
-        IonWriter writer = IonWriterFactory.makeWriter(container);
+        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);
         return writer;
+    }
+
+
+    /**
+     * FIXME ION-160 This method consumes the entire stream!
+     */
+    public Iterator<IonValue> systemIterate(Reader ionText)
+    {
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
+        Iterator<IonValue> iterator = make_system_iterator(reader);
+        return iterator;
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
-        IonReader reader = IonReaderFactoryX.makeSystemReader(this, ionText);
+        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionText);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }
@@ -1107,7 +975,17 @@ public final class IonSystemLite
      */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
-        IonReader reader = IonReaderFactoryX.makeReader(this, ionData);
+        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
+        Iterator<IonValue> iterator = make_system_iterator(reader);
+        return iterator;
+    }
+
+    /**
+     * FIXME ION-160 This method consumes the entire stream!
+     */
+    public Iterator<IonValue> systemIterate(byte[] ionData)
+    {
+        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionData);
         Iterator<IonValue> iterator = make_system_iterator(reader);
         return iterator;
     }
@@ -1118,7 +996,7 @@ public final class IonSystemLite
     private Iterator<IonValue> make_system_iterator(IonReader reader)
     {
         IonDatagram datagram = newDatagram();
-        IonWriter writer = IonWriterFactory.makeWriter(datagram);
+        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
         try {
             writer.writeValues(reader);
         }

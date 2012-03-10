@@ -1,9 +1,11 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -13,16 +15,16 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonScalarConversionsX.AS_TYPE;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Iterator;
 
-class IonReaderBinaryUserX
+final class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements IonReaderWriterPrivate, IonReaderWithPosition
+    implements _Private_ReaderWriter
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -34,29 +36,14 @@ class IonReaderBinaryUserX
     SymbolTable _symbols;
     IonCatalog  _catalog;
 
-    private static class IonReaderBinaryPosition
-        extends IonReaderPositionBase
-        implements IonReaderOctetPosition, OffsetSpan
+    private static final class IonReaderBinarySpan
+        extends DowncastingFaceted
+        implements Span, OffsetSpan
     {
         State       _state;
         long        _offset;
         long        _limit;
-        IonType     _value_type;
-        boolean     _value_is_null;
-        boolean     _value_is_true;
         SymbolTable _symbol_table;
-
-        IonReaderBinaryPosition() {}
-
-        public long getOffset()
-        {
-            return _offset;
-        }
-
-        public long getLength()
-        {
-            return _limit - _offset;
-        }
 
         public long getStartOffset()
         {
@@ -69,17 +56,29 @@ class IonReaderBinaryUserX
         }
     }
 
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, byte[] bytes, int offset, int length) {
+    @Deprecated
+    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog,
+                                byte[] bytes, int offset, int length)
+    {
         super(system, bytes, offset, length);
         _physical_start_offset = offset;
         init_user(catalog);
     }
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, InputStream userBytes) {
+
+    public IonReaderBinaryUserX(IonSystem system,
+                                IonCatalog catalog,
+                                UnifiedInputStreamX userBytes,
+                                int physicalStartOffset)
+    {
         super(system, userBytes);
-        _physical_start_offset = 0;
+        _physical_start_offset = physicalStartOffset;
         init_user(catalog);
     }
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog, UnifiedInputStreamX userBytes) {
+
+    public IonReaderBinaryUserX(IonSystem system,
+                                IonCatalog catalog,
+                                UnifiedInputStreamX userBytes)
+    {
         super(system, userBytes);
         _physical_start_offset = 0;
         init_user(catalog);
@@ -106,9 +105,9 @@ class IonReaderBinaryUserX
      * @throws IllegalStateException if the reader doesn't have a current
      * value.
      */
-    public IonReaderBinaryPosition getCurrentPosition()
+    public Span getCurrentPosition()
     {
-        IonReaderBinaryPosition pos = new IonReaderBinaryPosition();
+        IonReaderBinarySpan pos = new IonReaderBinarySpan();
 
         if (getType() == null)
         {
@@ -130,18 +129,15 @@ class IonReaderBinaryUserX
             pos._symbol_table = _symbols;
         }
 
-        pos._state         = _state;
-        pos._value_type    = _value_type;
-        pos._value_is_null = _value_is_null;
-        pos._value_is_true = _value_is_true;
+        pos._state = _state;
 
         return pos;
     }
 
 
-    public void seek(IonReaderPosition position)
+    public void seek(IonReaderBinarySpan position)
     {
-        IonReaderBinaryPosition pos = position.asFacet(IonReaderBinaryPosition.class);
+        IonReaderBinarySpan pos = position;
 
         if (pos == null)
         {
@@ -229,7 +225,7 @@ class IonReaderBinaryUserX
     {
         super.hasNext();
         if (getDepth() == 0 && !_value_is_null) {
-            if (_value_tid == IonConstants.tidSymbol) {
+            if (_value_tid == _Private_IonConstants.tidSymbol) {
                 load_cached_value(AS_TYPE.int_value);
                 int sid = _v.getInt();
                 if (sid == ION_1_0_SID) {
@@ -238,24 +234,17 @@ class IonReaderBinaryUserX
                     _has_next_needed = true;
                 }
             }
-            else if (_value_tid == IonConstants.tidStruct) {
+            else if (_value_tid == _Private_IonConstants.tidStruct) {
                 int count = load_annotations();
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
-
-                        //stepIn();
-                        //an empty struct is actually ok, just not very interesting
-                        //if (!hasNext()) {
-                        //    this.error_at("local symbol table with an empty struct encountered");
-                        //}
-                        UnifiedSymbolTable symtab =
-                                UnifiedSymbolTable.makeNewLocalSymbolTable(
-                                    _system
-                                  , _catalog
-                                  , this
-                                  , false // false failed do list encountered, but removed call to stepIn above // true failed for testBenchmark singleValue
-                        );
-                        _symbols = symtab;
+                        _symbols =
+                            newLocalSymtab(_system,
+                                           // TODO should be current symtab:
+                                           _system.getSystemSymbolTable(),
+                                           _catalog,
+                                           this,
+                                           false);
                         push_symbol_table(_symbols);
                         _has_next_needed = true;
                         break;
@@ -263,7 +252,7 @@ class IonReaderBinaryUserX
                 }
             }
             else {
-                assert (_value_tid != IonConstants.tidTypedecl);
+                assert (_value_tid != _Private_IonConstants.tidTypedecl);
             }
         }
     }
@@ -272,7 +261,7 @@ class IonReaderBinaryUserX
     public String getFieldName()
     {
         String name;
-        if (_value_field_id == UnifiedSymbolTable.UNKNOWN_SID) {
+        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) {
             name = null;
         }
         else {
@@ -282,10 +271,19 @@ class IonReaderBinaryUserX
     }
 
     @Override
+    public final SymbolToken getFieldNameSymbol()
+    {
+        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
+        int sid = _value_field_id;
+        String text = _symbols.findKnownSymbol(sid);
+        return new SymbolTokenImpl(text, sid);
+    }
+
+    @Override
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        return IonImplUtils.stringIterator(annotations);
+        return _Private_Utils.stringIterator(annotations);
     }
 
     @Override
@@ -294,7 +292,7 @@ class IonReaderBinaryUserX
         load_annotations();
         String[] anns;
         if (_annotation_count < 1) {
-            anns = IonImplUtils.EMPTY_STRING_ARRAY;
+            anns = _Private_Utils.EMPTY_STRING_ARRAY;
         }
         else {
             anns = new String[_annotation_count];
@@ -305,15 +303,15 @@ class IonReaderBinaryUserX
         return anns;
     }
 
-    @Override
+    @Override // TODO this override shouldn't be necessary
     public String stringValue()
     {
-        if (_value_is_null) {
-            return null;
-        }
-        if (IonType.SYMBOL.equals(_value_type)) {
+        if (! IonType.isText(_value_type)) throw new IllegalStateException();
+        if (_value_is_null) return null;
+
+        if (_value_type == IonType.SYMBOL) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
-                int sid = intValue();
+                int sid = getSymbolId();
                 String sym = _symbols.findSymbol(sid);
                 _v.addValue(sym);
             }
@@ -322,6 +320,19 @@ class IonReaderBinaryUserX
             prepare_value(AS_TYPE.string_value);
         }
         return _v.getString();
+    }
+
+    @Override
+    public SymbolToken symbolValue()
+    {
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
+        if (_value_is_null) return null;
+
+        int sid = getSymbolId();
+        assert sid != UNKNOWN_SYMBOL_ID;
+        String text = _symbols.findKnownSymbol(sid);
+
+        return new SymbolTokenImpl(text, sid);
     }
 
     @Override
@@ -385,11 +396,6 @@ class IonReaderBinaryUserX
         // TODO ION-243 support seeking over InputStream
         if (_input instanceof FromByteArray)
         {
-            if (facetType == IonReaderWithPosition.class)
-            {
-                return facetType.cast(this);
-            }
-
             if (facetType == SeekableReader.class)
             {
                 return facetType.cast(new SeekableReaderFacet());
@@ -433,12 +439,12 @@ class IonReaderBinaryUserX
     {
         public void hoist(Span span)
         {
-            if (! (span instanceof IonReaderBinaryPosition))
+            if (! (span instanceof IonReaderBinarySpan))
             {
                 throw new IllegalArgumentException("Span isn't compatible with this reader.");
             }
 
-            seek((IonReaderBinaryPosition) span);
+            seek((IonReaderBinarySpan) span);
         }
     }
 

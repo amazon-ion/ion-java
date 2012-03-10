@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -6,18 +6,17 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.Timestamp.Precision;
-import com.amazon.ion.impl.IonConstants;
+import com.amazon.ion.ValueVisitor;
 import java.math.BigDecimal;
 import java.util.Date;
 
 /**
  *
  */
-public class IonTimestampLite
-extends IonValueLite
-implements IonTimestamp
+final class IonTimestampLite
+    extends IonValueLite
+    implements IonTimestamp
 {
     public final static Integer UTC_OFFSET = Timestamp.UTC_OFFSET;
 
@@ -63,10 +62,6 @@ implements IonTimestamp
     }
 
 
-    static final int NULL_TIMESTAMP_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidTimestamp,
-                                        IonConstants.lnIsNullAtom);
-
     private Timestamp _timestamp_value;
 
     /**
@@ -87,7 +82,7 @@ implements IonTimestamp
     @Override
     public IonTimestampLite clone()
     {
-        IonTimestampLite clone = new IonTimestampLite(this._context.getSystemLite(), false);
+        IonTimestampLite clone = new IonTimestampLite(this._context.getSystem(), false);
 
         clone.copyValueContentFrom(this);
         clone._timestamp_value = this._timestamp_value;

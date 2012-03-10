@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -33,7 +33,7 @@ package com.amazon.ion.impl;
  *   if the end position is not set it is treated as "to end of file"
  *
  */
-public class UnifiedSavePointManagerX
+final class UnifiedSavePointManagerX
 {
     private static final int FREE_LIST_LIMIT = 20;
 

@@ -12,7 +12,6 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.facet.Facets;
-import com.amazon.ion.impl.IonReaderOctetPosition;
 import org.junit.After;
 
 /**
@@ -32,29 +31,19 @@ public abstract class ReaderFacetTestCase
      * These are the readers that don't support {@link OffsetSpan}s.
      */
     public static final ReaderMaker[] NON_OFFSET_SPAN_READERS =
-    {
-        ReaderMaker.FROM_DOM
-    };
+        ReaderMaker.valuesWith(ReaderMaker.Feature.DOM);
 
     /**
      * These are the readers that don't support {@link TextSpan}s.
      */
     public static final ReaderMaker[] NON_TEXT_SPAN_READERS =
-    {
-        ReaderMaker.FROM_BYTES_BINARY,
-        ReaderMaker.FROM_BYTES_OFFSET_BINARY,
-        ReaderMaker.FROM_INPUT_STREAM_BINARY,
-        ReaderMaker.FROM_DOM
-    };
+        ReaderMaker.valuesWithout(ReaderMaker.Feature.TEXT);
 
     /**
      * These readers don't support the {@link SeekableReader} facet.
      */
     public static final ReaderMaker[] NON_SEEKABLE_READERS =
-    {
-        ReaderMaker.FROM_INPUT_STREAM_BINARY,    // TODO ION-243
-        ReaderMaker.FROM_INPUT_STREAM_TEXT       // TODO ION-243
-    };
+        ReaderMaker.valuesWith(ReaderMaker.Feature.STREAM); // TODO ION-243
 
 
     protected SpanProvider sp;
@@ -66,7 +55,6 @@ public abstract class ReaderFacetTestCase
     @After @Override
     public void tearDown() throws Exception
     {
-        in = null;
         sp = null;
         sr = null;
         super.tearDown();
@@ -152,18 +140,5 @@ public abstract class ReaderFacetTestCase
 
         offsets = currentSpan(OffsetSpan.class, in);
         checkSpan(start, finish, offsets);
-
-        // Transitional APIs
-        if (myReaderMaker.sourceIsBinary())
-        {
-            long len = finish - start;
-
-            IonReaderOctetPosition pos =
-                assumeFacet(IonReaderOctetPosition.class, span);
-            assertEquals(start,  pos.getOffset());
-            assertEquals(start,  pos.getStartOffset());
-            assertEquals(len,    pos.getLength());
-            assertEquals(finish, pos.getFinishOffset());
-        }
     }
 }

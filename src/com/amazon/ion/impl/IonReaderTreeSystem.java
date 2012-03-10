@@ -1,8 +1,8 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonImplUtils.readFully;
+import static com.amazon.ion.impl._Private_Utils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -23,6 +23,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +36,7 @@ import java.util.Iterator;
  *
  */
 class IonReaderTreeSystem
-    implements IonReader, IonReaderWriterPrivate
+    implements IonReader, _Private_ReaderWriter
 {
     protected IonSystem           _system;
     protected SymbolTable         _symbols;
@@ -82,7 +83,7 @@ class IonReaderTreeSystem
         if (value instanceof IonDatagram) {
             // datagrams interacting with these readers must be
             // IonContainerPrivate containers
-            assert(value instanceof IonContainerPrivate);
+            assert(value instanceof _Private_IonContainer);
             IonDatagram dg = (IonDatagram) value;
             _parent = dg;
             _next = null;
@@ -233,7 +234,7 @@ class IonReaderTreeSystem
         return (_curr == null) ? null : _curr.getType();
     }
 
-    public String[] getTypeAnnotations()
+    public final String[] getTypeAnnotations()
     {
         if (_curr == null) {
             throw new IllegalStateException();
@@ -241,33 +242,32 @@ class IonReaderTreeSystem
         return _curr.getTypeAnnotations();
     }
 
-    public int[] getTypeAnnotationIds()
+
+    public final SymbolToken[] getTypeAnnotationSymbols()
     {
-        String [] annotations = getTypeAnnotations();
-        if (annotations.length == 0) {
-            return IonImplUtils.EMPTY_INT_ARRAY;
+        if (_curr == null) {
+            throw new IllegalStateException();
         }
-
-        int [] ids = new int[annotations.length];
-        SymbolTable sym = _curr.getSymbolTable();
-
-        for (int ii=0; ii<annotations.length; ii++) {
-            ids[ii] = sym.findSymbol(annotations[ii]);
-        }
-
-        return ids;
+        // TODO should this localize the symbols?
+        return _curr.getTypeAnnotationSymbols();
     }
 
-    public Iterator<Integer> iterateTypeAnnotationIds()
+    public final int[] getTypeAnnotationIds()
+    {
+        SymbolToken[] syms = getTypeAnnotationSymbols(); // Checks nullValue
+        return _Private_Utils.toSids(syms, syms.length);
+    }
+
+    public final Iterator<Integer> iterateTypeAnnotationIds()
     {
         int [] ids = getTypeAnnotationIds();
-        return IonImplUtils.intIterator(ids);
+        return _Private_Utils.intIterator(ids);
     }
 
-    public Iterator<String> iterateTypeAnnotations()
+    public final Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
-        return IonImplUtils.stringIterator(annotations);
+        return _Private_Utils.stringIterator(annotations);
     }
 
 
@@ -289,12 +289,18 @@ class IonReaderTreeSystem
     public int getFieldId()
     {
         // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null || (_hoisted && _top == 0)) ? UnifiedSymbolTable.UNKNOWN_SID : _curr.getFieldId();
+        return (_curr == null || (_hoisted && _top == 0)) ? SymbolTable.UNKNOWN_SYMBOL_ID : _curr.getFieldId();
     }
 
     public String getFieldName()
     {
         return (_curr == null || (_hoisted && _top == 0)) ? null : _curr.getFieldName();
+    }
+
+    public final SymbolToken getFieldNameSymbol()
+    {
+        if (_curr == null || (_hoisted && _top == 0)) return null;
+        return _curr.getFieldNameSymbol();
     }
 
 
@@ -394,13 +400,23 @@ class IonReaderTreeSystem
 
     public String stringValue()
     {
-        if (_curr == null) return null;
         if (_curr instanceof IonText) {
             return ((IonText)_curr).stringValue();
         }
         throw new IllegalStateException("current value is not a symbol or string");
     }
 
+    public SymbolToken symbolValue()
+    {
+        if (! (_curr instanceof IonSymbol))
+        {
+            throw new IllegalStateException();
+        }
+        if (_curr.isNullValue()) return null;
+        return ((IonSymbol)_curr).symbolValue();
+    }
+
+    @Deprecated
     public int getSymbolId()
     {
         if (_curr == null) return -1;
@@ -478,13 +494,13 @@ class IonReaderTreeSystem
     {
         boolean             _eof;
         int                 _next_idx;
-        IonContainerPrivate _parent;
+        _Private_IonContainer _parent;
         IonValue            _curr;
 
         Children(IonContainer parent)
         {
-            if (parent instanceof IonContainerPrivate) {
-                _parent = (IonContainerPrivate)parent;
+            if (parent instanceof _Private_IonContainer) {
+                _parent = (_Private_IonContainer)parent;
 
 if (_parent instanceof IonValueImpl) {
 ((IonValueImpl)_parent).makeReady();

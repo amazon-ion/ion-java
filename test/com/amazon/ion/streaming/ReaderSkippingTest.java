@@ -1,13 +1,15 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.TestUtils.consumeCurrentValue;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -15,7 +17,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.Random;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -141,37 +142,26 @@ extends IonTestCase
         // Read all data from myFullReader,
         // but only some data from mySkipReader
 
-        myFullReader.getTypeAnnotations();
+        myFullReader.getTypeAnnotationSymbols();
         if (!skip())
         {
-            Assert.assertArrayEquals(myFullReader.getTypeAnnotations(),
-                                     mySkipReader.getTypeAnnotations());
+            SymbolToken[] expecteds = myFullReader.getTypeAnnotationSymbols();
+            check(mySkipReader).annotations(expecteds);
         }
 
-        myFullReader.getTypeAnnotationIds();
+        // We don't test SIDs since that assumes that SIDs always get assigned
+        // in the same order. We don't guarantee that for all readers.
+
+        myFullReader.getFieldNameSymbol();
         if (!skip())
         {
-            Assert.assertArrayEquals(myFullReader.getTypeAnnotationIds(),
-                                     mySkipReader.getTypeAnnotationIds());
+            check(mySkipReader).fieldName(myFullReader.getFieldNameSymbol());
         }
 
-        myFullReader.getFieldName();
-        if (!skip())
-        {
-            assertEquals(myFullReader.getFieldName(),
-                         mySkipReader.getFieldName());
-        }
-
-        myFullReader.getFieldId();
-        if (!skip())
-        {
-            assertEquals(myFullReader.getFieldId(),
-                         mySkipReader.getFieldId());
-        }
 
         if (skip())
         {
-            system().newValue(myFullReader);
+            consumeCurrentValue(myFullReader);
         }
         else
         {

@@ -1,8 +1,10 @@
-/*
- * Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.lnIsNullSequence;
+import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
+import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
@@ -16,13 +18,12 @@ import java.util.Collection;
 /**
  * Implements the Ion <code>sexp</code> (S-expression) type.
  */
-public class IonSexpImpl
+final class IonSexpImpl
     extends IonSequenceImpl
     implements IonSexp
 {
     private static final int NULL_SEXP_TYPEDESC =
-        IonConstants.makeTypeDescriptor(IonConstants.tidSexp,
-                                        IonConstants.lnIsNullSequence);
+        makeTypeDescriptor(tidSexp, lnIsNullSequence);
 
     private static final int HASH_SIGNATURE =
         IonType.SEXP.toString().hashCode();
@@ -44,7 +45,7 @@ public class IonSexpImpl
     public IonSexpImpl(IonSystemImpl system, boolean makeNull)
     {
         super(system, NULL_SEXP_TYPEDESC, makeNull);
-        assert pos_getType() == IonConstants.tidSexp;
+        assert pos_getType() == _Private_IonConstants.tidSexp;
     }
 
     /**
@@ -70,8 +71,8 @@ public class IonSexpImpl
      */
     public IonSexpImpl(IonSystemImpl system, int typeDesc)
     {
-        super(system, typeDesc, (IonConstants.getLowNibble(typeDesc) == IonConstants.lnIsNull));
-        assert pos_getType() == IonConstants.tidSexp;
+        super(system, typeDesc, (_Private_IonConstants.getLowNibble(typeDesc) == _Private_IonConstants.lnIsNull));
+        assert pos_getType() == _Private_IonConstants.tidSexp;
     }
 
     /**

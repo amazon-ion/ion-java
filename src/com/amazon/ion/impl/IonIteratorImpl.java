@@ -1,8 +1,6 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
-
-import static com.amazon.ion.impl.UnifiedSymbolTable.makeNewLocalSymbolTable;
 
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
@@ -11,42 +9,36 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.ValueFactory;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 
-public class IonIteratorImpl
+final class IonIteratorImpl
     implements Iterator<IonValue>
 {
-    private final IonSystemImpl _system;
-
-    private IonReader    _reader;
-    private SymbolTable  _current_symbols;
-
-    private boolean      _at_eof;
-    private IonValueImpl _curr;
-    private IonValueImpl _next;
+    private final ValueFactory _valueFactory;
+    private final IonReader _reader;
+    private boolean  _at_eof;
+    private IonValue _curr;
+    private IonValue _next;
 
 
 
     /**
      * @throws NullPointerException if any parameter is null.
      */
-    public IonIteratorImpl(IonSystemImpl system,
+    public IonIteratorImpl(ValueFactory valueFactory,
                            IonReader input)
     {
-        if (system == null || input == null)
+        if (valueFactory == null || input == null)
         {
             throw new NullPointerException();
         }
 
-        _system = system;
+        _valueFactory = valueFactory;
         _reader = input;
-    }
-
-
-    public IonSystemImpl getSystem() {
-        return _system;
     }
 
 
@@ -66,55 +58,31 @@ public class IonIteratorImpl
     {
         assert !_at_eof && _next == null;
 
-        if (! _reader.hasNext())
+        IonType type = _reader.next();
+        if (type == null)
         {
             _at_eof = true;
         }
         else
         {
-            IonType type = _reader.next();
-            // FIXME second clause shouldn't be needed.  ION-27
-//            assert !_reader.isInStruct() || type==IonType.STRUCT;
-            assert(type != null);
-
-            IonValue v = readValue(_reader);
-            _next = (IonValueImpl) v;
-            SymbolTable symbols = _next.getAssignedSymbolTable();
-            if (UnifiedSymbolTable.isTrivialTable(symbols) == true
-             && UnifiedSymbolTable.isTrivialTable(this._current_symbols) == false
-            ) {
-                symbols = this._current_symbols;
-                _next.setSymbolTable(symbols);
-            }
-
-            if (UnifiedSymbolTable.isRealLocalTable(symbols) == false) {
-                // so we have to make it a real
-                assert(symbols == null || symbols.isSharedTable() || symbols.isSystemTable());
-                IonSystemImpl system = _next.getSystem();
-                SymbolTable local =
-                    makeNewLocalSymbolTable(system, system.getSystemSymbolTable());
-                _next.setSymbolTable(local);
-                symbols = local;
-            }
-
-            this._current_symbols = symbols;
+            _next = readValue();
         }
 
         return _next;
     }
 
 
-    private IonValue readValue(IonReader reader)
+    private IonValue readValue()
     {
         IonType type = _reader.getType();
 
-        String [] annotations = _reader.getTypeAnnotations();
+        SymbolToken[] annotations = _reader.getTypeAnnotationSymbols();
 
         IonValue v;
 
         if (_reader.isNullValue())
         {
-            v = _system.newNull(type);
+            v = _valueFactory.newNull(type);
         }
         else
         {
@@ -123,52 +91,50 @@ public class IonIteratorImpl
                     // Handled above
                     throw new IllegalStateException();
                 case BOOL:
-                    v = _system.newBool(_reader.booleanValue());
+                    v = _valueFactory.newBool(_reader.booleanValue());
                     break;
                 case INT:
-                    // FIXME should use bigInteger
-                    v = _system.newInt(_reader.longValue());
+                    v = _valueFactory.newInt(_reader.bigIntegerValue());
                     break;
                 case FLOAT:
-                    v = _system.newFloat(_reader.doubleValue());
+                    v = _valueFactory.newFloat(_reader.doubleValue());
                     break;
                 case DECIMAL:
-                    v = _system.newDecimal(_reader.decimalValue());
+                    v = _valueFactory.newDecimal(_reader.decimalValue());
                     break;
                 case TIMESTAMP:
-                    v = _system.newTimestamp(_reader.timestampValue());
+                    v = _valueFactory.newTimestamp(_reader.timestampValue());
                     break;
                 case STRING:
-                    v = _system.newString(_reader.stringValue());
+                    v = _valueFactory.newString(_reader.stringValue());
                     break;
                 case SYMBOL:
-                    // FIXME handle case where only SID is known
-                    v = _system.newSymbol(_reader.stringValue());
+                    // TODO always pass the SID?  Is it correct?
+                    v = _valueFactory.newSymbol(_reader.symbolValue());
                     break;
                 case BLOB:
                 {
-                    IonLob lob = _system.newNullBlob();
-                    lob.setBytes(reader.newBytes());
+                    IonLob lob = _valueFactory.newNullBlob();
+                    lob.setBytes(_reader.newBytes());
                     v = lob;
                     break;
                 }
                 case CLOB:
                 {
-                    IonLob lob = _system.newNullClob();
-                    lob.setBytes(reader.newBytes());
+                    IonLob lob = _valueFactory.newNullClob();
+                    lob.setBytes(_reader.newBytes());
                     v = lob;
                     break;
                 }
                 case STRUCT:
                 {
-                    IonStruct struct = _system.newEmptyStruct();
+                    IonStruct struct = _valueFactory.newEmptyStruct();
                     _reader.stepIn();
-                    while (_reader.hasNext())
+                    while (_reader.next() != null)
                     {
-                        _reader.next();
-                        String fieldName = _reader.getFieldName();
-                        IonValue child = readValue(_reader);
-                        struct.add(fieldName, child);
+                        SymbolToken name = _reader.getFieldNameSymbol();
+                        IonValue child = readValue();
+                        struct.add(name, child);
                     }
                     _reader.stepOut();
                     v = struct;
@@ -176,12 +142,11 @@ public class IonIteratorImpl
                 }
                 case LIST:
                 {
-                    IonSequence seq = _system.newEmptyList();
+                    IonSequence seq = _valueFactory.newEmptyList();
                     _reader.stepIn();
-                    while (_reader.hasNext())
+                    while (_reader.next() != null)
                     {
-                        _reader.next();
-                        IonValue child = readValue(_reader);
+                        IonValue child = readValue();
                         seq.add(child);
                     }
                     _reader.stepOut();
@@ -190,12 +155,11 @@ public class IonIteratorImpl
                 }
                 case SEXP:
                 {
-                    IonSequence seq = _system.newEmptySexp();
+                    IonSequence seq = _valueFactory.newEmptySexp();
                     _reader.stepIn();
-                    while (_reader.hasNext())
+                    while (_reader.next() != null)
                     {
-                        _reader.next();
-                        IonValue child = readValue(_reader);
+                        IonValue child = readValue();
                         seq.add(child);
                     }
                     _reader.stepOut();
@@ -207,18 +171,20 @@ public class IonIteratorImpl
             }
         }
 
+        // TODO this is too late in the case of system reading
+        // when v is a local symtab (it will get itself, not the prior symtab)
         SymbolTable symtab = _reader.getSymbolTable();
-        ((IonValueImpl)v).setSymbolTable(symtab);
+        ((_Private_IonValue)v).setSymbolTable(symtab);
 
         if (annotations.length != 0) {
-            v.setTypeAnnotations(annotations);
+            ((_Private_IonValue)v).setTypeAnnotationSymbols(annotations);
         }
 
         return v;
     }
 
 
-    public IonValueImpl next() {
+    public IonValue next() {
         if (! _at_eof) {
             _curr = null;
             if (_next == null) {

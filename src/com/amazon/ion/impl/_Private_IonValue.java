@@ -1,14 +1,16 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import java.io.PrintWriter;
 
 /**
  *
  */
-public interface IonValuePrivate
+public interface _Private_IonValue
     extends IonValue
 {
     /**
@@ -18,37 +20,29 @@ public interface IonValuePrivate
     public int         getElementId();
 
     /**
-     * Returns the top level value.  If this values
-     * parent is a datagram or a system value it
-     * is the root.  Otherwise it is the root
-     * of this values container.
-     *
-     * @return top level owner of this value, this is never null
-     */
-    public IonValuePrivate getRoot();
-
-    /**
-     * make this symbol table current for this value.
+     * Makes this symbol table current for this value.
      * This may directly apply to this IonValue if this
      * value is either loose or a top level datagram
      * member.  Or it may be delegated to the IonContainer
      * this value is a contained in.
-     *
+     * <p>
      * Assigning null forces any symbol values to be
      * resolved to strings and any associated symbol
      * table will be removed.
+     * <p>
+     * @param symbols must be local or system table. May be null.
      *
-     * @param symbols
+     * @throws UnsupportedOperationException if this is a datagram.
      */
-    public void        setSymbolTable(SymbolTable symbols);
+    public void setSymbolTable(SymbolTable symbols);
 
     /**
-     * this returns the symbol table that is actually
-     * assigned to this value.  Values that are contained
-     * will return null as they don't actually own
-     * their own symbol table.
-     * @return SymbolTable if this value is the real
-     *         owner, otherwise null
+     * Returns the symbol table that is directly associated with this value,
+     * without doing any recursive lookup.
+     * Values that are not top-level will return null as they don't actually
+     * own their own symbol table.
+     *
+     * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
      */
     public SymbolTable getAssignedSymbolTable();
 
@@ -111,4 +105,7 @@ public interface IonValuePrivate
      */
     public SymbolTable populateSymbolValues(SymbolTable symbols);
 
+    public void dump(PrintWriter out);
+
+    public String validate();
 }

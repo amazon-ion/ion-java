@@ -1,8 +1,12 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion;
 
-import com.amazon.ion.impl.lite.IonStructLite;
-import com.amazon.ion.impl.lite.IonValueLite;
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
+import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl._Private_Utils;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -175,6 +179,12 @@ public class StructTest
         testClearContainer(value);
     }
 
+    @Test
+    public void testPutAfterUnknownFieldName()
+    {
+        IonStruct value = struct("{$99:null}");
+        value.put("hi", system().newNull());
+    }
 
     //=========================================================================
     // Test cases
@@ -409,7 +419,7 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("a");
         assertEquals("a", fieldA.getFieldName());
-        assertEquals("b", fieldA.stringValue());
+        checkSymbol("b", fieldA);
         assertEquals("{a:b}", value.toString());
     }
 
@@ -420,7 +430,7 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("aa");
         assertEquals("aa", fieldA.getFieldName());
-        assertEquals("b",  fieldA.stringValue());
+        checkSymbol("b", fieldA);
         assertEquals("{aa:b}", value.toString());
     }
 
@@ -432,7 +442,8 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("123456789ABCDEF");
         assertEquals("123456789ABCDEF", fieldA.getFieldName());
-        assertEquals("b", fieldA.stringValue());
+        assertEquals("123456789ABCDEF", fieldA.getFieldName());
+        checkSymbol("b", fieldA);
     }
 
 
@@ -443,7 +454,7 @@ public class StructTest
         assertEquals(1, value.size());
         IonSymbol fieldA = (IonSymbol) value.get("123456789ABCDEF");
         assertEquals("123456789ABCDEF", fieldA.getFieldName());
-        assertEquals("b", fieldA.stringValue());
+        checkSymbol("b", fieldA);
     }
 
 
@@ -562,7 +573,7 @@ public class StructTest
         IonBool nullBool = system().newNullBool();
 
         try {
-            value.add(null, nullBool);
+            value.add((String) null, nullBool);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
@@ -578,6 +589,82 @@ public class StructTest
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
+    }
+
+
+    @Test
+    public void testAddSymbolTokenWithBadSid()
+    {
+        IonStruct struct = system().newNullStruct();
+        IonBool nullBool = system().newNullBool();
+
+        SymbolToken is = _Private_Utils.newSymbolToken("f", 1);
+        struct.add(is, nullBool);
+        is = nullBool.getFieldNameSymbol();
+        checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
+
+        nullBool = system().newNullBool();
+        is = new FakeSymbolToken("g", 99);
+        struct.add(is, nullBool);
+        is = nullBool.getFieldNameSymbol();
+        checkSymbol("g", UNKNOWN_SYMBOL_ID, is);
+
+        IonBool nullBool2 = system().newNullBool();
+        is = new FakeSymbolToken("h", -2);
+        struct.add(is, nullBool2);
+        is = nullBool2.getFieldNameSymbol();
+        checkSymbol("h", UNKNOWN_SYMBOL_ID, is);
+    }
+
+    @Test
+    public void testBadAddSymbolToken()
+    {
+        IonStruct value = system().newNullStruct();
+        IonBool nullBool = system().newNullBool();
+
+        try {
+            value.add((SymbolToken) null, nullBool);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        SymbolToken is = _Private_Utils.newSymbolToken("f", 1);
+        try {
+            value.add(is, null);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) { }
+
+        IonValue contained = value.add("g").newNull();
+        try {
+            value.add(is, contained);
+            fail("Expected exception");
+        }
+        catch (ContainedValueException e) { }
+
+        IonValue dg = system().newDatagram();
+        try {
+            value.add(is, dg);
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        is = new FakeSymbolToken(null, UNKNOWN_SYMBOL_ID);
+        try {
+            value.add(is, nullBool);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        is = new FakeSymbolToken(null, -2);
+        try {
+            value.add(is, nullBool);
+            fail("Expected IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) { }
+
+        value.remove(contained);
+        assertTrue(value.isEmpty());
     }
 
     @Test
@@ -676,6 +763,37 @@ public class StructTest
         assertNull(s.remove("something"));
         assertTrue(s.isNullValue());
     }
+
+    public void testRemoveClearsFieldName(IonStruct s)
+    {
+        IonValue f = s.get("f");
+
+        // TODO ION-273
+        if (getDomType() == DomType.LITE) {
+            assertTrue(f.getFieldId() > 0);
+        }
+
+        f.removeFromContainer();
+        assertEquals(null, f.getFieldName());
+        assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, f.getFieldId());
+    }
+
+    @Test
+    public void testRemoveClearsFieldName()
+    {
+        IonDatagram dg = loader().load("{f:null}");
+        dg = reload(dg);
+        byte[] bytes = dg.getBytes(); // Force symbol interning
+
+        IonStruct s = (IonStruct) dg.get(0);
+        testRemoveClearsFieldName(s);
+
+        IonReader r = system().newReader(bytes);
+        r.next();
+        s = (IonStruct) system().newValue(r);
+        testRemoveClearsFieldName(s);
+    }
+
 
     @Test
     public void testRemoveOnReadOnlyStruct()
@@ -911,7 +1029,6 @@ public class StructTest
         IonStruct s = (IonStruct) oneValue("{f:12}");
         IonValue f = s.get("f");
         assertEquals("f", f.getFieldName());
-        assertTrue(0 < f.getFieldId());
 
         IonValue clone = f.clone();
         assertNull("field name shouldn't be cloned", clone.getFieldName());
@@ -979,30 +1096,60 @@ public class StructTest
     @Test
     public void testCloneAndRemove()
     {
-        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct s1 = struct("a::$99::{c:1,d:2,e:3,d:3}");
         IonStruct actual = s1.cloneAndRemove("c", "e");
-        IonStruct expected = struct("a::b::{d:2,d:3}");
+        IonStruct expected = struct("a::$99::{d:2,d:3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
+        assertEquals(struct("a::$99::{}"), actual.cloneAndRemove("d"));
+
+        IonStruct n = struct("$55::y::null.struct");
+        IonStruct n2 = n.cloneAndRemove("a");
+        assertEquals(struct("$55::y::null.struct"), n2);
+    }
+
+    @Test
+    public void testCloneAndRemoveWithSpecialFieldNames()
+    {
+        IonStruct s1 = struct("{c:1,$99:2,'$19':3,'$20':3}");
+        IonStruct actual = s1.cloneAndRemove("c", "$19");
+        IonStruct expected = struct("{$99:2,'$20':3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("{}"), actual.cloneAndRemove("$20", null));
 
         IonStruct n = struct("x::y::null.struct");
-        IonStruct n2 = n.cloneAndRemove("a");
+        IonStruct n2 = n.cloneAndRemove("$20");
         assertEquals(struct("x::y::null.struct"), n2);
     }
 
     @Test
     public void testCloneAndRetain()
     {
-        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
+        IonStruct s1 = struct("a::$99::{c:1,d:2,e:3,d:3}");
         IonStruct actual = s1.cloneAndRetain("c", "d");
-        IonStruct expected = struct("a::b::{c:1,d:2,d:3}");
+        IonStruct expected = struct("a::$99::{c:1,d:2,d:3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("a::b::{}"), actual.cloneAndRetain("e"));
+        assertEquals(struct("a::$99::{}"), actual.cloneAndRetain("e"));
+
+        IonStruct n = struct("$55::y::null.struct");
+        IonStruct n2 = n.cloneAndRetain("a");
+        assertEquals(struct("$55::y::null.struct"), n2);
+    }
+
+    @Test
+    public void testCloneAndRetainWithSpecialFieldNames()
+    {
+        IonStruct s1 = struct("{c:1,$99:2,'$19':3,'$20':3}");
+        IonStruct actual = s1.cloneAndRetain("c", "$20", null);
+        IonStruct expected = struct("{c:1,$99:2,'$20':3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("{}"), actual.cloneAndRetain("$99"));
 
         IonStruct n = struct("x::y::null.struct");
-        IonStruct n2 = n.cloneAndRetain("a");
+        IonStruct n2 = n.cloneAndRetain("$20");
         assertEquals(struct("x::y::null.struct"), n2);
     }
 
@@ -1196,10 +1343,8 @@ public class StructTest
         }
     }
     void dump(IonStruct s1_temp, ArrayList<TestField> s2) {
-        IonStructLite s1 = ((IonStructLite)s1_temp);
-        System.out.println("struct: "+s1.toString());
-        s1.debug_print_map();
-        System.out.println("dups: "+s1._field_map_duplicate_count);
+        _Private_IonValue s1 = ((_Private_IonValue)s1_temp);
+        s1.dump(new PrintWriter(System.out));
         System.out.println("array: "+s2.toString());
     }
     int pick_command(Random r, int size)
@@ -1427,8 +1572,8 @@ public class StructTest
                 errors += "extra field in struct "+v;
                 errors += "\n";
             }
-            if (v instanceof IonValueLite) {
-                int eid = ((IonValueLite)v).getElementId();
+            if (v instanceof _Private_IonValue) {
+                int eid = ((_Private_IonValue)v).getElementId();
                 if (eid != struct_idx) {
                     difference = true;
                     errors += "index of struct field "+struct_idx+" doesn't match array index "+eid+": "+v;
@@ -1451,8 +1596,8 @@ public class StructTest
 
         if (_debug_print_flag) {
             // now check the map, if there is one
-            IonStructLite l = (IonStructLite)s1;
-            String map_error = l.debug_check_map();
+            _Private_IonValue l = (_Private_IonValue)s1;
+            String map_error = l.validate();
             if (map_error != null) {
                 errors += map_error;
                 difference = true;

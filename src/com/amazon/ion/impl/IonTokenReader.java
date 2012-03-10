@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -11,7 +11,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
-import com.amazon.ion.impl.IonConstants.HighNibble;
+import com.amazon.ion.impl._Private_IonConstants.HighNibble;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.io.PushbackReader;
@@ -25,7 +25,7 @@ import java.util.Stack;
  *  It does both the token recognition (aka the scanner) and the state
  *  management needed to use the value underlying some of these tokens.
  */
-public class IonTokenReader
+final class IonTokenReader
 {
     // TODO clean up, many of these are unused.
     public static int isPunctuation = 0x0001;
@@ -432,7 +432,7 @@ public class IonTokenReader
             localReader = new LocalReader(this);
             pushbackReader =
                 new PushbackReader(localReader,
-                                   IonImplUtils.MAX_LOOKAHEAD_UTF16);
+                                   _Private_Utils.MAX_LOOKAHEAD_UTF16);
         }
         localReader.reset();
         return pushbackReader ;
@@ -557,7 +557,7 @@ public class IonTokenReader
         case '\"':
             inQuotedContent = true;
             this.keyword = Type.none; // anything in quotes isn't a keyword
-            return scanString(c, IonConstants.lnIsVarLen - 1);
+            return scanString(c, _Private_IonConstants.lnIsVarLen - 1);
         case '\'':
             c2 = read();
             if (c2 == '\'') {

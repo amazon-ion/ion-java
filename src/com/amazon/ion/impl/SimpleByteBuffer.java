@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -18,7 +18,7 @@ import java.math.MathContext;
  * Manages a very simple byte buffer that is a single contiguous
  * byte array, without resize ability.
  */
-public final class SimpleByteBuffer
+final class SimpleByteBuffer
     implements ByteBuffer
 {
     byte[]  _bytes;
@@ -511,38 +511,38 @@ done:       for (;;) {
             if (position() < end) {  // FIXME remove
                 // year is from 0001 to 9999
                 // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
-            	year  = readVarUInt();
+                year  = readVarUInt();
                 p = Precision.YEAR; // our lowest significant option
 
                 // now we look for hours and minutes
                 if (position() < end) {
-	            	month = readVarUInt();
-	                p = Precision.MONTH;
+                    month = readVarUInt();
+                    p = Precision.MONTH;
 
-	                // now we look for hours and minutes
-	                if (position() < end) {
-		            	day   = readVarUInt();
-		                p = Precision.DAY; // our lowest significant option
+                    // now we look for hours and minutes
+                    if (position() < end) {
+                        day   = readVarUInt();
+                        p = Precision.DAY; // our lowest significant option
 
-		                // now we look for hours and minutes
-		                if (position() < end) {
-		                    hour   = readVarUInt();
-		                    minute = readVarUInt();
-		                    p = Precision.MINUTE;
+                        // now we look for hours and minutes
+                        if (position() < end) {
+                            hour   = readVarUInt();
+                            minute = readVarUInt();
+                            p = Precision.MINUTE;
 
-		                    if (position() < end) {
-		                    	second = readVarUInt();
-		                        p = Precision.SECOND;
+                            if (position() < end) {
+                                second = readVarUInt();
+                                p = Precision.SECOND;
 
-		                        remaining = end - position();
-		                        if (remaining > 0) {
-		                            // now we read in our actual "milliseconds since the epoch"
-		                            frac = this.readDecimal(remaining);
-		                            p = Precision.FRACTION;
-		                        }
-		                    }
-		                }
-	                }
+                                remaining = end - position();
+                                if (remaining > 0) {
+                                    // now we read in our actual "milliseconds since the epoch"
+                                    frac = this.readDecimal(remaining);
+                                    p = Precision.FRACTION;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -568,8 +568,8 @@ done:       for (;;) {
                     chars[ii++] = (char)c;
                 }
                 else { // when c is >= 0x10000 we need surrogate encoding
-                    chars[ii++] = (char)IonConstants.makeHighSurrogate(c);
-                    chars[ii++] = (char)IonConstants.makeLowSurrogate(c);
+                    chars[ii++] = (char)_Private_IonConstants.makeHighSurrogate(c);
+                    chars[ii++] = (char)_Private_IonConstants.makeLowSurrogate(c);
                 }
             }
             if (this.position() < endPosition) throwUnexpectedEOFException();
@@ -921,8 +921,8 @@ done:       for (;;) {
             int written_len = 1;
 
             int td = ((typeid & 0xf) << 4);
-            if (valueLength >= IonConstants.lnIsVarLen) {
-                td |= IonConstants.lnIsVarLen;
+            if (valueLength >= _Private_IonConstants.lnIsVarLen) {
+                td |= _Private_IonConstants.lnIsVarLen;
                 writeTypeDesc(td);
                 written_len += writeVarUInt(valueLength, lenOfLength, true);
             }
@@ -938,8 +938,8 @@ done:       for (;;) {
             int written_len = 1;
 
             int td = ((typeid & 0xf) << 4);
-            if (valueLength >= IonConstants.lnIsVarLen) {
-                td |= IonConstants.lnIsVarLen;
+            if (valueLength >= _Private_IonConstants.lnIsVarLen) {
+                td |= _Private_IonConstants.lnIsVarLen;
                 writeTypeDesc(td);
                 int lenOfLength = IonBinary.lenVarUInt(valueLength);
                 written_len += writeVarUInt(valueLength, lenOfLength, true);
@@ -1283,13 +1283,13 @@ done:       for (;;) {
             // now the date - year, month, day as varUint7's
             // if we have a non-null value we have at least the date
             if (precisionIncludes(precision_flags, Precision.YEAR)) {
-            	returnlen += this.writeVarUInt(di.getZYear(), true);
+                returnlen += this.writeVarUInt(di.getZYear(), true);
             }
             if (precisionIncludes(precision_flags, Precision.MONTH)) {
-            	returnlen += this.writeVarUInt(di.getZMonth(), true);
+                returnlen += this.writeVarUInt(di.getZMonth(), true);
             }
             if (precisionIncludes(precision_flags, Precision.DAY)) {
-            	returnlen += this.writeVarUInt(di.getZDay(), true);
+                returnlen += this.writeVarUInt(di.getZDay(), true);
             }
 
             // now the time part
@@ -1298,7 +1298,7 @@ done:       for (;;) {
                 returnlen += this.writeVarUInt(di.getZMinute(), true);
             }
             if (precisionIncludes(precision_flags, Precision.SECOND)) {
-            	returnlen += this.writeVarUInt(di.getZSecond(), true);
+                returnlen += this.writeVarUInt(di.getZSecond(), true);
             }
             if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
@@ -1321,19 +1321,19 @@ done:       for (;;) {
                 int c = value.charAt(ii);
                 if (c > 127) {
                     if (c >= 0xD800) {
-                        if (IonConstants.isHighSurrogate(c)) {
+                        if (_Private_IonConstants.isHighSurrogate(c)) {
                             ii++;
                             // houston we have a high surrogate (let's hope it has a partner
                             if (ii >= value.length()) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
                             int c2 = value.charAt(ii);
-                            if (!IonConstants.isLowSurrogate(c2)) {
+                            if (!_Private_IonConstants.isLowSurrogate(c2)) {
                                 throw new IonException("invalid string, unpaired high surrogate character");
                             }
-                            c = IonConstants.makeUnicodeScalar(c, c2);
+                            c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                         }
-                        else if (IonConstants.isLowSurrogate(c)) {
+                        else if (_Private_IonConstants.isLowSurrogate(c)) {
                             // it's a loner low surrogate - that's an error
                             throw new IonException("invalid string, unpaired low surrogate character");
                         }

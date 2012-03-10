@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -6,7 +6,7 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl.IonValuePrivate;
+import com.amazon.ion.impl._Private_IonValue;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -16,7 +16,7 @@ import java.util.List;
 /**
  *
  */
-public abstract class IonSequenceLite
+abstract class IonSequenceLite
     extends IonContainerLite
     implements IonSequence
 {
@@ -25,9 +25,9 @@ public abstract class IonSequenceLite
      */
     protected static final IonValueLite[] EMPTY_VALUE_ARRAY = new IonValueLite[0];
 
-    protected IonSequenceLite(IonSystemLite system, boolean isNull)
+    IonSequenceLite(IonContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     /**
@@ -42,12 +42,12 @@ public abstract class IonSequenceLite
      * @throws IllegalArgumentException
      * @throws NullPointerException
      */
-    protected IonSequenceLite(IonSystemLite system,
-                              Collection<? extends IonValue> elements)
+    IonSequenceLite(IonContext context,
+                    Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException
     {
-        this(system, (elements == null));
+        this(context, (elements == null));
         assert _children == null;
 
         if (elements != null)
@@ -154,13 +154,11 @@ public abstract class IonSequenceLite
         };
     }
 
-    @Override
-    // Increasing visibility
+
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException
     {
-        // super.add will check for the lock
-        super.add(index, element);
+        add(index, (IonValueLite) element);
     }
 
     public ValueFactory add(final int index)
@@ -191,7 +189,7 @@ public abstract class IonSequenceLite
 
         assert _children != null; // else index would be out of bounds above.
 
-        IonValueLite removed = set_child_lite(index, concrete);
+        IonValueLite removed = set_child(index, concrete);
         concrete._elementid(index);
         concrete._context = this;
 
@@ -209,7 +207,7 @@ public abstract class IonSequenceLite
             throw new IndexOutOfBoundsException("" + index);
         }
 
-        IonValueLite v = get_child_lite(index);
+        IonValueLite v = get_child(index);
         assert(v._elementid() == index);
         remove_child(index);
         patch_elements_helper(index);
@@ -310,10 +308,7 @@ public abstract class IonSequenceLite
         if (o == null) {
             throw new NullPointerException();
         }
-        if (!(o instanceof IonValuePrivate)) {
-            throw new ClassCastException();
-        }
-        IonValuePrivate v = (IonValuePrivate) o;
+        _Private_IonValue v = (_Private_IonValue) o;
         if (this != v.getContainer()) return -1;
         return v.getElementId();
     }

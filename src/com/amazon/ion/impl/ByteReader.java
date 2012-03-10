@@ -1,13 +1,10 @@
-/*
- * Copyright (c) 2008 Amazon.com, Inc.  All rights reserved.
- */
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
-
 /**
  * Interface to read bytes over a variety of sources.
  * Avoiding the Java standard overhead in so far as possible.
@@ -15,7 +12,7 @@ import java.io.IOException;
  * data source randomly.  However forward access is expected to be
  * the standard direction.
  */
-public interface ByteReader
+interface ByteReader
 {
     /**
      * yet another definition of eof of file as -1

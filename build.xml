@@ -70,7 +70,7 @@
     <jar destfile="${jar.output.src}"
          basedir="${dir.classes}">
       <manifest>
-        <attribute name="Main-Class" value="com.amazon.ion.impl.IonBuild"/>
+        <attribute name="Main-Class" value="com.amazon.ion.impl._Private_CommandLine"/>
       </manifest>
     </jar>
   </target>

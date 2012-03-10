@@ -1,7 +1,8 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,6 +25,8 @@ import java.util.Iterator;
  * see {@link com.amazon.ion.system.IonSystemBuilder}.
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
+ *
+ * @see IonTextWriterBuilder
  */
 public interface IonSystem
     extends ValueFactory
@@ -74,6 +77,21 @@ public interface IonSystem
      * @throws NullPointerException if any import is null.
      */
     public SymbolTable newLocalSymbolTable(SymbolTable... imports);
+
+
+    //-------------------------------------------------------------------------
+    // Shared symtab factory methods
+
+
+    /*              ===========================
+     *              =                         =
+     *              =    I M P O R T A N T    =
+     *              =                         =
+     *              ===========================
+     *
+     * Any new factory methods MUST be added to the SharedSymtabMaker
+     * enumeration to ensure complete test coverage!
+     */
 
 
     /**
@@ -139,49 +157,8 @@ public interface IonSystem
      */
     public SymbolTable newSharedSymbolTable(IonReader reader, boolean alreadyOnStruct);
 
-    /**
-     * Creates a new empty datagram.
-     *
-     * @return a new datagram with no user values.
-     */
-    public IonDatagram newDatagram();
 
-
-    /**
-     * Creates a new datagram containing one value.  If the given value is
-     * contained elsewhere, it is cloned before insertion.
-     *
-     * @param initialChild becomes the first and only (user) value in the
-     * datagram.  The child's {@link IonValue#getSystem() system}
-     * must be <em>this</em> system.
-     * If {@code null}, then the returned datagram will have no
-     * user values.
-     *
-     * @return a new datagram.
-     *
-     * @throws IllegalArgumentException
-     *   if {@code initialChild} is an {@link IonDatagram}.
-     */
-    public IonDatagram newDatagram(IonValue initialChild);
-
-
-    /**
-     * Creates a new datagram, bootstrapped with imported symbol tables.
-     * Generally an application will use this to aquire a datagram, then adds
-     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
-     * (or similar) to extract binary data.
-     *
-     * @param imports the set of shared symbol tables to import.
-     * The first (and only the first) may be a system table.
-     *
-     * @return a new datagram with no user values.
-     *
-     * @throws IllegalArgumentException if any import is a local table,
-     * or if any but the first is a system table.
-     *
-     * @see #newLocalSymbolTable(SymbolTable...)
-     */
-    public IonDatagram newDatagram(SymbolTable... imports);
+    //-------------------------------------------------------------------------
 
     /**
      * Constructs a new loader instance using the
@@ -334,6 +311,17 @@ public interface IonSystem
     //-------------------------------------------------------------------------
     // IonReader creation
 
+    /*              ===========================
+     *              =                         =
+     *              =    I M P O R T A N T    =
+     *              =                         =
+     *              ===========================
+     *
+     * Any new factory methods MUST be added to the ReaderMaker
+     * enumeration to ensure complete test coverage!
+     */
+
+
     /*
      * Applications should generally us {@link #newReader(InputStream)}
      * whenever possible, since this library has much faster UTF-8 decoding
@@ -428,6 +416,8 @@ public interface IonSystem
      * Must not be null.
      *
      * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(OutputStream out);
 
@@ -439,6 +429,8 @@ public interface IonSystem
      * Must not be null.
      *
      * @return a new {@link IonWriter} instance; not {@code null}.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(Appendable out);
 
@@ -456,6 +448,8 @@ public interface IonSystem
      * @return a new {@link IonWriter} instance; not {@code null}.
      *
      * @throws IOException if its thrown by the output stream.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
         throws IOException;
@@ -469,11 +463,14 @@ public interface IonSystem
      *
      * @param out the stream that will receive Ion text data.
      * Must not be null.
-     * @param imports a sequence of shared symbol tables
+     * @param imports a sequence of shared symbol tables.
+     * The first (and only the first) may be a system table.
      *
      * @return a new {@link IonWriter} instance; not {@code null}.
      *
      * @throws IOException if its thrown by the output stream.
+     *
+     * @see IonTextWriterBuilder
      */
     public IonWriter newTextWriter(Appendable out, SymbolTable... imports)
         throws IOException;
@@ -527,6 +524,51 @@ public interface IonSystem
 
     //-------------------------------------------------------------------------
     // DOM creation
+
+
+    /**
+     * Creates a new empty datagram.
+     *
+     * @return a new datagram with no user values.
+     */
+    public IonDatagram newDatagram();
+
+
+    /**
+     * Creates a new datagram containing one value.  If the given value is
+     * contained elsewhere, it is cloned before insertion.
+     *
+     * @param initialChild becomes the first and only (user) value in the
+     * datagram.  The child's {@link IonValue#getSystem() system}
+     * must be <em>this</em> system.
+     * If {@code null}, then the returned datagram will have no
+     * user values.
+     *
+     * @return a new datagram.
+     *
+     * @throws IllegalArgumentException
+     *   if {@code initialChild} is an {@link IonDatagram}.
+     */
+    public IonDatagram newDatagram(IonValue initialChild);
+
+
+    /**
+     * Creates a new datagram, bootstrapped with imported symbol tables.
+     * Generally an application will use this to aquire a datagram, then adds
+     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
+     * (or similar) to extract binary data.
+     *
+     * @param imports the set of shared symbol tables to import.
+     * The first (and only the first) may be a system table.
+     *
+     * @return a new datagram with no user values.
+     *
+     * @throws IllegalArgumentException if any import is a local table,
+     * or if any but the first is a system table.
+     *
+     * @see #newLocalSymbolTable(SymbolTable...)
+     */
+    public IonDatagram newDatagram(SymbolTable... imports);
 
 
     /**

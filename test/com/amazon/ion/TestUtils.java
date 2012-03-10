@@ -1,10 +1,11 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl.IonImplUtils.READER_HASNEXT_REMOVED;
+import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
 
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.util.IonStreamUtils;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -35,6 +37,14 @@ public class TestUtils
         public boolean accept(File dir, String name)
         {
             return name.endsWith(".ion");
+        }
+    };
+
+    public static final FilenameFilter ION_ONLY_FILTER = new FilenameFilter()
+    {
+        public boolean accept(File dir, String name)
+        {
+            return name.endsWith(".ion") || name.endsWith(".10n");
         }
     };
 
@@ -79,7 +89,42 @@ public class TestUtils
                       );
 
 
+    private static void testdataFiles(FilenameFilter filter,
+                                      File dir,
+                                      List<File> results,
+                                      boolean recurse)
+    {
+        String[] fileNames = dir.list();
+        if (fileNames == null)
+        {
+            String message = "Not a directory: " + dir.getAbsolutePath();
+            throw new IllegalArgumentException(message);
+        }
+
+        // Sort the fileNames so they are listed in order.
+        // This is not a functional requirement but it helps humans scanning
+        // the output looking for a specific file.
+        Arrays.sort(fileNames);
+
+        for (String fileName : fileNames)
+        {
+            File testFile = new File(dir, fileName);
+            if (testFile.isDirectory())
+            {
+                if (recurse)
+                {
+                    testdataFiles(filter, testFile, results, recurse);
+                }
+            }
+            else if (filter == null || filter.accept(dir, fileName))
+            {
+                results.add(testFile);
+            }
+        }
+    }
+
     public static File[] testdataFiles(FilenameFilter filter,
+                                       boolean recurse,
                                        String... testdataDirs)
     {
         ArrayList<File> files = new ArrayList<File>();
@@ -87,38 +132,52 @@ public class TestUtils
         for (String testdataDir : testdataDirs)
         {
             File dir = IonTestCase.getTestdataFile(testdataDir);
-
-            String[] fileNames = dir.list();
-            if (fileNames == null)
+            if (! dir.isDirectory())
             {
                 String message =
                     "testdataDir is not a directory: "
-                    + dir.getAbsolutePath();
+                        + dir.getAbsolutePath();
                 throw new IllegalArgumentException(message);
             }
 
-            // Sort the fileNames so they are listed in order.
-            Arrays.sort(fileNames);
-            for (String fileName : fileNames)
-            {
-                if (filter == null || filter.accept(dir, fileName))
-                {
-                    File testFile = new File(dir, fileName);
-                    if (testFile.isFile())
-                    {
-                        files.add(testFile);
-                    }
-                }
-            }
+            testdataFiles(filter, dir, files, recurse);
         }
 
         return files.toArray(new File[files.size()]);
     }
 
 
+    public static File[] testdataFiles(FilenameFilter filter,
+                                       String... testdataDirs)
+    {
+        return testdataFiles(filter, /* recurse */ true, testdataDirs);
+    }
+
+
     public static File[] testdataFiles(String... testdataDirs)
     {
         return testdataFiles(null, testdataDirs);
+    }
+
+
+    //========================================================================
+
+
+    public static byte[] ensureBinary(IonSystem system, byte[] ionData)
+    {
+        if (IonStreamUtils.isIonBinary(ionData)) return ionData;
+
+        IonDatagram dg = system.getLoader().load(ionData);
+        return dg.getBytes();
+    }
+
+    public static byte[] ensureText(IonSystem system, byte[] ionData)
+    {
+        if (! IonStreamUtils.isIonBinary(ionData)) return ionData;
+
+        IonDatagram dg = system.getLoader().load(ionData);
+        String ionText = dg.toString();
+        return _Private_Utils.utf8(ionText);
     }
 
 
@@ -135,11 +194,8 @@ public class TestUtils
         IonType t = reader.getType();
         if (t == null) return;
 
-        reader.getTypeAnnotationIds();
-        reader.getTypeAnnotations();
-
-        reader.getFieldName();
-        reader.getFieldId();
+        reader.getFieldNameSymbol();
+        reader.getTypeAnnotationSymbols();
 
         switch (t)
         {
@@ -245,8 +301,7 @@ public class TestUtils
                 String s = reader.stringValue();
                 break;
             case SYMBOL:
-                int sid = reader.getSymbolId();
-                String sy = reader.stringValue();
+                SymbolToken tok = reader.symbolValue();
                 break;
             case BLOB:
             case CLOB:
@@ -268,7 +323,7 @@ public class TestUtils
 
     public static String hexDump(final String str)
     {
-        final byte[] utf16Bytes = IonImplUtils.encode(str, UTF16BE_CHARSET);
+        final byte[] utf16Bytes = _Private_Utils.encode(str, UTF16BE_CHARSET);
         StringBuilder buf = new StringBuilder(utf16Bytes.length * 4);
         for (byte b : utf16Bytes) {
             buf.append(Integer.toString(0x00FF & b, 16));
@@ -304,7 +359,7 @@ public class TestUtils
 
     static
     {
-        if (! IonImplUtils.utf8(FERMATA_UTF8).equals(FERMATA))
+        if (! _Private_Utils.utf8(FERMATA_UTF8).equals(FERMATA))
         {
             throw new AssertionError("Broken encoding");
         }

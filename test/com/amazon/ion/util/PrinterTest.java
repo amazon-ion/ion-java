@@ -25,7 +25,7 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -75,6 +75,20 @@ public class PrinterTest
         assertEquals("Printer output", expected, w.toString());
     }
 
+    public void checkNullRendering(String image, IonValue value)
+        throws Exception
+    {
+        boolean origUntypedNulls = myPrinter.myOptions.untypedNulls;
+
+        myPrinter.myOptions.untypedNulls = false;
+        checkRendering(image, value);
+
+        myPrinter.myOptions.untypedNulls = true;
+        checkRendering("null", value);
+
+        myPrinter.myOptions.untypedNulls = origUntypedNulls;
+    }
+
 
     //=========================================================================
     // Test cases
@@ -83,17 +97,18 @@ public class PrinterTest
     public void testPrintingAnnotations()
         throws Exception
     {
-        IonNull value = (IonNull) oneValue("an::null");
-        checkRendering("an::null", value);
+        IonNull value = (IonNull) oneValue("an::$99::null");
+        checkRendering("an::$99::null", value);
 
         value.addTypeAnnotation("+");
         value.addTypeAnnotation("\u0000");
-        checkRendering("an::'+'::'\\0'::null", value);
+        value.addTypeAnnotation("$99");
+        checkRendering("an::$99::'+'::'\\0'::'$99'::null", value);
 
         myPrinter.setPrintSymbolAsString(true);
-        checkRendering("an::'+'::'\\0'::null", value);
+        checkRendering("an::$99::'+'::'\\0'::'$99'::null", value);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("an::'+'::'\\0'::null", value);
+        checkRendering("an::$99::'+'::'\\0'::'$99'::null", value);
         myPrinter.setPrintSymbolAsString(false);
         myPrinter.setPrintStringAsJson(false);
 
@@ -103,11 +118,11 @@ public class PrinterTest
 
         IonSexp s = system().newEmptySexp();
         s.add(value);
-        checkRendering("(an::'+'::'\\0'::null)", s);
+        checkRendering("(an::$99::'+'::'\\0'::'$99'::null)", s);
         myPrinter.setPrintSymbolAsString(true);
-        checkRendering("(an::'+'::'\\0'::null)", s);
+        checkRendering("(an::$99::'+'::'\\0'::'$99'::null)", s);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("(an::'+'::'\\0'::null)", s);
+        checkRendering("(an::$99::'+'::'\\0'::'$99'::null)", s);
 
         value.setTypeAnnotations("boo", "boo");
         checkRendering("boo::boo::null", value);
@@ -119,7 +134,7 @@ public class PrinterTest
         throws Exception
     {
         IonBlob value = system().newNullBlob();
-        checkRendering("null.blob", value);
+        checkNullRendering("null.blob", value);
 
         for (int i = 0; i < BlobTest.TEST_DATA.length; i++)
         {
@@ -146,7 +161,7 @@ public class PrinterTest
         throws Exception
     {
         IonBool value = system().newNullBool();
-        checkRendering("null.bool", value);
+        checkNullRendering("null.bool", value);
 
         value.setValue(true);
         checkRendering("true", value);
@@ -164,7 +179,7 @@ public class PrinterTest
         throws Exception
     {
         IonClob value = system().newNullClob();
-        checkRendering("null.clob", value);
+        checkNullRendering("null.clob", value);
 
         value.setBytes(ClobTest.SAMPLE_ASCII_AS_UTF8);
         checkRendering("{{\"" + ClobTest.SAMPLE_ASCII + "\"}}", value);
@@ -271,7 +286,7 @@ public class PrinterTest
         throws Exception
     {
         IonDecimal value = system().newNullDecimal();
-        checkRendering("null.decimal", value);
+        checkNullRendering("null.decimal", value);
 
         value.setValue(-123);
         checkRendering("-123.", value);
@@ -310,7 +325,7 @@ public class PrinterTest
         throws Exception
     {
         IonFloat value = system().newNullFloat();
-        checkRendering("null.float", value);
+        checkNullRendering("null.float", value);
 
         value.setValue(-123);
         checkRendering("-123e0", value);
@@ -342,7 +357,7 @@ public class PrinterTest
         throws Exception
     {
         IonInt value = system().newNullInt();
-        checkRendering("null.int", value);
+        checkNullRendering("null.int", value);
 
         value.setValue(-123);
         checkRendering("-123", value);
@@ -366,7 +381,7 @@ public class PrinterTest
         throws Exception
     {
         IonList value = system().newNullList();
-        checkRendering("null.list", value);
+        checkNullRendering("null.list", value);
 
         value.add(system().newNull());
         checkRendering("[null]", value);
@@ -392,7 +407,7 @@ public class PrinterTest
         throws Exception
     {
         IonNull value = system().newNull();
-        checkRendering("null", value);
+        checkNullRendering("null", value);
 
         value.addTypeAnnotation("an");
         checkRendering("an::null", value);
@@ -404,7 +419,7 @@ public class PrinterTest
         throws Exception
     {
         IonSexp value = system().newNullSexp();
-        checkRendering("null.sexp", value);
+        checkNullRendering("null.sexp", value);
 
         value.add(system().newNull());
         checkRendering("(null)", value);
@@ -438,7 +453,7 @@ public class PrinterTest
         throws Exception
     {
         IonString value = system().newNullString();
-        checkRendering("null.string", value);
+        checkNullRendering("null.string", value);
 
         value.setValue("Adam E");
         checkRendering("\"Adam E\"", value);
@@ -463,7 +478,7 @@ public class PrinterTest
         throws Exception
     {
         IonStruct value = system().newNullStruct();
-        checkRendering("null.struct", value);
+        checkNullRendering("null.struct", value);
 
         value.put("foo", system().newNull());
         checkRendering("{foo:null}", value);
@@ -484,11 +499,13 @@ public class PrinterTest
         value.addTypeAnnotation("an");
         checkRendering("an::{}", value);
 
+
+        value = (IonStruct) oneValue("an::{$99:null}");
         value.addTypeAnnotation("\u0007");
         value.put("A\u0000", system().newInt(12));
-        checkRendering("an::'\\a'::{\"A\\0\":12}", value);
+        checkRendering("an::'\\a'::{\"$99\":null,\"A\\0\":12}", value);
         myPrinter.setPrintStringAsJson(true);
-        checkRendering("an::'\\a'::{\"A\\u0000\":12}", value);
+        checkRendering("an::'\\a'::{\"$99\":null,\"A\\u0000\":12}", value);
     }
 
 
@@ -497,7 +514,7 @@ public class PrinterTest
         throws Exception
     {
         IonSymbol value = system().newNullSymbol();
-        checkRendering("null.symbol", value);
+        checkNullRendering("null.symbol", value);
 
         value.setValue("Adam E");
         checkRendering("'Adam E'", value);
@@ -544,7 +561,42 @@ public class PrinterTest
         checkRendering("\"Ab\\u0000\"", value);
         myPrinter.setPrintSymbolAsString(false);
         checkRendering("'Ab\\0'", value);
+
+        value = system().newSymbol("$99"); // Known, sidlike text
+        checkRendering("'$99'", value);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintSymbolAsString(false);
+        checkRendering("'$99'", value);
+
+        value = (IonSymbol) system().singleValue("$99");  // Unknown symbol
+        checkRendering("$99", value);
+        myPrinter.setPrintSymbolAsString(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintStringAsJson(true);
+        checkRendering("\"$99\"", value);
+        myPrinter.setPrintSymbolAsString(false);
+        checkRendering("$99", value);
     }
+
+    @Test
+    public void testPrintingSidlikeSymbol()
+        throws Exception
+    {
+        IonSymbol value = system().newSymbol("$");
+        checkRendering("$", value);
+
+        value = system().newSymbol("$0");
+        checkRendering("'$0'", value);
+
+        value = system().newSymbol("$99");
+        checkRendering("'$99'", value);
+    }
+
+    // TODO annotations
+    // TODO field names
 
 
     @Test
@@ -552,7 +604,7 @@ public class PrinterTest
         throws Exception
     {
         IonTimestamp value = system().newNullTimestamp();
-        checkRendering("null.timestamp", value);
+        checkNullRendering("null.timestamp", value);
 
         value = (IonTimestamp) oneValue("2007-05-15T18:45-00:00");
         checkRendering("2007-05-15T18:45-00:00", value);
@@ -612,7 +664,7 @@ public class PrinterTest
             .append("'''")
             .toString();
 
-        final byte[] utf8Bytes = IonImplUtils.utf8(literal);
+        final byte[] utf8Bytes = _Private_Utils.utf8(literal);
 
         final IonDatagram dg = loader().load(utf8Bytes);
         final StringBuilder out = new StringBuilder();

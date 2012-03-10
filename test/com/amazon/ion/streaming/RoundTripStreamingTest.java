@@ -1,9 +1,10 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.testdataFiles;
-import static com.amazon.ion.impl.IonImplUtils.utf8;
+import static com.amazon.ion.impl._Private_Utils.utf8;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -13,11 +14,11 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl.IonImplUtils;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.impl.IonWriterUserBinary;
-import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
@@ -82,7 +83,7 @@ extends IonTestCase
         super.setUp();
         myPrinter = new Printer();
         myBuilder = new StringBuilder();
-        myBuffer = IonImplUtils.loadFileBytes(myTestFile);
+        myBuffer = _Private_Utils.loadFileBytes(myTestFile);
     }
 
     @Override
@@ -127,12 +128,14 @@ extends IonTestCase
     {
         IonReader in = makeIterator(buffer);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        TextOptions options = new TextOptions(prettyPrint // boolean prettyPrint
-                                              ,false // boolean printAscii
-                                              ,false // boolean filterOutSymbolTables
-                                              ,true  // boolean suppressIonVersionMarker
-        );
-        IonWriter tw = system().newTextWriter(out, options);
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        if (prettyPrint)
+        {
+            b.withPrettyPrinting();
+        }
+        b.setInitialIvmHandling(SUPPRESS);
+
+        IonWriter tw = b.build(out);
 
         tw.writeValues(in);
         tw.close();
