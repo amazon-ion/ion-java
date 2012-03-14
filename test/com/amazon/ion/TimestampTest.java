@@ -728,6 +728,26 @@ public class TimestampTest
     }
 
 
+    /** Trap for ION-280 */
+    @Test
+    public void testFromCalendarWithDaylightSavingsTime()
+    {
+        Calendar cal = makeUtcCalendar();
+        cal.clear();
+        cal.set(2012, 2, 9, 10, 11, 12);
+        cal.set(Calendar.MILLISECOND, 345);
+        cal.setTimeZone(TimeZone.getTimeZone("PST"));
+        Timestamp ts = new Timestamp(cal);
+        assertEquals("2012-03-09T10:11:12.345-08:00", ts.toString());
+
+        // Move forward into daylight savings
+        cal.add(Calendar.DAY_OF_MONTH, 5);
+        ts = new Timestamp(cal);
+        System.out.println(ts);
+        assertEquals("2012-03-14T10:11:12.345-07:00", ts.toString());
+    }
+
+
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromClearCalendar()
     {
