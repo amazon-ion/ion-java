@@ -547,20 +547,21 @@ abstract class IonWriterUser
         }
         assert(_current_writer == _system_writer);
 
-        // TODO This always minimizes adjacent IVMs; should be optional.
         boolean suppress = _suppress_initial_ivm;
-        if (! _suppress_initial_ivm && ! _previous_value_was_ivm) {
-            _system_writer.writeIonVersionMarker(systemSymtab);
-            _previous_value_was_ivm = true;
-        }
-        else
+        if (_suppress_initial_ivm || _previous_value_was_ivm)
         {
+            // TODO This always minimizes adjacent IVMs; should be optional.
             // TODO mustn't suppress if default isn't $ion_1_0
             assert _system_writer.getSymbolTable() == _system_writer._default_system_symbol_table;
         }
+        else
+        {
+            _system_writer.writeIonVersionMarker(systemSymtab);
+            _previous_value_was_ivm = true;
+        }
 
         finish_value();
-        // We reset these since finish sets themto false (which is the correct
+        // We reset these since finish sets them to false (which is the correct
         // behavior except here).  We could add a flag to finish to tell it
         // whether we were finishing a IVM or not, but since this is the only
         // time it's the case it's easier to just patch it here.
