@@ -53,6 +53,12 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     boolean     _pending_separator;
 
     /**
+     * True when the last data written was a triple-quoted string, meaning we
+     * cannot write another long string lest it be incorrectly concatenated.
+     */
+    private boolean _following_long_string;
+
+    /**
      * Set by {@link #finish()} to force writing of $ion_1_0 before any further
      * data.
      */
@@ -249,13 +255,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         return _stack_pending_comma[_top - 1];
     }
 
-    private boolean containerIsListOrStruct()
-    {
-        if (_top == 0) return false;
-        int topType = topType();
-        return (topType == tidList || topType == tidStruct);
-    }
-
     private boolean containerIsSexp()
     {
         if (_top == 0) return false;
@@ -356,15 +355,20 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             writeSymbol(SystemSymbols.ION_1_0_SID);
         }
 
+        boolean followingLongString = _following_long_string;
+
         if (_options.isPrettyPrintOn()) {
-            if (_pending_separator && _separator_character != '\n') {
+            if (_pending_separator && _separator_character > ' ') {
+                // Only bother if the separator is non-whitespace.
                 _output.append((char)_separator_character);
+                followingLongString = false;
             }
             _output.append(_options.lineSeparator());
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
             _output.append((char)_separator_character);
+            if (_separator_character > ' ') followingLongString = false;
         }
 
         // write field name
@@ -380,6 +384,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             }
             _output.append(':');
             clearFieldName();
+            followingLongString = false;
         }
 
         // write annotations
@@ -397,13 +402,17 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
                     }
                     _output.append("::");
                 }
+                followingLongString = false;
             }
             clearAnnotations();
         }
+
+        _following_long_string = followingLongString;
     }
 
     void closeValue() {
         _pending_separator = true;
+        _following_long_string = false;  // Caller overwrites this as needed.
     }
 
 
@@ -486,6 +495,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         push(tid);
         _output.append(opener);
         _pending_separator = false;
+        _following_long_string = false;
     }
 
     public void stepOut() throws IOException
@@ -750,22 +760,29 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     {
         startValue();
         if (value != null
-            && containerIsListOrStruct()
+            && ! _following_long_string
             && _long_string_threshold < value.length())
         {
             // TODO This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
             IonTextUtils.printLongString(_output, value);
-        }
-        else if (_options._string_as_json)
-        {
-            IonTextUtils.printJsonString(_output, value);
+
+            // This sets _following_long_string = false so we must overwrite
+            closeValue();
+            _following_long_string = true;
         }
         else
         {
-            IonTextUtils.printString(_output, value);
+            if (_options._string_as_json)
+            {
+                IonTextUtils.printJsonString(_output, value);
+            }
+            else
+            {
+                IonTextUtils.printString(_output, value);
+            }
+            closeValue();
         }
-        closeValue();
     }
 
     // escape sequences for character below ascii 32 (space)

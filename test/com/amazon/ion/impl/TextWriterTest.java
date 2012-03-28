@@ -70,60 +70,96 @@ public class TextWriterTest
     {
         options = IonTextWriterBuilder.standard();
         options.setInitialIvmHandling(SUPPRESS);
-        options.setLongStringThreshold(10);
+        options.setLongStringThreshold(5);
 
-        // TODO support long strings at datagram and sexp level?
-        // That is tricky because we must avoid triple-quoting multiple
+        // This is tricky because we must avoid triple-quoting multiple
         // long strings in such a way that they'd get concatenated together!
         IonDatagram dg = system().newDatagram();
         dg.add().newNullString();
         dg.add().newString("hello");
         dg.add().newString("hello\nnurse");
+        dg.add().newString("goodbye").addTypeAnnotation("a");
         dg.add().newString("what's\nup\ndoc");
 
-        expectRendering("null.string \"hello\" \"hello\\nnurse\" \"what's\\nup\\ndoc\"",
+        expectRendering("null.string \"hello\" '''hello\nnurse''' a::'''goodbye''' \"what's\\nup\\ndoc\"",
                         dg);
 
         dg.clear();
+        dg.add().newString("looong");
         IonSequence seq = dg.add().newEmptySexp();
-        seq.add().newNullString();
+        seq.add().newString("looong");
         seq.add().newString("hello");
         seq.add().newString("hello\nnurse");
+        seq.add().newString("goodbye").addTypeAnnotation("a");
         seq.add().newString("what's\nup\ndoc");
 
-        expectRendering("(null.string \"hello\" \"hello\\nnurse\" \"what's\\nup\\ndoc\")",
+        expectRendering("'''looong''' ('''looong''' \"hello\" '''hello\nnurse''' a::'''goodbye''' \"what's\\nup\\ndoc\")",
                         dg);
 
         dg.clear();
+        dg.add().newString("looong");
         seq = dg.add().newEmptyList();
-        seq.add().newNullString();
+        seq.add().newString("looong");
         seq.add().newString("hello");
         seq.add().newString("hello\nnurse");
         seq.add().newString("what's\nup\ndoc");
 
-        expectRendering("[null.string,\"hello\",'''hello\n" +
+        expectRendering("'''looong''' ['''looong''',\"hello\",'''hello\n" +
                         "nurse''','''what\\'s\n" +
                         "up\n" +
                         "doc''']",
                         dg);
 
         options.setLongStringThreshold(0);
-        expectRendering("[null.string,\"hello\",\"hello\\nnurse\",\"what's\\nup\\ndoc\"]",
+        expectRendering("\"looong\" [\"looong\",\"hello\",\"hello\\nnurse\",\"what's\\nup\\ndoc\"]",
             dg);
 
-        options.setLongStringThreshold(10);
+        options.setLongStringThreshold(5);
         dg.clear();
+        dg.add().newString("looong");
         IonStruct struct = dg.add().newEmptyStruct();
-        struct.add("a").newNullString();
+        struct.add("a").newString("looong");
         struct.add("b").newString("hello");
         struct.add("c").newString("hello\nnurse");
         struct.add("d").newString("what's\nup\ndoc");
 
-        expectRendering("{a:null.string,b:\"hello\",c:'''hello\n" +
+        expectRendering("'''looong''' {a:'''looong''',b:\"hello\",c:'''hello\n" +
                         "nurse''',d:'''what\\'s\n" +
                         "up\n" +
                         "doc'''}",
                         dg);
+
+        options.withPrettyPrinting();
+        expectRendering("\n" +
+        		"'''looong'''\n" +
+        		"{\n" +
+                        "  a:'''looong''',\n" +
+        		"  b:\"hello\",\n" +
+        		"  c:'''hello\n" +
+                        "nurse''',\n" +
+                        "  d:'''what\\'s\n" +
+                        "up\n" +
+                        "doc'''\n" +
+                        "}",
+            dg);
+    }
+
+    @Test
+    public void testJsonLongStrings()
+        throws Exception
+    {
+        options = IonTextWriterBuilder.json();
+        options.setLongStringThreshold(5);
+
+        IonDatagram dg = system().newDatagram();
+        dg.add().newString("hello");
+        dg.add().newString("hello!");
+        dg.add().newString("goodbye");
+        dg.add().newString("what's\nup\ndoc");
+
+        expectRendering("\"hello\" '''hello!''' \"goodbye\" '''what\\'s\nup\ndoc'''",
+                        dg);
+
     }
 
     @Test
@@ -170,7 +206,7 @@ public class TextWriterTest
         assertEquals("null " + ION_1_0 + " null", outputString());
     }
 
-    @Test
+    @Test @Override
     public void testWritingLob()
         throws Exception
     {
