@@ -562,6 +562,8 @@ final class IonWriterSystemBinary
         }
 
         _writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+        closeValue();
+
         _ensure_initial_ivm = false;  // we've done our job, we can turn this off now
 
         super.writeIonVersionMarker(systemSymtab);
@@ -631,13 +633,18 @@ final class IonWriterSystemBinary
         }
         _writer.write((tid << 4) | _Private_IonConstants.lnIsNullAtom);
         patch(1);
+
+        closeValue();
     }
+
     public void writeBool(boolean value) throws IOException
     {
         startValue(IonType.BOOL, 1);
         int ln = value ? _Private_IonConstants.lnBooleanTrue : _Private_IonConstants.lnBooleanFalse;
         _writer.write((_Private_IonConstants.tidBoolean << 4) | ln);
         patch(1);
+
+        closeValue();
     }
     public void writeInt(int value) throws IOException
     {
@@ -652,6 +659,8 @@ final class IonWriterSystemBinary
             _writer.writeUIntValue(value, len);
         }
         patch(1 + len);
+
+        closeValue();
     }
     public void writeInt(long value) throws IOException
     {
@@ -666,6 +675,8 @@ final class IonWriterSystemBinary
             _writer.writeUIntValue(value, len);
         }
         patch(1 + len);
+
+        closeValue();
     }
 
     public void writeInt(BigInteger value) throws IOException
@@ -706,6 +717,7 @@ final class IonWriterSystemBinary
         assert wroteLen == len;
         patch(patch_len);
 
+        closeValue();
     }
 
     public void writeFloat(double value) throws IOException
@@ -715,6 +727,8 @@ final class IonWriterSystemBinary
         _writer.write((_Private_IonConstants.tidFloat << 4) | len);
         len = _writer.writeFloatValue(value);
         patch(1 + len);
+
+        closeValue();
     }
 
     @Override
@@ -743,6 +757,8 @@ final class IonWriterSystemBinary
         assert wroteLen == len;
         patch_len += wroteLen;
         patch(patch_len);
+
+        closeValue();
     }
 
     public void writeTimestamp(Timestamp value) throws IOException
@@ -771,7 +787,10 @@ final class IonWriterSystemBinary
         }
         patch_len += _writer.writeTimestamp(di);
         patch(patch_len);
+
+        closeValue();
     }
+
     public void writeString(String value) throws IOException
     {
         if (value == null) {
@@ -796,6 +815,8 @@ final class IonWriterSystemBinary
         }
         patch_len += _writer.writeStringData(value);
         patch(patch_len);
+
+        closeValue();
     }
 
     @Deprecated
@@ -817,6 +838,7 @@ final class IonWriterSystemBinary
             _writer.write((_Private_IonConstants.tidSymbol << 4) | len);
             patch_len += _writer.writeUIntValue(symbolId, len);
             patch(patch_len);
+            closeValue();
         }
     }
 
@@ -858,6 +880,8 @@ final class IonWriterSystemBinary
         _writer.write(value, start, len);
         patch_len += len;
         patch(patch_len);
+
+        closeValue();
     }
 
     public void writeBlob(byte[] value, int start, int len) throws IOException
@@ -887,6 +911,8 @@ final class IonWriterSystemBinary
         _writer.write(value, start, len);
         patch_len += len;
         patch(patch_len);
+
+        closeValue();
     }
 
     static final int bool_true = (_Private_IonConstants.tidBoolean << 4) | _Private_IonConstants.lnBooleanTrue;
