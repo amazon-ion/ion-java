@@ -490,7 +490,7 @@ abstract class IonWriterUser
     public final void writeSymbol(int symbolId) throws IOException
     {
         if (write_as_ivm(symbolId)) {
-            if (! previousValueWasIvm()) {
+            if (! _previous_value_was_ivm) {
                 writeIonVersionMarker();
             }
             // since writeIVM calls finish and when
@@ -525,14 +525,6 @@ abstract class IonWriterUser
              && _root_is_datagram
              && _current_writer.getDepth() == 0);
         return treat_as_ivm;
-    }
-
-    private final boolean previousValueWasIvm()
-    {
-        // we skip this IVM symbol if it is a redundant IVM
-        // either at the beginning (which is common if this
-        // is a binary writer) or at any other time.
-        return _previous_value_was_ivm;
     }
 
 
