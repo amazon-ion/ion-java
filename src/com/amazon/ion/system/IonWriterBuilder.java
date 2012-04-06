@@ -21,7 +21,12 @@ public abstract class IonWriterBuilder
      */
     public enum InitialIvmHandling
     {
-        // ENSURE,
+        /**
+         * Always emits an initial IVM, even when the user hasn't explicitly
+         * written one.  If the user <em>does</em> write one, this won't
+         * cause an extra to be emitted.
+         */
+        ENSURE,
 
         /**
          * Indicates that initial IVMs should be suppressed from the output

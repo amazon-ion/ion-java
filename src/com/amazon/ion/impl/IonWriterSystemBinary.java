@@ -13,6 +13,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.BlockedBuffer.BlockedByteInputStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -106,7 +107,7 @@ final class IonWriterSystemBinary
                           boolean ensureInitialIvm)
     {
         super(defaultSystemSymtab,
-              (ensureInitialIvm ? InitialIVMHandling.ENSURE : null),
+              (ensureInitialIvm ? InitialIvmHandling.ENSURE : null),
               IvmMinimizing.ADJACENT);
 
         out.getClass(); // Efficient null check

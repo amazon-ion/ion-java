@@ -13,6 +13,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
@@ -55,6 +56,30 @@ public class TextWriterTest
         String ionText = outputString();
 
         assertEquals("holla", ionText);
+    }
+
+
+    @Test
+    public void testEnsureInitialIvm()
+        throws Exception
+    {
+        options = IonTextWriterBuilder.standard();
+        iw = makeWriter();
+        iw.writeNull();
+        String ionText = outputString();
+        assertEquals("null", ionText);
+
+        options.setInitialIvmHandling(InitialIvmHandling.ENSURE);
+        iw = makeWriter();
+        iw.writeNull();
+        ionText = outputString();
+        assertEquals(ION_1_0 + " null", ionText);
+
+        iw = makeWriter();
+        iw.writeSymbol(SystemSymbols.ION_1_0);
+        iw.writeNull();
+        ionText = outputString();
+        assertEquals(ION_1_0 + " null", ionText);
     }
 
 

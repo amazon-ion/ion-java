@@ -7,7 +7,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.IonWriterSystem.InitialIVMHandling;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import java.io.OutputStream;
 
 /**
@@ -44,7 +44,7 @@ public final class _Private_IonWriterFactory
         // The Span tests detect that problem.
         IonWriterSystemTree system_writer =
             new IonWriterSystemTree(defaultSystemSymtab, catalog, container,
-                                    InitialIVMHandling.SUPPRESS);
+                                    InitialIvmHandling.SUPPRESS);
 
         IonWriter writer = new IonWriterUserTree(catalog, sys, system_writer);
         return writer;

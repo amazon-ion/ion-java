@@ -24,6 +24,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -64,7 +65,7 @@ final class IonWriterSystemTree
     protected IonWriterSystemTree(SymbolTable defaultSystemSymbolTable,
                                   IonCatalog catalog,
                                   IonContainer rootContainer,
-                                  InitialIVMHandling initialIvmHandling)
+                                  InitialIvmHandling initialIvmHandling)
     {
         super(defaultSystemSymbolTable, initialIvmHandling,
               IvmMinimizing.ADJACENT);

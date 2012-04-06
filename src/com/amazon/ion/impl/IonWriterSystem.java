@@ -25,9 +25,6 @@ import java.io.IOException;
 abstract class IonWriterSystem
     extends IonWriterBaseImpl
 {
-    /** TODO temporary until {@link InitialIvmHandling} supports ENSURE. */
-    enum InitialIVMHandling { ENSURE, SUPPRESS }
-
     /**
      * The system symtab used when resetting the stream.
      * Must not be null.
@@ -40,7 +37,7 @@ abstract class IonWriterSystem
      * After a {@link #finish()} this becomes {@link InitialIVMHandling#ENSURE}
      * because we must force another IVM to be emitted.
      */
-    private InitialIVMHandling _initial_ivm_handling;
+    private InitialIvmHandling _initial_ivm_handling;
 
     /**
      * What to do about non-initial IVMs.
@@ -77,7 +74,7 @@ abstract class IonWriterSystem
      * @param defaultSystemSymbolTable must not be null.
      */
     IonWriterSystem(SymbolTable defaultSystemSymbolTable,
-                    InitialIVMHandling initialIvmHandling,
+                    InitialIvmHandling initialIvmHandling,
                     IvmMinimizing ivmMinimizing)
     {
         defaultSystemSymbolTable.getClass(); // Efficient null check
@@ -145,7 +142,7 @@ abstract class IonWriterSystem
 
         // TODO should we still suppress if the symtab isn't $ion_1_0 ?
         // TODO What if previous IVM is different from given system?
-        if (_initial_ivm_handling != InitialIVMHandling.SUPPRESS
+        if (_initial_ivm_handling != InitialIvmHandling.SUPPRESS
             && (_ivm_minimizing == null
                 || ! _previous_value_was_ivm))
         {
@@ -223,7 +220,7 @@ abstract class IonWriterSystem
 
     void startValue() throws IOException
     {
-        if (_initial_ivm_handling == InitialIVMHandling.ENSURE)
+        if (_initial_ivm_handling == InitialIvmHandling.ENSURE)
         {
             assert getDepth() == 0;
             writeIonVersionMarker(_default_system_symbol_table);
@@ -285,9 +282,7 @@ abstract class IonWriterSystem
         flush();
 
         _previous_value_was_ivm = false;
-        _initial_ivm_handling = InitialIVMHandling.ENSURE;
-
-        // TODO this should always be $ion_1_0
+        _initial_ivm_handling = InitialIvmHandling.ENSURE;
         _symbol_table = _default_system_symbol_table;
     }
 
