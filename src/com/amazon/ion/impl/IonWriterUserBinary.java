@@ -39,8 +39,7 @@ public class IonWriterUserBinary
                         boolean streamCopyOptimized,
                         SymbolTable... imports)
     {
-        super(catalog, symtabValueFactory, systemWriter,
-              false /* suppressInitialIvm */, imports);
+        super(catalog, symtabValueFactory, systemWriter, imports);
         myStreamCopyOptimized = streamCopyOptimized;
     }
 

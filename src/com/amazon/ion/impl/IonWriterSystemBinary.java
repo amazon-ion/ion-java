@@ -10,7 +10,6 @@ import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.BlockedBuffer.BlockedByteInputStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -41,9 +40,6 @@ final class IonWriterSystemBinary
      * @see #closeValue()
      */
     private final boolean _auto_flush;
-
-    /** Forces IVM in the event the caller forgets to write an IVM. */
-    private boolean _ensure_initial_ivm;
 
     boolean           _in_struct;
 
@@ -108,7 +104,8 @@ final class IonWriterSystemBinary
                           boolean autoFlush,
                           boolean ensureInitialIvm)
     {
-        super(defaultSystemSymtab);
+        super(defaultSystemSymtab,
+              ensureInitialIvm ? InitialIVMHandling.ENSURE : null);
 
         out.getClass(); // Efficient null check
         _user_output_stream = out;
@@ -119,7 +116,6 @@ final class IonWriterSystemBinary
         _manager = new BufferManager();
         _writer = _manager.openWriter();
         _auto_flush = autoFlush;
-        _ensure_initial_ivm = ensureInitialIvm;
     }
 
     /**
@@ -156,7 +152,6 @@ final class IonWriterSystemBinary
 
         writeAllBufferedData();
         super.finish();
-        _ensure_initial_ivm = true;
     }
 
     final OutputStream getOutputStream()
@@ -335,12 +330,7 @@ final class IonWriterSystemBinary
 
     final void patchInSymbolTable(SymbolTable symbols) throws IOException
     {
-        if (_ensure_initial_ivm) {
-            // we have to check for this here since we
-            // may be patching a symbol table in before
-            // the version marker has been written
-            writeIonVersionMarker();
-        }
+        startValue();
 
         int pos = _writer.position();
 
@@ -403,11 +393,9 @@ final class IonWriterSystemBinary
     private final void startValue(IonType value_type, int value_length)
         throws IOException
     {
-        int patch_len = 0;
+        super.startValue();
 
-        if (_ensure_initial_ivm) {
-            writeIonVersionMarker();
-        }
+        int patch_len = 0;
 
         // write field name
         if (_in_struct) {
@@ -550,22 +538,11 @@ final class IonWriterSystemBinary
 
 
     @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
-        if (!atDatagramLevel()) {
-            throw new IllegalStateException("you can only write Ion Version Markers when you are at the datagram level");
-        }
-        if (! SystemSymbols.ION_1_0.equals(systemSymtab.getIonVersionId())) {
-            throw new UnsupportedOperationException("This library only supports Ion 1.0");
-        }
-
         _writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         closeValue();
-
-        _ensure_initial_ivm = false;  // we've done our job, we can turn this off now
-
-        super.writeIonVersionMarker(systemSymtab);
     }
 
     @Override

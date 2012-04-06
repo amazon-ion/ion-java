@@ -20,6 +20,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
@@ -57,12 +58,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
      */
     private boolean _following_long_string;
 
-    /**
-     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
-     * data.
-     */
-    private boolean _finished_and_requiring_version_marker;
-
     int         _separator_character;
 
     int         _top;
@@ -92,7 +87,9 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
                                   _Private_IonTextWriterBuilder options,
                                   Appendable out)
     {
-        super(defaultSystemSymtab);
+        super(defaultSystemSymtab,
+              (options.getInitialIvmHandling() == InitialIvmHandling.SUPPRESS
+                  ? InitialIVMHandling.SUPPRESS : null));
 
         out.getClass(); // Efficient null check
 
@@ -339,19 +336,10 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     }
 
 
+    @Override
     void startValue() throws IOException
     {
-        if (_finished_and_requiring_version_marker)
-        {
-            assert getDepth() == 0;
-
-            // TODO if caller is writing an IVM this will output an extra one.
-
-            // Clear the flag first, since writeSymbol will call back here.
-            _finished_and_requiring_version_marker = false;
-
-            writeIonVersionMarker(_default_system_symbol_table);
-        }
+        super.startValue();
 
         boolean followingLongString = _following_long_string;
 
@@ -416,11 +404,10 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
 
 
     @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
         writeSymbolAsIs(systemSymtab.getIonVersionId());
-        super.writeIonVersionMarker(systemSymtab);
     }
 
     @Override
@@ -983,13 +970,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
                 ((Flushable)_output).flush();
             }
         }
-    }
-
-    @Override
-    public void finish() throws IOException
-    {
-        super.finish();
-        _finished_and_requiring_version_marker = true;
     }
 
     public void close() throws IOException

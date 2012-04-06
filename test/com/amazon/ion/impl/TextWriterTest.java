@@ -131,11 +131,11 @@ public class TextWriterTest
 
         options.withPrettyPrinting();
         expectRendering("\n" +
-        		"'''looong'''\n" +
-        		"{\n" +
+                "'''looong'''\n" +
+                "{\n" +
                         "  a:'''looong''',\n" +
-        		"  b:\"hello\",\n" +
-        		"  c:'''hello\n" +
+                "  b:\"hello\",\n" +
+                "  c:'''hello\n" +
                         "nurse''',\n" +
                         "  d:'''what\\'s\n" +
                         "up\n" +
@@ -189,15 +189,18 @@ public class TextWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol(ION_1_0);
+//        iw.writeSymbol(ION_1_0);  // TODO User writer always minimizes adjacent
         iw.writeNull();
         iw.writeSymbol(ION_1_0);
         iw.writeNull();
 
-        assertEquals(ION_1_0 + " null " + ION_1_0 + " null", outputString());
+        assertEquals(/*ION_1_0 + " " +*/ ION_1_0 + " null " + ION_1_0 + " null",
+                     outputString());
 
         options = IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
 
         iw = makeWriter();
+        iw.writeSymbol(ION_1_0);
         iw.writeSymbol(ION_1_0);
         iw.writeNull();
         iw.writeSymbol(ION_1_0);

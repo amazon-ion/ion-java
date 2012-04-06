@@ -14,6 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import java.io.IOException;
 
 
@@ -23,11 +24,21 @@ import java.io.IOException;
 abstract class IonWriterSystem
     extends IonWriterBaseImpl
 {
+    /** TODO temporary until {@link InitialIvmHandling} supports ENSURE. */
+    enum InitialIVMHandling { ENSURE, SUPPRESS }
+
     /**
      * The system symtab used when resetting the stream.
      * Must not be null.
      */
     final SymbolTable _default_system_symbol_table;
+
+    /**
+     * What to do about IVMs at the start of the stream.
+     * Becomes null as soon as we write anything.
+     * Doesn't affect data following a {@link #finish()}.
+     */
+    private InitialIVMHandling _initial_ivm_handling;
 
     /**
      * Must be either local or system table, and never null.
@@ -52,11 +63,13 @@ abstract class IonWriterSystem
     /**
      * @param defaultSystemSymbolTable must not be null.
      */
-    IonWriterSystem(SymbolTable defaultSystemSymbolTable)
+    IonWriterSystem(SymbolTable defaultSystemSymbolTable,
+                    InitialIVMHandling initialIvmHandling)
     {
         defaultSystemSymbolTable.getClass(); // Efficient null check
         _default_system_symbol_table = defaultSystemSymbolTable;
         _symbol_table = defaultSystemSymbolTable;
+        _initial_ivm_handling = initialIvmHandling;
     }
 
 
@@ -94,15 +107,46 @@ abstract class IonWriterSystem
 
 
     /**
-     * Sets {@link #_symbol_table}.
+     * Sets {@link #_symbol_table} and clears {@link #_initial_ivm_handling}.
      * Subclasses should override to generate output.
      */
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    final void writeIonVersionMarker(SymbolTable systemSymtab)
         throws IOException
     {
+        if (getDepth() != 0)
+        {
+            String message =
+                "Ion Version Markers are only valid at the top level of a " +
+                "data stream";
+            throw new IllegalStateException(message);
+        }
         assert systemSymtab.isSystemTable();
+
+        if (! SystemSymbols.ION_1_0.equals(systemSymtab.getIonVersionId()))
+        {
+            String message = "This library only supports Ion 1.0";
+            throw new UnsupportedOperationException(message);
+        }
+
+        // TODO should we still suppress if the symtab isn't $ion_1_0 ?
+        if (_initial_ivm_handling != InitialIVMHandling.SUPPRESS)
+        {
+            writeIonVersionMarkerAsIs(systemSymtab);
+        }
+
         _symbol_table = systemSymtab;
+
+        // Regardless of where we are, we've written an IVM.
+        _initial_ivm_handling = null;  // TODO wrong for suppress
     }
+
+    /**
+     * Writes an IVM without checking preconditions or
+     * {@link InitialIVMHandling}.
+     */
+    abstract void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
+        throws IOException;
+
 
     @Override // TODO ION-271 make final after IMS is migrated
     public void writeIonVersionMarker()
@@ -158,6 +202,23 @@ abstract class IonWriterSystem
         return sid;
     }
 
+    void startValue() throws IOException
+    {
+        if (_initial_ivm_handling == InitialIVMHandling.ENSURE)
+        {
+            assert getDepth() == 0;
+
+            // TODO if caller is writing an IVM this will output an extra one. XXX
+
+            // Clear the flag first, since writeSymbol will call back here.
+            // TODO we shouldn't get here if value is a symtab
+            _initial_ivm_handling = null;
+
+            writeIonVersionMarker(_default_system_symbol_table);
+        }
+    }
+
+
 
     /** Writes a symbol without checking for system ID. */
     abstract void writeSymbolAsIs(int symbolId) throws IOException;
@@ -205,6 +266,8 @@ abstract class IonWriterSystem
         }
 
         flush();
+
+        _initial_ivm_handling = InitialIVMHandling.ENSURE;
 
         // TODO this should always be $ion_1_0
         _symbol_table = _default_system_symbol_table;

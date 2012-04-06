@@ -47,14 +47,11 @@ abstract class IonWriterUser
     /** Used to make correct local symbol tables. May be null. */
     private final IonCatalog _catalog;
 
-    /** Turns false once we've written non-IVM data. */
-    private boolean _suppress_initial_ivm;
-
     /**
      * Indicates whether the (immediately) previous value was an IVM.
      * This is cleared by {@link #finish_value()}.
      */
-          boolean _previous_value_was_ivm;
+          boolean _previous_value_was_ivm; // TODO push into system level
     final boolean _root_is_datagram;
 
     /**
@@ -113,18 +110,13 @@ abstract class IonWriterUser
      * @param catalog may be null.
      * @param symtabValueFactory must not be null.
      * @param systemWriter must not be null.
-     * @param suppressInitialIvm when true, any initial {@code $ion_1_0} IVMs
-     *  will be suppressed even when the user explicitly writes one.
      */
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
-                  boolean suppressInitialIvm,
                   SymbolTable... imports)
     {
         this(catalog, symtabValueFactory, systemWriter);
-
-        _suppress_initial_ivm = suppressInitialIvm;
 
         SymbolTable defaultSystemSymtab =
             systemWriter.getDefaultSystemSymtab();
@@ -292,8 +284,6 @@ abstract class IonWriterUser
         }
 
         _system_writer.writeLocalSymtab(symbols);
-
-        _suppress_initial_ivm = false;  // We're past the initial IVM now.
     }
 
 
@@ -385,13 +375,12 @@ abstract class IonWriterUser
 
     /**
      * To be called at the end of every value.
-     * Sets {@link #_previous_value_was_ivm} and {@link #_suppress_initial_ivm}
-     * to false, althought they may be overwritten by the caller.
+     * Sets {@link #_previous_value_was_ivm} to false,
+     * althought they may be overwritten by the caller.
      */
     private final void finish_value()
     {
         _previous_value_was_ivm = false;
-        _suppress_initial_ivm = false;
     }
 
     public void stepIn(IonType containerType) throws IOException
@@ -539,11 +528,10 @@ abstract class IonWriterUser
         }
         assert(_current_writer == _system_writer);
 
-        boolean suppress = _suppress_initial_ivm;
-        if (_suppress_initial_ivm || _previous_value_was_ivm)
+        if (_previous_value_was_ivm)
         {
             // TODO This always minimizes adjacent IVMs; should be optional.
-            // TODO mustn't suppress if default isn't $ion_1_0
+            // TODO What if previous IVM is different from given system?
             assert _system_writer.getSymbolTable() == _system_writer._default_system_symbol_table;
         }
         else
@@ -558,7 +546,6 @@ abstract class IonWriterUser
         // whether we were finishing a IVM or not, but since this is the only
         // time it's the case it's easier to just patch it here.
         _previous_value_was_ivm = true;
-        _suppress_initial_ivm = suppress;
     }
 
     @Override

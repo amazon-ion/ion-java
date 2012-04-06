@@ -44,12 +44,6 @@ final class IonWriterSystemTree
 
     private final int _initialDepth;
 
-    /**
-     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
-     * data.
-     */
-    private boolean _finished_and_requiring_version_marker;
-
     private boolean             _in_struct;
 
     /**
@@ -70,8 +64,10 @@ final class IonWriterSystemTree
                                   IonCatalog catalog,
                                   IonContainer rootContainer)
     {
-        super(defaultSystemSymbolTable);
+        super(defaultSystemSymbolTable, null /* initialIvmHandling */);
+
         if (rootContainer == null) throw new NullPointerException();
+
         _factory = rootContainer.getSystem();
         _catalog = catalog;
         _current_parent = rootContainer;
@@ -159,23 +155,13 @@ final class IonWriterSystemTree
 
     private void append(IonValue value)
     {
-        if (_finished_and_requiring_version_marker)
+        try
         {
-            assert getDepth() == 0;
-
-            // TODO if caller is writing an IVM this will output an extra one.
-
-            // Clear the flag first, since writeSymbol will call back here.
-            _finished_and_requiring_version_marker = false;
-
-            try
-            {
-                writeIonVersionMarker(_default_system_symbol_table);
-            }
-            catch (IOException e)
-            {
-                throw new IonException(e); // Shouldn't happen
-            }
+            super.startValue();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e); // Shouldn't happen
         }
 
         if (hasAnnotations()) {
@@ -230,13 +216,11 @@ final class IonWriterSystemTree
 
 
     @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
         IonValue root = get_root();
         ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
-
-        super.writeIonVersionMarker(systemSymtab);
     }
 
 
@@ -357,14 +341,6 @@ final class IonWriterSystemTree
     public void flush()
     {
         // flush is not meaningful for a tree writer
-    }
-
-    @Override
-    public void finish()
-        throws IOException
-    {
-        super.finish();
-        _finished_and_requiring_version_marker = true;
     }
 
     public void close()
