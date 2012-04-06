@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -25,12 +25,5 @@ final class IonWriterUserTree
                                 IonWriterSystemTree systemWriter)
     {
         super(catalog, symtabValueFactory, systemWriter);
-
-        // TODO ION-165 this shouldn't be needed.
-        // If removed, the datagram can end up with extra IVM sometimes.
-
-        // Datagrams have an implicit initial IVM
-        _previous_value_was_ivm = true;
-        // TODO what if container isn't a datagram?
     }
 }

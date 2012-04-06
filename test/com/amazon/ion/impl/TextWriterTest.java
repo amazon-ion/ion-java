@@ -16,6 +16,7 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.OutputStream;
 import org.junit.Test;
 
@@ -56,6 +57,43 @@ public class TextWriterTest
         assertEquals("holla", ionText);
     }
 
+
+    @Test
+    public void testIvmMinimizing()
+        throws Exception
+    {
+        options = IonTextWriterBuilder.standard();
+        iw = makeWriter();
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol("foo");
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol("bar");
+        iw.writeSymbol(ION_1_0);
+
+        String ionText = outputString();
+        assertEquals(ION_1_0 + " " + ION_1_0 + " foo " +
+                     ION_1_0 + " " + ION_1_0 + " " + ION_1_0 + " bar " +
+                     ION_1_0,
+                     ionText);
+
+        options.setIvmMinimizing(IvmMinimizing.ADJACENT);
+        iw = makeWriter();
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol("foo");
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol("bar");
+        iw.writeSymbol(ION_1_0);
+
+        ionText = outputString();
+        assertEquals(ION_1_0 + " foo " + ION_1_0 + " bar " + ION_1_0,
+                     ionText);
+    }
 
     @Test
     public void testLstMinimizing()

@@ -30,6 +30,23 @@ public abstract class IonWriterBuilder
         SUPPRESS
     }
 
+
+    /**
+     * A strategy for minimizing the output of non-initial Ion version markers.
+     */
+    public enum IvmMinimizing
+    {
+        /** Replaces identical, adjacent IVMs with a single IVM. */
+        ADJACENT,
+
+        /*
+         * Discards IVMs that don't change the Ion version, even when there's
+         * other data between them.
+         */
+//        DISTANT
+    }
+
+
     /**
      * NOT FOR APPLICATION USE
      */
@@ -48,4 +65,7 @@ public abstract class IonWriterBuilder
      * Null indicates the default for the specific output form.
      */
     public abstract InitialIvmHandling getInitialIvmHandling();
+
+
+    public abstract IvmMinimizing getIvmMinimizing();
 }

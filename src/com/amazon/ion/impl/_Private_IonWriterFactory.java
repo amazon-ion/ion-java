@@ -7,6 +7,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl.IonWriterSystem.InitialIVMHandling;
 import java.io.OutputStream;
 
 /**
@@ -37,8 +38,13 @@ public final class _Private_IonWriterFactory
         IonSystem sys = container.getSystem();
         SymbolTable defaultSystemSymtab = sys.getSystemSymbolTable();
 
+        // TODO the SUPPRESS here is a nasty discontinuity with other places
+        // that create this kind of reader.  It prevents the Lite DG system
+        // iterator from returning two IVMs at the start of the data.
+        // The Span tests detect that problem.
         IonWriterSystemTree system_writer =
-            new IonWriterSystemTree(defaultSystemSymtab, catalog, container);
+            new IonWriterSystemTree(defaultSystemSymtab, catalog, container,
+                                    InitialIVMHandling.SUPPRESS);
 
         IonWriter writer = new IonWriterUserTree(catalog, sys, system_writer);
         return writer;
@@ -74,7 +80,8 @@ public final class _Private_IonWriterFactory
         IonCatalog cat = sys.getCatalog();
         SymbolTable defaultSystemSymtab = sys.getSystemSymbolTable();
         IonWriter writer =
-            new IonWriterSystemTree(defaultSystemSymtab, cat, container);
+            new IonWriterSystemTree(defaultSystemSymtab, cat, container,
+                                    null /* initialIvmHandling */);
         return writer;
     }
 }

@@ -24,6 +24,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -62,9 +63,11 @@ final class IonWriterSystemTree
      */
     protected IonWriterSystemTree(SymbolTable defaultSystemSymbolTable,
                                   IonCatalog catalog,
-                                  IonContainer rootContainer)
+                                  IonContainer rootContainer,
+                                  InitialIVMHandling initialIvmHandling)
     {
-        super(defaultSystemSymbolTable, null /* initialIvmHandling */);
+        super(defaultSystemSymbolTable, initialIvmHandling,
+              IvmMinimizing.ADJACENT);
 
         if (rootContainer == null) throw new NullPointerException();
 
@@ -219,8 +222,10 @@ final class IonWriterSystemTree
     void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
+        startValue();
         IonValue root = get_root();
         ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
+        endValue();
     }
 
 

@@ -47,11 +47,6 @@ abstract class IonWriterUser
     /** Used to make correct local symbol tables. May be null. */
     private final IonCatalog _catalog;
 
-    /**
-     * Indicates whether the (immediately) previous value was an IVM.
-     * This is cleared by {@link #finish_value()}.
-     */
-          boolean _previous_value_was_ivm; // TODO push into system level
     final boolean _root_is_datagram;
 
     /**
@@ -195,8 +190,6 @@ abstract class IonWriterUser
         }
 
         _system_writer.finish();
-
-        _previous_value_was_ivm = false;
     }
 
     //========================================================================
@@ -239,7 +232,8 @@ abstract class IonWriterUser
 
         _current_writer = new IonWriterSystemTree(activeSystemSymbolTable(),
                                                   _catalog,
-                                                  _symbol_table_value);
+                                                  _symbol_table_value,
+                                                  null /* initialIvmHandling */);
     }
 
     /**
@@ -375,12 +369,10 @@ abstract class IonWriterUser
 
     /**
      * To be called at the end of every value.
-     * Sets {@link #_previous_value_was_ivm} to false,
-     * althought they may be overwritten by the caller.
      */
     private final void finish_value()
     {
-        _previous_value_was_ivm = false;
+//        _system_writer.closeValue(false);
     }
 
     public void stepIn(IonType containerType) throws IOException
@@ -478,15 +470,6 @@ abstract class IonWriterUser
     @Deprecated
     public final void writeSymbol(int symbolId) throws IOException
     {
-        if (write_as_ivm(symbolId)) {
-            if (! _previous_value_was_ivm) {
-                writeIonVersionMarker();
-            }
-            // since writeIVM calls finish and when
-            // we don't write the IVM we don't want
-            // to call finish, we're done here.
-            return;
-        }
         _current_writer.writeSymbol(symbolId);
         finish_value();
     }
@@ -528,24 +511,9 @@ abstract class IonWriterUser
         }
         assert(_current_writer == _system_writer);
 
-        if (_previous_value_was_ivm)
-        {
-            // TODO This always minimizes adjacent IVMs; should be optional.
-            // TODO What if previous IVM is different from given system?
-            assert _system_writer.getSymbolTable() == _system_writer._default_system_symbol_table;
-        }
-        else
-        {
-            _system_writer.writeIonVersionMarker(systemSymtab);
-            _previous_value_was_ivm = true;
-        }
+        _system_writer.writeIonVersionMarker(systemSymtab);
 
         finish_value();
-        // We reset these since finish sets them to false (which is the correct
-        // behavior except here).  We could add a flag to finish to tell it
-        // whether we were finishing a IVM or not, but since this is the only
-        // time it's the case it's easier to just patch it here.
-        _previous_value_was_ivm = true;
     }
 
     @Override

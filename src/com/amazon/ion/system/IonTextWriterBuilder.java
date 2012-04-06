@@ -123,6 +123,7 @@ public abstract class IonTextWriterBuilder
     private IonCatalog myCatalog;
     private Charset myCharset;
     private InitialIvmHandling myInitialIvmHandling;
+    private IvmMinimizing myIvmMinimizing;
     private LstMinimizing myLstMinimizing;
     private SymbolTable[] myImports;
     private int _long_string_threshold;
@@ -139,6 +140,7 @@ public abstract class IonTextWriterBuilder
         this.myCatalog              = that.myCatalog;
         this.myCharset              = that.myCharset;
         this.myInitialIvmHandling   = that.myInitialIvmHandling;
+        this.myIvmMinimizing        = that.myIvmMinimizing;
         this.myLstMinimizing        = that.myLstMinimizing;
         this.myImports              = that.myImports;
         this._long_string_threshold = that._long_string_threshold;
@@ -376,6 +378,32 @@ public abstract class IonTextWriterBuilder
      *
      * @see #setLstMinimizing(LstMinimizing)
      * @see #withLstMinimizing(LstMinimizing)
+     */
+    public final IvmMinimizing getIvmMinimizing()
+    {
+        return myIvmMinimizing;
+    }
+
+    public void setIvmMinimizing(IvmMinimizing minimizing)
+    {
+        myIvmMinimizing = minimizing;
+    }
+
+    /*
+    // TODO document
+    public final IonTextWriterBuilder
+    withLstMinimizing(LstMinimizing minimizing)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setLstMinimizing(minimizing);
+        return b;
+    }
+*/
+
+    //-------------------------------------------------------------------------
+
+    /**
+     *
      */
     public final LstMinimizing getLstMinimizing()
     {

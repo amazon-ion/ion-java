@@ -1146,6 +1146,9 @@ final class IonDatagramLite
             }
             // and at the front we need to put in the ion version marker
             if (curr_index == 0 && !is_ivm(curr_value)) {
+                // TODO this is wrong, because we may have already pushed
+                // a rep above. This is just making up an additional symtab
+                // where one was not placed by the user.
                 IonValueLite ivm = __iterator.get_datagram_ivm();
                 push_system_value(ivm);
             }

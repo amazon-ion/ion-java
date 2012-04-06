@@ -15,6 +15,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 
 
@@ -36,9 +37,21 @@ abstract class IonWriterSystem
     /**
      * What to do about IVMs at the start of the stream.
      * Becomes null as soon as we write anything.
-     * Doesn't affect data following a {@link #finish()}.
+     * After a {@link #finish()} this becomes {@link InitialIVMHandling#ENSURE}
+     * because we must force another IVM to be emitted.
      */
     private InitialIVMHandling _initial_ivm_handling;
+
+    /**
+     * What to do about non-initial IVMs.
+     */
+    private final IvmMinimizing _ivm_minimizing;
+
+    /**
+     * Indicates whether the (immediately previous emitted value was an IVM.
+     * This is cleared by {@link #endValue()}.
+     */
+    private boolean _previous_value_was_ivm;
 
     /**
      * Must be either local or system table, and never null.
@@ -64,12 +77,14 @@ abstract class IonWriterSystem
      * @param defaultSystemSymbolTable must not be null.
      */
     IonWriterSystem(SymbolTable defaultSystemSymbolTable,
-                    InitialIVMHandling initialIvmHandling)
+                    InitialIVMHandling initialIvmHandling,
+                    IvmMinimizing ivmMinimizing)
     {
         defaultSystemSymbolTable.getClass(); // Efficient null check
         _default_system_symbol_table = defaultSystemSymbolTable;
         _symbol_table = defaultSystemSymbolTable;
         _initial_ivm_handling = initialIvmHandling;
+        _ivm_minimizing = ivmMinimizing;
     }
 
 
@@ -129,15 +144,19 @@ abstract class IonWriterSystem
         }
 
         // TODO should we still suppress if the symtab isn't $ion_1_0 ?
-        if (_initial_ivm_handling != InitialIVMHandling.SUPPRESS)
+        // TODO What if previous IVM is different from given system?
+        if (_initial_ivm_handling != InitialIVMHandling.SUPPRESS
+            && (_ivm_minimizing == null
+                || ! _previous_value_was_ivm))
         {
+            _initial_ivm_handling = null;
+
             writeIonVersionMarkerAsIs(systemSymtab);
+
+            _previous_value_was_ivm = true;
         }
 
         _symbol_table = systemSymtab;
-
-        // Regardless of where we are, we've written an IVM.
-        _initial_ivm_handling = null;  // TODO wrong for suppress
     }
 
     /**
@@ -207,17 +226,15 @@ abstract class IonWriterSystem
         if (_initial_ivm_handling == InitialIVMHandling.ENSURE)
         {
             assert getDepth() == 0;
-
-            // TODO if caller is writing an IVM this will output an extra one. XXX
-
-            // Clear the flag first, since writeSymbol will call back here.
-            // TODO we shouldn't get here if value is a symtab
-            _initial_ivm_handling = null;
-
             writeIonVersionMarker(_default_system_symbol_table);
         }
     }
 
+    void endValue()
+    {
+        _initial_ivm_handling = null;
+        _previous_value_was_ivm = false;
+    }
 
 
     /** Writes a symbol without checking for system ID. */
@@ -267,6 +284,7 @@ abstract class IonWriterSystem
 
         flush();
 
+        _previous_value_was_ivm = false;
         _initial_ivm_handling = InitialIVMHandling.ENSURE;
 
         // TODO this should always be $ion_1_0

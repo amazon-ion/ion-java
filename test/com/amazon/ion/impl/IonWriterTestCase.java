@@ -1020,14 +1020,11 @@ public abstract class IonWriterTestCase
         }
         checkSymbol("foo", it.next());
 
-        if (myOutputForm != OutputForm.DOM
-            || getDomType() == DomType.BACKED) // TODO ION-165
+        if (myOutputForm != OutputForm.DOM) // TODO ION-165
         {
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
-        if (myOutputForm == OutputForm.BINARY
-            || (myOutputForm == OutputForm.DOM
-                && getDomType() == DomType.BACKED)) // TODO ION-165
+        if (myOutputForm == OutputForm.BINARY) // TODO ION-165
         {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }

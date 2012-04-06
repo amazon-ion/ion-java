@@ -13,6 +13,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.BlockedBuffer.BlockedByteInputStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -105,7 +106,8 @@ final class IonWriterSystemBinary
                           boolean ensureInitialIvm)
     {
         super(defaultSystemSymtab,
-              ensureInitialIvm ? InitialIVMHandling.ENSURE : null);
+              (ensureInitialIvm ? InitialIVMHandling.ENSURE : null),
+              IvmMinimizing.ADJACENT);
 
         out.getClass(); // Efficient null check
         _user_output_stream = out;
@@ -474,6 +476,8 @@ final class IonWriterSystemBinary
     private final void closeValue()
         throws IOException
     {
+        super.endValue();
+
         int topType = topType();
 
         // check for annotations, which we need to pop off now
@@ -541,6 +545,7 @@ final class IonWriterSystemBinary
     void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
+        startValue();
         _writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         closeValue();
     }

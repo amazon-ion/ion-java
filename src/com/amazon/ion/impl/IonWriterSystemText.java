@@ -20,8 +20,8 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
-import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
@@ -90,7 +90,8 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     {
         super(defaultSystemSymtab,
               (options.getInitialIvmHandling() == InitialIvmHandling.SUPPRESS
-                  ? InitialIVMHandling.SUPPRESS : null));
+                  ? InitialIVMHandling.SUPPRESS : null),
+              options.getIvmMinimizing());
 
         out.getClass(); // Efficient null check
 
@@ -398,6 +399,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     }
 
     void closeValue() {
+        super.endValue();
         _pending_separator = true;
         _following_long_string = false;  // Caller overwrites this as needed.
     }
