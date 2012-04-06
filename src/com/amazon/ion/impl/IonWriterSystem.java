@@ -12,6 +12,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 
@@ -155,6 +156,45 @@ abstract class IonWriterSystem
 
         sid = _symbol_table.addSymbol(name);
         return sid;
+    }
+
+
+    /** Writes a symbol without checking for system ID. */
+    abstract void writeSymbolAsIs(int symbolId) throws IOException;
+
+    /** Writes a symbol without checking for system ID. */
+    abstract void writeSymbolAsIs(String value) throws IOException;
+
+
+    @Deprecated
+    public final void writeSymbol(int symbolId) throws IOException
+    {
+        if (symbolId < 1) {
+            throw new IllegalArgumentException("symbol IDs are greater than 0");
+        }
+
+        if (symbolId == SystemSymbols.ION_1_0_SID && getDepth() == 0)
+        {
+            // TODO make sure to get the right symtab, default may differ.
+            writeIonVersionMarker();
+        }
+        else
+        {
+            writeSymbolAsIs(symbolId);
+        }
+    }
+
+
+    public final void writeSymbol(String value) throws IOException
+    {
+        if (SystemSymbols.ION_1_0.equals(value) && getDepth() == 0)
+        {
+            // TODO make sure to get the right symtab, default may differ.
+            writeIonVersionMarker();
+        }
+        else {
+            writeSymbolAsIs(value);
+        }
     }
 
 

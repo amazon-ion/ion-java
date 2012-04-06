@@ -16,7 +16,6 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
@@ -351,8 +350,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             // Clear the flag first, since writeSymbol will call back here.
             _finished_and_requiring_version_marker = false;
 
-            // This MUST always be $ion_1_0
-            writeSymbol(SystemSymbols.ION_1_0_SID);
+            writeIonVersionMarker(_default_system_symbol_table);
         }
 
         boolean followingLongString = _following_long_string;
@@ -421,7 +419,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     void writeIonVersionMarker(SymbolTable systemSymtab)
         throws IOException
     {
-        writeSymbol(systemSymtab.getIonVersionId());
+        writeSymbolAsIs(systemSymtab.getIonVersionId());
         super.writeIonVersionMarker(systemSymtab);
     }
 
@@ -803,16 +801,15 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
 
-    @Deprecated
-    public void writeSymbol(int symbolId)
+    @Override
+    void writeSymbolAsIs(int symbolId)
         throws IOException
     {
-        // TODO ION-165 this should handle IVMs
         SymbolTable symtab = getSymbolTable();
         String text = symtab.findKnownSymbol(symbolId);
         if (text != null)
         {
-            writeSymbol(text);
+            writeSymbolAsIs(text);
         }
         else
         {
@@ -822,10 +819,10 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         }
     }
 
-    public void writeSymbol(String value)
+    @Override
+    public void writeSymbolAsIs(String value)
         throws IOException
     {
-        // TODO ION-165 this should handle IVMs
         if (value == null)
         {
             writeNull(IonType.SYMBOL);

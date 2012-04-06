@@ -11,6 +11,7 @@ import com.amazon.ion.IonClob;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonString;
@@ -21,7 +22,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.io.IOException;
@@ -168,8 +168,14 @@ final class IonWriterSystemTree
             // Clear the flag first, since writeSymbol will call back here.
             _finished_and_requiring_version_marker = false;
 
-            // This MUST always be $ion_1_0
-            writeSymbol(SystemSymbols.ION_1_0_SID);
+            try
+            {
+                writeIonVersionMarker(_default_system_symbol_table);
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e); // Shouldn't happen
+            }
         }
 
         if (hasAnnotations()) {
@@ -318,19 +324,18 @@ final class IonWriterSystemTree
     }
 
 
-    @Deprecated
-    public void writeSymbol(int symbolId)
+    @Override
+    void writeSymbolAsIs(int symbolId)
     {
-        // TODO ION-165 this should handle IVMs
         String name = getSymbolTable().findKnownSymbol(symbolId);
         SymbolTokenImpl is = new SymbolTokenImpl(name, symbolId);
         IonSymbol v = _factory.newSymbol(is);
         append(v);
     }
 
-    public void writeSymbol(String value)
+    @Override
+    public void writeSymbolAsIs(String value)
     {
-        // TODO ION-165 this should handle IVMs
         IonSymbol v = _factory.newSymbol(value);
         append(v);
     }

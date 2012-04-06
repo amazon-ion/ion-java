@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.impl._Private_IonConstants.tidDATAGRAM;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
@@ -819,30 +818,20 @@ final class IonWriterSystemBinary
         closeValue();
     }
 
-    @Deprecated
-    public void writeSymbol(int symbolId) throws IOException
+    @Override
+    void writeSymbolAsIs(int symbolId) throws IOException
     {
-        if (symbolId < 1) {
-            throw new IllegalArgumentException("symbol IDs are greater than 0");
-        }
-
-        if (symbolId == ION_1_0_SID && atDatagramLevel()) {
-            // the $ion_1_0 symbol at the datagram level is ALWAYS
-            // an ion version marker
-            writeIonVersionMarker();
-        }
-        else {
-            int patch_len = 1;
-            int len = IonBinary.lenUInt(symbolId);
-            startValue(IonType.SYMBOL, len + 1);
-            _writer.write((_Private_IonConstants.tidSymbol << 4) | len);
-            patch_len += _writer.writeUIntValue(symbolId, len);
-            patch(patch_len);
-            closeValue();
-        }
+        int patch_len = 1;
+        int len = IonBinary.lenUInt(symbolId);
+        startValue(IonType.SYMBOL, len + 1);
+        _writer.write((_Private_IonConstants.tidSymbol << 4) | len);
+        patch_len += _writer.writeUIntValue(symbolId, len);
+        patch(patch_len);
+        closeValue();
     }
 
-    public void writeSymbol(String value) throws IOException
+    @Override
+    public void writeSymbolAsIs(String value) throws IOException
     {
         if (value == null) {
             writeNull(IonType.SYMBOL);
@@ -850,7 +839,7 @@ final class IonWriterSystemBinary
         }
 
         int sid = add_symbol(value);
-        writeSymbol(sid);
+        writeSymbolAsIs(sid);
     }
 
     public void writeClob(byte[] value, int start, int len) throws IOException

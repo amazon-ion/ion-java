@@ -48,6 +48,7 @@ import org.junit.Test;
 /**
  *
  */
+@SuppressWarnings("deprecation")
 public abstract class IonWriterTestCase
     extends IonTestCase
 {
@@ -445,7 +446,7 @@ public abstract class IonWriterTestCase
     }
 
 
-    @Test @SuppressWarnings("deprecation")
+    @Test
     public void testWritingDeepNestedList() throws Exception {
         // JIRA ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
@@ -877,7 +878,7 @@ public abstract class IonWriterTestCase
      * Discovered this old behavior during test builds, some user code relies
      * on it.
      */
-    @Test @SuppressWarnings("deprecation")
+    @Test
     public void testWriteValueNull()
         throws Exception
     {
@@ -962,7 +963,7 @@ public abstract class IonWriterTestCase
      * TODO ION-165 datagram is lazy creating local symtabs.
      * Should use a reader to check the results.
      */
-    @Test @Ignore
+    @Test
     public void testWriteIVMImplicitly()
         throws Exception
     {
@@ -970,20 +971,21 @@ public abstract class IonWriterTestCase
         iw.writeSymbol("foo");
         iw.writeSymbol(SystemSymbols.ION_1_0);
         iw.writeInt(1);
-
-        IonDatagram dg = reload();
-        assertEquals(2, dg.size());
-        assertNotSame("symbol table instance",
-                      dg.get(0).getSymbolTable(),
-                      dg.get(1).getSymbolTable());
+        iw.writeSymbol(SystemSymbols.ION_1_0_SID);
+        iw.writeInt(2);
 
         Iterator<IonValue> it = systemIterateOutput();
         if (myOutputForm != OutputForm.TEXT) {
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
+        if (myOutputForm == OutputForm.BINARY) {
+            checkAnnotation(ION_SYMBOL_TABLE, it.next());
+        }
         checkSymbol("foo", it.next());
         checkSymbol(SystemSymbols.ION_1_0, it.next());
         checkInt(1, it.next());
+        checkSymbol(SystemSymbols.ION_1_0, it.next());
+        checkInt(2, it.next());
     }
 
     @Test
@@ -997,7 +999,6 @@ public abstract class IonWriterTestCase
 
         IonDatagram dg = reload();
         assertEquals(2, dg.size());
-
     }
 
     @Test // TODO ION-165 Inconsistencies between writers
@@ -1018,10 +1019,16 @@ public abstract class IonWriterTestCase
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
         checkSymbol("foo", it.next());
-        if (myOutputForm != OutputForm.DOM) {
+
+        if (myOutputForm != OutputForm.DOM
+            || getDomType() == DomType.BACKED) // TODO ION-165
+        {
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
-        if (myOutputForm == OutputForm.BINARY) {
+        if (myOutputForm == OutputForm.BINARY
+            || (myOutputForm == OutputForm.DOM
+                && getDomType() == DomType.BACKED)) // TODO ION-165
+        {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
         checkSymbol("foo", it.next());

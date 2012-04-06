@@ -9,7 +9,6 @@ import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.isTrivialTable;
 import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.symtabIsLocalAndNonTrivial;
 import static com.amazon.ion.impl._Private_Utils.valueIsLocalSymbolTable;
 
 import com.amazon.ion.ContainedValueException;
@@ -252,6 +251,8 @@ final class IonDatagramImpl
                 new_symtab = _system.getSystemSymbolTable();
             }
             else if (_symboltable != null) {
+                // This is a pending symbol table hanging off the end.
+                // TODO this should only be used if appending to the end
                 new_symtab = _symboltable;
             }
             else {
@@ -269,6 +270,16 @@ final class IonDatagramImpl
                 ((IonValueImpl)element).setSymbolTable(new_symtab);
                 if (new_symtab == _symboltable) {
                     _symboltable = null;
+                    if (new_symtab.isSystemTable())
+                    {
+                        // This system ID was explicitly requested by the user.
+                        // Inject the IVM so it doesn't get suppresed due to
+                        // it matching the current system state.
+                        String systemId = new_symtab.getIonVersionId();
+                        IonSymbolImpl ivm = makeIonVersionMarker(systemId);
+                        add(ivm, systemPos, -1);
+                        systemPos++;
+                    }
                 }
             }
         }
@@ -283,14 +294,7 @@ final class IonDatagramImpl
 
     private SymbolTable getCurrentSymbolTable(int systemPos)
     {
-        assert _symboltable == null; // Due to only call site.
-
-        SymbolTable symtab = this._symboltable;
-
-        if (symtabIsLocalAndNonTrivial(symtab)) {
-            this._symboltable = null;
-            return symtab;
-        }
+        SymbolTable symtab = null;
 
         // if the systemPos is 0 (or less) then there's no room
         // for a local symbol table, so there's no need to look
@@ -810,7 +814,8 @@ final class IonDatagramImpl
                         if (systemPos < 1
                          || !_system.valueIsSystemId(get_child(systemPos - 1))
                          ) {
-                            IonSymbolImpl ivm = makeIonVersionMarker();
+                            String systemId = symtab.getIonVersionId();
+                            IonSymbolImpl ivm = makeIonVersionMarker(systemId);
                             assert ivm.getSymbolTable().isSystemTable();
                             this.add(ivm, systemPos, -1);
                             systemPos++;
@@ -1067,7 +1072,17 @@ final class IonDatagramImpl
     {
         assert symtab.isLocalTable() || symtab.isSystemTable();
 
-        _symboltable = symtab;
+        if (symtab.isSystemTable())
+        {
+            // Just append the IVM.
+            String systemId = symtab.getIonVersionId();
+            IonSymbolImpl ivm = makeIonVersionMarker(systemId);
+            add(ivm);
+        }
+        else
+        {
+            _symboltable = symtab;
+        }
     }
 
     @Override
@@ -1155,10 +1170,9 @@ final class IonDatagramImpl
         return ivm;
     }
 
-    private IonSymbolImpl makeIonVersionMarker()
+    private IonSymbolImpl makeIonVersionMarker(String systemId)
     {
-        IonSymbolImpl ivm =
-            _system.newSystemIdSymbol(ION_1_0);
+        IonSymbolImpl ivm = _system.newSystemIdSymbol(systemId);
 
         // TODO why is this needed?
         ivm._buffer = this._buffer;
