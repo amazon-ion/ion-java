@@ -2,8 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
@@ -46,8 +44,6 @@ abstract class IonWriterUser
 
     /** Used to make correct local symbol tables. May be null. */
     private final IonCatalog _catalog;
-
-    final boolean _root_is_datagram;
 
     /**
      * The underlying system writer that writing the raw format (text, binary,
@@ -92,7 +88,6 @@ abstract class IonWriterUser
         assert systemWriter != null;
         _system_writer = systemWriter;
         _current_writer = systemWriter;
-        _root_is_datagram = systemWriter.getDepth() == 0;
     }
 
 
@@ -367,19 +362,10 @@ abstract class IonWriterUser
         return _current_writer.getTypeAnnotationSymbols();
     }
 
-    /**
-     * To be called at the end of every value.
-     */
-    private final void finish_value()
-    {
-//        _system_writer.closeValue(false);
-    }
-
     public void stepIn(IonType containerType) throws IOException
     {
         // see if it looks like we're starting a local symbol table
         if (containerType == IonType.STRUCT
-            && _root_is_datagram
             && _current_writer.getDepth() == 0
             && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID))
         {
@@ -390,7 +376,6 @@ abstract class IonWriterUser
             // writer is currently in scope
             _current_writer.stepIn(containerType);
         }
-        finish_value();
     }
 
     public void stepOut() throws IOException
@@ -407,126 +392,83 @@ abstract class IonWriterUser
     public void writeBlob(byte[] value, int start, int len) throws IOException
     {
         _current_writer.writeBlob(value, start, len);
-        finish_value();
     }
 
     public void writeBool(boolean value) throws IOException
     {
         _current_writer.writeBool(value);
-        finish_value();
     }
 
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
         _current_writer.writeClob(value, start, len);
-        finish_value();
     }
 
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
     {
         _current_writer.writeDecimal(value);
-        finish_value();
     }
 
     public void writeFloat(double value) throws IOException
     {
         _current_writer.writeFloat(value);
-        finish_value();
     }
 
     @SuppressWarnings("cast")
     public void writeInt(int value) throws IOException
     {
         _current_writer.writeInt((long)value);
-        finish_value();
     }
 
     public void writeInt(long value) throws IOException
     {
         _current_writer.writeInt(value);
-        finish_value();
     }
-
 
     public void writeInt(BigInteger value) throws IOException
     {
         _current_writer.writeInt(value);
-        finish_value();
     }
 
     public void writeNull(IonType type) throws IOException
     {
         _current_writer.writeNull(type);
-        finish_value();
     }
 
     public void writeString(String value) throws IOException
     {
         _current_writer.writeString(value);
-        finish_value();
     }
 
     @Deprecated
     public final void writeSymbol(int symbolId) throws IOException
     {
         _current_writer.writeSymbol(symbolId);
-        finish_value();
     }
 
     public final void writeSymbol(String value) throws IOException
     {
-        if (ION_1_0.equals(value) && write_as_ivm(ION_1_0_SID))
-        {
-            // TODO make sure to get the right symtab, default may differ.
-            writeIonVersionMarker();
-            // calls finish_value() for us
-        }
-        else {
-            _current_writer.writeSymbol(value);
-            finish_value();
-        }
-    }
-
-    private final boolean write_as_ivm(int sid)
-    {
-        // we only treat the $ion_1_0 symbol as an IVM
-        // if we're at the top level in a datagram
-        boolean treat_as_ivm =
-            (sid == ION_1_0_SID
-             && _root_is_datagram
-             && _current_writer.getDepth() == 0);
-        return treat_as_ivm;
+        _current_writer.writeSymbol(value);
     }
 
 
     final void writeIonVersionMarker(SymbolTable systemSymtab)
         throws IOException
     {
-        if (getDepth() != 0 || _root_is_datagram == false) {
-            String message =
-                "Ion Version Markers are only valid at the top level of a " +
-                "data stream";
-            throw new IllegalStateException(message);
-        }
-        assert(_current_writer == _system_writer);
-
-        _system_writer.writeIonVersionMarker(systemSymtab);
-
-        finish_value();
+        _current_writer.writeIonVersionMarker(systemSymtab);
     }
 
     @Override
     public final void writeIonVersionMarker()
         throws IOException
     {
-        writeIonVersionMarker(_system_writer._default_system_symbol_table);
+        _current_writer.writeIonVersionMarker();
     }
 
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
         _current_writer.writeTimestamp(value);
-        finish_value();
     }
 }
