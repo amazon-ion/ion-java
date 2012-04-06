@@ -21,6 +21,7 @@ import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
@@ -418,7 +419,16 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
 
         // TODO ION-274 this always suppresses local symtabs w/o imports
         SymbolTable[] imports = symtab.getImportedTables();
-        if (imports.length > 0) {
+
+        LstMinimizing min = _options.getLstMinimizing();
+        if (min == null)
+        {
+            symtab.writeTo(this);
+        }
+        else if (min == LstMinimizing.LOCALS && imports.length > 0)
+        {
+            // Copy the symtab, but filter out local symbols.
+
             IonReader reader = new UnifiedSymbolTableReader(symtab);
 
             // move onto and write the struct header
@@ -449,6 +459,11 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
 
             // we're done step out and move along
             stepOut();
+        }
+        else  // Collapse to IVM
+        {
+            SymbolTable systemSymtab = symtab.getSystemSymbolTable();
+            writeIonVersionMarker(systemSymtab);
         }
 
         super.writeLocalSymtab(symtab);

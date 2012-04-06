@@ -237,8 +237,8 @@ public class RoundTripTest
         {
             // TODO ION-274 this should compare system readers
             // but that doesn't work on testfile36.ion
-            IonReader r0 = system().newReader(fileIn);
-            IonReader r1 = system().newReader(outBytes);
+            IonReader r0 = system().newSystemReader(fileIn);
+            IonReader r1 = system().newSystemReader(outBytes);
 
             ReaderCompare.compare(r0, r1);
         }

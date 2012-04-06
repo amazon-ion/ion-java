@@ -5,12 +5,17 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
+import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.Symtabs;
 import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import java.io.OutputStream;
 import org.junit.Test;
 
@@ -49,6 +54,61 @@ public class TextWriterTest
         String ionText = outputString();
 
         assertEquals("holla", ionText);
+    }
+
+
+    @Test
+    public void testLstMinimizing()
+        throws Exception
+    {
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+
+        IonBinaryWriter binaryWriter = system().newBinaryWriter(fred1);
+        binaryWriter.writeSymbol("fred_1");
+        binaryWriter.writeSymbol("ginger");
+        binaryWriter.finish();
+        byte[] binaryData = binaryWriter.getBytes();
+
+        options = IonTextWriterBuilder.standard();
+
+        // TODO User reader still transfers local symtabs!
+        IonReader binaryReader = system().newReader(binaryData);
+        iw = makeWriter();
+        iw.writeValues(binaryReader);
+
+        String ionText = outputString();
+        assertEquals(// TODO "$ion_1_0 " +
+                     "$ion_symbol_table::{imports:[{name:\"fred\",version:1,max_id:2}],"
+                     +                   "symbols:[\"ginger\"]} " +
+                     "fred_1 ginger",
+                     ionText);
+
+        options.setLstMinimizing(LstMinimizing.LOCALS);
+        binaryReader = system().newReader(binaryData);
+        iw = makeWriter();
+        iw.writeValues(binaryReader);
+        ionText = outputString();
+        assertEquals(// TODO "$ion_1_0 " +
+                     "$ion_symbol_table::{imports:[{name:\"fred\",version:1,max_id:2}]} " +
+                     "fred_1 ginger",
+                     ionText);
+
+        options.setLstMinimizing(LstMinimizing.EVERYTHING);
+        binaryReader = system().newReader(binaryData);
+        iw = makeWriter();
+        iw.writeValues(binaryReader);
+        ionText = outputString();
+        assertEquals(// TODO "$ion_1_0 " +
+                     "$ion_1_0 fred_1 ginger",
+                     ionText);
+
+        options.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+        binaryReader = system().newReader(binaryData);
+        iw = makeWriter();
+        iw.writeValues(binaryReader);
+        ionText = outputString();
+        assertEquals("fred_1 ginger",
+                     ionText);
     }
 
 

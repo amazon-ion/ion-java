@@ -230,6 +230,12 @@ public class _Private_IonTextWriterBuilder
         }
 
         @Override
+        public void setLstMinimizing(LstMinimizing minimizing)
+        {
+            mutationFailure();
+        }
+
+        @Override
         public void setImports(SymbolTable... imports)
         {
             mutationFailure();
