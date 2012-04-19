@@ -743,7 +743,6 @@ public class TimestampTest
         // Move forward into daylight savings
         cal.add(Calendar.DAY_OF_MONTH, 5);
         ts = new Timestamp(cal);
-        System.out.println(ts);
         assertEquals("2012-03-14T10:11:12.345-07:00", ts.toString());
     }
 
