@@ -72,5 +72,11 @@ public abstract class IonWriterBuilder
     public abstract InitialIvmHandling getInitialIvmHandling();
 
 
+    /**
+     * Gets the strategy for reducing or eliminating non-initial Ion version
+     * markers. When null, IVMs are emitted as they are written.
+     *
+     * @return the initial IVM minimization.
+     */
     public abstract IvmMinimizing getIvmMinimizing();
 }

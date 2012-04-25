@@ -372,38 +372,65 @@ public abstract class IonTextWriterBuilder
     //-------------------------------------------------------------------------
 
     /**
+     * {@inheritDoc}
+     *
+     * @see #setIvmMinimizing(IvmMinimizing)
+     * @see #withIvmMinimizing(IvmMinimizing)
+     */
+    @Override
+    public final IvmMinimizing getIvmMinimizing()
+    {
+        return myIvmMinimizing;
+    }
+
+    /**
+     * Sets the strategy for reducing or eliminating non-initial Ion version
+     * markers. When null, IVMs are emitted as they are written.
+     *
+     * @param minimizing the IVM minimization strategy.
+     * Null indicates that all explicitly-written IVMs will be emitted.
+     *
+     * @see #getIvmMinimizing()
+     * @see #withIvmMinimizing(IvmMinimizing)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public void setIvmMinimizing(IvmMinimizing minimizing)
+    {
+        myIvmMinimizing = minimizing;
+    }
+
+    /**
+     * Declares the strategy for reducing or eliminating non-initial Ion version
+     * markers, returning a new mutable builder if this is immutable.
+     * When null, IVMs are emitted as they are written.
+     *
+     * @param minimizing the IVM minimization strategy.
+     * Null indicates that all explicitly-written IVMs will be emitted.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @see #setIvmMinimizing(IvmMinimizing)
+     * @see #getIvmMinimizing()
+     */
+    public final IonTextWriterBuilder
+    withIvmMinimizing(IvmMinimizing minimizing)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setIvmMinimizing(minimizing);
+        return b;
+    }
+
+    //-------------------------------------------------------------------------
+
+    /**
      * Gets the strategy for reducing or eliminating local symbol tables.
      * By default, LST data is emitted as received or when necessary
      * (for example, binary data will always collect and emit local symbols).
      *
      * @see #setLstMinimizing(LstMinimizing)
      * @see #withLstMinimizing(LstMinimizing)
-     */
-    public final IvmMinimizing getIvmMinimizing()
-    {
-        return myIvmMinimizing;
-    }
-
-    public void setIvmMinimizing(IvmMinimizing minimizing)
-    {
-        myIvmMinimizing = minimizing;
-    }
-
-    /*
-    // TODO document
-    public final IonTextWriterBuilder
-    withLstMinimizing(LstMinimizing minimizing)
-    {
-        IonTextWriterBuilder b = mutable();
-        b.setLstMinimizing(minimizing);
-        return b;
-    }
-*/
-
-    //-------------------------------------------------------------------------
-
-    /**
-     *
      */
     public final LstMinimizing getLstMinimizing()
     {
