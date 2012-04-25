@@ -282,7 +282,22 @@ public class TextWriterTest
 
         expectRendering("\"hello\" '''hello!''' \"goodbye\" '''what\\'s\nup\ndoc'''",
                         dg);
+    }
 
+    @Test
+    public void testJsonSystemMinimization()
+        throws Exception
+    {
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+
+        options = IonTextWriterBuilder.json();
+        iw = makeWriter(fred1);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol("fred_1");
+
+        // TODO ION-283 fix distant IVMs
+
+        assertEquals("\"fred_1\"", outputString());
     }
 
     @Test

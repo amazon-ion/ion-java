@@ -47,6 +47,7 @@ public abstract class IonWriterBuilder
         /*
          * Discards IVMs that don't change the Ion version, even when there's
          * other data between them.
+         * TODO ION-283
          */
 //        DISTANT
     }

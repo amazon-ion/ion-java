@@ -2,6 +2,8 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -17,10 +19,22 @@ import java.nio.charset.Charset;
  * objects.
  * Builder instances are <em>not</em> thread-safe unless they are immutable.
  * <p>
- * The easiest way to get going is to just use the {@link #standard()} builder:
+ * The most general and correct approach is to use the {@link #standard()}
+ * builder:
  * <pre>
  *  IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
  *</pre>
+ * The standard configuration gives a direct representation of what's written,
+ * including version markers and local symbol tables. That's good for
+ * diagnostics but it may be more than you want in many situations.
+ * In such cases the {@link #minimal()} or {@link #pretty()} builders (or a
+ * combination) may give more satisfying output:
+ * <pre>
+ *  IonWriter w = IonTextWriterBuilder.minimal()
+ *                                    .withPrettyPrinting()
+ *                                    .build(outputStream);
+ *</pre>
+ *
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
@@ -73,16 +87,32 @@ public abstract class IonTextWriterBuilder
 
     /**
      * The standard builder of {@link IonWriter}s, with all configuration
-     * properties having their default values.
+     * properties having their default values. The resulting output is a
+     * direct representation of what's written to the writer, including
+     * version markers and local symbol tables.
      *
      * @return a new, mutable builder instance.
      *
+     * @see #minimal()
      * @see #pretty()
      * @see #json()
      */
     public static IonTextWriterBuilder standard()
     {
         return _Private_IonTextWriterBuilder.standard();
+    }
+
+    /**
+     * Creates a builder configured to minimize system data, eliminating local
+     * symbol tables and minimizing version markers.
+     *
+     * @return a new, mutable builder instance.
+     *
+     * @see #withMinimalSystemData()
+     */
+    public static IonTextWriterBuilder minimal()
+    {
+        return standard().withMinimalSystemData();
     }
 
     /**
@@ -277,6 +307,34 @@ public abstract class IonTextWriterBuilder
     //-------------------------------------------------------------------------
 
     /**
+     * Declares that this builder should minimize system-level output
+     * (Ion version markers and local symbol tables).
+     * <p>
+     * This is equivalent to:
+     * <ul>
+     *   <li>{@link #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
+     *   setInitialIvmHandling}{@code (}{@link IonWriterBuilder.InitialIvmHandling#SUPPRESS SUPPRESS}{@code )}
+     *   <li>{@link #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     *   setIvmMinimizing}{@code (}{@link IonWriterBuilder.IvmMinimizing#ADJACENT ADJACENT}{@code )}
+     *   <li>{@link #setLstMinimizing(LstMinimizing)
+     *   setLstMinimizing}{@code (}{@link LstMinimizing#EVERYTHING EVERYTHING}{@code )}
+     * </ul>
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public final IonTextWriterBuilder withMinimalSystemData()
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setInitialIvmHandling(SUPPRESS);
+        // TODO ION-283 should be DISTANT
+        b.setIvmMinimizing(IvmMinimizing.ADJACENT);
+        b.setLstMinimizing(LstMinimizing.EVERYTHING);
+        return b;
+    }
+
+
+    /**
      * Declares that this builder should use basic pretty-printing.
      * Calling this method alters several other configuration properties,
      * so code should call it first, then make any necessary overrides.
@@ -298,6 +356,7 @@ public abstract class IonTextWriterBuilder
      * <p>
      * The specific conversions are as follows:
      * <ul>
+     *   <li>System data is suppressed per {@link #withMinimalSystemData()}.
      *   <li>All annotations are suppressed.
      *   <li>Nulls of any type are printed as JSON {@code null}.
      *   <li>Blobs are printed as strings, containing Base64.
@@ -374,8 +433,8 @@ public abstract class IonTextWriterBuilder
     /**
      * {@inheritDoc}
      *
-     * @see #setIvmMinimizing(IvmMinimizing)
-     * @see #withIvmMinimizing(IvmMinimizing)
+     * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      */
     @Override
     public final IvmMinimizing getIvmMinimizing()
@@ -391,7 +450,7 @@ public abstract class IonTextWriterBuilder
      * Null indicates that all explicitly-written IVMs will be emitted.
      *
      * @see #getIvmMinimizing()
-     * @see #withIvmMinimizing(IvmMinimizing)
+     * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
@@ -411,7 +470,7 @@ public abstract class IonTextWriterBuilder
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      *
-     * @see #setIvmMinimizing(IvmMinimizing)
+     * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      * @see #getIvmMinimizing()
      */
     public final IonTextWriterBuilder

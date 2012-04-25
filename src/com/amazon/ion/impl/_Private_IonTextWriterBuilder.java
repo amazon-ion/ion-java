@@ -103,7 +103,7 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = mutable();
 
-        b.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+        b.withMinimalSystemData();
 
         _blob_as_string      = true;
         _clob_as_string      = true;
