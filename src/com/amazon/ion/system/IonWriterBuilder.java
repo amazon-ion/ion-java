@@ -44,12 +44,11 @@ public abstract class IonWriterBuilder
         /** Replaces identical, adjacent IVMs with a single IVM. */
         ADJACENT,
 
-        /*
+        /**
          * Discards IVMs that don't change the Ion version, even when there's
-         * other data between them.
-         * TODO ION-283
+         * other data between them. This includes adjacent IVMs.
          */
-//        DISTANT
+        DISTANT
     }
 
 

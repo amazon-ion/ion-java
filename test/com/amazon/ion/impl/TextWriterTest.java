@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
+import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -294,10 +295,11 @@ public class TextWriterTest
         iw = makeWriter(fred1);
         iw.writeSymbol(ION_1_0);
         iw.writeSymbol("fred_1");
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol("fred_1");
 
-        // TODO ION-283 fix distant IVMs
-
-        assertEquals("\"fred_1\"", outputString());
+        assertEquals("\"fred_1\" \"fred_1\"", outputString());
     }
 
     @Test
@@ -327,12 +329,12 @@ public class TextWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol(ION_1_0);
-//        iw.writeSymbol(ION_1_0);  // TODO User writer always minimizes adjacent
+        iw.writeSymbol(ION_1_0);
         iw.writeNull();
         iw.writeSymbol(ION_1_0);
         iw.writeNull();
 
-        assertEquals(/*ION_1_0 + " " +*/ ION_1_0 + " null " + ION_1_0 + " null",
+        assertEquals(ION_1_0 + " " + ION_1_0 + " null " + ION_1_0 + " null",
                      outputString());
 
         options = IonTextWriterBuilder.standard().withInitialIvmHandling(SUPPRESS);
@@ -345,6 +347,23 @@ public class TextWriterTest
         iw.writeNull();
 
         assertEquals("null " + ION_1_0 + " null", outputString());
+    }
+
+    @Test
+    public void testMinimizeDistantIvm()
+        throws Exception
+    {
+        options = IonTextWriterBuilder.standard().withIvmMinimizing(DISTANT);
+
+        iw = makeWriter();
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeNull();
+        iw.writeSymbol(ION_1_0);
+        iw.writeSymbol(ION_1_0);
+        iw.writeNull();
+
+        assertEquals(ION_1_0 + " null null", outputString());
     }
 
     @Test @Override
@@ -361,5 +380,15 @@ public class TextWriterTest
 
         options.setLongStringThreshold(2);
         super.testWritingLob();
+    }
+
+    @Test @Override
+    public void testFinishDoesReset()
+        throws Exception
+    {
+        super.testFinishDoesReset();
+
+        options = IonTextWriterBuilder.standard().withIvmMinimizing(DISTANT);
+        super.testFinishDoesReset();
     }
 }

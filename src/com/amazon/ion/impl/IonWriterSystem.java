@@ -51,6 +51,11 @@ abstract class IonWriterSystem
     private boolean _previous_value_was_ivm;
 
     /**
+     * Indicates whether we've written anything at all.
+     */
+    private boolean _anything_written;
+
+    /**
      * Must be either local or system table, and never null.
      * May only be changed between top-level values.
      */
@@ -117,6 +122,34 @@ abstract class IonWriterSystem
         _symbol_table = symbols;
     }
 
+    boolean shouldWriteIvm(SymbolTable systemSymtab)
+    {
+        if (_initial_ivm_handling == InitialIvmHandling.ENSURE)
+        {
+            return true;
+        }
+        if (_initial_ivm_handling == InitialIvmHandling.SUPPRESS)
+        {
+            // TODO ION-285 Must write IVM if given system != 1.0
+            return false;
+        }
+        // TODO ION-285 Add SUPPRESS_ALL to suppress non 1.0 IVMs
+
+        if (_ivm_minimizing == IvmMinimizing.ADJACENT)
+        {
+            // TODO ION-285 Write IVM if current system version != given system
+            // For now we assume that it's the same since we only support 1.0
+            return ! _previous_value_was_ivm;
+        }
+        if (_ivm_minimizing == IvmMinimizing.DISTANT)
+        {
+            // TODO ION-285 Write IVM if current system version != given system
+            // For now we assume that it's the same since we only support 1.0
+            return ! _anything_written;
+        }
+
+        return true;
+    }
 
     /**
      * Sets {@link #_symbol_table} and clears {@link #_initial_ivm_handling}.
@@ -140,11 +173,7 @@ abstract class IonWriterSystem
             throw new UnsupportedOperationException(message);
         }
 
-        // TODO should we still suppress if the symtab isn't $ion_1_0 ?
-        // TODO What if previous IVM is different from given system?
-        if (_initial_ivm_handling != InitialIvmHandling.SUPPRESS
-            && (_ivm_minimizing == null
-                || ! _previous_value_was_ivm))
+        if (shouldWriteIvm(systemSymtab))
         {
             _initial_ivm_handling = null;
 
@@ -222,7 +251,6 @@ abstract class IonWriterSystem
     {
         if (_initial_ivm_handling == InitialIvmHandling.ENSURE)
         {
-            assert getDepth() == 0;
             writeIonVersionMarker(_default_system_symbol_table);
         }
     }
@@ -231,6 +259,7 @@ abstract class IonWriterSystem
     {
         _initial_ivm_handling = null;
         _previous_value_was_ivm = false;
+        _anything_written = true;
     }
 
 
@@ -250,7 +279,7 @@ abstract class IonWriterSystem
 
         if (symbolId == SystemSymbols.ION_1_0_SID && getDepth() == 0)
         {
-            // TODO make sure to get the right symtab, default may differ.
+            // TODO ION-285 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
         else
@@ -264,7 +293,7 @@ abstract class IonWriterSystem
     {
         if (SystemSymbols.ION_1_0.equals(value) && getDepth() == 0)
         {
-            // TODO make sure to get the right symtab, default may differ.
+            // TODO ION-285 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
         else {

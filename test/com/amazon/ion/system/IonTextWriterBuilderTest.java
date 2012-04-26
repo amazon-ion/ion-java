@@ -9,6 +9,7 @@ import static com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing.EVERYTHIN
 import static com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing.LOCALS;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.ADJACENT;
+import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -233,6 +234,17 @@ public class IonTextWriterBuilderTest
         writer.writeSymbol(ION_1_0);
         writer.close();
         assertEquals(ION_1_0 + " null " + ION_1_0, out.toString());
+
+        b.withIvmMinimizing(DISTANT);
+        out.setLength(0);
+        writer = b.build(out);
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.writeNull();
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.close();
+        assertEquals(ION_1_0 + " null", out.toString());
     }
 
     //-------------------------------------------------------------------------

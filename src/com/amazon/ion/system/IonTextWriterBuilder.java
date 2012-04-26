@@ -315,7 +315,7 @@ public abstract class IonTextWriterBuilder
      *   <li>{@link #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      *   setInitialIvmHandling}{@code (}{@link IonWriterBuilder.InitialIvmHandling#SUPPRESS SUPPRESS}{@code )}
      *   <li>{@link #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
-     *   setIvmMinimizing}{@code (}{@link IonWriterBuilder.IvmMinimizing#ADJACENT ADJACENT}{@code )}
+     *   setIvmMinimizing}{@code (}{@link IonWriterBuilder.IvmMinimizing#DISTANT DISTANT}{@code )}
      *   <li>{@link #setLstMinimizing(LstMinimizing)
      *   setLstMinimizing}{@code (}{@link LstMinimizing#EVERYTHING EVERYTHING}{@code )}
      * </ul>
@@ -327,8 +327,7 @@ public abstract class IonTextWriterBuilder
     {
         IonTextWriterBuilder b = mutable();
         b.setInitialIvmHandling(SUPPRESS);
-        // TODO ION-283 should be DISTANT
-        b.setIvmMinimizing(IvmMinimizing.ADJACENT);
+        b.setIvmMinimizing(IvmMinimizing.DISTANT);
         b.setLstMinimizing(LstMinimizing.EVERYTHING);
         return b;
     }
