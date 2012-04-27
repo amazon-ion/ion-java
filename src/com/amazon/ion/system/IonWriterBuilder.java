@@ -38,6 +38,9 @@ public abstract class IonWriterBuilder
 
     /**
      * A strategy for minimizing the output of non-initial Ion version markers.
+     * <p>
+     * This strategy does not affect handling of IVMs at the start of a data
+     * stream; that's the job of {@link InitialIvmHandling}.
      */
     public enum IvmMinimizing
     {
@@ -73,10 +76,13 @@ public abstract class IonWriterBuilder
 
 
     /**
-     * Gets the strategy for reducing or eliminating non-initial Ion version
-     * markers. When null, IVMs are emitted as they are written.
+     * Gets the strategy for eliminating Ion version markers mid-stream.
+     * By default, IVMs are emitted as received or when necessary.
+     * <p>
+     * This strategy does not affect handling of IVMs at the start of the
+     * stream; that's the job of {@link InitialIvmHandling}.
      *
-     * @return the initial IVM minimization.
+     * @return the IVM minimizing strategy.
      */
     public abstract IvmMinimizing getIvmMinimizing();
 }

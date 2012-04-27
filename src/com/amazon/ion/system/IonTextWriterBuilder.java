@@ -17,7 +17,8 @@ import java.nio.charset.Charset;
  * <p>
  * Builders may be configured once and reused to construct multiple
  * objects.
- * Builder instances are <em>not</em> thread-safe unless they are immutable.
+ * Builder instances are <em>not</em> thread-safe unless they are
+ * {@linkplain #immutable() immutable}.
  * <p>
  * The most general and correct approach is to use the {@link #standard()}
  * builder:
@@ -70,6 +71,10 @@ public abstract class IonTextWriterBuilder
 
         /**
          * Discards everything, collapsing the LST to an IVM.
+         * If {@link com.amazon.ion.system.IonWriterBuilder.IvmMinimizing}
+         * is also in effect, then even that IVM may be suppressed.
+         *
+         * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
          */
         EVERYTHING
     }
@@ -377,6 +382,10 @@ public abstract class IonTextWriterBuilder
     /**
      * {@inheritDoc}
      *
+     * @return the initial IVM strategy.
+     * The default value ({@code null}) indicates that an initial IVM is
+     * emitted if and only if it is received by the writer.
+     *
      * @see #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      * @see #withInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      */
@@ -431,6 +440,10 @@ public abstract class IonTextWriterBuilder
 
     /**
      * {@inheritDoc}
+     *
+     * @return the IVM minimizing strategy.
+     * The default value ({@code null}) indicates that no minimization occurs
+     * and IVMs are emitted as received by the writer.
      *
      * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
