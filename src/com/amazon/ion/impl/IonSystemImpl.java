@@ -269,22 +269,14 @@ final class IonSystemImpl
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        IonReader reader = newReader(ionText);
-        return new IonIteratorImpl(this, reader);
+        IonReader ir = newReader(ionText);
+        return new IonIteratorImpl(this, ir);
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
-        if (LoaderImpl.USE_NEW_READERS)
-        {
-            // TODO sadly this doesn't pass all tests yet
-            // There's some strangeness with symbol tables
-//            IonReader reader = newSystemReader(ionText);
-//            return new IonIteratorImpl(this, reader);
-        }
-
-        SystemValueIterator reader = makeSystemIterator(this, ionText);
-        return reader;
+        IonReader ir = newSystemReader(ionText);
+        return new IonIteratorImpl(this, ir);
     }
 
 
@@ -328,16 +320,19 @@ final class IonSystemImpl
     }
 
     /**
-     * TODO Must correct ION-160 before exposing this or using from public API
-     * If data is text, the resulting reader will NOT flush the buffer
-     * and will accumulate memory!
-     * See comment on {@link #systemIterate(Reader)} before adding to public APIs!
+     * TODO Must correct ION-233 before exposing this or using from public API
      */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
+        if (false) {
+            // TODO ION-233 blocking this: system readers don't give symbol text
+            IonReader ir = newSystemReader(ionData);
+            return new IonIteratorImpl(this, ir);
+        }
+
         if (ionData == null) throw new NullPointerException();
 
-        Iterator<IonValue> systemReader;
+        Iterator<IonValue> systemIterator;
         boolean binaryData;
         try
         {
@@ -345,16 +340,12 @@ final class IonSystemImpl
             binaryData = _Private_Utils.streamIsIonBinary(pushback);
             if (binaryData)
             {
-                systemReader = newPagedBinarySystemIterator(getCatalog(), pushback);
+                systemIterator = newPagedBinarySystemIterator(getCatalog(), pushback);
             }
             else
             {
                 Reader reader = new InputStreamReader(pushback, UTF8_CHARSET);
-                // This incrementally transcodes the whole stream into
-                // a buffer. However, when system==false we wrap this with a
-                // UserReader below, and then flip a switch to recycle the
-                // buffer.
-                systemReader = systemIterate(reader);
+                systemIterator = systemIterate(reader);
             }
         }
         catch (IOException e)
@@ -362,7 +353,7 @@ final class IonSystemImpl
             throw new IonException(e);
         }
 
-        return systemReader;
+        return systemIterator;
     }
 
     //=========================================================================

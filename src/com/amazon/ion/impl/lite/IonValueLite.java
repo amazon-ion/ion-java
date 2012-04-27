@@ -413,6 +413,8 @@ abstract class IonValueLite
                         symbols = resolve_symbol(symbols, text);
 
                         // TODO we've interned the symbol but forgotten the sid
+                        // We also haven't made sure we're using the same
+                        // String instance as the symtab.
                     }
                 }
             }

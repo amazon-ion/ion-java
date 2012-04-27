@@ -685,6 +685,15 @@ public final class _Private_Utils
         return s;
     }
 
+    /**
+     * Create a value iterator from a reader.
+     * Primarily a trampoline for access permission.
+     */
+    public static Iterator<IonValue> iterate(ValueFactory valueFactory,
+                                             IonReader input)
+     {
+        return new IonIteratorImpl(valueFactory, input);
+     }
 
     //========================================================================
     // Symbol Table helpers

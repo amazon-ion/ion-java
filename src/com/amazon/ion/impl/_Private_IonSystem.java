@@ -27,22 +27,19 @@ public interface _Private_IonSystem
     public SymbolTable newSharedSymbolTable(IonStruct ionRep);
 
     /**
-     * TODO Must correct ION-160 before exposing this or using from public API.
-     * TODO Must correct ION-262 before exposing this or using from public API.
+     * TODO Must correct ION-233 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(String ionText);
 
     /**
-     * TODO Must correct ION-160 before exposing this or using from public API.
-     * TODO Must correct ION-262 before exposing this or using from public API.
+     * TODO Must correct ION-233 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(Reader ionText);
 
     public Iterator<IonValue> systemIterate(byte[] ionData);
 
     /**
-     * TODO Must correct ION-160 before exposing this or using from public API.
-     * TODO Must correct ION-262 before exposing this or using from public API.
+     * TODO Must correct ION-233 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(InputStream ionData);
 

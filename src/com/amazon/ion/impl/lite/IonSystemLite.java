@@ -953,59 +953,30 @@ final class IonSystemLite
     }
 
 
-    /**
-     * FIXME ION-160 This method consumes the entire stream!
-     */
     public Iterator<IonValue> systemIterate(Reader ionText)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionText);
+        return _Private_Utils.iterate(this, ir);
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
-        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionText);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionText);
+        return _Private_Utils.iterate(this, ir);
     }
 
-    /**
-     * FIXME ION-160 This method consumes the entire stream!
-     */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionData);
+        return _Private_Utils.iterate(this, ir);
     }
 
-    /**
-     * FIXME ION-160 This method consumes the entire stream!
-     */
     public Iterator<IonValue> systemIterate(byte[] ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionData);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionData);
+        return _Private_Utils.iterate(this, ir);
     }
 
-    /**
-     * FIXME This method consumes the entire stream!
-     */
-    private Iterator<IonValue> make_system_iterator(IonReader reader)
-    {
-        IonDatagram datagram = newDatagram();
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
-        try {
-            writer.writeValues(reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        Iterator<IonValue> iterator = datagram.systemIterator();
-        return iterator;
-    }
 
     public boolean valueIsSharedSymbolTable(IonValue value)
     {
