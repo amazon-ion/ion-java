@@ -46,8 +46,7 @@ public final class _Private_IonWriterFactory
             new IonWriterSystemTree(defaultSystemSymtab, catalog, container,
                                     InitialIvmHandling.SUPPRESS);
 
-        IonWriter writer = new IonWriterUserTree(catalog, sys, system_writer);
-        return writer;
+        return new IonWriterUser(catalog, sys, system_writer);
     }
 
 

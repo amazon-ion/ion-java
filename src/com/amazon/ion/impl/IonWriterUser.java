@@ -35,7 +35,7 @@ import java.math.BigInteger;
  * struct is stepped-out, the diversion is stopped and the new
  * {@link SymbolTable} is installed.
  */
-abstract class IonWriterUser
+class IonWriterUser
     extends IonWriterBaseImpl
     implements _Private_IonWriter
 {
