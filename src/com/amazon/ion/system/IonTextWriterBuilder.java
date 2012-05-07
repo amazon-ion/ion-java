@@ -2,6 +2,8 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -15,12 +17,25 @@ import java.nio.charset.Charset;
  * <p>
  * Builders may be configured once and reused to construct multiple
  * objects.
- * Builder instances are <em>not</em> thread-safe unless they are immutable.
+ * Builder instances are <em>not</em> thread-safe unless they are
+ * {@linkplain #immutable() immutable}.
  * <p>
- * The easiest way to get going is to just use the {@link #standard()} builder:
+ * The most general and correct approach is to use the {@link #standard()}
+ * builder:
  * <pre>
  *  IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
  *</pre>
+ * The standard configuration gives a direct representation of what's written,
+ * including version markers and local symbol tables. That's good for
+ * diagnostics but it may be more than you want in many situations.
+ * In such cases the {@link #minimal()} or {@link #pretty()} builders (or a
+ * combination) may give more satisfying output:
+ * <pre>
+ *  IonWriter w = IonTextWriterBuilder.minimal()
+ *                                    .withPrettyPrinting()
+ *                                    .build(outputStream);
+ *</pre>
+ *
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
@@ -37,6 +52,34 @@ public abstract class IonTextWriterBuilder
     extends IonWriterBuilder
 {
     /**
+     * A strategy for minimizing the output of local symbol tables.
+     * By default, no minimization takes place and the writer outputs all data
+     * as-is.
+     */
+    public enum LstMinimizing
+    {
+        /**
+         * Discards local symbols, retains imports<!-- and open content-->.
+         */
+        LOCALS,
+
+        /* TODO Discards local symbols and imports, retains open content.
+         * This isn't implemented yet, because our symtab implmentations don't
+         * support open content (so it would work the same as EVERYTHING).
+         */
+//      IMPORTS,
+
+        /**
+         * Discards everything, collapsing the LST to an IVM.
+         * If {@link com.amazon.ion.system.IonWriterBuilder.IvmMinimizing}
+         * is also in effect, then even that IVM may be suppressed.
+         *
+         * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
+         */
+        EVERYTHING
+    }
+
+    /**
      * The {@code "US-ASCII"} charset.
      */
     public static final Charset ASCII = _Private_Utils.ASCII_CHARSET;
@@ -49,16 +92,32 @@ public abstract class IonTextWriterBuilder
 
     /**
      * The standard builder of {@link IonWriter}s, with all configuration
-     * properties having their default values.
+     * properties having their default values. The resulting output is a
+     * direct representation of what's written to the writer, including
+     * version markers and local symbol tables.
      *
      * @return a new, mutable builder instance.
      *
+     * @see #minimal()
      * @see #pretty()
      * @see #json()
      */
     public static IonTextWriterBuilder standard()
     {
         return _Private_IonTextWriterBuilder.standard();
+    }
+
+    /**
+     * Creates a builder configured to minimize system data, eliminating local
+     * symbol tables and minimizing version markers.
+     *
+     * @return a new, mutable builder instance.
+     *
+     * @see #withMinimalSystemData()
+     */
+    public static IonTextWriterBuilder minimal()
+    {
+        return standard().withMinimalSystemData();
     }
 
     /**
@@ -99,6 +158,8 @@ public abstract class IonTextWriterBuilder
     private IonCatalog myCatalog;
     private Charset myCharset;
     private InitialIvmHandling myInitialIvmHandling;
+    private IvmMinimizing myIvmMinimizing;
+    private LstMinimizing myLstMinimizing;
     private SymbolTable[] myImports;
     private int _long_string_threshold;
 
@@ -114,6 +175,8 @@ public abstract class IonTextWriterBuilder
         this.myCatalog              = that.myCatalog;
         this.myCharset              = that.myCharset;
         this.myInitialIvmHandling   = that.myInitialIvmHandling;
+        this.myIvmMinimizing        = that.myIvmMinimizing;
+        this.myLstMinimizing        = that.myLstMinimizing;
         this.myImports              = that.myImports;
         this._long_string_threshold = that._long_string_threshold;
     }
@@ -249,6 +312,33 @@ public abstract class IonTextWriterBuilder
     //-------------------------------------------------------------------------
 
     /**
+     * Declares that this builder should minimize system-level output
+     * (Ion version markers and local symbol tables).
+     * <p>
+     * This is equivalent to:
+     * <ul>
+     *   <li>{@link #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
+     *   setInitialIvmHandling}{@code (}{@link IonWriterBuilder.InitialIvmHandling#SUPPRESS SUPPRESS}{@code )}
+     *   <li>{@link #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     *   setIvmMinimizing}{@code (}{@link IonWriterBuilder.IvmMinimizing#DISTANT DISTANT}{@code )}
+     *   <li>{@link #setLstMinimizing(LstMinimizing)
+     *   setLstMinimizing}{@code (}{@link LstMinimizing#EVERYTHING EVERYTHING}{@code )}
+     * </ul>
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public final IonTextWriterBuilder withMinimalSystemData()
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setInitialIvmHandling(SUPPRESS);
+        b.setIvmMinimizing(IvmMinimizing.DISTANT);
+        b.setLstMinimizing(LstMinimizing.EVERYTHING);
+        return b;
+    }
+
+
+    /**
      * Declares that this builder should use basic pretty-printing.
      * Calling this method alters several other configuration properties,
      * so code should call it first, then make any necessary overrides.
@@ -270,6 +360,7 @@ public abstract class IonTextWriterBuilder
      * <p>
      * The specific conversions are as follows:
      * <ul>
+     *   <li>System data is suppressed per {@link #withMinimalSystemData()}.
      *   <li>All annotations are suppressed.
      *   <li>Nulls of any type are printed as JSON {@code null}.
      *   <li>Blobs are printed as strings, containing Base64.
@@ -291,6 +382,10 @@ public abstract class IonTextWriterBuilder
     /**
      * {@inheritDoc}
      *
+     * @return the initial IVM strategy.
+     * The default value ({@code null}) indicates that an initial IVM is
+     * emitted if and only if it is received by the writer.
+     *
      * @see #setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      * @see #withInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      */
@@ -301,7 +396,7 @@ public abstract class IonTextWriterBuilder
     }
 
     /**
-     * Gets the strategy for emitting Ion version markers at the start
+     * Sets the strategy for emitting Ion version markers at the start
      * of the stream. By default, IVMs are emitted only when explicitly
      * written or when necessary (for example, before data that's not Ion 1.0).
      *
@@ -338,6 +433,118 @@ public abstract class IonTextWriterBuilder
     {
         IonTextWriterBuilder b = mutable();
         b.setInitialIvmHandling(handling);
+        return b;
+    }
+
+    //-------------------------------------------------------------------------
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return the IVM minimizing strategy.
+     * The default value ({@code null}) indicates that no minimization occurs
+     * and IVMs are emitted as received by the writer.
+     *
+     * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     */
+    @Override
+    public final IvmMinimizing getIvmMinimizing()
+    {
+        return myIvmMinimizing;
+    }
+
+    /**
+     * Sets the strategy for reducing or eliminating non-initial Ion version
+     * markers. When null, IVMs are emitted as they are written.
+     *
+     * @param minimizing the IVM minimization strategy.
+     * Null indicates that all explicitly-written IVMs will be emitted.
+     *
+     * @see #getIvmMinimizing()
+     * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public void setIvmMinimizing(IvmMinimizing minimizing)
+    {
+        myIvmMinimizing = minimizing;
+    }
+
+    /**
+     * Declares the strategy for reducing or eliminating non-initial Ion version
+     * markers, returning a new mutable builder if this is immutable.
+     * When null, IVMs are emitted as they are written.
+     *
+     * @param minimizing the IVM minimization strategy.
+     * Null indicates that all explicitly-written IVMs will be emitted.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     * @see #getIvmMinimizing()
+     */
+    public final IonTextWriterBuilder
+    withIvmMinimizing(IvmMinimizing minimizing)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setIvmMinimizing(minimizing);
+        return b;
+    }
+
+    //-------------------------------------------------------------------------
+
+    /**
+     * Gets the strategy for reducing or eliminating local symbol tables.
+     * By default, LST data is emitted as received or when necessary
+     * (for example, binary data will always collect and emit local symbols).
+     *
+     * @see #setLstMinimizing(LstMinimizing)
+     * @see #withLstMinimizing(LstMinimizing)
+     */
+    public final LstMinimizing getLstMinimizing()
+    {
+        return myLstMinimizing;
+    }
+
+    /**
+     * Sets the strategy for reducing or eliminating local symbol tables.
+     * By default, LST data is emitted as received or when necessary
+     * (for example, binary data will always collect and emit local symbols).
+     *
+     * @param minimizing the LST minimization strategy.
+     * Null indicates that LSTs will be emitted as received.
+     *
+     * @see #getLstMinimizing()
+     * @see #withLstMinimizing(LstMinimizing)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public void setLstMinimizing(LstMinimizing minimizing)
+    {
+        myLstMinimizing = minimizing;
+    }
+
+    /**
+     * Sets the strategy for reducing or eliminating local symbol tables.
+     * By default, LST data is emitted as received or when necessary
+     * (for example, binary data will always collect and emit local symbols).
+     *
+     * @param minimizing the LST minimization strategy.
+     * Null indicates that LSTs will be emitted as received.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @see #getLstMinimizing()
+     * @see #setLstMinimizing(LstMinimizing)
+     */
+    public final IonTextWriterBuilder
+    withLstMinimizing(LstMinimizing minimizing)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setLstMinimizing(minimizing);
         return b;
     }
 

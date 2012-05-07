@@ -111,9 +111,12 @@ public interface IonWriter
      * <p>
      * Implementations should allow the application to continue writing further
      * top-level values following the semantics for concatenating Ion data
-     * streams. If another top-level value is written, it must be preceded by
-     * an Ion version marker in order to reset the stream context as if this
-     * were a new stream.
+     * streams. If another top-level value is written, the result must behave
+     * as if it were preceded by an Ion version marker, resetting the stream
+     * context as if this were a new stream. (Whether or not an IVM is written
+     * may depend upon the writer's configuration; see
+     * {@link com.amazon.ion.system.IonWriterBuilder.IvmMinimizing
+     * IvmMinimizing}.)
      * <p>
      * This feature can be used to flush reliably before writing more values.
      * Think about a long-running stream of binary values: without finishing,

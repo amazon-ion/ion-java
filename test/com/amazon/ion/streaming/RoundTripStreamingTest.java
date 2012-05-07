@@ -14,8 +14,8 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.impl.IonWriterUserBinary;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -175,7 +175,7 @@ extends IonTestCase
     {
         IonReader in = makeIterator(buffer);
         IonDatagram dg = system().newDatagram();
-        IonWriter tw = system().newTreeSystemWriter(dg);
+        IonWriter tw = system().newTreeWriter(dg);
 
         tw.writeValues(in);
         //IonValue v = tw.getContentAsIonValue();

@@ -16,11 +16,11 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonWriterUserText.TextOptions;
+import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
@@ -53,10 +53,10 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     boolean     _pending_separator;
 
     /**
-     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
-     * data.
+     * True when the last data written was a triple-quoted string, meaning we
+     * cannot write another long string lest it be incorrectly concatenated.
      */
-    private boolean _finished_and_requiring_version_marker;
+    private boolean _following_long_string;
 
     int         _separator_character;
 
@@ -87,7 +87,9 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
                                   _Private_IonTextWriterBuilder options,
                                   Appendable out)
     {
-        super(defaultSystemSymtab);
+        super(defaultSystemSymtab,
+              options.getInitialIvmHandling(),
+              options.getIvmMinimizing());
 
         out.getClass(); // Efficient null check
 
@@ -249,13 +251,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         return _stack_pending_comma[_top - 1];
     }
 
-    private boolean containerIsListOrStruct()
-    {
-        if (_top == 0) return false;
-        int topType = topType();
-        return (topType == tidList || topType == tidStruct);
-    }
-
     private boolean containerIsSexp()
     {
         if (_top == 0) return false;
@@ -341,30 +336,25 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     }
 
 
+    @Override
     void startValue() throws IOException
     {
-        if (_finished_and_requiring_version_marker)
-        {
-            assert getDepth() == 0;
+        super.startValue();
 
-            // TODO if caller is writing an IVM this will output an extra one.
-
-            // Clear the flag first, since writeSymbol will call back here.
-            _finished_and_requiring_version_marker = false;
-
-            // This MUST always be $ion_1_0
-            writeSymbol(SystemSymbols.ION_1_0_SID);
-        }
+        boolean followingLongString = _following_long_string;
 
         if (_options.isPrettyPrintOn()) {
-            if (_pending_separator && _separator_character != '\n') {
+            if (_pending_separator && _separator_character > ' ') {
+                // Only bother if the separator is non-whitespace.
                 _output.append((char)_separator_character);
+                followingLongString = false;
             }
             _output.append(_options.lineSeparator());
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
             _output.append((char)_separator_character);
+            if (_separator_character > ' ') followingLongString = false;
         }
 
         // write field name
@@ -380,6 +370,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             }
             _output.append(':');
             clearFieldName();
+            followingLongString = false;
         }
 
         // write annotations
@@ -397,23 +388,27 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
                     }
                     _output.append("::");
                 }
+                followingLongString = false;
             }
             clearAnnotations();
         }
+
+        _following_long_string = followingLongString;
     }
 
     void closeValue() {
+        super.endValue();
         _pending_separator = true;
+        _following_long_string = false;  // Caller overwrites this as needed.
     }
 
 
 
     @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
-        writeSymbol(systemSymtab.getIonVersionId());
-        super.writeIonVersionMarker(systemSymtab);
+        writeSymbolAsIs(systemSymtab.getIonVersionId());
     }
 
     @Override
@@ -424,7 +419,16 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
 
         // TODO ION-274 this always suppresses local symtabs w/o imports
         SymbolTable[] imports = symtab.getImportedTables();
-        if (imports.length > 0) {
+
+        LstMinimizing min = _options.getLstMinimizing();
+        if (min == null)
+        {
+            symtab.writeTo(this);
+        }
+        else if (min == LstMinimizing.LOCALS && imports.length > 0)
+        {
+            // Copy the symtab, but filter out local symbols.
+
             IonReader reader = new UnifiedSymbolTableReader(symtab);
 
             // move onto and write the struct header
@@ -456,6 +460,11 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             // we're done step out and move along
             stepOut();
         }
+        else  // Collapse to IVM
+        {
+            SymbolTable systemSymtab = symtab.getSystemSymbolTable();
+            writeIonVersionMarker(systemSymtab);
+        }
 
         super.writeLocalSymtab(symtab);
     }
@@ -486,6 +495,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         push(tid);
         _output.append(opener);
         _pending_separator = false;
+        _following_long_string = false;
     }
 
     public void stepOut() throws IOException
@@ -750,22 +760,29 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     {
         startValue();
         if (value != null
-            && containerIsListOrStruct()
+            && ! _following_long_string
             && _long_string_threshold < value.length())
         {
             // TODO This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
             IonTextUtils.printLongString(_output, value);
-        }
-        else if (_options._string_as_json)
-        {
-            IonTextUtils.printJsonString(_output, value);
+
+            // This sets _following_long_string = false so we must overwrite
+            closeValue();
+            _following_long_string = true;
         }
         else
         {
-            IonTextUtils.printString(_output, value);
+            if (_options._string_as_json)
+            {
+                IonTextUtils.printJsonString(_output, value);
+            }
+            else
+            {
+                IonTextUtils.printString(_output, value);
+            }
+            closeValue();
         }
-        closeValue();
     }
 
     // escape sequences for character below ascii 32 (space)
@@ -786,16 +803,15 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         return '\\'+LOW_ESCAPE_SEQUENCES[c];
     }
 
-    @Deprecated
-    public void writeSymbol(int symbolId)
+    @Override
+    void writeSymbolAsIs(int symbolId)
         throws IOException
     {
-        // TODO ION-165 this should handle IVMs
         SymbolTable symtab = getSymbolTable();
         String text = symtab.findKnownSymbol(symbolId);
         if (text != null)
         {
-            writeSymbol(text);
+            writeSymbolAsIs(text);
         }
         else
         {
@@ -805,10 +821,10 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         }
     }
 
-    public void writeSymbol(String value)
+    @Override
+    public void writeSymbolAsIs(String value)
         throws IOException
     {
-        // TODO ION-165 this should handle IVMs
         if (value == null)
         {
             writeNull(IonType.SYMBOL);
@@ -969,13 +985,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
                 ((Flushable)_output).flush();
             }
         }
-    }
-
-    @Override
-    public void finish() throws IOException
-    {
-        super.finish();
-        _finished_and_requiring_version_marker = true;
     }
 
     public void close() throws IOException

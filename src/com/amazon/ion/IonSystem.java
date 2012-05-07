@@ -228,6 +228,8 @@ public interface IonSystem
      * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
@@ -373,6 +375,8 @@ public interface IonSystem
      * detecting whether it's text or binary data. If the input data is
      * text this may return an {@link IonTextReader} which can report the
      * line and offset position of the parser for error reporting.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData must not be null.
      *

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -62,12 +62,7 @@ public class EquivsTest
 
                 try
                 {
-                    // the extra if allows us (me) to set a break point on failures here, specifically here.
-                    if (current.equals(next) == false) {
-                        IonAssert.assertIonEquals(current, next);
-                    }
-                    assertEquals("Equal values have unequal hashes",
-                                 current.hashCode(), next.hashCode());
+                    checkEquivalence(current, next);
                 }
                 catch (Throwable e)
                 {
@@ -80,5 +75,15 @@ public class EquivsTest
                 }
             }
         }
+    }
+
+    protected void checkEquivalence(IonValue left, IonValue right)
+    {
+        // the extra if allows sitting a break point on failures
+        if (left.equals(right) == false) {
+            IonAssert.assertIonEquals(left, right);
+        }
+        assertEquals("Equal values have unequal hashes",
+                     left.hashCode(), right.hashCode());
     }
 }

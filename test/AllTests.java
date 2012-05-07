@@ -9,6 +9,7 @@ import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
+import com.amazon.ion.EquivTimelineTest;
 import com.amazon.ion.EquivsTest;
 import com.amazon.ion.ExtendedDecimalTest;
 import com.amazon.ion.FieldNameEscapesTest;
@@ -137,6 +138,7 @@ import org.junit.runners.Suite;
     GoodIonTest.class,
     BadIonTest.class,
     EquivsTest.class,
+    EquivTimelineTest.class,
     RoundTripTest.class,
 
     // Some tests are collected to make it easier to run interesting subsets.

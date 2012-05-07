@@ -4,13 +4,17 @@ package com.amazon.ion;
 
 import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.zip.GZIPOutputStream;
 import org.junit.Test;
 
 /**
@@ -224,5 +228,64 @@ public class IonSystemTest
         IonReader r = system().newReader("hi");
         // we don't call next()!
         system().newValue(r);
+    }
+
+
+    private byte[] gzip(byte[] input)
+        throws IOException
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzos = new GZIPOutputStream(baos);
+        gzos.write(input);
+        gzos.close();
+        return baos.toByteArray();
+    }
+
+    private void checkGzipDetection(IonReader r)
+    {
+        assertEquals(IonType.INT, r.next());
+        assertEquals(1234, r.intValue());
+        assertEquals(null, r.next());
+    }
+
+    private void checkGzipDetection(byte[] bytes)
+        throws Exception
+    {
+        IonSystem system = system();
+
+        InputStream in = new ByteArrayInputStream(bytes);
+        IonReader r = system.newReader(in);
+        assertEquals(IonType.INT, r.next());
+        assertEquals(1234, r.intValue());
+        assertEquals(null, r.next());
+
+        in = new ByteArrayInputStream(bytes);
+        Iterator<IonValue> i = system.iterate(in);
+        checkInt(1234, i.next());
+
+        if (false) { // TODO ION-207 this fails for the lazy DOM
+            IonLoader loader = loader();
+            in = new ByteArrayInputStream(bytes);
+            IonDatagram dg = loader.load(in);
+            checkInt(1234, dg.get(0));
+        }
+    }
+
+    @Test
+    public void testGzipDetection()
+        throws Exception
+    {
+        String ionText = "1234";
+        byte[] textBytes = _Private_Utils.utf8(ionText);
+        byte[] gzipTextBytes = gzip(textBytes);
+
+        checkGzipDetection(textBytes);
+        checkGzipDetection(gzipTextBytes);
+
+        byte[] binaryBytes = loader().load(ionText).getBytes();
+        byte[] gzipBinaryBytes = gzip(binaryBytes);
+
+        checkGzipDetection(binaryBytes);
+        checkGzipDetection(gzipBinaryBytes);
     }
 }

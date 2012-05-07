@@ -155,6 +155,7 @@ final class LoaderImpl
     public IonDatagramImpl load(InputStream ionData)
         throws IonException, IOException
     {
+        // TODO ION-207 gzip support is tricky, don't want multiple pushbacks
         try
         {
             PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
@@ -166,6 +167,8 @@ final class LoaderImpl
                     // The streaming APIs add no benefit.
                 }
 
+                // TODO this can be extended to take the pushback separately
+                // thus avoiding the need for the PushbackInputStream entirely
                 SystemValueIterator systemReader =
                     mySystem.newBinarySystemIterator(myCatalog, pushback);
                 return new IonDatagramImpl(mySystem, systemReader);

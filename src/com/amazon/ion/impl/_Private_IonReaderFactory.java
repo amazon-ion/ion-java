@@ -205,19 +205,17 @@ public final class _Private_IonReaderFactory
         }
         return r;
     }
-    public static final IonReader makeReader(IonSystem system, InputStream is)
-    {
-        IonReader r = makeReader(system, system.getCatalog(), is);
-        return r;
-    }
 
     public static final IonReader makeReader(IonSystem system,
                                              IonCatalog catalog,
                                              InputStream is)
     {
+        is.getClass(); // Force NPE
+
         IonReader r;
         UnifiedInputStreamX uis;
         try {
+            is = new GzipOrRawInputStream(is);
             uis = UnifiedInputStreamX.makeStream(is);
             if (has_binary_cookie(uis)) {
                 r = new IonReaderBinaryUserX(system, catalog, uis);

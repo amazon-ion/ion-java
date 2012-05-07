@@ -12,7 +12,10 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 
 
@@ -27,6 +30,30 @@ abstract class IonWriterSystem
      * Must not be null.
      */
     final SymbolTable _default_system_symbol_table;
+
+    /**
+     * What to do about IVMs at the start of the stream.
+     * Becomes null as soon as we write anything.
+     * After a {@link #finish()} this becomes {@link InitialIVMHandling#ENSURE}
+     * because we must force another IVM to be emitted.
+     */
+    private InitialIvmHandling _initial_ivm_handling;
+
+    /**
+     * What to do about non-initial IVMs.
+     */
+    private final IvmMinimizing _ivm_minimizing;
+
+    /**
+     * Indicates whether the (immediately previous emitted value was an IVM.
+     * This is cleared by {@link #endValue()}.
+     */
+    private boolean _previous_value_was_ivm;
+
+    /**
+     * Indicates whether we've written anything at all.
+     */
+    private boolean _anything_written;
 
     /**
      * Must be either local or system table, and never null.
@@ -51,11 +78,15 @@ abstract class IonWriterSystem
     /**
      * @param defaultSystemSymbolTable must not be null.
      */
-    IonWriterSystem(SymbolTable defaultSystemSymbolTable)
+    IonWriterSystem(SymbolTable defaultSystemSymbolTable,
+                    InitialIvmHandling initialIvmHandling,
+                    IvmMinimizing ivmMinimizing)
     {
         defaultSystemSymbolTable.getClass(); // Efficient null check
         _default_system_symbol_table = defaultSystemSymbolTable;
         _symbol_table = defaultSystemSymbolTable;
+        _initial_ivm_handling = initialIvmHandling;
+        _ivm_minimizing = ivmMinimizing;
     }
 
 
@@ -91,17 +122,76 @@ abstract class IonWriterSystem
         _symbol_table = symbols;
     }
 
+    boolean shouldWriteIvm(SymbolTable systemSymtab)
+    {
+        if (_initial_ivm_handling == InitialIvmHandling.ENSURE)
+        {
+            return true;
+        }
+        if (_initial_ivm_handling == InitialIvmHandling.SUPPRESS)
+        {
+            // TODO ION-285 Must write IVM if given system != 1.0
+            return false;
+        }
+        // TODO ION-285 Add SUPPRESS_ALL to suppress non 1.0 IVMs
+
+        if (_ivm_minimizing == IvmMinimizing.ADJACENT)
+        {
+            // TODO ION-285 Write IVM if current system version != given system
+            // For now we assume that it's the same since we only support 1.0
+            return ! _previous_value_was_ivm;
+        }
+        if (_ivm_minimizing == IvmMinimizing.DISTANT)
+        {
+            // TODO ION-285 Write IVM if current system version != given system
+            // For now we assume that it's the same since we only support 1.0
+            return ! _anything_written;
+        }
+
+        return true;
+    }
 
     /**
-     * Sets {@link #_symbol_table}.
+     * Sets {@link #_symbol_table} and clears {@link #_initial_ivm_handling}.
      * Subclasses should override to generate output.
      */
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    final void writeIonVersionMarker(SymbolTable systemSymtab)
         throws IOException
     {
+        if (getDepth() != 0)
+        {
+            String message =
+                "Ion Version Markers are only valid at the top level of a " +
+                "data stream";
+            throw new IllegalStateException(message);
+        }
         assert systemSymtab.isSystemTable();
+
+        if (! SystemSymbols.ION_1_0.equals(systemSymtab.getIonVersionId()))
+        {
+            String message = "This library only supports Ion 1.0";
+            throw new UnsupportedOperationException(message);
+        }
+
+        if (shouldWriteIvm(systemSymtab))
+        {
+            _initial_ivm_handling = null;
+
+            writeIonVersionMarkerAsIs(systemSymtab);
+
+            _previous_value_was_ivm = true;
+        }
+
         _symbol_table = systemSymtab;
     }
+
+    /**
+     * Writes an IVM without checking preconditions or
+     * {@link InitialIVMHandling}.
+     */
+    abstract void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
+        throws IOException;
+
 
     @Override // TODO ION-271 make final after IMS is migrated
     public void writeIonVersionMarker()
@@ -157,6 +247,60 @@ abstract class IonWriterSystem
         return sid;
     }
 
+    void startValue() throws IOException
+    {
+        if (_initial_ivm_handling == InitialIvmHandling.ENSURE)
+        {
+            writeIonVersionMarker(_default_system_symbol_table);
+        }
+    }
+
+    void endValue()
+    {
+        _initial_ivm_handling = null;
+        _previous_value_was_ivm = false;
+        _anything_written = true;
+    }
+
+
+    /** Writes a symbol without checking for system ID. */
+    abstract void writeSymbolAsIs(int symbolId) throws IOException;
+
+    /** Writes a symbol without checking for system ID. */
+    abstract void writeSymbolAsIs(String value) throws IOException;
+
+
+    @Deprecated
+    public final void writeSymbol(int symbolId) throws IOException
+    {
+        if (symbolId < 1) {
+            throw new IllegalArgumentException("symbol IDs are greater than 0");
+        }
+
+        if (symbolId == SystemSymbols.ION_1_0_SID && getDepth() == 0)
+        {
+            // TODO ION-285 Make sure to get the right symtab, default may differ.
+            writeIonVersionMarker();
+        }
+        else
+        {
+            writeSymbolAsIs(symbolId);
+        }
+    }
+
+
+    public final void writeSymbol(String value) throws IOException
+    {
+        if (SystemSymbols.ION_1_0.equals(value) && getDepth() == 0)
+        {
+            // TODO ION-285 Make sure to get the right symtab, default may differ.
+            writeIonVersionMarker();
+        }
+        else {
+            writeSymbolAsIs(value);
+        }
+    }
+
 
     public void finish() throws IOException
     {
@@ -166,7 +310,8 @@ abstract class IonWriterSystem
 
         flush();
 
-        // TODO this should always be $ion_1_0
+        _previous_value_was_ivm = false;
+        _initial_ivm_handling = InitialIvmHandling.ENSURE;
         _symbol_table = _default_system_symbol_table;
     }
 
