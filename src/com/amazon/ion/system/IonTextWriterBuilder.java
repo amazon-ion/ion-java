@@ -55,6 +55,8 @@ public abstract class IonTextWriterBuilder
      * A strategy for minimizing the output of local symbol tables.
      * By default, no minimization takes place and the writer outputs all data
      * as-is.
+     *
+     * @since IonJava R16
      */
     public enum LstMinimizing
     {
@@ -114,6 +116,8 @@ public abstract class IonTextWriterBuilder
      * @return a new, mutable builder instance.
      *
      * @see #withMinimalSystemData()
+     *
+     * @since IonJava R16
      */
     public static IonTextWriterBuilder minimal()
     {
@@ -327,6 +331,8 @@ public abstract class IonTextWriterBuilder
      *
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
+     *
+     * @since IonJava R16
      */
     public final IonTextWriterBuilder withMinimalSystemData()
     {
@@ -447,6 +453,8 @@ public abstract class IonTextWriterBuilder
      *
      * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
+     *
+     * @since IonJava R16
      */
     @Override
     public final IvmMinimizing getIvmMinimizing()
@@ -465,6 +473,8 @@ public abstract class IonTextWriterBuilder
      * @see #withIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      *
      * @throws UnsupportedOperationException if this is immutable.
+     *
+     * @since IonJava R16
      */
     public void setIvmMinimizing(IvmMinimizing minimizing)
     {
@@ -484,6 +494,8 @@ public abstract class IonTextWriterBuilder
      *
      * @see #setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      * @see #getIvmMinimizing()
+     *
+     * @since IonJava R16
      */
     public final IonTextWriterBuilder
     withIvmMinimizing(IvmMinimizing minimizing)
@@ -502,6 +514,8 @@ public abstract class IonTextWriterBuilder
      *
      * @see #setLstMinimizing(LstMinimizing)
      * @see #withLstMinimizing(LstMinimizing)
+     *
+     * @since IonJava R16
      */
     public final LstMinimizing getLstMinimizing()
     {
@@ -520,6 +534,8 @@ public abstract class IonTextWriterBuilder
      * @see #withLstMinimizing(LstMinimizing)
      *
      * @throws UnsupportedOperationException if this is immutable.
+     *
+     * @since IonJava R16
      */
     public void setLstMinimizing(LstMinimizing minimizing)
     {
@@ -539,6 +555,8 @@ public abstract class IonTextWriterBuilder
      *
      * @see #getLstMinimizing()
      * @see #setLstMinimizing(LstMinimizing)
+     *
+     * @since IonJava R16
      */
     public final IonTextWriterBuilder
     withLstMinimizing(LstMinimizing minimizing)

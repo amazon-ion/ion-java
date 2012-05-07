@@ -18,6 +18,8 @@ public abstract class IonWriterBuilder
     /**
      * A strategy for altering emission of Ion version markers at the start of
      * an Ion stream.
+     *
+     * @see IonTextWriterBuilder#setInitialIvmHandling(InitialIvmHandling)
      */
     public enum InitialIvmHandling
     {
@@ -25,6 +27,8 @@ public abstract class IonWriterBuilder
          * Always emits an initial IVM, even when the user hasn't explicitly
          * written one.  If the user <em>does</em> write one, this won't
          * cause an extra to be emitted.
+         *
+         * @since IonJava R16
          */
         ENSURE,
 
@@ -41,6 +45,10 @@ public abstract class IonWriterBuilder
      * <p>
      * This strategy does not affect handling of IVMs at the start of a data
      * stream; that's the job of {@link InitialIvmHandling}.
+     *
+     * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
+     *
+     * @since IonJava R16
      */
     public enum IvmMinimizing
     {
@@ -83,6 +91,8 @@ public abstract class IonWriterBuilder
      * stream; that's the job of {@link InitialIvmHandling}.
      *
      * @return the IVM minimizing strategy.
+     *
+     * @since IonJava R16
      */
     public abstract IvmMinimizing getIvmMinimizing();
 }
