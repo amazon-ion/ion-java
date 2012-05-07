@@ -178,7 +178,7 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
+        IonReader reader = newReader(ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
