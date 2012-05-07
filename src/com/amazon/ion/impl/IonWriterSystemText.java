@@ -415,9 +415,6 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
     void writeLocalSymtab(SymbolTable symtab)
         throws IOException
     {
-        // TODO implement _filter_symbol_tables
-
-        // TODO ION-274 this always suppresses local symtabs w/o imports
         SymbolTable[] imports = symtab.getImportedTables();
 
         LstMinimizing min = _options.getLstMinimizing();

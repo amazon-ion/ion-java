@@ -230,15 +230,7 @@ public class PrinterTest
         assertTrue("missing data",
                    text.endsWith(" a b c"));
 
-        // We shouldn't jnject a local table if its not needed.
-
-        // TODO ION-165
-        if (getDomType() == DomType.LITE)
-        {
-            // This is a hack to make the lite dom work like the original.
-            // It's hiding some uglyness, disable to see.
-            myPrinter.myOptions.simplifySystemValues = true;
-        }
+        // We shouldn't inject a local table if its not needed.
 
         String data = "2 '+' [2,'+']";
         String dataWithIvm = ION_1_0 + ' ' + data;

@@ -288,8 +288,8 @@ abstract class IonWriterSystem
         }
     }
 
-
-    public final void writeSymbol(String value) throws IOException
+    // TODO ION-271 make final when IMS removes its JsonWriter
+    public void writeSymbol(String value) throws IOException
     {
         if (SystemSymbols.ION_1_0.equals(value) && getDepth() == 0)
         {
