@@ -209,8 +209,7 @@ public class RoundTripTest
     }
 
 
-    @Test
-    public void testStandardTextWriter()
+    private void checkTextOutput(IonTextWriterBuilder builder)
         throws Exception
     {
         byte[] outBytes;
@@ -221,7 +220,7 @@ public class RoundTripTest
             IonReader r0 = system().newSystemReader(fileIn);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            IonWriter w = IonTextWriterBuilder.standard().build(out);
+            IonWriter w = builder.build(out);
             w.writeValues(r0);
             w.close();
 
@@ -244,5 +243,25 @@ public class RoundTripTest
         {
             fileIn.close();
         }
+    }
+
+
+    @Test
+    public void testStandardTextWriter()
+        throws Exception
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        checkTextOutput(b);
+    }
+
+
+    @Test
+    public void testTextWriterLongStrings()
+        throws Exception
+    {
+        IonTextWriterBuilder b =
+            IonTextWriterBuilder.standard()
+            .withLongStringThreshold(1);
+        checkTextOutput(b);
     }
 }
