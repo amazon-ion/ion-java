@@ -16,6 +16,9 @@ import java.io.IOException;
  */
 public class IonStreamUtils
 {
+    private static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
+
+
     /**
      * Determines whether a buffer contains Ion binary data by looking for the
      * presence of the Ion Version Marker at its start.
@@ -54,20 +57,33 @@ public class IonStreamUtils
      */
     public static boolean isIonBinary(byte[] buffer, int offset, int length)
     {
-        return cookiMatches(BINARY_VERSION_MARKER_1_0, buffer, offset, length);
+        return cookieMatches(BINARY_VERSION_MARKER_1_0, buffer, offset, length);
     }
 
 
-    private static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
-
+    /**
+     * Determines whether a buffer contains GZIPped data.
+     *
+     * @param buffer the data to check.
+     * @param offset the position in the buffer at which to start reading.
+     * @param length the number of bytes in the buffer that are valid,
+     *  starting from {@code offset}.
+     *
+     * @return {@code true} if the buffer contains GZIPped data; {@code false}
+     * if the buffer is null or if the {@code length} is too short.
+     *
+     * @since IonJava R16
+     */
     public static boolean isGzip(byte[] buffer, int offset, int length)
     {
-        return cookiMatches(GZIP_HEADER, buffer, offset, length);
+        return cookieMatches(GZIP_HEADER, buffer, offset, length);
     }
 
 
-    private static boolean cookiMatches(byte[] cookie,
-                                        byte[] buffer, int offset, int length)
+    private static boolean cookieMatches(byte[] cookie,
+                                         byte[] buffer,
+                                         int offset,
+                                         int length)
     {
         if (buffer == null || length < cookie.length)
         {
