@@ -12,9 +12,12 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.util.IonStreamUtils;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.util.zip.GZIPInputStream;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -194,76 +197,98 @@ public final class _Private_IonReaderFactory
                                              int offset,
                                              int length)
     {
-        UnifiedInputStreamX iis =
-            UnifiedInputStreamX.makeStream(bytes, offset, length);
-        IonReader r;
-        if (isIonBinary(bytes, offset, length)) {
-            r = new IonReaderBinaryUserX(system, catalog, iis, offset);
+        try
+        {
+            UnifiedInputStreamX uis = makeUnifiedStream(bytes, offset, length);
+            IonReader r = makeReader(system, catalog, uis, offset);
+            return r;
         }
-        else {
-            r = new IonReaderTextUserX(system, catalog, iis, offset);
+        catch (IOException e)
+        {
+            throw new IonException(e);
         }
-        return r;
     }
 
     public static final IonReader makeReader(IonSystem system,
                                              IonCatalog catalog,
                                              InputStream is)
     {
-        is.getClass(); // Force NPE
-
-        IonReader r;
-        UnifiedInputStreamX uis;
         try {
-            is = new GzipOrRawInputStream(is);
-            uis = UnifiedInputStreamX.makeStream(is);
-            if (has_binary_cookie(uis)) {
-                r = new IonReaderBinaryUserX(system, catalog, uis);
-            }
-            else {
-                r = new IonReaderTextUserX(system, catalog, uis);
-            }
+            UnifiedInputStreamX uis = makeUnifiedStream(is);
+            IonReader r = makeReader(system, catalog, uis, 0);
+            return r;
         }
         catch (IOException e) {
             throw new IonException(e);
         }
+    }
+
+    private static IonReader makeReader(IonSystem system,
+                                        IonCatalog catalog,
+                                        UnifiedInputStreamX uis,
+                                        int offset)
+        throws IOException
+    {
+        IonReader r;
+        if (has_binary_cookie(uis)) {
+            r = new IonReaderBinaryUserX(system, catalog, uis, offset);
+        }
+        else {
+            r = new IonReaderTextUserX(system, catalog, uis, offset);
+        }
         return r;
     }
 
+
     // and on request you can get a system reader when you include a system
-    public static final IonReader makeSystemReader(IonSystem system, byte[] bytes)
+    public static IonReader makeSystemReader(IonSystem system, byte[] bytes)
     {
         IonReader r = makeSystemReader(system, bytes, 0, bytes.length);
         return r;
     }
-    public static final IonReader makeSystemReader(IonSystem system, byte[] bytes, int offset, int length)
+
+    public static IonReader makeSystemReader(IonSystem system,
+                                             byte[] bytes,
+                                             int offset,
+                                             int length)
     {
-        UnifiedInputStreamX iis =
-            UnifiedInputStreamX.makeStream(bytes, offset, length);
-        IonReader r;
-        if (isIonBinary(bytes, offset, length)) {
-            r = new IonReaderBinarySystemX(system, iis); // FIXME pass offset?
+        try
+        {
+            UnifiedInputStreamX uis = makeUnifiedStream(bytes, offset, length);
+            IonReader r = makeSystemReader(system, uis, offset);
+            return r;
         }
-        else {
-            r = new IonReaderTextSystemX(system, iis);
+        catch (IOException e)
+        {
+            throw new IonException(e);
         }
-        return r;
     }
-    public static final IonReader makeSystemReader(IonSystem system, InputStream is)
+
+    public static IonReader makeSystemReader(IonSystem system, InputStream is)
     {
-        IonReader r;
-        UnifiedInputStreamX uis;
         try {
-            uis = UnifiedInputStreamX.makeStream(is);
-            if (has_binary_cookie(uis)) {
-                r = new IonReaderBinarySystemX(system, uis);
-            }
-            else {
-                r = new IonReaderTextSystemX(system, uis);
-            }
+            UnifiedInputStreamX uis = makeUnifiedStream(is);
+            IonReader r = makeSystemReader(system, uis, 0);
+            return r;
         }
         catch (IOException e) {
             throw new IonException(e);
+        }
+    }
+
+    private static IonReader makeSystemReader(IonSystem system,
+                                              UnifiedInputStreamX uis,
+                                              int offset)
+        throws IOException
+    {
+        IonReader r;
+        if (has_binary_cookie(uis)) {
+            // TODO pass offset, or spans will be incorrect
+            r = new IonReaderBinarySystemX(system, uis);
+        }
+        else {
+            // TODO pass offset, or spans will be incorrect
+            r = new IonReaderTextSystemX(system, uis);
         }
         return r;
     }
@@ -271,7 +296,42 @@ public final class _Private_IonReaderFactory
     //
     //  helper functions
     //
-    private static final boolean has_binary_cookie(UnifiedInputStreamX uis) throws IOException
+
+    private static UnifiedInputStreamX makeUnifiedStream(byte[] bytes,
+                                                         int offset,
+                                                         int length)
+        throws IOException
+    {
+        UnifiedInputStreamX uis;
+        if (IonStreamUtils.isGzip(bytes, offset, length))
+        {
+            ByteArrayInputStream baos =
+                new ByteArrayInputStream(bytes, offset, length);
+            GZIPInputStream gzip = new GZIPInputStream(baos);
+            uis = UnifiedInputStreamX.makeStream(gzip);
+        }
+        else
+        {
+            uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
+        }
+        return uis;
+    }
+
+
+    private static UnifiedInputStreamX makeUnifiedStream(InputStream in)
+        throws IOException
+    {
+        in.getClass(); // Force NPE
+
+        // TODO avoid multiple wrapping streams, use the UIS for the pushback
+        in = new GzipOrRawInputStream(in);
+        UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(in);
+        return uis;
+    }
+
+
+    private static final boolean has_binary_cookie(UnifiedInputStreamX uis)
+        throws IOException
     {
         byte[] bytes = new byte[BINARY_VERSION_MARKER_SIZE];
 

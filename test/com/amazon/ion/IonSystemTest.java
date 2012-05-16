@@ -253,22 +253,35 @@ public class IonSystemTest
     {
         IonSystem system = system();
 
-        InputStream in = new ByteArrayInputStream(bytes);
-        IonReader r = system.newReader(in);
-        assertEquals(IonType.INT, r.next());
-        assertEquals(1234, r.intValue());
-        assertEquals(null, r.next());
+        IonValue v = system.singleValue(bytes);
+        checkInt(1234, v);
 
-        in = new ByteArrayInputStream(bytes);
-        Iterator<IonValue> i = system.iterate(in);
+        IonReader r = system.newReader(bytes);
+        checkGzipDetection(r);
+
+        byte[] padded = new byte[bytes.length + 70];
+        System.arraycopy(bytes, 0, padded, 37, bytes.length);
+        r = system.newReader(padded, 37, bytes.length);
+        checkGzipDetection(r);
+
+        InputStream in = new ByteArrayInputStream(bytes);
+        r = system.newReader(in);
+        checkGzipDetection(r);
+
+        Iterator<IonValue> i = system.iterate(bytes);
         checkInt(1234, i.next());
 
-        if (false) { // TODO ION-207 this fails for the lazy DOM
-            IonLoader loader = loader();
-            in = new ByteArrayInputStream(bytes);
-            IonDatagram dg = loader.load(in);
-            checkInt(1234, dg.get(0));
-        }
+        in = new ByteArrayInputStream(bytes);
+        i = system.iterate(in);
+        checkInt(1234, i.next());
+
+        IonLoader loader = loader();
+        IonDatagram dg = loader.load(bytes);
+        checkInt(1234, dg.get(0));
+
+        in = new ByteArrayInputStream(bytes);
+        dg = loader.load(in);
+        checkInt(1234, dg.get(0));
     }
 
     @Test

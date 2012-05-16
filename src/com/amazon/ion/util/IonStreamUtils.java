@@ -3,7 +3,6 @@
 package com.amazon.ion.util;
 
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -55,21 +54,35 @@ public class IonStreamUtils
      */
     public static boolean isIonBinary(byte[] buffer, int offset, int length)
     {
-        if (buffer == null || length < BINARY_VERSION_MARKER_SIZE)
+        return cookiMatches(BINARY_VERSION_MARKER_1_0, buffer, offset, length);
+    }
+
+
+    private static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
+
+    public static boolean isGzip(byte[] buffer, int offset, int length)
+    {
+        return cookiMatches(GZIP_HEADER, buffer, offset, length);
+    }
+
+
+    private static boolean cookiMatches(byte[] cookie,
+                                        byte[] buffer, int offset, int length)
+    {
+        if (buffer == null || length < cookie.length)
         {
             return false;
         }
 
-        for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
+        for (int i = 0; i < cookie.length; i++)
         {
-            if (BINARY_VERSION_MARKER_1_0[i] != buffer[offset + i])
+            if (cookie[i] != buffer[offset + i])
             {
                 return false;
             }
         }
         return true;
     }
-
 
     /**
      * writes an IonList with a series of IonBool values. This
