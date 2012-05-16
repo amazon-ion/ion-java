@@ -155,10 +155,13 @@ final class LoaderImpl
     public IonDatagramImpl load(InputStream ionData)
         throws IonException, IOException
     {
-        // TODO ION-207 gzip support is tricky, don't want multiple pushbacks
         try
         {
-            PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
+            // TODO ION-233 this should always use a system IonReader
+            // (avoiding the SystemValueIterator)
+            // but that's broken until field names work properly on binary
+            GzipOrRawInputStream gzip = new GzipOrRawInputStream(ionData);
+            PushbackInputStream pushback = new PushbackInputStream(gzip, 8);
             if (_Private_Utils.streamIsIonBinary(pushback)) {
                 if (USE_NEW_READERS)
                 {

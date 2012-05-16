@@ -264,8 +264,11 @@ public interface IonSystem
      * <p>
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
-     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text, or
+     * GZIPped Ion data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
@@ -294,8 +297,11 @@ public interface IonSystem
 
     /**
      * Extracts a single value from Ion text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
-     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text, or
+     * GZIPped Ion data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
@@ -346,6 +352,8 @@ public interface IonSystem
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
      * The reader retains a reference to the array, so its data must not be
@@ -355,9 +363,9 @@ public interface IonSystem
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
-     * detecting whether it's text or binary data.  If the input data is
-     * text this may return an {@link IonTextReader} which can report the
-     * line and offset position of the parser for error reporting.
+     * detecting whether it's text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData is used only within the range of bytes starting at
      * {@code offset} for {@code len} bytes.
@@ -372,9 +380,7 @@ public interface IonSystem
 
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
-     * detecting whether it's text or binary data. If the input data is
-     * text this may return an {@link IonTextReader} which can report the
-     * line and offset position of the parser for error reporting.
+     * detecting whether it's text or binary data.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
      *
