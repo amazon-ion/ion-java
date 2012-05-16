@@ -308,17 +308,17 @@ public class TextWriterTest
     {
         options = IonTextWriterBuilder.standard();
         options.setInitialIvmHandling(SUPPRESS);
-        options.setLongStringThreshold(3);
+        options.setLongStringThreshold(4);
 
 
         IonDatagram dg = system().newDatagram();
-        dg.add().newClob(new byte[]{'a', 'b', '\n'});
+        dg.add().newClob(new byte[]{'a', '"', '\'', '\n'});
 
-        expectRendering("{{\"ab\\n\"}}", dg);
+        expectRendering("{{\"a\\\"'\\n\"}}", dg);
 
         dg.clear();
-        dg.add().newClob(new byte[]{'a', 'b', '\n', 'c'});
-        expectRendering("{{'''ab\n" +
+        dg.add().newClob(new byte[]{'a', '"', '\'', '\n', 'c'});
+        expectRendering("{{'''a\"\\'\n" +
                         "c'''}}",
                         dg);
     }

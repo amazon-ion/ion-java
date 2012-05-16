@@ -903,7 +903,7 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
         final boolean json =
             _options._clob_as_string && _options._string_as_json;
 
-        boolean longString = (_long_string_threshold < value.length);
+        final boolean longString = (_long_string_threshold < value.length);
 
         if (longString) {
             _output.append("'''");
@@ -941,10 +941,24 @@ class IonWriterSystemText  // TODO ION-271 make final after IMS is migrated
             }
             else {
                 switch (c) {
-                case '"':  //   \"  double quote
+                case '"':
+                {
+                    if (! longString) _output.append('\\');
+                    break;
+                }
+                case '\'':
+                {
+                    // This escapes more often than is necessary, but doing it
+                    // minimally is very tricky. Must be sure to account for
+                    // quotes at the end of the content.
+                    if (longString) _output.append('\\');
+                    break;
+                }
                 case '\\': //   \\  backslash
+                {
                     _output.append('\\');
                     break;
+                }
                 default:
                     break;
                 }
