@@ -33,8 +33,8 @@ Here's the easiest way to bootstrap:
     IonSystem ion = IonSystemBuilder.standard().build();
 </pre>
 That should be sufficient for many, but not all, applications.  Long-running
-services will probably want to use a non-default 
-{@linkplain com.amazon.ion.IonCatalog catalog} by configuring the builder 
+services will probably want to use a non-default
+{@linkplain com.amazon.ion.IonCatalog catalog} by configuring the builder
 before calling {@link com.amazon.ion.system.IonSystemBuilder#build() build()}.
 
 <h2>SystemFactory is Deprecated</h2>
@@ -42,7 +42,7 @@ As of early 2011, the {@link com.amazon.ion.system.SystemFactory SystemFactory}
 class has been deprecated in favor of {@code IonSystemBuilder}.
 This should be a straightforward application change and we strongly recommend
 that all applications update.
-<!--, but at the moment the 
+<!--, but at the moment the
 builder behaves differently in that it produces systems using a different
 {@link com.amazon.ion.IonValue IonValue} implementation.
 <b>Read the documentation of
@@ -59,14 +59,14 @@ guaranteed to work</b>:
 <pre>
     IonSystem sys1 = IonSystemBuilder.standard().build();
     IonSystem sys2 = IonSystemBuilder.standard().build();
-    
+
     IonList parent = sys1.newEmptyList();
     IonInt  child  = sys2.newInt(23);
     parent.add(child); // NOT SUPPORTED
 </pre>
 
 Given any {@code IonValue} instance it is possible to retrieve the relevant
-system via {@link com.amazon.ion.IonValue#getSystem()}. 
+system via {@link com.amazon.ion.IonValue#getSystem()}.
 This is generally the best way to ensure
 that you're using the correct system while modifying existing trees.
 You can also use the "Curried" insertion methods to add new values to
@@ -81,7 +81,7 @@ collections:
 
 This release defines three mechanisms for accepting Ion data:
 <ul>
-  <li>{@link com.amazon.ion.IonReader IonReader} scans an input stream using a 
+  <li>{@link com.amazon.ion.IonReader IonReader} scans an input stream using a
     "pull parsing" paradigm. This is a low-level, high-performance API, and
     the other mechanisms are built on top of it.
   <li>Iteration reads an input stream by
@@ -97,16 +97,16 @@ All mechanisms accept either text or binary Ion data, and applications should
 rarely care about the input format.
 <p>
 To construct an {@code IonReader}, call one of the {@code newReader} methods
-on {@code IonSystem}; for example 
-{@link com.amazon.ion.IonSystem#newReader(InputStream)}. 
-You can then pull data from the reader. Don't forget to 
+on {@code IonSystem}; for example
+{@link com.amazon.ion.IonSystem#newReader(InputStream)}.
+You can then pull data from the reader. Don't forget to
 {@link com.amazon.ion.IonReader#close() close} it when you're done!
 <p>
 Ion iterators are extensions of
 {@link java.util.Iterator} so they are used once and then discarded.
 Use the various {@code iterate} methods on {@code IonSystem} to
-create them; for example 
-{@link com.amazon.ion.IonSystem#iterate(InputStream)}. 
+create them; for example
+{@link com.amazon.ion.IonSystem#iterate(InputStream)}.
 <p>
 To construct an {@code IonLoader}, call
 {@link com.amazon.ion.IonSystem#newLoader()} and configure it as necessary.
@@ -121,7 +121,7 @@ There's also several mechanisms for generating Ion data:
   <li>{@link com.amazon.ion.IonWriter IonWriter} is the low-level API for
     generating Ion data in some form. It's agnostic to the output format; in
     theory the actual output could be some other format entirely.
-  <li>{@link com.amazon.ion.util.Printer Printer} is the most flexible way to 
+  <li>{@link com.amazon.ion.util.Printer Printer} is the most flexible way to
     create Ion text data from an {@link com.amazon.ion.IonValue IonValue}.
   <li>{@link com.amazon.ion.IonValue#toString() IonValue.toString()} will also
     generate Ion text, but it's primarily intended for debugging purposes and
@@ -137,5 +137,23 @@ There's also several mechanisms for generating Ion data:
 You can create {@code IonWriter}s using methods on {@code IonSystem}, but the
 {@link com.amazon.ion.system.IonTextWriterBuilder} provides more flexibility.
 
+<h1>JSON Integration</h1>
+The Ion text format is a superset of JSON, so JSON data <em>is</em> Ion data.
+This means that you can read JSON data as-is using the Ion libraries, with two
+caveats:
+<ul>
+  <li>Empty field names (for example, <code>{ "": 12 }</code>) will cause an
+      error.
+      See issue <a href="https://jira2.amazon.com/browse/ION-268">ION-268</a>.
+  <li>JSON numbers with exponents are decoded as Ion float, while those with
+      fractions (but not exponents) are decoded as Ion decimal.
+</ul>
+<p>
+To output JSON with this library, Ion data can be "downconverted" to JSON
+format using an
+{@link com.amazon.ion.system.IonTextWriterBuilder IonTextWriterBuilder}.
+This replaces Ion-only datatypes with more-or-less equivalent JSON values.
+(The {@link com.amazon.ion.util.Printer Printer} can also be used, but it is
+no longer recommended and will be deprecated.)
 </body>
 </html>
