@@ -59,7 +59,7 @@ public class BadIonTest
             }
             catch (IonException e)
             {
-                assert myTestFile.getPath().contains("bad/utf8");
+                assert myTestFile.getPath().contains("bad/utf8") || myTestFile.getPath().contains("bad\\utf8");
                 return;
             }
 
