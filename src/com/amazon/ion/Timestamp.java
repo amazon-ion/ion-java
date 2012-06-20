@@ -1058,21 +1058,7 @@ public final class Timestamp
         Timestamp adjusted = this;
 
         if (this._offset != null) {
-            int offset = this._offset.intValue();
-            boolean needs_adjustment = false;
-            if (offset < 0) {
-                // look for the only case the year might roll over forward
-                if (this._month == 12 && this._day == 31) {
-                    needs_adjustment = true;
-                }
-            }
-            else {
-                // look for the only case the year might roll over forward
-                if (this._month == 1 && this._day == 1) {
-                    needs_adjustment = true;
-                }
-            }
-            if (needs_adjustment) {
+            if (this._offset.intValue() != 0) {
                 adjusted = make_localtime();
             }
         }
