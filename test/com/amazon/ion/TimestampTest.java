@@ -728,6 +728,25 @@ public class TimestampTest
     }
 
 
+    /** Trap for ION-280 */
+    @Test
+    public void testFromCalendarWithDaylightSavingsTime()
+    {
+        Calendar cal = makeUtcCalendar();
+        cal.clear();
+        cal.set(2012, 2, 9, 10, 11, 12);
+        cal.set(Calendar.MILLISECOND, 345);
+        cal.setTimeZone(TimeZone.getTimeZone("PST"));
+        Timestamp ts = new Timestamp(cal);
+        assertEquals("2012-03-09T10:11:12.345-08:00", ts.toString());
+
+        // Move forward into daylight savings
+        cal.add(Calendar.DAY_OF_MONTH, 5);
+        ts = new Timestamp(cal);
+        assertEquals("2012-03-14T10:11:12.345-07:00", ts.toString());
+    }
+
+
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromClearCalendar()
     {
@@ -898,5 +917,37 @@ public class TimestampTest
     public void testForSqlTimestampZNull()
     {
         assertEquals(null, Timestamp.forSqlTimestampZ(null));
+    }
+
+    @Test
+    public void testLocalYearBoundaryPositive() {
+        // UTC is previous year
+        final Timestamp ts = Timestamp.valueOf("2007-01-01T00:00:01+09:00");
+        assertEquals(2007, ts.getYear());
+        assertEquals(2006, ts.getZYear());
+        assertEquals(01, ts.getMonth());
+        assertEquals(12, ts.getZMonth());
+        assertEquals(01, ts.getDay());
+        assertEquals(31, ts.getZDay());
+        assertEquals(0, ts.getHour());
+        assertEquals(15, ts.getZHour());
+        assertEquals(00, ts.getMinute());
+        assertEquals(00, ts.getZMinute());
+    }
+
+    @Test
+    public void testLocalYearBoundaryNegative() {
+        // UTC is next year
+        final Timestamp ts = Timestamp.valueOf("2006-12-31T23:59:59-08:00");
+        assertEquals(2006, ts.getYear());
+        assertEquals(2007, ts.getZYear());
+        assertEquals(12, ts.getMonth());
+        assertEquals(1, ts.getZMonth());
+        assertEquals(31, ts.getDay());
+        assertEquals(1, ts.getZDay());
+        assertEquals(23, ts.getHour());
+        assertEquals(7, ts.getZHour());
+        assertEquals(59, ts.getMinute());
+        assertEquals(59, ts.getZMinute());
     }
 }

@@ -309,8 +309,13 @@ public final class Timestamp
         // Strangely, if this test is made before calling get(), it will return
         // false even when Calendar.setTimeZone() was called.
         if (cal.isSet(Calendar.ZONE_OFFSET)) {
+            int offset = cal.get(Calendar.ZONE_OFFSET);
+            if (cal.isSet(Calendar.DST_OFFSET)) {
+                offset += cal.get(Calendar.DST_OFFSET);
+            }
+
             // convert ms to minutes
-            _offset = cal.get(Calendar.ZONE_OFFSET) / (1000*60);
+            _offset = offset / (1000*60);
             // Transform our members from local time to Zulu
             this.apply_offset(_offset);
         }
@@ -1053,21 +1058,7 @@ public final class Timestamp
         Timestamp adjusted = this;
 
         if (this._offset != null) {
-            int offset = this._offset.intValue();
-            boolean needs_adjustment = false;
-            if (offset < 0) {
-                // look for the only case the year might roll over forward
-                if (this._month == 12 && this._day == 31) {
-                    needs_adjustment = true;
-                }
-            }
-            else {
-                // look for the only case the year might roll over forward
-                if (this._month == 1 && this._day == 1) {
-                    needs_adjustment = true;
-                }
-            }
-            if (needs_adjustment) {
+            if (this._offset.intValue() != 0) {
                 adjusted = make_localtime();
             }
         }
