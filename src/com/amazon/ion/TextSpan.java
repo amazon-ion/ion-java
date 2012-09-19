@@ -3,7 +3,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.facet.Faceted;
-import com.amazon.ion.facet.Facets;
+import com.amazon.ion.util.Spans;
 
 /**
  * Exposes the positions of a {@link Span} in the form of <em>one-based</em>
@@ -14,7 +14,7 @@ import com.amazon.ion.facet.Facets;
  * <p>
  * To get one of these from a {@link Span}, use
  * {@link Faceted#asFacet(Class) asFacet}{@code (TextSpan.class)} or one of
- * the helpers from {@link Facets}.
+ * the helpers from {@link Spans}.
  *
  * @since IonJava R13
  */

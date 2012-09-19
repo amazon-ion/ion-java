@@ -129,7 +129,8 @@ public abstract class IonTextWriterBuilder
      * <p>
      * The specifics of this configuration may change between releases of this
      * library, so automated processes should not depend on the exact output
-     * formatting.
+     * formatting. In particular, there's currently no promise regarding
+     * handling of system data.
      *
      * @return a new, mutable builder instance.
      *
@@ -346,6 +347,7 @@ public abstract class IonTextWriterBuilder
 
     /**
      * Declares that this builder should use basic pretty-printing.
+     * Does not alter the handling of system data.
      * Calling this method alters several other configuration properties,
      * so code should call it first, then make any necessary overrides.
      * <p>
