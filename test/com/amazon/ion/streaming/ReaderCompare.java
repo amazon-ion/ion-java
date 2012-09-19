@@ -4,13 +4,13 @@ package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
 
-import com.amazon.ion.Decimal;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.junit.IonAssert;
+import java.math.BigDecimal;
 import org.junit.Assert;
 
 /**
@@ -33,11 +33,9 @@ public class ReaderCompare
                 compareFieldNames(it1, it2);
             }
             compareAnnotations(it1, it2);
-            assertEquals(it1.isNullValue(), it2.isNullValue());
-            if (it1.isNullValue()) {
-                // remember - anything can be a null value
-                continue;
-            }
+
+            boolean isNull = it1.isNullValue();
+            assertEquals(isNull, it2.isNullValue());
 
             switch (t1) {
                 case NULL:
@@ -53,7 +51,7 @@ public class ReaderCompare
                 case SYMBOL:
                 case BLOB:
                 case CLOB:
-                    compareScalars(t1, it1, it2);
+                    compareScalars(t1, isNull, it1, it2);
                     break;
                 case STRUCT:
                 case LIST:
@@ -66,7 +64,7 @@ public class ReaderCompare
                     break;
 
                 default:
-                    throw new IllegalStateException("iterated to a type that's not expected");
+                    throw new IllegalStateException();
             }
         }
         assertFalse(hasNext(it1, it2));
@@ -127,32 +125,44 @@ public class ReaderCompare
         IonAssert.assertSymbolEquals("annotation", syms1, syms2);
     }
 
-    public static void compareScalars(IonType t, IonReader it1, IonReader it2) {
+    public static void compareScalars(IonType t, boolean isNull,
+                                      IonReader it1, IonReader it2) {
         switch (t) {
             case BOOL:
-                assertEquals(it1.booleanValue(), it2.booleanValue());
+                if (!isNull) assertEquals(it1.booleanValue(), it2.booleanValue());
                 break;
             case INT:
                 assertEquals(it1.bigIntegerValue(), it2.bigIntegerValue());
                 break;
-            case FLOAT: {
-                double v1 = it1.doubleValue();
-                double v2 = it2.doubleValue();
-                assertEquals(v1, v2, 0);
-                // The last param is a delta, and we want exact match.
+            case FLOAT:
+            {
+                if (! isNull)
+                {
+                    double v1 = it1.doubleValue();
+                    double v2 = it2.doubleValue();
+                    assertEquals(v1, v2, 0);
+                    // The last param is a delta, and we want exact match.
+                }
                 break;
             }
             case DECIMAL:
-                Decimal dec1 = it1.decimalValue();
-                Decimal dec2 = it2.decimalValue();
+            {
+                BigDecimal dec1 = it1.bigDecimalValue();
+                BigDecimal dec2 = it2.bigDecimalValue();
                 IonTestCase.assertPreciselyEquals(dec1, dec2);
-                // TODO also test bigDecimal, double, long, int etc.
+                dec1 = it1.decimalValue();
+                dec2 = it2.decimalValue();
+                IonTestCase.assertPreciselyEquals(dec1, dec2);
+                // TODO also test double, long, int etc.
                 break;
+            }
             case TIMESTAMP:
+            {
                 Timestamp t1 = it1.timestampValue();
                 Timestamp t2 = it2.timestampValue();
                 assertEquals(t1, t2);
                 break;
+            }
             case STRING:
             {
                 String s1 = it1.stringValue();
@@ -164,7 +174,12 @@ public class ReaderCompare
             {
                 SymbolToken tok1 = it1.symbolValue();
                 SymbolToken tok2 = it2.symbolValue();
-                if (tok1.getText() == null || tok2.getText() == null)
+                if (isNull)
+                {
+                    assertNull(tok1);
+                    assertNull(tok2);
+                }
+                else if (tok1.getText() == null || tok2.getText() == null)
                 {
                     assertEquals("sids", tok1.getSid(), tok2.getSid());
                 }
@@ -178,16 +193,21 @@ public class ReaderCompare
             }
             case BLOB:
             case CLOB:
-                byte[] b1 = it1.newBytes();
-                byte[] b2 = it2.newBytes();
-                assert b1 != null && b2 != null;
-                assert b1.length == b2.length;
-                for (int ii=0; ii<b1.length; ii++) {
-                    byte v1 = b1[ii];
-                    byte v2 = b2[ii];
-                    assertEquals(v1, v2);
+            {
+                if (!isNull)
+                {
+                    byte[] b1 = it1.newBytes();
+                    byte[] b2 = it2.newBytes();
+                    assert b1 != null && b2 != null;
+                    assert b1.length == b2.length;
+                    for (int ii=0; ii<b1.length; ii++) {
+                        byte v1 = b1[ii];
+                        byte v2 = b2[ii];
+                        assertEquals(v1, v2);
+                    }
                 }
                 break;
+            }
             default:
                 throw new IllegalStateException("iterated to a type that's not expected");
         }

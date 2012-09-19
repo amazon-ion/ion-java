@@ -918,4 +918,36 @@ public class TimestampTest
     {
         assertEquals(null, Timestamp.forSqlTimestampZ(null));
     }
+
+    @Test
+    public void testLocalYearBoundaryPositive() {
+        // UTC is previous year
+        final Timestamp ts = Timestamp.valueOf("2007-01-01T00:00:01+09:00");
+        assertEquals(2007, ts.getYear());
+        assertEquals(2006, ts.getZYear());
+        assertEquals(01, ts.getMonth());
+        assertEquals(12, ts.getZMonth());
+        assertEquals(01, ts.getDay());
+        assertEquals(31, ts.getZDay());
+        assertEquals(0, ts.getHour());
+        assertEquals(15, ts.getZHour());
+        assertEquals(00, ts.getMinute());
+        assertEquals(00, ts.getZMinute());
+    }
+
+    @Test
+    public void testLocalYearBoundaryNegative() {
+        // UTC is next year
+        final Timestamp ts = Timestamp.valueOf("2006-12-31T23:59:59-08:00");
+        assertEquals(2006, ts.getYear());
+        assertEquals(2007, ts.getZYear());
+        assertEquals(12, ts.getMonth());
+        assertEquals(1, ts.getZMonth());
+        assertEquals(31, ts.getDay());
+        assertEquals(1, ts.getZDay());
+        assertEquals(23, ts.getHour());
+        assertEquals(7, ts.getZHour());
+        assertEquals(59, ts.getMinute());
+        assertEquals(59, ts.getZMinute());
+    }
 }

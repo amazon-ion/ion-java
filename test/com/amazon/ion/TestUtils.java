@@ -183,6 +183,13 @@ public class TestUtils
 
     //========================================================================
 
+    /**
+     * Performs a "deep read" of the reader's current value, including scalar
+     * data. This therefore exercises all the {@code *Value()} methods of the
+     * reader.
+     *
+     * @see #deepRead(IonReader)
+     */
     public static void consumeCurrentValue(IonReader reader)
     {
         consumeCurrentValue(reader, true);

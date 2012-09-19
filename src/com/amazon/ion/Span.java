@@ -34,6 +34,8 @@ import com.amazon.ion.util.Spans;
  *
  * @see SpanProvider
  * @see Spans
+ * @see TextSpan
+ * @see OffsetSpan
  *
  * @see <a href="http://portal.acm.org/citation.cfm?id=133234">Subsequence
  * References: First-Class Values for Substrings</a>

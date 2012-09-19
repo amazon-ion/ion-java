@@ -335,6 +335,9 @@ class IonReaderBinarySystemX
 
     public Decimal decimalValue()
     {
+        if (_value_is_null) {
+            return null;
+        }
         prepare_value(AS_TYPE.decimal_value);
         return _v.getDecimal();
     }
