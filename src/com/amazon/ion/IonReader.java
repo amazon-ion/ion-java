@@ -326,15 +326,20 @@ public interface IonReader
      * <p>
      * This method is only valid when {@link #getType()} returns
      * {@link IonType#DECIMAL}.
+     *
+     * @return the current value as a {@link BigDecimal},
+     * or {@code null} if the current value is {@code null.decimal}.
      */
     public BigDecimal bigDecimalValue();
-    // TODO do these methods work when isNullValue()?
 
     /**
      * Returns the current value as a {@link Decimal}, which extends
      * {@link BigDecimal} with support for negative zeros.
      * This is only valid when {@link #getType()} returns
      * {@link IonType#DECIMAL}.
+     *
+     * @return the current value as a {@link Decimal},
+     * or {@code null} if the current value is {@code null.decimal}.
      */
     public Decimal decimalValue();
 
@@ -344,7 +349,7 @@ public interface IonReader
      * This is only valid when {@link #getType()} returns
      * {@link IonType#TIMESTAMP}.
      *
-     * @return a new {@link Date} instance,
+     * @return the current value as a {@link Date},
      * or {@code null} if the current value is {@code null.timestamp}.
      */
     public Date dateValue();
