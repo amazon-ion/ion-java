@@ -395,6 +395,7 @@ abstract class IonValueLite
             // this is redundant now:  checkForLock();
             if (symbols == null) {
                 symbols = getSymbolTable();
+                // TODO assertion contradicts the spec for getSymbolTable()
                 assert(symbols != null); // we should get a system symbol table if nothing else
             }
 
