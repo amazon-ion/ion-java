@@ -10,7 +10,7 @@ import java.util.Iterator;
  *
  */
 public class DatagramIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private String myText;
 

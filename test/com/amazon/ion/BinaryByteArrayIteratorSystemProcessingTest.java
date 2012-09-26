@@ -6,7 +6,7 @@ import java.util.Iterator;
 
 
 public class BinaryByteArrayIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private byte[] myBytes;
 
