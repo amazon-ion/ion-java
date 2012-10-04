@@ -8,7 +8,7 @@ import java.util.Iterator;
 
 
 public class JavaReaderIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private Reader myStream;
 

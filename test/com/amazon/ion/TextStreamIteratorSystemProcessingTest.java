@@ -9,7 +9,7 @@ import java.util.Iterator;
 
 
 public class TextStreamIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private byte[] myBytes;
     private InputStream myStream;

@@ -2,41 +2,24 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_IonSystem;
 import java.util.Iterator;
 
 /**
  *
  */
-public class IteratorSystemProcessingTest
+abstract class IteratorSystemProcessingTestCase
     extends SystemProcessingTestCase
 {
-    private String myText;
     private Iterator<IonValue> myIterator;
     private IonValue myCurrentValue;
 
 
-    protected Iterator<IonValue> iterate()
-        throws Exception
-    {
-        return system().iterate(myText);
-    }
+    abstract Iterator<IonValue> iterate()
+        throws Exception;
 
-    protected Iterator<IonValue> systemIterate()
-        throws Exception
-    {
-        _Private_IonSystem sys = system();
-        Iterator<IonValue> it = sys.systemIterate(myText);
-        return it;
-    }
+    abstract Iterator<IonValue> systemIterate()
+        throws Exception;
 
-
-    @Override
-    protected void prepare(String text)
-        throws Exception
-    {
-        myText = text;
-    }
 
     @Override
     protected void startIteration() throws Exception

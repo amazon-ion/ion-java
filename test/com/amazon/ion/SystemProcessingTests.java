@@ -10,7 +10,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    IteratorSystemProcessingTest.class,
+    TextIteratorSystemProcessingTest.class,
     TextByteArrayIteratorSystemProcessingTest.class,
     BinaryByteArrayIteratorSystemProcessingTest.class,
     JavaReaderIteratorSystemProcessingTest.class,
