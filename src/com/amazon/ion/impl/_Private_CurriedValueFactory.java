@@ -7,6 +7,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
@@ -409,4 +410,13 @@ public abstract class _Private_CurriedValueFactory
         return v;
     }
 
+    //-------------------------------------------------------------------------
+
+    public <T extends IonValue> T clone(T value)
+        throws IonException
+    {
+        T v = myFactory.clone(value);
+        handle(v);
+        return v;
+    }
 }

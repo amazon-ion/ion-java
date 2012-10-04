@@ -621,23 +621,4 @@ public interface IonSystem
      * millisecond.
      */
     public IonTimestamp newCurrentUtcTimestamp();
-
-
-    /**
-     * Creates a deep copy of an Ion value.  This method can properly clone
-     * {@link IonDatagram}s.
-     * <p>
-     * The given value can be in the context of any {@code IonSystem} instance,
-     * and the result will be in the context of this system. This allows you to
-     * shift data from one system instance to another.
-     *
-     * @param value the value to copy.
-     * @return a deep copy of value, with no container.
-     * @throws NullPointerException if <code>value</code> is null.
-     * @throws IonException if there's a problem creating the clone.
-     *
-     * @see IonValue#clone()
-     */
-    public <T extends IonValue> T clone(T value)
-        throws IonException;
 }
