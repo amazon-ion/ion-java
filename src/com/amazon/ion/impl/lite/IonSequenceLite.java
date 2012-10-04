@@ -6,6 +6,7 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonValue;
 import java.lang.reflect.Array;
 import java.util.Collection;
@@ -144,10 +145,10 @@ abstract class IonSequenceLite
 
     public ValueFactory add()
     {
-        return new CurriedValueFactoryLite(this.getSystem())
+        return new _Private_CurriedValueFactory(this.getSystem())
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(newValue);
             }
@@ -163,10 +164,10 @@ abstract class IonSequenceLite
 
     public ValueFactory add(final int index)
     {
-        return new CurriedValueFactoryLite(getSystem())
+        return new _Private_CurriedValueFactory(getSystem())
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(index, newValue);
                 patch_elements_helper(index + 1);

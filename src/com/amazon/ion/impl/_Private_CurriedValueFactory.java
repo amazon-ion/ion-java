@@ -7,6 +7,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonDecimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
@@ -29,8 +30,10 @@ import java.util.Collection;
 /**
  * Helper for implementing curried container insertion methods such as
  * {@link IonStruct#put(String)}.
+ * <p>
+ * <b>NOT FOR APPLICATION USE!</b>
  */
-abstract class CurriedValueFactory
+public abstract class _Private_CurriedValueFactory
     implements ValueFactory
 {
     private final ValueFactory myFactory;
@@ -38,7 +41,7 @@ abstract class CurriedValueFactory
     /**
      * @param factory must not be null.
      */
-    CurriedValueFactory(ValueFactory factory)
+    protected _Private_CurriedValueFactory(ValueFactory factory)
     {
         myFactory = factory;
     }
@@ -49,7 +52,7 @@ abstract class CurriedValueFactory
      *
      * @param newValue was just constructed by {@link #myFactory}.
      */
-    abstract void handle(IonValue newValue);
+    protected abstract void handle(IonValue newValue);
 
     //-------------------------------------------------------------------------
 
@@ -407,4 +410,13 @@ abstract class CurriedValueFactory
         return v;
     }
 
+    //-------------------------------------------------------------------------
+
+    public <T extends IonValue> T clone(T value)
+        throws IonException
+    {
+        T v = myFactory.clone(value);
+        handle(v);
+        return v;
+    }
 }

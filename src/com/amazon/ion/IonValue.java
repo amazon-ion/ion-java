@@ -382,8 +382,9 @@ public interface IonValue
      * be modifiable whether or not this one {@link #isReadOnly()}.
      * <p>
      * The cloned value will be created in the context of the same
-     * {@link IonSystem} as this instance; if you want a copy using a different
-     * system, then use {@link IonSystem#clone(IonValue)} instead.
+     * {@link ValueFactory} as this instance; if you want a copy using a
+     * different factory, then use {@link ValueFactory#clone(IonValue)}
+     * instead.
      */
     public IonValue clone();
 

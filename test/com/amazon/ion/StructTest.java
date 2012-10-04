@@ -1051,6 +1051,14 @@ public class StructTest
         IonString str = s.put("f").newString("g");
         checkString("g", str);
         assertSame(str, s.get("f"));
+
+        IonString str2 = s.put("h").clone(str);
+        assertNotSame(str, str2);
+        assertEquals(str, str2);
+        assertEquals(2, s.size());
+        checkString("g", str2);
+        assertSame(str, s.get("f"));
+        assertSame(str2, s.get("h"));
     }
 
 

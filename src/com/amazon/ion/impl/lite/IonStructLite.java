@@ -10,6 +10,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl._Private_CurriedValueFactory;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -430,10 +431,10 @@ final class IonStructLite
 
     public ValueFactory add(final String fieldName)
     {
-        return new CurriedValueFactoryLite(_context.getSystem())
+        return new _Private_CurriedValueFactory(_context.getSystem())
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(fieldName, newValue);
             }
@@ -504,10 +505,10 @@ final class IonStructLite
 
     public ValueFactory put(final String fieldName)
     {
-        return new CurriedValueFactoryLite(_context.getSystem())
+        return new _Private_CurriedValueFactory(_context.getSystem())
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 put(fieldName, newValue);
             }

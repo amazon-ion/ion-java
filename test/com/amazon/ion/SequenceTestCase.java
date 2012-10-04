@@ -741,6 +741,13 @@ public abstract class SequenceTestCase
         assertEquals(2, s.size());
         checkString("g", str);
         assertSame(str, s.get(1));
+
+        IonString str2 = s.add().clone(str);
+        assertNotSame(str, str2);
+        assertEquals(str, str2);
+        assertEquals(3, s.size());
+        checkString("g", str2);
+        assertSame(str2, s.get(2));
     }
 
 
