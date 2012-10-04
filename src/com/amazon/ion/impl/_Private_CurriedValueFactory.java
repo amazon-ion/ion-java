@@ -29,8 +29,10 @@ import java.util.Collection;
 /**
  * Helper for implementing curried container insertion methods such as
  * {@link IonStruct#put(String)}.
+ * <p>
+ * <b>NOT FOR APPLICATION USE!</b>
  */
-abstract class CurriedValueFactory
+public abstract class _Private_CurriedValueFactory
     implements ValueFactory
 {
     private final ValueFactory myFactory;
@@ -38,7 +40,7 @@ abstract class CurriedValueFactory
     /**
      * @param factory must not be null.
      */
-    CurriedValueFactory(ValueFactory factory)
+    protected _Private_CurriedValueFactory(ValueFactory factory)
     {
         myFactory = factory;
     }
@@ -49,7 +51,7 @@ abstract class CurriedValueFactory
      *
      * @param newValue was just constructed by {@link #myFactory}.
      */
-    abstract void handle(IonValue newValue);
+    protected abstract void handle(IonValue newValue);
 
     //-------------------------------------------------------------------------
 

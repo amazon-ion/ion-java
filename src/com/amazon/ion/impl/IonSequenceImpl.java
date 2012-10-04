@@ -184,10 +184,10 @@ abstract class IonSequenceImpl
 
     public ValueFactory add()
     {
-        return new CurriedValueFactory(_system)
+        return new _Private_CurriedValueFactory(_system)
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(newValue);
             }
@@ -206,10 +206,10 @@ abstract class IonSequenceImpl
 
     public ValueFactory add(final int index)
     {
-        return new CurriedValueFactory(_system)
+        return new _Private_CurriedValueFactory(_system)
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(index, newValue);
             }
