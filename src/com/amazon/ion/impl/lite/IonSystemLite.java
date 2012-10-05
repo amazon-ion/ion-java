@@ -32,7 +32,6 @@ import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonReaderFactory;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
-import com.amazon.ion.impl._Private_ReaderWriter;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -178,7 +177,7 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
+        IonReader reader = newReader(ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -325,10 +324,6 @@ final class IonSystemLite
         IonValueLite value = load_value_helper(reader);
         if (value == null) {
             throw new IonException("No value available");
-        }
-        if (value._isSymbolPresent()) {
-            // TODO why is this necessary?
-            value.populateSymbolValues(null);
         }
         return value;
     }
@@ -670,7 +665,6 @@ final class IonSystemLite
         private final IonReader        _reader;
         private final IonSystemLite    _system;
         private       IonType          _next;
-        private       SymbolTable      _previous_symbols; // we're faking the datagram behavior with this
 
 
         // TODO: do we need catalog, import support for this?
@@ -680,7 +674,6 @@ final class IonSystemLite
         {
             _reader = reader;
             _system = system;
-            _previous_symbols = _system.getSystemSymbolTable();
         }
 
         public boolean hasNext()
@@ -702,6 +695,8 @@ final class IonSystemLite
                 // return null;
             }
 
+            SymbolTable symtab = _reader.getSymbolTable();
+
             // make an ion value from our reader
             // We called _reader.next() inside hasNext() above
             IonValueLite value = _system.newValue(_reader);
@@ -709,42 +704,11 @@ final class IonSystemLite
             // we've used up the value now, force a _reader._next() the next time through
             _next = null;
 
-            // now set the values symbol table if necessary
-            // this is the symbol table that was passed up
-            // by the reader getting to this value
-            SymbolTable symbols = get_values_local_symbol_table();
-
-            // we still have to create a local symbol table if
-            // we hit something with symbols and the current
-            // symbol table is the system symbol table
-            if (value._isSymbolPresent()) {
-                if (symbols == null || !symbols.isLocalTable()) {
-                    symbols = value.getContext().ensureLocalSymbolTable(value);
-                }
-            }
-
-            // if we have a symbol table for the value, apply it
-            if (symbols != null) {
-                value.setSymbolTable(symbols);
-                _previous_symbols = symbols;
-            }
+            value.setSymbolTable(symtab);
 
             return value;
         }
 
-        private SymbolTable get_values_local_symbol_table()
-        {
-            SymbolTable symbols;
-
-            if (_reader instanceof _Private_ReaderWriter) {
-                symbols = ((_Private_ReaderWriter)_reader).pop_passed_symbol_table();
-                if (symbols != null) {
-                    _previous_symbols = symbols;
-                }
-            }
-
-            return _previous_symbols;
-        }
 
         public void remove()
         {
@@ -953,59 +917,30 @@ final class IonSystemLite
     }
 
 
-    /**
-     * FIXME ION-160 This method consumes the entire stream!
-     */
     public Iterator<IonValue> systemIterate(Reader ionText)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionText);
+        return _Private_Utils.iterate(this, ir);
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
-        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionText);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionText);
+        return _Private_Utils.iterate(this, ir);
     }
 
-    /**
-     * FIXME ION-160 This method consumes the entire stream!
-     */
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionData);
+        return _Private_Utils.iterate(this, ir);
     }
 
-    /**
-     * FIXME ION-160 This method consumes the entire stream!
-     */
     public Iterator<IonValue> systemIterate(byte[] ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeSystemReader(this, ionData);
-        Iterator<IonValue> iterator = make_system_iterator(reader);
-        return iterator;
+        IonReader ir = newSystemReader(ionData);
+        return _Private_Utils.iterate(this, ir);
     }
 
-    /**
-     * FIXME This method consumes the entire stream!
-     */
-    private Iterator<IonValue> make_system_iterator(IonReader reader)
-    {
-        IonDatagram datagram = newDatagram();
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
-        try {
-            writer.writeValues(reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        Iterator<IonValue> iterator = datagram.systemIterator();
-        return iterator;
-    }
 
     public boolean valueIsSharedSymbolTable(IonValue value)
     {

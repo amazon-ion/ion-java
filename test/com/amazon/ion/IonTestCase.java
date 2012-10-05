@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
@@ -911,16 +912,27 @@ public abstract class IonTestCase
         return null;
     }
 
-    public static void assertPreciselyEquals(Decimal expected,
-                                             Decimal actual)
+
+    /**
+     * Checks decimal equality, including precision and negative-zero.
+     *
+     * @param expected may be null
+     * @param actual may be null
+     */
+    public static void assertPreciselyEquals(BigDecimal expected,
+                                             BigDecimal actual)
     {
         assertEquals(expected, actual);
-        assertEquals("value",
-                     expected.unscaledValue(), actual.unscaledValue());
-        assertEquals("scale",
-                     expected.scale(), actual.scale());
-        assertEquals("isNegativeZero",
-                     expected.isNegativeZero(), actual.isNegativeZero());
+        if (expected != null)
+        {
+            assertEquals("value",
+                         expected.unscaledValue(), actual.unscaledValue());
+            assertEquals("scale",
+                         expected.scale(), actual.scale());
+            assertEquals("isNegativeZero",
+                         Decimal.isNegativeZero(expected),
+                         Decimal.isNegativeZero(actual));
+        }
     }
 
 

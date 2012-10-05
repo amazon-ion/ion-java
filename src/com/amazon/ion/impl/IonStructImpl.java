@@ -308,10 +308,10 @@ final class IonStructImpl
 
     public ValueFactory put(final String fieldName)
     {
-        return new CurriedValueFactory(_system)
+        return new _Private_CurriedValueFactory(_system)
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 put(fieldName, newValue);
             }
@@ -374,10 +374,10 @@ final class IonStructImpl
 
     public ValueFactory add(final String fieldName)
     {
-        return new CurriedValueFactory(_system)
+        return new _Private_CurriedValueFactory(_system)
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(fieldName, newValue);
             }

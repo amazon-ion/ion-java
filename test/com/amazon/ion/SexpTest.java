@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import java.util.ArrayList;
@@ -332,65 +332,16 @@ public class SexpTest
     @Test
     public void testNumericTerminationCharacters()
     {
-        IonSexp value = null;
-        IonReader scanner = null;
-
         for (String image : termintor_test_values) {
-            scanner = system().newReader(image);
-            readAll(scanner);
+            IonReader r = system().newReader(image);
+            TestUtils.deepRead(r);
         }
 
         // these should parse correctly
         for (String image : termintor_test_values) {
-            value = (IonSexp) oneValue(image);
-        }
-        IonValue value2 = reload(value);
-        assertEquals(value, value2);
-    }
-    void readAll(IonReader scanner)
-    {
-        while (scanner.hasNext()) {
-            switch (scanner.next()) {
-                case NULL:
-                    break;
-                case BOOL:
-                    scanner.booleanValue();
-                    break;
-                case INT:
-                    scanner.longValue();
-                    break;
-                case FLOAT:
-                    scanner.doubleValue();
-                    break;
-                case DECIMAL:
-                    scanner.bigDecimalValue();
-                    break;
-                case TIMESTAMP:
-                    scanner.dateValue();
-                    break;
-                case STRING:
-                    scanner.stringValue();
-                    break;
-                case SYMBOL:
-                    scanner.stringValue();
-                    break;
-                case BLOB:
-                    scanner.newBytes();
-                    break;
-                case CLOB:
-                    scanner.newBytes();
-                    break;
-                case STRUCT:
-                case LIST:
-                case SEXP:
-                    scanner.stepIn();
-                    readAll(scanner);
-                    scanner.stepOut();
-                    break;
-                case DATAGRAM:
-                default:
-                    throw new IonException("bad type returned by scanner");
-            }
+            IonValue value = oneValue(image);
+            IonValue value2 = reload(value);
+            assertEquals(value, value2);
         }
     }
 }

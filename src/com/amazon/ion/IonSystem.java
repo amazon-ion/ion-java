@@ -228,6 +228,8 @@ public interface IonSystem
      * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
@@ -262,8 +264,11 @@ public interface IonSystem
      * <p>
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
-     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text, or
+     * GZIPped Ion data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
@@ -292,8 +297,11 @@ public interface IonSystem
 
     /**
      * Extracts a single value from Ion text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
-     * @param ionData may be either Ion binary data or (UTF-8) Ion text.
+     * @param ionData may be either Ion binary data or (UTF-8) Ion text, or
+     * GZIPped Ion data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
@@ -344,6 +352,8 @@ public interface IonSystem
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
      * The reader retains a reference to the array, so its data must not be
@@ -353,9 +363,9 @@ public interface IonSystem
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
-     * detecting whether it's text or binary data.  If the input data is
-     * text this may return an {@link IonTextReader} which can report the
-     * line and offset position of the parser for error reporting.
+     * detecting whether it's text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData is used only within the range of bytes starting at
      * {@code offset} for {@code len} bytes.
@@ -370,9 +380,9 @@ public interface IonSystem
 
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
-     * detecting whether it's text or binary data. If the input data is
-     * text this may return an {@link IonTextReader} which can report the
-     * line and offset position of the parser for error reporting.
+     * detecting whether it's text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData must not be null.
      *
@@ -611,23 +621,4 @@ public interface IonSystem
      * millisecond.
      */
     public IonTimestamp newCurrentUtcTimestamp();
-
-
-    /**
-     * Creates a deep copy of an Ion value.  This method can properly clone
-     * {@link IonDatagram}s.
-     * <p>
-     * The given value can be in the context of any {@code IonSystem} instance,
-     * and the result will be in the context of this system. This allows you to
-     * shift data from one system instance to another.
-     *
-     * @param value the value to copy.
-     * @return a deep copy of value, with no container.
-     * @throws NullPointerException if <code>value</code> is null.
-     * @throws IonException if there's a problem creating the clone.
-     *
-     * @see IonValue#clone()
-     */
-    public <T extends IonValue> T clone(T value)
-        throws IonException;
 }

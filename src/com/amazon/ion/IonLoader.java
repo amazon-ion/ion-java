@@ -88,6 +88,8 @@ public interface IonLoader
     /**
      * Loads a block of Ion data into a single datagram,
      * detecting whether it's text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
      * <em>This method assumes ownership of the array</em> and may modify it at
@@ -108,6 +110,8 @@ public interface IonLoader
      * detecting whether it's text or binary data.
      * <p/>
      * The specified stream remains open after this method returns.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData the stream from which to read Ion data.
      *

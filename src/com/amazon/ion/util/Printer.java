@@ -33,7 +33,8 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
@@ -411,9 +412,9 @@ public class Printer
         }
         else
         {
-            // Bridge to the configurable test writer. This is here for
-            // testing purposes. It *almost* works except for some wonkyness
-            // at the IVM/symtab level where the two paths behave differently.
+            // Bridge to the configurable text writer. This is here for
+            // testing purposes. It *almost* works except for printing
+            // datagram as list.
 
             boolean dg = value instanceof IonDatagram;
 
@@ -424,15 +425,14 @@ public class Printer
             {
                 if (options.skipSystemValues)
                 {
-                    o.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+                    o.withMinimalSystemData();
                 }
                 else if (options.simplifySystemValues) {
-                    // TODO minimize distant IVMs
-                    // TODO discard LST open content
-                    // TODO shrink LSTs
+
+                    o.setIvmMinimizing(IvmMinimizing.DISTANT);
+                    o.setLstMinimizing(LstMinimizing.LOCALS);
                 }
             }
-//          o._filter_symbol_tables = options.skipSystemValues;
 
             o._blob_as_string      = options.blobAsString;
             o._clob_as_string      = options.clobAsString;

@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -72,7 +72,7 @@ public class OffsetSpanReaderTest
         }
 
         // Textification is wonky and inconsistent here, it looks like:
-        //  LITE:   $ion_1_0 1000 $ion_1_0 1000 1000 1000 ...
+        //  LITE:   $ion_1_0 1000 1000 1000 1000 ...
         //  BACKED: $ion_1_0 1000 $ion_1_0 1000 ...
 
         read(buf.toByteArray());
@@ -83,7 +83,7 @@ public class OffsetSpanReaderTest
             checkCurrentSpan(binaryStart, binaryStart+3, textStart);
             binaryStart += 7;
             textStart +=
-                ((getDomType() == DomType.LITE && textStart >= 23 ) ? 5 : 14);
+                ((getDomType() == DomType.LITE) ? 5 : 14);
         }
         assertNull(in.next());
     }

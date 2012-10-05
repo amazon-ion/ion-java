@@ -8,7 +8,7 @@ import java.util.Iterator;
 
 
 public class BinaryStreamIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private byte[] myBytes;
     private InputStream myStream;

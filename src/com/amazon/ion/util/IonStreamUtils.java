@@ -3,7 +3,6 @@
 package com.amazon.ion.util;
 
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -17,6 +16,9 @@ import java.io.IOException;
  */
 public class IonStreamUtils
 {
+    private static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
+
+
     /**
      * Determines whether a buffer contains Ion binary data by looking for the
      * presence of the Ion Version Marker at its start.
@@ -55,21 +57,48 @@ public class IonStreamUtils
      */
     public static boolean isIonBinary(byte[] buffer, int offset, int length)
     {
-        if (buffer == null || length < BINARY_VERSION_MARKER_SIZE)
+        return cookieMatches(BINARY_VERSION_MARKER_1_0, buffer, offset, length);
+    }
+
+
+    /**
+     * Determines whether a buffer contains GZIPped data.
+     *
+     * @param buffer the data to check.
+     * @param offset the position in the buffer at which to start reading.
+     * @param length the number of bytes in the buffer that are valid,
+     *  starting from {@code offset}.
+     *
+     * @return {@code true} if the buffer contains GZIPped data; {@code false}
+     * if the buffer is null or if the {@code length} is too short.
+     *
+     * @since IonJava R16
+     */
+    public static boolean isGzip(byte[] buffer, int offset, int length)
+    {
+        return cookieMatches(GZIP_HEADER, buffer, offset, length);
+    }
+
+
+    private static boolean cookieMatches(byte[] cookie,
+                                         byte[] buffer,
+                                         int offset,
+                                         int length)
+    {
+        if (buffer == null || length < cookie.length)
         {
             return false;
         }
 
-        for (int i = 0; i < BINARY_VERSION_MARKER_SIZE; i++)
+        for (int i = 0; i < cookie.length; i++)
         {
-            if (BINARY_VERSION_MARKER_1_0[i] != buffer[offset + i])
+            if (cookie[i] != buffer[offset + i])
             {
                 return false;
             }
         }
         return true;
     }
-
 
     /**
      * writes an IonList with a series of IonBool values. This

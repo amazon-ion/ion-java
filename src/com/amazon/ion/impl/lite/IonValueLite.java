@@ -395,6 +395,7 @@ abstract class IonValueLite
             // this is redundant now:  checkForLock();
             if (symbols == null) {
                 symbols = getSymbolTable();
+                // TODO assertion contradicts the spec for getSymbolTable()
                 assert(symbols != null); // we should get a system symbol table if nothing else
             }
 
@@ -413,6 +414,8 @@ abstract class IonValueLite
                         symbols = resolve_symbol(symbols, text);
 
                         // TODO we've interned the symbol but forgotten the sid
+                        // We also haven't made sure we're using the same
+                        // String instance as the symtab.
                     }
                 }
             }

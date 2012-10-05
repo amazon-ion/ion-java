@@ -19,6 +19,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonDatagram;
 import com.amazon.ion.impl._Private_Utils;
@@ -184,10 +185,10 @@ final class IonDatagramLite
     @Override
     public ValueFactory add()
     {
-        return new CurriedValueFactoryLite(this.getSystem())
+        return new _Private_CurriedValueFactory(this.getSystem())
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(newValue);
             }
@@ -233,10 +234,10 @@ final class IonDatagramLite
     @Override
     public ValueFactory add(final int index)
     {
-        return new CurriedValueFactoryLite(getSystem())
+        return new _Private_CurriedValueFactory(getSystem())
         {
             @Override
-            void handle(IonValue newValue)
+            protected void handle(IonValue newValue)
             {
                 add(index, newValue);
             }
@@ -1146,6 +1147,9 @@ final class IonDatagramLite
             }
             // and at the front we need to put in the ion version marker
             if (curr_index == 0 && !is_ivm(curr_value)) {
+                // TODO this is wrong, because we may have already pushed
+                // a rep above. This is just making up an additional symtab
+                // where one was not placed by the user.
                 IonValueLite ivm = __iterator.get_datagram_ivm();
                 push_system_value(ivm);
             }

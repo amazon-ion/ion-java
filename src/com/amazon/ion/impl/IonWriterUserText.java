@@ -119,7 +119,6 @@ public class IonWriterUserText // TODO ION-271 protect after IMS is migrated
         super(systemWriter.getBuilder().getCatalog(),
               symtabValueFactory,
               systemWriter,
-              systemWriter.getBuilder().getInitialIvmHandling() == SUPPRESS,
               systemWriter.getBuilder().getImports());
     }
 

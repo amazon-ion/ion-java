@@ -11,6 +11,7 @@ import com.amazon.ion.IonClob;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonDecimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonString;
@@ -21,9 +22,10 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -44,12 +46,6 @@ final class IonWriterSystemTree
 
     private final int _initialDepth;
 
-    /**
-     * Set by {@link #finish()} to force writing of $ion_1_0 before any further
-     * data.
-     */
-    private boolean _finished_and_requiring_version_marker;
-
     private boolean             _in_struct;
 
     /**
@@ -68,10 +64,14 @@ final class IonWriterSystemTree
      */
     protected IonWriterSystemTree(SymbolTable defaultSystemSymbolTable,
                                   IonCatalog catalog,
-                                  IonContainer rootContainer)
+                                  IonContainer rootContainer,
+                                  InitialIvmHandling initialIvmHandling)
     {
-        super(defaultSystemSymbolTable);
+        super(defaultSystemSymbolTable, initialIvmHandling,
+              IvmMinimizing.ADJACENT);
+
         if (rootContainer == null) throw new NullPointerException();
+
         _factory = rootContainer.getSystem();
         _catalog = catalog;
         _current_parent = rootContainer;
@@ -159,17 +159,13 @@ final class IonWriterSystemTree
 
     private void append(IonValue value)
     {
-        if (_finished_and_requiring_version_marker)
+        try
         {
-            assert getDepth() == 0;
-
-            // TODO if caller is writing an IVM this will output an extra one.
-
-            // Clear the flag first, since writeSymbol will call back here.
-            _finished_and_requiring_version_marker = false;
-
-            // This MUST always be $ion_1_0
-            writeSymbol(SystemSymbols.ION_1_0_SID);
+            super.startValue();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e); // Shouldn't happen
         }
 
         if (hasAnnotations()) {
@@ -224,13 +220,13 @@ final class IonWriterSystemTree
 
 
     @Override
-    void writeIonVersionMarker(SymbolTable systemSymtab)
+    void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
+        startValue();
         IonValue root = get_root();
         ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
-
-        super.writeIonVersionMarker(systemSymtab);
+        endValue();
     }
 
 
@@ -318,19 +314,18 @@ final class IonWriterSystemTree
     }
 
 
-    @Deprecated
-    public void writeSymbol(int symbolId)
+    @Override
+    void writeSymbolAsIs(int symbolId)
     {
-        // TODO ION-165 this should handle IVMs
         String name = getSymbolTable().findKnownSymbol(symbolId);
         SymbolTokenImpl is = new SymbolTokenImpl(name, symbolId);
         IonSymbol v = _factory.newSymbol(is);
         append(v);
     }
 
-    public void writeSymbol(String value)
+    @Override
+    public void writeSymbolAsIs(String value)
     {
-        // TODO ION-165 this should handle IVMs
         IonSymbol v = _factory.newSymbol(value);
         append(v);
     }
@@ -352,14 +347,6 @@ final class IonWriterSystemTree
     public void flush()
     {
         // flush is not meaningful for a tree writer
-    }
-
-    @Override
-    public void finish()
-        throws IOException
-    {
-        super.finish();
-        _finished_and_requiring_version_marker = true;
     }
 
     public void close()

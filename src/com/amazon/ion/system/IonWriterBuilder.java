@@ -18,10 +18,19 @@ public abstract class IonWriterBuilder
     /**
      * A strategy for altering emission of Ion version markers at the start of
      * an Ion stream.
+     *
+     * @see IonTextWriterBuilder#setInitialIvmHandling(InitialIvmHandling)
      */
     public enum InitialIvmHandling
     {
-        // ENSURE,
+        /**
+         * Always emits an initial IVM, even when the user hasn't explicitly
+         * written one.  If the user <em>does</em> write one, this won't
+         * cause an extra to be emitted.
+         *
+         * @since IonJava R16
+         */
+        ENSURE,
 
         /**
          * Indicates that initial IVMs should be suppressed from the output
@@ -29,6 +38,30 @@ public abstract class IonWriterBuilder
          */
         SUPPRESS
     }
+
+
+    /**
+     * A strategy for minimizing the output of non-initial Ion version markers.
+     * <p>
+     * This strategy does not affect handling of IVMs at the start of a data
+     * stream; that's the job of {@link InitialIvmHandling}.
+     *
+     * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
+     *
+     * @since IonJava R16
+     */
+    public enum IvmMinimizing
+    {
+        /** Replaces identical, adjacent IVMs with a single IVM. */
+        ADJACENT,
+
+        /**
+         * Discards IVMs that don't change the Ion version, even when there's
+         * other data between them. This includes adjacent IVMs.
+         */
+        DISTANT
+    }
+
 
     /**
      * NOT FOR APPLICATION USE
@@ -48,4 +81,18 @@ public abstract class IonWriterBuilder
      * Null indicates the default for the specific output form.
      */
     public abstract InitialIvmHandling getInitialIvmHandling();
+
+
+    /**
+     * Gets the strategy for eliminating Ion version markers mid-stream.
+     * By default, IVMs are emitted as received or when necessary.
+     * <p>
+     * This strategy does not affect handling of IVMs at the start of the
+     * stream; that's the job of {@link InitialIvmHandling}.
+     *
+     * @return the IVM minimizing strategy.
+     *
+     * @since IonJava R16
+     */
+    public abstract IvmMinimizing getIvmMinimizing();
 }

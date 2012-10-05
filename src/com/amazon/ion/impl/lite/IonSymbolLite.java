@@ -51,6 +51,12 @@ final class IonSymbolLite
                     throw new EmptySymbolException();
                 }
                 super.setValue(text);
+
+                // TODO why is the sid ignored in this case?
+                // Probably because we don't trust our ability to change the
+                // sid if this value gets recontextualized.
+                // BUT: we retain the sid on field names and annotations,
+                // so one or the other is buggy.
             }
             else
             {

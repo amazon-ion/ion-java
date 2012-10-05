@@ -4,13 +4,17 @@ package com.amazon.ion;
 
 import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.zip.GZIPOutputStream;
 import org.junit.Test;
 
 /**
@@ -224,5 +228,77 @@ public class IonSystemTest
         IonReader r = system().newReader("hi");
         // we don't call next()!
         system().newValue(r);
+    }
+
+
+    private byte[] gzip(byte[] input)
+        throws IOException
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzos = new GZIPOutputStream(baos);
+        gzos.write(input);
+        gzos.close();
+        return baos.toByteArray();
+    }
+
+    private void checkGzipDetection(IonReader r)
+    {
+        assertEquals(IonType.INT, r.next());
+        assertEquals(1234, r.intValue());
+        assertEquals(null, r.next());
+    }
+
+    private void checkGzipDetection(byte[] bytes)
+        throws Exception
+    {
+        IonSystem system = system();
+
+        IonValue v = system.singleValue(bytes);
+        checkInt(1234, v);
+
+        IonReader r = system.newReader(bytes);
+        checkGzipDetection(r);
+
+        byte[] padded = new byte[bytes.length + 70];
+        System.arraycopy(bytes, 0, padded, 37, bytes.length);
+        r = system.newReader(padded, 37, bytes.length);
+        checkGzipDetection(r);
+
+        InputStream in = new ByteArrayInputStream(bytes);
+        r = system.newReader(in);
+        checkGzipDetection(r);
+
+        Iterator<IonValue> i = system.iterate(bytes);
+        checkInt(1234, i.next());
+
+        in = new ByteArrayInputStream(bytes);
+        i = system.iterate(in);
+        checkInt(1234, i.next());
+
+        IonLoader loader = loader();
+        IonDatagram dg = loader.load(bytes);
+        checkInt(1234, dg.get(0));
+
+        in = new ByteArrayInputStream(bytes);
+        dg = loader.load(in);
+        checkInt(1234, dg.get(0));
+    }
+
+    @Test
+    public void testGzipDetection()
+        throws Exception
+    {
+        String ionText = "1234";
+        byte[] textBytes = _Private_Utils.utf8(ionText);
+        byte[] gzipTextBytes = gzip(textBytes);
+
+        checkGzipDetection(textBytes);
+        checkGzipDetection(gzipTextBytes);
+
+        byte[] binaryBytes = loader().load(ionText).getBytes();
+        byte[] gzipBinaryBytes = gzip(binaryBytes);
+
+        checkGzipDetection(binaryBytes);
+        checkGzipDetection(gzipBinaryBytes);
     }
 }

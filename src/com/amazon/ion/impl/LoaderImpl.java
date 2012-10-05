@@ -157,7 +157,11 @@ final class LoaderImpl
     {
         try
         {
-            PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
+            // TODO ION-233 this should always use a system IonReader
+            // (avoiding the SystemValueIterator)
+            // but that's broken until field names work properly on binary
+            GzipOrRawInputStream gzip = new GzipOrRawInputStream(ionData);
+            PushbackInputStream pushback = new PushbackInputStream(gzip, 8);
             if (_Private_Utils.streamIsIonBinary(pushback)) {
                 if (USE_NEW_READERS)
                 {
@@ -166,6 +170,8 @@ final class LoaderImpl
                     // The streaming APIs add no benefit.
                 }
 
+                // TODO this can be extended to take the pushback separately
+                // thus avoiding the need for the PushbackInputStream entirely
                 SystemValueIterator systemReader =
                     mySystem.newBinarySystemIterator(myCatalog, pushback);
                 return new IonDatagramImpl(mySystem, systemReader);

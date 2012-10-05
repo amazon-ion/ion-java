@@ -459,6 +459,7 @@ class IonReaderTextSystemX
     public Decimal decimalValue()
     {
         load_or_cast_cached_value(AS_TYPE.decimal_value);
+        if (_v.isNull()) return null;
         return _v.getDecimal();
     }
 

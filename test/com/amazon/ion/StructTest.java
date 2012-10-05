@@ -984,8 +984,11 @@ public class StructTest
 
         // what happened to j?
         IonDatagram dg = ionSystem.newDatagram(s1);
-        // Do this before toString, ensuring we have local symtab
         byte[] bytes = dg.getBytes();
+
+        // Force symbol interning for complete symtab coverage
+        // Just getting the bytes doesn't ensure that the DG is updated!
+        dg.deepMaterialize();
 
         String i3 = dg.toString();
         //System.out.println(i3);
@@ -1048,6 +1051,14 @@ public class StructTest
         IonString str = s.put("f").newString("g");
         checkString("g", str);
         assertSame(str, s.get("f"));
+
+        IonString str2 = s.put("h").clone(str);
+        assertNotSame(str, str2);
+        assertEquals(str, str2);
+        assertEquals(2, s.size());
+        checkString("g", str2);
+        assertSame(str, s.get("f"));
+        assertSame(str2, s.get("h"));
     }
 
 

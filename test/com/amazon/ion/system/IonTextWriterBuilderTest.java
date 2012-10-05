@@ -5,7 +5,11 @@ package com.amazon.ion.system;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
+import static com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing.EVERYTHING;
+import static com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing.LOCALS;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
+import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.ADJACENT;
+import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -170,6 +174,114 @@ public class IonTextWriterBuilderTest
         assertEquals("null " + ION_1_0, out.toString());
     }
 
+    //-------------------------------------------------------------------------
+
+    @Test
+    public void testIvmMinimizing()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        assertEquals(null, b.getIvmMinimizing());
+        b.setIvmMinimizing(ADJACENT);
+        assertSame(ADJACENT, b.getIvmMinimizing());
+
+        // Test with...() on mutable builder
+
+        IonTextWriterBuilder b2 = b.withIvmMinimizing(null);
+        assertSame(b, b2);
+        assertSame(null, b.getIvmMinimizing());
+
+        // Test with...() on immutable builder
+
+        b2 = b.immutable();
+        assertSame(null, b2.getIvmMinimizing());
+        IonTextWriterBuilder b3 = b2.withIvmMinimizing(ADJACENT);
+        assertNotSame(b2, b3);
+        assertSame(null, b2.getIvmMinimizing());
+        assertSame(ADJACENT, b3.getIvmMinimizing());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testIvmMinimizingImmutability()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setIvmMinimizing(ADJACENT);
+
+        IonTextWriterBuilder b2 = b.immutable();
+        assertSame(ADJACENT, b2.getIvmMinimizing());
+        b2.setIvmMinimizing(null);
+    }
+
+    @Test
+    public void testIvmMinimization()
+        throws IOException
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+
+        StringBuilder out = new StringBuilder();
+        IonWriter writer = b.build(out);
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.close();
+        assertEquals(ION_1_0 + " " + ION_1_0, out.toString());
+
+        b.withIvmMinimizing(ADJACENT);
+        out.setLength(0);
+        writer = b.build(out);
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.writeNull();
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.close();
+        assertEquals(ION_1_0 + " null " + ION_1_0, out.toString());
+
+        b.withIvmMinimizing(DISTANT);
+        out.setLength(0);
+        writer = b.build(out);
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.writeNull();
+        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ION_1_0);
+        writer.close();
+        assertEquals(ION_1_0 + " null", out.toString());
+    }
+
+    //-------------------------------------------------------------------------
+
+    @Test
+    public void testLstMinimizing()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setLstMinimizing(EVERYTHING);
+        assertSame(EVERYTHING, b.getLstMinimizing());
+
+        // Test with...() on mutable builder
+
+        IonTextWriterBuilder b2 = b.withLstMinimizing(null);
+        assertSame(b, b2);
+        assertSame(null, b.getLstMinimizing());
+
+        // Test with...() on immutable builder
+
+        b2 = b.immutable();
+        assertSame(null, b2.getLstMinimizing());
+        IonTextWriterBuilder b3 = b2.withLstMinimizing(LOCALS);
+        assertNotSame(b2, b3);
+        assertSame(null, b2.getLstMinimizing());
+        assertSame(LOCALS, b3.getLstMinimizing());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testLstMinimizingImmutability()
+    {
+        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        b.setLstMinimizing(EVERYTHING);
+
+        IonTextWriterBuilder b2 = b.immutable();
+        assertSame(EVERYTHING, b2.getLstMinimizing());
+        b2.setLstMinimizing(null);
+    }
 
     //-------------------------------------------------------------------------
 

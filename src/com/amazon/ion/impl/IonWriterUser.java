@@ -2,8 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
@@ -37,7 +35,7 @@ import java.math.BigInteger;
  * struct is stepped-out, the diversion is stopped and the new
  * {@link SymbolTable} is installed.
  */
-abstract class IonWriterUser
+class IonWriterUser
     extends IonWriterBaseImpl
     implements _Private_IonWriter
 {
@@ -46,16 +44,6 @@ abstract class IonWriterUser
 
     /** Used to make correct local symbol tables. May be null. */
     private final IonCatalog _catalog;
-
-    /** Turns false once we've written non-IVM data. */
-    private boolean _suppress_initial_ivm;
-
-    /**
-     * Indicates whether the (immediately) previous value was an IVM.
-     * This is cleared by {@link #finish_value()}.
-     */
-          boolean _previous_value_was_ivm;
-    final boolean _root_is_datagram;
 
     /**
      * The underlying system writer that writing the raw format (text, binary,
@@ -100,7 +88,6 @@ abstract class IonWriterUser
         assert systemWriter != null;
         _system_writer = systemWriter;
         _current_writer = systemWriter;
-        _root_is_datagram = systemWriter.getDepth() == 0;
     }
 
 
@@ -113,18 +100,13 @@ abstract class IonWriterUser
      * @param catalog may be null.
      * @param symtabValueFactory must not be null.
      * @param systemWriter must not be null.
-     * @param suppressInitialIvm when true, any initial {@code $ion_1_0} IVMs
-     *  will be suppressed even when the user explicitly writes one.
      */
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
-                  boolean suppressInitialIvm,
                   SymbolTable... imports)
     {
         this(catalog, symtabValueFactory, systemWriter);
-
-        _suppress_initial_ivm = suppressInitialIvm;
 
         SymbolTable defaultSystemSymtab =
             systemWriter.getDefaultSystemSymtab();
@@ -203,8 +185,6 @@ abstract class IonWriterUser
         }
 
         _system_writer.finish();
-
-        _previous_value_was_ivm = false;
     }
 
     //========================================================================
@@ -247,7 +227,8 @@ abstract class IonWriterUser
 
         _current_writer = new IonWriterSystemTree(activeSystemSymbolTable(),
                                                   _catalog,
-                                                  _symbol_table_value);
+                                                  _symbol_table_value,
+                                                  null /* initialIvmHandling */);
     }
 
     /**
@@ -292,8 +273,6 @@ abstract class IonWriterUser
         }
 
         _system_writer.writeLocalSymtab(symbols);
-
-        _suppress_initial_ivm = false;  // We're past the initial IVM now.
     }
 
 
@@ -383,22 +362,10 @@ abstract class IonWriterUser
         return _current_writer.getTypeAnnotationSymbols();
     }
 
-    /**
-     * To be called at the end of every value.
-     * Sets {@link #_previous_value_was_ivm} and {@link #_suppress_initial_ivm}
-     * to false, althought they may be overwritten by the caller.
-     */
-    private final void finish_value()
-    {
-        _previous_value_was_ivm = false;
-        _suppress_initial_ivm = false;
-    }
-
     public void stepIn(IonType containerType) throws IOException
     {
         // see if it looks like we're starting a local symbol table
         if (containerType == IonType.STRUCT
-            && _root_is_datagram
             && _current_writer.getDepth() == 0
             && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID))
         {
@@ -409,7 +376,6 @@ abstract class IonWriterUser
             // writer is currently in scope
             _current_writer.stepIn(containerType);
         }
-        finish_value();
     }
 
     public void stepOut() throws IOException
@@ -426,159 +392,83 @@ abstract class IonWriterUser
     public void writeBlob(byte[] value, int start, int len) throws IOException
     {
         _current_writer.writeBlob(value, start, len);
-        finish_value();
     }
 
     public void writeBool(boolean value) throws IOException
     {
         _current_writer.writeBool(value);
-        finish_value();
     }
 
     public void writeClob(byte[] value, int start, int len) throws IOException
     {
         _current_writer.writeClob(value, start, len);
-        finish_value();
     }
 
     @Override
     public void writeDecimal(BigDecimal value) throws IOException
     {
         _current_writer.writeDecimal(value);
-        finish_value();
     }
 
     public void writeFloat(double value) throws IOException
     {
         _current_writer.writeFloat(value);
-        finish_value();
     }
 
     @SuppressWarnings("cast")
     public void writeInt(int value) throws IOException
     {
         _current_writer.writeInt((long)value);
-        finish_value();
     }
 
     public void writeInt(long value) throws IOException
     {
         _current_writer.writeInt(value);
-        finish_value();
     }
-
 
     public void writeInt(BigInteger value) throws IOException
     {
         _current_writer.writeInt(value);
-        finish_value();
     }
 
     public void writeNull(IonType type) throws IOException
     {
         _current_writer.writeNull(type);
-        finish_value();
     }
 
     public void writeString(String value) throws IOException
     {
         _current_writer.writeString(value);
-        finish_value();
     }
 
     @Deprecated
     public final void writeSymbol(int symbolId) throws IOException
     {
-        if (write_as_ivm(symbolId)) {
-            if (! previousValueWasIvm()) {
-                writeIonVersionMarker();
-            }
-            // since writeIVM calls finish and when
-            // we don't write the IVM we don't want
-            // to call finish, we're done here.
-            return;
-        }
         _current_writer.writeSymbol(symbolId);
-        finish_value();
     }
 
     public final void writeSymbol(String value) throws IOException
     {
-        if (ION_1_0.equals(value) && write_as_ivm(ION_1_0_SID))
-        {
-            // TODO make sure to get the right symtab, default may differ.
-            writeIonVersionMarker();
-            // calls finish_value() for us
-        }
-        else {
-            _current_writer.writeSymbol(value);
-            finish_value();
-        }
-    }
-
-    private final boolean write_as_ivm(int sid)
-    {
-        // we only treat the $ion_1_0 symbol as an IVM
-        // if we're at the top level in a datagram
-        boolean treat_as_ivm =
-            (sid == ION_1_0_SID
-             && _root_is_datagram
-             && _current_writer.getDepth() == 0);
-        return treat_as_ivm;
-    }
-
-    private final boolean previousValueWasIvm()
-    {
-        // we skip this IVM symbol if it is a redundant IVM
-        // either at the beginning (which is common if this
-        // is a binary writer) or at any other time.
-        return _previous_value_was_ivm;
+        _current_writer.writeSymbol(value);
     }
 
 
     final void writeIonVersionMarker(SymbolTable systemSymtab)
         throws IOException
     {
-        if (getDepth() != 0 || _root_is_datagram == false) {
-            String message =
-                "Ion Version Markers are only valid at the top level of a " +
-                "data stream";
-            throw new IllegalStateException(message);
-        }
-        assert(_current_writer == _system_writer);
-
-        // TODO This always minimizes adjacent IVMs; should be optional.
-        boolean suppress = _suppress_initial_ivm;
-        if (! _suppress_initial_ivm && ! _previous_value_was_ivm) {
-            _system_writer.writeIonVersionMarker(systemSymtab);
-            _previous_value_was_ivm = true;
-        }
-        else
-        {
-            // TODO mustn't suppress if default isn't $ion_1_0
-            assert _system_writer.getSymbolTable() == _system_writer._default_system_symbol_table;
-        }
-
-        finish_value();
-        // We reset these since finish sets themto false (which is the correct
-        // behavior except here).  We could add a flag to finish to tell it
-        // whether we were finishing a IVM or not, but since this is the only
-        // time it's the case it's easier to just patch it here.
-        _previous_value_was_ivm = true;
-        _suppress_initial_ivm = suppress;
+        _current_writer.writeIonVersionMarker(systemSymtab);
     }
 
     @Override
     public final void writeIonVersionMarker()
         throws IOException
     {
-        writeIonVersionMarker(_system_writer._default_system_symbol_table);
+        _current_writer.writeIonVersionMarker();
     }
 
 
     public void writeTimestamp(Timestamp value) throws IOException
     {
         _current_writer.writeTimestamp(value);
-        finish_value();
     }
 }

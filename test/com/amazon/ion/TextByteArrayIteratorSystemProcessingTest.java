@@ -7,7 +7,7 @@ import java.util.Iterator;
 
 
 public class TextByteArrayIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private byte[] myBytes;
 

@@ -8,7 +8,7 @@ import java.util.Iterator;
  * TODO replicates other tests in this hierarchy
  */
 public class NewDatagramIteratorSystemProcessingTest
-    extends IteratorSystemProcessingTest
+    extends IteratorSystemProcessingTestCase
 {
     private String myText;
 
