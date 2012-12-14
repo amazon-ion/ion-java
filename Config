@@ -1,5 +1,4 @@
 # -*-perl-*- 
-#  //brazil/src/shared/platform/IonJava/mainline perforce:9591/Config 
 
 package.IonJava = {
   interfaces = (1.0);
@@ -25,6 +24,12 @@ package.IonJava = {
 
 
   build-system = happytrails;
+
+  build-environment = {
+    # http://w?BuilderTools/BuildTeam/SandboxedBuilds
+    chroot = basic;
+    network-access = blocked;
+  };
 
   build-tools = {
     1.0 = {
