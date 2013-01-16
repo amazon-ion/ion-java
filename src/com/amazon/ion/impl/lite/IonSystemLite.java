@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -346,8 +346,17 @@ final class IonSystemLite
                 v = newBool(reader.booleanValue());
                 break;
             case INT:
+                // TODO ION-176  Inefficient since we can't determine the size
+                // of the integer in order to avoid making BigIntegers.
+                if (true) {
+                    v = newInt(reader.bigIntegerValue());
+                    break;
+                }
                 try {
                     v = newInt(reader.longValue());
+                    // FIXME ION-297 this is wrong!
+                    // This exception is not specified or tested and is not
+                    // thrown by all reader implementations.  ION-176
                 } catch (CantConvertException e) {
                     v = newInt(reader.bigIntegerValue());
                 }

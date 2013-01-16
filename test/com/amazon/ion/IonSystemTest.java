@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.zip.GZIPOutputStream;
@@ -228,6 +229,17 @@ public class IonSystemTest
         IonReader r = system().newReader("hi");
         // we don't call next()!
         system().newValue(r);
+    }
+
+    @Test // ION-297
+    public void testNewValueWithHugeInt()
+    {
+        String huge = Long.MAX_VALUE + "0";
+        IonInt i = system().newInt(new BigInteger(huge));
+        IonReader r = system().newReader(i);
+        r.next();
+        IonInt i2 = (IonInt) system().newValue(r);
+        assertEquals(i, i2);
     }
 
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
@@ -54,6 +54,7 @@ import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.InputStreamReaderTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
+import com.amazon.ion.streaming.ReaderDomCopyTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
@@ -156,6 +157,7 @@ import org.junit.runners.Suite;
     BadIonStreamingTest.class,
     GoodIonStreamingTest.class,
     RoundTripStreamingTest.class,
+    ReaderDomCopyTest.class,
     ReaderSkippingTest.class,
 
     IonSystemTest.class,
