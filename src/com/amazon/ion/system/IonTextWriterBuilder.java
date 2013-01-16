@@ -76,7 +76,7 @@ public abstract class IonTextWriterBuilder
          * If {@link com.amazon.ion.system.IonWriterBuilder.IvmMinimizing}
          * is also in effect, then even that IVM may be suppressed.
          *
-         * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
+         * @see IonTextWriterBuilder#setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
          */
         EVERYTHING
     }
