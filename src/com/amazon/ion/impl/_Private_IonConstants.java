@@ -7,8 +7,10 @@ import com.amazon.ion.IonException;
 /**
  * NOT FOR APPLICATION USE!
  */
-public class _Private_IonConstants // TODO ION-271 make final
+public final class _Private_IonConstants
 {
+    private _Private_IonConstants() { }
+
 
     public final static int BB_TOKEN_LEN           =    1;
 

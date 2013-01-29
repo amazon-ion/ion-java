@@ -156,6 +156,7 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
         IonCatalog catalog = b.getCatalog();
+        SymbolTable[] imports = b.getImports();
 
         // TODO We shouldn't need a system here
         IonSystem system =
@@ -164,7 +165,7 @@ public class _Private_IonTextWriterBuilder
         IonWriterSystemText systemWriter =
             new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
 
-        return new IonWriterUserText(system, systemWriter);
+        return new IonWriterUser(catalog, system, systemWriter, imports);
     }
 
     @Override
@@ -172,6 +173,7 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
         IonCatalog catalog = b.getCatalog();
+        SymbolTable[] imports = b.getImports();
 
         // TODO We shouldn't need a system here
         IonSystem system =
@@ -180,7 +182,7 @@ public class _Private_IonTextWriterBuilder
         IonWriterSystemText systemWriter =
             new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
 
-        return new IonWriterUserText(system, systemWriter);
+        return new IonWriterUser(catalog, system, systemWriter, imports);
     }
 
     //=========================================================================

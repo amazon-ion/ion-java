@@ -11,7 +11,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.util.Iterator;
 
@@ -55,8 +54,6 @@ public interface _Private_IonSystem
 
     public IonReader newSystemReader(IonValue value);
 
-    @Deprecated // TODO ION-271 remove after IMS is migrated
-    public IonWriter newTextWriter(OutputStream out, boolean pretty);
 
     public IonWriter newTreeWriter(IonContainer container);
 

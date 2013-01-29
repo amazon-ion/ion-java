@@ -452,17 +452,6 @@ final class IonSystemImpl
         return myTextWriterBuilder.build(out);
     }
 
-    @Deprecated // TODO ION-271 remove after IMS is migrated
-    public IonWriter newTextWriter(OutputStream out, boolean pretty)
-    {
-        IonTextWriterBuilder b = myTextWriterBuilder;
-        if (pretty)
-        {
-            b = b.withPrettyPrinting();
-        }
-        return b.build(out);
-    }
-
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
     {
         return myTextWriterBuilder.withImports(imports).build(out);
