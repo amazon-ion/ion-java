@@ -2281,23 +2281,64 @@ done:       for (;;) {
          * These are the "write value" family, they just write the value
          * @throws IOException
          */
-        public int writeFixedIntValue(long val, int len) throws IOException
-        {
-            switch (len) {
-            case 8: write((byte)((val >> 56) & 0xffL));
-            case 7: write((byte)((val >> 48) & 0xffL));
-            case 6: write((byte)((val >> 40) & 0xffL));
-            case 5: write((byte)((val >> 32) & 0xffL));
-            case 4: write((byte)((val >> 24) & 0xffL));
-            case 3: write((byte)((val >> 16) & 0xffL));
-            case 2: write((byte)((val >>  8) & 0xffL));
-            case 1: write((byte)((val >>  0) & 0xffL));
+        private byte[] intBuffer;
+        void writeLong(long val, int len, int bits, byte endByte) throws IOException {
+            int mask = (1 << bits) - 1;
+            if (intBuffer == null) {
+                intBuffer = new byte[8];
             }
-            return len;
+            if (len == 1) {
+                write(endByte | (byte)(val & mask));
+            } else if (len > 1) {
+                int shift = bits * (len - 1);
+                for (int i = 0; i < len; ++i) {
+                    intBuffer[i] = (byte)((val >> shift) & mask);
+                    shift -= bits;
+                }
+                intBuffer[len - 1] |= endByte;
+                write(intBuffer, 0, len);
+            }
         }
+        void writeNegLong(long val, int len, int bits, byte endByte) throws IOException {
+            int mask = (1 << bits) - 1;  // 8 bits -> 0xff
+            byte neg = 0;
+            if (intBuffer == null) {
+                intBuffer = new byte[8];
+            }
+            if (val < 0) {
+                val = -val;
+                neg = (byte)(1 << (bits - 1));
+            }
+            if (len == 1) {
+                write(endByte | neg | (byte)(val & mask));
+            } else {
+                int shift = bits * (len - 1);
+                for (int i = 0; i < len; ++i) {
+                    intBuffer[i] = (byte)((val >> shift) & mask);
+                    shift -= bits;
+                }
+                intBuffer[0] |= neg;
+                intBuffer[len - 1] |= endByte;
+                write(intBuffer, 0, len);
+            }
+        }
+
+//        public int writeFixedIntValue(long val, int len) throws IOException
+//        {
+//            switch (len) {
+//            case 8: write((byte)((val >> 56) & 0xffL));
+//            case 7: write((byte)((val >> 48) & 0xffL));
+//            case 6: write((byte)((val >> 40) & 0xffL));
+//            case 5: write((byte)((val >> 32) & 0xffL));
+//            case 4: write((byte)((val >> 24) & 0xffL));
+//            case 3: write((byte)((val >> 16) & 0xffL));
+//            case 2: write((byte)((val >>  8) & 0xffL));
+//            case 1: write((byte)((val >>  0) & 0xffL));
+//            }
+//            return len;
+//        }
         public int writeVarUIntValue(int value, int fixed_size) throws IOException
         {
-            int mask = 0x7F;
             int len = lenVarUInt(value);
 
             if (fixed_size > 0) {
@@ -2312,35 +2353,19 @@ done:       for (;;) {
                 }
                 len = fixed_size;
             }
-
-            switch (len-1) {
-            case 4: write((byte)((value >> (7*4)) & mask));
-            case 3: write((byte)((value >> (7*3)) & mask));
-            case 2: write((byte)((value >> (7*2)) & mask));
-            case 1: write((byte)((value >> (7*1)) & mask));
-            case 0: write((byte)((value & mask) | 0x80));
-                    break;
-            }
+            writeLong(value, len, 7, (byte)0x80);
             return len;
         }
         public int writeVarUIntValue(int value, boolean force_zero_write) throws IOException
         {
-            int mask = 0x7F;
             int len = lenVarUInt(value);
-
-            switch (len - 1) {
-            case 4: write((byte)((value >> (7*4)) & mask));
-            case 3: write((byte)((value >> (7*3)) & mask));
-            case 2: write((byte)((value >> (7*2)) & mask));
-            case 1: write((byte)((value >> (7*1)) & mask));
-            case 0: write((byte)((value & mask) | 0x80L));
-                    break;
-            case -1: // or 0
+            if (len == 0) {
                 if (force_zero_write) {
                     write((byte)0x80);
                     len = 1;
                 }
-                break;
+            } else {
+                writeLong(value, len, 7, (byte)0x80);
             }
             return len;
         }
@@ -2352,19 +2377,7 @@ done:       for (;;) {
          */
         public int writeUIntValue(long value, int len) throws IOException
         {
-            long mask = 0xffL;
-
-            switch (len) {
-            case 8: write((byte)((value >> (56)) & mask));
-            case 7: write((byte)((value >> (48)) & mask));
-            case 6: write((byte)((value >> (40)) & mask));
-            case 5: write((byte)((value >> (32)) & mask));
-            case 4: write((byte)((value >> (24)) & mask));
-            case 3: write((byte)((value >> (16)) & mask));
-            case 2: write((byte)((value >> (8)) & mask));
-            case 1: write((byte)(value & mask));
-                    break;
-            }
+            writeLong(value, len, 8, (byte)0x0);
             return len;
         }
 
@@ -2408,121 +2421,28 @@ done:       for (;;) {
         }
 
 
-        public int writeVarIntValue(int value, boolean force_zero_write) throws IOException
-        {
-            int len = 0;
-
-            if (value != 0) {
-                int mask = 0x7F;
-                boolean is_negative = false;
-
-                len = lenVarInt(value);
-                if (is_negative = (value < 0)) {
-                    value = -value;
-                }
-
-                // we write the first "byte" separately as it has the sign
-                // note that we don't want to sign extend here (later we don't care)
-                int b = (byte)((value >>> (7*(len-1))) & mask);
-                if (is_negative)  b |= 0x40; // the sign bit only on the first byte
-                if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
-                write((byte)b);
-
-                // write the rest
-                switch (len) {  // we already wrote 1 byte
-                case 5: write((byte)((value >> (7*3)) & mask));
-                case 4: write((byte)((value >> (7*2)) & mask));
-                case 3: write((byte)((value >> (7*1)) & mask));
-                case 2: write((byte)((value & mask) | 0x80));
-                case 1: // do nothing
-                }
-            }
-            else if (force_zero_write) {
-                write((byte)0x80);
-                len = 1;
-            }
-            return len;
-        }
         public int writeVarIntValue(long value, boolean force_zero_write) throws IOException
         {
             int len = 0;
 
-            if (value != 0) {
-                long mask = 0x7fL;
-                boolean is_negative = false;
-
-                len = lenInt(value);
-                if (is_negative = (value < 0)) {
-                    // note that for Long.MIN_VALUE (0x8000000000000000) the negative
-                    //      is the same, but that's also the bit pattern we need to
-                    //      write out - so not worries (except sign extension)
-                    value = -value;
+            if (value == 0) {
+                if (force_zero_write) {
+                    write((byte)0x80);
+                    len = 1;
                 }
-
-                // we write the first "byte" separately as it has the sign
-                // and we really don't want to sign extend here (in case we're operating
-                // on the dreaded MIN_VALUE value
-                int b = (byte)((value >>> (7*len)) & mask);
-                if (is_negative)  b |= 0x40; // the sign bit
-                if (len == 1)     b |= 0x80; // the terminator in case the first "byte" is the last
-                write((byte)b);
-
-                // write the rest
-                switch (len - 1) {  // we already wrote 1 byte
-                case 8: write((byte)((value >> (7*8)) & mask));
-                case 7: write((byte)((value >> (7*7)) & mask));
-                case 6: write((byte)((value >> (7*6)) & mask));
-                case 5: write((byte)((value >> (7*5)) & mask));
-                case 4: write((byte)((value >> (7*4)) & mask));
-                case 3: write((byte)((value >> (7*3)) & mask));
-                case 2: write((byte)((value >> (7*2)) & mask));
-                case 1: write((byte)((value >> (7*1)) & mask));
-                case 0: write((byte)((value & mask) | 0x80L));
-                }
+            } else {
+                len = lenVarInt(value);
+                writeNegLong(value, len, 7, (byte)0x80);
             }
-            else if (force_zero_write) {
-                write((byte)0x80);
-                len = 0;
-            }
-
             return len;
         }
+
         public int writeIntValue(long value) throws IOException {
-            int  len = 0;
+            int len = 0;
 
-            // figure out how many we have bytes we have to write out
             if (value != 0) {
-                long mask = 0xffL;
-                boolean is_negative = (value < 0);
-
-                len = lenInt(value) - 1;
-                if (is_negative) {
-                    // we just let MIN_VALUE wrap back to itself
-                    value = -value;
-                }
-
-                // we write the first "byte" separately as it has the sign
-                // note that for MIN_VALUE (where the high byte is 0x80 both
-                // before and after the negation above this will strip off the
-                // high bit, and write out 0x80 - just the sign.  Since the
-                // output length will be 9 below we'll write out the high order
-                // byte as the value portion.
-                int b = (byte)((value >>> (8*len)) & 0x7fL);
-                if (is_negative)  b |= 0x80; // the sign bit
-                write((byte)b);
-
-                // write the rest
-                switch (len - 1) {  // we already wrote 1 byte
-                case 7: write((byte)((value >> (8*7)) & mask)); // but for MIN_VALUE we might have a full 9 bytes of output
-                case 6: write((byte)((value >> (8*6)) & mask));
-                case 5: write((byte)((value >> (8*5)) & mask));
-                case 4: write((byte)((value >> (8*4)) & mask));
-                case 3: write((byte)((value >> (8*3)) & mask));
-                case 2: write((byte)((value >> (8*2)) & mask));
-                case 1: write((byte)((value >> (8*1)) & mask));
-                case 0: write((byte)(value & mask));
-                }
-                len++;
+                len = lenUInt(value < 0 ? -value : value);
+                writeNegLong(value, len, 8, (byte)0);
             }
             return len;
         }
@@ -2539,14 +2459,27 @@ done:       for (;;) {
             long dBits = Double.doubleToRawLongBits(d);
             return writeUIntValue(dBits, _ib_FLOAT64_LEN);
         }
+
+        byte[] unicodeBuffer;
         public int writeUnicodeScalarAsUTF8(int c) throws IOException
         {
-            this.start_write();
-            int ret = this._writeUnicodeScalarAsUTF8(c);
-            this.end_write();
-            return ret;
+            int len;
+            if (c < 0x80) {
+                len = 1;
+                this.start_write();
+                _write((byte)(c & 0xff));
+                this.end_write();
+            } else {
+                if (unicodeBuffer == null) {
+                    unicodeBuffer = new byte[4];
+                }
+                len = _writeUnicodeScalarToByteBuffer(c, unicodeBuffer, 0);
+                this.write(unicodeBuffer, 0, len);
+            }
+            return len;
         }
-        final int _writeUnicodeScalarAsUTF8(int c) throws IOException
+
+        final int _writeUnicodeScalarToByteBuffer(int c, byte[] buffer, int offset) throws IOException
         {
             // TO DO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
@@ -2557,15 +2490,16 @@ done:       for (;;) {
 
             int len = -1;
 
+            assert offset + 4 < buffer.length;
+
             // first the quick, easy and common case - ascii
             if (c < 0x80) {
-                _write((byte)(0xff & c ));
+                buffer[offset] = (byte)(0xff & c );
                 len = 1;
-            }
-            else if (c < 0x800) {
+            } else if (c < 0x800) {
                 // 2 bytes characters from 0x000080 to 0x0007FF
-                _write((byte)( 0xff & (0xC0 | (c >> 6)) ));
-                _write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
+                buffer[offset] = (byte)( 0xff & (0xC0 | (c >> 6)) );
+                buffer[++offset] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
                 len = 2;
             }
             else if (c < 0x10000) {
@@ -2574,18 +2508,18 @@ done:       for (;;) {
                 if (c > 0xD7FF && c < 0xE000) {
                     this.throwUTF8Exception();
                 }
-                _write((byte)( 0xff & (0xE0 |  (c >> 12)) ));
-                _write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-                _write((byte)( 0xff & (0x80 |  (c & 0x3F)) ));
+                buffer[offset] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
+                buffer[++offset] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                buffer[++offset] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
                 len = 3;
             }
             else if (c <= 0x10FFFF) {
                 // 4 byte characters 0x010000 to 0x10FFFF
                 // these are are valid
-                _write((byte)( 0xff & (0xF0 |  (c >> 18)) ));
-                _write((byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) ));
-                _write((byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) ));
-                _write((byte)( 0xff & (0x80 | (c & 0x3F)) ));
+                buffer[offset] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
+                buffer[++offset] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
+                buffer[++offset] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                buffer[++offset] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
                 len = 4;
             }
             else {
@@ -2763,17 +2697,27 @@ done:       for (;;) {
             return len;
         }
 
+        byte[] stringBuffer;
+        static final int stringBufferLen = 1024;
         public int writeStringData(String s) throws IOException
         {
             int len = 0;
 
-            this.start_write();
+            if (stringBuffer == null) {
+                stringBuffer = new byte[stringBufferLen];
+            }
+            int bufPos = 0;
 
             for (int ii=0; ii<s.length(); ii++) {
                 int c = s.charAt(ii);
+                if (bufPos > stringBufferLen - 4) { // 4 is the max UTF-8 encoding size
+                    this.write(stringBuffer, 0, bufPos);
+                    bufPos = 0;
+                }
+                // at this point stringBuffer contains enough space for UTF-8 encoded code point
                 if (c < 128) {
                     // don't even both to call the "utf8" converter for ascii
-                    this._write((byte)c);
+                    stringBuffer[bufPos++] = (byte)c;
                     len++;
                 }
                 else {
@@ -2795,11 +2739,14 @@ done:       for (;;) {
                         }
                         // from 0xE000 up the _writeUnicodeScalar will check for us
                     }
-                    len += this._writeUnicodeScalarAsUTF8(c);
+                    int utf8len = this._writeUnicodeScalarToByteBuffer(c, stringBuffer, bufPos);
+                    bufPos += utf8len;
+                    len += utf8len;
                 }
             }
-
-            this.end_write();
+            if (bufPos > 0) {
+                this.write(stringBuffer, 0, bufPos);
+            }
 
             return len;
         }
