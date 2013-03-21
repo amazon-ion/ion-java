@@ -417,7 +417,7 @@ final class IonUTF8 {
     {
         final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
         final private OutputStream _byte_stream;
-              private char         _pending_low_surrogate = NO_SURROGATE;
+              private char         _pending_high_surrogate = NO_SURROGATE;
 
         public CharToUTF8(OutputStream byteStream) {
             byteStream.getClass(); // Efficient null check
@@ -428,7 +428,7 @@ final class IonUTF8 {
         }
         public final void flush() throws IOException
         {
-            if (_pending_low_surrogate != NO_SURROGATE) {
+            if (_pending_high_surrogate != NO_SURROGATE) {
                 throw new IOException("unused low surrogate still pending on close");
             }
             _byte_stream.flush();
@@ -470,19 +470,23 @@ final class IonUTF8 {
         }
         private final void append_helper(char c) throws IOException
         {
-            if (_pending_low_surrogate != NO_SURROGATE) {
-                if (!IonUTF8.isHighSurrogate(c)) {
-                    throw new IOException("invalid surrogate (low surrogate not followed by a high surrogate)");
+            if (_pending_high_surrogate != NO_SURROGATE) {
+                if (!IonUTF8.isLowSurrogate(c)) {
+                    throw new IOException("invalid surrogate (high surrogate not followed by a low surrogate)");
                 }
-                int scalar = IonUTF8.getUnicodeScalarFromSurrogates(c, _pending_low_surrogate);
+                int scalar = IonUTF8.getUnicodeScalarFromSurrogates(_pending_high_surrogate, c);
                 append_helper_write_utf8(scalar);
-                _pending_low_surrogate = NO_SURROGATE;
+                _pending_high_surrogate = NO_SURROGATE;
             }
-            else if (c > 127) {
+            else if (c < 128) {
                 _byte_stream.write((byte)c & 0xff);
             }
-            else if (IonUTF8.isLowSurrogate(c)) {
-                _pending_low_surrogate = c;
+            else if (c >= 0xd800 && c <= 0xdfff) {
+                if (IonUTF8.isHighSurrogate(c)) {
+                    _pending_high_surrogate = c;
+                } else {
+                    throw new IOException("invalid surrogate (low surrogate preceeds high surrogate)");
+                }
             }
             else {
                 append_helper_write_utf8(c);

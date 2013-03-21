@@ -208,39 +208,34 @@ final class IonBinary
     static public int writeString(OutputStream userstream, String value) throws IOException
     {
         int len = 0;
-
         for (int ii=0; ii<value.length(); ii++) {
             int c = value.charAt(ii);
-            if (c > 127) {
-                if (c >= 0xD800) {
-                    if (_Private_IonConstants.isHighSurrogate(c)) {
-                        ii++;
-                        // houston we have a high surrogate (let's hope it has a partner
-                        if (ii >= value.length()) {
-                            throw new IonException("invalid string, unpaired high surrogate character");
-                        }
-                        int c2 = value.charAt(ii);
-                        if (!_Private_IonConstants.isLowSurrogate(c2)) {
-                            throw new IonException("invalid string, unpaired high surrogate character");
-                        }
-                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+            if (c < 128) {
+                userstream.write((byte)c);
+                ++len;
+                continue;
+            }
+            // multi-byte utf8
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                if (_Private_IonConstants.isHighSurrogate(c)) {
+                    // houston we have a high surrogate (let's hope it has a partner
+                    if (++ii >= value.length()) {
+                        throw new IonException("invalid string, unpaired high surrogate character");
                     }
-                    else if (_Private_IonConstants.isLowSurrogate(c)) {
-                        // it's a loner low surrogate - that's an error
-                        throw new IonException("invalid string, unpaired low surrogate character");
+                    int c2 = value.charAt(ii);
+                    if (!_Private_IonConstants.isLowSurrogate(c2)) {
+                        throw new IonException("invalid string, unpaired high surrogate character");
                     }
-                    // from 0xE000 up the _writeUnicodeScalar will check for us
+                    c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                 }
-                c = makeUTF8IntFromScalar(c);
+                else if (_Private_IonConstants.isLowSurrogate(c)) {
+                    // it's a loner low surrogate - that's an error
+                    throw new IonException("invalid string, unpaired low surrogate character");
+                }
             }
 
-            // write it here - try to test userWriter as little as possible
-            for (;;) {
+            for (c = makeUTF8IntFromScalar(c); (c & 0xffffff00) != 0; ++len) {
                 userstream.write((byte)(c & 0xff));
-                len++;
-                if ((c & 0xffffff00) == 0) {
-                    break;
-                }
                 c = c >>> 8;
             }
         }
@@ -759,38 +754,36 @@ final class IonBinary
                 len++;
                 continue;
             }
-
-            // look for surrogate pairs and merge them (and throw on bad data)
-            if (_Private_IonConstants.isHighSurrogate(c)) {
-                ii++;
-                if (ii >= v.length()) {
-                    String message =
-                        "Text ends with unmatched UTF-16 surrogate " +
-                        IonTextUtils.printCodePointAsString(c);
-                    throw new IllegalArgumentException(message);
+            // multi-byte utf8
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                // look for surrogate pairs and merge them (and throw on bad data)
+                if (_Private_IonConstants.isHighSurrogate(c)) {
+                    ii++;
+                    if (ii >= v.length()) {
+                        String message =
+                            "Text ends with unmatched UTF-16 surrogate " +
+                            IonTextUtils.printCodePointAsString(c);
+                        throw new IllegalArgumentException(message);
+                    }
+                    int c2 = v.charAt(ii);
+                    if (!_Private_IonConstants.isLowSurrogate(c2)) {
+                        String message =
+                            "Text contains unmatched UTF-16 high surrogate " +
+                            IonTextUtils.printCodePointAsString(c) +
+                            " at index " + (ii-1);
+                        throw new IllegalArgumentException(message);
+                    }
+                    c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                 }
-                int c2 = v.charAt(ii);
-                if (!_Private_IonConstants.isLowSurrogate(c2)) {
+                else if (_Private_IonConstants.isLowSurrogate(c)) {
                     String message =
-                        "Text contains unmatched UTF-16 high surrogate " +
+                        "Text contains unmatched UTF-16 low surrogate " +
                         IonTextUtils.printCodePointAsString(c) +
-                        " at index " + (ii-1);
+                        " at index " + ii;
                     throw new IllegalArgumentException(message);
                 }
-                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
             }
-            else if (_Private_IonConstants.isLowSurrogate(c)) {
-                String message =
-                    "Text contains unmatched UTF-16 low surrogate " +
-                    IonTextUtils.printCodePointAsString(c) +
-                    " at index " + ii;
-                throw new IllegalArgumentException(message);
-            }
-
-            if (c > 0x10FFFF || (c > 0xD7FF && c < 0xE000)) {
-                // TODO how is this possible?
-                throw new IllegalArgumentException("invalid string, illegal Unicode scalar (character) encountered");
-            }
+            // no need to check the 0x10FFFF overflow as it is checked in lenUnicodeScalarAsUTF8
 
             // and now figure out how long this "complicated" (non-ascii) character is
             int clen = lenUnicodeScalarAsUTF8(c);
@@ -804,8 +797,6 @@ final class IonBinary
         return len;
     }
     public static int lenUnicodeScalarAsUTF8(int c) {
-        int len = -1;
-
         // this routine presuposes the value is a legal Unicode scalar
         // (aka character or code point)  The caller of this method is
         // expected to have handled the surrogate character issues (i.e.
@@ -817,19 +808,19 @@ final class IonBinary
         //}
 
         if (c < 0x80) {
-            len = 1;
+            return 1;
         }
         else if (c < 0x800) {
-            len  = 2;
+            return 2;
         }
         else if (c < 0x10000) {
-            len  = 3;
+            return 3;
         }
         else if (c <= 0x10FFFF) { // just about as cheap as & == 0 and checks for some out of range values
-            len  = 4;
+            return 4;
         }
 
-        return len;
+        return -1;
     }
 
     public static int lenAnnotationListWithLen(String[] annotations,
@@ -2719,30 +2710,31 @@ done:       for (;;) {
                     // don't even both to call the "utf8" converter for ascii
                     stringBuffer[bufPos++] = (byte)c;
                     len++;
+                    continue;
                 }
-                else {
-                    if (c >= 0xD800) {
-                        if (_Private_IonConstants.isHighSurrogate(c)) {
-                            // houston we have a high surrogate (let's hope it has a partner
-                            if (ii >= s.length()) {
-                                throw new IonException("invalid string, unpaired high surrogate character");
-                            }
-                            int c2 = s.charAt(++ii);
-                            if (!_Private_IonConstants.isLowSurrogate(c2)) {
-                                throw new IonException("invalid string, unpaired high surrogate character");
-                            }
-                            c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+                // multi-byte utf8
+
+                if (c >= 0xD800 && c <= 0xDFFF) {
+                    if (_Private_IonConstants.isHighSurrogate(c)) {
+                        // houston we have a high surrogate (let's hope it has a partner
+                        if (++ii >= s.length()) {
+                            throw new IonException("invalid string, unpaired high surrogate character");
                         }
-                        else if (_Private_IonConstants.isLowSurrogate(c)) {
-                            // it's a loner low surrogate - that's an error
-                            throw new IonException("invalid string, unpaired low surrogate character");
+                        int c2 = s.charAt(ii);
+                        if (!_Private_IonConstants.isLowSurrogate(c2)) {
+                            throw new IonException("invalid string, unpaired high surrogate character");
                         }
-                        // from 0xE000 up the _writeUnicodeScalar will check for us
+                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                     }
-                    int utf8len = this._writeUnicodeScalarToByteBuffer(c, stringBuffer, bufPos);
-                    bufPos += utf8len;
-                    len += utf8len;
+                    else if (_Private_IonConstants.isLowSurrogate(c)) {
+                        // it's a loner low surrogate - that's an error
+                        throw new IonException("invalid string, unpaired low surrogate character");
+                    }
+                    // from 0xE000 up the _writeUnicodeScalar will check for us
                 }
+                int utf8len = this._writeUnicodeScalarToByteBuffer(c, stringBuffer, bufPos);
+                bufPos += utf8len;
+                len += utf8len;
             }
             if (bufPos > 0) {
                 this.write(stringBuffer, 0, bufPos);
