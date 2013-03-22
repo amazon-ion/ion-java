@@ -773,17 +773,22 @@ final class UnifiedSymbolTable
         int ii=0;
         for (; ii<name.length(); ii++) {
             char c = name.charAt(ii);
-            if (_Private_IonConstants.isHighSurrogate(c)) {
-                if (pending_high_surrogate) {
-                    break; // our check at the end will throw for us
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                if (_Private_IonConstants.isHighSurrogate(c)) {
+                    if (pending_high_surrogate) {
+                        break; // our check at the end will throw for us
+                    }
+                    pending_high_surrogate = true;
                 }
-                pending_high_surrogate = true;
+                else if (_Private_IonConstants.isLowSurrogate(c)) {
+                    if (!pending_high_surrogate) {
+                        throw new IllegalArgumentException("unparied low surrogate in symbol name at position "+ii);
+                    }
+                    pending_high_surrogate = false;
+                }
             }
-            else if (_Private_IonConstants.isLowSurrogate(c)) {
-                if (!pending_high_surrogate) {
-                    throw new IllegalArgumentException("unparied low surrogate in symbol name at position "+ii);
-                }
-                pending_high_surrogate = false;
+            if (c > 0x10FFFF) {
+                throw new IllegalArgumentException("illegal unicode codepoint " + (int)c);
             }
         }
         if (pending_high_surrogate) {
