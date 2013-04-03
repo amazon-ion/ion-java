@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -396,7 +396,8 @@ public interface IonValue
      * return identical results, only that they will be equivalent per
      * the Ion data model.
      * <p>
-     * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
+     * For more configurable rendering, see
+     * {@link com.amazon.ion.system.IonTextWriterBuilder}.
      *
      * @return Ion text data equivalent to this value.
      */
@@ -406,14 +407,17 @@ public interface IonValue
     /**
      * Compares two Ion values for structural equality, which means that they
      * represent the exact same semantics, including annotations, numeric
-     * precision, and so on.
+     * precision, and so on.  This is a "deep" comparison that recursively
+     * traverse the hierarchy, and as such it should be considered an expensive
+     * operation.
      *
      * @see com.amazon.ion.util.Equivalence
      *
      * @param   other   The value to compare with.
      *
-     * @return  A boolean, true if the other value is an Ion Value that is the same
-     *          content and annotations.
+     * @return  A boolean, true if the argument is an {@link IonValue} that
+     *   is semantically identical within the Ion data model, including
+     *   precision and annotations.
      */
     public boolean equals(Object other);
 
