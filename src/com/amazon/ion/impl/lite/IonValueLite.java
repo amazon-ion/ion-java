@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -681,15 +681,17 @@ abstract class IonValueLite
      *          content and annotations.
      */
     @Override
-    public boolean equals(final Object other) {
-        // TODO we can make this more efficient since we have impl details
-
-        boolean same = false;
+    public final boolean equals(final Object other)
+    {
+        if (other == this) {
+            // we shouldn't make 3 deep method calls for this common case
+            return true;
+        }
         if (other instanceof IonValue)
         {
-            same = ionEquals(this, (IonValue) other);
+            return ionEquals(this, (IonValue) other);
         }
-        return same;
+        return false;
     }
 
 

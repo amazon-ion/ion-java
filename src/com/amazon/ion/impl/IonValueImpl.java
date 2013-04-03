@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -2118,18 +2118,17 @@ abstract class IonValueImpl
      *          content and annotations.
      */
     @Override
-    public boolean equals(final Object other)
+    public final boolean equals(final Object other)
     {
-        boolean same = false;
         if (other == this) {
             // we shouldn't make 3 deep method calls for this common case
             return true;
         }
         if (other instanceof IonValue)
         {
-            same = ionEquals(this, (IonValue) other);
+            return ionEquals(this, (IonValue) other);
         }
-        return same;
+        return false;
     }
 
 
