@@ -156,13 +156,13 @@ final class IonBinary
 
         // write the rest
         switch (len) {  // we already wrote 1 byte
-        case 8: userstream.write((byte)((value >> (8*7)) & mask));
-        case 7: userstream.write((byte)((value >> (8*6)) & mask));
-        case 6: userstream.write((byte)((value >> (8*5)) & mask));
-        case 5: userstream.write((byte)((value >> (8*4)) & mask));
-        case 4: userstream.write((byte)((value >> (8*3)) & mask));
-        case 3: userstream.write((byte)((value >> (8*2)) & mask));
-        case 2: userstream.write((byte)((value >> (8*1)) & mask));
+        case 8: userstream.write((byte)((value >> 56) & mask));
+        case 7: userstream.write((byte)((value >> 48) & mask));
+        case 6: userstream.write((byte)((value >> 40) & mask));
+        case 5: userstream.write((byte)((value >> 32) & mask));
+        case 4: userstream.write((byte)((value >> 24) & mask));
+        case 3: userstream.write((byte)((value >> 16) & mask));
+        case 2: userstream.write((byte)((value >>  8) & mask));
         case 1: userstream.write((byte)(value & mask));
         }
 
@@ -181,15 +181,15 @@ final class IonBinary
         assert value > 0;
 
         switch (len - 1) {
-        case 9: userstream.write((byte)((value >> (7*9)) & mask));
-        case 8: userstream.write((byte)((value >> (7*8)) & mask));
-        case 7: userstream.write((byte)((value >> (7*7)) & mask));
-        case 6: userstream.write((byte)((value >> (7*6)) & mask));
-        case 5: userstream.write((byte)((value >> (7*5)) & mask));
-        case 4: userstream.write((byte)((value >> (7*4)) & mask));
-        case 3: userstream.write((byte)((value >> (7*3)) & mask));
-        case 2: userstream.write((byte)((value >> (7*2)) & mask));
-        case 1: userstream.write((byte)((value >> (7*1)) & mask));
+        case 9: userstream.write((byte)((value >> 63) & mask));
+        case 8: userstream.write((byte)((value >> 56) & mask));
+        case 7: userstream.write((byte)((value >> 49) & mask));
+        case 6: userstream.write((byte)((value >> 42) & mask));
+        case 5: userstream.write((byte)((value >> 35) & mask));
+        case 4: userstream.write((byte)((value >> 28) & mask));
+        case 3: userstream.write((byte)((value >> 21) & mask));
+        case 2: userstream.write((byte)((value >> 14) & mask));
+        case 1: userstream.write((byte)((value >> 7) & mask));
         case 0: userstream.write((byte)((value & mask) | 0x80L));
                 break;
         case -1: // or len == 0
@@ -416,63 +416,76 @@ final class IonBinary
      * Variable-length, high-bit-terminating integer, 7 data bits per byte.
      */
     public static int lenVarUInt(int intVal) {  // we write a lot of these
-        int len = 0;
-
-        if (intVal != 0) {
-            if (intVal < 0) {
-                throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
-            }
-
-            len = _ib_VAR_INT32_LEN_MAX - 1;
-            while ( ( 0x7f & (intVal>>(7*len)) ) == 0 ) {
-                len--;
-            }
-            if (len < 0) len = 0;
-            len++;
+        if (intVal == 0) {
+            return 0;
         }
-        return len;
+        if (intVal < 0) {
+            throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
+        }
+
+        if (intVal <=              0x7f) return 1;  // 7
+        if (intVal <=            0x3fff) return 2;  // 14
+        if (intVal <=          0x1fffff) return 3;  // 21
+        if (intVal <=         0xfffffff) return 4;  // 28
+        return 5;                                   // 35
     }
+
     public static int lenVarUInt(long longVal) {
-        int len = 0;
-
-        if (longVal != 0) {
-            if (longVal < 0) {
-                throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
-            }
-
-            len = _ib_VAR_INT64_LEN_MAX - 1;
-            while ( (int)( 0x7fL & (longVal>>(7*len)) ) == 0 ) {
-                len--;
-            }
-            if (len < 0) len = 0;
-            len++;
+        if (longVal == 0) {
+            return 0;
         }
-        return len;
+        if (longVal < 0) {
+            throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
+        }
+        if (longVal <=              0x7fL) return 1;  // 7
+        if (longVal <=            0x3fffL) return 2;  // 14
+        if (longVal <=          0x1fffffL) return 3;  // 21
+        if (longVal <=         0xfffffffL) return 4;  // 28
+        if (longVal <=        0x7fffffffL) return 5;  // 35
+        if (longVal <=      0x3fffffffffL) return 6;  // 42
+        if (longVal <=    0x1fffffffffffL) return 7;  // 49
+        if (longVal <=   0xfffffffffffffL) return 8;  // 56
+        if (longVal <= 0x7ffffffffffffffL) return 9;  // 63
+        return 10;
+    }
+
+    // TODO maybe add lenVarInt(int) to micro-optimize, or?
+
+    public static int lenVarInt(long longVal) {
+        if (longVal == 0) {
+            return 0;
+        }
+        if (longVal <  0) longVal = -longVal;
+        if (longVal <=              0x3fL) return 1;  // 6
+        if (longVal <=            0x1fffL) return 2;  // 13
+        if (longVal <=           0xfffffL) return 3;  // 20
+        if (longVal <=         0x7ffffffL) return 4;  // 27
+        if (longVal <=        0x3fffffffL) return 5;  // 34
+        if (longVal <=      0x1fffffffffL) return 6;  // 41
+        if (longVal <=     0xfffffffffffL) return 7;  // 48
+        if (longVal <=   0x7ffffffffffffL) return 8;  // 55
+        if (longVal <= 0x3ffffffffffffffL) return 9;  // 62
+        return 10;
     }
 
     /**
      * @return zero if input is zero
      */
     public static int lenUInt(long longVal) {
-        int len = 0;
-
-        // figure out how many we have bytes we have to write out
-        if (longVal != 0) {
-            if (longVal < 0) {
-                throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
-            }
-
-            len = _ib_INT64_LEN_MAX - 1;
-            while ( (int)( 0xffL & (longVal>>(8*len)) ) == 0 ) {
-                len--;
-            }
-            if (len < 0) {
-                // "toast until it smokes" -- Piet Hein
-                len = 0;
-            }
-            len++;
+        if (longVal == 0) {
+            return 0;
         }
-        return len;
+        if (longVal < 0) {
+            throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
+        }
+        if (longVal <=             0xffL) return 1;
+        if (longVal <=           0xffffL) return 2;
+        if (longVal <=         0xffffffL) return 3;
+        if (longVal <=       0xffffffffL) return 4;
+        if (longVal <=     0xffffffffffL) return 5;
+        if (longVal <=   0xffffffffffffL) return 6;
+        if (longVal <= 0x0fffffffffffffL) return 7;
+        return 8;
     }
 
     public static int lenUInt(BigInteger bigVal)
@@ -496,32 +509,19 @@ final class IonBinary
     // TODO maybe add lenInt(int) to micro-optimize, or?
 
     public static int lenInt(long longVal) {
-        int len = 0;
-
-        // figure out how many we have bytes we have to write out
         if (longVal != 0) {
-            len = _ib_INT64_LEN_MAX - 1;
-            if (longVal < 0) {
-                // note that for Long.MIN_VALUE (0x8000000000000000) the negative
-                //      is the same, but that's also the bit pattern we need to
-                //      write out, but the UInt method won't like it, so we just
-                //      return then value that we actually know.
-                if (longVal == Long.MIN_VALUE) {
-                    // we need 1 extra byte since the first bit holds the sign separately
-                    return 9;
-                }
-                // for any other case just let routine do it's work normally
-                longVal = -longVal;
-            }
-            while ( (int)( 0xffL & (longVal >> (8*len)) ) == 0 ) {
-                len--;
-            }
-            if (((~0x7fL) & (longVal >> (8*len))) != 0) {
-                len++;
-            }
-            len++;
+            return 0;
         }
-        return len;
+        if (longVal < 0) longVal = -longVal;
+        if (longVal <=             0x7fL) return 1;
+        if (longVal <=           0x7fffL) return 2;
+        if (longVal <=         0x7fffffL) return 3;
+        if (longVal <=       0x7fffffffL) return 4;
+        if (longVal <=     0x7fffffffffL) return 5;
+        if (longVal <=   0x7fffffffffffL) return 6;
+        if (longVal <= 0x7fffffffffffffL) return 7;
+        if (longVal == Long.MIN_VALUE) return 9;
+        return 8;
     }
 
     public static int lenInt(BigInteger bi, boolean force_zero_writes)
@@ -542,41 +542,6 @@ final class IonBinary
         return bytelen;
     }
 
-
-    // TODO maybe add lenVarInt(int) to micro-optimize, or?
-
-    public static int lenVarInt(long longVal) {
-        int len = 0;
-
-        // figure out how many we have bytes we have to write out
-        if (longVal != 0) {
-
-            len = _ib_VAR_INT64_LEN_MAX - 1;
-            if (longVal < 0) {
-                // note that for Long.MIN_VALUE (0x8000000000000000) the negative
-                //      is the same, but that's also the bit pattern we need to
-                //      write out.
-                if (longVal == Long.MIN_VALUE) {
-                    //int bitlen = 1 + (Long.SIZE * 8); that is: 65
-                    //int bytelen = ((bitlen + 1) / 7) + 1; (66/7)+1 = 10 bytes
-                    //return bytelen;
-                    return 10;
-                }
-                longVal = -longVal;
-            }
-            while ( (int)( 0x7fL & (longVal>>>(7*len)) ) == 0 ) {
-                len--;
-            }
-            if (((~0x3fL) & (longVal >>> (7*len))) != 0) {
-                len++;
-            }
-            if (len < 0) {
-                len = 0;
-            }
-            len++;  // 0 based for shift, 1 based for return length
-        }
-        return len;
-    }
     public static int lenIonInt(long v) {
         if (v < 0) {
             // note that for Long.MIN_VALUE (0x8000000000000000) the negative
@@ -786,41 +751,24 @@ final class IonBinary
             // no need to check the 0x10FFFF overflow as it is checked in lenUnicodeScalarAsUTF8
 
             // and now figure out how long this "complicated" (non-ascii) character is
-            int clen = lenUnicodeScalarAsUTF8(c);
-            if (clen < 1) {
+            if (c < 0x80) {
+                ++len;
+            }
+            else if (c < 0x800) {
+                len += 2;
+            }
+            else if (c < 0x10000) {
+                len += 3;
+            }
+            else if (c <= 0x10FFFF) { // just about as cheap as & == 0 and checks for some out of range values
+                len += 4;
+            } else {
                 // TODO how is this possible?
                 throw new IllegalArgumentException("invalid string, illegal Unicode scalar (character) encountered");
             }
-            len += clen;
         }
 
         return len;
-    }
-    public static int lenUnicodeScalarAsUTF8(int c) {
-        // this routine presuposes the value is a legal Unicode scalar
-        // (aka character or code point)  The caller of this method is
-        // expected to have handled the surrogate character issues (i.e.
-        // converted the two surrogates into a single code point)
-        // before calling this routine.
-
-        //if ((c & (~0x1FFFFF)) != 0) {
-        //    throw new IonException("invalid character for UTF-8 output");
-        //}
-
-        if (c < 0x80) {
-            return 1;
-        }
-        else if (c < 0x800) {
-            return 2;
-        }
-        else if (c < 0x10000) {
-            return 3;
-        }
-        else if (c <= 0x10FFFF) { // just about as cheap as & == 0 and checks for some out of range values
-            return 4;
-        }
-
-        return -1;
     }
 
     public static int lenAnnotationListWithLen(String[] annotations,
@@ -2470,7 +2418,8 @@ done:       for (;;) {
             return len;
         }
 
-        final int _writeUnicodeScalarToByteBuffer(int c, byte[] buffer, int offset) throws IOException
+        // this will write at least 2 byte unicode scalar to buffer
+        private final int _writeUnicodeScalarToByteBuffer(int c, byte[] buffer, int offset) throws IOException
         {
             // TO DO: check this encoding, it is from:
             //      http://en.wikipedia.org/wiki/UTF-8
@@ -2484,10 +2433,7 @@ done:       for (;;) {
             assert offset + 4 < buffer.length;
 
             // first the quick, easy and common case - ascii
-            if (c < 0x80) {
-                buffer[offset] = (byte)(0xff & c );
-                len = 1;
-            } else if (c < 0x800) {
+            if (c < 0x800) {
                 // 2 bytes characters from 0x000080 to 0x0007FF
                 buffer[offset] = (byte)( 0xff & (0xC0 | (c >> 6)) );
                 buffer[++offset] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
