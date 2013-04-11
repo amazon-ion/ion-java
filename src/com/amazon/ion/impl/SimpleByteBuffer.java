@@ -836,10 +836,12 @@ done:       for (;;) {
 
         SimpleByteBuffer _buffer;
         int              _position;
+        UTF8Converter    _utf8Converter;
 
         SimpleByteWriter(SimpleByteBuffer bytebuffer) {
             _buffer = bytebuffer;
             _position = bytebuffer._start;
+            _utf8Converter = new UTF8Converter();
         }
 
         protected void flushTo(OutputStream userOutput) throws IOException {
@@ -1315,56 +1317,7 @@ done:       for (;;) {
 
         final private int writeString(String value, UserByteWriter userWriter) throws IOException
         {
-            int len = 0;
-
-            for (int ii=0; ii<value.length(); ii++) {
-                int c = value.charAt(ii);
-                if (c > 127) {
-                    if (c >= 0xD800 && c <= 0xDFFF) {
-                        if (_Private_IonConstants.isHighSurrogate(c)) {
-                            ii++;
-                            // houston we have a high surrogate (let's hope it has a partner
-                            if (ii >= value.length()) {
-                                throw new IonException("invalid string, unpaired high surrogate character");
-                            }
-                            int c2 = value.charAt(ii);
-                            if (!_Private_IonConstants.isLowSurrogate(c2)) {
-                                throw new IonException("invalid string, unpaired high surrogate character");
-                            }
-                            c = _Private_IonConstants.makeUnicodeScalar(c, c2);
-                        }
-                        else if (_Private_IonConstants.isLowSurrogate(c)) {
-                            // it's a loner low surrogate - that's an error
-                            throw new IonException("invalid string, unpaired low surrogate character");
-                        }
-                        // from 0xE000 up the _writeUnicodeScalar will check for us
-                    }
-                    c = IonBinary.makeUTF8IntFromScalar(c);
-                }
-
-                // write it here - try to test userWriter as little as possible
-                if (userWriter == null) {
-                    for (;;) {
-                        write((byte)(c & 0xff));
-                        len++;
-                        if ((c & 0xffffff00) == 0) {
-                            break;
-                        }
-                        c = c >>> 8;
-                    }
-                }
-                else {
-                    for (;;) {
-                        userWriter.write((byte)(c & 0xff));
-                        len++;
-                        if ((c & 0xffffff00) == 0) {
-                            break;
-                        }
-                        c = c >>> 8;
-                    }
-                }
-            }
-            return len;
+            return _utf8Converter.write(userWriter, value);
         }
         void throwUTF8Exception() throws IOException
         {

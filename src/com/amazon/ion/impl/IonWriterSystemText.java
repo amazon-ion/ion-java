@@ -754,21 +754,15 @@ final class IonWriterSystemText
 
     // escape sequences for character below ascii 32 (space)
     static final String [] LOW_ESCAPE_SEQUENCES = {
-          "0",   "x01", "x02", "x03",
-          "x04", "x05", "x06", "a",
-          "b",   "t",   "n",   "v",
-          "f",   "r",   "x0e", "x0f",
-          "x10", "x11", "x12", "x13",
-          "x14", "x15", "x16", "x17",
-          "x18", "x19", "x1a", "x1b",
-          "x1c", "x1d", "x1e", "x1f",
+          "\\0",   "\\x01", "\\x02", "\\x03",
+          "\\x04", "\\x05", "\\x06", "\\a",
+          "\\b",   "\\t",   "\\n",   "\\v",
+          "\\f",   "\\r",   "\\x0e", "\\x0f",
+          "\\x10", "\\x11", "\\x12", "\\x13",
+          "\\x14", "\\x15", "\\x16", "\\x17",
+          "\\x18", "\\x19", "\\x1a", "\\x1b",
+          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
     };
-    String lowEscapeSequence(char c) {
-        if (c == 13) {
-            return '\\'+LOW_ESCAPE_SEQUENCES[c];
-        }
-        return '\\'+LOW_ESCAPE_SEQUENCES[c];
-    }
 
     @Override
     void writeSymbolAsIs(int symbolId)
@@ -892,7 +886,7 @@ final class IonWriterSystemText
                     // TODO account for NL versus CR+NL streams
                     _output.append(c);
                 } else {
-                    _output.append(lowEscapeSequence(c));
+                    _output.append(LOW_ESCAPE_SEQUENCES[c]);
                 }
             }
             else if (c > 127) {
