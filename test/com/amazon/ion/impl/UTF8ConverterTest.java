@@ -39,14 +39,19 @@ public class UTF8ConverterTest extends IonTestCase
         byte[] partial = new byte[1234];
         System.arraycopy(test, 123, partial, 0, 1234);
         assertConversion(sb.substring(123, 1234), partial);
-
-        assertConversion("հայ Ḁℐ", new byte[] { (byte)0xD5, (byte)0xB0, (byte)0xD5, (byte)0xA1, (byte)0xD5, (byte)0xB5, (byte)0x20,
-                                                (byte)0xE1, (byte)0xB8, (byte)0x80, (byte)0xE2, (byte)0x84, (byte)0x90 });
     }
 
     @Test
-    public void testSurrogates() throws Exception {
-        assertConversion(new String(new char[] { 0xD834, 0xDD1E} ), new byte[] { (byte)0xF0, (byte)0x9D, (byte)0x84, (byte)0x9E });
+    public void testUTF16Surrogates() throws Exception {
+        // "հայ Ḁℐ"
+       assertConversion(new String(new char[] { 0x0570, 0x0561, 0x0575, 0x1E00, 0x2110 }),
+                                   new byte[] { (byte)0xD5, (byte)0xB0,
+                                                (byte)0xD5, (byte)0xA1,
+                                                (byte)0xD5, (byte)0xB5,
+                                                (byte)0xE1, (byte)0xB8, (byte)0x80,
+                                                (byte)0xE2, (byte)0x84, (byte)0x90 });
+       assertConversion(new String(new char[] { 0xD834, 0xDD1E } ),
+                                   new byte[] { (byte)0xF0, (byte)0x9D, (byte)0x84, (byte)0x9E });
     }
 
     @Test
