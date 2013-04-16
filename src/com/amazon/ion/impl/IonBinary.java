@@ -207,55 +207,86 @@ final class IonBinary
 
     static public int writeString(OutputStream userstream, String value) throws IOException
     {
-        UTF8Converter utf8Converter = new UTF8Converter(value.length());
-        return utf8Converter.write(userstream, value);
+        int len = 0;
+        for (int ii=0; ii<value.length(); ii++) {
+            int c = value.charAt(ii);
+            if (c < 128) {
+                userstream.write((byte)c);
+                ++len;
+                continue;
+            }
+            // multi-byte utf8
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                if (_Private_IonConstants.isHighSurrogate(c)) {
+                    // houston we have a high surrogate (let's hope it has a partner
+                    if (++ii >= value.length()) {
+                        throw new IonException("invalid string, unpaired high surrogate character");
+                    }
+                    int c2 = value.charAt(ii);
+                    if (!_Private_IonConstants.isLowSurrogate(c2)) {
+                        throw new IonException("invalid string, unpaired high surrogate character");
+                    }
+                    c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+                }
+                else if (_Private_IonConstants.isLowSurrogate(c)) {
+                    // it's a loner low surrogate - that's an error
+                    throw new IonException("invalid string, unpaired low surrogate character");
+                }
+            }
+
+            for (c = makeUTF8IntFromScalar(c); (c & 0xffffff00) != 0; ++len) {
+                userstream.write((byte)(c & 0xff));
+                c = c >>> 8;
+            }
+        }
+        return len;
     }
 
-//    // TODO: move this to IonConstants or IonUTF8
-//    static final public int makeUTF8IntFromScalar(int c) throws IOException
-//    {
-//        // TO DO: check this encoding, it is from:
-//        //      http://en.wikipedia.org/wiki/UTF-8
-//        // we probably should use some sort of Java supported
-//        // library for this.  this class might be of interest:
-//        //     CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte)
-//        // in: java.nio.charset.CharsetDecoder
-//
-//        int value = 0;
-//
-//        // first the quick, easy and common case - ascii
-//        if (c < 0x80) {
-//            value = (0xff & c );
-//        }
-//        else if (c < 0x800) {
-//            // 2 bytes characters from 0x000080 to 0x0007FF
-//            value  = ( 0xff & (0xC0 | (c >> 6)        ) );
-//            value |= ( 0xff & (0x80 | (c       & 0x3F)) ) <<  8;
-//        }
-//        else if (c < 0x10000) {
-//            // 3 byte characters from 0x800 to 0xFFFF
-//            // but only 0x800...0xD7FF and 0xE000...0xFFFF are valid
-//            if (c > 0xD7FF && c < 0xE000) {
-//                throwUTF8Exception();
-//            }
-//            value  = ( 0xff & (0xE0 |  (c >> 12)       ) );
-//            value |= ( 0xff & (0x80 | ((c >>  6) & 0x3F)) ) <<  8;
-//            value |= ( 0xff & (0x80 |  (c        & 0x3F)) ) << 16;
-//
-//        }
-//        else if (c <= 0x10FFFF) {
-//            // 4 byte characters 0x010000 to 0x10FFFF
-//            // these are are valid
-//            value  = ( 0xff & (0xF0 |  (c >> 18)) );
-//            value |= ( 0xff & (0x80 | ((c >> 12) & 0x3F)) ) <<  8;
-//            value |= ( 0xff & (0x80 | ((c >>  6) & 0x3F)) ) << 16;
-//            value |= ( 0xff & (0x80 |  (c        & 0x3F)) ) << 24;
-//        }
-//        else {
-//            throwUTF8Exception();
-//        }
-//        return value;
-//    }
+    // TODO: move this to IonConstants or IonUTF8
+    static final public int makeUTF8IntFromScalar(int c) throws IOException
+    {
+        // TO DO: check this encoding, it is from:
+        //      http://en.wikipedia.org/wiki/UTF-8
+        // we probably should use some sort of Java supported
+        // library for this.  this class might be of interest:
+        //     CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte)
+        // in: java.nio.charset.CharsetDecoder
+
+        int value = 0;
+
+        // first the quick, easy and common case - ascii
+        if (c < 0x80) {
+            value = (0xff & c );
+        }
+        else if (c < 0x800) {
+            // 2 bytes characters from 0x000080 to 0x0007FF
+            value  = ( 0xff & (0xC0 | (c >> 6)        ) );
+            value |= ( 0xff & (0x80 | (c       & 0x3F)) ) <<  8;
+        }
+        else if (c < 0x10000) {
+            // 3 byte characters from 0x800 to 0xFFFF
+            // but only 0x800...0xD7FF and 0xE000...0xFFFF are valid
+            if (c > 0xD7FF && c < 0xE000) {
+                throwUTF8Exception();
+            }
+            value  = ( 0xff & (0xE0 |  (c >> 12)       ) );
+            value |= ( 0xff & (0x80 | ((c >>  6) & 0x3F)) ) <<  8;
+            value |= ( 0xff & (0x80 |  (c        & 0x3F)) ) << 16;
+
+        }
+        else if (c <= 0x10FFFF) {
+            // 4 byte characters 0x010000 to 0x10FFFF
+            // these are are valid
+            value  = ( 0xff & (0xF0 |  (c >> 18)) );
+            value |= ( 0xff & (0x80 | ((c >> 12) & 0x3F)) ) <<  8;
+            value |= ( 0xff & (0x80 | ((c >>  6) & 0x3F)) ) << 16;
+            value |= ( 0xff & (0x80 |  (c        & 0x3F)) ) << 24;
+        }
+        else {
+            throwUTF8Exception();
+        }
+        return value;
+    }
     static void throwUTF8Exception() throws IOException
     {
         throw new IOException("Invalid UTF-8 character encountered");
@@ -1725,26 +1756,19 @@ done:       for (;;) {
     public static final class Writer
         extends BlockedBuffer.BlockedByteOutputStream
     {
-        private UTF8Converter utf8Converter;
         /**
          * creates writable stream (OutputStream) that writes
          * to a fresh blocked buffer.  The stream is initially
          * position at offset 0.
          */
-        public Writer() {
-            super();
-            utf8Converter = new UTF8Converter();
-        }
+        public Writer() { super(); }
         /**
          * creates writable stream (OutputStream) that writes
          * to the supplied byte buffer.  The stream is initially
          * position at offset 0.
          * @param bb blocked buffer to write to
          */
-        public Writer(BlockedBuffer bb) {
-            super(bb);
-            utf8Converter = new UTF8Converter();
-        }
+        public Writer(BlockedBuffer bb) { super(bb); }
         /**
          * creates writable stream (OutputStream) that can write
          * to the supplied byte buffer.  The stream is initially
@@ -1752,10 +1776,7 @@ done:       for (;;) {
          * @param bb blocked buffer to write to
          * @param off initial offset to write to
          */
-        public Writer(BlockedBuffer bb, int off) {
-            super(bb, off);
-            utf8Converter = new UTF8Converter();
-        }
+        public Writer(BlockedBuffer bb, int off) { super(bb, off); }
 
         Stack<PositionMarker> _pos_stack;
         Stack<Integer>        _pending_high_surrogate_stack;
@@ -1932,8 +1953,6 @@ done:       for (;;) {
         // sequence processed (so we don't want to do that a second time)
         // the chars here were filled by the IonTokenReader which already
         // de-escaped the escaped sequences from the input, so all chars are "real"
-
-        // TODO - GET RID OF THIS!!!!
         public void appendToLongValue(CharSequence chars, boolean onlyByteSizedCharacters) throws IOException
         {
             if (debugValidation) _validate();
@@ -2615,60 +2634,59 @@ done:       for (;;) {
             return len;
         }
 
-//        byte[] stringBuffer;
-//        static final int stringBufferLen = 1024;
+        byte[] stringBuffer;
+        static final int stringBufferLen = 1024;
         public int writeStringData(String s) throws IOException
         {
-            return utf8Converter.write(this, s);
-//            int len = 0;
-//
-//            if (stringBuffer == null) {
-//                stringBuffer = new byte[stringBufferLen];
-//            }
-//            int bufPos = 0;
-//
-//            for (int ii=0; ii<s.length(); ii++) {
-//                int c = s.charAt(ii);
-//                if (bufPos > stringBufferLen - 4) { // 4 is the max UTF-8 encoding size
-//                    this.write(stringBuffer, 0, bufPos);
-//                    bufPos = 0;
-//                }
-//                // at this point stringBuffer contains enough space for UTF-8 encoded code point
-//                if (c < 128) {
-//                    // don't even both to call the "utf8" converter for ascii
-//                    stringBuffer[bufPos++] = (byte)c;
-//                    len++;
-//                    continue;
-//                }
-//                // multi-byte utf8
-//
-//                if (c >= 0xD800 && c <= 0xDFFF) {
-//                    if (_Private_IonConstants.isHighSurrogate(c)) {
-//                        // houston we have a high surrogate (let's hope it has a partner
-//                        if (++ii >= s.length()) {
-//                            throw new IonException("invalid string, unpaired high surrogate character");
-//                        }
-//                        int c2 = s.charAt(ii);
-//                        if (!_Private_IonConstants.isLowSurrogate(c2)) {
-//                            throw new IonException("invalid string, unpaired high surrogate character");
-//                        }
-//                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
-//                    }
-//                    else if (_Private_IonConstants.isLowSurrogate(c)) {
-//                        // it's a loner low surrogate - that's an error
-//                        throw new IonException("invalid string, unpaired low surrogate character");
-//                    }
-//                    // from 0xE000 up the _writeUnicodeScalar will check for us
-//                }
-//                int utf8len = this._writeUnicodeScalarToByteBuffer(c, stringBuffer, bufPos);
-//                bufPos += utf8len;
-//                len += utf8len;
-//            }
-//            if (bufPos > 0) {
-//                this.write(stringBuffer, 0, bufPos);
-//            }
-//
-//            return len;
+            int len = 0;
+
+            if (stringBuffer == null) {
+                stringBuffer = new byte[stringBufferLen];
+            }
+            int bufPos = 0;
+
+            for (int ii=0; ii<s.length(); ii++) {
+                int c = s.charAt(ii);
+                if (bufPos > stringBufferLen - 4) { // 4 is the max UTF-8 encoding size
+                    this.write(stringBuffer, 0, bufPos);
+                    bufPos = 0;
+                }
+                // at this point stringBuffer contains enough space for UTF-8 encoded code point
+                if (c < 128) {
+                    // don't even both to call the "utf8" converter for ascii
+                    stringBuffer[bufPos++] = (byte)c;
+                    len++;
+                    continue;
+                }
+                // multi-byte utf8
+
+                if (c >= 0xD800 && c <= 0xDFFF) {
+                    if (_Private_IonConstants.isHighSurrogate(c)) {
+                        // houston we have a high surrogate (let's hope it has a partner
+                        if (++ii >= s.length()) {
+                            throw new IonException("invalid string, unpaired high surrogate character");
+                        }
+                        int c2 = s.charAt(ii);
+                        if (!_Private_IonConstants.isLowSurrogate(c2)) {
+                            throw new IonException("invalid string, unpaired high surrogate character");
+                        }
+                        c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+                    }
+                    else if (_Private_IonConstants.isLowSurrogate(c)) {
+                        // it's a loner low surrogate - that's an error
+                        throw new IonException("invalid string, unpaired low surrogate character");
+                    }
+                    // from 0xE000 up the _writeUnicodeScalar will check for us
+                }
+                int utf8len = this._writeUnicodeScalarToByteBuffer(c, stringBuffer, bufPos);
+                bufPos += utf8len;
+                len += utf8len;
+            }
+            if (bufPos > 0) {
+                this.write(stringBuffer, 0, bufPos);
+            }
+
+            return len;
         }
 
         public int writeNullWithTD(HighNibble hn) throws IOException

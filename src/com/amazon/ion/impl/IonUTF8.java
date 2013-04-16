@@ -415,15 +415,13 @@ final class IonUTF8 {
     public static final class CharToUTF8
         implements Appendable, Closeable, Flushable
     {
-        final private int               NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
-        final private OutputStream      _byte_stream;
-              private char              _pending_high_surrogate = NO_SURROGATE;
-              private UTF8Converter     _utf8Converter;
+        final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
+        final private OutputStream _byte_stream;
+              private char         _pending_high_surrogate = NO_SURROGATE;
 
         public CharToUTF8(OutputStream byteStream) {
             byteStream.getClass(); // Efficient null check
             _byte_stream = byteStream;
-            _utf8Converter = new UTF8Converter();
         }
         public final OutputStream getOutputStream() {
             return _byte_stream;
@@ -450,18 +448,24 @@ final class IonUTF8 {
 
         public final Appendable append(CharSequence csq) throws IOException
         {
-            _utf8Converter.write(_byte_stream, csq.toString());
-            return this;
+            return append(csq, 0, csq.length());
         }
         public final Appendable append(CharSequence csq, int start, int end)
             throws IOException
         {
-            _utf8Converter.write(_byte_stream, csq.toString(), start, end - start);
+            for (int ii=start; ii < end; ii++) {
+                char c = csq.charAt(ii);
+                append_helper(c);
+            }
+
             return this;
         }
         public final Appendable append(char c) throws IOException
         {
-            _utf8Converter.write(_byte_stream, c);
+            if (c < 0) {
+                throw new IllegalArgumentException("invalid character");
+            }
+            append_helper(c);
             return this;
         }
         private final void append_helper(char c) throws IOException

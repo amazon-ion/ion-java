@@ -114,34 +114,34 @@ public class ByteBufferTest
     @Test
     public void testPartialSurrogateFailure() {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-//        try {
-//            IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
-//            utf8.append(new String(new int[] { 0x10000 }, 0, 1));
-//            utf8.append((char)0xd800);
-//            utf8.append((char)0xdc00);
-//            utf8.append((char)0xdbff);
-//            utf8.append((char)0xdfff);
-//            utf8.flush();
-//            assertEquals(new String(os.toByteArray()),
-//                         new String(new byte[] {(byte)0xF0, (byte)0x90, (byte)0x80, (byte)0x80,
-//                                                (byte)0xF0, (byte)0x90, (byte)0x80, (byte)0x80,
-//                                                (byte)0xF4, (byte)0x8F, (byte)0xBF, (byte)0xBF}));
-//        } catch (Exception e) {
-//            assertFalse("Unexpected exception: " + e.getMessage(), true);
-//        }
+        try {
+            IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
+            utf8.append(new String(new int[] { 0x10000 }, 0, 1));
+            utf8.append((char)0xd800);
+            utf8.append((char)0xdc00);
+            utf8.append((char)0xdbff);
+            utf8.append((char)0xdfff);
+            utf8.flush();
+            assertEquals(new String(os.toByteArray()),
+                         new String(new byte[] {(byte)0xF0, (byte)0x90, (byte)0x80, (byte)0x80,
+                                                (byte)0xF0, (byte)0x90, (byte)0x80, (byte)0x80,
+                                                (byte)0xF4, (byte)0x8F, (byte)0xBF, (byte)0xBF}));
+        } catch (Exception e) {
+            assertFalse("Unexpected exception: " + e.getMessage(), true);
+        }
         try {
             IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
             utf8.append((char)0xd800);
             utf8.flush();
             assertFalse("Successfully parsed a partial surrogate", true);
-        } catch (Exception e) {
+        } catch (IOException e) {
             assertTrue(true);
         }
         try {
             IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
             utf8.append((char)0xdc00);
             assertFalse("Successfully parsed a partial surrogate", true);
-        } catch (Exception e) {
+        } catch (IOException e) {
             assertTrue(true);
         }
     }
