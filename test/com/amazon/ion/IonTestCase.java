@@ -912,7 +912,6 @@ public abstract class IonTestCase
         return null;
     }
 
-
     /**
      * Checks decimal equality, including precision and negative-zero.
      *

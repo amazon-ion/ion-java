@@ -414,8 +414,7 @@ public class SymbolTableTest
         final int import2id = systemMaxId() + 2;
         final int fred3id   = systemMaxId() + 3;
 
-        final int local1id = systemMaxId() + IMPORTED_2_MAX_ID + 1;
-        final int local2id = local1id + 1;
+        final int maxLocalId = systemMaxId() + IMPORTED_2_MAX_ID + 2;
 
         registerImportedV1();
         registerImportedV2();
@@ -434,8 +433,9 @@ public class SymbolTableTest
         assertNotNull(catalog.removeTable("imported", 2));
 
         IonDatagram dg = loader().load(binary);
-        checkSymbol("local1", local1id, dg.get(0));
-        checkSymbol("local2", local2id, dg.get(1));
+
+        checkSymbol("local1", dg.get(0));
+        checkSymbol("local2", dg.get(1));
         checkSymbol("imported 1", import1id, dg.get(2));
         checkSymbol("imported 2", import2id, dg.get(3));
         checkUnknownSymbol(fred3id, dg.get(4));
@@ -444,6 +444,8 @@ public class SymbolTableTest
         checkFirstImport("imported", 2,
                          new String[]{"imported 1", "imported 2", null, null},
                          st);
+        assertTrue(st.isLocalTable());
+        assertEquals(maxLocalId, st.getMaxId());
     }
 
     /**
@@ -457,16 +459,11 @@ public class SymbolTableTest
         final int import2id = systemMaxId() + 2;
         final int fred3id   = systemMaxId() + 3;
 
-        final int local1id = systemMaxId() + IMPORTED_2_MAX_ID + 1;
-        final int local2id = local1id + 1;
-        final int local3id = local2id + 1;
+        final int maxLocalId = systemMaxId() + IMPORTED_2_MAX_ID + 3;
 
         registerImportedV1();
         registerImportedV2();
-        SymbolTable i3 = registerImportedV3();
-
-        // Make sure our syms don't overlap.
-        assertTrue(i3.findSymbol("fred5") != local3id);
+        registerImportedV3();
 
         // fred5 is not in table version 2, so it gets local symbol
         String text =
@@ -483,12 +480,13 @@ public class SymbolTableTest
         assertNotNull(catalog.removeTable("imported", 2));
 
         IonDatagram dg = loader().load(binary);
-        checkSymbol("local1", local1id, dg.get(0));
-        checkSymbol("local2", local2id, dg.get(1));
+
+        checkSymbol("local1", dg.get(0));
+        checkSymbol("local2", dg.get(1));
         checkSymbol("imported 1", import1id, dg.get(2));
         checkUnknownSymbol(import2id, dg.get(3));
         checkSymbol("fred3", fred3id, dg.get(4));
-        checkSymbol("fred5", local3id, dg.get(5));
+        checkSymbol("fred5", dg.get(5));
 
         SymbolTable st = dg.get(0).getSymbolTable();
         checkFirstImport("imported", 2,
@@ -496,6 +494,9 @@ public class SymbolTableTest
                          st);
         SymbolTable imported = st.getImportedTables()[0];
         checkUnknownSymbol("fred5", 5, imported);
+
+        assertTrue(st.isLocalTable());
+        assertEquals(maxLocalId, st.getMaxId());
     }
 
     @Test
