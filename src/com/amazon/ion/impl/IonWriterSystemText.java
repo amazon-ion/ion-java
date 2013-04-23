@@ -41,6 +41,8 @@ final class IonWriterSystemText
     /** At least one. */
     private final int _long_string_threshold;
 
+    private final IonTextUtils.IonCodePointWriter _stringWriter;
+
     BufferManager _manager;
 
     /** Ensure we don't use a closed {@link #output} stream. */
@@ -99,6 +101,8 @@ final class IonWriterSystemText
             _separator_character = ' ';
         }
 
+        _stringWriter = new IonTextUtils.IonCodePointWriter(_output);
+
         int threshold = _options.getLongStringThreshold();
         if (threshold < 1) threshold = Integer.MAX_VALUE;
         _long_string_threshold = threshold;
@@ -116,7 +120,7 @@ final class IonWriterSystemText
         return _top;
     }
     public boolean isInStruct() {
-        return this._in_struct;
+        return _in_struct;
     }
     protected IonType getContainer()
     {
@@ -151,7 +155,6 @@ final class IonWriterSystemText
             growStack();
         }
         _stack_parent_type[_top] = typeid;
-        _stack_in_struct[_top] = _in_struct;
         _stack_pending_comma[_top] = _pending_separator;
         switch (typeid) {
         case _Private_IonConstants.tidSexp:
@@ -190,10 +193,15 @@ final class IonWriterSystemText
         switch (parentid) {
         case -1:
         case _Private_IonConstants.tidSexp:
+            _in_struct = false;
             _separator_character = ' ';
             break;
         case _Private_IonConstants.tidList:
+            _in_struct = false;
+            _separator_character = ',';
+            break;
         case _Private_IonConstants.tidStruct:
+            _in_struct = true;
             _separator_character = ',';
             break;
         default:
@@ -212,10 +220,6 @@ final class IonWriterSystemText
         return _stack_parent_type[_top - 1];
     }
 
-    boolean topInStruct() {
-        if (_top == 0) return false;
-        return _stack_in_struct[_top - 1];
-    }
     boolean topPendingComma() {
         if (_top == 0) return false;
         return _stack_pending_comma[_top - 1];
@@ -270,11 +274,11 @@ final class IonWriterSystemText
         {
             if (_options._string_as_json)
             {
-                IonTextUtils.printJsonString(_output, value);
+                _stringWriter.printJsonString(value);
             }
             else
             {
-                IonTextUtils.printString(_output, value);
+                _stringWriter.printString(value);
             }
         }
         else
@@ -298,7 +302,7 @@ final class IonWriterSystemText
                 }
                 case QUOTED:
                 {
-                    IonTextUtils.printQuotedSymbol(_output, value);
+                    _stringWriter.printQuotedSymbol(value);
                     break;
                 }
             }
@@ -354,7 +358,7 @@ final class IonWriterSystemText
                         _output.append(Integer.toString(ann.getSid()));
                     }
                     else {
-                        IonTextUtils.printSymbol(_output, name);
+                        _stringWriter.printSymbol(name);
                     }
                     _output.append("::");
                 }
@@ -446,15 +450,22 @@ final class IonWriterSystemText
         switch (containerType)
         {
             case SEXP:
-            {
-                if (!_options._sexp_as_list)
-                {
-                    tid = tidSexp; _in_struct = false; opener = '('; break;
+                if (!_options._sexp_as_list) {
+                    tid = tidSexp;
+                    _in_struct = false;
+                    opener = '('; break;
                 }
                 // else fall through and act just like list
-            }
-            case LIST:   tid = tidList;   _in_struct = false; opener = '['; break;
-            case STRUCT: tid = tidStruct; _in_struct = true;  opener = '{'; break;
+            case LIST:
+                tid = tidList;
+                _in_struct = false;
+                opener = '[';
+                break;
+            case STRUCT:
+                tid = tidStruct;
+                _in_struct = true;
+                opener = '{';
+                break;
             default:
                 throw new IllegalArgumentException();
         }
@@ -484,8 +495,6 @@ final class IonWriterSystemText
         }
         closeCollection(closer);
         closeValue();
-        _in_struct = topInStruct();
-
     }
 
 
@@ -597,12 +606,14 @@ final class IonWriterSystemText
             }
         }
         else {
-            BigDecimal decimal = new BigDecimal(value);
-            BigInteger unscaled = decimal.unscaledValue();
-
-            _output.append(unscaled.toString());
-            _output.append('e');
-            _output.append(Integer.toString(-decimal.scale()));
+            String str = Double.toString(value);
+            if (str.indexOf('E') == -1) {
+                if (str.indexOf('.') == -1) {
+                    str += ".0";
+                }
+                str += "e0";
+            }
+            _output.append(str);
         }
 
         closeValue();
@@ -732,7 +743,7 @@ final class IonWriterSystemText
         {
             // TODO This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
-            IonTextUtils.printLongString(_output, value);
+            _stringWriter.printLongString(value);
 
             // This sets _following_long_string = false so we must overwrite
             closeValue();
@@ -742,11 +753,11 @@ final class IonWriterSystemText
         {
             if (_options._string_as_json)
             {
-                IonTextUtils.printJsonString(_output, value);
+                _stringWriter.printJsonString(value);
             }
             else
             {
-                IonTextUtils.printString(_output, value);
+                _stringWriter.printString(value);
             }
             closeValue();
         }
@@ -754,21 +765,15 @@ final class IonWriterSystemText
 
     // escape sequences for character below ascii 32 (space)
     static final String [] LOW_ESCAPE_SEQUENCES = {
-          "0",   "x01", "x02", "x03",
-          "x04", "x05", "x06", "a",
-          "b",   "t",   "n",   "v",
-          "f",   "r",   "x0e", "x0f",
-          "x10", "x11", "x12", "x13",
-          "x14", "x15", "x16", "x17",
-          "x18", "x19", "x1a", "x1b",
-          "x1c", "x1d", "x1e", "x1f",
+          "\\0",   "\\x01", "\\x02", "\\x03",
+          "\\x04", "\\x05", "\\x06", "\\a",
+          "\\b",   "\\t",   "\\n",   "\\v",
+          "\\f",   "\\r",   "\\x0e", "\\x0f",
+          "\\x10", "\\x11", "\\x12", "\\x13",
+          "\\x14", "\\x15", "\\x16", "\\x17",
+          "\\x18", "\\x19", "\\x1a", "\\x1b",
+          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
     };
-    String lowEscapeSequence(char c) {
-        if (c == 13) {
-            return '\\'+LOW_ESCAPE_SEQUENCES[c];
-        }
-        return '\\'+LOW_ESCAPE_SEQUENCES[c];
-    }
 
     @Override
     void writeSymbolAsIs(int symbolId)
@@ -862,91 +867,36 @@ final class IonWriterSystemText
 
         startValue();
 
-        if (! _options._clob_as_string) {
-            _output.append("{{");
-
-            if (_options.isPrettyPrintOn()) {
-                _output.append(" ");
-            }
-        }
-
         final boolean json =
             _options._clob_as_string && _options._string_as_json;
 
         final boolean longString = (_long_string_threshold < value.length);
 
-        if (longString) {
-            _output.append("'''");
-        } else {
-            _output.append('"');
-        }
+        if (!_options._clob_as_string) {
+            if (!json) {
+                _output.append("{{");
+            }
 
-        int end = start + len;
-        for (int ii=start; ii<end; ii++) {
-            char c = (char)(value[ii] & 0xff);
-            if (c < 32 ) {
-                if (json) {
-                    IonTextUtils.printJsonCodePoint(_output, c);
-                }
-                else if (c == '\n' && longString) {
-                    // TODO account for NL versus CR+NL streams
-                    _output.append(c);
-                } else {
-                    _output.append(lowEscapeSequence(c));
-                }
-            }
-            else if (c > 127) {
-                if (json) {
-                    // JSON uses u00HH
-                    IonTextUtils.printJsonCodePoint(_output, c);
-                }
-                else
-                {
-                    // Ion uses \xHH
-                    _output.append("\\x");
-                    // this should always be 2 hex chars
-                    assert (c > 0x7f && c <= 0xff);
-                    _output.append(Integer.toHexString(c));
-                }
-            }
-            else {
-                switch (c) {
-                case '"':
-                {
-                    if (! longString) _output.append('\\');
-                    break;
-                }
-                case '\'':
-                {
-                    // This escapes more often than is necessary, but doing it
-                    // minimally is very tricky. Must be sure to account for
-                    // quotes at the end of the content.
-                    if (longString) _output.append('\\');
-                    break;
-                }
-                case '\\': //   \\  backslash
-                {
-                    _output.append('\\');
-                    break;
-                }
-                default:
-                    break;
-                }
-                _output.append(c);
+            if (_options.isPrettyPrintOn()) {
+                _output.append(" ");
             }
         }
 
-        if (longString) {
-            _output.append("'''");
+        if (json) {
+            _stringWriter.printJsonClob(value, start, start + len);
+        } else if (longString) {
+            _stringWriter.printLongClob(value, start, start + len);
         } else {
-            _output.append('"');
+            _stringWriter.printClob(value, start, start + len);
         }
 
         if (! _options._clob_as_string) {
             if (_options.isPrettyPrintOn()) {
                 _output.append(" ");
             }
-            _output.append("}}");
+            if (!json) {
+                _output.append("}}");
+            }
         }
 
         closeValue();

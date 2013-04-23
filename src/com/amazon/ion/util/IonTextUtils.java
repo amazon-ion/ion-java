@@ -61,7 +61,330 @@ public class IonTextUtils
         }
     }
 
+    private final static String[] ZERO_PADDING =
+    {
+        "",
+        "0",
+        "00",
+        "000",
+        "0000",
+        "00000",
+        "000000",
+        "0000000",
+    };
+
+    // escape sequences for character below ascii 32 (space)
+    private static final String[] ESCAPE_CODES;
+    static
+    {
+        ESCAPE_CODES = new String[256];
+        ESCAPE_CODES[0x00] = "\\0";
+        ESCAPE_CODES[0x07] = "\\a";
+        ESCAPE_CODES[0x08] = "\\b";
+        ESCAPE_CODES['\t'] = "\\t";
+        ESCAPE_CODES['\n'] = "\\n";
+        ESCAPE_CODES[0x0B] = "\\v";
+        ESCAPE_CODES['\f'] = "\\f";
+        ESCAPE_CODES['\r'] = "\\r";
+        ESCAPE_CODES['\\'] = "\\\\";
+        ESCAPE_CODES['\"'] = "\\\"";
+        for (int i = 1; i < 0x20; ++i) {
+            if (ESCAPE_CODES[i] == null) {
+                String s = Integer.toHexString(i);
+                ESCAPE_CODES[i] = "\\x" + ZERO_PADDING[2 - s.length()] + s;
+            }
+        }
+        for (int i = 0x7F; i < 0x100; ++i) {
+            String s = Integer.toHexString(i);
+            ESCAPE_CODES[i] = "\\x" + s;
+        }
+    }
+
+    private static final String[] LONG_ESCAPE_CODES;
+    static
+    {
+        LONG_ESCAPE_CODES = new String[256];
+        for (int i = 0; i < 256; ++i) {
+            LONG_ESCAPE_CODES[i] = ESCAPE_CODES[i];
+        }
+        LONG_ESCAPE_CODES['\n'] = null;
+        LONG_ESCAPE_CODES['\''] = "\\\'";
+        LONG_ESCAPE_CODES['\"'] = null; // Treat as normal code point for long string
+    }
+
+    private static final String[] SYMBOL_ESCAPE_CODES;
+    static
+    {
+        SYMBOL_ESCAPE_CODES = new String[256];
+        for (int i = 0; i < 256; ++i) {
+            SYMBOL_ESCAPE_CODES[i] = ESCAPE_CODES[i];
+        }
+        SYMBOL_ESCAPE_CODES['\''] = "\\\'";
+        SYMBOL_ESCAPE_CODES['\"'] = null; // Treat as normal code point for symbol.
+    }
+
+    private static final String[] JSON_ESCAPE_CODES;
+    static
+    {
+        JSON_ESCAPE_CODES = new String[256];
+        JSON_ESCAPE_CODES[0x00] = "\\0";
+        JSON_ESCAPE_CODES[0x07] = "\\u0007";
+        JSON_ESCAPE_CODES[0x0B] = "\\u000b";
+        JSON_ESCAPE_CODES['\t'] = "\\t";
+        JSON_ESCAPE_CODES['\n'] = "\\n";
+        JSON_ESCAPE_CODES[0x0B] = "\\v";
+        JSON_ESCAPE_CODES['\f'] = "\\f";
+        JSON_ESCAPE_CODES['\r'] = "\\r";
+        JSON_ESCAPE_CODES['\\'] = "\\\\";
+        JSON_ESCAPE_CODES['\"'] = "\\\"";
+        for (int i = 1; i < 0x20; ++i) {
+            if (JSON_ESCAPE_CODES[i] == null) {
+                String s = Integer.toHexString(i);
+                JSON_ESCAPE_CODES[i] = "\\u" + ZERO_PADDING[4 - s.length()] + s;
+            }
+        }
+        for (int i = 0x7F; i < 0x100; ++i) {
+            String s = Integer.toHexString(i);
+            JSON_ESCAPE_CODES[i] = "\\u00" + s;
+        }
+    }
+
+    private static final String utf16Prefix = "\\u";
+    private static final String utf32Prefix = "\\U";
+    private static final String tripleQuotes = "'''";
+
+
+//
+//          "\\0",   "\\x01", "\\x02", "\\x03",
+//          "\\x04", "\\x05", "\\x06", "\\a",
+//          "\\b",   "\\t",   "\\n",   "\\v",
+//          "\\f",   "\\r",   "\\x0e", "\\x0f",
+//          "\\x10", "\\x11", "\\x12", "\\x13",
+//          "\\x14", "\\x15", "\\x16", "\\x17",
+//          "\\x18", "\\x19", "\\x1a", "\\x1b",
+//          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
+//    };
+
+
     //=========================================================================
+
+
+    public static final class IonCodePointWriter {
+
+        private final Appendable _out;
+        private String[] _escapes;
+
+        public IonCodePointWriter(Appendable out) {
+            this._out = out;
+        }
+
+        public final void printString(CharSequence text)
+            throws IOException
+        {
+            if (text == null)
+            {
+                _out.append("null.string");
+            }
+            else
+            {
+                _out.append('"');
+                _escapes = ESCAPE_CODES;
+                printCodePoints(text);
+                _out.append('"');
+            }
+        }
+
+        public final void printLongString(CharSequence text)
+            throws IOException
+        {
+            if (text == null)
+            {
+                _out.append("null.string");
+            }
+            else
+            {
+                _out.append(tripleQuotes);
+                _escapes = LONG_ESCAPE_CODES;
+                printCodePoints(text);
+                _out.append(tripleQuotes);
+            }
+        }
+
+        public final void printJsonString(CharSequence text)
+            throws IOException
+        {
+            if (text == null)
+            {
+                _out.append("null");
+            }
+            else
+            {
+                _out.append('"');
+                _escapes = JSON_ESCAPE_CODES;
+                printCodePoints(text);
+                _out.append('"');
+            }
+        }
+
+        public final void printClob(byte[] value, int start, int end)
+            throws IOException
+        {
+            if (value == null)
+            {
+                _out.append("null.clob");
+            }
+            else
+            {
+                _out.append('"');
+                _escapes = ESCAPE_CODES;
+                printASCII(value, start, end);
+                _out.append('"');
+            }
+        }
+
+        public final void printLongClob(byte[] value, int start, int end)
+            throws IOException
+        {
+            if (value == null) {
+                _out.append("null.clob");
+            }
+            else
+            {
+                _escapes = LONG_ESCAPE_CODES;
+                _out.append(tripleQuotes);
+                printASCII(value, start, end);
+                _out.append(tripleQuotes);
+            }
+        }
+
+        public final void printJsonClob(byte[] value, int start, int end)
+            throws IOException
+        {
+            if (value == null) {
+                _out.append("null");
+            } else {
+                _out.append('"');
+                _escapes = JSON_ESCAPE_CODES;
+                printASCII(value, start, end);
+                _out.append('"');
+            }
+        }
+
+        public final void printSymbol(CharSequence text)
+            throws IOException
+        {
+            if (text == null)
+            {
+                _out.append("null.symbol");
+            }
+            else if (text.length() == 0)
+            {
+                throw new EmptySymbolException();
+            }
+            else if (symbolNeedsQuoting(text, true)) {
+                _out.append('\'');
+                _escapes = SYMBOL_ESCAPE_CODES;
+                printCodePoints(text);
+                _out.append('\'');
+            }
+            else
+            {
+                _out.append(text);
+            }
+        }
+        public final void printQuotedSymbol(CharSequence text)
+            throws IOException
+        {
+            if (text == null)
+            {
+                _out.append("null.symbol");
+            }
+            else if (text.length() == 0)
+            {
+                throw new EmptySymbolException();
+            }
+            else
+            {
+                _out.append('\'');
+                _escapes = SYMBOL_ESCAPE_CODES;
+                printCodePoints(text);
+                _out.append('\'');
+            }
+        }
+
+        private final void printASCII(byte[] value, int start, int end)
+            throws IOException
+        {
+            for (int i = start; i < end; i++) {
+                char c = (char)(value[i] & 0xff);
+                if (_escapes[c] != null) {
+                    _out.append(_escapes[c]);
+                } else {
+                    _out.append(c);
+                }
+            }
+        }
+
+        private final void printCodePoints(CharSequence text)
+            throws IOException
+        {
+            int len = text.length();
+            for (int i = 0; i < len; ++i)
+            {
+                // write as many bytes in a sequence as possible
+                int c = -1;
+                int j;
+                for (j = i; j < len; ++j) {
+                    c = text.charAt(j);
+                    if (c >= 0x100 || _escapes[c] != null) {
+                        // append sequence then continue the normal loop
+                        if (j > i) {
+                            _out.append(text, i, j);
+                            i = j;
+                        }
+                        break;
+                    }
+                }
+                if (j == len) {
+                    // we've reached the end of sequence; append it and break
+                    _out.append(text, i, j);
+                    break;
+                }
+                // write the non Latin-1 character
+                if (c < 0x100) {
+                    assert _escapes[c] != null;
+                    _out.append(_escapes[c]);
+                } else if (c < 0xD800 || c >= 0xE000) {
+                    String s = Integer.toHexString(c);
+                    _out.append(utf16Prefix);
+                    _out.append(ZERO_PADDING[4 - s.length()]);
+                    _out.append(s);
+                } else if (_Private_IonConstants.isHighSurrogate(c)) {
+                    // high surrogate
+                    char c2;
+                    if (++i == len || !_Private_IonConstants.isLowSurrogate(c2 = text.charAt(i))) {
+                        String message =
+                            "text is invalid UTF-16. It contains an unmatched " +
+                            "high surrogate 0x" + Integer.toHexString(c) +
+                            " at index " + (i-1);
+                        throw new IllegalArgumentException(message);
+                    }
+                    c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+                    String s = Integer.toHexString(c);
+                    _out.append(utf32Prefix);
+                    _out.append(ZERO_PADDING[8 - s.length()]);
+                    _out.append(s);
+                } else {
+                    // unmatched low surrogate
+                    String message =
+                        "text is invalid UTF-16. It contains an unmatched " +
+                        "low surrogate 0x" + Integer.toHexString(c) +
+                        " at index " + i;
+                    throw new IllegalArgumentException(message);
+                }
+            }
+        }
+    }
 
     /**
      * Ion whitespace is defined as one of the characters space, tab, newline,
@@ -488,17 +811,6 @@ public class IonTextUtils
         }
     }
 
-    private final static String[] ZERO_PADDING =
-    {
-        "",
-        "0",
-        "00",
-        "000",
-        "0000",
-        "00000",
-        "000000",
-        "0000000",
-    };
 
     /**
      * Generates a two-digit hex escape sequence,
