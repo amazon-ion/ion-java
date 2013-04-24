@@ -237,7 +237,7 @@ public class IonTextUtils
             {
                 _out.append('"');
                 _escapes = ESCAPE_CODES;
-                printASCII(value, start, end);
+                printBytes(value, start, end);
                 _out.append('"');
             }
         }
@@ -250,9 +250,9 @@ public class IonTextUtils
             }
             else
             {
-                _escapes = LONG_ESCAPE_CODES;
                 _out.append(tripleQuotes);
-                printASCII(value, start, end);
+                _escapes = LONG_ESCAPE_CODES;
+                printBytes(value, start, end);
                 _out.append(tripleQuotes);
             }
         }
@@ -265,7 +265,7 @@ public class IonTextUtils
             } else {
                 _out.append('"');
                 _escapes = JSON_ESCAPE_CODES;
-                printASCII(value, start, end);
+                printBytes(value, start, end);
                 _out.append('"');
             }
         }
@@ -312,7 +312,7 @@ public class IonTextUtils
             }
         }
 
-        private final void printASCII(byte[] value, int start, int end)
+        private final void printBytes(byte[] value, int start, int end)
             throws IOException
         {
             for (int i = start; i < end; i++) {

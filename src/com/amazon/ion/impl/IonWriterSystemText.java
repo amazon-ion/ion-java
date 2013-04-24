@@ -75,7 +75,7 @@ final class IonWriterSystemText
              options,
              (out instanceof Appendable
                  ? (Appendable) out
-                 : new IonUTF8.CharToUTF8(out)));
+                 : new UTF8Converter(out)));
     }
 
     /**

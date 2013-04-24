@@ -16,9 +16,9 @@ public class UTF8ConverterTest extends IonTestCase
     private Random rand = new Random();
 
     private void assertConversion(String str, byte[] out) throws Exception {
-        UTF8Converter conv = new UTF8Converter();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        conv.write(baos, str);
+        UTF8Converter conv = new UTF8Converter(baos);
+        conv.append(str);
         byte[] bytes = baos.toByteArray();
         assertEqualBytes(bytes, 0, bytes.length, out);
     }
@@ -81,6 +81,6 @@ public class UTF8ConverterTest extends IonTestCase
 
     @Test(expected = IonException.class)
     public void testSurrogatesFailure() throws Exception {
-        new UTF8Converter().write(new ByteArrayOutputStream(), new String(new char[] { 0xDD1E} ));
+        new UTF8Converter(new ByteArrayOutputStream()).append(new String(new char[] { 0xDD1E} ));
     }
 }
