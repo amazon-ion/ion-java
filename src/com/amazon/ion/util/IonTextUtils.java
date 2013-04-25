@@ -127,12 +127,12 @@ public class IonTextUtils
     static
     {
         JSON_ESCAPE_CODES = new String[256];
-        JSON_ESCAPE_CODES[0x00] = "\\0";
+        JSON_ESCAPE_CODES[0x00] = "\\u0000";
         JSON_ESCAPE_CODES[0x07] = "\\u0007";
-        JSON_ESCAPE_CODES[0x0B] = "\\u000b";
+        JSON_ESCAPE_CODES[0x08] = "\\b";
         JSON_ESCAPE_CODES['\t'] = "\\t";
         JSON_ESCAPE_CODES['\n'] = "\\n";
-        JSON_ESCAPE_CODES[0x0B] = "\\v";
+        JSON_ESCAPE_CODES[0x0B] = "\\u000b";
         JSON_ESCAPE_CODES['\f'] = "\\f";
         JSON_ESCAPE_CODES['\r'] = "\\r";
         JSON_ESCAPE_CODES['\\'] = "\\\\";
