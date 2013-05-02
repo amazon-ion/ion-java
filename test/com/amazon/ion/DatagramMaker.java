@@ -45,7 +45,7 @@ public enum DatagramMaker
     },
 
     /**
-     * Invokes {@link IonLoader#load(byte[])} with Ion binary.
+     * Invokes {@link IonLoader#load(byte[])} with Ion text.
      */
     FROM_BYTES_TEXT(true, false)
     {

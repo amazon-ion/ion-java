@@ -220,8 +220,7 @@ public abstract class SystemProcessingTestCase
 
         String text = "bar foo $ion_1_0 1 far boo";
 
-        prepare(text);
-        startIteration();
+        startIteration(text);
 
         nextValue();
         checkSymbol("bar");
