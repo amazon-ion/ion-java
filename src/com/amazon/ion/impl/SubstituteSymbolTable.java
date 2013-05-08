@@ -141,6 +141,9 @@ final class SubstituteSymbolTable
         if (myDelegate != null)
         {
             tok = myDelegate.find(text);
+            // If symbol token is found but its sid is beyond the correct max
+            // id of the substitute, then return null, as it should not be
+            // found at all.
             if (tok != null && tok.getSid() > myMaxId)
             {
                 tok = null;

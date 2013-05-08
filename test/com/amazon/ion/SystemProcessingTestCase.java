@@ -534,16 +534,11 @@ if (table1 == table2) {
         final int local4id = local + 4; // 17: id for fred_5, which isn't present when version 2 was defined
 
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
-        Symtabs.register("fred", 1, catalog);
         Symtabs.register("fred", 2, catalog);
         SymbolTable fredV3 = Symtabs.register("fred", 3, catalog);
 
         // Make sure our syms don't overlap.
         assertTrue(fredV3.findSymbol("fred_5") != local3id);
-
-        // version: 1
-        // {  name:"fred", version:1,
-        // symbols:["fred_1", "fred_2"]}
 
         // version: 3: /* Removed fred_2 */
         //"{  name:"fred", version:3," +
@@ -599,6 +594,142 @@ if (table1 == table2) {
         checkSymbol("fred_5");
 
         checkEof();
+    }
+
+    /**
+     * Checks that the imported table retrieved from the current symtab has the
+     * correct specs (i.e. isSubstitute, name, version, max_id). The correct
+     * specs are based on <code>declaredMaxId</code> and
+     * <code>testRemovalAfterPrepare</code> parameters.
+     *
+     * @param declaredMaxId
+     *          the max_id of the import declaration being tested
+     * @param testRemovalAfterPrepare
+     *          flag on whether the exact match of import contained within the
+     *          catalog is removed after {@link #prepare(String)}
+     * @param catalog
+     * @throws Exception
+     */
+    protected void testImportTableSpecs(int declaredMaxId,
+                                        boolean testRemovalAfterPrepare,
+                                        SimpleCatalog catalog)
+        throws Exception
+    {
+        // The exact match of import contained within the catalog
+        // is defined as { name: "fred",
+        //                 version: 2,
+        //                 max_id: Symtabs.FRED_MAX_IDS[2] }
+
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"fred\", version:2, " +
+            "            max_id:" + declaredMaxId + "}]," +
+            "}\n" +
+            "local1";
+
+        Symtabs.register("fred", 2, catalog);
+        prepare(text);
+
+        if (testRemovalAfterPrepare) {
+            assertNotNull(catalog.removeTable("fred", 2));
+        }
+
+        startIteration();
+
+        nextValue();
+        checkSymbol("local1");
+
+        // There should be only one imported symtab
+        SymbolTable[] imports = currentSymtab().getImportedTables();
+        assertEquals(1, imports.length);
+
+        // If exact import is removed after prepare, imported symtab must be
+        // a substitute table
+        // If exact import is not removed after prepare, imported symtab must be
+        // a substitute table iff declaredMaxId is different from exact max_id
+        assertEquals(testRemovalAfterPrepare || declaredMaxId != Symtabs.FRED_MAX_IDS[2],
+                     imports[0].isSubstitute());
+
+        assertEquals(Symtabs.FRED_NAME, imports[0].getName());
+        assertEquals(2, imports[0].getVersion());
+        assertEquals(declaredMaxId, imports[0].getMaxId());
+
+        checkEof();
+    }
+
+    protected void testImportTableSpecsWithVariants(SimpleCatalog catalog)
+        throws Exception
+    {
+        final int exactMaxId = Symtabs.FRED_MAX_IDS[2];
+        assertTrue(exactMaxId > 1);
+
+        // MaxId variants WITHOUT removal of exact match in catalog after prepare
+        testImportTableSpecs(exactMaxId,     // equal max id
+                             false,
+                             catalog);
+        testImportTableSpecs(exactMaxId - 1, // lesser max id
+                             false,
+                             catalog);
+        testImportTableSpecs(exactMaxId + 1, // greater max id
+                             false,
+                             catalog);
+
+        // MaxId variants WITH removal of exact match in catalog after prepare
+        testImportTableSpecs(exactMaxId,     // equal max id
+                             true,
+                             catalog);
+        testImportTableSpecs(exactMaxId - 1, // lesser max id
+                             true,
+                             catalog);
+        testImportTableSpecs(exactMaxId + 1, // greater max id
+                             true,
+                             catalog);
+    }
+
+    /**
+     * Import v2 but catalog has v1.
+     */
+    @Test
+    public void testSubstituteTableWithLesserVersionImport()
+        throws Exception
+    {
+        startTestCheckpoint("testSubstituteTableWithLesserVersionImport");
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 1, catalog);
+
+        testImportTableSpecsWithVariants(catalog);
+    }
+
+    /**
+     * Import v2 but catalog has v3.
+     */
+    @Test
+    public void testSubstituteTableWithGreaterVersionImport()
+        throws Exception
+    {
+        startTestCheckpoint("testSubstituteTableWithGreaterVersionImport");
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 3, catalog);
+
+        testImportTableSpecsWithVariants(catalog);
+    }
+
+    /**
+     * Import v2 and catalog has v2.
+     */
+    @Test
+    public void testSubstituteTableWithEqualVersionImport()
+        throws Exception
+    {
+        startTestCheckpoint("testSubstituteTableWithEqualVersionImport");
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 2, catalog);
+
+        testImportTableSpecsWithVariants(catalog);
     }
 
 
@@ -941,6 +1072,8 @@ if (table1 == table2) {
         }
         checkEof();
     }
+
+    // TODO ION-305 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
 
     @Test
     public void testHighUnicodeDirectInBlob()

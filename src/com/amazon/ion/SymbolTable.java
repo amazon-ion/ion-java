@@ -11,6 +11,20 @@ import java.util.Iterator;
  * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  * <p>
+ * There are two kinds of symbol tables: shared and local. With that, there are
+ * two further distinctions of shared symbol tables: system and substitute.
+ *
+ * <h2>Notes about Substitute symbol tables</h2>
+ * Substitute tables are used when the relevant catalog cannot find an exact
+ * match, that is, the catalog cannot find an imported shared symtab with the
+ * same name, version and max_id.
+ * <p>
+ * In order to ensure that we retain the correct import declarations,
+ * a substitute table is created, <em>substituting</em> the originally matched
+ * shared symtab from the catalog. The substitute table in turns exposes the
+ * correct name, version and max_id for any callers that require it, and
+ * becomes a delegate of the substituted symtab's interface.
+ * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  */
@@ -139,9 +153,16 @@ public interface SymbolTable
      * Gets the sequence of shared symbol tables imported by this (local)
      * symbol table. The result does not include a system table.
      * <p>
-     * If this local table imported a shared table that was not available in
-     * the appropriate {@link IonCatalog}, then that entry will be a dummy
-     * table with no known symbol text.
+     * If this local table imported a shared table for which the relevant
+     * {@link IonCatalog} has the same name but different version and/or max_id,
+     * then that entry will be a substitute table with the
+     * correct version and max_id, wrapping the original shared symbol table
+     * that was found.
+     * <p>
+     * If this local table imported a shared table for which the relevant
+     * {@link IonCatalog} has no entry with the same name, but the import
+     * declaration has a max_id available, then that entry will
+     * be a substitute table with max_id undefined symbols.
      *
      * @return {@code null} if this is a shared or system table, otherwise a
      * non-null but potentially zero-length array of shared tables (but no
