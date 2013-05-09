@@ -23,8 +23,11 @@ import java.util.Iterator;
 final class SubstituteSymbolTable
     implements SymbolTable
 {
-    /** Either null or a non-system shared table. */
-    private final SymbolTable myDelegate;
+    /**
+     * This is the original symbol table that is being substituted.
+     * Either null or a non-system shared table.
+     */
+    private final SymbolTable myOriginalSymTab;
     private final String myName;
     private final int myVersion;
     private final int myMaxId;
@@ -38,20 +41,20 @@ final class SubstituteSymbolTable
     SubstituteSymbolTable(String name, int version,
                           int maxId)
     {
-        myDelegate = null;
+        myOriginalSymTab = null;
         myName = name;
         myVersion = version;
         myMaxId = maxId;
     }
 
-    SubstituteSymbolTable(SymbolTable delegate, int version, int maxId)
+    SubstituteSymbolTable(SymbolTable original, int version, int maxId)
     {
-        assert delegate.isSharedTable() && ! delegate.isSystemTable();
-        assert (delegate.getVersion() != version
-                || delegate.getMaxId() != maxId);
+        assert original.isSharedTable() && ! original.isSystemTable();
+        assert (original.getVersion() != version
+                || original.getMaxId() != maxId);
 
-        myDelegate = delegate;
-        myName = delegate.getName();
+        myOriginalSymTab = original;
+        myName = original.getName();
         myVersion = version;
         myMaxId = maxId;
     }
@@ -138,9 +141,9 @@ final class SubstituteSymbolTable
     public SymbolToken find(String text)
     {
         SymbolToken tok = null;
-        if (myDelegate != null)
+        if (myOriginalSymTab != null)
         {
-            tok = myDelegate.find(text);
+            tok = myOriginalSymTab.find(text);
             // If symbol token is found but its sid is beyond the correct max
             // id of the substitute, then return null, as it should not be
             // found at all.
@@ -155,9 +158,9 @@ final class SubstituteSymbolTable
     public int findSymbol(String text)
     {
         int sid = UNKNOWN_SYMBOL_ID;
-        if (myDelegate != null)
+        if (myOriginalSymTab != null)
         {
-            sid = myDelegate.findSymbol(text);
+            sid = myOriginalSymTab.findSymbol(text);
             if (sid > myMaxId)
             {
                 sid = UNKNOWN_SYMBOL_ID;
@@ -169,28 +172,28 @@ final class SubstituteSymbolTable
     @SuppressWarnings("deprecation")
     public String findSymbol(int id)
     {
-        if (id > myMaxId || myDelegate == null)
+        if (id > myMaxId || myOriginalSymTab == null)
         {
             throw new UnknownSymbolException(id);
         }
-        return myDelegate.findSymbol(id);
+        return myOriginalSymTab.findSymbol(id);
     }
 
     public String findKnownSymbol(int id)
     {
-        if (id > myMaxId || myDelegate == null)
+        if (id > myMaxId || myOriginalSymTab == null)
         {
             return null;
         }
-        return myDelegate.findKnownSymbol(id);
+        return myOriginalSymTab.findKnownSymbol(id);
     }
 
     public int addSymbol(String name)
     {
-        if (myDelegate != null)
+        if (myOriginalSymTab != null)
         {
             @SuppressWarnings("deprecation")
-            int sid = myDelegate.addSymbol(name);
+            int sid = myOriginalSymTab.addSymbol(name);
             if (sid <= myMaxId)
             {
                 return sid;
@@ -202,16 +205,16 @@ final class SubstituteSymbolTable
     @SuppressWarnings("unchecked")
     public Iterator<String> iterateDeclaredSymbolNames()
     {
-        Iterator<String> delegateIter;
-        if (myDelegate != null)
+        Iterator<String> originalIterator;
+        if (myOriginalSymTab != null)
         {
-            delegateIter = myDelegate.iterateDeclaredSymbolNames();
+            originalIterator = myOriginalSymTab.iterateDeclaredSymbolNames();
         }
         else
         {
-            delegateIter = Collections.EMPTY_LIST.iterator();
+            originalIterator = Collections.EMPTY_LIST.iterator();
         }
-        return new SymbolIterator(delegateIter);
+        return new SymbolIterator(originalIterator);
     }
 
     public void writeTo(IonWriter writer) throws IOException
@@ -222,12 +225,12 @@ final class SubstituteSymbolTable
 
     private final class SymbolIterator implements Iterator<String>
     {
-        private Iterator<String> myDelegate;
+        private Iterator<String> myOriginalIterator;
         private int myIndex = 0;
 
-        SymbolIterator(Iterator<String> delegate)
+        SymbolIterator(Iterator<String> originalIterator)
         {
-            myDelegate = delegate;
+            myOriginalIterator = originalIterator;
         }
 
         public boolean hasNext()
@@ -243,9 +246,9 @@ final class SubstituteSymbolTable
             // TODO bad failure mode if next() called beyond end
             if (myIndex < myMaxId) {
                 String name = null;
-                if (myDelegate.hasNext())
+                if (myOriginalIterator.hasNext())
                 {
-                    name = myDelegate.next();
+                    name = myOriginalIterator.next();
                 }
                 myIndex++;
                 return name;
