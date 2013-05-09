@@ -62,7 +62,68 @@ final class IonWriterSystemText
     int []      _stack_parent_type = new int[10];
     boolean[]   _stack_in_struct = new boolean[10];
     boolean[]   _stack_pending_comma = new boolean[10];
+    char[]      _integer_buffer = new char[20];
 
+    static class OutputStreamWrapper
+        implements Flushable, Closeable, Appendable
+    {
+        private static final int MAX_BYTES_LEN = 4096;
+        // this is a temporary byte buffer where the generated data is written
+        // before it gets to OutputStream
+        private int bytePos_;
+        private byte[] bytes_;
+        // OutputStream
+        private OutputStream out_;
+
+        public OutputStreamWrapper(OutputStream out) {
+            out.getClass();
+            this.bytePos_ = 0;
+            this.bytes_ = new byte[MAX_BYTES_LEN];
+            this.out_ = out;
+        }
+        public Appendable append(char c) throws IOException {
+            if (bytePos_ == bytes_.length) {
+                out_.write(bytes_, 0, bytePos_);
+                bytePos_ = 0;
+            }
+            bytes_[bytePos_++] = (byte)c;
+            return this;
+        }
+
+        public Appendable append(CharSequence seq) throws IOException
+        {
+            return append(seq, 0, seq.length());
+        }
+
+        public Appendable append(CharSequence seq, int start, int end) throws IOException
+        {
+            while (start < end) {
+                if (bytePos_ == bytes_.length) {
+                    out_.write(bytes_, 0, bytePos_);
+                    bytePos_ = 0;
+                }
+                int c = seq.charAt(start++);
+                bytes_[bytePos_++] = (byte)c;
+            }
+            return this;
+        }
+
+        public void flush() throws IOException {
+            if (bytePos_ > 0) {
+                out_.write(bytes_, 0, bytePos_);
+                bytePos_ = 0;
+            }
+            out_.flush();
+        }
+
+        public void close() throws IOException  {
+            try {
+                flush();
+            } finally {
+                out_.close();
+            }
+        }
+    }
 
     /**
      * @throws NullPointerException if any parameter is null.
@@ -75,7 +136,7 @@ final class IonWriterSystemText
              options,
              (out instanceof Appendable
                  ? (Appendable) out
-                 : new UTF8Converter(out)));
+                 : new OutputStreamWrapper(out)));
     }
 
     /**
@@ -550,11 +611,35 @@ final class IonWriterSystemText
         _output.append(value ? "true" : "false");
         closeValue();
     }
+
+    int prepareIntBuffer(long value)
+    {
+        int j = 19;
+        if (value == 0) {
+            _integer_buffer[j] = '0';
+            return 19;
+        }
+        if (value < 0) {
+            while (value != 0) {
+                _integer_buffer[j--] = (char)(0x30 - value % 10);
+                value /= 10;
+            }
+            _integer_buffer[j--] = '-';
+        } else {
+            while (value != 0) {
+                _integer_buffer[j--] = (char)(0x30 + value % 10);
+                value /= 10;
+            }
+        }
+        return j + 1;
+    }
+
     public void writeInt(int value)
         throws IOException
     {
         startValue();
-        _output.append(Integer.toString(value));
+        int start = prepareIntBuffer(value);
+        _output.append(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
         closeValue();
     }
 
@@ -562,7 +647,8 @@ final class IonWriterSystemText
         throws IOException
     {
         startValue();
-        _output.append(Long.toString(value));
+        int start = prepareIntBuffer(value);
+        _output.append(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
         closeValue();
     }
 

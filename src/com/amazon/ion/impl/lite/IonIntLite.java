@@ -99,6 +99,13 @@ final class IonIntLite
         return IonType.INT;
     }
 
+    public boolean isBigInteger()
+        throws NullValueException
+    {
+        validateThisNotNull();
+        return _big_int_value != null;
+    }
+
     public int intValue()
         throws NullValueException
     {
