@@ -3,9 +3,9 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.sharedSymtabStruct;
+import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.stringIterator;
-import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -136,14 +136,23 @@ public class SharedSymbolTableTest
     @Test
     public void testMalformedSymbols()
     {
-        testMalformedSymbols(null);
-        testMalformedSymbols("[]");
-        testMalformedSymbols("null.list");
-        testMalformedSymbols("{}");
-        testMalformedSymbols("null.struct");
-        testMalformedSymbols("null");
-        testMalformedSymbols("a_symbol");
-        testMalformedSymbols("100");
+        testMalformedSymbols(null);                     // null
+        testMalformedSymbols("true");                   // boolean
+        testMalformedSymbols("100");                    // integer
+        testMalformedSymbols("0.123");                  // decimal
+        testMalformedSymbols("-0.12e4");                // float
+        testMalformedSymbols("2013-05-09");             // timestamp
+        testMalformedSymbols("\"string\"");             // string
+        testMalformedSymbols("a_symbol");               // symbol
+        testMalformedSymbols("{{MTIz}}");               // blob
+        testMalformedSymbols("{{'''clob_content'''}}"); // clob
+        testMalformedSymbols("{a:123}");                // struct
+        testMalformedSymbols("[]");                     // empty list
+        testMalformedSymbols("(a b c)");                // sexp
+        testMalformedSymbols("null.struct");            // null.struct
+        testMalformedSymbols("null.list");              // null.list
+        testMalformedSymbols("null.sexp");              // null.sexp
+        testMalformedSymbols("null");                   // string
     }
 
     public void testMalformedSymbols(String symbolValue)
@@ -159,12 +168,21 @@ public class SharedSymbolTableTest
     @Test
     public void testMalformedSymbolEntry()
     {
-        testMalformedSymbolEntry(" \"\" ");      // empty string
-        testMalformedSymbolEntry("null.string");
-        testMalformedSymbolEntry("null");
-        testMalformedSymbolEntry("a_symbol");
-        testMalformedSymbolEntry("100");
-        testMalformedSymbolEntry("['''whee''']");
+        testMalformedSymbolEntry("null");                        // null
+        testMalformedSymbolEntry("true");                        // boolean
+        testMalformedSymbolEntry("100");                         // integer
+        testMalformedSymbolEntry("0.123");                       // decimal
+        testMalformedSymbolEntry("-0.12e4");                     // float
+        testMalformedSymbolEntry("2013-05-09");                  // timestamp
+        testMalformedSymbolEntry("\"\"");                        // empty string
+        testMalformedSymbolEntry("a_symbol");                    // symbol
+        testMalformedSymbolEntry("{{MTIz}}");                    // blob
+        testMalformedSymbolEntry("{{'''clob_content'''}}");      // clob
+        testMalformedSymbolEntry("{a:123}");                     // struct
+        testMalformedSymbolEntry("[a, b, c]");                   // list
+        testMalformedSymbolEntry("(a b c)");                     // sexp
+        testMalformedSymbolEntry("null.string");                 // null.string
+        testMalformedSymbolEntry("['''whee''']");                // string nested inside list
     }
 
     public void testMalformedSymbolEntry(String symbolValue)

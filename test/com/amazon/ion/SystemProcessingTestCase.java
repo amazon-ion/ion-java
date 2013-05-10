@@ -16,7 +16,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-
 /**
  *
  */
@@ -1155,4 +1154,45 @@ if (table1 == table2) {
         nextValue();
         checkEof();
     }
+
+    protected void testLocalSymtabWithMalformedSymbolEntry(String symbolValue)
+        throws Exception
+    {
+        String text =
+            "$ion_symbol_table::{" +
+            "  symbols:[" + symbolValue + "]}\n" +
+            "$10";
+
+        startIteration(text);
+
+        nextValue();
+        checkSymbol(null, 10);
+
+        checkEof();
+    }
+
+    @Test
+    public void testLocalSymtabWithMalformedSymbolEntries()
+        throws Exception
+    {
+        startTestCheckpoint("testLocalSymtabWithMalformedSymbols");
+
+        testLocalSymtabWithMalformedSymbolEntry("null");                        // null
+        testLocalSymtabWithMalformedSymbolEntry("true");                        // boolean
+        testLocalSymtabWithMalformedSymbolEntry("100");                         // integer
+        testLocalSymtabWithMalformedSymbolEntry("0.123");                       // decimal
+        testLocalSymtabWithMalformedSymbolEntry("-0.12e4");                     // float
+        testLocalSymtabWithMalformedSymbolEntry("2013-05-09");                  // timestamp
+        testLocalSymtabWithMalformedSymbolEntry("\"\"");                        // empty string
+        testLocalSymtabWithMalformedSymbolEntry("a_symbol");                    // symbol
+        testLocalSymtabWithMalformedSymbolEntry("{{MTIz}}");                    // blob
+        testLocalSymtabWithMalformedSymbolEntry("{{'''clob_content'''}}");      // clob
+        testLocalSymtabWithMalformedSymbolEntry("{a:123}");                     // struct
+        testLocalSymtabWithMalformedSymbolEntry("[a, b, c]");                   // list
+        testLocalSymtabWithMalformedSymbolEntry("(a b c)");                     // sexp
+        testLocalSymtabWithMalformedSymbolEntry("null.string");                 // null.string
+        testLocalSymtabWithMalformedSymbolEntry("['''whee''']");                // string nested inside list
+    }
+
+
 }
