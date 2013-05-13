@@ -439,7 +439,7 @@ if (table1 == table2) {
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
             "local1 local2 fred_1 fred_2 fred_3 $12 " +
-            "fred_3::$99 $99::local1 [{fred_3:local2, $98:$97}]";
+            "fred_3::$99 [{fred_3:local2}]";
         // TODO { $12:something }
         // TODO $12::something
         // Nesting flushed out a bug at one point
@@ -490,20 +490,12 @@ if (table1 == table2) {
         checkMissingAnnotation("fred_3", fred3id);
 
         nextValue();
-        checkSymbol("local1");
-        checkMissingAnnotation(null, 99);
-
-        nextValue();
         stepIn();
             nextValue();
             stepIn();
                 nextValue();
                 checkMissingFieldName("fred_3", fred3id);
                 checkSymbol("local2");
-
-                nextValue();
-                checkMissingFieldName(null, 98);
-                checkSymbol(null, 97);
 
                 checkEof();
             stepOut();
@@ -609,7 +601,7 @@ if (table1 == table2) {
      * @param catalog
      * @throws Exception
      */
-    protected void testImportTableSpecs(int declaredMaxId,
+    protected void checkImportTableSpecs(int declaredMaxId,
                                         boolean testRemovalAfterPrepare,
                                         SimpleCatalog catalog)
         throws Exception
@@ -657,31 +649,31 @@ if (table1 == table2) {
         checkEof();
     }
 
-    protected void testImportTableSpecsWithVariants(SimpleCatalog catalog)
+    protected void checkImportTableSpecsWithVariants(SimpleCatalog catalog)
         throws Exception
     {
         final int exactMaxId = Symtabs.FRED_MAX_IDS[2];
         assertTrue(exactMaxId > 1);
 
         // MaxId variants WITHOUT removal of exact match in catalog after prepare
-        testImportTableSpecs(exactMaxId,     // equal max id
+        checkImportTableSpecs(exactMaxId,     // equal max id
                              false,
                              catalog);
-        testImportTableSpecs(exactMaxId - 1, // lesser max id
+        checkImportTableSpecs(exactMaxId - 1, // lesser max id
                              false,
                              catalog);
-        testImportTableSpecs(exactMaxId + 1, // greater max id
+        checkImportTableSpecs(exactMaxId + 1, // greater max id
                              false,
                              catalog);
 
         // MaxId variants WITH removal of exact match in catalog after prepare
-        testImportTableSpecs(exactMaxId,     // equal max id
+        checkImportTableSpecs(exactMaxId,     // equal max id
                              true,
                              catalog);
-        testImportTableSpecs(exactMaxId - 1, // lesser max id
+        checkImportTableSpecs(exactMaxId - 1, // lesser max id
                              true,
                              catalog);
-        testImportTableSpecs(exactMaxId + 1, // greater max id
+        checkImportTableSpecs(exactMaxId + 1, // greater max id
                              true,
                              catalog);
     }
@@ -698,7 +690,7 @@ if (table1 == table2) {
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 1, catalog);
 
-        testImportTableSpecsWithVariants(catalog);
+        checkImportTableSpecsWithVariants(catalog);
     }
 
     /**
@@ -713,7 +705,7 @@ if (table1 == table2) {
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 3, catalog);
 
-        testImportTableSpecsWithVariants(catalog);
+        checkImportTableSpecsWithVariants(catalog);
     }
 
     /**
@@ -728,7 +720,7 @@ if (table1 == table2) {
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 2, catalog);
 
-        testImportTableSpecsWithVariants(catalog);
+        checkImportTableSpecsWithVariants(catalog);
     }
 
 
@@ -785,16 +777,16 @@ if (table1 == table2) {
     /**
      * Parse Ion string data and ensure it matches expected text.
      */
-    protected void testString(String expectedValue, String ionData)
+    protected void checkString(String expectedValue, String ionData)
         throws Exception
     {
-        testString(expectedValue, ionData, ionData);
+        checkString(expectedValue, ionData, ionData);
     }
 
     /**
      * Parse Ion string data and ensure it matches expected text.
      */
-    protected void testString(String expectedValue,
+    protected void checkString(String expectedValue,
                               String expectedRendering,
                               String ionData)
         throws Exception
@@ -812,30 +804,30 @@ if (table1 == table2) {
         startTestCheckpoint("testUnicodeCharacters");
 
         String ionData = "\"\\0\"";
-        testString("\0", ionData);
+        checkString("\0", ionData);
 
         ionData = "\"\\x01\"";
-        testString("\01", ionData);
+        checkString("\01", ionData);
 
         // U+007F is a control character
         ionData = "\"\\x7f\"";
-        testString("\u007f", ionData);
+        checkString("\u007f", ionData);
 
         ionData = "\"\\xff\"";
-        testString("\u00ff", ionData);
+        checkString("\u00ff", ionData);
 
         ionData = "\"\\" + "u0110\""; // Carefully avoid Java escape
-        testString("\u0110", ionData);
+        checkString("\u0110", ionData);
 
         ionData = "\"\\" + "uffff\""; // Carefully avoid Java escape
-        testString("\uffff", ionData);
+        checkString("\uffff", ionData);
 
         ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
-        testString("\ud834\udd10", ionData);
+        checkString("\ud834\udd10", ionData);
 
         // The largest legal code point
         ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
-        testString("\udbff\udfff", ionData);
+        checkString("\udbff\udfff", ionData);
     }
 
 
@@ -858,13 +850,13 @@ if (table1 == table2) {
                 String low = lows[j];
 
                 String ionData = '"' + high + low + '"';
-                testString(FERMATA, "\"\\U0001d110\"", ionData);
+                checkString(FERMATA, "\"\\U0001d110\"", ionData);
 
                 ionData = "'''" + high + low + "'''";
-                testString(FERMATA, "\"\\U0001d110\"", ionData);
+                checkString(FERMATA, "\"\\U0001d110\"", ionData);
 
                 ionData = "'''" + high + "''' '''" + low + "'''";
-                testString(FERMATA, "\"\\U0001d110\"", ionData);
+                checkString(FERMATA, "\"\\U0001d110\"", ionData);
             }
         }
     }
@@ -875,29 +867,85 @@ if (table1 == table2) {
     {
         startTestCheckpoint("testQuotesInLongStrings");
 
-        testString("'", "\"'\"", "'''\\''''");
-        testString("x''y", "\"x''y\"", "'''x''y'''");
-        testString("x'''y", "\"x'''y\"", "'''x''\\'y'''");
-        testString("x\"y", "\"x\\\"y\"", "'''x\"y'''");
-        testString("x\"\"y", "\"x\\\"\\\"y\"", "'''x\"\"y'''");
+        checkString("'", "\"'\"", "'''\\''''");
+        checkString("x''y", "\"x''y\"", "'''x''y'''");
+        checkString("x'''y", "\"x'''y\"", "'''x''\\'y'''");
+        checkString("x\"y", "\"x\\\"y\"", "'''x\"y'''");
+        checkString("x\"\"y", "\"x\\\"\\\"y\"", "'''x\"\"y'''");
     }
 
     // TODO similar tests on clob
 
 
-    /** Traps a bug in lite DOM transitioning to large size */
+    /**
+     * Traps a bug in lite DOM transitioning to large size.
+     * For e.g. a value's type descriptor's 'length value' (binary encoding) is
+     * encoded differently when representation is at least 14 bytes long.
+     */
     @Test
     public void testLargeStructWithUnknownFieldNames()
         throws Exception
     {
-        startIteration("{ $10:10, $11:11, $12:12, $13:13, $14:14," +
-                       " $15:15, $16:16, $17:17, $18:18, $19:19 }");
+        startIteration(ION_1_0 +
+                       " { $10:10, $11:11, $12:12, $13:13, $14:14," +
+                       "   $15:15, $16:16, $17:17, $18:18, $19:19 }");
+        nextValue();
+            stepIn();
+            for (int i = 10; i <= 19; i++)
+            {
+                nextValue();
+            }
+            checkEof();
+            stepOut();
+        checkEof();
+    }
+
+    @Test
+    public void testUnknownFieldNames()
+        throws Exception
+    {
+        startIteration(ION_1_0 + " $10 { $11:$11, $12:$12 } ");
+
+        nextValue();
+        checkSymbol(null, 10);
+
         nextValue();
         stepIn();
-        for (int i = 10; i <= 19; i++)
-        {
             nextValue();
-        }
+            checkMissingFieldName(null, 11);
+            checkSymbol(null, 11);
+
+            nextValue();
+            checkMissingFieldName(null, 12);
+            checkSymbol(null, 12);
+
+            checkEof();
+        stepOut();
+
+        checkEof();
+    }
+
+    @Test
+    public void testUnknownAnnotations()
+        throws Exception
+    {
+        startIteration(ION_1_0 + " $10::$10 $11::[ $12::$12 ]");
+
+        nextValue();
+        checkSymbol(null, 10);
+        checkMissingAnnotation(null, 10);
+
+        nextValue();
+        checkMissingAnnotation(null, 11);
+        stepIn();
+            nextValue();
+            checkMissingAnnotation(null, 12);
+            checkSymbol(null, 12);
+
+            checkEof();
+        stepOut();
+
+        checkEof();
     }
 
 
@@ -1131,13 +1179,16 @@ if (table1 == table2) {
                          new int[]{ sid, sid });
     }
 
-    @Test
-    public void testIvmWithUnknownAnnotation()
-    throws Exception
+    protected void checkIvmWithAnnotation(String annotation)
+        throws Exception
     {
-        startIteration("$99::$ion_1_0 23");
+        startIteration(annotation + "::" + ION_1_0 + " 123");
+
         nextValue();
-        // TODO ION-187 inconsistent handling of annotated IVM.
+
+        // TODO ION-187 annotated IVMs are not read as IonSymbols, but as proper IVMs.
+//        checkSymbol(ION_1_0);
+
         if (currentValueType() == IonType.SYMBOL)
         {
             nextValue();
@@ -1146,13 +1197,11 @@ if (table1 == table2) {
     }
 
     @Test
-    public void testLocalSymtabWithUnknownAnnotation()
-        throws Exception
+    public void testIvmWithAnnotations()
+    throws Exception
     {
-        String text = "$99::" + Symtabs.printLocalSymtab("s1") + " null";
-        startIteration(text);
-        nextValue();
-        checkEof();
+        checkIvmWithAnnotation("$99");
+        checkIvmWithAnnotation("annotation");
     }
 
     protected void testLocalSymtabWithMalformedSymbolEntry(String symbolValue)
@@ -1193,6 +1242,5 @@ if (table1 == table2) {
         testLocalSymtabWithMalformedSymbolEntry("null.string");                 // null.string
         testLocalSymtabWithMalformedSymbolEntry("['''whee''']");                // string nested inside list
     }
-
 
 }

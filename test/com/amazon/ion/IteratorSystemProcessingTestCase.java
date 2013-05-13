@@ -134,12 +134,12 @@ abstract class IteratorSystemProcessingTestCase
     }
 
     @Override
-    protected void testString(String expectedValue,
+    protected void checkString(String expectedValue,
                               String expectedRendering,
                               String ionData)
         throws Exception
     {
-        super.testString(expectedValue, expectedRendering, ionData);
+        super.checkString(expectedValue, expectedRendering, ionData);
         assertEquals(expectedRendering, myCurrentValue.toString());
     }
 }
