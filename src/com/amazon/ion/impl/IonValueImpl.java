@@ -32,7 +32,7 @@ import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
 /**
- *
+ * Base class for the "lazy DOM" implementation of {@link IonValue}.
  */
 abstract class IonValueImpl
     implements _Private_IonValue

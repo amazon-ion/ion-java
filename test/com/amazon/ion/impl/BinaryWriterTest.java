@@ -44,6 +44,12 @@ public class BinaryWriterTest
         return outputByteArray();
     }
 
+    /**
+     * Test the byte-copy optimization when copying from a binary reader to a
+     * binary writer, where they have compatible symbol table contexts.
+     *
+     * @see IonWriterUserBinary#writeValue(IonReader)
+     */
     @Test
     public void testOptimizedWriteValue()
     throws Exception
