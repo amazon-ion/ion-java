@@ -169,9 +169,16 @@ final class IonBinary
         return len;
     }
 
-    static final public int writeVarUInt(OutputStream userstream, int value, int len, boolean force_zero_write) throws IOException
+//    static final public int writeVarUInt(OutputStream userstream, int value, int len, boolean force_zero_write) throws IOException
+//    {
+//        return writeVarUInt(userstream, (long)value, len, force_zero_write);
+//    }
+//
+    static public int writeVarUInt(OutputStream userstream, long value) throws IOException
     {
-        return writeVarUInt(userstream, (long)value, len, force_zero_write);
+        int len = IonBinary.lenVarUInt(value);
+        writeVarUInt(userstream, value, len, false);
+        return len;
     }
 
     static public int writeVarUInt(OutputStream userstream, long value, int len, boolean force_zero_write) throws IOException
@@ -220,17 +227,17 @@ final class IonBinary
                 if (_Private_IonConstants.isHighSurrogate(c)) {
                     // houston we have a high surrogate (let's hope it has a partner
                     if (++ii >= value.length()) {
-                        throw new IonException("invalid string, unpaired high surrogate character");
+                        throw new IllegalArgumentException("invalid string, unpaired high surrogate character");
                     }
                     int c2 = value.charAt(ii);
                     if (!_Private_IonConstants.isLowSurrogate(c2)) {
-                        throw new IonException("invalid string, unpaired high surrogate character");
+                        throw new IllegalArgumentException("invalid string, unpaired high surrogate character");
                     }
                     c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                 }
                 else if (_Private_IonConstants.isLowSurrogate(c)) {
                     // it's a loner low surrogate - that's an error
-                    throw new IonException("invalid string, unpaired low surrogate character");
+                    throw new IllegalArgumentException("invalid string, unpaired low surrogate character");
                 }
             }
 
@@ -2664,17 +2671,17 @@ done:       for (;;) {
                     if (_Private_IonConstants.isHighSurrogate(c)) {
                         // houston we have a high surrogate (let's hope it has a partner
                         if (++ii >= s.length()) {
-                            throw new IonException("invalid string, unpaired high surrogate character");
+                            throw new IllegalArgumentException("invalid string, unpaired high surrogate character");
                         }
                         int c2 = s.charAt(ii);
                         if (!_Private_IonConstants.isLowSurrogate(c2)) {
-                            throw new IonException("invalid string, unpaired high surrogate character");
+                            throw new IllegalArgumentException("invalid string, unpaired high surrogate character");
                         }
                         c = _Private_IonConstants.makeUnicodeScalar(c, c2);
                     }
                     else if (_Private_IonConstants.isLowSurrogate(c)) {
                         // it's a loner low surrogate - that's an error
-                        throw new IonException("invalid string, unpaired low surrogate character");
+                        throw new IllegalArgumentException("invalid string, unpaired low surrogate character");
                     }
                     // from 0xE000 up the _writeUnicodeScalar will check for us
                 }

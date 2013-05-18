@@ -470,8 +470,7 @@ final class IonReaderBinaryUserX
             int inOffset = (int) _position_start;
             int inLen    = (int) _position_len;
 
-            writer._writer.write(_input._bytes, inOffset, inLen);
-            writer.patch(inLen);
+            writer.writeRaw(_input._bytes, inOffset, inLen);
         }
     }
 }

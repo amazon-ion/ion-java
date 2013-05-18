@@ -63,18 +63,18 @@ public class ByteBufferTest
         try {
             writer.writeStringData(new String(new int[] { 0xd800 }, 0, 1));
             assertTrue("Successfully parsed a partial surrogate", false);
-        } catch (IonException e) {
-            assertTrue(true);
         } catch (Exception e) {
-            assertFalse("Unexpected exception: " + e.getMessage(), true);
+            assertTrue(true);
+//        } catch (Exception e) {
+//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
         try {
             writer.writeStringData(new String(new int[] { 0xdfff}, 0, 1));
             assertFalse("Successfully parsed a partial surrogate", true);
-        } catch (IonException e) {
-            assertTrue(true);
         } catch (Exception e) {
-            assertFalse("Unexpected exception: " + e.getMessage(), true);
+            assertTrue(true);
+//        } catch (Exception e) {
+//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
     }
 
@@ -96,18 +96,18 @@ public class ByteBufferTest
         try {
             IonBinary.writeString(os, new String(new int[] { 0xd800 }, 0, 1));
             assertFalse("Successfully parsed a partial surrogate", true);
-        } catch (IonException e) {
-            assertTrue(true);
         } catch (Exception e) {
-            assertFalse("Unexpected exception: " + e.getMessage(), true);
+            assertTrue(true);
+//        } catch (Exception e) {
+//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
         try {
             IonBinary.writeString(os, new String(new int[] { 0xdfff}, 0, 1));
             assertFalse("Successfully parsed a partial surrogate", true);
-        } catch (IonException e) {
-            assertTrue(true);
         } catch (Exception e) {
-            assertFalse("Unexpected exception: " + e.getMessage(), true);
+            assertTrue(true);
+//        } catch (Exception e) {
+//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
     }
 
