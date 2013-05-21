@@ -235,15 +235,17 @@ abstract class IonWriterSystem
 
     final int add_symbol(String name) throws IOException
     {
-        int sid = _symbol_table.findSymbol(name);
-        if (sid != UNKNOWN_SYMBOL_ID) return sid;
-
+        int sid;
         if (_symbol_table.isSystemTable()) {
+            sid = _symbol_table.findSymbol(name);
+            if (sid != UNKNOWN_SYMBOL_ID) {
+                return sid;
+            }
+            // @name is not a system symbol, so we inject a local symtab
             _symbol_table = inject_local_symbol_table();
         }
         assert _symbol_table.isLocalTable();
-
-        sid = _symbol_table.addSymbol(name);
+        sid = _symbol_table.intern(name).getSid();
         return sid;
     }
 
