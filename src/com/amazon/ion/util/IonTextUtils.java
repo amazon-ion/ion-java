@@ -74,42 +74,42 @@ public class IonTextUtils
     };
 
     // escape sequences for character below ascii 32 (space)
-    private static final String[] ESCAPE_CODES;
+    private static final String[] STRING_ESCAPE_CODES;
     static
     {
-        ESCAPE_CODES = new String[256];
-        ESCAPE_CODES[0x00] = "\\0";
-        ESCAPE_CODES[0x07] = "\\a";
-        ESCAPE_CODES[0x08] = "\\b";
-        ESCAPE_CODES['\t'] = "\\t";
-        ESCAPE_CODES['\n'] = "\\n";
-        ESCAPE_CODES[0x0B] = "\\v";
-        ESCAPE_CODES['\f'] = "\\f";
-        ESCAPE_CODES['\r'] = "\\r";
-        ESCAPE_CODES['\\'] = "\\\\";
-        ESCAPE_CODES['\"'] = "\\\"";
+        STRING_ESCAPE_CODES = new String[256];
+        STRING_ESCAPE_CODES[0x00] = "\\0";
+        STRING_ESCAPE_CODES[0x07] = "\\a";
+        STRING_ESCAPE_CODES[0x08] = "\\b";
+        STRING_ESCAPE_CODES['\t'] = "\\t";
+        STRING_ESCAPE_CODES['\n'] = "\\n";
+        STRING_ESCAPE_CODES[0x0B] = "\\v";
+        STRING_ESCAPE_CODES['\f'] = "\\f";
+        STRING_ESCAPE_CODES['\r'] = "\\r";
+        STRING_ESCAPE_CODES['\\'] = "\\\\";
+        STRING_ESCAPE_CODES['\"'] = "\\\"";
         for (int i = 1; i < 0x20; ++i) {
-            if (ESCAPE_CODES[i] == null) {
+            if (STRING_ESCAPE_CODES[i] == null) {
                 String s = Integer.toHexString(i);
-                ESCAPE_CODES[i] = "\\x" + ZERO_PADDING[2 - s.length()] + s;
+                STRING_ESCAPE_CODES[i] = "\\x" + ZERO_PADDING[2 - s.length()] + s;
             }
         }
         for (int i = 0x7F; i < 0x100; ++i) {
             String s = Integer.toHexString(i);
-            ESCAPE_CODES[i] = "\\x" + s;
+            STRING_ESCAPE_CODES[i] = "\\x" + s;
         }
     }
 
-    private static final String[] LONG_ESCAPE_CODES;
+    private static final String[] LONG_STRING_ESCAPE_CODES;
     static
     {
-        LONG_ESCAPE_CODES = new String[256];
+        LONG_STRING_ESCAPE_CODES = new String[256];
         for (int i = 0; i < 256; ++i) {
-            LONG_ESCAPE_CODES[i] = ESCAPE_CODES[i];
+            LONG_STRING_ESCAPE_CODES[i] = STRING_ESCAPE_CODES[i];
         }
-        LONG_ESCAPE_CODES['\n'] = null;
-        LONG_ESCAPE_CODES['\''] = "\\\'";
-        LONG_ESCAPE_CODES['\"'] = null; // Treat as normal code point for long string
+        LONG_STRING_ESCAPE_CODES['\n'] = null;
+        LONG_STRING_ESCAPE_CODES['\''] = "\\\'";
+        LONG_STRING_ESCAPE_CODES['\"'] = null; // Treat as normal code point for long string
     }
 
     private static final String[] SYMBOL_ESCAPE_CODES;
@@ -117,7 +117,7 @@ public class IonTextUtils
     {
         SYMBOL_ESCAPE_CODES = new String[256];
         for (int i = 0; i < 256; ++i) {
-            SYMBOL_ESCAPE_CODES[i] = ESCAPE_CODES[i];
+            SYMBOL_ESCAPE_CODES[i] = STRING_ESCAPE_CODES[i];
         }
         SYMBOL_ESCAPE_CODES['\''] = "\\\'";
         SYMBOL_ESCAPE_CODES['\"'] = null; // Treat as normal code point for symbol.
@@ -172,7 +172,6 @@ public class IonTextUtils
     public static final class IonCodePointWriter {
 
         private final Appendable _out;
-        private String[] _escapes;
 
         public IonCodePointWriter(Appendable out) {
             this._out = out;
@@ -188,8 +187,7 @@ public class IonTextUtils
             else
             {
                 _out.append('"');
-                _escapes = ESCAPE_CODES;
-                printCodePoints(text);
+                printCodePoints(text, STRING_ESCAPE_CODES);
                 _out.append('"');
             }
         }
@@ -204,8 +202,7 @@ public class IonTextUtils
             else
             {
                 _out.append(tripleQuotes);
-                _escapes = LONG_ESCAPE_CODES;
-                printCodePoints(text);
+                printCodePoints(text, LONG_STRING_ESCAPE_CODES);
                 _out.append(tripleQuotes);
             }
         }
@@ -220,8 +217,7 @@ public class IonTextUtils
             else
             {
                 _out.append('"');
-                _escapes = JSON_ESCAPE_CODES;
-                printCodePoints(text);
+                printCodePoints(text, JSON_ESCAPE_CODES);
                 _out.append('"');
             }
         }
@@ -236,8 +232,7 @@ public class IonTextUtils
             else
             {
                 _out.append('"');
-                _escapes = ESCAPE_CODES;
-                printBytes(value, start, end);
+                printBytes(value, start, end, STRING_ESCAPE_CODES);
                 _out.append('"');
             }
         }
@@ -251,8 +246,7 @@ public class IonTextUtils
             else
             {
                 _out.append(tripleQuotes);
-                _escapes = LONG_ESCAPE_CODES;
-                printBytes(value, start, end);
+                printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
                 _out.append(tripleQuotes);
             }
         }
@@ -264,8 +258,7 @@ public class IonTextUtils
                 _out.append("null");
             } else {
                 _out.append('"');
-                _escapes = JSON_ESCAPE_CODES;
-                printBytes(value, start, end);
+                printBytes(value, start, end, JSON_ESCAPE_CODES);
                 _out.append('"');
             }
         }
@@ -283,8 +276,7 @@ public class IonTextUtils
             }
             else if (symbolNeedsQuoting(text, true)) {
                 _out.append('\'');
-                _escapes = SYMBOL_ESCAPE_CODES;
-                printCodePoints(text);
+                printCodePoints(text, SYMBOL_ESCAPE_CODES);
                 _out.append('\'');
             }
             else
@@ -306,26 +298,25 @@ public class IonTextUtils
             else
             {
                 _out.append('\'');
-                _escapes = SYMBOL_ESCAPE_CODES;
-                printCodePoints(text);
+                printCodePoints(text, SYMBOL_ESCAPE_CODES);
                 _out.append('\'');
             }
         }
 
-        private final void printBytes(byte[] value, int start, int end)
+        private final void printBytes(byte[] value, int start, int end, String[] escapes)
             throws IOException
         {
             for (int i = start; i < end; i++) {
                 char c = (char)(value[i] & 0xff);
-                if (_escapes[c] != null) {
-                    _out.append(_escapes[c]);
+                if (escapes[c] != null) {
+                    _out.append(escapes[c]);
                 } else {
                     _out.append(c);
                 }
             }
         }
 
-        private final void printCodePoints(CharSequence text)
+        private final void printCodePoints(CharSequence text, String[] escapes)
             throws IOException
         {
             int len = text.length();
@@ -336,7 +327,7 @@ public class IonTextUtils
                 int j;
                 for (j = i; j < len; ++j) {
                     c = text.charAt(j);
-                    if (c >= 0x100 || _escapes[c] != null) {
+                    if (c >= 0x100 || escapes[c] != null) {
                         // append sequence then continue the normal loop
                         if (j > i) {
                             _out.append(text, i, j);
@@ -352,8 +343,8 @@ public class IonTextUtils
                 }
                 // write the non Latin-1 character
                 if (c < 0x100) {
-                    assert _escapes[c] != null;
-                    _out.append(_escapes[c]);
+                    assert escapes[c] != null;
+                    _out.append(escapes[c]);
                 } else if (c < 0xD800 || c >= 0xE000) {
                     String s = Integer.toHexString(c);
                     _out.append(utf16Prefix);
