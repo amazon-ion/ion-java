@@ -2,10 +2,18 @@
 
 date
 
-echo "DIRECT"
+echo "IonJava DIRECT"
 brazil vs -printDependencies --direct -package IonJava-1.0 -consumers -versionSet live \
     | grep "Total dependencies"
 
-echo "TRANSITIVE"
+echo "IonJava TRANSITIVE"
+brazil vs -printDependencies -package IonJava-1.0 -consumers -versionSet live \
+    | grep "Total dependencies"
+
+echo "IonPathJava DIRECT"
+brazil vs -printDependencies --direct -package IonPathJava-1.0 -consumers -versionSet live \
+    | grep "Total dependencies"
+
+echo "IonPathJava TRANSITIVE"
 brazil vs -printDependencies -package IonJava-1.0 -consumers -versionSet live \
     | grep "Total dependencies"

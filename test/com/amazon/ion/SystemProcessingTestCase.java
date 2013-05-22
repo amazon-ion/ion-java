@@ -16,7 +16,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-
 /**
  *
  */
@@ -220,8 +219,7 @@ public abstract class SystemProcessingTestCase
 
         String text = "bar foo $ion_1_0 1 far boo";
 
-        prepare(text);
-        startIteration();
+        startIteration(text);
 
         nextValue();
         checkSymbol("bar");
@@ -441,7 +439,7 @@ if (table1 == table2) {
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
             "local1 local2 fred_1 fred_2 fred_3 $12 " +
-            "fred_3::$99 $99::local1 [{fred_3:local2, $98:$97}]";
+            "fred_3::$99 [{fred_3:local2}]";
         // TODO { $12:something }
         // TODO $12::something
         // Nesting flushed out a bug at one point
@@ -492,20 +490,12 @@ if (table1 == table2) {
         checkMissingAnnotation("fred_3", fred3id);
 
         nextValue();
-        checkSymbol("local1");
-        checkMissingAnnotation(null, 99);
-
-        nextValue();
         stepIn();
             nextValue();
             stepIn();
                 nextValue();
                 checkMissingFieldName("fred_3", fred3id);
                 checkSymbol("local2");
-
-                nextValue();
-                checkMissingFieldName(null, 98);
-                checkSymbol(null, 97);
 
                 checkEof();
             stepOut();
@@ -535,16 +525,11 @@ if (table1 == table2) {
         final int local4id = local + 4; // 17: id for fred_5, which isn't present when version 2 was defined
 
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
-        Symtabs.register("fred", 1, catalog);
         Symtabs.register("fred", 2, catalog);
         SymbolTable fredV3 = Symtabs.register("fred", 3, catalog);
 
         // Make sure our syms don't overlap.
         assertTrue(fredV3.findSymbol("fred_5") != local3id);
-
-        // version: 1
-        // {  name:"fred", version:1,
-        // symbols:["fred_1", "fred_2"]}
 
         // version: 3: /* Removed fred_2 */
         //"{  name:"fred", version:3," +
@@ -602,6 +587,142 @@ if (table1 == table2) {
         checkEof();
     }
 
+    /**
+     * Checks that the imported table retrieved from the current symtab has the
+     * correct specs (i.e. isSubstitute, name, version, max_id). The correct
+     * specs are based on <code>declaredMaxId</code> and
+     * <code>testRemovalAfterPrepare</code> parameters.
+     *
+     * @param declaredMaxId
+     *          the max_id of the import declaration being tested
+     * @param testRemovalAfterPrepare
+     *          flag on whether the exact match of import contained within the
+     *          catalog is removed after {@link #prepare(String)}
+     * @param catalog
+     * @throws Exception
+     */
+    protected void checkImportTableSpecs(int declaredMaxId,
+                                        boolean testRemovalAfterPrepare,
+                                        SimpleCatalog catalog)
+        throws Exception
+    {
+        // The exact match of import contained within the catalog
+        // is defined as { name: "fred",
+        //                 version: 2,
+        //                 max_id: Symtabs.FRED_MAX_IDS[2] }
+
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"fred\", version:2, " +
+            "            max_id:" + declaredMaxId + "}]," +
+            "}\n" +
+            "local1";
+
+        Symtabs.register("fred", 2, catalog);
+        prepare(text);
+
+        if (testRemovalAfterPrepare) {
+            assertNotNull(catalog.removeTable("fred", 2));
+        }
+
+        startIteration();
+
+        nextValue();
+        checkSymbol("local1");
+
+        // There should be only one imported symtab
+        SymbolTable[] imports = currentSymtab().getImportedTables();
+        assertEquals(1, imports.length);
+
+        // If exact import is removed after prepare, imported symtab must be
+        // a substitute table
+        // If exact import is not removed after prepare, imported symtab must be
+        // a substitute table iff declaredMaxId is different from exact max_id
+        assertEquals(testRemovalAfterPrepare || declaredMaxId != Symtabs.FRED_MAX_IDS[2],
+                     imports[0].isSubstitute());
+
+        assertEquals(Symtabs.FRED_NAME, imports[0].getName());
+        assertEquals(2, imports[0].getVersion());
+        assertEquals(declaredMaxId, imports[0].getMaxId());
+
+        checkEof();
+    }
+
+    protected void checkImportTableSpecsWithVariants(SimpleCatalog catalog)
+        throws Exception
+    {
+        final int exactMaxId = Symtabs.FRED_MAX_IDS[2];
+        assertTrue(exactMaxId > 1);
+
+        // MaxId variants WITHOUT removal of exact match in catalog after prepare
+        checkImportTableSpecs(exactMaxId,     // equal max id
+                             false,
+                             catalog);
+        checkImportTableSpecs(exactMaxId - 1, // lesser max id
+                             false,
+                             catalog);
+        checkImportTableSpecs(exactMaxId + 1, // greater max id
+                             false,
+                             catalog);
+
+        // MaxId variants WITH removal of exact match in catalog after prepare
+        checkImportTableSpecs(exactMaxId,     // equal max id
+                             true,
+                             catalog);
+        checkImportTableSpecs(exactMaxId - 1, // lesser max id
+                             true,
+                             catalog);
+        checkImportTableSpecs(exactMaxId + 1, // greater max id
+                             true,
+                             catalog);
+    }
+
+    /**
+     * Import v2 but catalog has v1.
+     */
+    @Test
+    public void testSubstituteTableWithLesserVersionImport()
+        throws Exception
+    {
+        startTestCheckpoint("testSubstituteTableWithLesserVersionImport");
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 1, catalog);
+
+        checkImportTableSpecsWithVariants(catalog);
+    }
+
+    /**
+     * Import v2 but catalog has v3.
+     */
+    @Test
+    public void testSubstituteTableWithGreaterVersionImport()
+        throws Exception
+    {
+        startTestCheckpoint("testSubstituteTableWithGreaterVersionImport");
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 3, catalog);
+
+        checkImportTableSpecsWithVariants(catalog);
+    }
+
+    /**
+     * Import v2 and catalog has v2.
+     */
+    @Test
+    public void testSubstituteTableWithEqualVersionImport()
+        throws Exception
+    {
+        startTestCheckpoint("testSubstituteTableWithEqualVersionImport");
+
+        SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
+        Symtabs.register("fred", 2, catalog);
+
+        checkImportTableSpecsWithVariants(catalog);
+    }
+
 
     @Test
     public void testSidLiteralForIvm()
@@ -656,16 +777,16 @@ if (table1 == table2) {
     /**
      * Parse Ion string data and ensure it matches expected text.
      */
-    protected void testString(String expectedValue, String ionData)
+    protected void checkString(String expectedValue, String ionData)
         throws Exception
     {
-        testString(expectedValue, ionData, ionData);
+        checkString(expectedValue, ionData, ionData);
     }
 
     /**
      * Parse Ion string data and ensure it matches expected text.
      */
-    protected void testString(String expectedValue,
+    protected void checkString(String expectedValue,
                               String expectedRendering,
                               String ionData)
         throws Exception
@@ -683,30 +804,30 @@ if (table1 == table2) {
         startTestCheckpoint("testUnicodeCharacters");
 
         String ionData = "\"\\0\"";
-        testString("\0", ionData);
+        checkString("\0", ionData);
 
         ionData = "\"\\x01\"";
-        testString("\01", ionData);
+        checkString("\01", ionData);
 
         // U+007F is a control character
         ionData = "\"\\x7f\"";
-        testString("\u007f", ionData);
+        checkString("\u007f", ionData);
 
         ionData = "\"\\xff\"";
-        testString("\u00ff", ionData);
+        checkString("\u00ff", ionData);
 
         ionData = "\"\\" + "u0110\""; // Carefully avoid Java escape
-        testString("\u0110", ionData);
+        checkString("\u0110", ionData);
 
         ionData = "\"\\" + "uffff\""; // Carefully avoid Java escape
-        testString("\uffff", ionData);
+        checkString("\uffff", ionData);
 
         ionData = "\"\\" + "U0001d110\""; // Carefully avoid Java escape
-        testString("\ud834\udd10", ionData);
+        checkString("\ud834\udd10", ionData);
 
         // The largest legal code point
         ionData = "\"\\" + "U0010ffff\""; // Carefully avoid Java escape
-        testString("\udbff\udfff", ionData);
+        checkString("\udbff\udfff", ionData);
     }
 
 
@@ -729,13 +850,13 @@ if (table1 == table2) {
                 String low = lows[j];
 
                 String ionData = '"' + high + low + '"';
-                testString(FERMATA, "\"\\U0001d110\"", ionData);
+                checkString(FERMATA, "\"\\U0001d110\"", ionData);
 
                 ionData = "'''" + high + low + "'''";
-                testString(FERMATA, "\"\\U0001d110\"", ionData);
+                checkString(FERMATA, "\"\\U0001d110\"", ionData);
 
                 ionData = "'''" + high + "''' '''" + low + "'''";
-                testString(FERMATA, "\"\\U0001d110\"", ionData);
+                checkString(FERMATA, "\"\\U0001d110\"", ionData);
             }
         }
     }
@@ -746,29 +867,85 @@ if (table1 == table2) {
     {
         startTestCheckpoint("testQuotesInLongStrings");
 
-        testString("'", "\"'\"", "'''\\''''");
-        testString("x''y", "\"x''y\"", "'''x''y'''");
-        testString("x'''y", "\"x'''y\"", "'''x''\\'y'''");
-        testString("x\"y", "\"x\\\"y\"", "'''x\"y'''");
-        testString("x\"\"y", "\"x\\\"\\\"y\"", "'''x\"\"y'''");
+        checkString("'", "\"'\"", "'''\\''''");
+        checkString("x''y", "\"x''y\"", "'''x''y'''");
+        checkString("x'''y", "\"x'''y\"", "'''x''\\'y'''");
+        checkString("x\"y", "\"x\\\"y\"", "'''x\"y'''");
+        checkString("x\"\"y", "\"x\\\"\\\"y\"", "'''x\"\"y'''");
     }
 
     // TODO similar tests on clob
 
 
-    /** Traps a bug in lite DOM transitioning to large size */
+    /**
+     * Traps a bug in lite DOM transitioning to large size.
+     * For e.g. a value's type descriptor's 'length value' (binary encoding) is
+     * encoded differently when representation is at least 14 bytes long.
+     */
     @Test
     public void testLargeStructWithUnknownFieldNames()
         throws Exception
     {
-        startIteration("{ $10:10, $11:11, $12:12, $13:13, $14:14," +
-                       " $15:15, $16:16, $17:17, $18:18, $19:19 }");
+        startIteration(ION_1_0 +
+                       " { $10:10, $11:11, $12:12, $13:13, $14:14," +
+                       "   $15:15, $16:16, $17:17, $18:18, $19:19 }");
+        nextValue();
+            stepIn();
+            for (int i = 10; i <= 19; i++)
+            {
+                nextValue();
+            }
+            checkEof();
+            stepOut();
+        checkEof();
+    }
+
+    @Test
+    public void testUnknownFieldNames()
+        throws Exception
+    {
+        startIteration(ION_1_0 + " $10 { $11:$11, $12:$12 } ");
+
+        nextValue();
+        checkSymbol(null, 10);
+
         nextValue();
         stepIn();
-        for (int i = 10; i <= 19; i++)
-        {
             nextValue();
-        }
+            checkMissingFieldName(null, 11);
+            checkSymbol(null, 11);
+
+            nextValue();
+            checkMissingFieldName(null, 12);
+            checkSymbol(null, 12);
+
+            checkEof();
+        stepOut();
+
+        checkEof();
+    }
+
+    @Test
+    public void testUnknownAnnotations()
+        throws Exception
+    {
+        startIteration(ION_1_0 + " $10::$10 $11::[ $12::$12 ]");
+
+        nextValue();
+        checkSymbol(null, 10);
+        checkMissingAnnotation(null, 10);
+
+        nextValue();
+        checkMissingAnnotation(null, 11);
+        stepIn();
+            nextValue();
+            checkMissingAnnotation(null, 12);
+            checkSymbol(null, 12);
+
+            checkEof();
+        stepOut();
+
+        checkEof();
     }
 
 
@@ -943,6 +1120,8 @@ if (table1 == table2) {
         checkEof();
     }
 
+    // TODO ION-305 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
+
     @Test
     public void testHighUnicodeDirectInBlob()
     {
@@ -1000,13 +1179,16 @@ if (table1 == table2) {
                          new int[]{ sid, sid });
     }
 
-    @Test
-    public void testIvmWithUnknownAnnotation()
-    throws Exception
+    protected void checkIvmWithAnnotation(String annotation)
+        throws Exception
     {
-        startIteration("$99::$ion_1_0 23");
+        startIteration(annotation + "::" + ION_1_0 + " 123");
+
         nextValue();
-        // TODO ION-187 inconsistent handling of annotated IVM.
+
+        // TODO ION-187 annotated IVMs are not read as IonSymbols, but as proper IVMs.
+//        checkSymbol(ION_1_0);
+
         if (currentValueType() == IonType.SYMBOL)
         {
             nextValue();
@@ -1015,12 +1197,50 @@ if (table1 == table2) {
     }
 
     @Test
-    public void testLocalSymtabWithUnknownAnnotation()
+    public void testIvmWithAnnotations()
+    throws Exception
+    {
+        checkIvmWithAnnotation("$99");
+        checkIvmWithAnnotation("annotation");
+    }
+
+    protected void testLocalSymtabWithMalformedSymbolEntry(String symbolValue)
         throws Exception
     {
-        String text = "$99::" + Symtabs.printLocalSymtab("s1") + " null";
+        String text =
+            "$ion_symbol_table::{" +
+            "  symbols:[" + symbolValue + "]}\n" +
+            "$10";
+
         startIteration(text);
+
         nextValue();
+        checkSymbol(null, 10);
+
         checkEof();
     }
+
+    @Test
+    public void testLocalSymtabWithMalformedSymbolEntries()
+        throws Exception
+    {
+        startTestCheckpoint("testLocalSymtabWithMalformedSymbols");
+
+        testLocalSymtabWithMalformedSymbolEntry("null");                        // null
+        testLocalSymtabWithMalformedSymbolEntry("true");                        // boolean
+        testLocalSymtabWithMalformedSymbolEntry("100");                         // integer
+        testLocalSymtabWithMalformedSymbolEntry("0.123");                       // decimal
+        testLocalSymtabWithMalformedSymbolEntry("-0.12e4");                     // float
+        testLocalSymtabWithMalformedSymbolEntry("2013-05-09");                  // timestamp
+        testLocalSymtabWithMalformedSymbolEntry("\"\"");                        // empty string
+        testLocalSymtabWithMalformedSymbolEntry("a_symbol");                    // symbol
+        testLocalSymtabWithMalformedSymbolEntry("{{MTIz}}");                    // blob
+        testLocalSymtabWithMalformedSymbolEntry("{{'''clob_content'''}}");      // clob
+        testLocalSymtabWithMalformedSymbolEntry("{a:123}");                     // struct
+        testLocalSymtabWithMalformedSymbolEntry("[a, b, c]");                   // list
+        testLocalSymtabWithMalformedSymbolEntry("(a b c)");                     // sexp
+        testLocalSymtabWithMalformedSymbolEntry("null.string");                 // null.string
+        testLocalSymtabWithMalformedSymbolEntry("['''whee''']");                // string nested inside list
+    }
+
 }

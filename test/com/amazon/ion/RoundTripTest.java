@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.TEXT_ONLY_FILTER;
 import static com.amazon.ion.TestUtils.testdataFiles;
+import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 
 import com.amazon.ion.TestUtils.And;
 import com.amazon.ion.impl.IonWriterUserBinary;
@@ -168,24 +169,19 @@ public class RoundTripTest
         String text2FromBinary   = renderUserView(dgFromBinary);
         byte[] binary2FromBinary = encode(dgFromBinary);
         checkBinaryHeader(binary2FromBinary);
-        assertEquals(binary1.length, binary2FromBinary.length);
+
+        // check strict data equivalence
+        IonDatagram dgbinary2FromBinary = loader.load(binary2FromBinary);
+        assertIonEquals(dgFromBinary, dgbinary2FromBinary);
 
         if (!compareRenderedTextImages(text2FromText, text2FromBinary))
         {
             fail("different printing from text vs from binary");
         }
 
-        assertEquals("encoded size from text vs from binary",
-                     binary2FromText.length,
-                     binary2FromBinary.length);
-
-        for (int i = 0; i < binary2FromText.length; i++)
-        {
-            if (binary2FromText[i] != binary2FromBinary[i])
-            {
-                fail("Binary data differs at index " + i);
-            }
-        }
+        // check strict data equivalence
+        IonDatagram dgBinary2FromText = loader.load(binary2FromText);
+        assertIonEquals(dgFromBinary, dgBinary2FromText);
     }
 
 

@@ -872,7 +872,7 @@ final class UnifiedSymbolTable
     // TODO add to interface to let caller avoid getImports which makes a copy
 
     /**
-     * this checks the import list for symbol tabls other than the
+     * this checks the import list for symbol tables other than the
      * system symbol table, which is doesn't count.  If any non system
      * imports exist it return true.  Otherwise it return false.
      */
@@ -1316,6 +1316,8 @@ final class UnifiedSymbolTable
                 throw new IonException(message);
             }
 
+            // Exact match is found, but max_id is undefined in import
+            // declaration, set max_id to largest sid of shared symtab
             maxid = itab.getMaxId();
         }
 
@@ -1327,7 +1329,9 @@ final class UnifiedSymbolTable
         }
         else if (itab.getVersion() != version || itab.getMaxId() != maxid)
         {
-            // Construct a substitute with correct specs
+            // A match was found BUT specs are not an exact match
+            // Construct a substitute with correct specs, containing the
+            // original import table that was found
             itab = new SubstituteSymbolTable(itab, version, maxid);
         }
 
