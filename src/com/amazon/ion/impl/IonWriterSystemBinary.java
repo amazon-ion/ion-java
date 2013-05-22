@@ -13,6 +13,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.BlockedBuffer.BlockedByteInputStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import com.amazon.ion.impl.lite.ReverseBinaryEncoder;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
@@ -885,8 +886,11 @@ final class IonWriterSystemBinary
             case TID_SYMBOL_TABLE_PATCH:
                 SymbolTable symtab = p._symtabs.remove();
                 if (!symtab.isSystemTable()) {
-                    int symtab_len = write_symbol_table(userstream, symtab);
-                    totalSize += symtab_len;
+                    ReverseBinaryEncoder encoder = new ReverseBinaryEncoder(1024);
+                    encoder.serialize(symtab);
+                    byte[] symtabBytes = encoder.toNewByteArray();
+                    userstream.write(symtabBytes);
+                    totalSize += symtabBytes.length;
                 }
                 break;
 
