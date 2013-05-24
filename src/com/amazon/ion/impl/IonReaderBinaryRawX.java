@@ -1057,8 +1057,7 @@ done:   for (;;) {
      */
     protected final Decimal readDecimal(int len) throws IOException
     {
-        // TODO this doesn't seem like the right math context
-        MathContext mathContext = MathContext.DECIMAL128;
+        MathContext mathContext = MathContext.UNLIMITED;
         Decimal bd;
         // we only write out the '0' value as the nibble 0
         if (len == 0) {

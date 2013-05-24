@@ -437,8 +437,7 @@ done:       for (;;) {
          */
         public Decimal readDecimal(int len) throws IOException
         {
-            // TODO this doesn't seem like the right math context
-            MathContext mathContext = MathContext.DECIMAL128;
+            MathContext mathContext = MathContext.UNLIMITED;
 
             Decimal bd;
 
