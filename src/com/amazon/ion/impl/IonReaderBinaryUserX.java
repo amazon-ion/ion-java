@@ -206,7 +206,7 @@ final class IonReaderBinaryUserX
     @Override
     public boolean hasNext()
     {
-        if (!_eof &&_has_next_needed) {
+        if (!_eof && _has_next_needed) {
             clear_system_value_stack();
             try {
                 while (!_eof && _has_next_needed) {
@@ -226,12 +226,15 @@ final class IonReaderBinaryUserX
         super.hasNext();
         if (getDepth() == 0 && !_value_is_null) {
             if (_value_tid == _Private_IonConstants.tidSymbol) {
-                load_cached_value(AS_TYPE.int_value);
-                int sid = _v.getInt();
-                if (sid == ION_1_0_SID) {
-                    _symbols = _system.getSystemSymbolTable();
-                    push_symbol_table(_symbols);
-                    _has_next_needed = true;
+                if (load_annotations() == 0) {
+                    // $ion_1_0 is read as an IVM only if it is not annotated
+                    load_cached_value(AS_TYPE.int_value);
+                    int sid = _v.getInt();
+                    if (sid == ION_1_0_SID) {
+                        _symbols = _system.getSystemSymbolTable();
+                        push_symbol_table(_symbols);
+                        _has_next_needed = true;
+                    }
                 }
             }
             else if (_value_tid == _Private_IonConstants.tidStruct) {

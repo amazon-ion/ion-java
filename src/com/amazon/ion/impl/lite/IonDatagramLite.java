@@ -1237,7 +1237,9 @@ final class IonDatagramLite
 
         private static final boolean is_ivm(IonValue value)
         {
-            if (value instanceof IonSymbol) {
+            if (value instanceof IonSymbol
+                && value.getTypeAnnotationSymbols().length == 0) {
+                // $ion_1_0 is read as an IVM only if it is not annotated
                 IonSymbol sym = (IonSymbol)value;
                 SymbolToken tok = sym.symbolValue();
                 if (tok != null && ION_1_0.equals(tok.getText()))

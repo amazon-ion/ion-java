@@ -119,7 +119,13 @@ public abstract class SystemProcessingTestCase
         }
     }
 
-    /** Check the first annotation. */
+    /** Check the first annotation's text */
+    final void checkAnnotation(String expectedText)
+    {
+        check().annotation(expectedText);
+    }
+
+    /** Check the first annotation's text and sid. */
     final void checkAnnotation(String expectedText, int expectedSid)
     {
         check().annotation(expectedText, expectedSid);
@@ -1179,32 +1185,42 @@ if (table1 == table2) {
                          new int[]{ sid, sid });
     }
 
-    protected void checkIvmWithAnnotation(String annotation)
+    @Test
+    public void testIvmWithAnnotationText()
         throws Exception
     {
-        startIteration(annotation + "::" + ION_1_0 + " 123");
+        startIteration("some_annotation::" + ION_1_0 + " 123");
+
+        // some_annotation::$ion_1_0 is not an IVM, but an annotated
+        // user-value symbol
+        nextValue();
+        checkSymbol(ION_1_0);
+        checkAnnotation("some_annotation");
 
         nextValue();
+        checkInt(123);
 
-        // TODO ION-187 annotated IVMs are not read as IonSymbols, but as proper IVMs.
-//        checkSymbol(ION_1_0);
-
-        if (currentValueType() == IonType.SYMBOL)
-        {
-            nextValue();
-        }
         checkEof();
     }
 
     @Test
-    public void testIvmWithAnnotations()
-    throws Exception
+    public void testIvmWithAnnotationSid()
+        throws Exception
     {
-        checkIvmWithAnnotation("$99");
-        checkIvmWithAnnotation("annotation");
+        startIteration("$99::" + ION_1_0 + " 123");
+
+        // $99::$ion_1_0 is not an IVM, but an annotated user-value symbol
+        nextValue();
+        checkSymbol(ION_1_0);
+        checkAnnotation(null, 99);
+
+        nextValue();
+        checkInt(123);
+
+        checkEof();
     }
 
-    protected void testLocalSymtabWithMalformedSymbolEntry(String symbolValue)
+    protected void checkLocalSymtabWithMalformedSymbolEntry(String symbolValue)
         throws Exception
     {
         String text =
@@ -1224,23 +1240,21 @@ if (table1 == table2) {
     public void testLocalSymtabWithMalformedSymbolEntries()
         throws Exception
     {
-        startTestCheckpoint("testLocalSymtabWithMalformedSymbols");
-
-        testLocalSymtabWithMalformedSymbolEntry("null");                        // null
-        testLocalSymtabWithMalformedSymbolEntry("true");                        // boolean
-        testLocalSymtabWithMalformedSymbolEntry("100");                         // integer
-        testLocalSymtabWithMalformedSymbolEntry("0.123");                       // decimal
-        testLocalSymtabWithMalformedSymbolEntry("-0.12e4");                     // float
-        testLocalSymtabWithMalformedSymbolEntry("2013-05-09");                  // timestamp
-        testLocalSymtabWithMalformedSymbolEntry("\"\"");                        // empty string
-        testLocalSymtabWithMalformedSymbolEntry("a_symbol");                    // symbol
-        testLocalSymtabWithMalformedSymbolEntry("{{MTIz}}");                    // blob
-        testLocalSymtabWithMalformedSymbolEntry("{{'''clob_content'''}}");      // clob
-        testLocalSymtabWithMalformedSymbolEntry("{a:123}");                     // struct
-        testLocalSymtabWithMalformedSymbolEntry("[a, b, c]");                   // list
-        testLocalSymtabWithMalformedSymbolEntry("(a b c)");                     // sexp
-        testLocalSymtabWithMalformedSymbolEntry("null.string");                 // null.string
-        testLocalSymtabWithMalformedSymbolEntry("['''whee''']");                // string nested inside list
+        checkLocalSymtabWithMalformedSymbolEntry("null");                       // null
+        checkLocalSymtabWithMalformedSymbolEntry("true");                       // boolean
+        checkLocalSymtabWithMalformedSymbolEntry("100");                        // integer
+        checkLocalSymtabWithMalformedSymbolEntry("0.123");                      // decimal
+        checkLocalSymtabWithMalformedSymbolEntry("-0.12e4");                    // float
+        checkLocalSymtabWithMalformedSymbolEntry("2013-05-09");                 // timestamp
+        checkLocalSymtabWithMalformedSymbolEntry("\"\"");                       // empty string
+        checkLocalSymtabWithMalformedSymbolEntry("a_symbol");                   // symbol
+        checkLocalSymtabWithMalformedSymbolEntry("{{MTIz}}");                   // blob
+        checkLocalSymtabWithMalformedSymbolEntry("{{'''clob_content'''}}");     // clob
+        checkLocalSymtabWithMalformedSymbolEntry("{a:123}");                    // struct
+        checkLocalSymtabWithMalformedSymbolEntry("[a, b, c]");                  // list
+        checkLocalSymtabWithMalformedSymbolEntry("(a b c)");                    // sexp
+        checkLocalSymtabWithMalformedSymbolEntry("null.string");                // null.string
+        checkLocalSymtabWithMalformedSymbolEntry("['''whee''']");               // string nested inside list
     }
 
 }

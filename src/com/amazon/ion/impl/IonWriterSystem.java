@@ -277,8 +277,10 @@ abstract class IonWriterSystem
             throw new IllegalArgumentException("symbol IDs are greater than 0");
         }
 
-        if (symbolId == SystemSymbols.ION_1_0_SID && getDepth() == 0)
-        {
+        if (symbolId == SystemSymbols.ION_1_0_SID
+            && getDepth() == 0
+            && _annotation_count == 0) {
+            // $ion_1_0 is written as an IVM only if it is not annotated
             // TODO ION-285 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
@@ -290,8 +292,10 @@ abstract class IonWriterSystem
 
     public final void writeSymbol(String value) throws IOException
     {
-        if (SystemSymbols.ION_1_0.equals(value) && getDepth() == 0)
-        {
+        if (SystemSymbols.ION_1_0.equals(value)
+            && getDepth() == 0
+            && _annotation_count == 0) {
+            // $ion_1_0 is written as an IVM only if it is not annotated
             // TODO ION-285 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }

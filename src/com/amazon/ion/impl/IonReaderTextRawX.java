@@ -466,7 +466,7 @@ abstract class IonReaderTextRawX
      * if there is it returns true.  It may have to clean up
      * any value that's partially complete (for example a
      * collection whose annotation has been read and loaded
-     * but the use has chosen not to step into the collection).
+     * but the user has chosen not to step into the collection).
      * @return true if more data remains, false on eof
      */
     public boolean hasNext()

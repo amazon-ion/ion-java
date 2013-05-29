@@ -151,12 +151,15 @@ class IonReaderTextUserX
                     }
                     break;
                 case SYMBOL:
-                    SymbolToken is = symbolValue();
-                    String sym = is.getText();
-                    if (ION_1_0.equals(sym)) {
-                        symbol_table_reset();
-                        push_symbol_table(_system.getSystemSymbolTable());
-                        _has_next_called = false;
+                    if (_annotation_count == 0) {
+                        // $ion_1_0 is read as an IVM only if it is not annotated
+                        SymbolToken is = symbolValue();
+                        String sym = is.getText();
+                        if (ION_1_0.equals(sym)) {
+                            symbol_table_reset();
+                            push_symbol_table(_system.getSystemSymbolTable());
+                            _has_next_called = false;
+                        }
                     }
                     break;
                 default:

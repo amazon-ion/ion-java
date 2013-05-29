@@ -603,7 +603,7 @@ abstract class IonValueLite
             return SymbolToken.EMPTY_ARRAY;
         }
 
-        // it there are we allocate a user array and
+        // if there are we allocate a user array and
         // copy the references into it. Note that our
         // count above lets us use arraycopy
         SymbolToken[] users_copy = new SymbolToken[count];

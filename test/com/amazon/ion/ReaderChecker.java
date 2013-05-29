@@ -123,6 +123,16 @@ public class ReaderChecker
     }
 
 
+    public ReaderChecker annotation(String expectedText)
+    {
+        Iterator<String> anns = myReader.iterateTypeAnnotations();
+        assertEquals("symbol text", expectedText, anns.next());
+        assertFalse(anns.hasNext());
+
+        return this;
+    }
+
+
     public ReaderChecker annotation(String expectedText, int expectedSid)
     {
         if (expectedText == null)
