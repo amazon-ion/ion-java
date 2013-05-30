@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -19,8 +19,10 @@ public class EquivTimelineTest
 
 
     @Override
-    protected void checkEquivalence(IonValue left, IonValue right)
+    protected void checkEquivalence(IonValue left, IonValue right,
+                                    boolean expectedEquality)
     {
+        // expectedEquality isn't used in this method
         IonTimestamp lDom = (IonTimestamp) left;
         IonTimestamp rDom = (IonTimestamp) right;
 

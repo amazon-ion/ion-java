@@ -45,9 +45,10 @@ import java.util.GregorianCalendar;
  *   <li>{@code 2009-01T}</li>
  *   <li>{@code 2009-01-01T}</li>
  *   <li>{@code 2009-01-01T00:00Z}</li>
- *   <li>{@code 2009-01-01T00:00.0Z}</li>
- *   <li>{@code 2009-01-01T00:00.00Z}</li>
- *   <li>{@code 2009-01-01T00:00.000Z} <em>etc.</em></li>
+ *   <li>{@code 2009-01-01T00:00:00Z}</li>
+ *   <li>{@code 2009-01-01T00:00:00.0Z}</li>
+ *   <li>{@code 2009-01-01T00:00:00.00Z}</li>
+ *   <li>{@code 2009-01-01T00:00:00.000Z} <em>etc.</em></li>
  * </ul>
  */
 
@@ -1548,7 +1549,7 @@ public final class Timestamp
         if (t == null) return false;
 
         // if the precisions are not the same the values are not
-        // precision doesn't matter WRT to equality
+        // precision doesn't matter WRT equality
         if (this._precision != t._precision) return false;
 
         // if the local offset are not the same the values are not

@@ -107,7 +107,7 @@ public final class Equivalence {
     private static int compare(int i1, int i2)
     {
         if (i1 < i2) return -1;
-        if (i2 > i2) return  1;
+        if (i1 > i2) return  1;
         return 0;
     }
 

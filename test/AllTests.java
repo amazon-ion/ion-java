@@ -25,6 +25,7 @@ import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
 import com.amazon.ion.LongStringTest;
+import com.amazon.ion.NonEquivsTest;
 import com.amazon.ion.NullTest;
 import com.amazon.ion.RoundTripTest;
 import com.amazon.ion.SexpTest;
@@ -41,7 +42,6 @@ import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
-import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
@@ -127,9 +127,11 @@ import org.junit.runners.Suite;
     SharedSymbolTableTest.class,
     LocalSymbolTableTest.class,
 
-    // equality testing
+    // Equality tests
     EquivalenceTest.class,
-    IonEqualsTest.class,
+    EquivsTest.class,
+    NonEquivsTest.class,
+    EquivTimelineTest.class,
 
     // hash code tests
     HashCodeCorrectnessTest.class,
@@ -138,8 +140,6 @@ import org.junit.runners.Suite;
     // General processing test suite
     GoodIonTest.class,
     BadIonTest.class,
-    EquivsTest.class,
-    EquivTimelineTest.class,
     RoundTripTest.class,
 
     // Some tests are collected to make it easier to run interesting subsets.
