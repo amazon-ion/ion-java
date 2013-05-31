@@ -163,7 +163,7 @@ public class _Private_IonTextWriterBuilder
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
         IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
+            new IonWriterSystemText(system.getSystemSymbolTable(), b, getCharset(), out);
 
         return new IonWriterUser(catalog, system, systemWriter, imports);
     }
@@ -180,7 +180,7 @@ public class _Private_IonTextWriterBuilder
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
         IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
+            new IonWriterSystemText(system.getSystemSymbolTable(), b, getCharset(), out);
 
         return new IonWriterUser(catalog, system, systemWriter, imports);
     }

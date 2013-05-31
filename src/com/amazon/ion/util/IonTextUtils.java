@@ -3,8 +3,12 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.impl.IonUTF8;
+import com.amazon.ion.impl.IonUTF8.CharToUTF8;
 import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 
 /**
@@ -172,9 +176,11 @@ public class IonTextUtils
     public static final class IonCodePointWriter {
 
         private final Appendable _out;
+        private final boolean escapeUnicode;
 
-        public IonCodePointWriter(Appendable out) {
+        public IonCodePointWriter(Appendable out, Charset charset) {
             this._out = out;
+            this.escapeUnicode = charset.equals(_Private_Utils.ASCII_CHARSET);
         }
 
         public final void printString(CharSequence text)
@@ -319,18 +325,19 @@ public class IonTextUtils
         private final void printCodePoints(CharSequence text, String[] escapes)
             throws IOException
         {
+            IonUTF8.Utf8Wrapper utf8 = (_out instanceof CharToUTF8 ? (CharToUTF8) _out : new IonUTF8.Utf8AppendableWrapper(_out) );
             int len = text.length();
             for (int i = 0; i < len; ++i)
             {
                 // write as many bytes in a sequence as possible
-                int c = -1;
+                char c = 0;
                 int j;
                 for (j = i; j < len; ++j) {
                     c = text.charAt(j);
                     if (c >= 0x100 || escapes[c] != null) {
                         // append sequence then continue the normal loop
                         if (j > i) {
-                            _out.append(text, i, j);
+                            utf8.appendAscii(text, i, j);
                             i = j;
                         }
                         break;
@@ -338,18 +345,22 @@ public class IonTextUtils
                 }
                 if (j == len) {
                     // we've reached the end of sequence; append it and break
-                    _out.append(text, i, j);
+                    utf8.appendAscii(text, i, j);
                     break;
                 }
                 // write the non Latin-1 character
                 if (c < 0x100) {
                     assert escapes[c] != null;
-                    _out.append(escapes[c]);
+                    utf8.appendAscii(escapes[c]);
                 } else if (c < 0xD800 || c >= 0xE000) {
                     String s = Integer.toHexString(c);
-                    _out.append(utf16Prefix);
-                    _out.append(ZERO_PADDING[4 - s.length()]);
-                    _out.append(s);
+                    if (escapeUnicode) {
+                        utf8.appendAscii(utf16Prefix);
+                        utf8.appendAscii(ZERO_PADDING[4 - s.length()]);
+                        utf8.appendAscii(s);
+                    } else {
+                        utf8.appendCodepoint(c);
+                    }
                 } else if (_Private_IonConstants.isHighSurrogate(c)) {
                     // high surrogate
                     char c2;
@@ -360,11 +371,15 @@ public class IonTextUtils
                             " at index " + (i-1);
                         throw new IllegalArgumentException(message);
                     }
-                    c = _Private_IonConstants.makeUnicodeScalar(c, c2);
-                    String s = Integer.toHexString(c);
-                    _out.append(utf32Prefix);
-                    _out.append(ZERO_PADDING[8 - s.length()]);
-                    _out.append(s);
+                    if (escapeUnicode) {
+                        int cp = _Private_IonConstants.makeUnicodeScalar(c, c2);
+                        String s = Integer.toHexString(cp);
+                        utf8.appendAscii(utf32Prefix);
+                        utf8.appendAscii(ZERO_PADDING[8 - s.length()]);
+                        utf8.appendAscii(s);
+                    } else {
+                        utf8.appendCodepoint(c, c2);
+                    }
                 } else {
                     // unmatched low surrogate
                     String message =

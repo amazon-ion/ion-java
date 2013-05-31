@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 
 /**
  *
@@ -130,10 +131,12 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
+                                  Charset charset,
                                   OutputStream out)
     {
         this(defaultSystemSymtab,
              options,
+             charset,
              (out instanceof Appendable
                  ? (Appendable) out
                  : new IonUTF8.CharToUTF8(out)));
@@ -144,6 +147,7 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
+                                  Charset charset,
                                   Appendable out)
     {
         super(defaultSystemSymtab,
@@ -162,7 +166,11 @@ final class IonWriterSystemText
             _separator_character = ' ';
         }
 
-        _stringWriter = new IonTextUtils.IonCodePointWriter(_output);
+        if (charset == null) {
+            charset = _Private_Utils.UTF8_CHARSET;
+        }
+
+        _stringWriter = new IonTextUtils.IonCodePointWriter(_output, charset);
 
         int threshold = _options.getLongStringThreshold();
         if (threshold < 1) threshold = Integer.MAX_VALUE;

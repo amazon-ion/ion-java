@@ -24,7 +24,7 @@ import java.io.OutputStream;
  * 21 April 2009
  *
  */
-final class IonUTF8 {
+public class IonUTF8 {
     private final static int UNICODE_MAX_ONE_BYTE_SCALAR       = 0x0000007F; // 7 bits     =  7 / 1 = 7    bits per byte
     private final static int UNICODE_MAX_TWO_BYTE_SCALAR       = 0x000007FF; // 5 + 6 bits = 11 / 2 = 5.50 bits per byte
     private final static int UNICODE_MAX_THREE_BYTE_SCALAR     = 0x0000FFFF; // 4 + 6+6    = 16 / 3 = 5.33 bits per byte
@@ -412,8 +412,37 @@ final class IonUTF8 {
             super(msg, e);
         }
     }
+
+    public interface Utf8Wrapper {
+        void appendAscii(CharSequence csq) throws IOException;
+        void appendAscii(CharSequence csq, int start, int end) throws IOException;
+        void appendCodepoint(char c) throws IOException;
+        void appendCodepoint(char leadSurrogate, char trailSurrogate) throws IOException;
+    }
+
+    public static class Utf8AppendableWrapper implements Utf8Wrapper {
+        final private Appendable _out;
+
+        public Utf8AppendableWrapper(Appendable out) {
+            this._out = out;
+        }
+        public void appendAscii(CharSequence csq) throws IOException {
+            _out.append(csq);
+        }
+        public void appendAscii(CharSequence csq, int start, int end) throws IOException {
+            _out.append(csq, start, end);
+        }
+        public void appendCodepoint(char c) throws IOException {
+            _out.append(c);
+        }
+        public void appendCodepoint(char leadSurrogate, char trailSurrogate) throws IOException {
+            _out.append(leadSurrogate);
+            _out.append(trailSurrogate);
+        }
+    }
+
     public static final class CharToUTF8
-        implements Appendable, Closeable, Flushable
+        implements Utf8Wrapper, Appendable, Closeable, Flushable
     {
         final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
         final private OutputStream _byte_stream;
@@ -444,6 +473,22 @@ final class IonUTF8 {
             {
                 _byte_stream.close();
             }
+        }
+
+        public void appendAscii(CharSequence csq) throws IOException {
+            appendAscii(csq, 0, csq.length());
+        }
+        public void appendAscii(CharSequence csq, int start, int end) throws IOException {
+            for (int ii=start; ii < end; ii++) {
+                char c = csq.charAt(ii);
+                _byte_stream.write((byte)c);
+            }
+        }
+        public void appendCodepoint(char unicodeScalar) throws IOException {
+            append_helper_write_utf8(unicodeScalar);
+        }
+        public void appendCodepoint(char leadSurrogate, char trailSurrogate) throws IOException {
+            append_helper_write_utf8(_Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate));
         }
 
         public final Appendable append(CharSequence csq) throws IOException
