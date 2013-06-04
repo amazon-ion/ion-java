@@ -448,17 +448,26 @@ public class IonUTF8 {
         final private OutputStream _byte_stream;
               private char         _pending_high_surrogate = NO_SURROGATE;
 
+              private static final int MAX_BYTES_LEN = 4096;
+              // this is a temporary byte buffer where the generated data is written
+              // before it gets to OutputStream
+              private int bytePos_;
+              private byte[] bytes_;
+
         public CharToUTF8(OutputStream byteStream) {
             byteStream.getClass(); // Efficient null check
-            _byte_stream = byteStream;
+            this._byte_stream = byteStream;
+            this.bytePos_ = 0;
+            this.bytes_ = new byte[MAX_BYTES_LEN];
         }
         public final OutputStream getOutputStream() {
             return _byte_stream;
         }
         public final void flush() throws IOException
         {
-            if (_pending_high_surrogate != NO_SURROGATE) {
-                throw new IOException("unused low surrogate still pending on close");
+            if (bytePos_ > 0) {
+                _byte_stream.write(bytes_, 0, bytePos_);
+                bytePos_ = 0;
             }
             _byte_stream.flush();
         }
@@ -480,8 +489,13 @@ public class IonUTF8 {
         }
         public void appendAscii(CharSequence csq, int start, int end) throws IOException {
             for (int ii=start; ii < end; ii++) {
+                if (bytePos_ == bytes_.length) {
+                    _byte_stream.write(bytes_, 0, bytePos_);
+                    bytePos_ = 0;
+                }
                 char c = csq.charAt(ii);
-                _byte_stream.write((byte)c);
+                assert c < 0x80;
+                bytes_[bytePos_++] = (byte)c;
             }
         }
         public void appendCodepoint(char unicodeScalar) throws IOException {
@@ -498,66 +512,40 @@ public class IonUTF8 {
         public final Appendable append(CharSequence csq, int start, int end)
             throws IOException
         {
-            for (int ii=start; ii < end; ii++) {
-                char c = csq.charAt(ii);
-                append_helper(c);
-            }
-
+            appendAscii(csq, start, end);
             return this;
         }
         public final Appendable append(char c) throws IOException
         {
-            if (c < 0) {
-                throw new IllegalArgumentException("invalid character");
+            if (bytePos_ == bytes_.length) {
+                _byte_stream.write(bytes_, 0, bytePos_);
+                bytePos_ = 0;
             }
-            append_helper(c);
+            assert c < 0x80;
+            bytes_[bytePos_++] = (byte)c;
             return this;
         }
-        private final void append_helper(char c) throws IOException
+        private final void append_helper_write_utf8(int c) throws IOException
         {
-            if (_pending_high_surrogate != NO_SURROGATE) {
-                if (!IonUTF8.isLowSurrogate(c)) {
-                    throw new IOException("invalid surrogate (high surrogate not followed by a low surrogate)");
-                }
-                int scalar = IonUTF8.getUnicodeScalarFromSurrogates(_pending_high_surrogate, c);
-                append_helper_write_utf8(scalar);
-                _pending_high_surrogate = NO_SURROGATE;
+            if (bytePos_ > bytes_.length - 4) {
+                _byte_stream.write(bytes_, 0, bytePos_);
+                bytePos_ = 0;
             }
-            else if (c < 128) {
-                _byte_stream.write((byte)c & 0xff);
-            }
-            else if (c >= 0xd800 && c <= 0xdfff) {
-                if (IonUTF8.isHighSurrogate(c)) {
-                    _pending_high_surrogate = c;
-                } else {
-                    throw new IOException("invalid surrogate (low surrogate preceeds high surrogate)");
-                }
-            }
-            else {
-                append_helper_write_utf8(c);
-            }
-        }
-        private final void append_helper_write_utf8(int unicodeScalar) throws IOException
-        {
-            switch (IonUTF8.getUTF8ByteCount(unicodeScalar)) {
-            case 1:
-                _byte_stream.write(unicodeScalar & 0xff);
-                break;
-            case 2:
-                _byte_stream.write(IonUTF8.getByte1Of2(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of2(unicodeScalar) & 0xff);
-                break;
-            case 3:
-                _byte_stream.write(IonUTF8.getByte1Of3(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of3(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte3Of3(unicodeScalar) & 0xff);
-                break;
-            case 4:
-                _byte_stream.write(IonUTF8.getByte1Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte3Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte4Of4(unicodeScalar) & 0xff);
-                break;
+            assert c >= 0x80;
+            if (c < 0x800) {
+                bytes_[bytePos_++] = (byte)( 0xff & (0xC0 | (c >> 6)) );
+                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
+            } else if (c < 0x10000) {
+                bytes_[bytePos_++] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
+                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                bytes_[bytePos_++] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
+            } else if (c <= 0x10FFFF) {
+                bytes_[bytePos_++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
+                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
+                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
+            } else {
+                throw new IOException("invalid codepoint " + c);
             }
         }
     }

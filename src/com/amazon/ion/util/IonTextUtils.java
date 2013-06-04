@@ -349,9 +349,16 @@ public class IonTextUtils
                     break;
                 }
                 // write the non Latin-1 character
-                if (c < 0x100) {
+                if (c < 0x80) {
                     assert escapes[c] != null;
                     utf8.appendAscii(escapes[c]);
+                } else if (c < 0x100) {
+                    assert escapes[c] != null;
+                    if (escapeUnicode) {
+                        utf8.appendAscii(escapes[c]);
+                    } else {
+                        utf8.appendCodepoint(c);
+                    }
                 } else if (c < 0xD800 || c >= 0xE000) {
                     String s = Integer.toHexString(c);
                     if (escapeUnicode) {
