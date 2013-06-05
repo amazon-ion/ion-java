@@ -17,6 +17,20 @@ package.IonJava = {
     };
   };
 
+  rebuild-when-dependency-changes = {
+    1.0 = {
+      # Consumes IonTests statically, make sure this package is rebuilt 
+      # when IonTests is rebuilt
+      IonTests = 1.0;
+    };
+  };
+
+  test-dependencies = {
+    1.0 = {
+      IonTests = 1.0;
+      junit = 4.7;
+    };
+  };
 
   caching-behavior = {
     additional-directories = (brazil-documentation);
@@ -39,13 +53,6 @@ package.IonJava = {
       BrazilJavadoc = 1.1;
       HappyTrails = 3.1;
       JDK = 1.5;
-    };
-  };
-
-  test-dependencies = {
-    1.0 = {
-      IonTests = 1.0;
-      junit = 4.7;
     };
   };
 
