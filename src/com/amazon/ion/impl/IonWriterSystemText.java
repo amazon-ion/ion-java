@@ -65,67 +65,6 @@ final class IonWriterSystemText
     boolean[]   _stack_pending_comma = new boolean[10];
     char[]      _integer_buffer = new char[20];
 
-    static class OutputStreamWrapper
-        implements Flushable, Closeable, Appendable
-    {
-        private static final int MAX_BYTES_LEN = 4096;
-        // this is a temporary byte buffer where the generated data is written
-        // before it gets to OutputStream
-        private int bytePos_;
-        private byte[] bytes_;
-        // OutputStream
-        private OutputStream out_;
-
-        public OutputStreamWrapper(OutputStream out) {
-            out.getClass();
-            this.bytePos_ = 0;
-            this.bytes_ = new byte[MAX_BYTES_LEN];
-            this.out_ = out;
-        }
-        public Appendable append(char c) throws IOException {
-            if (bytePos_ == bytes_.length) {
-                out_.write(bytes_, 0, bytePos_);
-                bytePos_ = 0;
-            }
-            bytes_[bytePos_++] = (byte)c;
-            return this;
-        }
-
-        public Appendable append(CharSequence seq) throws IOException
-        {
-            return append(seq, 0, seq.length());
-        }
-
-        public Appendable append(CharSequence seq, int start, int end) throws IOException
-        {
-            while (start < end) {
-                if (bytePos_ == bytes_.length) {
-                    out_.write(bytes_, 0, bytePos_);
-                    bytePos_ = 0;
-                }
-                int c = seq.charAt(start++);
-                bytes_[bytePos_++] = (byte)c;
-            }
-            return this;
-        }
-
-        public void flush() throws IOException {
-            if (bytePos_ > 0) {
-                out_.write(bytes_, 0, bytePos_);
-                bytePos_ = 0;
-            }
-            out_.flush();
-        }
-
-        public void close() throws IOException  {
-            try {
-                flush();
-            } finally {
-                out_.close();
-            }
-        }
-    }
-
     /**
      * @throws NullPointerException if any parameter is null.
      */
@@ -620,7 +559,9 @@ final class IonWriterSystemText
         closeValue();
     }
 
-    int prepareIntBuffer(long value)
+    // this will convert long to a char array in @_integer_buffer back to front
+    // and return the starting position in the array
+    int longToChar(long value)
     {
         int j = 19;
         if (value == 0) {
@@ -646,7 +587,7 @@ final class IonWriterSystemText
         throws IOException
     {
         startValue();
-        int start = prepareIntBuffer(value);
+        int start = longToChar(value);
         _output.append(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
         closeValue();
     }
@@ -655,7 +596,7 @@ final class IonWriterSystemText
         throws IOException
     {
         startValue();
-        int start = prepareIntBuffer(value);
+        int start = longToChar(value);
         _output.append(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
         closeValue();
     }

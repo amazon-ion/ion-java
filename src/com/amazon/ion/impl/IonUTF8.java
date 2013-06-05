@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.util.IonTextUtils.CharsetWriter;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -24,7 +25,7 @@ import java.io.OutputStream;
  * 21 April 2009
  *
  */
-public class IonUTF8 {
+class IonUTF8 {
     private final static int UNICODE_MAX_ONE_BYTE_SCALAR       = 0x0000007F; // 7 bits     =  7 / 1 = 7    bits per byte
     private final static int UNICODE_MAX_TWO_BYTE_SCALAR       = 0x000007FF; // 5 + 6 bits = 11 / 2 = 5.50 bits per byte
     private final static int UNICODE_MAX_THREE_BYTE_SCALAR     = 0x0000FFFF; // 4 + 6+6    = 16 / 3 = 5.33 bits per byte
@@ -413,46 +414,20 @@ public class IonUTF8 {
         }
     }
 
-    public interface Utf8Wrapper {
-        void appendAscii(CharSequence csq) throws IOException;
-        void appendAscii(CharSequence csq, int start, int end) throws IOException;
-        void appendCodepoint(char c) throws IOException;
-        void appendCodepoint(char leadSurrogate, char trailSurrogate) throws IOException;
-    }
-
-    public static class Utf8AppendableWrapper implements Utf8Wrapper {
-        final private Appendable _out;
-
-        public Utf8AppendableWrapper(Appendable out) {
-            this._out = out;
-        }
-        public void appendAscii(CharSequence csq) throws IOException {
-            _out.append(csq);
-        }
-        public void appendAscii(CharSequence csq, int start, int end) throws IOException {
-            _out.append(csq, start, end);
-        }
-        public void appendCodepoint(char c) throws IOException {
-            _out.append(c);
-        }
-        public void appendCodepoint(char leadSurrogate, char trailSurrogate) throws IOException {
-            _out.append(leadSurrogate);
-            _out.append(trailSurrogate);
-        }
-    }
-
+    /**
+     * Wrapper around OutputStream that implements both AppendableUnicodeAdapter and Appendable
+     * interfaces. The latter is for compatibility in IonWriterSystemText and is using the former
+     * for actual writes. The former is intended to optimize ASCII vs UTF16 character writes
+     */
     public static final class CharToUTF8
-        implements Utf8Wrapper, Appendable, Closeable, Flushable
+        implements CharsetWriter, Appendable, Closeable, Flushable
     {
-        final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
         final private OutputStream _byte_stream;
-              private char         _pending_high_surrogate = NO_SURROGATE;
-
-              private static final int MAX_BYTES_LEN = 4096;
-              // this is a temporary byte buffer where the generated data is written
-              // before it gets to OutputStream
-              private int bytePos_;
-              private byte[] bytes_;
+        final private static int MAX_BYTES_LEN = 4096;
+        // this byte array is used as a buffer where the generated data is written
+        // before it gets to OutputStream
+        private int bytePos_;
+        private byte[] bytes_;
 
         public CharToUTF8(OutputStream byteStream) {
             byteStream.getClass(); // Efficient null check
@@ -484,6 +459,14 @@ public class IonUTF8 {
             }
         }
 
+        public void appendAscii(char c) throws IOException {
+            if (bytePos_ == bytes_.length) {
+                _byte_stream.write(bytes_, 0, bytePos_);
+                bytePos_ = 0;
+            }
+            assert c < 0x80;
+            bytes_[bytePos_++] = (byte)c;
+        }
         public void appendAscii(CharSequence csq) throws IOException {
             appendAscii(csq, 0, csq.length());
         }
@@ -498,11 +481,11 @@ public class IonUTF8 {
                 bytes_[bytePos_++] = (byte)c;
             }
         }
-        public void appendCodepoint(char unicodeScalar) throws IOException {
-            append_helper_write_utf8(unicodeScalar);
+        public void appendUtf16(char unicodeScalar) throws IOException {
+            appendCodePoint(unicodeScalar);
         }
-        public void appendCodepoint(char leadSurrogate, char trailSurrogate) throws IOException {
-            append_helper_write_utf8(_Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate));
+        public void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
+            appendCodePoint(_Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate));
         }
 
         public final Appendable append(CharSequence csq) throws IOException
@@ -525,7 +508,7 @@ public class IonUTF8 {
             bytes_[bytePos_++] = (byte)c;
             return this;
         }
-        private final void append_helper_write_utf8(int c) throws IOException
+        private final void appendCodePoint(int c) throws IOException
         {
             if (bytePos_ > bytes_.length - 4) {
                 _byte_stream.write(bytes_, 0, bytePos_);

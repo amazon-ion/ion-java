@@ -3,8 +3,6 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.impl.IonUTF8;
-import com.amazon.ion.impl.IonUTF8.CharToUTF8;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -157,29 +155,57 @@ public class IonTextUtils
     private static final String utf32Prefix = "\\U";
     private static final String tripleQuotes = "'''";
 
+    /**
+     * The interface is used by IonTextUtils to optimize appending of ASCII and UTF-16
+     * characters to Appendable object provided by the user. In case of OutputStream, an
+     * instance of CharToUTF8 is used which also implements this interface
+     */
+    public interface CharsetWriter {
+        void appendAscii(char c) throws IOException;
+        void appendAscii(CharSequence csq) throws IOException;
+        void appendAscii(CharSequence csq, int start, int end) throws IOException;
+        void appendUtf16(char c) throws IOException;
+        void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException;
+    }
 
-//
-//          "\\0",   "\\x01", "\\x02", "\\x03",
-//          "\\x04", "\\x05", "\\x06", "\\a",
-//          "\\b",   "\\t",   "\\n",   "\\v",
-//          "\\f",   "\\r",   "\\x0e", "\\x0f",
-//          "\\x10", "\\x11", "\\x12", "\\x13",
-//          "\\x14", "\\x15", "\\x16", "\\x17",
-//          "\\x18", "\\x19", "\\x1a", "\\x1b",
-//          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
-//    };
+    /**
+     * A wrapper around an Appendable interface
+     */
+    public static class CharsetWriterAppendableWrapper implements CharsetWriter {
+        final private Appendable _out;
 
+        public CharsetWriterAppendableWrapper(Appendable out) {
+            this._out = out;
+        }
+        final public void appendAscii(char c) throws IOException {
+            _out.append(c);
+        }
+        final public void appendAscii(CharSequence csq) throws IOException {
+            _out.append(csq);
+        }
+        final public void appendAscii(CharSequence csq, int start, int end) throws IOException {
+            _out.append(csq, start, end);
+        }
+        final public void appendUtf16(char c) throws IOException {
+            _out.append(c);
+        }
+        final public void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
+            _out.append(leadSurrogate);
+            _out.append(trailSurrogate);
+        }
+    }
 
-    //=========================================================================
-
-
+    /**
+     * Write textual Ion types into Appendable interface
+     */
     public static final class IonCodePointWriter {
 
-        private final Appendable _out;
+        private final CharsetWriter _out;
         private final boolean escapeUnicode;
 
         public IonCodePointWriter(Appendable out, Charset charset) {
-            this._out = out;
+            this._out = (out instanceof CharsetWriter ? (CharsetWriter)out
+                                                      : new CharsetWriterAppendableWrapper(out) );
             this.escapeUnicode = charset.equals(_Private_Utils.ASCII_CHARSET);
         }
 
@@ -188,13 +214,13 @@ public class IonTextUtils
         {
             if (text == null)
             {
-                _out.append("null.string");
+                _out.appendAscii("null.string");
             }
             else
             {
-                _out.append('"');
+                _out.appendAscii('"');
                 printCodePoints(text, STRING_ESCAPE_CODES);
-                _out.append('"');
+                _out.appendAscii('"');
             }
         }
 
@@ -203,13 +229,13 @@ public class IonTextUtils
         {
             if (text == null)
             {
-                _out.append("null.string");
+                _out.appendAscii("null.string");
             }
             else
             {
-                _out.append(tripleQuotes);
+                _out.appendAscii(tripleQuotes);
                 printCodePoints(text, LONG_STRING_ESCAPE_CODES);
-                _out.append(tripleQuotes);
+                _out.appendAscii(tripleQuotes);
             }
         }
 
@@ -218,13 +244,13 @@ public class IonTextUtils
         {
             if (text == null)
             {
-                _out.append("null");
+                _out.appendAscii("null");
             }
             else
             {
-                _out.append('"');
+                _out.appendAscii('"');
                 printCodePoints(text, JSON_ESCAPE_CODES);
-                _out.append('"');
+                _out.appendAscii('"');
             }
         }
 
@@ -233,13 +259,13 @@ public class IonTextUtils
         {
             if (value == null)
             {
-                _out.append("null.clob");
+                _out.appendAscii("null.clob");
             }
             else
             {
-                _out.append('"');
+                _out.appendAscii('"');
                 printBytes(value, start, end, STRING_ESCAPE_CODES);
-                _out.append('"');
+                _out.appendAscii('"');
             }
         }
 
@@ -247,13 +273,13 @@ public class IonTextUtils
             throws IOException
         {
             if (value == null) {
-                _out.append("null.clob");
+                _out.appendAscii("null.clob");
             }
             else
             {
-                _out.append(tripleQuotes);
+                _out.appendAscii(tripleQuotes);
                 printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
-                _out.append(tripleQuotes);
+                _out.appendAscii(tripleQuotes);
             }
         }
 
@@ -261,11 +287,11 @@ public class IonTextUtils
             throws IOException
         {
             if (value == null) {
-                _out.append("null");
+                _out.appendAscii("null");
             } else {
-                _out.append('"');
+                _out.appendAscii('"');
                 printBytes(value, start, end, JSON_ESCAPE_CODES);
-                _out.append('"');
+                _out.appendAscii('"');
             }
         }
 
@@ -274,20 +300,20 @@ public class IonTextUtils
         {
             if (text == null)
             {
-                _out.append("null.symbol");
+                _out.appendAscii("null.symbol");
             }
             else if (text.length() == 0)
             {
                 throw new EmptySymbolException();
             }
             else if (symbolNeedsQuoting(text, true)) {
-                _out.append('\'');
+                _out.appendAscii('\'');
                 printCodePoints(text, SYMBOL_ESCAPE_CODES);
-                _out.append('\'');
+                _out.appendAscii('\'');
             }
             else
             {
-                _out.append(text);
+                _out.appendAscii(text);
             }
         }
         public final void printQuotedSymbol(CharSequence text)
@@ -295,7 +321,7 @@ public class IonTextUtils
         {
             if (text == null)
             {
-                _out.append("null.symbol");
+                _out.appendAscii("null.symbol");
             }
             else if (text.length() == 0)
             {
@@ -303,9 +329,9 @@ public class IonTextUtils
             }
             else
             {
-                _out.append('\'');
+                _out.appendAscii('\'');
                 printCodePoints(text, SYMBOL_ESCAPE_CODES);
-                _out.append('\'');
+                _out.appendAscii('\'');
             }
         }
 
@@ -315,9 +341,9 @@ public class IonTextUtils
             for (int i = start; i < end; i++) {
                 char c = (char)(value[i] & 0xff);
                 if (escapes[c] != null) {
-                    _out.append(escapes[c]);
+                    _out.appendAscii(escapes[c]);
                 } else {
-                    _out.append(c);
+                    _out.appendAscii(c);
                 }
             }
         }
@@ -325,7 +351,6 @@ public class IonTextUtils
         private final void printCodePoints(CharSequence text, String[] escapes)
             throws IOException
         {
-            IonUTF8.Utf8Wrapper utf8 = (_out instanceof CharToUTF8 ? (CharToUTF8) _out : new IonUTF8.Utf8AppendableWrapper(_out) );
             int len = text.length();
             for (int i = 0; i < len; ++i)
             {
@@ -337,7 +362,7 @@ public class IonTextUtils
                     if (c >= 0x100 || escapes[c] != null) {
                         // append sequence then continue the normal loop
                         if (j > i) {
-                            utf8.appendAscii(text, i, j);
+                            _out.appendAscii(text, i, j);
                             i = j;
                         }
                         break;
@@ -345,28 +370,28 @@ public class IonTextUtils
                 }
                 if (j == len) {
                     // we've reached the end of sequence; append it and break
-                    utf8.appendAscii(text, i, j);
+                    _out.appendAscii(text, i, j);
                     break;
                 }
                 // write the non Latin-1 character
                 if (c < 0x80) {
                     assert escapes[c] != null;
-                    utf8.appendAscii(escapes[c]);
+                    _out.appendAscii(escapes[c]);
                 } else if (c < 0x100) {
                     assert escapes[c] != null;
                     if (escapeUnicode) {
-                        utf8.appendAscii(escapes[c]);
+                        _out.appendAscii(escapes[c]);
                     } else {
-                        utf8.appendCodepoint(c);
+                        _out.appendUtf16(c);
                     }
                 } else if (c < 0xD800 || c >= 0xE000) {
                     String s = Integer.toHexString(c);
                     if (escapeUnicode) {
-                        utf8.appendAscii(utf16Prefix);
-                        utf8.appendAscii(ZERO_PADDING[4 - s.length()]);
-                        utf8.appendAscii(s);
+                        _out.appendAscii(utf16Prefix);
+                        _out.appendAscii(ZERO_PADDING[4 - s.length()]);
+                        _out.appendAscii(s);
                     } else {
-                        utf8.appendCodepoint(c);
+                        _out.appendUtf16(c);
                     }
                 } else if (_Private_IonConstants.isHighSurrogate(c)) {
                     // high surrogate
@@ -381,11 +406,11 @@ public class IonTextUtils
                     if (escapeUnicode) {
                         int cp = _Private_IonConstants.makeUnicodeScalar(c, c2);
                         String s = Integer.toHexString(cp);
-                        utf8.appendAscii(utf32Prefix);
-                        utf8.appendAscii(ZERO_PADDING[8 - s.length()]);
-                        utf8.appendAscii(s);
+                        _out.appendAscii(utf32Prefix);
+                        _out.appendAscii(ZERO_PADDING[8 - s.length()]);
+                        _out.appendAscii(s);
                     } else {
-                        utf8.appendCodepoint(c, c2);
+                        _out.appendUtf16Surrogate(c, c2);
                     }
                 } else {
                     // unmatched low surrogate
