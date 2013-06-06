@@ -462,8 +462,8 @@ class IonUTF8 {
                 _out.close();
             }
         }
-
-        public void appendAscii(char c) throws IOException {
+        @Override
+        public final void appendAscii(char c) throws IOException {
             if (_byteBufferPos == _byteBuffer.length) {
                 _out.write(_byteBuffer, 0, _byteBufferPos);
                 _byteBufferPos = 0;
@@ -471,29 +471,53 @@ class IonUTF8 {
             assert c < 0x80;
             _byteBuffer[_byteBufferPos++] = (byte)c;
         }
-        public void appendAscii(CharSequence csq) throws IOException {
+        @Override
+        public final void appendAscii(CharSequence csq) throws IOException {
             appendAscii(csq, 0, csq.length());
         }
-        public void appendAscii(CharSequence csq, int start, int end) throws IOException {
+        @Override
+        public final void appendAscii(CharSequence csq, int start, int end) throws IOException {
             if (csq instanceof String) {
+                // using String.getBytes
                 String str = (String)csq;
-                byte[] strBytes = str.getBytes();
-
-            }
-            for (int ii=start; ii < end; ii++) {
-                if (_byteBufferPos == _byteBuffer.length) {
-                    _out.write(_byteBuffer, 0, _byteBufferPos);
-                    _byteBufferPos = 0;
+                byte[] strBytes = new byte[end - start];
+                str.getBytes(start, end, strBytes, 0);
+                if (_byteBuffer.length > _byteBufferPos + strBytes.length) {
+                    // we have enough space in the byteBuffer, so copy there
+                    System.arraycopy(strBytes, 0, _byteBuffer, _byteBufferPos, strBytes.length);
+                    _byteBufferPos += strBytes.length;
+                } else {
+                    // flush the byte buffer
+                    if (_byteBufferPos > 0) {
+                        _out.write(_byteBuffer, 0, _byteBufferPos);
+                        _byteBufferPos = 0;
+                    }
+                    // use byte buffer if the string fits there
+                    if (strBytes.length < _byteBuffer.length) {
+                        System.arraycopy(strBytes, 0, _byteBuffer, 0, strBytes.length);
+                        _byteBufferPos += strBytes.length;
+                    } else {
+                        _out.write(strBytes);
+                    }
                 }
-                char c = csq.charAt(ii);
-                assert c < 0x80;
-                _byteBuffer[_byteBufferPos++] = (byte)c;
+            } else {
+                for (int ii=start; ii < end; ii++) {
+                    if (_byteBufferPos == _byteBuffer.length) {
+                        _out.write(_byteBuffer, 0, _byteBufferPos);
+                        _byteBufferPos = 0;
+                    }
+                    char c = csq.charAt(ii);
+                    assert c < 0x80;
+                    _byteBuffer[_byteBufferPos++] = (byte)c;
+                }
             }
         }
-        public void appendUtf16(char unicodeScalar) throws IOException {
+        @Override
+        public final void appendUtf16(char unicodeScalar) throws IOException {
             appendCodePoint(unicodeScalar);
         }
-        public void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
+        @Override
+        public final void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
             appendCodePoint(_Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate));
         }
 
