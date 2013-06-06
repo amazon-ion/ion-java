@@ -163,16 +163,58 @@ public class IonTextUtils
     public static abstract class IonTextWriter {
         private final boolean escapeUnicode;
 
+        /**
+         * Append an ASCII character.
+         * NB! METHOD DOESN'T VERIFY IF CHARACTER IS ACTUALLY ASCII!!!
+         * @param c
+         * @throws IOException
+         */
         public abstract void appendAscii(char c) throws IOException;
+
+        /**
+         * Append a sequence of ASCII characters
+         * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
+         * @param csq
+         * @throws IOException
+         */
         public abstract void appendAscii(CharSequence csq) throws IOException;
+
+        /**
+         * Append a range in sequence of ASCII characters
+         * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
+         * @param csq
+         * @param start
+         * @param end
+         * @throws IOException
+         */
         public abstract void appendAscii(CharSequence csq, int start, int end) throws IOException;
+
+        /**
+         * Append a UTF-16 non-surrogate character
+         * NB! METHOD DOESN'T VERIFY IF CHARACTER IS/IS-NOT SURROGATE!!!
+         * @param c
+         * @throws IOException
+         */
         public abstract void appendUtf16(char c) throws IOException;
+
+        /**
+         * Append a UTF-16 surrogate pair
+         * NB! METHOD DOESN'T VERIFY IF LEAD AND TRIAL SURROGATES ARE VALID!!!
+         * @param leadSurrogate
+         * @param trailSurrogate
+         * @throws IOException
+         */
         public abstract void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException;
 
         public IonTextWriter(boolean escapeUnicodeCharacters) {
             this.escapeUnicode = escapeUnicodeCharacters;
         }
 
+        /**
+         * Print an Ion String type
+         * @param text
+         * @throws IOException
+         */
         public final void printString(CharSequence text)
             throws IOException
         {
@@ -188,6 +230,11 @@ public class IonTextUtils
             }
         }
 
+        /**
+         * Print an Ion triple-quoted string
+         * @param text
+         * @throws IOException
+         */
         public final void printLongString(CharSequence text)
             throws IOException
         {
@@ -203,6 +250,11 @@ public class IonTextUtils
             }
         }
 
+        /**
+         * Print a JSON string
+         * @param text
+         * @throws IOException
+         */
         public final void printJsonString(CharSequence text)
             throws IOException
         {
@@ -218,6 +270,13 @@ public class IonTextUtils
             }
         }
 
+        /**
+         * Print Ion Clob type
+         * @param value
+         * @param start
+         * @param end
+         * @throws IOException
+         */
         public final void printClob(byte[] value, int start, int end)
             throws IOException
         {
@@ -233,6 +292,13 @@ public class IonTextUtils
             }
         }
 
+        /**
+         * Print triple-quoted Ion Clob type
+         * @param value
+         * @param start
+         * @param end
+         * @throws IOException
+         */
         public final void printLongClob(byte[] value, int start, int end)
             throws IOException
         {
@@ -247,6 +313,13 @@ public class IonTextUtils
             }
         }
 
+        /**
+         * Print an Ion Clob in JSON format (eg as JSON text)
+         * @param value
+         * @param start
+         * @param end
+         * @throws IOException
+         */
         public final void printJsonClob(byte[] value, int start, int end)
             throws IOException
         {
@@ -259,6 +332,11 @@ public class IonTextUtils
             }
         }
 
+        /**
+         * Print an Ion Symbol type. This method will check if symbol needs quoting
+         * @param text
+         * @throws IOException
+         */
         public final void printSymbol(CharSequence text)
             throws IOException
         {
@@ -280,6 +358,12 @@ public class IonTextUtils
                 appendAscii(text);
             }
         }
+
+        /**
+         * Print single-quoted Ion Symbol type
+         * @param text
+         * @throws IOException
+         */
         public final void printQuotedSymbol(CharSequence text)
             throws IOException
         {
