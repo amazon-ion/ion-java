@@ -480,25 +480,20 @@ class IonUTF8 {
             if (csq instanceof String) {
                 // using String.getBytes
                 String str = (String)csq;
-                byte[] strBytes = new byte[end - start];
-                str.getBytes(start, end, strBytes, 0);
-                if (_byteBuffer.length > _byteBufferPos + strBytes.length) {
-                    // we have enough space in the byteBuffer, so copy there
-                    System.arraycopy(strBytes, 0, _byteBuffer, _byteBufferPos, strBytes.length);
-                    _byteBufferPos += strBytes.length;
+                int len = end - start;
+                if (_byteBufferPos + len < _byteBuffer.length) {
+                    // put String bytes directly into buffer
+                    str.getBytes(start, end, _byteBuffer, _byteBufferPos);
+                    _byteBufferPos += len;
                 } else {
-                    // flush the byte buffer
-                    if (_byteBufferPos > 0) {
+                    do {
+                        // flush the buffer on every loop
                         _out.write(_byteBuffer, 0, _byteBufferPos);
-                        _byteBufferPos = 0;
-                    }
-                    // use byte buffer if the string fits there
-                    if (strBytes.length < _byteBuffer.length) {
-                        System.arraycopy(strBytes, 0, _byteBuffer, 0, strBytes.length);
-                        _byteBufferPos += strBytes.length;
-                    } else {
-                        _out.write(strBytes);
-                    }
+                        // check if we still need to split into chunks
+                        _byteBufferPos = (end - start > _byteBuffer.length ? _byteBuffer.length : end - start);
+                        str.getBytes(start, start + _byteBufferPos, _byteBuffer, 0);
+                        start += _byteBufferPos;
+                    } while (start < end);
                 }
             } else {
                 for (int ii=start; ii < end; ii++) {
