@@ -18,6 +18,8 @@ import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
+import com.amazon.ion.util.IonTextUtils.CharsetWriterAppendableWrapper;
+import com.amazon.ion.util.IonTextUtils.IonTextWriter;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -36,13 +38,11 @@ final class IonWriterSystemText
     extends IonWriterSystem
 {
     /** Not null. */
-    private final Appendable _output;
-    /** Not null. */
     private final _Private_IonTextWriterBuilder _options;
     /** At least one. */
     private final int _long_string_threshold;
 
-    private final IonTextUtils.IonCodePointWriter _stringWriter;
+    private final IonTextUtils.IonTextWriter _output;
 
     BufferManager _manager;
 
@@ -66,6 +66,9 @@ final class IonWriterSystemText
     char[]      _integer_buffer = new char[20];
 
     /**
+     * Takes an OutputStream and a charset, and creates an CharToUTF8 text
+     * writer class
+     *
      * @throws NullPointerException if any parameter is null.
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
@@ -75,13 +78,11 @@ final class IonWriterSystemText
     {
         this(defaultSystemSymtab,
              options,
-             charset,
-             (out instanceof Appendable
-                 ? (Appendable) out
-                 : new IonUTF8.CharToUTF8(out)));
+             new IonUTF8.CharToUTF8(out, charset == null ? _Private_Utils.UTF8_CHARSET : charset));
     }
 
     /**
+     * Takes an instance of Appendable and creates a text writer
      * @throws NullPointerException if any parameter is null.
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
@@ -89,11 +90,21 @@ final class IonWriterSystemText
                                   Charset charset,
                                   Appendable out)
     {
+        this(defaultSystemSymtab,
+             options,
+             new CharsetWriterAppendableWrapper(out, charset == null ? _Private_Utils.UTF8_CHARSET : charset));
+    }
+
+    /**
+     * @throws NullPointerException if any parameter is null.
+     */
+    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
+                                  _Private_IonTextWriterBuilder options,
+                                  IonTextWriter out)
+    {
         super(defaultSystemSymtab,
               options.getInitialIvmHandling(),
               options.getIvmMinimizing());
-
-        out.getClass(); // Efficient null check
 
         _output = out;
         _options = options;
@@ -104,12 +115,6 @@ final class IonWriterSystemText
         else {
             _separator_character = ' ';
         }
-
-        if (charset == null) {
-            charset = _Private_Utils.UTF8_CHARSET;
-        }
-
-        _stringWriter = new IonTextUtils.IonCodePointWriter(_output, charset);
 
         int threshold = _options.getLongStringThreshold();
         if (threshold < 1) threshold = Integer.MAX_VALUE;
@@ -242,16 +247,16 @@ final class IonWriterSystemText
 
     void printLeadingWhiteSpace() throws IOException {
         for (int ii=0; ii<_top; ii++) {
-            _output.append(' ');
-            _output.append(' ');
+            _output.appendAscii(' ');
+            _output.appendAscii(' ');
         }
     }
     void closeCollection(char closeChar) throws IOException {
        if (_options.isPrettyPrintOn()) {
-           _output.append(_options.lineSeparator());
+           _output.appendAscii(_options.lineSeparator());
            printLeadingWhiteSpace();
        }
-       _output.append(closeChar);
+       _output.appendAscii(closeChar);
     }
 
 
@@ -263,13 +268,13 @@ final class IonWriterSystemText
         // No extra handling needed for JSON strings, this is already legal.
 
         boolean asString = _options._symbol_as_string;
-        if (asString) _output.append('"');
+        if (asString) _output.appendAscii('"');
 
-        _output.append('$');
+        _output.appendAscii('$');
         // TODO optimize to avoid intermediate string
-        _output.append(Integer.toString(sid));
+        _output.appendAscii(Integer.toString(sid));
 
-        if (asString) _output.append('"');
+        if (asString) _output.appendAscii('"');
     }
 
 
@@ -282,11 +287,11 @@ final class IonWriterSystemText
         {
             if (_options._string_as_json)
             {
-                _stringWriter.printJsonString(value);
+                _output.printJsonString(value);
             }
             else
             {
-                _stringWriter.printString(value);
+                _output.printString(value);
             }
         }
         else
@@ -296,21 +301,21 @@ final class IonWriterSystemText
             {
                 case IDENTIFIER:
                 {
-                    _output.append(value);
+                    _output.appendAscii(value);
                     break;
                 }
                 case OPERATOR:
                 {
                     if (containerIsSexp())
                     {
-                        _output.append(value);
+                        _output.appendAscii(value);
                         break;
                     }
                     // else fall through...
                 }
                 case QUOTED:
                 {
-                    _stringWriter.printQuotedSymbol(value);
+                    _output.printQuotedSymbol(value);
                     break;
                 }
             }
@@ -328,14 +333,14 @@ final class IonWriterSystemText
         if (_options.isPrettyPrintOn()) {
             if (_pending_separator && _separator_character > ' ') {
                 // Only bother if the separator is non-whitespace.
-                _output.append((char)_separator_character);
+                _output.appendAscii((char)_separator_character);
                 followingLongString = false;
             }
-            _output.append(_options.lineSeparator());
+            _output.appendAscii(_options.lineSeparator());
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
-            _output.append((char)_separator_character);
+            _output.appendAscii((char)_separator_character);
             if (_separator_character > ' ') followingLongString = false;
         }
 
@@ -350,7 +355,7 @@ final class IonWriterSystemText
             else {
                 writeSymbolToken(name);
             }
-            _output.append(':');
+            _output.appendAscii(':');
             clearFieldName();
             followingLongString = false;
         }
@@ -362,13 +367,13 @@ final class IonWriterSystemText
                 for (SymbolToken ann : annotations) {
                     String name = ann.getText();
                     if (name == null) {
-                        _output.append('$');
-                        _output.append(Integer.toString(ann.getSid()));
+                        _output.appendAscii('$');
+                        _output.appendAscii(Integer.toString(ann.getSid()));
                     }
                     else {
-                        _stringWriter.printSymbol(name);
+                        _output.printSymbol(name);
                     }
-                    _output.append("::");
+                    _output.appendAscii("::");
                 }
                 followingLongString = false;
             }
@@ -479,7 +484,7 @@ final class IonWriterSystemText
         }
 
         push(tid);
-        _output.append(opener);
+        _output.appendAscii(opener);
         _pending_separator = false;
         _following_long_string = false;
     }
@@ -514,7 +519,7 @@ final class IonWriterSystemText
         throws IOException
     {
         startValue();
-        _output.append("null");
+        _output.appendAscii("null");
         closeValue();
     }
     public void writeNull(IonType type) throws IOException
@@ -548,14 +553,14 @@ final class IonWriterSystemText
             }
         }
 
-        _output.append(nullimage);
+        _output.appendAscii(nullimage);
         closeValue();
     }
     public void writeBool(boolean value)
         throws IOException
     {
         startValue();
-        _output.append(value ? "true" : "false");
+        _output.appendAscii(value ? "true" : "false");
         closeValue();
     }
 
@@ -588,7 +593,7 @@ final class IonWriterSystemText
     {
         startValue();
         int start = longToChar(value);
-        _output.append(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
+        _output.appendAscii(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
         closeValue();
     }
 
@@ -597,7 +602,7 @@ final class IonWriterSystemText
     {
         startValue();
         int start = longToChar(value);
-        _output.append(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
+        _output.appendAscii(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
         closeValue();
     }
 
@@ -609,7 +614,7 @@ final class IonWriterSystemText
         }
 
         startValue();
-        _output.append(value.toString());
+        _output.appendAscii(value.toString());
         closeValue();
     }
 
@@ -622,22 +627,22 @@ final class IonWriterSystemText
         if (value == 0.0) {
             if (Double.compare(value, 0d) == 0) {
                 // positive zero
-                _output.append("0e0");
+                _output.appendAscii("0e0");
             }
             else {
                 // negative zero
-                _output.append("-0e0");
+                _output.appendAscii("-0e0");
             }
         }
         else if (Double.isNaN(value)) {
-            _output.append("nan");
+            _output.appendAscii("nan");
         }
         else if (Double.isInfinite(value)) {
             if (value > 0) {
-                _output.append("+inf");
+                _output.appendAscii("+inf");
             }
             else {
-                _output.append("-inf");
+                _output.appendAscii("-inf");
             }
         }
         else {
@@ -648,7 +653,7 @@ final class IonWriterSystemText
                 }
                 str += "e0";
             }
-            _output.append(str);
+            _output.appendAscii(str);
         }
 
         closeValue();
@@ -670,7 +675,7 @@ final class IonWriterSystemText
         int signum = decimal.signum();
         if (signum < 0)
         {
-            _output.append('-');
+            _output.appendAscii('-');
             unscaled = unscaled.negate();
         }
         else if (decimal instanceof Decimal
@@ -679,7 +684,7 @@ final class IonWriterSystemText
             // for the various forms of negative zero we have to
             // write the sign ourselves, since neither BigInteger
             // nor BigDecimal recognize negative zero, but Ion does.
-            _output.append('-');
+            _output.appendAscii('-');
         }
 
         final String unscaledText = unscaled.toString();
@@ -690,14 +695,14 @@ final class IonWriterSystemText
 
         if (_options._decimal_as_float)
         {
-            _output.append(unscaledText);
-            _output.append('e');
-            _output.append(Integer.toString(exponent));
+            _output.appendAscii(unscaledText);
+            _output.appendAscii('e');
+            _output.appendAscii(Integer.toString(exponent));
         }
         else if (exponent == 0)
         {
-            _output.append(unscaledText);
-            _output.append('.');
+            _output.appendAscii(unscaledText);
+            _output.appendAscii('.');
         }
         else if (0 < scale)
         {
@@ -714,27 +719,27 @@ final class IonWriterSystemText
                 remainingScale = scale - significantDigits + 1;
             }
 
-            _output.append(unscaledText, 0, wholeDigits);
+            _output.appendAscii(unscaledText, 0, wholeDigits);
             if (wholeDigits < significantDigits)
             {
-                _output.append('.');
-                _output.append(unscaledText, wholeDigits,
+                _output.appendAscii('.');
+                _output.appendAscii(unscaledText, wholeDigits,
                              significantDigits);
             }
 
             if (remainingScale != 0)
             {
-                _output.append("d-");
-                _output.append(Integer.toString(remainingScale));
+                _output.appendAscii("d-");
+                _output.appendAscii(Integer.toString(remainingScale));
             }
         }
         else // (exponent > 0)
         {
             // We cannot move the decimal point to the right, adding
             // rightmost zeros, because that would alter the precision.
-            _output.append(unscaledText);
-            _output.append('d');
-            _output.append(Integer.toString(exponent));
+            _output.appendAscii(unscaledText);
+            _output.appendAscii('d');
+            _output.appendAscii(Integer.toString(exponent));
         }
         closeValue();
     }
@@ -751,18 +756,18 @@ final class IonWriterSystemText
         if (_options._timestamp_as_millis)
         {
             long millis = value.getMillis();
-            _output.append(Long.toString(millis));
+            _output.appendAscii(Long.toString(millis));
         }
         else if (_options._timestamp_as_string)
         {
             // Timestamp is ASCII-safe so this is easy
-            _output.append('"');
-            value.print(_output);
-            _output.append('"');
+            _output.appendAscii('"');
+            _output.appendAscii(value.toString());
+            _output.appendAscii('"');
         }
         else
         {
-            value.print(_output);
+            _output.appendAscii(value.toString());
         }
 
         closeValue();
@@ -778,7 +783,7 @@ final class IonWriterSystemText
         {
             // TODO This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
-            _stringWriter.printLongString(value);
+            _output.printLongString(value);
 
             // This sets _following_long_string = false so we must overwrite
             closeValue();
@@ -788,11 +793,11 @@ final class IonWriterSystemText
         {
             if (_options._string_as_json)
             {
-                _stringWriter.printJsonString(value);
+                _output.printJsonString(value);
             }
             else
             {
-                _stringWriter.printString(value);
+                _output.printString(value);
             }
             closeValue();
         }
@@ -862,12 +867,12 @@ final class IonWriterSystemText
         startValue();
 
         if (_options._blob_as_string) {
-            _output.append('"');
+            _output.appendAscii('"');
         }
         else {
-            _output.append("{{");
+            _output.appendAscii("{{");
             if (_options.isPrettyPrintOn()) {
-                _output.append(' ');
+                _output.appendAscii(' ');
             }
         }
 
@@ -875,18 +880,18 @@ final class IonWriterSystemText
             // TODO is it better to fill up the CharBuffer before outputting?
             int clen = ts.read(buf, 0, buf.length);
             if (clen < 1) break;
-            _output.append(cb, 0, clen);
+            _output.appendAscii(cb, 0, clen);
         }
 
 
         if (_options._blob_as_string) {
-            _output.append('"');
+            _output.appendAscii('"');
         }
         else {
             if (_options.isPrettyPrintOn()) {
-                _output.append(' ');
+                _output.appendAscii(' ');
             }
-            _output.append("}}");
+            _output.appendAscii("}}");
         }
         closeValue();
     }
@@ -909,28 +914,28 @@ final class IonWriterSystemText
 
         if (!_options._clob_as_string) {
             if (!json) {
-                _output.append("{{");
+                _output.appendAscii("{{");
             }
 
             if (_options.isPrettyPrintOn()) {
-                _output.append(" ");
+                _output.appendAscii(" ");
             }
         }
 
         if (json) {
-            _stringWriter.printJsonClob(value, start, start + len);
+            _output.printJsonClob(value, start, start + len);
         } else if (longString) {
-            _stringWriter.printLongClob(value, start, start + len);
+            _output.printLongClob(value, start, start + len);
         } else {
-            _stringWriter.printClob(value, start, start + len);
+            _output.printClob(value, start, start + len);
         }
 
         if (! _options._clob_as_string) {
             if (_options.isPrettyPrintOn()) {
-                _output.append(" ");
+                _output.appendAscii(" ");
             }
             if (!json) {
-                _output.append("}}");
+                _output.appendAscii("}}");
             }
         }
 

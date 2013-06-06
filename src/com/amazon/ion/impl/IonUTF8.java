@@ -3,11 +3,12 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.util.IonTextUtils.CharsetWriter;
+import com.amazon.ion.util.IonTextUtils.IonTextWriter;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 /**
  * this class holds the various constants and helper functions Ion uses
@@ -420,31 +421,34 @@ class IonUTF8 {
      * for actual writes. The former is intended to optimize ASCII vs UTF16 character writes
      */
     public static final class CharToUTF8
-        implements CharsetWriter, Appendable, Closeable, Flushable
+        extends IonTextWriter
+        implements Appendable, Closeable, Flushable
     {
-        final private OutputStream _byte_stream;
+        final private OutputStream _out;
         final private static int MAX_BYTES_LEN = 4096;
         // this byte array is used as a buffer where the generated data is written
         // before it gets to OutputStream
-        private int bytePos_;
-        private byte[] bytes_;
+        private int _byteBufferPos;
+        private byte[] _byteBuffer;
 
-        public CharToUTF8(OutputStream byteStream) {
-            byteStream.getClass(); // Efficient null check
-            this._byte_stream = byteStream;
-            this.bytePos_ = 0;
-            this.bytes_ = new byte[MAX_BYTES_LEN];
+        public CharToUTF8(OutputStream out, Charset charset) {
+            // escape unicode symbols if charset is ASCII
+            super(charset == _Private_Utils.ASCII_CHARSET);
+            out.getClass(); // Efficient null check
+            this._out = out;
+            this._byteBufferPos = 0;
+            this._byteBuffer = new byte[MAX_BYTES_LEN];
         }
         public final OutputStream getOutputStream() {
-            return _byte_stream;
+            return _out;
         }
         public final void flush() throws IOException
         {
-            if (bytePos_ > 0) {
-                _byte_stream.write(bytes_, 0, bytePos_);
-                bytePos_ = 0;
+            if (_byteBufferPos > 0) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
-            _byte_stream.flush();
+            _out.flush();
         }
 
         public final void close() throws IOException
@@ -455,30 +459,35 @@ class IonUTF8 {
             }
             finally
             {
-                _byte_stream.close();
+                _out.close();
             }
         }
 
         public void appendAscii(char c) throws IOException {
-            if (bytePos_ == bytes_.length) {
-                _byte_stream.write(bytes_, 0, bytePos_);
-                bytePos_ = 0;
+            if (_byteBufferPos == _byteBuffer.length) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
             assert c < 0x80;
-            bytes_[bytePos_++] = (byte)c;
+            _byteBuffer[_byteBufferPos++] = (byte)c;
         }
         public void appendAscii(CharSequence csq) throws IOException {
             appendAscii(csq, 0, csq.length());
         }
         public void appendAscii(CharSequence csq, int start, int end) throws IOException {
+            if (csq instanceof String) {
+                String str = (String)csq;
+                byte[] strBytes = str.getBytes();
+
+            }
             for (int ii=start; ii < end; ii++) {
-                if (bytePos_ == bytes_.length) {
-                    _byte_stream.write(bytes_, 0, bytePos_);
-                    bytePos_ = 0;
+                if (_byteBufferPos == _byteBuffer.length) {
+                    _out.write(_byteBuffer, 0, _byteBufferPos);
+                    _byteBufferPos = 0;
                 }
                 char c = csq.charAt(ii);
                 assert c < 0x80;
-                bytes_[bytePos_++] = (byte)c;
+                _byteBuffer[_byteBufferPos++] = (byte)c;
             }
         }
         public void appendUtf16(char unicodeScalar) throws IOException {
@@ -500,33 +509,33 @@ class IonUTF8 {
         }
         public final Appendable append(char c) throws IOException
         {
-            if (bytePos_ == bytes_.length) {
-                _byte_stream.write(bytes_, 0, bytePos_);
-                bytePos_ = 0;
+            if (_byteBufferPos == _byteBuffer.length) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
             assert c < 0x80;
-            bytes_[bytePos_++] = (byte)c;
+            _byteBuffer[_byteBufferPos++] = (byte)c;
             return this;
         }
         private final void appendCodePoint(int c) throws IOException
         {
-            if (bytePos_ > bytes_.length - 4) {
-                _byte_stream.write(bytes_, 0, bytePos_);
-                bytePos_ = 0;
+            if (_byteBufferPos > _byteBuffer.length - 4) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
             assert c >= 0x80;
             if (c < 0x800) {
-                bytes_[bytePos_++] = (byte)( 0xff & (0xC0 | (c >> 6)) );
-                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xC0 | (c >> 6)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
             } else if (c < 0x10000) {
-                bytes_[bytePos_++] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
-                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
-                bytes_[bytePos_++] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
             } else if (c <= 0x10FFFF) {
-                bytes_[bytePos_++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
-                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
-                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
-                bytes_[bytePos_++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
             } else {
                 throw new IOException("invalid codepoint " + c);
             }
