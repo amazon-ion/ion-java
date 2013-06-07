@@ -29,7 +29,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
 
 /**
  *
@@ -48,6 +47,7 @@ final class IonWriterSystemText
 
     /** Ensure we don't use a closed {@link #output} stream. */
     private boolean _closed;
+    /** Flags if current container to be written is struct enforcing writing of member names */
     boolean     _in_struct;
     boolean     _pending_separator;
 
@@ -61,9 +61,7 @@ final class IonWriterSystemText
 
     int         _top;
     int []      _stack_parent_type = new int[10];
-    boolean[]   _stack_in_struct = new boolean[10];
     boolean[]   _stack_pending_comma = new boolean[10];
-    char[]      _integer_buffer = new char[20];
 
     /**
      * Takes an OutputStream and a charset, and creates an CharToUTF8 text
@@ -73,12 +71,11 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
-                                  Charset charset,
                                   OutputStream out)
     {
         this(defaultSystemSymtab,
              options,
-             new IonUTF8.CharToUTF8(out, charset == null ? _Private_Utils.UTF8_CHARSET : charset));
+             new IonUTF8.CharToUTF8(out, options.getCharset() == null ? _Private_Utils.UTF8_CHARSET : options.getCharset()));
     }
 
     /**
@@ -87,12 +84,11 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
-                                  Charset charset,
                                   Appendable out)
     {
         this(defaultSystemSymtab,
              options,
-             new CharsetWriterAppendableWrapper(out, charset == null ? _Private_Utils.UTF8_CHARSET : charset));
+             new CharsetWriterAppendableWrapper(out, options.getCharset() == null ? _Private_Utils.UTF8_CHARSET : options.getCharset()));
     }
 
     /**
@@ -164,7 +160,7 @@ final class IonWriterSystemText
     }
     void push(int typeid)
     {
-        if (_top >= _stack_in_struct.length) {
+        if (_top + 1 == _stack_parent_type.length) {
             growStack();
         }
         _stack_parent_type[_top] = typeid;
@@ -184,18 +180,15 @@ final class IonWriterSystemText
         _top++;
     }
     void growStack() {
-        int oldlen = _stack_in_struct.length;
+        int oldlen = _stack_parent_type.length;
         int newlen = oldlen * 2;
         int[] temp1 = new int[newlen];
-        boolean[] temp2 = new boolean[newlen];
         boolean[] temp3 = new boolean[newlen];
 
         System.arraycopy(_stack_parent_type, 0, temp1, 0, oldlen);
-        System.arraycopy(_stack_in_struct, 0, temp2, 0, oldlen);
         System.arraycopy(_stack_pending_comma, 0, temp3, 0, oldlen);
 
         _stack_parent_type = temp1;
-        _stack_in_struct = temp2;
         _stack_pending_comma = temp3;
     }
     int pop() {
@@ -564,25 +557,26 @@ final class IonWriterSystemText
         closeValue();
     }
 
-    // this will convert long to a char array in @_integer_buffer back to front
+    // this will convert long to a char array in @_integerBuffer back to front
     // and return the starting position in the array
+    char[] _fixedIntBuffer = new char[_Private_IonConstants.MAX_LONG_TEXT_SIZE];
     int longToChar(long value)
     {
-        int j = 19;
+        int j = _fixedIntBuffer.length - 1;
         if (value == 0) {
-            _integer_buffer[j] = '0';
-            return 19;
-        }
-        if (value < 0) {
-            while (value != 0) {
-                _integer_buffer[j--] = (char)(0x30 - value % 10);
-                value /= 10;
-            }
-            _integer_buffer[j--] = '-';
+            _fixedIntBuffer[j--] = '0';
         } else {
-            while (value != 0) {
-                _integer_buffer[j--] = (char)(0x30 + value % 10);
-                value /= 10;
+            if (value < 0) {
+                while (value != 0) {
+                    _fixedIntBuffer[j--] = (char)(0x30 - value % 10);
+                    value /= 10;
+                }
+                _fixedIntBuffer[j--] = '-';
+            } else {
+                while (value != 0) {
+                    _fixedIntBuffer[j--] = (char)(0x30 + value % 10);
+                    value /= 10;
+                }
             }
         }
         return j + 1;
@@ -593,7 +587,8 @@ final class IonWriterSystemText
     {
         startValue();
         int start = longToChar(value);
-        _output.appendAscii(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
+        // using CharBuffer to avoid copying of _fixedIntBuffer in String
+        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer), start, _fixedIntBuffer.length);
         closeValue();
     }
 
@@ -602,7 +597,8 @@ final class IonWriterSystemText
     {
         startValue();
         int start = longToChar(value);
-        _output.appendAscii(CharBuffer.wrap(_integer_buffer), start, _integer_buffer.length);
+        // using CharBuffer to avoid copying of _fixedIntBuffer in String
+        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer), start, _fixedIntBuffer.length);
         closeValue();
     }
 
@@ -648,9 +644,6 @@ final class IonWriterSystemText
         else {
             String str = Double.toString(value);
             if (str.indexOf('E') == -1) {
-                if (str.indexOf('.') == -1) {
-                    str += ".0";
-                }
                 str += "e0";
             }
             _output.appendAscii(str);
@@ -913,10 +906,7 @@ final class IonWriterSystemText
         final boolean longString = (_long_string_threshold < value.length);
 
         if (!_options._clob_as_string) {
-            if (!json) {
-                _output.appendAscii("{{");
-            }
-
+            _output.appendAscii("{{");
             if (_options.isPrettyPrintOn()) {
                 _output.appendAscii(" ");
             }
@@ -934,9 +924,7 @@ final class IonWriterSystemText
             if (_options.isPrettyPrintOn()) {
                 _output.appendAscii(" ");
             }
-            if (!json) {
-                _output.appendAscii("}}");
-            }
+            _output.appendAscii("}}");
         }
 
         closeValue();

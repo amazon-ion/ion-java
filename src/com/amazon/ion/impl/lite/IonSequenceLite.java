@@ -367,5 +367,4 @@ abstract class IonSequenceLite
         clear();
         return array;
     }
-
 }

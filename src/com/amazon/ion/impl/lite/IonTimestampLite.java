@@ -2,8 +2,10 @@
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
@@ -255,6 +257,19 @@ final class IonTimestampLite
         checkForLock();
         _timestamp_value = null;
         _isNullValue(true);
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.TIMESTAMP);
+            } else {
+                writer.writeTimestamp(_timestamp_value);
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
     }
 
     @Override

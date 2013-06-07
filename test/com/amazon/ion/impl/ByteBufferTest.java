@@ -47,104 +47,51 @@ public class ByteBufferTest
     }
 
     @Test
-    public void testPartialSurrogateOverflow() {
+    public void testUnicodeCodepointOverflow() {
         BufferManager buf = new BufferManager ();
         IonBinary.Writer writer = buf.openWriter();
 
         try {
-            writer.writeStringData(new String(new int[] { 0xd799 }, 0, 1));
-            writer.writeStringData(new String(new int[] { 0x10000 }, 0, 1));
-            assertTrue(true);
-        } catch (IonException e) {
-            assertFalse("Failed on parsing non-surrogate", true);
+            writer.writeStringData(new String(new char[] { 0xd799 }, 0, 1));
+            writer.writeStringData(new String(new char[] { 0xe000 }, 0, 1));
         } catch (Exception e) {
-            assertFalse("Unexpected exception: " + e.getMessage(), true);
+            fail("Unexpected exception: " + e.getMessage());
         }
         try {
-            writer.writeStringData(new String(new int[] { 0xd800 }, 0, 1));
-            assertTrue("Successfully parsed a partial surrogate", false);
+            writer.writeStringData(new String(new char[] { 0xd800 }, 0, 1));
+            fail("Successfully parsed a partial surrogate");
         } catch (Exception e) {
-            assertTrue(true);
-//        } catch (Exception e) {
-//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
         try {
-            writer.writeStringData(new String(new int[] { 0xdfff}, 0, 1));
-            assertFalse("Successfully parsed a partial surrogate", true);
+            writer.writeStringData(new String(new char[] { 0xdfff}, 0, 1));
+            fail("Successfully parsed a partial surrogate");
         } catch (Exception e) {
-            assertTrue(true);
-//        } catch (Exception e) {
-//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
     }
 
     @Test
-    public void testPartialSurrogateOverflowStatic() {
+    public void testUnicodeCodepointOverflowStatic() {
         OutputStream os = new ByteArrayOutputStream();
         try {
-            IonBinary.writeString(os, new String(new int[] { 0xd799 }, 0, 1));
-            IonBinary.writeString(os, new String(new int[] { 0x10000 }, 0, 1));
-            IonBinary.writeString(os, new String(new int[] { 0xd800, 0xdc00 }, 0, 2));
-            IonBinary.writeString(os, new String(new int[] { 0xdbff, 0xdfff }, 0, 2));
-            IonBinary.writeString(os, new String(new int[] { 0x10000 }, 0, 1));
-            assertTrue(true);
-        } catch (IonException e) {
-            assertFalse("Failed on parsing non-surrogate", true);
+            IonBinary.writeString(os, new String(new char[] { 0xd799 }, 0, 1));
+            IonBinary.writeString(os, new String(new char[] { 0xe000 }, 0, 1));
+            // surrogates
+            IonBinary.writeString(os, new String(new char[] { 0xd800, 0xdc00 }, 0, 2));
+            IonBinary.writeString(os, new String(new char[] { 0xdbff, 0xdfff }, 0, 2));
         } catch (Exception e) {
-            assertFalse("Unexpected exception: " + e.getMessage(), true);
+            throw new IonException(e);
         }
         try {
             IonBinary.writeString(os, new String(new int[] { 0xd800 }, 0, 1));
-            assertFalse("Successfully parsed a partial surrogate", true);
+            fail("Successfully parsed a partial surrogate");
         } catch (Exception e) {
-            assertTrue(true);
-//        } catch (Exception e) {
-//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
         try {
             IonBinary.writeString(os, new String(new int[] { 0xdfff}, 0, 1));
-            assertFalse("Successfully parsed a partial surrogate", true);
+            fail("Successfully parsed a partial surrogate");
         } catch (Exception e) {
-            assertTrue(true);
-//        } catch (Exception e) {
-//            assertFalse("Unexpected exception: " + e.getMessage(), true);
         }
     }
-
-//    @Test
-//    public void testPartialSurrogateFailure() {
-//        ByteArrayOutputStream os = new ByteArrayOutputStream();
-//        try {
-//            IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
-//            utf8.append(new String(new int[] { 0x10000 }, 0, 1));
-//            utf8.append((char)0xd800);
-//            utf8.append((char)0xdc00);
-//            utf8.append((char)0xdbff);
-//            utf8.append((char)0xdfff);
-//            utf8.flush();
-//            assertEquals(new String(os.toByteArray()),
-//                         new String(new byte[] {(byte)0xF0, (byte)0x90, (byte)0x80, (byte)0x80,
-//                                                (byte)0xF0, (byte)0x90, (byte)0x80, (byte)0x80,
-//                                                (byte)0xF4, (byte)0x8F, (byte)0xBF, (byte)0xBF}));
-//        } catch (Exception e) {
-//            assertFalse("Unexpected exception: " + e.getMessage(), true);
-//        }
-//        try {
-//            IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
-//            utf8.append((char)0xd800);
-//            utf8.flush();
-//            assertFalse("Successfully parsed a partial surrogate", true);
-//        } catch (IOException e) {
-//            assertTrue(true);
-//        }
-//        try {
-//            IonUTF8.CharToUTF8 utf8 = new IonUTF8.CharToUTF8(os);
-//            utf8.append((char)0xdc00);
-//            assertFalse("Successfully parsed a partial surrogate", true);
-//        } catch (IOException e) {
-//            assertTrue(true);
-//        }
-//    }
 
     @Test
     public void testLargeInsertion()

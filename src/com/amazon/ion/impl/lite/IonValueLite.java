@@ -7,31 +7,16 @@ import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
-import com.amazon.ion.IonBlob;
-import com.amazon.ion.IonBool;
-import com.amazon.ion.IonClob;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonFloat;
-import com.amazon.ion.IonInt;
-import com.amazon.ion.IonList;
-import com.amazon.ion.IonNull;
-import com.amazon.ion.IonSexp;
-import com.amazon.ion.IonString;
-import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonValue;
@@ -39,7 +24,6 @@ import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Iterator;
 
 /**
  *  Base class of the light weight implementation of
@@ -858,116 +842,116 @@ abstract class IonValueLite
     }
 
 
-    public final void writeTo(IonWriter writer)
-    {
-        try
-        {
-            accept(new WriterVisitor(writer));
-        }
-        catch (Exception e)
-        {
-            throw new IonException(e);
-        }
-    }
-
-    static class WriterVisitor implements ValueVisitor
-    {
-        private int depth;
-        private IonWriter writer;
-        WriterVisitor(IonWriter writer) {
-            this.depth = 0;
-            this.writer = writer;
-        }
-        public void visit(IonBlob value) throws Exception {
-            writer.writeBlob(value.getBytes());
-        }
-        public void visit(IonBool value) throws Exception {
-            writer.writeBool(value.booleanValue());
-        }
-        public void visit(IonClob value) throws Exception {
-            writer.writeClob(value.getBytes());
-        }
-        public void visit(IonDecimal value) throws Exception {
-            writer.writeDecimal(value.decimalValue());
-        }
-        public void visit(IonFloat value) throws Exception {
-            writer.writeFloat(value.doubleValue());
-        }
-        public void visit(IonInt value) throws Exception {
-            assert value instanceof IonIntLite;
-            IonIntLite intValue = (IonIntLite)value;
-            if (intValue.isBigInteger()) {
-                writer.writeInt(intValue.bigIntegerValue());
-            } else {
-                writer.writeInt(intValue.longValue());
-            }
-        }
-        public void visit(IonNull value) throws Exception {
-            writer.writeNull();
-        }
-        public void visit(IonString value) throws Exception {
-            writer.writeString(value.stringValue());
-        }
-        public void visit(IonSymbol value) throws Exception {
-            String symbStr = value.stringValue();
-            if (symbStr == null) {
-                SymbolToken st = value.symbolValue();
-                symbStr = st.getText();
-                if (symbStr == null) {
-                    symbStr = "$" + st.getSid();
-                }
-            }
-            writer.writeSymbol(symbStr);
-        }
-        public void visit(IonTimestamp value) throws Exception {
-            writer.writeTimestamp(value.timestampValue());
-        }
-        public void visit(IonStruct value) throws Exception {
-            ++depth;
-            writer.stepIn(IonType.STRUCT);
-            write(true, value);
-            writer.stepOut();
-            --depth;
-        }
-        public void visit(IonSexp value) throws Exception {
-            ++depth;
-            writer.stepIn(IonType.SEXP);
-            write(false, value);
-            writer.stepOut();
-            --depth;
-        }
-        public void visit(IonList value) throws Exception {
-            ++depth;
-            writer.stepIn(IonType.LIST);
-            write(false, value);
-            writer.stepOut();
-            --depth;
-        }
-        public void visit(IonDatagram value) throws Exception {
-            writer.writeSymbol(SystemSymbols.ION_1_0);
-            write(false, value);
-        }
-        private void write(boolean hasFieldNames, Iterable<IonValue> value) throws Exception {
-            Iterator<IonValue> i = value.iterator();
-            while (i.hasNext()) {
-                IonValue child = i.next();
-                if (hasFieldNames) {
-                    String fieldName = child.getFieldName();
-                    if (fieldName != null) {
-                        writer.setFieldName(fieldName);
-                    } else {
-                        writer.setFieldNameSymbol(child.getFieldNameSymbol());
-                    }
-                }
-                writer.setTypeAnnotationSymbols(child.getTypeAnnotationSymbols());
-                if (child.isNullValue()) {
-                    writer.writeNull(child.getType());
-                } else {
-                    child.accept(this);
-                }
-            }
-        }
-    }
+//    public final void writeTo(IonWriter writer)
+//    {
+//        try
+//        {
+//            accept(new WriterVisitor(writer));
+//        }
+//        catch (Exception e)
+//        {
+//            throw new IonException(e);
+//        }
+//    }
+//
+//    static class WriterVisitor implements ValueVisitor
+//    {
+//        private int depth;
+//        private IonWriter writer;
+//        WriterVisitor(IonWriter writer) {
+//            this.depth = 0;
+//            this.writer = writer;
+//        }
+//        public void visit(IonBlob value) throws Exception {
+//            writer.writeBlob(value.getBytes());
+//        }
+//        public void visit(IonBool value) throws Exception {
+//            writer.writeBool(value.booleanValue());
+//        }
+//        public void visit(IonClob value) throws Exception {
+//            writer.writeClob(value.getBytes());
+//        }
+//        public void visit(IonDecimal value) throws Exception {
+//            writer.writeDecimal(value.decimalValue());
+//        }
+//        public void visit(IonFloat value) throws Exception {
+//            writer.writeFloat(value.doubleValue());
+//        }
+//        public void visit(IonInt value) throws Exception {
+//            assert value instanceof IonIntLite;
+//            IonIntLite intValue = (IonIntLite)value;
+//            if (intValue.isBigInteger()) {
+//                writer.writeInt(intValue.bigIntegerValue());
+//            } else {
+//                writer.writeInt(intValue.longValue());
+//            }
+//        }
+//        public void visit(IonNull value) throws Exception {
+//            writer.writeNull();
+//        }
+//        public void visit(IonString value) throws Exception {
+//            writer.writeString(value.stringValue());
+//        }
+//        public void visit(IonSymbol value) throws Exception {
+//            String symbStr = value.stringValue();
+//            if (symbStr == null) {
+//                SymbolToken st = value.symbolValue();
+//                symbStr = st.getText();
+//                if (symbStr == null) {
+//                    symbStr = "$" + st.getSid();
+//                }
+//            }
+//            writer.writeSymbol(symbStr);
+//        }
+//        public void visit(IonTimestamp value) throws Exception {
+//            writer.writeTimestamp(value.timestampValue());
+//        }
+//        public void visit(IonStruct value) throws Exception {
+//            ++depth;
+//            writer.stepIn(IonType.STRUCT);
+//            write(true, value);
+//            writer.stepOut();
+//            --depth;
+//        }
+//        public void visit(IonSexp value) throws Exception {
+//            ++depth;
+//            writer.stepIn(IonType.SEXP);
+//            write(false, value);
+//            writer.stepOut();
+//            --depth;
+//        }
+//        public void visit(IonList value) throws Exception {
+//            ++depth;
+//            writer.stepIn(IonType.LIST);
+//            write(false, value);
+//            writer.stepOut();
+//            --depth;
+//        }
+//        public void visit(IonDatagram value) throws Exception {
+//            writer.writeSymbol(SystemSymbols.ION_1_0);
+//            write(false, value);
+//        }
+//        private void write(boolean hasFieldNames, Iterable<IonValue> value) throws Exception {
+//            Iterator<IonValue> i = value.iterator();
+//            while (i.hasNext()) {
+//                IonValue child = i.next();
+//                if (hasFieldNames) {
+//                    String fieldName = child.getFieldName();
+//                    if (fieldName != null) {
+//                        writer.setFieldName(fieldName);
+//                    } else {
+//                        writer.setFieldNameSymbol(child.getFieldNameSymbol());
+//                    }
+//                }
+//                writer.setTypeAnnotationSymbols(child.getTypeAnnotationSymbols());
+//                if (child.isNullValue()) {
+//                    writer.writeNull(child.getType());
+//                } else {
+//                    child.accept(this);
+//                }
+//            }
+//        }
+//    }
 
     public void dump(PrintWriter out)
     {

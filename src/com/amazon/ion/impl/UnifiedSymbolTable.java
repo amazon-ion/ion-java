@@ -773,16 +773,15 @@ final class UnifiedSymbolTable
             int c = name.charAt(i);
             if (c >= 0xD800 && c <= 0xDFFF) {
                 if (c >= 0xDC00) {
-                    // low surrogate without the high one
-                    throw new IllegalArgumentException("unparied low surrogate in symbol name at position " + i);
+                    throw new IllegalArgumentException("unparied trailing surrogate in symbol name at position " + i);
                 }
                 ++i;
                 if (i == name.length()) {
-                    throw new IllegalArgumentException("unmatched high surrogate in symbol name at position " + i);
+                    throw new IllegalArgumentException("unmatched leading surrogate in symbol name at position " + i);
                 }
                 c = name.charAt(i);
                 if (c < 0xDC00 || c > 0xDFFF) {
-                    throw new IllegalArgumentException("unmatched high surrogate in symbol name at position " + i);
+                    throw new IllegalArgumentException("unmatched leading surrogate in symbol name at position " + i);
                 }
             }
         }

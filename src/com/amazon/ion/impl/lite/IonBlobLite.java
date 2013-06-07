@@ -3,7 +3,9 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonBlob;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_LazyDomTrampoline;
 import java.io.IOException;
@@ -81,6 +83,19 @@ final class IonBlobLite
         finally
         {
             byteStream.close();
+        }
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.BLOB);
+            } else {
+                writer.writeBlob(getBytesNoCopy());
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
         }
     }
 

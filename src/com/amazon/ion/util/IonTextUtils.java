@@ -151,8 +151,8 @@ public class IonTextUtils
         }
     }
 
-    private static final String utf16Prefix = "\\u";
-    private static final String utf32Prefix = "\\U";
+    private static final String HEX_4_PREFIX = "\\u";
+    private static final String HEX_8_PREFIX = "\\U";
     private static final String tripleQuotes = "'''";
 
     /**
@@ -307,6 +307,13 @@ public class IonTextUtils
             }
             else
             {
+                // TODO Some points on printing long clobs:
+
+                // This may escape more often than is necessary, but doing it
+                // minimally is very tricky. Must be sure to account for
+                // quotes at the end of the content.
+
+                // Account for NL versus CR+NL streams
                 appendAscii(tripleQuotes);
                 printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
                 appendAscii(tripleQuotes);
@@ -435,7 +442,7 @@ public class IonTextUtils
                 } else if (c < 0xD800 || c >= 0xE000) {
                     String s = Integer.toHexString(c);
                     if (escapeUnicode) {
-                        appendAscii(utf16Prefix);
+                        appendAscii(HEX_4_PREFIX);
                         appendAscii(ZERO_PADDING[4 - s.length()]);
                         appendAscii(s);
                     } else {
@@ -454,7 +461,7 @@ public class IonTextUtils
                     if (escapeUnicode) {
                         int cp = _Private_IonConstants.makeUnicodeScalar(c, c2);
                         String s = Integer.toHexString(cp);
-                        appendAscii(utf32Prefix);
+                        appendAscii(HEX_8_PREFIX);
                         appendAscii(ZERO_PADDING[8 - s.length()]);
                         appendAscii(s);
                     } else {
@@ -480,6 +487,7 @@ public class IonTextUtils
 
         public CharsetWriterAppendableWrapper(Appendable out, Charset charset) {
             super(charset == _Private_Utils.ASCII_CHARSET);
+            assert charset != null;
             out.getClass();
             this._out = out;
         }

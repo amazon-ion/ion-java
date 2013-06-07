@@ -15,8 +15,10 @@ import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
@@ -481,6 +483,17 @@ final class IonDatagramLite
     public IonType getType()
     {
         return IonType.DATAGRAM;
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.writeSymbol(SystemSymbols.ION_1_0);
+            for (IonValue iv : this) {
+                iv.writeTo(writer);
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
     }
 
 

@@ -2,8 +2,10 @@
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 
 /**
@@ -62,6 +64,19 @@ final class IonStringLite
     public IonType getType()
     {
         return IonType.STRING;
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.STRING);
+            } else {
+                writer.writeString(stringValue());
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
     }
 
     @Override

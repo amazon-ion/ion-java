@@ -422,7 +422,7 @@ class IonUTF8 {
      */
     public static final class CharToUTF8
         extends IonTextWriter
-        implements Appendable, Closeable, Flushable
+        implements Closeable, Flushable
     {
         final private OutputStream _out;
         final private static int MAX_BYTES_LEN = 4096;
@@ -434,6 +434,7 @@ class IonUTF8 {
         public CharToUTF8(OutputStream out, Charset charset) {
             // escape unicode symbols if charset is ASCII
             super(charset == _Private_Utils.ASCII_CHARSET);
+            assert charset != null;
             out.getClass(); // Efficient null check
             this._out = out;
             this._byteBufferPos = 0;
@@ -508,41 +509,12 @@ class IonUTF8 {
             }
         }
         @Override
-        public final void appendUtf16(char unicodeScalar) throws IOException {
-            appendCodePoint(unicodeScalar);
-        }
-        @Override
-        public final void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
-            appendCodePoint(_Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate));
-        }
-
-        public final Appendable append(CharSequence csq) throws IOException
-        {
-            return append(csq, 0, csq.length());
-        }
-        public final Appendable append(CharSequence csq, int start, int end)
-            throws IOException
-        {
-            appendAscii(csq, start, end);
-            return this;
-        }
-        public final Appendable append(char c) throws IOException
-        {
-            if (_byteBufferPos == _byteBuffer.length) {
-                _out.write(_byteBuffer, 0, _byteBufferPos);
-                _byteBufferPos = 0;
-            }
-            assert c < 0x80;
-            _byteBuffer[_byteBufferPos++] = (byte)c;
-            return this;
-        }
-        private final void appendCodePoint(int c) throws IOException
-        {
-            if (_byteBufferPos > _byteBuffer.length - 4) {
-                _out.write(_byteBuffer, 0, _byteBufferPos);
-                _byteBufferPos = 0;
-            }
+        public final void appendUtf16(char c) throws IOException {
             assert c >= 0x80;
+            if (_byteBufferPos > _byteBuffer.length - 3) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
+            }
             if (c < 0x800) {
                 _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xC0 | (c >> 6)) );
                 _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
@@ -550,14 +522,20 @@ class IonUTF8 {
                 _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
                 _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
                 _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
-            } else if (c <= 0x10FFFF) {
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
-            } else {
-                throw new IOException("invalid codepoint " + c);
             }
+        }
+        @Override
+        public final void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
+            int c = _Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate);
+            assert c >= 0x10000;
+            if (_byteBufferPos > _byteBuffer.length - 4) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
+            }
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
         }
     }
 

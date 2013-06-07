@@ -7,6 +7,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.util.Collection;
@@ -86,6 +87,17 @@ final class IonListLite
         return IonType.LIST;
     }
 
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.stepIn(IonType.LIST);
+            for (IonValue iv : this) {
+                iv.writeTo(writer);
+            }
+            writer.stepOut();
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
+    }
 
     @Override
     public void accept(ValueVisitor visitor)
