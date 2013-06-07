@@ -75,7 +75,7 @@ import java.util.ListIterator;
  * nested values of the top-level value being traversed in a similar
  * last-to-first (right-to-left) order.
  */
-class ReverseBinaryEncoder
+public class ReverseBinaryEncoder
 {
     private static final BigInteger MAX_LONG_VALUE =
         BigInteger.valueOf(Long.MAX_VALUE);
@@ -254,6 +254,12 @@ class ReverseBinaryEncoder
 
         // Write IVM
         writeBytes(BINARY_VERSION_MARKER_1_0);
+    }
+
+    public void serialize(SymbolTable symTab)
+        throws IonException
+    {
+        writeLocalSymbolTable(symTab);
     }
 
     /**
