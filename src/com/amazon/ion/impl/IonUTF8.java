@@ -3,10 +3,12 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.util.IonTextUtils.IonTextWriter;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 /**
  * this class holds the various constants and helper functions Ion uses
@@ -24,7 +26,7 @@ import java.io.OutputStream;
  * 21 April 2009
  *
  */
-final class IonUTF8 {
+class IonUTF8 {
     private final static int UNICODE_MAX_ONE_BYTE_SCALAR       = 0x0000007F; // 7 bits     =  7 / 1 = 7    bits per byte
     private final static int UNICODE_MAX_TWO_BYTE_SCALAR       = 0x000007FF; // 5 + 6 bits = 11 / 2 = 5.50 bits per byte
     private final static int UNICODE_MAX_THREE_BYTE_SCALAR     = 0x0000FFFF; // 4 + 6+6    = 16 / 3 = 5.33 bits per byte
@@ -412,26 +414,42 @@ final class IonUTF8 {
             super(msg, e);
         }
     }
-    public static final class CharToUTF8
-        implements Appendable, Closeable, Flushable
-    {
-        final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
-        final private OutputStream _byte_stream;
-              private char         _pending_low_surrogate = NO_SURROGATE;
 
-        public CharToUTF8(OutputStream byteStream) {
-            byteStream.getClass(); // Efficient null check
-            _byte_stream = byteStream;
+    /**
+     * Wrapper around OutputStream that implements both AppendableUnicodeAdapter and Appendable
+     * interfaces. The latter is for compatibility in IonWriterSystemText and is using the former
+     * for actual writes. The former is intended to optimize ASCII vs UTF16 character writes
+     */
+    public static final class CharToUTF8
+        extends IonTextWriter
+        implements Closeable, Flushable
+    {
+        final private OutputStream _out;
+        final private static int MAX_BYTES_LEN = 4096;
+        // this byte array is used as a buffer where the generated data is written
+        // before it gets to OutputStream
+        private int _byteBufferPos;
+        private byte[] _byteBuffer;
+
+        public CharToUTF8(OutputStream out, Charset charset) {
+            // escape unicode symbols if charset is ASCII
+            super(charset == _Private_Utils.ASCII_CHARSET);
+            assert charset != null;
+            out.getClass(); // Efficient null check
+            this._out = out;
+            this._byteBufferPos = 0;
+            this._byteBuffer = new byte[MAX_BYTES_LEN];
         }
         public final OutputStream getOutputStream() {
-            return _byte_stream;
+            return _out;
         }
         public final void flush() throws IOException
         {
-            if (_pending_low_surrogate != NO_SURROGATE) {
-                throw new IOException("unused low surrogate still pending on close");
+            if (_byteBufferPos > 0) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
-            _byte_stream.flush();
+            _out.flush();
         }
 
         public final void close() throws IOException
@@ -442,74 +460,82 @@ final class IonUTF8 {
             }
             finally
             {
-                _byte_stream.close();
+                _out.close();
             }
         }
-
-        public final Appendable append(CharSequence csq) throws IOException
-        {
-            return append(csq, 0, csq.length());
-        }
-        public final Appendable append(CharSequence csq, int start, int end)
-            throws IOException
-        {
-            for (int ii=start; ii < end; ii++) {
-                char c = csq.charAt(ii);
-                append_helper(c);
+        @Override
+        public final void appendAscii(char c) throws IOException {
+            if (_byteBufferPos == _byteBuffer.length) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
-
-            return this;
+            assert c < 0x80;
+            _byteBuffer[_byteBufferPos++] = (byte)c;
         }
-        public final Appendable append(char c) throws IOException
-        {
-            if (c < 0) {
-                throw new IllegalArgumentException("invalid character");
-            }
-            append_helper(c);
-            return this;
+        @Override
+        public final void appendAscii(CharSequence csq) throws IOException {
+            appendAscii(csq, 0, csq.length());
         }
-        private final void append_helper(char c) throws IOException
-        {
-            if (_pending_low_surrogate != NO_SURROGATE) {
-                if (!IonUTF8.isHighSurrogate(c)) {
-                    throw new IOException("invalid surrogate (low surrogate not followed by a high surrogate)");
+        @Override
+        public final void appendAscii(CharSequence csq, int start, int end) throws IOException {
+            if (csq instanceof String) {
+                // using String.getBytes
+                String str = (String)csq;
+                int len = end - start;
+                if (_byteBufferPos + len < _byteBuffer.length) {
+                    // put String bytes directly into buffer
+                    str.getBytes(start, end, _byteBuffer, _byteBufferPos);
+                    _byteBufferPos += len;
+                } else {
+                    do {
+                        // flush the buffer on every loop
+                        _out.write(_byteBuffer, 0, _byteBufferPos);
+                        // check if we still need to split into chunks
+                        _byteBufferPos = (end - start > _byteBuffer.length ? _byteBuffer.length : end - start);
+                        str.getBytes(start, start + _byteBufferPos, _byteBuffer, 0);
+                        start += _byteBufferPos;
+                    } while (start < end);
                 }
-                int scalar = IonUTF8.getUnicodeScalarFromSurrogates(c, _pending_low_surrogate);
-                append_helper_write_utf8(scalar);
-                _pending_low_surrogate = NO_SURROGATE;
-            }
-            else if (c > 127) {
-                _byte_stream.write((byte)c & 0xff);
-            }
-            else if (IonUTF8.isLowSurrogate(c)) {
-                _pending_low_surrogate = c;
-            }
-            else {
-                append_helper_write_utf8(c);
+            } else {
+                for (int ii=start; ii < end; ii++) {
+                    if (_byteBufferPos == _byteBuffer.length) {
+                        _out.write(_byteBuffer, 0, _byteBufferPos);
+                        _byteBufferPos = 0;
+                    }
+                    char c = csq.charAt(ii);
+                    assert c < 0x80;
+                    _byteBuffer[_byteBufferPos++] = (byte)c;
+                }
             }
         }
-        private final void append_helper_write_utf8(int unicodeScalar) throws IOException
-        {
-            switch (IonUTF8.getUTF8ByteCount(unicodeScalar)) {
-            case 1:
-                _byte_stream.write(unicodeScalar & 0xff);
-                break;
-            case 2:
-                _byte_stream.write(IonUTF8.getByte1Of2(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of2(unicodeScalar) & 0xff);
-                break;
-            case 3:
-                _byte_stream.write(IonUTF8.getByte1Of3(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of3(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte3Of3(unicodeScalar) & 0xff);
-                break;
-            case 4:
-                _byte_stream.write(IonUTF8.getByte1Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte3Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte4Of4(unicodeScalar) & 0xff);
-                break;
+        @Override
+        public final void appendUtf16(char c) throws IOException {
+            assert c >= 0x80;
+            if (_byteBufferPos > _byteBuffer.length - 3) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
             }
+            if (c < 0x800) {
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xC0 | (c >> 6)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
+            } else if (c < 0x10000) {
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
+            }
+        }
+        @Override
+        public final void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
+            int c = _Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate);
+            assert c >= 0x10000;
+            if (_byteBufferPos > _byteBuffer.length - 4) {
+                _out.write(_byteBuffer, 0, _byteBufferPos);
+                _byteBufferPos = 0;
+            }
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
+            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
         }
     }
 

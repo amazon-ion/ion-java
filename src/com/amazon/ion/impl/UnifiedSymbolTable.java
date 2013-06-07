@@ -125,7 +125,7 @@ final class UnifiedSymbolTable
     private String[] _symbols;
 
     /** The initial length of {@link #_symbols}. */
-    private static final int DEFAULT_CAPACITY = 10;
+    private static final int DEFAULT_CAPACITY = 16;
 
     /**
      * This is the number of symbols defined in this symbol table
@@ -769,25 +769,21 @@ final class UnifiedSymbolTable
         if (name == null || name.length() < 1) {
             throw new IllegalArgumentException("symbols must contain 1 or more characters");
         }
-        boolean pending_high_surrogate = false;
-        int ii=0;
-        for (; ii<name.length(); ii++) {
-            char c = name.charAt(ii);
-            if (_Private_IonConstants.isHighSurrogate(c)) {
-                if (pending_high_surrogate) {
-                    break; // our check at the end will throw for us
+        for (int i = 0; i < name.length(); ++i) {
+            int c = name.charAt(i);
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                if (c >= 0xDC00) {
+                    throw new IllegalArgumentException("unparied trailing surrogate in symbol name at position " + i);
                 }
-                pending_high_surrogate = true;
-            }
-            else if (_Private_IonConstants.isLowSurrogate(c)) {
-                if (!pending_high_surrogate) {
-                    throw new IllegalArgumentException("unparied low surrogate in symbol name at position "+ii);
+                ++i;
+                if (i == name.length()) {
+                    throw new IllegalArgumentException("unmatched leading surrogate in symbol name at position " + i);
                 }
-                pending_high_surrogate = false;
+                c = name.charAt(i);
+                if (c < 0xDC00 || c > 0xDFFF) {
+                    throw new IllegalArgumentException("unmatched leading surrogate in symbol name at position " + i);
+                }
             }
-        }
-        if (pending_high_surrogate) {
-            throw new IllegalArgumentException("unmatched high surrogate in symbol name at position "+ii);
         }
     }
 

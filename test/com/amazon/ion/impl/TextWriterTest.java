@@ -324,6 +324,44 @@ public class TextWriterTest
     }
 
     @Test
+    public void testWritingJsonLongClobs()
+        throws Exception
+    {
+        options = IonTextWriterBuilder.json();
+        options.setInitialIvmHandling(SUPPRESS);
+        options.setLongStringThreshold(4);
+
+        // Cannot call expectRendering as the input to reload() would be Json rather than Ion
+        // test 1
+        IonDatagram dg = system().newDatagram();
+        dg.add().newClob(new byte[]{'a', '"', '\'', '\n'});
+
+        // expectRendering
+        iw = makeWriter();
+        dg.writeTo(iw);
+
+        IonDatagram reloaded = loader().load("{{\"a\\\"'\\n\"}}");
+        assertEquals(dg, reloaded);
+
+        String actual = outputString();
+        assertEquals("\"a\\\"'\\n\"", actual);
+
+        // test 2
+        dg.clear();
+        dg.add().newClob(new byte[]{'a', '"', '\'', '\n', 'c', 0x7F});
+
+        // expectRendering
+        iw = makeWriter();
+        dg.writeTo(iw);
+
+        reloaded = loader().load("{{'''a\"\\'\nc\\x7f'''}}");
+        assertEquals(dg, reloaded);
+
+        actual = outputString();
+        assertEquals("\"a\\\"'\\nc\\u007f\"", actual);
+    }
+
+    @Test
     public void testSuppressInitialIvm()
         throws Exception
     {

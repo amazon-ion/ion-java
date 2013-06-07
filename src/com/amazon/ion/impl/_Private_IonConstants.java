@@ -26,6 +26,9 @@ public final class _Private_IonConstants
 
     public final static int INT32_SIZE            = 4;
 
+    // maximum size of textual representation of a 64bit integer (long)
+    public final static int MAX_LONG_TEXT_SIZE    = 20;
+
     // these are used for various Unicode translation where
     // we need to convert the utf-16 Java characters into
     // unicode scalar values (utf-32 more or less) and back
