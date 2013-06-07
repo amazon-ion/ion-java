@@ -156,12 +156,12 @@ final class IonBinary
 
         // write the rest
         switch (len) {  // we already wrote 1 byte
-        case 8: userstream.write((byte)((value >> 56) & mask));
-        case 7: userstream.write((byte)((value >> 48) & mask));
-        case 6: userstream.write((byte)((value >> 40) & mask));
-        case 5: userstream.write((byte)((value >> 32) & mask));
-        case 4: userstream.write((byte)((value >> 24) & mask));
-        case 3: userstream.write((byte)((value >> 16) & mask));
+        case 8: userstream.write((byte)((value >> 8*7) & mask));
+        case 7: userstream.write((byte)((value >> 8*6) & mask));
+        case 6: userstream.write((byte)((value >> 8*5) & mask));
+        case 5: userstream.write((byte)((value >> 8*4) & mask));
+        case 4: userstream.write((byte)((value >> 8*3) & mask));
+        case 3: userstream.write((byte)((value >> 8*2) & mask));
         case 2: userstream.write((byte)((value >>  8) & mask));
         case 1: userstream.write((byte)(value & mask));
         }
@@ -188,14 +188,14 @@ final class IonBinary
         assert value > 0;
 
         switch (len - 1) {
-        case 9: userstream.write((byte)((value >> 63) & mask));
-        case 8: userstream.write((byte)((value >> 56) & mask));
-        case 7: userstream.write((byte)((value >> 49) & mask));
-        case 6: userstream.write((byte)((value >> 42) & mask));
-        case 5: userstream.write((byte)((value >> 35) & mask));
-        case 4: userstream.write((byte)((value >> 28) & mask));
-        case 3: userstream.write((byte)((value >> 21) & mask));
-        case 2: userstream.write((byte)((value >> 14) & mask));
+        case 9: userstream.write((byte)((value >> 7*9) & mask));
+        case 8: userstream.write((byte)((value >> 7*8) & mask));
+        case 7: userstream.write((byte)((value >> 7*7) & mask));
+        case 6: userstream.write((byte)((value >> 7*6) & mask));
+        case 5: userstream.write((byte)((value >> 7*5) & mask));
+        case 4: userstream.write((byte)((value >> 7*4) & mask));
+        case 3: userstream.write((byte)((value >> 7*3) & mask));
+        case 2: userstream.write((byte)((value >> 7*2) & mask));
         case 1: userstream.write((byte)((value >> 7) & mask));
         case 0: userstream.write((byte)((value & mask) | 0x80L));
                 break;
@@ -422,37 +422,20 @@ final class IonBinary
     /**
      * Variable-length, high-bit-terminating integer, 7 data bits per byte.
      */
-    public static int lenVarUInt(int intVal) {  // we write a lot of these
-        if (intVal == 0) {
-            return 0;
-        }
-        if (intVal < 0) {
-            throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
-        }
-
-        if (intVal <=              0x7f) return 1;  // 7
-        if (intVal <=            0x3fff) return 2;  // 14
-        if (intVal <=          0x1fffff) return 3;  // 21
-        if (intVal <=         0xfffffff) return 4;  // 28
-        return 5;                                   // 35
-    }
-
     public static int lenVarUInt(long longVal) {
+        assert longVal >= 0;
         if (longVal == 0) {
             return 0;
         }
-        if (longVal < 0) {
-            throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
-        }
-        if (longVal <=              0x7fL) return 1;  // 7
-        if (longVal <=            0x3fffL) return 2;  // 14
-        if (longVal <=          0x1fffffL) return 3;  // 21
-        if (longVal <=         0xfffffffL) return 4;  // 28
-        if (longVal <=        0x7fffffffL) return 5;  // 35
-        if (longVal <=      0x3fffffffffL) return 6;  // 42
-        if (longVal <=    0x1fffffffffffL) return 7;  // 49
-        if (longVal <=   0xfffffffffffffL) return 8;  // 56
-        if (longVal <= 0x7ffffffffffffffL) return 9;  // 63
+        if (longVal <=              0x7fL) return 1;  // 7  bits
+        if (longVal <=            0x3fffL) return 2;  // 14 bits
+        if (longVal <=          0x1fffffL) return 3;  // 21 bits
+        if (longVal <=         0xfffffffL) return 4;  // 28 bits
+        if (longVal <=        0x7fffffffL) return 5;  // 35 bits
+        if (longVal <=      0x3fffffffffL) return 6;  // 42 bits
+        if (longVal <=    0x1fffffffffffL) return 7;  // 49 bits
+        if (longVal <=   0xfffffffffffffL) return 8;  // 56 bits
+        if (longVal <= 0x7ffffffffffffffL) return 9;  // 63 bits
         return 10;
     }
 
@@ -463,15 +446,15 @@ final class IonBinary
             return 0;
         }
         if (longVal <  0) longVal = -longVal;
-        if (longVal <=              0x3fL) return 1;  // 6
-        if (longVal <=            0x1fffL) return 2;  // 13
-        if (longVal <=           0xfffffL) return 3;  // 20
-        if (longVal <=         0x7ffffffL) return 4;  // 27
-        if (longVal <=        0x3fffffffL) return 5;  // 34
-        if (longVal <=      0x1fffffffffL) return 6;  // 41
-        if (longVal <=     0xfffffffffffL) return 7;  // 48
-        if (longVal <=   0x7ffffffffffffL) return 8;  // 55
-        if (longVal <= 0x3ffffffffffffffL) return 9;  // 62
+        if (longVal <=              0x3fL) return 1;  // 6  bits
+        if (longVal <=            0x1fffL) return 2;  // 13 bits
+        if (longVal <=           0xfffffL) return 3;  // 20 bits
+        if (longVal <=         0x7ffffffL) return 4;  // 27 bits
+        if (longVal <=        0x3fffffffL) return 5;  // 34 bits
+        if (longVal <=      0x1fffffffffL) return 6;  // 41 bits
+        if (longVal <=     0xfffffffffffL) return 7;  // 48 bits
+        if (longVal <=   0x7ffffffffffffL) return 8;  // 55 bits
+        if (longVal <= 0x3ffffffffffffffL) return 9;  // 62 bits
         return 10;
     }
 
@@ -1652,7 +1635,6 @@ done:       for (;;) {
 
         public String readString(int len) throws IOException
         {
-            //StringBuffer sb = new StringBuffer(len);
             char[] cb = new char[len]; // since we know the length in bytes (which must be
                                     // greater than or equal to chars) there's no need
                                     // for a stringbuffer (even surrgated char's are ok)
@@ -2222,52 +2204,10 @@ done:       for (;;) {
          */
 
 
-        /**************************
-         *
-         * These are the "write value" family, they just write the value
-         * @throws IOException
+        /**
+         * Buffer for decoding (un)signed VarInt's and Int's
          */
         private byte[] numberBuffer = new byte[10];
-//        void writeLong(long val, int len, int bits, byte endByte) throws IOException {
-//            int mask = (1 << bits) - 1;
-//            if (numberBuffer == null) {
-//
-//            }
-//            if (len == 1) {
-//                write(endByte | (byte)(val & mask));
-//            } else if (len > 1) {
-//                int shift = bits * (len - 1);
-//                for (int i = 0; i < len; ++i) {
-//                    numberBuffer[i] = (byte)((val >> shift) & mask);
-//                    shift -= bits;
-//                }
-//                numberBuffer[len - 1] |= endByte;
-//                write(numberBuffer, 0, len);
-//            }
-//        }
-//        void writeNegLong(long val, int len, int bits, byte endByte) throws IOException {
-//            int mask = (1 << bits) - 1;  // 8 bits -> 0xff
-//            byte neg = 0;
-//            if (numberBuffer == null) {
-//                numberBuffer = new byte[8];
-//            }
-//            if (val < 0) {
-//                val = -val;
-//                neg = (byte)(1 << (bits - 1));
-//            }
-//            if (len == 1) {
-//                write(endByte | neg | (byte)(val & mask));
-//            } else {
-//                int shift = bits * (len - 1);
-//                for (int i = 0; i < len; ++i) {
-//                    numberBuffer[i] = (byte)((val >> shift) & mask);
-//                    shift -= bits;
-//                }
-//                numberBuffer[0] |= neg;
-//                numberBuffer[len - 1] |= endByte;
-//                write(numberBuffer, 0, len);
-//            }
-//        }
 
         public int writeVarUIntValue(long value, boolean force_zero_write) throws IOException
         {
@@ -2442,7 +2382,7 @@ done:       for (;;) {
             return writeUIntValue(dBits, _ib_FLOAT64_LEN);
         }
 
-        byte[] unicodeBuffer;
+        byte[] singleCodepointUtf8Buffer = new byte[4];
         public int writeUnicodeScalarAsUTF8(int c) throws IOException
         {
             int len;
@@ -2452,11 +2392,8 @@ done:       for (;;) {
                 _write((byte)(c & 0xff));
                 this.end_write();
             } else {
-                if (unicodeBuffer == null) {
-                    unicodeBuffer = new byte[4];
-                }
-                len = _writeUnicodeScalarToByteBuffer(c, unicodeBuffer, 0);
-                this.write(unicodeBuffer, 0, len);
+                len = _writeUnicodeScalarToByteBuffer(c, singleCodepointUtf8Buffer, 0);
+                this.write(singleCodepointUtf8Buffer, 0, len);
             }
             return len;
         }
@@ -2464,13 +2401,6 @@ done:       for (;;) {
         // this will write at least 2 byte unicode scalar to buffer
         private final int _writeUnicodeScalarToByteBuffer(int c, byte[] buffer, int offset) throws IOException
         {
-            // TO DO: check this encoding, it is from:
-            //      http://en.wikipedia.org/wiki/UTF-8
-            // we probably should use some sort of Java supported
-            // library for this.  this class might be of interest:
-            //     CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte)
-            // in: java.nio.charset.CharsetDecoder
-
             int len = -1;
 
             assert offset + 4 < buffer.length;
@@ -2677,17 +2607,12 @@ done:       for (;;) {
             return len;
         }
 
-        byte[] stringBuffer;
-        static final int stringBufferLen = 1024;
+        static final int stringBufferLen = 128;
+        byte[] stringBuffer = new byte[stringBufferLen];
         public int writeStringData(String s) throws IOException
         {
             int len = 0;
-
-            if (stringBuffer == null) {
-                stringBuffer = new byte[stringBufferLen];
-            }
             int bufPos = 0;
-
             for (int ii=0; ii<s.length(); ii++) {
                 int c = s.charAt(ii);
                 if (bufPos > stringBufferLen - 4) { // 4 is the max UTF-8 encoding size
