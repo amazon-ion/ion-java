@@ -4,7 +4,9 @@ package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonDecimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import java.math.BigDecimal;
@@ -151,6 +153,18 @@ final class IonDecimalLite
         _isNullValue(value == null);
     }
 
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.DECIMAL);
+            } else {
+                writer.writeDecimal(_decimal_value);
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
+    }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception

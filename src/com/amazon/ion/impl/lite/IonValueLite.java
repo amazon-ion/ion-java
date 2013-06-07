@@ -10,11 +10,9 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
@@ -841,20 +839,6 @@ abstract class IonValueLite
         _fieldName = null;
         _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
-    }
-
-
-    public final void writeTo(IonWriter writer)
-    {
-        IonReader valueReader = getSystem().newReader(this);
-        try
-        {
-            writer.writeValues(valueReader);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
     }
 
 

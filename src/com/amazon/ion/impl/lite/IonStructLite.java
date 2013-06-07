@@ -7,6 +7,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
@@ -774,6 +775,24 @@ final class IonStructLite
         }
     }
 
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.stepIn(IonType.STRUCT);
+            for (IonValue iv : this) {
+                // TODO Fix symbol handling
+                // ION-320 - Get rid of try-catch after bug is fixed
+                // A million-dollar question is - if text is missing, do
+                // we throw (cannot serialize) or do we pass the sid thru???
+
+                // NB! This will through if field name is not set
+                writer.setFieldName(iv.getFieldName());
+                iv.writeTo(writer);
+            }
+            writer.stepOut();
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
+    }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception

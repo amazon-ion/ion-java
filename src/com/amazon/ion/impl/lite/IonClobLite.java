@@ -3,7 +3,9 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonClob;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.InputStream;
@@ -80,6 +82,19 @@ final class IonClobLite
         if (bytes == null) return null;
 
         return _Private_Utils.decode(bytes, cs);
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.CLOB);
+            } else {
+                writer.writeClob(getBytesNoCopy());
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
     }
 
     @Override

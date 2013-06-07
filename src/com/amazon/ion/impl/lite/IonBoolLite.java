@@ -3,7 +3,9 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonBool;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 
@@ -101,6 +103,19 @@ final class IonBoolLite
         else {
             _isBoolTrue(b.booleanValue());
             _isNullValue(false);
+        }
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.BOOL);
+            } else {
+                writer.writeBool(booleanValue());
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
         }
     }
 

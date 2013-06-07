@@ -7,8 +7,10 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -264,6 +266,25 @@ final class IonSymbolLite
         _isSystemValue(isIVM);
 
         _sid = ION_1_0_SID;
+    }
+
+    public final void writeTo(IonWriter writer) {
+        try {
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.SYMBOL);
+            } else {
+                // TODO Fix symbol handling
+                // ION-320 - Get rid of try-catch after bug is fixed
+                // A million-dollar question is - if text is missing, do
+                // we throw (cannot serialize) or do we pass the sid thru???
+
+                // NB! This will through if symbol is not set
+                writer.writeSymbol(stringValue());
+            }
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
     }
 
     @Override

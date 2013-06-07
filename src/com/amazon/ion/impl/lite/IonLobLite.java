@@ -87,6 +87,14 @@ abstract class IonLobLite
         }
     }
 
+    /**
+     * Get the byte array without copying
+     */
+    protected byte[] getBytesNoCopy()
+    {
+        return _lob_value;
+    }
+
     public final InputStream newInputStream()
     {
         if (_isNullValue())
