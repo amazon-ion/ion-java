@@ -605,31 +605,15 @@ final class IonWriterSystemBinary
         _patch.patchValue(1);
         closeValue();
     }
-//    public void writeInt(int value) throws IOException
-//    {
-//        int len = IonBinary.lenIonInt(value);
-//        if (value < 0) {
-//            startValue(_Private_IonConstants.tidNegInt); // int's are always less than varlen long
-//            _writer.write((_Private_IonConstants.tidNegInt << 4) | len);
-//            _writer.writeUIntValue(-value, len);
-//        }
-//        else {
-//            startValue(_Private_IonConstants.tidPosInt); // int's are always less than varlen long
-//            _writer.write((_Private_IonConstants.tidPosInt << 4) | len);
-//            _writer.writeUIntValue(value, len);
-//        }
-//        _patch.patchValue(1 + len);
-//        closeValue();
-//    }
     public void writeInt(long value) throws IOException
     {
-        startValue(value < 0 ? _Private_IonConstants.tidNegInt : _Private_IonConstants.tidPosInt);
-        int len = IonBinary.lenIonInt(value);
+        int len;
         if (value < 0) {
-            _writer.writeUIntValue(-value, len);
-        }
-        else {
-            _writer.writeUIntValue(value, len);
+            startValue(_Private_IonConstants.tidNegInt);
+            len = _writer.writeUIntValue(-value);
+        } else {
+            startValue(_Private_IonConstants.tidPosInt);
+            len = _writer.writeUIntValue(value);
         }
         _patch.patchValue(len);
         closeValue();
@@ -706,9 +690,8 @@ final class IonWriterSystemBinary
     @Override
     void writeSymbolAsIs(int symbolId) throws IOException
     {
-        int len = IonBinary.lenUInt(symbolId);
         startValue(_Private_IonConstants.tidSymbol);
-        _writer.writeUIntValue(symbolId, len);
+        int len = _writer.writeUIntValue(symbolId);
         _patch.patchValue(len);
         closeValue();
     }
@@ -925,109 +908,6 @@ final class IonWriterSystemBinary
         }
         return totalSize;
     }
-
-//    int writeBytes(OutputStream userstream) throws IOException
-//    {
-//        int buffer_length = _manager.buffer().size();
-//        if (buffer_length == 0) return 0;
-//
-//        int pos = 0;
-//        int total_written = 0;
-//        BlockedByteInputStream datastream =
-//            new BlockedByteInputStream(_manager.buffer());
-//
-//        int patch_idx = 0;
-//        int patch_pos;
-//        if (patch_idx < _patch_count) {
-//            patch_pos = _patch_offsets[patch_idx];
-//        }
-//        else {
-//            patch_pos = buffer_length + 1;
-//        }
-//
-//        // loop through the data buffer merging in
-//        // symbol table and length patching as needed
-//        // symbol tables first then lengths if they
-//        // are at the same offset.  Symbol table
-//        // patches are represented as a _patch_types[i]
-//        // of TID_FOR_SYMBOL_TABLE_PATCH.  Then the
-//        // _patch_length is the index to the symbol table
-//        // into _patch_symbol_tables[].
-//        while (pos < buffer_length)
-//        {
-//            // first write whatever data needs to be
-//            // written to get us to the patch location
-//            if (pos < patch_pos) {
-//                int len;
-//                if (patch_pos > buffer_length) {
-//                    len = buffer_length - pos ;
-//                }
-//                else {
-//                    len = patch_pos - pos ;
-//                }
-//
-//                // write the user data
-//                pos += datastream.writeTo(userstream, len);
-//
-//                total_written += len;
-//                if (pos >= buffer_length) break;
-//            }
-//
-//            // extract the next patch to emit
-//            int vlen = _patch_lengths[patch_idx];
-//            int ptd  = _patch_types[patch_idx];
-//            switch (ptd) {
-//            case TID_FOR_SYMBOL_TABLE_PATCH:
-//                int table_idx = _patch_table_idx[patch_idx];
-//                SymbolTable symtab = _patch_symbol_tables[table_idx];
-//                int symtab_len = write_symbol_table(userstream, symtab);
-//                total_written += symtab_len;
-//                break;
-//            case _Private_IonConstants.tidNull:      // 0
-//            case _Private_IonConstants.tidBoolean:   // 1
-//            case _Private_IonConstants.tidPosInt:    // 2
-//            case _Private_IonConstants.tidNegInt:    // 3
-//            case _Private_IonConstants.tidFloat:     // 4
-//            case _Private_IonConstants.tidDecimal:   // 5
-//            case _Private_IonConstants.tidTimestamp: // 6
-//            case _Private_IonConstants.tidSymbol:    // 7
-//            case _Private_IonConstants.tidString:    // 8
-//            case _Private_IonConstants.tidClob:      // 9
-//            case _Private_IonConstants.tidBlob:      // 10 A
-//            case _Private_IonConstants.tidList:      // 11 B
-//            case _Private_IonConstants.tidSexp:      // 12 C
-//            case _Private_IonConstants.tidStruct:    // 13 D
-//            case _Private_IonConstants.tidTypedecl:  // 14 E
-//                // there is not type desc byte for the datagram, but there is
-//                // for all other containers
-//                int type_desc_len = IonBinary.writeTypeDescWithLength(userstream, ptd, vlen);
-//                total_written += type_desc_len;
-//
-//                // skip the typedesc byte we wrote into the buffered stream
-//                // TODO: don't waste our time writing the type desc byte
-//                //       we clearly don't care about
-//                pos += datastream.skip(1);
-//                break;
-//
-//            case _Private_IonConstants.tidDATAGRAM:
-//                // do nothing
-//                break;
-//            default:
-//                throw new IonException("Internal Error: invalid type id ["+ptd+"] encountered while patching binary output");
-//            }
-//
-//            // find the next patch point, if there's one left
-//            patch_idx++;
-//            if (patch_idx < _patch_count) {
-//                patch_pos = _patch_offsets[patch_idx];
-//            }
-//            else {
-//                patch_pos = buffer_length + 1;
-//            }
-//        }
-//
-//        return total_written;
-//    }
 
     static class CountingStream extends OutputStream
     {

@@ -2227,91 +2227,68 @@ done:       for (;;) {
          * These are the "write value" family, they just write the value
          * @throws IOException
          */
-        private byte[] intBuffer;
-        void writeLong(long val, int len, int bits, byte endByte) throws IOException {
-            int mask = (1 << bits) - 1;
-            if (intBuffer == null) {
-                intBuffer = new byte[8];
-            }
-            if (len == 1) {
-                write(endByte | (byte)(val & mask));
-            } else if (len > 1) {
-                int shift = bits * (len - 1);
-                for (int i = 0; i < len; ++i) {
-                    intBuffer[i] = (byte)((val >> shift) & mask);
-                    shift -= bits;
-                }
-                intBuffer[len - 1] |= endByte;
-                write(intBuffer, 0, len);
-            }
-        }
-        void writeNegLong(long val, int len, int bits, byte endByte) throws IOException {
-            int mask = (1 << bits) - 1;  // 8 bits -> 0xff
-            byte neg = 0;
-            if (intBuffer == null) {
-                intBuffer = new byte[8];
-            }
-            if (val < 0) {
-                val = -val;
-                neg = (byte)(1 << (bits - 1));
-            }
-            if (len == 1) {
-                write(endByte | neg | (byte)(val & mask));
-            } else {
-                int shift = bits * (len - 1);
-                for (int i = 0; i < len; ++i) {
-                    intBuffer[i] = (byte)((val >> shift) & mask);
-                    shift -= bits;
-                }
-                intBuffer[0] |= neg;
-                intBuffer[len - 1] |= endByte;
-                write(intBuffer, 0, len);
-            }
-        }
-
-//        public int writeFixedIntValue(long val, int len) throws IOException
-//        {
-//            switch (len) {
-//            case 8: write((byte)((val >> 56) & 0xffL));
-//            case 7: write((byte)((val >> 48) & 0xffL));
-//            case 6: write((byte)((val >> 40) & 0xffL));
-//            case 5: write((byte)((val >> 32) & 0xffL));
-//            case 4: write((byte)((val >> 24) & 0xffL));
-//            case 3: write((byte)((val >> 16) & 0xffL));
-//            case 2: write((byte)((val >>  8) & 0xffL));
-//            case 1: write((byte)((val >>  0) & 0xffL));
+        private byte[] numberBuffer = new byte[10];
+//        void writeLong(long val, int len, int bits, byte endByte) throws IOException {
+//            int mask = (1 << bits) - 1;
+//            if (numberBuffer == null) {
+//
 //            }
-//            return len;
+//            if (len == 1) {
+//                write(endByte | (byte)(val & mask));
+//            } else if (len > 1) {
+//                int shift = bits * (len - 1);
+//                for (int i = 0; i < len; ++i) {
+//                    numberBuffer[i] = (byte)((val >> shift) & mask);
+//                    shift -= bits;
+//                }
+//                numberBuffer[len - 1] |= endByte;
+//                write(numberBuffer, 0, len);
+//            }
 //        }
-        public int writeVarUIntValue(int value, int fixed_size) throws IOException
-        {
-            int len = lenVarUInt(value);
+//        void writeNegLong(long val, int len, int bits, byte endByte) throws IOException {
+//            int mask = (1 << bits) - 1;  // 8 bits -> 0xff
+//            byte neg = 0;
+//            if (numberBuffer == null) {
+//                numberBuffer = new byte[8];
+//            }
+//            if (val < 0) {
+//                val = -val;
+//                neg = (byte)(1 << (bits - 1));
+//            }
+//            if (len == 1) {
+//                write(endByte | neg | (byte)(val & mask));
+//            } else {
+//                int shift = bits * (len - 1);
+//                for (int i = 0; i < len; ++i) {
+//                    numberBuffer[i] = (byte)((val >> shift) & mask);
+//                    shift -= bits;
+//                }
+//                numberBuffer[0] |= neg;
+//                numberBuffer[len - 1] |= endByte;
+//                write(numberBuffer, 0, len);
+//            }
+//        }
 
-            if (fixed_size > 0) {
-                if (fixed_size < len) {
-                    throwException(
-                             "VarUInt overflow, fixed size ("
-                            +fixed_size
-                            +") too small for value ("
-                            +value
-                            +")"
-                    );
-                }
-                len = fixed_size;
-            }
-            writeLong(value, len, 7, (byte)0x80);
-            return len;
-        }
-        public int writeVarUIntValue(int value, boolean force_zero_write) throws IOException
+        public int writeVarUIntValue(long value, boolean force_zero_write) throws IOException
         {
-            int len = lenVarUInt(value);
-            if (len == 0) {
+            assert value >= 0;
+            int len = 0;
+            if (value == 0) {
                 if (force_zero_write) {
                     write((byte)0x80);
                     len = 1;
                 }
             } else {
-                writeLong(value, len, 7, (byte)0x80);
+                int i = numberBuffer.length;
+                // write every 7 bits of the value
+                while (value > 0) {
+                    numberBuffer[--i] = (byte)(value & 0x7f);
+                    value = value >>> 7;
+                }
+                // set the end bit
+                numberBuffer[numberBuffer.length - 1] |= 0x80;
+                len = numberBuffer.length - i;
+                write(numberBuffer, i, len);
             }
             return len;
         }
@@ -2321,9 +2298,32 @@ done:       for (;;) {
          * Note that this will write from the lowest to highest
          * order bits in the long value given.
          */
+        public int writeUIntValue(long value) throws IOException
+        {
+            int i = numberBuffer.length;
+            // even if value is Long.MIN_VALUE we will still serialize it correctly :)
+            while (value != 0) {
+                numberBuffer[--i] = (byte)(value & 0xff);
+                value = value >>> 8;
+            }
+            int len = numberBuffer.length - i;
+            write(numberBuffer, i, len);
+            return len;
+        }
+
+        /**
+         * Writes a uint field at given length
+         * Note that this will write from the lowest to highest
+         * order bits in the long value given.
+         */
         public int writeUIntValue(long value, int len) throws IOException
         {
-            writeLong(value, len, 8, (byte)0x0);
+            int i = numberBuffer.length;
+            for (int j = 0; j < len; ++j) {
+                numberBuffer[--i] = (byte)(value & 0xff);
+                value = value >>> 8;
+            }
+            write(numberBuffer, i, len);
             return len;
         }
 
@@ -2370,26 +2370,62 @@ done:       for (;;) {
         public int writeVarIntValue(long value, boolean force_zero_write) throws IOException
         {
             int len = 0;
-
             if (value == 0) {
                 if (force_zero_write) {
                     write((byte)0x80);
                     len = 1;
                 }
             } else {
-                len = lenVarInt(value);
-                writeNegLong(value, len, 7, (byte)0x80);
+                int i = numberBuffer.length;
+                boolean negative = value < 0;
+                if (negative) {
+                    value = -value;
+                }
+                // write every 7 bits of the value
+                while (value > 0) {
+                    numberBuffer[--i] = (byte)(value & 0x7f);
+                    value = value >>> 7;
+                }
+                // set the end bit
+                numberBuffer[numberBuffer.length - 1] |= 0x80;
+                // increase the length of VarInt if the sign bit is 'occupied'
+                // by the value to properly flag it
+                if ((numberBuffer[i] & 0x40) == 0x40) {
+                    numberBuffer[--i] = 0x00;
+                }
+                // set the sign bit
+                if (negative) {
+                    // add the sign bit to MSB
+                    numberBuffer[i] |= 0x40;
+                }
+                len = numberBuffer.length - i;
+                write(numberBuffer, i, len);
             }
             return len;
         }
 
         public int writeIntValue(long value) throws IOException {
-            int len = 0;
-
-            if (value != 0) {
-                len = lenUInt(value < 0 ? -value : value);
-                writeNegLong(value, len, 8, (byte)0);
+            int i = numberBuffer.length;
+            boolean negative = value < 0;
+            if (negative) {
+                value = -value;
             }
+            while (value > 0) {
+                numberBuffer[--i] = (byte)(value & 0xff);
+                value = value >>> 8;
+            }
+            // increase the length of Int if the sign bit is 'occupied'
+            // by the value to properly flag it
+            if ((numberBuffer[i] & 0x80) == 0x40) {
+                numberBuffer[--i] = 0x00;
+            }
+            // set the sign bit
+            if (negative) {
+                // add the sign bit to MSB
+                numberBuffer[i] |= 0x80;
+            }
+            int len = numberBuffer.length - i;
+            write(numberBuffer, i, len);
             return len;
         }
         public int writeFloatValue(double d) throws IOException
