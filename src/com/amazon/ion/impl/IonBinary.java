@@ -2403,7 +2403,7 @@ done:       for (;;) {
         {
             int len = -1;
 
-            assert offset + 4 < buffer.length;
+            assert offset + 4 <= buffer.length;
 
             // first the quick, easy and common case - ascii
             if (c < 0x800) {

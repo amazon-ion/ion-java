@@ -31,6 +31,31 @@ final class IonWriterSystemBinary
     implements _Private_ListWriter
 {
 
+    /**
+     * Implements patching of the internal OutputStream with actual value
+     * lengths and types. Every instance of this class represents a container
+     * (including the datagram). Information about the children of the container
+     * is stored in _types/_positions/_lengths arrays.
+     *
+     * The patching mechanism works as follows. For every primitive value, we store
+     * its type, position in internal OutputStream and the serialized lengths
+     * in this class. With every value insertion, its length is then summed to the
+     * length of the @_parent. Upon seeing a container, a new PatchedValue is created
+     * and inserted into @_children queue, then all subsequent values are written
+     * as described above. As the container is finished, its @_parent becomes active
+     * and values are continued to be written. In the end, a general tree is created
+     * with information about all the values in the datagram. The values themselves
+     * are serialized into internal OutputStream
+     *
+     * To finalize the internal OutputStream into a user stream, the arrays in
+     * PatchedValues are traversed from the beginning. For every value in
+     * in @_types[i], it's type descriptor is written into user stream. If the type
+     * is primitive, content of the internal OutputStream is copied starting
+     * from @_positions[i] with length @_lengths[i]. If @_types[i] is a container,
+     * a child is popped from the @_children queue and recursively written as
+     * described above. Whenever TID_SYMBOL_TABLE_PATCH is seen in @_types, the
+     * current symbol table gets reset with the one on the top of @_symtabs queue.
+     */
     static class PatchedValues {
 
         private final static int DEFAULT_PATCH_COUNT    = 10;
@@ -41,7 +66,9 @@ final class IonWriterSystemBinary
         int[] _types;
         // positions where values start in buffer
         int[] _positions;
-        // lengths of the values
+        // lengths of the values. The high 32bits of this value store the length
+        // of the field name, the low 32bits store the actual value length. We need the
+        // field name length to properly adjust the total @_parent length in @endPatch
         long[] _lengths;
         // the parent
         PatchedValues _parent;
@@ -55,6 +82,15 @@ final class IonWriterSystemBinary
             _lengths = new long[DEFAULT_PATCH_COUNT];
         }
 
+        void reset() {
+            _freePos = -1;
+            _children = null;
+            _symtabs = null;
+        }
+
+        /**
+         * Add a new PatchedValues instance to _children and return it
+         */
         PatchedValues addChild() {
             PatchedValues pv = new PatchedValues();
             pv._parent = this;
@@ -65,12 +101,18 @@ final class IonWriterSystemBinary
             return pv;
         }
 
-        void reset() {
-            _freePos = -1;
-            _children = null;
-            _symtabs = null;
-        }
-
+        /**
+         * Inject a symbol table at the specified position in internal OutputStream. Most of the
+         * times, the injection will happen upon seeing the first non-system symbol. At that point
+         * the information about the symbol is already stored here by @startPatch call, so we need
+         * to be able to inject a symtab before this value (injectBeforeCurrent)
+         *
+         * @param st
+         * @param pos Position of the current value being stored before symtab got injected
+         * @param injectBeforeCurrent Flags if symbol table must be injected before the current value
+         *                            which essentially shifts the array by 1
+         * @throws IllegalStateException if the PatchedValues is not a top-level one
+         */
         void injectSymbolTable(SymbolTable st, int pos, boolean injectBeforeCurrent) {
             if (_parent != null) {
                 // we're not on top-level
@@ -80,8 +122,9 @@ final class IonWriterSystemBinary
                 _symtabs = new LinkedList<SymbolTable>();
             }
             ++_freePos;
-            // NB! Position is not moved swapped while injecting a symbol table - positions
-            // are order
+            if (_freePos == _positions.length) {
+                grow();
+            }
             _positions[_freePos] = pos;
             if (injectBeforeCurrent) {
                 // move current value to the right
@@ -107,6 +150,7 @@ final class IonWriterSystemBinary
             return _parent;
         }
 
+        /** Start the patch for given @type at given @pos */
         void startPatch(int type, int pos) {
             ++_freePos;
             if (_freePos == _positions.length) {
@@ -117,16 +161,26 @@ final class IonWriterSystemBinary
             _positions[_freePos] = pos;
         }
 
+        /** Set the field name length as high 32bits of @_lengths item */
         void patchFieldName(int fieldNameLength) {
             _lengths[_freePos] = ((long)fieldNameLength) << 32;
         }
 
+        /**
+         * Set the value length as low 32bits of @_lengths item. The low 32bits will be
+         * summed with the given value (say, it's a list that is in struct)
+         * @param len
+         */
         void patchValue(int len) {
             long memLen = (_lengths[_freePos] & 0xFFFFFFFF00000000L);
             long curLen = (_lengths[_freePos] & 0x00000000FFFFFFFFL);
             _lengths[_freePos] = memLen | (curLen + len);
         }
 
+        /**
+         * End this patch. If there's a @_parent available, it's @_length will be summed
+         * with the length of current patched value
+         */
         void endPatch() {
             if (_parent != null) {
                 int memberLen = (int)(_lengths[_freePos] >> 32);
