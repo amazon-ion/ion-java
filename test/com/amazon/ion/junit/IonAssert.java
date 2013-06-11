@@ -3,6 +3,7 @@
 package com.amazon.ion.junit;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -478,7 +479,7 @@ public class IonAssert
             SymbolToken tok = v.getFieldNameSymbol();
             String text = tok.getText();
             if (text == null) {
-                text = " --UNKNOWN SYMBOL-- $" + tok.getSid(); // TODO ION-272
+                text = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid(); // TODO ION-272
             }
             List<IonValue> fields = sorted.get(text);
             if (fields == null)
