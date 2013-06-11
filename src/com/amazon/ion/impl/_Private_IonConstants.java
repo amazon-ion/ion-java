@@ -3,7 +3,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.junit.IonAssert;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -283,7 +282,7 @@ public final class _Private_IonConstants
      * two values will be considered a match within IonStruct's equality checks,
      * which is wrong.
      * <p>
-     * See {@link IonAssert} for another use of this idiom.
+     * See IonAssert for another use of this idiom.
      */
     public static final String UNKNOWN_SYMBOL_TEXT_PREFIX =
         " -- UNKNOWN SYMBOL TEXT -- $";
