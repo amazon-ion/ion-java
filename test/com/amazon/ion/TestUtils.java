@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -29,6 +29,17 @@ public class TestUtils
 
     public static final Charset UTF16BE_CHARSET =
         Charset.forName(UTF16BE_CHARSET_NAME);
+
+    public static final String BAD_IONTESTS_FILES               = "bad";
+    public static final String BAD_TIMESTAMP_IONTESTS_FILES     = "bad/timestamp";
+
+    public static final String GOOD_IONTESTS_FILES              = "good";
+    public static final String GOOD_TIMESTAMP_IONTESTS_FILES    = "good/timestamp";
+
+    public static final String EQUIVS_IONTESTS_FILES            = "good/equivs";
+    public static final String EQUIVS_TIMESTAMP_IONTESTS_FILES  = "good/timestamp/equivTimeline";
+
+    public static final String NON_EQUIVS_IONTESTS_FILEs        = "good/non-equivs";
 
 
 

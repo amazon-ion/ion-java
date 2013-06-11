@@ -1,7 +1,9 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.TEXT_ONLY_FILTER;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
@@ -39,8 +41,9 @@ public class RoundTripTest
      */
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(new And(TEXT_ONLY_FILTER, TestUtils.GLOBAL_SKIP_LIST),
-                      "good", "equivs");
+        testdataFiles(new And(TEXT_ONLY_FILTER,
+                              GLOBAL_SKIP_LIST),
+                      GOOD_IONTESTS_FILES);
 
     private File myTestFile;
 

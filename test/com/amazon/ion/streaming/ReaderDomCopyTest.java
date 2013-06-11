@@ -2,6 +2,7 @@
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 
@@ -14,14 +15,13 @@ import java.io.File;
 import java.io.IOException;
 import org.junit.Test;
 
-
 /** Based on ION-297 */
 public class ReaderDomCopyTest
 extends IonTestCase
 {
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles("good", "equivs");
+        testdataFiles(GOOD_IONTESTS_FILES);
 
 
     private File myTestFile;

@@ -2,18 +2,18 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.EQUIVS_IONTESTS_FILES;
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 
 public class EquivsTest
     extends EquivsTestCase
 {
-    /**
-     * TODO ION-314 IonTests "equivs" folder is to be moved to "good/equivs".
-     */
     @Inject("testFile")
     public static final File[] FILES =
-        TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "equivs");
+        TestUtils.testdataFiles(GLOBAL_SKIP_LIST, EQUIVS_IONTESTS_FILES);
 
     public EquivsTest()
     {

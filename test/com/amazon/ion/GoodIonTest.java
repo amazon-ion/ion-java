@@ -1,7 +1,9 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
@@ -13,14 +15,13 @@ import java.io.FileInputStream;
 import java.util.Iterator;
 import org.junit.Test;
 
-
 public class GoodIonTest
     extends IonTestCase
 {
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
-                      "good", "equivs");
+        testdataFiles(GLOBAL_SKIP_LIST,
+                      GOOD_IONTESTS_FILES);
 
 
     private File myTestFile;

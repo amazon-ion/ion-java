@@ -2,20 +2,20 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.EQUIVS_TIMESTAMP_IONTESTS_FILES;
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
-
-
 
 public class EquivTimelineTest
     extends EquivsTest
 {
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
-                      "good/timestamp/equivTimeline");
+        testdataFiles(GLOBAL_SKIP_LIST,
+                      EQUIVS_TIMESTAMP_IONTESTS_FILES);
 
 
     @Override

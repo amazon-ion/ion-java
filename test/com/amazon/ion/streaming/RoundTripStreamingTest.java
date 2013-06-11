@@ -1,7 +1,9 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.impl._Private_Utils.utf8;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
@@ -13,7 +15,6 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.IonWriterUserBinary;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
@@ -43,8 +44,8 @@ extends IonTestCase
 
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
-                      "good", "equivs");
+        testdataFiles(GLOBAL_SKIP_LIST,
+                      GOOD_IONTESTS_FILES);
 
     private File myTestFile;
 

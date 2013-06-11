@@ -2,6 +2,9 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.NON_EQUIVS_IONTESTS_FILEs;
+
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 
@@ -10,7 +13,7 @@ public class NonEquivsTest
 {
     @Inject("testFile")
     public static final File[] FILES =
-        TestUtils.testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "good/non-equivs");
+        TestUtils.testdataFiles(GLOBAL_SKIP_LIST, NON_EQUIVS_IONTESTS_FILEs);
 
     public NonEquivsTest()
     {
