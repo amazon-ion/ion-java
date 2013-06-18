@@ -38,6 +38,9 @@ import java.io.PrintWriter;
 abstract class IonValueLite
     implements _Private_IonValue
 {
+    private static final int TYPE_ANNOTATION_HASH_SIGNATURE =
+        "TYPE ANNOTATION".hashCode();
+
     /**
      * this hold all the various boolean flags we have
      * in a single int.  Use set_flag(), clear_flag(), is_true()
@@ -301,10 +304,7 @@ abstract class IonValueLite
      * @return hash code for instance consistent with equals().
      */
     @Override
-    public /* abstract */ int hashCode()
-    {
-        throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
-    }
+    public abstract int hashCode();
 
     public void deepMaterialize()
     {
@@ -665,6 +665,41 @@ abstract class IonValueLite
             }
         }
         return -1;
+    }
+
+    protected int hashTypeAnnotations(final int original)
+    {
+        final SymbolToken[] tokens = getTypeAnnotationSymbols();
+        if (tokens.length == 0)
+        {
+            return original;
+        }
+
+        final int sidHashSalt   = 127;      // prime to salt sid of annotation
+        final int textHashSalt  = 31;       // prime to salt text of annotation
+        final int prime = 8191;
+        int result = original ^ TYPE_ANNOTATION_HASH_SIGNATURE;
+
+        result = prime * original + tokens.length;
+
+        for (final SymbolToken token : tokens)
+        {
+            String text = token.getText();
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 19) ^ (tokenHashCode >> 13);
+
+            result = prime * result + tokenHashCode;
+
+            // mixing at each step to make the hash code order-dependent
+            result ^= (result << 25) ^ (result >> 7);
+        }
+
+        return result;
     }
 
     /**

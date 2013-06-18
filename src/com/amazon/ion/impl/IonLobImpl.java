@@ -40,13 +40,15 @@ abstract class IonLobImpl
      */
     protected int lobHashCode(int seed)
     {
-        int hash_code = seed;
+        int result = seed;
+
         if (!isNullValue())  {
             CRC32 crc = new CRC32();
             crc.update(getBytes());
-            hash_code ^= (int) crc.getValue();
+            result ^= (int) crc.getValue();
         }
-        return hash_code;
+
+        return hashTypeAnnotations(result);
     }
 
     /**

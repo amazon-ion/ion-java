@@ -67,23 +67,18 @@ final class IonDecimalLite
         return clone;
     }
 
-    /**
-     * Calculate Ion Decimal hash code as hash code of double value,
-     * XOR'ed with IonType hash code. This is required because
-     * {@link IonDecimal#equals(Object)} is not consistent
-     * with {@link BigDecimal#equals(Object)}, but rather with
-     * {@link BigDecimal#compareTo(BigDecimal)}.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
+        // This is consistent with Decimal.equals(Object), and with Equivalence
+        // strict equality checks between two IonDecimals.
         if (!isNullValue())  {
-            long bits = Double.doubleToLongBits(doubleValue());
-            hash ^= (int) ((bits >>> 32) ^ bits);
+            result ^= decimalValue().hashCode();
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override

@@ -44,20 +44,16 @@ final class IonStringLite
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the string value XOR'ed with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
-    public int hashCode() {
-        int hash = HASH_SIGNATURE;
-        if (!isNullValue())  {
-            hash ^= stringValue().hashCode();
+    public int hashCode()
+    {
+        int result = HASH_SIGNATURE;
+
+        if (!isNullValue()) {
+            result ^= stringValue().hashCode();
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override

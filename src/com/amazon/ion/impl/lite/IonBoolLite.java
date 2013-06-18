@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -23,13 +23,13 @@ final class IonBoolLite
      * Optimizes out a function call for a const result
      */
     protected static final int TRUE_HASH
-            = IonType.BOOL.toString().hashCode() ^ Boolean.TRUE.hashCode();
+            = HASH_SIGNATURE ^ (16777619 * Boolean.TRUE.hashCode());
 
     /**
      * Optimizes out a function call for a const result
      */
     protected static final int FALSE_HASH
-            = IonType.BOOL.toString().hashCode() ^ Boolean.FALSE.hashCode();
+            = HASH_SIGNATURE ^ (16777619 * Boolean.FALSE.hashCode());
 
     /**
      * Constructs a null bool value.
@@ -66,18 +66,17 @@ final class IonBoolLite
         return IonType.BOOL;
     }
 
-    /**
-     * Calculate bool hash code as Java does
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
-        if (!isNullValue())  {
-            hash ^= booleanValue() ? TRUE_HASH : FALSE_HASH;
+        int result = HASH_SIGNATURE;
+
+        if (!isNullValue())
+        {
+            result = booleanValue() ? TRUE_HASH : FALSE_HASH;
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public boolean booleanValue()

@@ -31,7 +31,6 @@ import com.amazon.ion.impl.IonBinary.Writer;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
-
 /**
  *
  */
@@ -124,6 +123,9 @@ abstract class IonValueImpl
      * to be an int (4 bytes for 1 bit seems excessive).
      */
     private short _flags;
+
+    private static final int TYPE_ANNOTATION_HASH_SIGNATURE =
+        "TYPE ANNOTATION".hashCode();
 
     private static final int IS_MATERIALIZED    = 0x01;
     private static final int IS_POSITION_LOADED = 0x02;
@@ -1055,6 +1057,41 @@ abstract class IonValueImpl
         this._annotations = temp;
 
         setDirty();
+    }
+
+    protected int hashTypeAnnotations(final int original)
+    {
+        final SymbolToken[] tokens = getTypeAnnotationSymbols();
+        if (tokens.length == 0)
+        {
+            return original;
+        }
+
+        final int sidHashSalt   = 127;      // prime to salt sid of annotation
+        final int textHashSalt  = 31;       // prime to salt text of annotation
+        final int prime = 8191;
+        int result = original ^ TYPE_ANNOTATION_HASH_SIGNATURE;
+
+        result = prime * original + tokens.length;
+
+        for (final SymbolToken token : tokens)
+        {
+            String text = token.getText();
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 19) ^ (tokenHashCode >> 13);
+
+            result = prime * result + tokenHashCode;
+
+            // mixing at each step to make the hash code order-dependent
+            result ^= (result << 25) ^ (result >> 7);
+        }
+
+        return result;
     }
 
     void pos_init()

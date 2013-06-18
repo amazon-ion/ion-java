@@ -58,6 +58,9 @@ public final class Timestamp
     public final static Integer UNKNOWN_OFFSET = null;
     public final static Integer UTC_OFFSET = new Integer(0);
 
+    private final static int HASH_SIGNATURE =
+        "INTERNAL TIMESTAMP".hashCode();
+
     public static enum Precision {
         YEAR,
         MONTH,
@@ -1460,19 +1463,43 @@ public final class Timestamp
         out.append(temp);
     }
 
-    // TODO - check this and see if we're really getting decent values out of this
     @Override
     public int hashCode()
     {
-        final int prime = 31;
-        int result = this._precision.hashCode();
-        result = prime * result + this.dateValue().hashCode();
-        result = prime * result +
-                 (this._precision == Precision.FRACTION
-                     ? _fraction.hashCode() : 0);
+        // Performs a Shift-Add-XOR-Rotate hash. Rotating at each step to
+        // produce an "Avalanche" effect for timestamps with small deltas, which
+        // is found to be a common input data set.
+        // Fixes ION-310.
+
+        final int prime = 8191;
+        int result = HASH_SIGNATURE;
+
+        result = prime * result + (this._precision == Precision.FRACTION
+            ? _fraction.hashCode()
+            : 0);
+
+        result ^= (result << 19) ^ (result >> 13);
+
+        result = prime * result + this._year;
+        result = prime * result + this._month;
+        result = prime * result + this._day;
+        result = prime * result + this._hour;
+        result = prime * result + this._minute;
+        result = prime * result + this._second;
+
+        result ^= (result << 19) ^ (result >> 13);
+
+        result = prime * result + this._precision.toString().hashCode();
+
+        result ^= (result << 19) ^ (result >> 13);
+
         result = prime * result + (_offset == null ? 0 : _offset.hashCode());
+
+        result ^= (result << 19) ^ (result >> 13);
+
         return result;
     }
+
 
 
     /**

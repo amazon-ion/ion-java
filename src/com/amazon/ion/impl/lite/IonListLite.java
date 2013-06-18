@@ -70,12 +70,6 @@ final class IonListLite
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
         return sequenceHashCode(HASH_SIGNATURE);

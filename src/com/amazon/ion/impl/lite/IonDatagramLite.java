@@ -84,6 +84,9 @@ final class IonDatagramLite
     private static final String REVERSE_BINARY_ENCODER_PROPERTY =
         "com.amazon.ion.IonDatagram.useReverseBinaryEncoder";
 
+    private static final int HASH_SIGNATURE =
+        IonType.DATAGRAM.toString().hashCode();
+
     private final IonSystemLite      _system;
     private final IonCatalog         _catalog;
     private       SymbolTable        _pending_symbol_table;
@@ -327,6 +330,12 @@ final class IonDatagramLite
         }
 
         return clone;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return sequenceHashCode(HASH_SIGNATURE);
     }
 
 

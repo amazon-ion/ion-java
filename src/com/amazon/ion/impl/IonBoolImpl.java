@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -26,6 +26,18 @@ final class IonBoolImpl
 
     private static final int HASH_SIGNATURE =
         IonType.BOOL.toString().hashCode();
+
+    /**
+     * Optimizes out a function call for a const result
+     */
+    protected static final int TRUE_HASH
+            = HASH_SIGNATURE ^ (16777619 * Boolean.TRUE.hashCode());
+
+    /**
+     * Optimizes out a function call for a const result
+     */
+    protected static final int FALSE_HASH
+            = HASH_SIGNATURE ^ (16777619 * Boolean.FALSE.hashCode());
 
     // TODO we can probably take less space by using two booleans
     // private boolean isNull, value;
@@ -75,30 +87,17 @@ final class IonBoolImpl
         return IonType.BOOL;
     }
 
-    /**
-     * Optimizes out a function call for a const result
-     */
-    protected static final int TRUE_HASH
-            = IonType.BOOL.toString().hashCode() ^ Boolean.TRUE.hashCode();
-
-    /**
-     * Optimizes out a function call for a const result
-     */
-    protected static final int FALSE_HASH
-            = IonType.BOOL.toString().hashCode() ^ Boolean.FALSE.hashCode();
-
-    /**
-     * Calculate bool hash code as Java does
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
-        if (!isNullValue())  {
-            hash ^= booleanValue() ? TRUE_HASH : FALSE_HASH;
+        int result = HASH_SIGNATURE;
+
+        if (!isNullValue())
+        {
+            result = booleanValue() ? TRUE_HASH : FALSE_HASH;
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public boolean booleanValue()

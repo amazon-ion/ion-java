@@ -107,31 +107,29 @@ final class IonSymbolImpl
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the string value XOR'ed with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
-    public int hashCode() {
-        int hash = HASH_SIGNATURE;
+    public int hashCode()
+    {
+        final int sidHashSalt   = 127;      // prime to salt sid
+        final int textHashSalt  = 31;       // prime to salt text
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())
         {
             SymbolToken token = symbolValue();
             String text = token.getText();
-            if (text != null)
-            {
-                hash ^= text.hashCode();
-            }
-            else
-            {
-                int sid = token.getSid();
-                hash ^= Integer.valueOf(sid).hashCode();
-            }
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 29) ^ (tokenHashCode >> 3);
+
+            result ^= tokenHashCode;
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonType getType()

@@ -83,20 +83,17 @@ final class IonFloatImpl
         return clone;
     }
 
-    /**
-     * Calculate Ion Float hash code as bits of double value,
-     * folded on themselves to form a 32 bit value.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
             long bits = Double.doubleToLongBits(doubleValue());
-            hash ^= (int) ((bits >>> 32) ^ bits);
+            result ^= (int) ((bits >>> 32) ^ bits);
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonType getType()
