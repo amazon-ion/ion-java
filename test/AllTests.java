@@ -16,6 +16,7 @@ import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTest;
 import com.amazon.ion.HashCodeCorrectnessTest;
+import com.amazon.ion.HashCodeDeltaCollisionTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonExceptionTest;
@@ -115,7 +116,7 @@ import org.junit.runners.Suite;
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
 
-    // binary format tests
+    // Binary format tests
     BinaryTest.class,
 
     // Utility tests
@@ -132,10 +133,6 @@ import org.junit.runners.Suite;
     EquivsTest.class,
     NonEquivsTest.class,
     EquivTimelineTest.class,
-
-    // hash code tests
-    HashCodeCorrectnessTest.class,
-    HashCodeDistributionTest.class,
 
     // General processing test suite
     GoodIonTest.class,
@@ -163,7 +160,12 @@ import org.junit.runners.Suite;
     IonSystemTest.class,
     ValueFactorySequenceTest.class,
     IonSystemBuilderTest.class,
-    IonTextWriterBuilderTest.class
+    IonTextWriterBuilderTest.class,
+
+    // Hash code tests
+    HashCodeCorrectnessTest.class,
+    HashCodeDistributionTest.class,
+    HashCodeDeltaCollisionTest.class
 })
 public class AllTests
 {

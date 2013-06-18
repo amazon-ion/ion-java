@@ -19,13 +19,12 @@ import java.io.FileInputStream;
 import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class ReaderSkippingTest
-extends IonTestCase
+    extends IonTestCase
 {
-    static final boolean _debug_flag = true;
-
     @Inject("testFile")
     public static final File[] FILES =
         testdataFiles(GLOBAL_SKIP_LIST,
@@ -46,6 +45,13 @@ extends IonTestCase
         myTestFile = file;
     }
 
+    @BeforeClass
+    public static void beforeClass()
+    {
+        SEED = System.currentTimeMillis();
+        System.err.println(ReaderSkippingTest.class.getSimpleName() +
+                           ".SEED=" + SEED + "L");
+    }
 
     @Override
     @Before
@@ -55,12 +61,6 @@ extends IonTestCase
         super.setUp();
         myFullReader = system().newReader(new FileInputStream(myTestFile));
         mySkipReader = system().newReader(new FileInputStream(myTestFile));
-
-        if (SEED == 0)
-        {
-            SEED = System.currentTimeMillis();
-            System.err.println("ReaderSkippingTest.SEED=" + SEED + "L");
-        }
 
         myRandom = new Random(SEED);
     }
