@@ -1,6 +1,12 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import static com.amazon.ion.IonType.LIST;
+import static com.amazon.ion.IonType.SEXP;
+import static com.amazon.ion.IonType.STRING;
+import static com.amazon.ion.IonType.STRUCT;
+import static com.amazon.ion.IonType.SYMBOL;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -11,254 +17,52 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Set;
-import org.junit.Before;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Test;
 
-/**
- * Chi-square test for IonHasher.  Using selected test data, determine chi^2
- * for various hash table sizes and determine whether it is within 95%
- * confidence interval.  See Knuth vol. 2 sec 3.3.1 for background.
+/** Chi-square test for {@link IonValue#hashCode()} implementations.
+ * Using selected test data, determine Chi^2 value for various hash table
+ * sizes and determine whether it is within 95% confidence interval using a
+ * goodness of fit test. The Chi-square test tests for the fact that hashes
+ * generated from the hash functions are random, with a 95% confidence.
+ * <p>
+ * See Knuth vol. 2 sec 3.3.1 for background.
  */
 public class HashCodeDistributionTest
-extends IonTestCase
+    extends IonTestCase
 {
-    @Override @Before
-    public void setUp() throws Exception
+    /**
+     * This value is the initial capacity of the data set (i.e. number of
+     * buckets). This must be a power of 2.
+     * <p>
+     * We want to keep halving the number of buckets in the data set to test on
+     * different sizes of buckets. The halving of the buckets is performed at
+     * {@link #collapse(int[])}.
+     * <p>
+     * The rationale behind this is that we want to mimic the internal
+     * implementation of how {@link HashMap} and {@link ConcurrentHashMap}
+     * stores its hash table, which is an {@link Entry} array with size that is
+     * a power of 2.
+     */
+    private static final int DATA_SET_INITIAL_CAPACITY = 1 << 12;
+
+    /**
+     * This is sync'ed with {@link HashMap}'s DEFAULT_INITIAL_CAPACITY
+     * constant, which is 16.
+     */
+    private static final int HASH_MAP_INITIAL_CAPACITY = 1 << 4;
+
+    private static final String BULK_TEST_DATA_PATH = "items-A";
+
+    protected Set<IonValue> loadBulkDataSet()
+        throws IOException
     {
-        super.setUp();
-        File data_dir = findDataDir();
-        if (data_dir != null)  {
-            loadTestData(data_dir);
-        }
-    }
+        Set<IonValue> dataSet = new HashSet<IonValue>();
+        File directory = getBulkTestdataFile(BULK_TEST_DATA_PATH);
 
-    /**
-     * Test method for {@link IonValue#hashCode()} output value
-     * distribution. This is a test of the raw hash code, not the
-     * hash code as actually used by {@link HashMap} and
-     * {@link HashSet}.
-     */
-    @Test
-    public void testIonHashCodeUnadjustedAll() throws Exception
-    {
-        int[] counts = new int[1 << 12];   // must be power of 2
-        dataSize = 0;
-        for (IonValue v : testData)  {
-            int index = v.hashCode() % counts.length;
-            if (index < 0) {
-                index += counts.length;
-            }
-            counts[index]++;
-            dataSize++;
-        }
-        analyzeDistribution(counts, 1 << 10);
-    }
-
-    /**
-     * Test method for {@link IonValue#hashCode()} output value
-     * distribution, adjusting the hash codes as per {@link HashMap}.
-     * This tests against a bigger range of hash map concentrations
-     * since it's the more important use case.
-     */
-    @Test
-    public void testIonHashCodeAdjustedAll() throws Exception
-    {
-        int[] counts = new int[1 << 12];   // must be power of 2
-        dataSize = 0;
-        for (IonValue v : testData)  {
-            int index = hashMapHash(v.hashCode()) % counts.length;
-            if (index < 0) {
-                index += counts.length;
-            }
-            counts[index]++;
-            dataSize++;
-        }
-        analyzeDistribution(counts, 1 << 4);
-    }
-
-    /**
-     * Test method for {@link IonStruct#hashCode()} output value
-     * distribution, adjusting the hash codes as per {@link HashMap}.
-     */
-    @Test
-    public void testIonHashCodeAdjustedStructs() throws Exception
-    {
-        int[] counts = new int[1 << 12];   // must be power of 2
-        dataSize = 0;
-        for (IonValue v : testData)  {
-            if (v instanceof IonStruct)  {
-                int index = hashMapHash(v.hashCode()) % counts.length;
-                if (index < 0) {
-                    index += counts.length;
-                }
-                counts[index]++;
-                dataSize++;
-            }
-        }
-        analyzeDistribution(counts, 1 << 4);
-    }
-
-    /**
-     * Test method for {@link IonSequence#hashCode()} output value
-     * distribution, adjusting the hash codes as per {@link HashMap}.
-     */
-    @Test
-    public void testIonHashCodeAdjustedSequences() throws Exception
-    {
-        int[] counts = new int[1 << 12];   // must be power of 2
-        dataSize = 0;
-        for (IonValue v : testData)  {
-            if (v instanceof IonSequence)  {
-                int index = hashMapHash(v.hashCode()) % counts.length;
-                if (index < 0) {
-                    index += counts.length;
-                }
-                counts[index]++;
-                dataSize++;
-            }
-        }
-        analyzeDistribution(counts, 1 << 4);
-    }
-
-    /**
-     * Test method for {@link IonText#hashCode()} output value
-     * distribution, adjusting the hash codes as per {@link HashMap}.
-     */
-    @Test
-    public void testIonHashCodeAdjustedText() throws Exception
-    {
-        int[] counts = new int[1 << 12];   // must be power of 2
-        dataSize = 0;
-        for (IonValue v : testData)  {
-            if (v instanceof IonText)  {
-                int index = hashMapHash(v.hashCode()) % counts.length;
-                if (index < 0) {
-                    index += counts.length;
-                }
-                counts[index]++;
-                dataSize++;
-            }
-        }
-        analyzeDistribution(counts, 1 << 4);
-    }
-
-    /**
-     * Analyze counts again Chi^2 distribution as provide and collapsed
-     * down to limit entries from initial size
-     * @param counts Input array
-     * @param limit Limit for collapse
-     */
-    protected void analyzeDistribution(int[] counts, int limit)
-    {
-        while (counts.length >= limit) {
-            testChiSquared(counts);
-            counts = collapse(counts);
-        }
-    }
-
-    /**
-     * Analyze counts again Chi^2 distribution at 95% threshold
-     * @param counts Input array
-     */
-    protected void testChiSquared(int[] counts)  {
-        int total = 0;
-        for (int count : counts) {
-            total += count;
-        }
-        if (total == 0)  {
-            return;     // nothing to test
-        }
-        assertEquals("Data size not equal to total counts", dataSize, total);
-        double expected_value = (double) total / (double) counts.length;
-        double chi_squared = 0.0;
-        for (int count : counts) {
-            chi_squared += (count - expected_value)*(count - expected_value)
-                                / expected_value;
-        }
-        int degrees_of_freedom = counts.length - 1;
-        // Compute 95% point of chi-square distribution
-        double threshold;
-        if (degrees_of_freedom < chiSquared95Table.length)  {
-            threshold = chiSquared95Table[degrees_of_freedom];
-        }
-        else {
-            double x_p = 1.64;
-            threshold = degrees_of_freedom
-                        + Math.sqrt(2*degrees_of_freedom)*x_p
-                        + 2.0/3.0*x_p*x_p
-                        - 2.0/3.0;
-        }
-        assertTrue(String.format("Chi-squared measured: %1$f, "
-                                 + "limit: %2$f, nu: %3$d",
-                                 chi_squared, threshold, degrees_of_freedom),
-                   chi_squared < threshold);
-    }
-
-    /**
-     * Collapse array and reanalyze
-     * @param counts Input array
-     */
-    private static int[] collapse(int[] counts)
-    {
-        int[] new_counts = new int[counts.length >> 1];
-        for (int i = 0; i < new_counts.length; ++i)  {
-            new_counts[i] = counts[i] + counts[i + new_counts.length];
-        }
-        return new_counts;
-    }
-
-    protected static File findDataDir()  {
-
-        // Look for test data
-        File curr_dir = new File(System.getProperty("user.dir"));
-        File data_dir = getDataDir(curr_dir);
-
-        // If no data in curr directory, look up and over at IonTests,
-        // per short format Brazil layout
-
-        if (!data_dir.exists() || !data_dir.isDirectory())  {
-            data_dir = getDataDir(new File(curr_dir.getParentFile(),
-                                           "IonTests"));
-
-            // If no data in curr directory, look up and over at IonTests,
-            // per Brazil layout
-            if (!data_dir.exists() || !data_dir.isDirectory())  {
-                data_dir = getDataDir(new File(curr_dir.getParentFile(),
-                                               "IonTests"));
-
-                // Or the build directory
-                if (!data_dir.exists() || !data_dir.isDirectory())  {
-                    data_dir = getDataDir(new File(curr_dir, "build"));
-
-                    // then give up
-                    if (!data_dir.exists() || !data_dir.isDirectory())  {
-                        data_dir = null;
-                    }
-                }
-            }
-        }
-        return data_dir;
-    }
-
-    /**
-     * Get data dir relative to specified path
-     * @param base_dir Base directory
-     * @return data directory
-     */
-
-    protected static File getDataDir(File base_dir)  {
-        return new File(new File(base_dir, "bulk"), "items-A");
-    }
-
-    /**
-     * Loads test data
-     * @param data_dir Directory w data files
-     */
-    protected void loadTestData(File data_dir)
-    throws IOException
-    {
-        File[] data_files = data_dir.listFiles(new FilenameFilter()
+        File[] testFiles = directory.listFiles(new FilenameFilter()
         {
             public boolean accept(File dir, String name)
             {
@@ -266,36 +70,131 @@ extends IonTestCase
             }
         });
 
-        IonSystem ionSys = system();
-        for (File data_file : data_files)  {
+        IonSystem ionSystem = system();
+        for (File testFile : testFiles)
+        {
             InputStream in =
-                new BufferedInputStream(new FileInputStream(data_file));
-            try {
-                Iterator<IonValue> i = ionSys.iterate(in);
-                while (i.hasNext())  {
-                    loadValue(i.next());
+                new BufferedInputStream(new FileInputStream(testFile));
+            try
+            {
+                Iterator<IonValue> i = ionSystem.iterate(in);
+                while (i.hasNext())
+                {
+                    loadValue(i.next(), dataSet);
                 }
             }
-            finally {
+            finally
+            {
                 in.close();
+            }
+        }
+
+        return dataSet;
+    }
+
+    /**
+     * Loads the {@link IonValue} and its nested values into the {@code dataSet}.
+     *
+     * @param value
+     * @param dataSet
+     */
+    protected void loadValue(IonValue value, Set<IonValue> dataSet)
+    {
+        dataSet.add(value);
+        if (value instanceof IonContainer)
+        {
+            IonContainer container = (IonContainer) value;
+            for (IonValue v : container)
+            {
+                loadValue(v, dataSet);
             }
         }
     }
 
     /**
-     * Loads an IonValue into the test data set.
-     * @param value
+     * Analyze key entries, {@code counts}, against the Chi^2 distribution as
+     * provided, while collapsing {@code counts} down to {@code limit} from the
+     * initial size.
+     *
+     * @param counts key entries int array
+     * @param totalCount total number of key entries
+     * @param limit limit for {@link #collapse(int[])}
      */
-    protected void loadValue(IonValue value)
+    protected void analyzeDistribution(int[] counts, int totalCount, int limit)
     {
-        testData.add(value);
-        if (value instanceof IonContainer)
+        while (counts.length >= limit)
         {
-            IonContainer container = (IonContainer) value;
-            for (IonValue v : container)  {
-                loadValue(v);
-            }
+            checkChiSquareValue(counts, totalCount);
+            counts = collapse(counts);
         }
+    }
+
+    /**
+     * Analyze counts against Chi^2 distribution at 95% confidence interval.
+     *
+     * @param counts key entries int array
+     */
+    protected void checkChiSquareValue(int[] counts, int totalCount)
+    {
+        int expectedTotalCount = 0;
+        for (int count : counts)
+        {
+            expectedTotalCount += count;
+        }
+
+        assertEquals("Total counts is incorrect", totalCount, expectedTotalCount);
+
+        if (expectedTotalCount == 0)
+        {
+            return; // nothing to test
+        }
+
+        double expectedValue = (double) totalCount / (double) counts.length;
+        double chiSquared = 0.0;
+        for (int count : counts)
+        {
+            chiSquared += Math.pow((count - expectedValue), 2) / expectedValue;
+        }
+        int degreesOfFreedom = counts.length - 1;
+
+        double threshold;
+        if (degreesOfFreedom < upperTailChiSquared95Table.length)
+        {
+            threshold = upperTailChiSquared95Table[degreesOfFreedom];
+        }
+        else
+        {
+            // Calculate critical chi-square value using formula for degrees of
+            // freedom greater than 100. Refer to Knuth vol. 2 sec 3.3.1
+            double x_p = 1.64;
+            threshold = degreesOfFreedom
+                        + Math.sqrt(2*degreesOfFreedom)*x_p
+                        + (2.0/3.0)*Math.pow(x_p, 2)
+                        - (2.0/3.0);
+        }
+
+        if (chiSquared >= threshold)
+        {
+            fail(String.format("Chi-square value above 95 percent " +
+                               "threshold: %1$f, limit: %2$f, nu: %3$d",
+                               chiSquared, threshold, degreesOfFreedom));
+        }
+    }
+
+    /**
+     * Collapse key entries int array and return a new int array.
+     *
+     * @param counts
+     * @return the new key entries int array
+     */
+    protected int[] collapse(int[] counts)
+    {
+        int[] new_counts = new int[counts.length >> 1]; // halve the number of buckets
+        for (int i = 0; i < new_counts.length; ++i)
+        {
+            new_counts[i] = counts[i] + counts[i + new_counts.length];
+        }
+        return new_counts;
     }
 
     /**
@@ -304,21 +203,117 @@ extends IonTestCase
      * @param raw_hash Raw hash value
      * @return cooked hash value
      */
-    protected int hashMapHash(int raw_hash)  {
+    protected int hashMapHash(int raw_hash)
+    {
         int cooked_hash = raw_hash;
         cooked_hash ^= (cooked_hash >>> 20) ^ (cooked_hash >>> 12);
         return cooked_hash ^ (cooked_hash >>> 7) ^ (cooked_hash >>> 4);
     }
 
-    protected final Set<IonValue> testData
-            = new HashSet<IonValue>(4096);
+    /**
+     * Counts each occurrence of {@link IonValue#hashCode()} and perform
+     * Chi^2 analysis over it.
+     *
+     * @param dataSet
+     *          the data set containing IonValue test data
+     * @param type
+     *          filter over IonValue test data; all IonValues are used if
+     *          {@code null}
+     * @param adjusted
+     *          {@code true} if using {@link #hashMapHash(int)} as a
+     *          supplementary hash function
+     * @param limit
+     *          the limit to {@link #collapse(int[])}
+     */
+    protected void checkChiSquareIonValueHashCode(Set<IonValue> dataSet,
+                                                  IonType type,
+                                                  boolean adjusted,
+                                                  int limit)
+    {
+        int[] counts = new int[DATA_SET_INITIAL_CAPACITY]; // must be power of 2
+        int countsLength = counts.length;
+        int totalCount = 0;
+        for (IonValue v : dataSet)
+        {
+            if (type == null || v.getType().equals(type))
+            {
+                int index = adjusted ?
+                            hashMapHash(v.hashCode()) % countsLength :
+                            v.hashCode() % countsLength;
+                if (index < 0)
+                {
+                    index += countsLength;
+                }
+                counts[index]++;
+                totalCount++;
+            }
+        }
+        analyzeDistribution(counts, totalCount, limit);
+    }
 
-    protected int dataSize;
 
 
-    /** From http://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm */
-    protected static final double[] chiSquared95Table = {
-        -1,  // nu = 0 is undefined
+
+    @Test
+    public void testChiSquareBulkDataSetUnadjusted() throws Exception
+    {
+        Set<IonValue> dataSet = loadBulkDataSet();
+
+        checkChiSquareIonValueHashCode(dataSet, null, false,
+                                       HASH_MAP_INITIAL_CAPACITY);
+    }
+
+    @Test
+    public void testChiSquareBulkDataSetAdjusted() throws Exception
+    {
+        Set<IonValue> dataSet = loadBulkDataSet();
+
+        checkChiSquareIonValueHashCode(dataSet, null, true,
+                                       HASH_MAP_INITIAL_CAPACITY);
+    }
+
+    @Test
+    public void testChiSquareBulkDataSetStructAdjusted() throws Exception
+    {
+        Set<IonValue> dataSet = loadBulkDataSet();
+
+        checkChiSquareIonValueHashCode(dataSet, STRUCT, true,
+                                       HASH_MAP_INITIAL_CAPACITY);
+    }
+
+    @Test
+    public void testChiSquareBulkDataSetSequenceAdjusted() throws Exception
+    {
+        Set<IonValue> dataSet = loadBulkDataSet();
+
+        checkChiSquareIonValueHashCode(dataSet, LIST, true,
+                                       HASH_MAP_INITIAL_CAPACITY);
+        checkChiSquareIonValueHashCode(dataSet, SEXP, true,
+                                       HASH_MAP_INITIAL_CAPACITY);
+    }
+
+    @Test
+    public void testChiSquareBulkDataSetTextAdjusted() throws Exception
+    {
+        Set<IonValue> dataSet = loadBulkDataSet();
+
+        checkChiSquareIonValueHashCode(dataSet, STRING, true,
+                                       HASH_MAP_INITIAL_CAPACITY);
+        checkChiSquareIonValueHashCode(dataSet, SYMBOL, true,
+                                       HASH_MAP_INITIAL_CAPACITY);
+    }
+
+
+
+
+
+    /**
+     * Chi-squre critical values for 95% confidence interval. One-based.
+     *
+     * @see <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm">Chi-square Critical Values Table</a>
+     */
+    protected static final double[] upperTailChiSquared95Table = {
+           -1, // nu =   0 is undefined
         3.841, // nu =   1
         5.991, // nu =   2
         7.815, // nu =   3

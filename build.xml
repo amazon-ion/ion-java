@@ -26,6 +26,8 @@
     <propertycopy property="dir.IonTests.src" from="bp:{IonTests}pkg.src"/>
     <property name="dir.test.data"
               location="${dir.IonTests.src}/iontestdata"/>
+    <property name="dir.test.data.bulk"
+              location="${dir.IonTests.src}/bulk"/>
 
     <property name="jar.output.src"  location="${dir.release}/${ant.project.name}.jar"/>
     <property name="jar.output.test" location="${dir.release}/${ant.project.name}-test.jar"/>
@@ -121,6 +123,8 @@
       <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
       <sysproperty key="com.amazon.iontests.iontestdata.path"
                    value="${dir.test.data}"/>
+      <sysproperty key="com.amazon.iontests.bulk.path"
+                   value="${dir.test.data.bulk}"/>
 
       <assertions enableSystemAssertions="true">
         <!--
@@ -226,6 +230,8 @@
     <propertyfile file="${basedir}/.eclipseout/system.properties">
       <entry key="com.amazon.iontests.iontestdata.path"
              value="${dir.test.data}" />
+      <entry key="com.amazon.iontests.bulk.path"
+             value="${dir.test.data.bulk}" />
     </propertyfile>
     <copy-jar-info classes-dir="${basedir}/.eclipseout"/>
   </target>

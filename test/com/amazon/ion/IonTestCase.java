@@ -48,6 +48,10 @@ public abstract class IonTestCase
     { StreamingMode.NEW_STREAMING };
 
 
+    private static final String ION_TESTS_IONTESTDATA_PATH_PROPERTY =
+        "com.amazon.iontests.iontestdata.path";
+    private static final String ION_TESTS_BULK_PATH_PROPERTY =
+        "com.amazon.iontests.bulk.path";
 
     private static boolean ourSystemPropertiesLoaded = false;
     protected SimpleCatalog    myCatalog;
@@ -155,14 +159,28 @@ public abstract class IonTestCase
     }
 
     /**
-     * Gets a {@link File} contained in the test data suite.
+     * Gets a {@link File} contained in the IonTests "iontestdata" data
+     * directory.
      *
-     * @param path is relative to the {@code testdata} directory.
+     * @param path is relative to the "iontestdata" directory.
      */
     public static File getTestdataFile(String path)
     {
         String testDataPath =
-            requireSystemProperty("com.amazon.iontests.iontestdata.path");
+            requireSystemProperty(ION_TESTS_IONTESTDATA_PATH_PROPERTY);
+        File testDataDir = new File(testDataPath);
+        return new File(testDataDir, path);
+    }
+
+    /**
+     * Gets a {@link File} contained in the IonTests "bulk" data directory.
+     *
+     * @param path is relative to the "bulk" directory
+     */
+    public static File getBulkTestdataFile(String path)
+    {
+        String testDataPath =
+            requireSystemProperty(ION_TESTS_BULK_PATH_PROPERTY);
         File testDataDir = new File(testDataPath);
         return new File(testDataDir, path);
     }
