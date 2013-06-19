@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
@@ -25,6 +25,17 @@ import org.junit.Test;
 public class TimestampTest
     extends IonTestCase
 {
+    /**
+     * Earliest Ion timestamp possible, that is, "0001-01-01".
+     *
+     * @see <a href="https://w.amazon.com/index.php/Ion#Timestamps">Ion wiki page</a>
+     */
+    private static final Timestamp EARLIEST_ION_TIMESTAMP =
+        Timestamp.valueOf("0001-01-01");
+
+    private static final Timestamp UNIX_EPOCH_TIMESTAMP =
+        Timestamp.valueOf("1970-01-01T00:00:00Z");
+
     /**
      * PST = -08:00 = -480
      */
@@ -282,6 +293,28 @@ public class TimestampTest
 
 
     // ========================================================================
+
+    /**
+     * Perform sanity check on static constant Timestamps fields, as they are
+     * used in other test methods.
+     * <p>
+     * <b>NOTE</b>: If this test method fails, you must re-run the entire test
+     * class as other test methods might be based off the correctness of
+     * assumptions declared here.
+     */
+    @Test
+    public void testTimestampConstants()
+    {
+        checkFields(1, 1, 1, 0, 0, 0, null, null, EARLIEST_ION_TIMESTAMP);
+        assertEquals("0001-01-01Z", EARLIEST_ION_TIMESTAMP.toZString());
+        assertEquals("0001-01-01", EARLIEST_ION_TIMESTAMP.toString());
+        assertEquals(-62135769600000L, EARLIEST_ION_TIMESTAMP.getMillis());
+
+        checkFields(1970, 1, 1, 0, 0, 0, null, 0, UNIX_EPOCH_TIMESTAMP);
+        assertEquals("1970-01-01T00:00:00Z", UNIX_EPOCH_TIMESTAMP.toZString());
+        assertEquals("1970-01-01T00:00:00Z", UNIX_EPOCH_TIMESTAMP.toString());
+        assertEquals(0L, UNIX_EPOCH_TIMESTAMP.getMillis());
+    }
 
     @Test
     public void testFactoryNullTimestamp()
@@ -950,4 +983,110 @@ public class TimestampTest
         assertEquals(59, ts.getMinute());
         assertEquals(59, ts.getZMinute());
     }
+
+    @Test
+    public void testTimestampCopyConstructor()
+    {
+        BigDecimal fraction = new BigDecimal(".3456789");
+        Timestamp expectedTs = new Timestamp(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET);
+        assertEquals("2010-02-01T10:11:12.3456789-08:00", expectedTs.toString());
+
+        //===== Test on Timestamp(...) fractional precision copy-constructor =====
+        Timestamp actualTs = new Timestamp(expectedTs.getYear(),
+                                           expectedTs.getMonth(),
+                                           expectedTs.getDay(),
+                                           expectedTs.getHour(),
+                                           expectedTs.getMinute(),
+                                           expectedTs.getSecond(),
+                                           expectedTs.getFractionalSecond(),
+                                           expectedTs.getLocalOffset());
+        assertEquals(expectedTs, actualTs);
+
+        //===== Test on Timestamp.createFromUtcFields(...) copy-constructor =====
+        actualTs = Timestamp
+            .createFromUtcFields(expectedTs.getPrecision(),
+                                 expectedTs.getZYear(),
+                                 expectedTs.getZMonth(),
+                                 expectedTs.getZDay(),
+                                 expectedTs.getZHour(),
+                                 expectedTs.getZMinute(),
+                                 expectedTs.getZSecond(),
+                                 expectedTs.getZFractionalSecond(),
+                                 expectedTs.getLocalOffset());
+        assertEquals(expectedTs, actualTs);
+    }
+
+    /**
+     * Trap for ION-324 - Ensures that a point in time represented by a
+     * millisecond value that is an offset from the Epoch with
+     * fractional precision has its fractional seconds computed correctly during
+     * construction of the Timestamp.
+     * <p>
+     * All variants of constructors that constructs a Timestamp with from a
+     * milliseconds representation with fractional precision is tested here.
+     * All constructors are expected to construct a valid Timestamp instance.
+     */
+    @Test
+    public void testNegativeEpochWithFractionalSeconds()
+    {
+        // an instance of negative UNIX epoch time in milliseconds, the
+        // UNIX epoch time is 0 milliseconds (i.e. 1970-01-01T00:00:00Z)
+        BigDecimal negativeEpochDecimalMillis =
+            new BigDecimal("-9223372036854.775808");
+
+        Timestamp expectedTs =
+            new Timestamp(negativeEpochDecimalMillis, UTC_OFFSET);
+        long expectedMillis = expectedTs.getMillis();
+        Timestamp expectedTsMillis =
+            new Timestamp(expectedMillis, UTC_OFFSET);
+        Timestamp expectedTsMillisWithNanosPrecision =
+            Timestamp.valueOf("1677-09-21T00:12:43.145000000Z");
+
+        // sanity check to ensure we indeed have a negative epoch point in time
+        // with proper fractional seconds
+        assertEquals("-9223372036854.775808",
+                     negativeEpochDecimalMillis.toPlainString());
+
+        assertEquals(-9223372036855L, expectedMillis);
+
+        assertEquals("1677-09-21T00:12:43.145224192Z",
+                     expectedTs.toZString());
+
+        assertEquals("1677-09-21T00:12:43.145000000Z",
+                     expectedTsMillisWithNanosPrecision.toZString());
+
+        assertEquals("1677-09-21T00:12:43.145Z",
+                     expectedTsMillis.toZString());
+
+        // expect: expectedTs is after earliest Ion timestamp
+        assertTrue(expectedTs.compareTo(EARLIEST_ION_TIMESTAMP) > 0);
+
+        // expect: expectedTs is before unix epoch timestamp
+        assertTrue(expectedTs.compareTo(UNIX_EPOCH_TIMESTAMP) < 0);
+
+
+
+        //===== Test on Timestamp(BigDecimal, Integer) constructor =====
+        Timestamp actualTs = new Timestamp(negativeEpochDecimalMillis, UTC_OFFSET);
+        assertEquals(expectedTs, actualTs);
+
+
+        //===== Test on Timestamp(long, Integer) constructor =====
+        actualTs = new Timestamp(expectedMillis, UTC_OFFSET);
+        assertEquals(expectedTsMillis, actualTs);
+
+
+        //===== Test on Timestamp.forSqlTimestampZ() constructor =====
+        java.sql.Timestamp actualSqlTs = new java.sql.Timestamp(expectedMillis);
+
+        // milliseconds value, with nanoseconds precision
+        actualTs = Timestamp.forSqlTimestampZ(actualSqlTs);
+        assertEquals(expectedTsMillisWithNanosPrecision, actualTs);
+
+        // milliseconds and nanoseconds value, with nanoseconds precision
+        actualSqlTs.setNanos(145224192);
+        actualTs = Timestamp.forSqlTimestampZ(actualSqlTs);
+        assertEquals(expectedTs, actualTs);
+    }
+
 }

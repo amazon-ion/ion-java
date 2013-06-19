@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,6 +7,7 @@ import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -28,14 +29,16 @@ import java.util.GregorianCalendar;
  * <h4>Equality and Comparison</h4>
  *
  * As with {@link IonValue} classes, the {@link #equals} methods on this class
- * performs a strict equivalence that observes the precision of each timestamp.
+ * performs a strict equivalence that observes the precision and local offset
+ * of each timestamp.
  * This means that it's possible to have two {@link Timestamp} instances that
  * represent the same point in time but are not equivalent.
  * <p>
  * On the other hand, the {@link #compareTo} methods perform timeline
- * comparison, ignoring precision. Thus the <em>natural comparison method</em>
- * of this class is <em>not consistent with equals</em>. See the documentation
- * of {@link Comparable} for further discussion.
+ * comparison, ignoring precision and local offset.
+ * Thus the <em>natural comparison method</em> of this class is <em>not
+ * consistent with equals</em>. See the documentation of {@link Comparable} for
+ * further discussion.
  * <p>
  * To illustrate this distinction, consider the following timestamps. None are
  * {@link #equals} to each other, but any pair will return a zero result from
@@ -250,15 +253,6 @@ public final class Timestamp
         int offset = date.getTimezoneOffset();
         this.apply_offset(-offset);
     }
-    private void set_fraction_from_millis(long ms) {
-        this._precision = Precision.FRACTION;
-        // BigDecimal is immutable - so really we're resetting this value
-        long secs = ms / 1000L;
-        int msInt = (int)(ms - secs*1000L);
-        BigDecimal dec_ms = new BigDecimal(msInt);
-        dec_ms = dec_ms.movePointLeft(3); // set value to milliseconds
-        this._fraction = dec_ms;
-    }
 
     /**
      * Copies data from a {@link Calendar} into this timestamp.
@@ -400,9 +394,9 @@ public final class Timestamp
 
         validate_fields();
         if (offset != null) {
-        this._offset = offset;
-        apply_offset(offset);
-    }
+            this._offset = offset;
+            apply_offset(offset);
+        }
     }
 
     /**
@@ -428,9 +422,9 @@ public final class Timestamp
 
         validate_fields();
         if (offset != null) {
-        this._offset = offset;
-        apply_offset(offset);
-    }
+            this._offset = offset;
+            apply_offset(offset);
+        }
     }
 
     /**
@@ -460,9 +454,9 @@ public final class Timestamp
 
         validate_fields();
         if (offset != null) {
-        this._offset = offset;
-        apply_offset(offset);
-    }
+            this._offset = offset;
+            apply_offset(offset);
+        }
     }
 
     /**
@@ -562,10 +556,9 @@ public final class Timestamp
         }
         else {
             this._precision = Precision.FRACTION;
-            long secs = ms / 1000;
-            BigDecimal temp = millis.movePointLeft(3);
-            BigDecimal dsec = new BigDecimal(secs);
-            this._fraction = temp.subtract(dsec);
+            BigDecimal secs = millis.movePointLeft(3);
+            BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
+            this._fraction = secs.subtract(secsDown);
         }
         this._offset = localOffset;
         this.validate_fields();
@@ -584,7 +577,13 @@ public final class Timestamp
     {
         Date d = new Date(millis);  // this will have the system timezone in it whether we want it or not
         this.set_fields_from_millis(d);
-        this.set_fraction_from_millis(millis);
+
+        // fractional seconds portion
+        this._precision = Precision.FRACTION;
+        BigDecimal secs = BigDecimal.valueOf(millis).movePointLeft(3);
+        BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
+        this._fraction = secs.subtract(secsDown);
+
         this._offset = localOffset;
         this.validate_fields();
     }
@@ -1551,7 +1550,7 @@ public final class Timestamp
      * {@link Timestamp} object that represents the same point in time,
      * precision, and local offset as this object.
      * <p>
-     * Use the {@link #compareTo(Object)} method to compare only the point in
+     * Use the {@link #compareTo(Timestamp)} method to compare only the point in
      * time.
      */
     @Override
@@ -1588,9 +1587,12 @@ public final class Timestamp
         }
 
         // so now we check the actual time value
-        long this_millis = this.getMillis();
-        long other_millis = t.getMillis();
-        if (this_millis != other_millis) return false;
+        if (this._year   != t._year)    return false;
+        if (this._month  != t._month)   return false;
+        if (this._day    != t._day)     return false;
+        if (this._hour   != t._hour)    return false;
+        if (this._minute != t._minute)  return false;
+        if (this._second != t._second)  return false;
 
         // and if we have a local offset, check the value here
         if (this._offset != null) {
