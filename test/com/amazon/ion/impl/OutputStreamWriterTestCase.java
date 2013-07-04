@@ -141,7 +141,7 @@ public abstract class OutputStreamWriterTestCase
     {
         IonDatagram expected = system().newDatagram();
 
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
 
         iw.writeSymbol("fred_1");
         expected.add().newSymbol("fred_1");

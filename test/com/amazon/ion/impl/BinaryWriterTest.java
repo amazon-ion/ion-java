@@ -157,7 +157,7 @@ public class BinaryWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
         iw.writeSymbol("s");
     }
 
@@ -167,7 +167,7 @@ public class BinaryWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
         iw.addTypeAnnotation("a");
         iw.writeNull();
     }
@@ -178,7 +178,7 @@ public class BinaryWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("f");
         iw.writeNull();

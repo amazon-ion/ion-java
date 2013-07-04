@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -19,13 +19,7 @@ public class IonWriterUserBinary
     extends IonWriterUser
     implements _Private_ListWriter
 {
-    @Deprecated // TODO ION-252 Remove this
-    public static final boolean OUR_FAST_COPY_DEFAULT = false;
-    @Deprecated // TODO ION-252 Remove this
-    public static volatile boolean ourFastCopyEnabled = OUR_FAST_COPY_DEFAULT;
-
     public final boolean myStreamCopyOptimized;
-
 
     // If we wanted to we could keep an extra reference to the
     // system writer which was correctly typed as an
@@ -58,7 +52,7 @@ public class IonWriterUserBinary
 
         ByteTransferReader transfer = reader.asFacet(ByteTransferReader.class);
 
-        if ((ourFastCopyEnabled || myStreamCopyOptimized) // TODO ION-252 Remove ourFastCopyEnabled
+        if (myStreamCopyOptimized
             && transfer != null
             && _current_writer instanceof IonWriterSystemBinary
             && symtabExtends(getSymbolTable(), reader.getSymbolTable()))
