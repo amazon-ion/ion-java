@@ -83,11 +83,16 @@ final class IonListLite
 
     public final void writeTo(IonWriter writer) {
         try {
-            writer.stepIn(IonType.LIST);
-            for (IonValue iv : this) {
-                iv.writeTo(writer);
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.LIST);
+            } else {
+                writer.stepIn(IonType.LIST);
+                for (IonValue iv : this) {
+                    iv.writeTo(writer);
+                }
+                writer.stepOut();
             }
-            writer.stepOut();
         } catch (Exception e) {
             throw new IonException(e);
         }

@@ -58,7 +58,7 @@ public class IonWriterUserBinary
 
         ByteTransferReader transfer = reader.asFacet(ByteTransferReader.class);
 
-        if ((ourFastCopyEnabled || myStreamCopyOptimized)
+        if ((ourFastCopyEnabled || myStreamCopyOptimized) // TODO ION-252 Remove ourFastCopyEnabled
             && transfer != null
             && _current_writer instanceof IonWriterSystemBinary
             && symtabExtends(getSymbolTable(), reader.getSymbolTable()))

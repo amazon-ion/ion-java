@@ -113,8 +113,8 @@ public class IonSystemBuilder
     //=========================================================================
 
     IonCatalog myCatalog;
-    boolean myBinaryBacked;
-    boolean myStreamCopyOptimized;
+    boolean myBinaryBacked = false;
+    boolean myStreamCopyOptimized = false;
 
 
     /** You no touchy. */

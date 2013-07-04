@@ -77,11 +77,16 @@ final class IonSexpLite
 
     public final void writeTo(IonWriter writer) {
         try {
-            writer.stepIn(IonType.SEXP);
-            for (IonValue iv : this) {
-                iv.writeTo(writer);
+            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            if (isNullValue()) {
+                writer.writeNull(IonType.SEXP);
+            } else {
+                writer.stepIn(IonType.SEXP);
+                for (IonValue iv : this) {
+                    iv.writeTo(writer);
+                }
+                writer.stepOut();
             }
-            writer.stepOut();
         } catch (Exception e) {
             throw new IonException(e);
         }

@@ -75,28 +75,54 @@ public class TestUtils
         }
     }
 
-    public static final class NameIsNot implements FilenameFilter
+    /**
+     * A FilenameFilter that filters file names based on an optional parent
+     * directory pathname, and a required file name. Refer to
+     * {@link FileIsNot#FileIsNot(String...)} constructor.
+     */
+    public static final class FileIsNot implements FilenameFilter
     {
         private final String[] mySkips;
 
-        public NameIsNot(String... filesToSkip) { mySkips = filesToSkip; }
+        /**
+         * {@code filesToSkip} must be of the form ".../filename.ion" where
+         * ... is optional and is the parent directory pathname of the file
+         * to skip. The leading slash is also optional.
+         * <p>
+         * Examples of valid parameters are:
+         * <ul>
+         *      <li>{@code iontestdata/good/non-equivs/filename.ion}</li>
+         *      <li>{@code non-equivs/filename.ion}</li>
+         *      <li>{@code filename.ion}</li>
+         * </ul>
+         *
+         * @param filesToSkip
+         */
+        public FileIsNot(String... filesToSkip) { mySkips = filesToSkip; }
 
         public boolean accept(File dir, String name)
         {
             for (String skip : mySkips)
             {
-                if (skip.equals(name)) return false;
+                // Remove leading slash if it already exists
+                if (name.startsWith("/"))
+                {
+                    name = name.substring(1);
+                }
+
+                String fullFilePath = "/" + dir.getPath() + "/" + name;
+
+                if (fullFilePath.endsWith(skip)) return false;
             }
             return true;
         }
     }
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
-        new NameIsNot(
-                      "floatDblMin.ion"                 // Still broken on Mac JRE/Windows JRE
-                     ,"annotationNested.10n"            // ION-178
-                     ,"emptyAnnotatedInt.10n"           // ION-178
-                     ,"paddedInts.10n"                  // ION-179
+        new FileIsNot(
+                       "bad/annotationNested.10n"                // ION-178
+                      ,"bad/emptyAnnotatedInt.10n"               // ION-178
+                      ,"equivs/paddedInts.10n"                   // ION-179
                       );
 
 

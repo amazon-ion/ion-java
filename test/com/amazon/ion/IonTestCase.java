@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -31,58 +31,71 @@ import org.junit.runner.RunWith;
 public abstract class IonTestCase
     extends Assert
 {
-    protected enum DomType { LITE, BACKED }
-
-    @Inject("domType")
-    public static final DomType[] DOM_TYPES = DomType.values();
-
-
-    public static enum StreamingMode {
-        OLD_STREAMING,
-        NEW_STREAMING
-    }
-
-    @Inject("streamingMode")
-    public static final StreamingMode[] STREAMING_DIMENSION =
-        //StreamingMode.values();  // ION-180 the old streaming fails numerous regressions.
-    { StreamingMode.NEW_STREAMING };
-
-
     private static final String ION_TESTS_IONTESTDATA_PATH_PROPERTY =
         "com.amazon.iontests.iontestdata.path";
     private static final String ION_TESTS_BULK_PATH_PROPERTY =
         "com.amazon.iontests.bulk.path";
 
-    private static boolean ourSystemPropertiesLoaded = false;
-    protected SimpleCatalog    myCatalog;
-    protected _Private_IonSystem mySystem;
-    protected IonLoader        myLoader;
+    /**
+     * Test dimensions of the DOM implementations.
+     */
+    protected enum DomType { LITE, BACKED }
 
-    //  FIXME: needs java docs
-    private DomType domType;
-    private StreamingMode desiredStreamingMode;
+    protected enum StreamingMode { OLD_STREAMING, NEW_STREAMING }
+
+    // Using an enum makes the test names more understandable than a boolean.
+    protected enum StreamCopySpeed { COPY_OPTIMIZED, COPY_NON_OPTIMIZED }
+
+    @Inject("domType")
+    public static final DomType[] DOM_TYPES = DomType.values();
+
+    @Inject("streamingMode")
+    public static final StreamingMode[] STREAMING_DIMENSION =
+        //StreamingMode.values();  // TODO ION-180 the old streaming fails numerous regressions.
+        { StreamingMode.NEW_STREAMING };
+
+    /**
+     * Flag on whether IonSystems generated is
+     * {@link IonSystemBuilder#isStreamCopyOptimized()}.
+     * <p>
+     * This is false by default. Keep this in sync with {@link IonSystemBuilder}!
+     */
+    private boolean                     myStreamCopyOptimized = false;
+    private DomType                     myDomType;
+    private StreamingMode               myStreamingMode;
+
+    private static boolean              ourSystemPropertiesLoaded = false;
+    protected SimpleCatalog             myCatalog;
+    protected _Private_IonSystem        mySystem;
+    protected IonLoader                 myLoader;
+
+    //=========================================================================
+    // Setters/Getters for injected values
 
     public DomType getDomType()
     {
-        return domType;
+        return myDomType;
     }
 
     public void setDomType(DomType type)
     {
-        domType = type;
-    }
-
-
-    public void setStreamingMode(StreamingMode mode) {
-        desiredStreamingMode = mode;
+        myDomType = type;
     }
 
     public StreamingMode getStreamingMode() {
-        return desiredStreamingMode;
+        return myStreamingMode;
     }
 
+    public void setStreamingMode(StreamingMode mode) {
+        myStreamingMode = mode;
+    }
 
-    // ========================================================================
+    public void setCopySpeed(StreamCopySpeed speed)
+    {
+        myStreamCopyOptimized = (speed == StreamCopySpeed.COPY_OPTIMIZED);
+    }
+
+    //=========================================================================
     // Access to test data
 
     public static synchronized void loadSystemProperties()
@@ -219,7 +232,7 @@ public abstract class IonTestCase
         value.deepMaterialize();
     }
 
-    // ========================================================================
+    //=========================================================================
     // Fixture Helpers
 
     protected _Private_IonSystem system()
@@ -231,13 +244,20 @@ public abstract class IonTestCase
         return mySystem;
     }
 
-    // added helper, this returns a separate system
-    // every time since the user is passing in a catalog
-    // which changes the state of the system object
+    /**
+     * Returns a separate IonSystem for each call, since the user is passing
+     * in an IonCatalog which changes the state of the IonSystem.
+     *
+     * @return
+     *          a new IonSystem instance, binary-backed and/or stream-copy
+     *          optimized depending on the injected {@link #myDomType} and
+     *          {@link #myStreamCopyOptimized}.
+     */
     protected _Private_IonSystem system(IonCatalog catalog)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
         BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
+        b.withStreamCopyOptimized(myStreamCopyOptimized);
         IonSystem system = b.build();
         return (_Private_IonSystem) system;
     }
@@ -281,7 +301,7 @@ public abstract class IonTestCase
     }
 
 
-    // ========================================================================
+    //=========================================================================
     // Encoding helpers
 
     /**
@@ -346,7 +366,7 @@ public abstract class IonTestCase
 
 
 
-    // ========================================================================
+    //=========================================================================
     // Processing Ion text
 
     /**

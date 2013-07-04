@@ -9,14 +9,16 @@ import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 
 import com.amazon.ion.TestUtils.And;
-import com.amazon.ion.impl.IonWriterUserBinary;
+import com.amazon.ion.TestUtils.FileIsNot;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
+import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Iterator;
 import org.junit.After;
@@ -26,14 +28,28 @@ import org.junit.Test;
 /**
  * Processes all text files in the "good" suite, transforming between text and
  * binary twice to ensure that the process is equivalent.
+ *
+ * TODO ION-332 Refactor this test class, possible duplicate test coverage in
+ * {@link RoundTripStreamingTest}.
  */
 public class RoundTripTest
     extends IonTestCase
 {
-    private Printer       myPrinter;
-    private StringBuilder myBuilder;
+    // TODO ION-320 Writing IonSymbol to bytes using IonSymbol.writeTo(IonWriter)
+    // will throw UnknownSymbolException if symbol text is unknown
+    public static final FilenameFilter ROUND_TRIP_TEST_SKIP_LIST =
+        new FileIsNot("good/symbols.ion");
 
-    //------------------------------------------------------------------------
+    /**
+     * Enumeration of the different ways a materialized IonValue can be
+     * serialized (encoded) into binary Ion format.
+     */
+    private enum BinaryEncoderType
+    {
+        DATAGRAM_GET_BYTES,
+        VALUE_WRITETO_WRITER,
+        WRITER_WRITEVALUES_READER
+    }
 
     /**
      * We don't use binary files since some of those have non-canonical
@@ -42,37 +58,32 @@ public class RoundTripTest
     @Inject("testFile")
     public static final File[] FILES =
         testdataFiles(new And(TEXT_ONLY_FILTER,
-                              GLOBAL_SKIP_LIST),
+                              GLOBAL_SKIP_LIST,
+                              ROUND_TRIP_TEST_SKIP_LIST),
                       GOOD_IONTESTS_FILES);
 
-    private File myTestFile;
+    @Inject("copySpeed")
+    public static final StreamCopySpeed[] STREAM_COPY_SPEEDS =
+        StreamCopySpeed.values();
+
+    @Inject("binaryEncoderType")
+    public static final BinaryEncoderType[] BINARY_ENCODER_TYPES =
+        BinaryEncoderType.values();
+
+    private Printer             myPrinter;
+    private StringBuilder       myBuilder;
+    private File                myTestFile;
+    private BinaryEncoderType   myBinaryEncoderType;
 
     public void setTestFile(File file)
     {
         myTestFile = file;
     }
 
-    //------------------------------------------------------------------------
-
-    // Using an enum makes the test names more understandable than a boolean.
-    private enum CopySpeed { slow, fast }
-
-    @Inject("copySpeed")
-    public static final CopySpeed[] COPY_SPEEDS = CopySpeed.values();
-
-    public void setCopySpeed(CopySpeed speed)
+    public void setBinaryEncoderType(BinaryEncoderType type)
     {
-        IonWriterUserBinary.ourFastCopyEnabled = (speed == CopySpeed.fast);
+        myBinaryEncoderType = type;
     }
-
-    @After
-    public void resetFastCopyFlag()
-    {
-        IonWriterUserBinary.ourFastCopyEnabled =
-            IonWriterUserBinary.OUR_FAST_COPY_DEFAULT;
-    }
-
-    //------------------------------------------------------------------------
 
     @Override
     @Before
@@ -128,8 +139,59 @@ public class RoundTripTest
     }
 
     private byte[] encode(IonDatagram datagram)
+        throws IOException
     {
-        return datagram.getBytes();
+        byte[] bytes = null;
+
+        switch (myBinaryEncoderType)
+        {
+            case DATAGRAM_GET_BYTES:
+                bytes = datagramGetBytes(datagram);
+                break;
+            case VALUE_WRITETO_WRITER:
+                bytes = valueWriteToWriter(datagram);
+                break;
+            case WRITER_WRITEVALUES_READER:
+                bytes = writerWriteValuesReader(datagram);
+                break;
+        }
+
+        return bytes;
+    }
+
+    private byte[] datagramGetBytes(IonDatagram datagram)
+    {
+        return datagram.getBytes(); // The API we're testing
+    }
+
+    private byte[] valueWriteToWriter(IonDatagram datagram)
+        throws IOException
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        IonWriter ionWriter = system().newBinaryWriter(baos);
+
+        datagram.writeTo(ionWriter); // The API we're testing
+
+        ionWriter.close();
+        baos.close();
+
+        return baos.toByteArray();
+    }
+
+    private byte[] writerWriteValuesReader(IonDatagram datagram)
+        throws IOException
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        IonReader ionReader = system().newReader(datagram);
+        IonWriter ionWriter = system().newBinaryWriter(baos);
+
+        ionWriter.writeValues(ionReader); // The API we're testing
+
+        ionReader.close();
+        ionWriter.close();
+        baos.close();
+
+        return baos.toByteArray();
     }
 
 
@@ -179,7 +241,9 @@ public class RoundTripTest
 
         if (!compareRenderedTextImages(text2FromText, text2FromBinary))
         {
-            fail("different printing from text vs from binary");
+            fail("different printing from text vs from binary\n" +
+            	 "text2FromText: " + text2FromText + "\n" +
+                 "text2FromBinary: " + text2FromBinary);
         }
 
         // check strict data equivalence
@@ -188,7 +252,6 @@ public class RoundTripTest
     }
 
 
-    private final static String ivm = "$ion_1_0";
     static boolean compareRenderedTextImages(String s1, String s2) {
         assert (s1 != null);
         assert (s2 != null);
@@ -196,11 +259,11 @@ public class RoundTripTest
         if (s1 == s2) return true;
         if (s1.equals(s2)) return true;
 
-        if (!s1.startsWith(ivm)) {
-            s1 = ivm + " " + s1;
+        if (!s1.startsWith(SystemSymbols.ION_1_0)) {
+            s1 = SystemSymbols.ION_1_0 + " " + s1;
         }
-        if (!s2.startsWith(ivm)) {
-            s2 = ivm + " " + s2;
+        if (!s2.startsWith(SystemSymbols.ION_1_0)) {
+            s2 = SystemSymbols.ION_1_0 + " " + s2;
         }
         // TODO the next step is, if they are still not the same, then
         //      convert them to binary and back to string and compare again
