@@ -675,7 +675,7 @@ public class TimestampTest
         badValue("2009-08-32T00:00Z");
         parse(   "2009-09-30T00:00Z");
         badValue("2009-09-31T00:00Z");
-        parse(   "2009-10-01T00:00+01:00"); // JIRA ION-71
+        parse(   "2009-10-01T00:00+01:00"); // Trap for ION-71
         parse(   "2009-10-31T00:00Z");
         badValue("2009-10-32T00:00Z");
         parse(   "2009-11-30T00:00Z");

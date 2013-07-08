@@ -62,8 +62,6 @@ abstract class IonReaderTextRawX
 {
     public abstract BigInteger bigIntegerValue();
 
-//////////////////////////////////////////////////////////////////////////    debug
-
 //              static final boolean _object_parser           = false;
               static final boolean _debug                   = false;
     private   static final int     DEFAULT_STACK_DEPTH      = 10;

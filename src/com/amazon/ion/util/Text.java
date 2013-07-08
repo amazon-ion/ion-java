@@ -285,8 +285,7 @@ public class Text
             printCodePointAsFourHexDigits(out, c);
         }
         else {
-            // FIXME JSON doesn't support eight-digit \U syntax!
-            // https://jira2.amazon.com/browse/ION-33
+            // FIXME ION-33 JSON doesn't support eight-digit \U syntax!
             printCodePointAsEightHexDigits(out, c);
         }
     }

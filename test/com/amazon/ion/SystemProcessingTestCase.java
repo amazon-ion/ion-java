@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -22,43 +22,7 @@ import org.junit.Test;
 public abstract class SystemProcessingTestCase
     extends IonTestCase
 {
-    // so far 1000 to 10000 (by 1000's) assigned Dec 31, 2009
-    // as classid's
-    String getDebugClassId() {
-        return this.getClass().getSimpleName();
-    }
-    static String current_test = null;
-    static String current_class = null;
-    static String getCurrentTestAndClass() {
-        String s = " \""+current_class+"\", \""+current_test+"\" ";
-        return s;
-    }
-    public final void startTestCheckpoint(String testid)
-    {
-        String classid = getDebugClassId();
-
-// FIXME: set these to null so we don't stop or print anything
-        String interesting_classid = null;
-        String interesting_testid = null;
-
-
-        current_test = testid;
-        current_class = classid;
-
-        if (testid.equals(interesting_testid) && classid.equals(interesting_classid)) {
-            System.out.println("Interesting test encountered.");
-            System.out.println("\tClass: "+classid);
-            System.out.println("\tTestCase: "+testid);
-            System.out.println("\t(this message from SystemProcessingTestCase.startTestCheckpoint(), approx line 50)");
-            System.out.println();
-            return;
-        }
-        return;
-    }
-
-
     boolean myMissingSymbolTokensHaveText = true;
-
 
     protected abstract void prepare(String text)
         throws Exception;
@@ -221,8 +185,6 @@ public abstract class SystemProcessingTestCase
     public void testLocalTableResetting()
         throws Exception
     {
-        startTestCheckpoint("testLocalTableResetting");
-
         String text = "bar foo $ion_1_0 1 far boo";
 
         startIteration(text);
@@ -262,16 +224,8 @@ public abstract class SystemProcessingTestCase
         SymbolTable table2 = currentSymtab();
         checkLocalTable(table2);
 
-// here for debug
-if (table1 == table2) {
-    System.out.println();
-    System.out.println("in class: "+this.getDebugClassId());
-    System.out.println("in test: "+"testLocalTableResetting");
-    System.out.println("the current and the initial symbol tables are the same, they should be different");
-    System.out.println(this.getClass().getCanonicalName()+ " about line 181");
-    System.out.println();
-}
-        assertNotSame(table1, table2);
+        assertNotSame("The current and initial symbol tables are the same, " +
+        		"they should be different", table1, table2);
 
         nextValue();
         checkSymbol("boo");
@@ -283,8 +237,6 @@ if (table1 == table2) {
     public void testTrivialLocalTableResetting()
         throws Exception
     {
-        startTestCheckpoint("testTrivialLocalTableResetting");
-
         String text = "1 $ion_1_0 2";
 
         startIteration(text);
@@ -327,8 +279,6 @@ if (table1 == table2) {
     public void testLocalTableReplacement()
         throws Exception
     {
-        startTestCheckpoint("testLocalTableReplacement");
-
         String text =
             "$ion_symbol_table::{" +
             "  symbols:[ \"foo\", \"bar\" ]," +
@@ -370,8 +320,6 @@ if (table1 == table2) {
     public void testTrivialLocalTableReplacement()
         throws Exception
     {
-        startTestCheckpoint("testTrivialLocalTableReplacement");
-
         String text =
             "$ion_symbol_table::{" +
             "}\n" +
@@ -402,8 +350,6 @@ if (table1 == table2) {
     public void testLocalSymtabWithOpenContent()
         throws Exception
     {
-        startTestCheckpoint("testLocalSymtabWithOpenContent");
-
         String data = "$ion_symbol_table::{open:33,symbols:[\"a\",\"b\"]} b";
 
         startIteration(data);
@@ -419,8 +365,6 @@ if (table1 == table2) {
     public void testLocalTableWithLesserImport()
         throws Exception
     {
-        startTestCheckpoint("testLocalTableWithLesserImport");
-
         final int fred1id = systemMaxId() + 1;
         final int fred2id = systemMaxId() + 2;
         final int fred3id = systemMaxId() + 3;
@@ -518,8 +462,6 @@ if (table1 == table2) {
     public void testLocalTableWithGreaterImport()
         throws Exception
     {
-        startTestCheckpoint("testLocalTableWithGreaterImport");
-
         final int fred1id_symtab = systemMaxId() + 1;  // expect 9 + 1 = 10
         final int fred2id_symtab = systemMaxId() + 2;
         final int fred3id_symtab = systemMaxId() + 3;
@@ -691,8 +633,6 @@ if (table1 == table2) {
     public void testSubstituteTableWithLesserVersionImport()
         throws Exception
     {
-        startTestCheckpoint("testSubstituteTableWithLesserVersionImport");
-
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 1, catalog);
 
@@ -706,8 +646,6 @@ if (table1 == table2) {
     public void testSubstituteTableWithGreaterVersionImport()
         throws Exception
     {
-        startTestCheckpoint("testSubstituteTableWithGreaterVersionImport");
-
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 3, catalog);
 
@@ -721,8 +659,6 @@ if (table1 == table2) {
     public void testSubstituteTableWithEqualVersionImport()
         throws Exception
     {
-        startTestCheckpoint("testSubstituteTableWithEqualVersionImport");
-
         SimpleCatalog catalog = (SimpleCatalog) system().getCatalog();
         Symtabs.register("fred", 2, catalog);
 
@@ -759,8 +695,6 @@ if (table1 == table2) {
     public void testSharedTableNotAddedToCatalog()
         throws Exception
     {
-        startTestCheckpoint("testSharedTableNotAddedToCatalog");
-
         String text =
             ION_1_0 + " " +
             SymbolTableTest.IMPORTED_1_SERIALIZED +
@@ -807,8 +741,6 @@ if (table1 == table2) {
     public void testUnicodeCharacters()
         throws Exception
     {
-        startTestCheckpoint("testUnicodeCharacters");
-
         String ionData = "\"\\0\"";
         checkString("\0", ionData);
 
@@ -841,8 +773,6 @@ if (table1 == table2) {
     public void testSurrogateGluing()
         throws Exception
     {
-        startTestCheckpoint("testSurrogateGluing");
-
         // Three ways to represent each surrogate:
         //  1) The actual UTF-8 or UTF-16
         //  2) The \ u 2-byte escape
@@ -871,8 +801,6 @@ if (table1 == table2) {
     public void testQuotesInLongStrings()
         throws Exception
     {
-        startTestCheckpoint("testQuotesInLongStrings");
-
         checkString("'", "\"'\"", "'''\\''''");
         checkString("x''y", "\"x''y\"", "'''x''y'''");
         checkString("x'''y", "\"x'''y\"", "'''x''\\'y'''");
@@ -959,8 +887,6 @@ if (table1 == table2) {
     public void testPosInt() // TODO rework?
         throws Exception
     {
-        startTestCheckpoint("XXXtestPosInt");
-
         startIteration("+1");
         nextValue();
         checkSymbol("+");
@@ -973,8 +899,6 @@ if (table1 == table2) {
     public void testPosDecimal() // TODO rework?
         throws Exception
     {
-        startTestCheckpoint("XXXtestPosDecimal");
-
         startIteration("+123d0");
         nextValue();
         checkSymbol("+");
@@ -987,8 +911,6 @@ if (table1 == table2) {
     public void testNegativeZeroDecimal()
         throws Exception
     {
-        startTestCheckpoint("testNegativeZeroDecimal");
-
         startIteration("-0d0");
         nextValue();
         checkDecimal(-0.d); // TODO this should pass IonBigDecimal
@@ -999,8 +921,6 @@ if (table1 == table2) {
     public void testPosFloat() // TODO rework?
         throws Exception
     {
-        startTestCheckpoint("XXXtestPosFloat");
-
         startIteration("+123e0");
         nextValue();
         checkSymbol("+");
@@ -1013,8 +933,6 @@ if (table1 == table2) {
     public void testPosTimestamp() // TODO rework?
         throws Exception
     {
-        startTestCheckpoint("XXXtestPosTimestamp");
-
         startIteration("+2009-02-18");
         nextValue();
         checkSymbol("+");
@@ -1023,13 +941,11 @@ if (table1 == table2) {
         checkEof();
     }
 
-    // JIRA ION-71
+    // Trap for ION-71
     @Test
     public void testTimestampWithRolloverOffset()
         throws Exception
     {
-        startTestCheckpoint("testTimestampWithRolloverOffset");
-
         String text = "2009-10-01T00:00+01:00";
         startIteration(text);
         nextValue();
@@ -1042,8 +958,6 @@ if (table1 == table2) {
     public void testShortTimestamps()
         throws Exception
     {
-        startTestCheckpoint("testShortTimestamps");
-
         String text = "2007T 2007-04T 2007-04-25 2007-04-25T";
 
         startIteration(text);
@@ -1062,8 +976,6 @@ if (table1 == table2) {
     public void testTimestampWithZeroFraction()
         throws Exception
     {
-        startTestCheckpoint("testTimestampWithZeroFraction");
-
         String text = "2009-11-23T17:04:03.0-04:00";
         startIteration(text);
         nextValue();
@@ -1075,8 +987,6 @@ if (table1 == table2) {
     public void testNullTimestamp()
         throws Exception
     {
-        startTestCheckpoint("testNullTimestamp");
-
         String text = "null.timestamp";
         startIteration(text);
         nextValue();
@@ -1088,8 +998,6 @@ if (table1 == table2) {
     public void testSpecialFloats()
         throws Exception
     {
-        startTestCheckpoint("testSpecialFloats");
-
         startIteration("nan +inf -inf");
         nextValue();
         checkFloat(Double.NaN);
@@ -1107,8 +1015,6 @@ if (table1 == table2) {
     public void testSystemIterationShowsIvm()
         throws Exception
     {
-        startTestCheckpoint("testSystemIterationShowsIvm");
-
         String text = ION_1_0;
 
         prepare(text);
@@ -1128,13 +1034,11 @@ if (table1 == table2) {
 
     // TODO ION-305 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
 
+    // Trap for ION-69
     @Test
     public void testHighUnicodeDirectInBlob()
     {
-        startTestCheckpoint("testHighUnicodeDirectInBlob");
-
         try {
-            // JIRA ION-69
             loader().load("{{\ufffd}}");
             fail();
         } catch (final IonException e) {/* expected */}
@@ -1145,8 +1049,6 @@ if (table1 == table2) {
     public void testSymtabOnInjectedSymtab()
         throws Exception
     {
-        startTestCheckpoint("XXXtestSymtabOnInjectedSymtab");
-
         String text = "local";
 
         prepare(text);

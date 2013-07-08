@@ -63,9 +63,9 @@ public class SurrogateEscapeTest extends IonTestCase {
         assertSingletonCodePoint(0x000CDE56);
     }
 
+    // Trap for ION-63
     @Test
     public void testLoadEscapeNonBmp() {
-        // JIRA ION-63
         buf.append("'''")
            .append('\\')
            .append("U000CDE56")

@@ -43,7 +43,6 @@ import java.io.IOException;
  */
 final class IonReaderTextRawTokensX
 {
-//////////////////////////////////////////////////////////////////////////debug
     static final boolean _debug = false;
 
 
