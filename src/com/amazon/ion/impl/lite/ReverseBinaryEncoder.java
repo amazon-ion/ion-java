@@ -803,8 +803,6 @@ public class ReverseBinaryEncoder
         BigInteger mantissa = bd.unscaledValue();
 
         byte[] mantissaBits;
-        boolean isNegative;
-        boolean needExtraByteForSign;
 
         switch (mantissa.signum())
         {
@@ -817,45 +815,24 @@ public class ReverseBinaryEncoder
                 {
                     mantissaBits = positiveZeroBitArray;
                 }
-                // NOTE: We're lying about this, since the negative zero bit
-                // array has the sign bit set already
-                isNegative = false;
-                needExtraByteForSign = false;
                 break;
             case -1:
+                // Obtain the unsigned value of the BigInteger
+                // We cannot use the twos complement representation of a
+                // negative BigInteger as this is different from the encoding
+                // of basic field Int.
                 mantissaBits = mantissa.negate().toByteArray();
-                needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
-                isNegative = true;
+                // Set the sign on the highest order bit of the first octet
+                mantissaBits[0] |= 0x80;
                 break;
             case 1:
                 mantissaBits = mantissa.toByteArray();
-                needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
-                isNegative = false;
                 break;
             default:
                 throw new IllegalStateException("mantissa signum out of range");
         }
 
-        // Write mantissa, then exponent
-
-        // TODO Remove unnecessary needExtraByteForSign flag, as mantissaBits
-        // (twos-complement representation) never has the high-order bit of the
-        // most significant byte set. majm@
-
-        if (!needExtraByteForSign && isNegative)
-        {
-            // Note that bits must always have at least 1 byte for negative
-            // values since negative zero is handled specially
-            mantissaBits[0] |= 0x80;
-        }
         writeBytes(mantissaBits);
-
-        // If the first bit is set, we cannot use it for the sign.
-        // So we need to write an extra byte to hold it.
-        if (needExtraByteForSign)
-        {
-            writeByte(isNegative ? 0x80 : 0x00);
-        }
 
         // Ion stores exponent, BigDecimal uses the negation 'scale' instead
         int exponent = -bd.scale();

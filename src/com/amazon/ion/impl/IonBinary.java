@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -2700,7 +2700,7 @@ done:       for (;;) {
                 returnlen += this.writeVarIntValue(offset.intValue(), true);
             }
 
-            // now the date - year, month, day as varUint7's
+            // now the date - year, month, day as VarUInts
             // if we have a non-null value we have at least the date
             if (precisionIncludes(precision_flags, Precision.YEAR)) {
                 returnlen += this.writeVarUIntValue(di.getZYear(), true);
@@ -2723,7 +2723,7 @@ done:       for (;;) {
             if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
                 returnlen += this.writeDecimalContent(di.getZFractionalSecond(),
-                                                    true /* forceContent */);
+                                                      true /* forceContent */);
             }
             return returnlen;
         }
@@ -2790,11 +2790,7 @@ done:       for (;;) {
             BigInteger mantissa = bd.unscaledValue();
 
             byte[] mantissaBits;
-            boolean isNegative;
-            boolean needExtraByteForSign;
             switch (mantissa.signum()) {
-            default:
-                throw new IllegalStateException("mantissa signum out of range");
             case 0:
                 // FIXME ION-105 (?) Why does forceContent imply negative zero?
                 if (forceContent || Decimal.isNegativeZero(bd)) {
@@ -2803,40 +2799,27 @@ done:       for (;;) {
                 else {
                     mantissaBits = positiveZeroBitArray;
                 }
-                // NOTE: we're lieing about this, since the negative zero bit
-                // array has the sign bit set already
-                isNegative = false;
-                needExtraByteForSign = false;
                 break;
             case -1:
+                // Obtain the unsigned value of the BigInteger
+                // We cannot use the twos complement representation of a
+                // negative BigInteger as this is different from the encoding
+                // of basic field Int.
                 mantissaBits = mantissa.negate().toByteArray();
-                needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
-                isNegative = true;
+                // Set the sign on the highest order bit of the first octet
+                mantissaBits[0] |= 0x80;
                 break;
             case 1:
                 mantissaBits = mantissa.toByteArray();
-                needExtraByteForSign = ((mantissaBits[0] & 0x80) != 0);
-                isNegative = false;
                 break;
+            default:
+                throw new IllegalStateException("mantissa signum out of range");
             }
-
 
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int exponent = -bd.scale();
             returnlen += this.writeVarIntValue(exponent, true);
 
-            // If the first bit is set, we can't use it for the sign,
-            // and we need to write an extra byte to hold it.
-            if (needExtraByteForSign)
-            {
-                this.write(isNegative ? 0x80 : 0x00);
-                returnlen++;
-            }
-            else if (isNegative) {
-                // note that bits must always have at least 1 byte for negative values
-                // since negative zero is handled specially
-                mantissaBits[0] |= 0x80;
-            }
             this.write(mantissaBits, 0, mantissaBits.length);
             returnlen += mantissaBits.length;
 
