@@ -1,14 +1,11 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.util.IonTextUtils.IonTextWriter;
 import java.io.Closeable;
-import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 
 /**
  * this class holds the various constants and helper functions Ion uses
@@ -415,129 +412,6 @@ class IonUTF8 {
         }
     }
 
-    /**
-     * Wrapper around OutputStream that implements both AppendableUnicodeAdapter and Appendable
-     * interfaces. The latter is for compatibility in IonWriterSystemText and is using the former
-     * for actual writes. The former is intended to optimize ASCII vs UTF16 character writes
-     */
-    public static final class CharToUTF8
-        extends IonTextWriter
-        implements Closeable, Flushable
-    {
-        final private OutputStream _out;
-        final private static int MAX_BYTES_LEN = 4096;
-        // this byte array is used as a buffer where the generated data is written
-        // before it gets to OutputStream
-        private int _byteBufferPos;
-        private byte[] _byteBuffer;
-
-        public CharToUTF8(OutputStream out, Charset charset) {
-            // escape unicode symbols if charset is ASCII
-            super(charset == _Private_Utils.ASCII_CHARSET);
-            assert charset != null;
-            out.getClass(); // Efficient null check
-            this._out = out;
-            this._byteBufferPos = 0;
-            this._byteBuffer = new byte[MAX_BYTES_LEN];
-        }
-        public final OutputStream getOutputStream() {
-            return _out;
-        }
-        public final void flush() throws IOException
-        {
-            if (_byteBufferPos > 0) {
-                _out.write(_byteBuffer, 0, _byteBufferPos);
-                _byteBufferPos = 0;
-            }
-            _out.flush();
-        }
-
-        public final void close() throws IOException
-        {
-            try
-            {
-                flush();
-            }
-            finally
-            {
-                _out.close();
-            }
-        }
-        @Override
-        public final void appendAscii(char c) throws IOException {
-            if (_byteBufferPos == _byteBuffer.length) {
-                _out.write(_byteBuffer, 0, _byteBufferPos);
-                _byteBufferPos = 0;
-            }
-            assert c < 0x80;
-            _byteBuffer[_byteBufferPos++] = (byte)c;
-        }
-        @Override
-        public final void appendAscii(CharSequence csq) throws IOException {
-            appendAscii(csq, 0, csq.length());
-        }
-        @Override
-        public final void appendAscii(CharSequence csq, int start, int end) throws IOException {
-            if (csq instanceof String) {
-                // using String.getBytes
-                String str = (String)csq;
-                int len = end - start;
-                if (_byteBufferPos + len < _byteBuffer.length) {
-                    // put String bytes directly into buffer
-                    str.getBytes(start, end, _byteBuffer, _byteBufferPos);
-                    _byteBufferPos += len;
-                } else {
-                    do {
-                        // flush the buffer on every loop
-                        _out.write(_byteBuffer, 0, _byteBufferPos);
-                        // check if we still need to split into chunks
-                        _byteBufferPos = (end - start > _byteBuffer.length ? _byteBuffer.length : end - start);
-                        str.getBytes(start, start + _byteBufferPos, _byteBuffer, 0);
-                        start += _byteBufferPos;
-                    } while (start < end);
-                }
-            } else {
-                for (int ii=start; ii < end; ii++) {
-                    if (_byteBufferPos == _byteBuffer.length) {
-                        _out.write(_byteBuffer, 0, _byteBufferPos);
-                        _byteBufferPos = 0;
-                    }
-                    char c = csq.charAt(ii);
-                    assert c < 0x80;
-                    _byteBuffer[_byteBufferPos++] = (byte)c;
-                }
-            }
-        }
-        @Override
-        public final void appendUtf16(char c) throws IOException {
-            assert c >= 0x80;
-            if (_byteBufferPos > _byteBuffer.length - 3) {
-                _out.write(_byteBuffer, 0, _byteBufferPos);
-                _byteBufferPos = 0;
-            }
-            if (c < 0x800) {
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xC0 | (c >> 6)) );
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
-            } else if (c < 0x10000) {
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xE0 |  (c >> 12)) );
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
-                _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 |  (c & 0x3F)) );
-            }
-        }
-        @Override
-        public final void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException {
-            int c = _Private_IonConstants.makeUnicodeScalar(leadSurrogate, trailSurrogate);
-            assert c >= 0x10000;
-            if (_byteBufferPos > _byteBuffer.length - 4) {
-                _out.write(_byteBuffer, 0, _byteBufferPos);
-                _byteBufferPos = 0;
-            }
-            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0xF0 |  (c >> 18)) );
-            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 12) & 0x3F)) );
-            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | ((c >> 6) & 0x3F)) );
-            _byteBuffer[_byteBufferPos++] = (byte)( 0xff & (0x80 | (c & 0x3F)) );
-        }
-    }
 
     public static final class UTF8ToChar extends OutputStream implements Closeable
     {

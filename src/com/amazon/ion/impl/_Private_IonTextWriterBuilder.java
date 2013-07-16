@@ -148,6 +148,11 @@ public class _Private_IonTextWriterBuilder
             b = b.withCatalog(new SimpleCatalog());
         }
 
+        if (b.getCharset() == null)
+        {
+            b = b.withCharset(UTF8);
+        }
+
         return (_Private_IonTextWriterBuilder) b.immutable();
     }
 

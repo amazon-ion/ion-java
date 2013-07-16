@@ -1,0 +1,624 @@
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+
+package com.amazon.ion.impl;
+
+import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
+import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
+import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
+
+import com.amazon.ion.EmptySymbolException;
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+
+
+/**
+ * Generic text sink that enables optimized output of both ASCII and UTF-16.
+ */
+public abstract class _Private_IonTextAppender
+    implements Closeable, Flushable
+{
+    private static boolean is8bitValue(int v)
+    {
+        return (v & ~0xff) == 0;
+    }
+
+    private static boolean isDecimalDigit(int codePoint)
+    {
+        return (codePoint >= '0' && codePoint <= '9');
+    }
+
+    private static final boolean[] IDENTIFIER_START_CHAR_FLAGS;
+    private static final boolean[] IDENTIFIER_FOLLOW_CHAR_FLAGS;
+    static
+    {
+        IDENTIFIER_START_CHAR_FLAGS = new boolean[256];
+        IDENTIFIER_FOLLOW_CHAR_FLAGS = new boolean[256];
+
+        for (int ii='a'; ii<='z'; ii++) {
+            IDENTIFIER_START_CHAR_FLAGS[ii]  = true;
+            IDENTIFIER_FOLLOW_CHAR_FLAGS[ii] = true;
+        }
+        for (int ii='A'; ii<='Z'; ii++) {
+            IDENTIFIER_START_CHAR_FLAGS[ii]  = true;
+            IDENTIFIER_FOLLOW_CHAR_FLAGS[ii] = true;
+        }
+        IDENTIFIER_START_CHAR_FLAGS ['_'] = true;
+        IDENTIFIER_FOLLOW_CHAR_FLAGS['_'] = true;
+
+        IDENTIFIER_START_CHAR_FLAGS ['$'] = true;
+        IDENTIFIER_FOLLOW_CHAR_FLAGS['$'] = true;
+
+        for (int ii='0'; ii<='9'; ii++) {
+            IDENTIFIER_FOLLOW_CHAR_FLAGS[ii] = true;
+        }
+    }
+
+    public static boolean isIdentifierStart(int codePoint) {
+        return IDENTIFIER_START_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
+    }
+
+    public static boolean isIdentifierPart(int codePoint) {
+        return IDENTIFIER_FOLLOW_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
+    }
+
+    public static final boolean[] OPERATOR_CHAR_FLAGS;
+    static
+    {
+        final char[] operatorChars = {
+            '<', '>', '=', '+', '-', '*', '&', '^', '%',
+            '~', '/', '?', '.', ';', '!', '|', '@', '`', '#'
+           };
+
+        OPERATOR_CHAR_FLAGS = new boolean[256];
+
+        for (int ii=0; ii<operatorChars.length; ii++) {
+            char operator = operatorChars[ii];
+            OPERATOR_CHAR_FLAGS[operator] = true;
+        }
+    }
+
+    public static boolean isOperatorPart(int codePoint) {
+        return OPERATOR_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
+    }
+
+
+    public static final String[] ZERO_PADDING =
+    {
+        "",
+        "0",
+        "00",
+        "000",
+        "0000",
+        "00000",
+        "000000",
+        "0000000",
+    };
+
+
+    // escape sequences for character below ascii 32 (space)
+    private static final String[] STRING_ESCAPE_CODES;
+    static
+    {
+        STRING_ESCAPE_CODES = new String[256];
+        STRING_ESCAPE_CODES[0x00] = "\\0";
+        STRING_ESCAPE_CODES[0x07] = "\\a";
+        STRING_ESCAPE_CODES[0x08] = "\\b";
+        STRING_ESCAPE_CODES['\t'] = "\\t";
+        STRING_ESCAPE_CODES['\n'] = "\\n";
+        STRING_ESCAPE_CODES[0x0B] = "\\v";
+        STRING_ESCAPE_CODES['\f'] = "\\f";
+        STRING_ESCAPE_CODES['\r'] = "\\r";
+        STRING_ESCAPE_CODES['\\'] = "\\\\";
+        STRING_ESCAPE_CODES['\"'] = "\\\"";
+        for (int i = 1; i < 0x20; ++i) {
+            if (STRING_ESCAPE_CODES[i] == null) {
+                String s = Integer.toHexString(i);
+                STRING_ESCAPE_CODES[i] = "\\x" + ZERO_PADDING[2 - s.length()] + s;
+            }
+        }
+        for (int i = 0x7F; i < 0x100; ++i) {
+            String s = Integer.toHexString(i);
+            STRING_ESCAPE_CODES[i] = "\\x" + s;
+        }
+    }
+
+    static final String[] LONG_STRING_ESCAPE_CODES;
+    static
+    {
+        LONG_STRING_ESCAPE_CODES = new String[256];
+        for (int i = 0; i < 256; ++i) {
+            LONG_STRING_ESCAPE_CODES[i] = STRING_ESCAPE_CODES[i];
+        }
+        LONG_STRING_ESCAPE_CODES['\n'] = null;
+        LONG_STRING_ESCAPE_CODES['\''] = "\\\'";
+        LONG_STRING_ESCAPE_CODES['\"'] = null; // Treat as normal code point for long string
+    }
+
+    static final String[] SYMBOL_ESCAPE_CODES;
+    static
+    {
+        SYMBOL_ESCAPE_CODES = new String[256];
+        for (int i = 0; i < 256; ++i) {
+            SYMBOL_ESCAPE_CODES[i] = STRING_ESCAPE_CODES[i];
+        }
+        SYMBOL_ESCAPE_CODES['\''] = "\\\'";
+        SYMBOL_ESCAPE_CODES['\"'] = null; // Treat as normal code point for symbol.
+    }
+
+    static final String[] JSON_ESCAPE_CODES;
+    static
+    {
+        JSON_ESCAPE_CODES = new String[256];
+        JSON_ESCAPE_CODES[0x00] = "\\u0000";
+        JSON_ESCAPE_CODES[0x07] = "\\u0007";
+        JSON_ESCAPE_CODES[0x08] = "\\b";
+        JSON_ESCAPE_CODES['\t'] = "\\t";
+        JSON_ESCAPE_CODES['\n'] = "\\n";
+        JSON_ESCAPE_CODES[0x0B] = "\\u000b";
+        JSON_ESCAPE_CODES['\f'] = "\\f";
+        JSON_ESCAPE_CODES['\r'] = "\\r";
+        JSON_ESCAPE_CODES['\\'] = "\\\\";
+        JSON_ESCAPE_CODES['\"'] = "\\\"";
+        for (int i = 1; i < 0x20; ++i) {
+            if (JSON_ESCAPE_CODES[i] == null) {
+                String s = Integer.toHexString(i);
+                JSON_ESCAPE_CODES[i] = "\\u" + ZERO_PADDING[4 - s.length()] + s;
+            }
+        }
+        for (int i = 0x7F; i < 0x100; ++i) {
+            String s = Integer.toHexString(i);
+            JSON_ESCAPE_CODES[i] = "\\u00" + s;
+        }
+    }
+
+    static final String HEX_4_PREFIX = "\\u";
+    static final String HEX_8_PREFIX = "\\U";
+    static final String tripleQuotes = "'''";
+
+
+    private final boolean escapeUnicode;
+
+    /**
+     * Append an ASCII character.
+     * NB! METHOD DOESN'T VERIFY IF CHARACTER IS ACTUALLY ASCII!!!
+     * @param c
+     * @throws IOException
+     */
+    public abstract void appendAscii(char c) throws IOException;
+
+    /**
+     * Append a sequence of ASCII characters
+     * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
+     * @param csq
+     * @throws IOException
+     */
+    public abstract void appendAscii(CharSequence csq) throws IOException;
+
+    /**
+     * Append a range in sequence of ASCII characters
+     * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
+     * @param csq
+     * @param start
+     * @param end
+     * @throws IOException
+     */
+    public abstract void appendAscii(CharSequence csq, int start, int end) throws IOException;
+
+    /**
+     * Append a UTF-16 non-surrogate character
+     * NB! METHOD DOESN'T VERIFY IF CHARACTER IS/IS-NOT SURROGATE!!!
+     * @param c
+     * @throws IOException
+     */
+    public abstract void appendUtf16(char c) throws IOException;
+
+    /**
+     * Append a UTF-16 surrogate pair
+     * NB! METHOD DOESN'T VERIFY IF LEAD AND TRIAL SURROGATES ARE VALID!!!
+     * @param leadSurrogate
+     * @param trailSurrogate
+     * @throws IOException
+     */
+    public abstract void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException;
+
+    public _Private_IonTextAppender(boolean escapeUnicodeCharacters) {
+        this.escapeUnicode = escapeUnicodeCharacters;
+    }
+
+    /**
+     * Print an Ion String type
+     * @param text
+     * @throws IOException
+     */
+    public final void printString(CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            appendAscii("null.string");
+        }
+        else
+        {
+            appendAscii('"');
+            printCodePoints(text, STRING_ESCAPE_CODES);
+            appendAscii('"');
+        }
+    }
+
+    /**
+     * Print an Ion triple-quoted string
+     * @param text
+     * @throws IOException
+     */
+    public final void printLongString(CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            appendAscii("null.string");
+        }
+        else
+        {
+            appendAscii(tripleQuotes);
+            printCodePoints(text, LONG_STRING_ESCAPE_CODES);
+            appendAscii(tripleQuotes);
+        }
+    }
+
+    /**
+     * Print a JSON string
+     * @param text
+     * @throws IOException
+     */
+    public final void printJsonString(CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            appendAscii("null");
+        }
+        else
+        {
+            appendAscii('"');
+            printCodePoints(text, JSON_ESCAPE_CODES);
+            appendAscii('"');
+        }
+    }
+
+    /**
+     * Print Ion Clob type
+     * @param value
+     * @param start
+     * @param end
+     * @throws IOException
+     */
+    public final void printClob(byte[] value, int start, int end)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.clob");
+        }
+        else
+        {
+            appendAscii('"');
+            printBytes(value, start, end, STRING_ESCAPE_CODES);
+            appendAscii('"');
+        }
+    }
+
+    /**
+     * Print triple-quoted Ion Clob type
+     * @param value
+     * @param start
+     * @param end
+     * @throws IOException
+     */
+    public final void printLongClob(byte[] value, int start, int end)
+        throws IOException
+    {
+        if (value == null) {
+            appendAscii("null.clob");
+        }
+        else
+        {
+            // TODO Some points on printing long clobs:
+
+            // This may escape more often than is necessary, but doing it
+            // minimally is very tricky. Must be sure to account for
+            // quotes at the end of the content.
+
+            // Account for NL versus CR+NL streams
+            appendAscii(tripleQuotes);
+            printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
+            appendAscii(tripleQuotes);
+        }
+    }
+
+    /**
+     * Print an Ion Clob in JSON format (eg as JSON text)
+     * @param value
+     * @param start
+     * @param end
+     * @throws IOException
+     */
+    public final void printJsonClob(byte[] value, int start, int end)
+        throws IOException
+    {
+        if (value == null) {
+            appendAscii("null");
+        } else {
+            appendAscii('"');
+            printBytes(value, start, end, JSON_ESCAPE_CODES);
+            appendAscii('"');
+        }
+    }
+
+
+    /**
+     * Determines whether the given text matches one of the Ion identifier
+     * keywords <code>null</code>, <code>true</code>, or <code>false</code>.
+     * <p>
+     * This does <em>not</em> check for non-identifier keywords such as
+     * <code>null.int</code>.
+     *
+     * @param text the symbol to check.
+     * @return <code>true</code> if the text is an identifier keyword.
+     */
+    public static boolean isIdentifierKeyword(CharSequence text)
+    {
+        int pos = 0;
+        int valuelen = text.length();
+        boolean keyword = false;
+
+        // there has to be at least 1 character or we wouldn't be here
+        switch (text.charAt(pos++)) {
+        case '$':
+            if (valuelen == 1) return false;
+            while (pos < valuelen) {
+                char c = text.charAt(pos++);
+                if (! isDecimalDigit(c)) return false;
+            }
+            return true;
+        case 'f':
+            if (valuelen == 5 //      'f'
+             && text.charAt(pos++) == 'a'
+             && text.charAt(pos++) == 'l'
+             && text.charAt(pos++) == 's'
+             && text.charAt(pos++) == 'e'
+            ) {
+                keyword = true;
+            }
+            break;
+        case 'n':
+            if (valuelen == 4 //      'n'
+             && text.charAt(pos++) == 'u'
+             && text.charAt(pos++) == 'l'
+             && text.charAt(pos++) == 'l'
+            ) {
+                keyword = true;
+            }
+            else if (valuelen == 3 // 'n'
+             && text.charAt(pos++) == 'a'
+             && text.charAt(pos++) == 'n'
+            ) {
+                keyword = true;
+            }
+            break;
+        case 't':
+            if (valuelen == 4 //      't'
+             && text.charAt(pos++) == 'r'
+             && text.charAt(pos++) == 'u'
+             && text.charAt(pos++) == 'e'
+            ) {
+                keyword = true;
+            }
+            break;
+        }
+
+        return keyword;
+    }
+
+
+    /**
+     * Determines whether the text of a symbol requires (single) quotes.
+     *
+     * @param symbol must be a non-empty string.
+     * @param quoteOperators indicates whether the caller wants operators to be
+     * quoted; if <code>true</code> then operator symbols like <code>!=</code>
+     * will return <code>true</code>.
+     * has looser quoting requirements than other containers.
+     * @return <code>true</code> if the given symbol requires quoting.
+     *
+     * @throws NullPointerException
+     *         if <code>symbol</code> is <code>null</code>.
+     * @throws EmptySymbolException if <code>symbol</code> is empty.
+     */
+    public static boolean symbolNeedsQuoting(CharSequence symbol,
+                                             boolean      quoteOperators)
+    {
+        int length = symbol.length();
+        if (length == 0) {
+            throw new EmptySymbolException();
+        }
+
+        // If the symbol's text matches an Ion keyword, we must quote it.
+        // Eg, the symbol 'false' must be rendered quoted.
+        if (! isIdentifierKeyword(symbol))
+        {
+            char c = symbol.charAt(0);
+            // Surrogates are neither identifierStart nor operatorPart, so the
+            // first one we hit will fall through and return true.
+            // TODO test that
+
+            if (!quoteOperators && isOperatorPart(c))
+            {
+                for (int ii = 0; ii < length; ii++) {
+                    c = symbol.charAt(ii);
+                    // We don't need to look for escapes since all
+                    // operator characters are ASCII.
+                    if (!isOperatorPart(c)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else if (isIdentifierStart(c))
+            {
+                for (int ii = 0; ii < length; ii++) {
+                    c = symbol.charAt(ii);
+                    if ((c == '\'' || c < 32 || c > 126)
+                        || !isIdentifierPart(c))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Print an Ion Symbol type. This method will check if symbol needs quoting
+     * @param text
+     * @throws IOException
+     */
+    public final void printSymbol(CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            appendAscii("null.symbol");
+        }
+        else if (text.length() == 0)
+        {
+            throw new EmptySymbolException();
+        }
+        else if (symbolNeedsQuoting(text, true)) {
+            appendAscii('\'');
+            printCodePoints(text, SYMBOL_ESCAPE_CODES);
+            appendAscii('\'');
+        }
+        else
+        {
+            appendAscii(text);
+        }
+    }
+
+    /**
+     * Print single-quoted Ion Symbol type
+     * @param text
+     * @throws IOException
+     */
+    public final void printQuotedSymbol(CharSequence text)
+        throws IOException
+    {
+        if (text == null)
+        {
+            appendAscii("null.symbol");
+        }
+        else if (text.length() == 0)
+        {
+            throw new EmptySymbolException();
+        }
+        else
+        {
+            appendAscii('\'');
+            printCodePoints(text, SYMBOL_ESCAPE_CODES);
+            appendAscii('\'');
+        }
+    }
+
+    private final void printBytes(byte[] value, int start, int end,
+                                  String[] escapes)
+        throws IOException
+    {
+        for (int i = start; i < end; i++) {
+            char c = (char)(value[i] & 0xff);
+            if (escapes[c] != null) {
+                appendAscii(escapes[c]);
+            } else {
+                appendAscii(c);
+            }
+        }
+    }
+
+    private final void printCodePoints(CharSequence text, String[] escapes)
+        throws IOException
+    {
+        int len = text.length();
+        for (int i = 0; i < len; ++i)
+        {
+            // write as many bytes in a sequence as possible
+            char c = 0;
+            int j;
+            for (j = i; j < len; ++j) {
+                c = text.charAt(j);
+                if (c >= 0x100 || escapes[c] != null) {
+                    // append sequence then continue the normal loop
+                    if (j > i) {
+                        appendAscii(text, i, j);
+                        i = j;
+                    }
+                    break;
+                }
+            }
+            if (j == len) {
+                // we've reached the end of sequence; append it and break
+                appendAscii(text, i, j);
+                break;
+            }
+            // write the non Latin-1 character
+            if (c < 0x80) {
+                assert escapes[c] != null;
+                appendAscii(escapes[c]);
+            } else if (c < 0x100) {
+                assert escapes[c] != null;
+                if (escapeUnicode) {
+                    appendAscii(escapes[c]);
+                } else {
+                    appendUtf16(c);
+                }
+            } else if (c < 0xD800 || c >= 0xE000) {
+                String s = Integer.toHexString(c);
+                if (escapeUnicode) {
+                    appendAscii(HEX_4_PREFIX);
+                    appendAscii(ZERO_PADDING[4 - s.length()]);
+                    appendAscii(s);
+                } else {
+                    appendUtf16(c);
+                }
+            } else if (isHighSurrogate(c)) {
+                // high surrogate
+                char c2;
+                if (++i == len || !isLowSurrogate(c2 = text.charAt(i))) {
+                    String message =
+                        "text is invalid UTF-16. It contains an unmatched " +
+                        "high surrogate 0x" + Integer.toHexString(c) +
+                        " at index " + (i-1);
+                    throw new IllegalArgumentException(message);
+                }
+                if (escapeUnicode) {
+                    int cp = makeUnicodeScalar(c, c2);
+                    String s = Integer.toHexString(cp);
+                    appendAscii(HEX_8_PREFIX);
+                    appendAscii(ZERO_PADDING[8 - s.length()]);
+                    appendAscii(s);
+                } else {
+                    appendUtf16Surrogate(c, c2);
+                }
+            } else {
+                // unmatched low surrogate
+                String message =
+                    "text is invalid UTF-16. It contains an unmatched " +
+                    "low surrogate 0x" + Integer.toHexString(c) +
+                    " at index " + i;
+                throw new IllegalArgumentException(message);
+            }
+        }
+    }
+}

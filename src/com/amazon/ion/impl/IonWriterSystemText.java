@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -18,8 +18,6 @@ import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
-import com.amazon.ion.util.IonTextUtils.CharsetWriterAppendableWrapper;
-import com.amazon.ion.util.IonTextUtils.IonTextWriter;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -41,7 +39,7 @@ final class IonWriterSystemText
     /** At least one. */
     private final int _long_string_threshold;
 
-    private final IonTextUtils.IonTextWriter _output;
+    private final _Private_IonTextAppender _output;
 
     BufferManager _manager;
 
@@ -64,8 +62,7 @@ final class IonWriterSystemText
     boolean[]   _stack_pending_comma = new boolean[10];
 
     /**
-     * Takes an OutputStream and a charset, and creates an CharToUTF8 text
-     * writer class
+     * Creates a writer to an {@link OutputStream}.
      *
      * @throws NullPointerException if any parameter is null.
      */
@@ -75,11 +72,12 @@ final class IonWriterSystemText
     {
         this(defaultSystemSymtab,
              options,
-             new IonUTF8.CharToUTF8(out, options.getCharset() == null ? _Private_Utils.UTF8_CHARSET : options.getCharset()));
+             new OutputStreamIonTextAppender(out, options.getCharset()));
     }
 
     /**
-     * Takes an instance of Appendable and creates a text writer
+     * Creates a write to an {@link Appendable}.
+     *
      * @throws NullPointerException if any parameter is null.
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
@@ -88,7 +86,7 @@ final class IonWriterSystemText
     {
         this(defaultSystemSymtab,
              options,
-             new CharsetWriterAppendableWrapper(out, options.getCharset() == null ? _Private_Utils.UTF8_CHARSET : options.getCharset()));
+             new AppendableIonTextAppender(out, options.getCharset()));
     }
 
     /**
@@ -96,7 +94,7 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
-                                  IonTextWriter out)
+                                  _Private_IonTextAppender out)
     {
         super(defaultSystemSymtab,
               options.getInitialIvmHandling(),
@@ -940,9 +938,7 @@ final class IonWriterSystemText
     public void flush() throws IOException
     {
         if (! _closed) {
-            if (_output instanceof Flushable) {
-                ((Flushable)_output).flush();
-            }
+            ((Flushable)_output).flush();
         }
     }
 
@@ -957,13 +953,10 @@ final class IonWriterSystemText
             }
             finally
             {
-
                 // Do this first so we are closed even if the call below throws.
                 _closed = true;
 
-                if (_output instanceof Closeable) {
-                    ((Closeable)_output).close();
-                }
+                ((Closeable)_output).close();
             }
         }
     }

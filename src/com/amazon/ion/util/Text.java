@@ -1,8 +1,9 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.impl._Private_IonTextAppender;
 import java.io.IOException;
 
 
@@ -123,7 +124,8 @@ public class Text
     public static boolean symbolNeedsQuoting(CharSequence symbol,
                                              boolean      quoteOperators)
     {
-        return IonTextUtils.symbolNeedsQuoting(symbol, quoteOperators);
+        return _Private_IonTextAppender.symbolNeedsQuoting(symbol,
+                                                           quoteOperators);
     }
 
 
