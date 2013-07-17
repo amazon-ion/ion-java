@@ -1,6 +1,8 @@
 // Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+import static com.amazon.ion.Decimal.NEGATIVE_ZERO;
+import static com.amazon.ion.Decimal.negativeZero;
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static com.amazon.ion.Timestamp.UTC_OFFSET;
 import static com.amazon.ion.Timestamp.Precision.DAY;
@@ -732,6 +734,24 @@ public class TimestampTest
         ts = new Timestamp(2010, 2, 1, 10, 11, 12, BigDecimal.ZERO, 0);
         assertEquals(Timestamp.valueOf("2010-02-01T10:11:12Z"), ts);
         checkFields(2010, 2, 1, 10, 11, 12, null, 0, SECOND, ts);
+
+        // New static method unifies decimal seconds
+        BigDecimal second = new BigDecimal("12.34");
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, second, PST_OFFSET);
+        checkFields(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET, FRACTION, ts);
+        assertEquals("2010-02-01T10:11:12.34-08:00", ts.toString());
+        assertEquals("2010-02-01T18:11:12.34Z", ts.toZString());
+
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, second, null);
+        checkFields(2010, 2, 1, 10, 11, 12, fraction, null, FRACTION, ts);
+        assertEquals("2010-02-01T10:11:12.34-00:00", ts.toString());
+        assertEquals("2010-02-01T10:11:12.34Z", ts.toZString());
+
+        second = new BigDecimal("12.");
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, second, PST_OFFSET);
+        checkFields(2010, 2, 1, 10, 11, 12, null, PST_OFFSET, SECOND, ts);
+        assertEquals("2010-02-01T10:11:12-08:00", ts.toString());
+        assertEquals("2010-02-01T18:11:12Z", ts.toZString());
     }
 
     /** Test for {@link Timestamp#Timestamp(BigDecimal, Integer)} */
@@ -1079,6 +1099,43 @@ public class TimestampTest
         catch (NullPointerException e) { }
     }
 
+
+    @Test
+    public void testTimestampForSecondValidation()
+    {
+        try {
+            Timestamp.forSecond(2000, 11, 14, 17, 30, null, 0);
+            fail("Expected exception");
+        }
+        catch (NullPointerException e) { }
+
+        try {
+            Timestamp.forSecond(2000, 11, 14, 17, 30, new BigDecimal("-1"), 0);
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try {
+            Timestamp.forSecond(2000, 11, 14, 17, 30, new BigDecimal("60"), 0);
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
+    @Test
+    public void testTimestampForSecondNegativeZero()
+    {
+        Timestamp a =
+            Timestamp.forSecond(2000, 11, 14, 17, 30, 0, 0);
+        Timestamp b =
+            Timestamp.forSecond(2000, 11, 14, 17, 30, NEGATIVE_ZERO, 0);
+        assertEquals(a, b);
+
+        a = Timestamp.forSecond(2000, 11, 14, 17, 30, new BigDecimal("0.000"), 0);
+        b = Timestamp.forSecond(2000, 11, 14, 17, 30, negativeZero(3),         0);
+        assertEquals(a, b);
+    }
+
     @Test
     public void testValueOfNullTimestamp()
     {
@@ -1246,9 +1303,11 @@ public class TimestampTest
     @Test
     public void testTimestampCopyConstructor()
     {
-        BigDecimal fraction = new BigDecimal(".3456789");
-        Timestamp expectedTs = new Timestamp(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET);
-        assertEquals("2010-02-01T10:11:12.3456789-08:00", expectedTs.toString());
+        BigDecimal second = new BigDecimal("12.3456789");
+        Timestamp expectedTs =
+            Timestamp.forSecond(2010, 2, 1, 10, 11, second, PST_OFFSET);
+        assertEquals("2010-02-01T10:11:12.3456789-08:00",
+                     expectedTs.toString());
 
         //===== Test on Timestamp(...) fractional precision copy-constructor =====
         Timestamp actualTs = new Timestamp(expectedTs.getYear(),

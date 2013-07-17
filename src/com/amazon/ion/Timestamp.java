@@ -69,6 +69,10 @@ public final class Timestamp
      */
     public static final Integer UTC_OFFSET = Integer.valueOf(0);
 
+    /** Used to check limits of decimal seconds. */
+    private static final BigDecimal SIXTY = BigDecimal.valueOf(60);
+
+
     /**
      * The precision of the Timestamp.
      */
@@ -330,7 +334,11 @@ public final class Timestamp
      * Creates a new Timestamp, precise to the day, with unknown local offset.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forDay(int, int, int)} instead.
      */
+    @Deprecated
     public Timestamp(int zyear, int zmonth, int zday)
     {
         if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
@@ -345,6 +353,7 @@ public final class Timestamp
         this._offset    = UNKNOWN_OFFSET;
     }
 
+
     /**
      * Creates a new Timestamp, precise to the minute, with a given local
      * offset.
@@ -356,7 +365,11 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forMinute(int, int, int, int, int, Integer)} instead.
      */
+    @Deprecated
     public Timestamp(int year, int month, int day,
                      int hour, int minute,
                      Integer offset)
@@ -385,8 +398,12 @@ public final class Timestamp
      *
      * @param offset
      *          the local offset from UTC, measured in minutes;
-     *          may be {@code null} to represent an unknown local offset
+     *          may be {@code null} to represent an unknown local offset.
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forSecond(int, int, int, int, int, int, Integer)} instead.
      */
+    @Deprecated
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second,
                      Integer offset)
@@ -423,7 +440,12 @@ public final class Timestamp
      *          may be {@code null} to represent an unknown local offset
      *
      * @throws NullPointerException if {@code frac} is {@code null}
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forSecond(int, int, int, int, int, BigDecimal, Integer)}
+     * instead.
      */
+    @Deprecated
     public Timestamp(int year, int month, int day,
                      int hour, int minute, int second, BigDecimal frac,
                      Integer offset)
@@ -556,8 +578,11 @@ public final class Timestamp
      *
      * @param offset
      *          the local offset from UTC, measured in minutes;
-     *          may be {@code null} to represent an unknown local offset
+     *          may be {@code null} to represent an unknown local offset.
+     *
+     * @deprecated Since IonJava R17.
      */
+    @Deprecated
     public static Timestamp
     createFromUtcFields(Precision p, int zyear, int zmonth, int zday,
                         int zhour, int zminute, int zsecond, BigDecimal frac,
@@ -587,7 +612,11 @@ public final class Timestamp
      *
      * @throws IllegalArgumentException
      *          if {@code cal} has no appropriate calendar fields set.
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forCalendar(Calendar)} instead.
      */
+    @Deprecated
     public Timestamp(Calendar cal)
     {
         set_fields_from_calendar(cal);
@@ -624,7 +653,11 @@ public final class Timestamp
      *          may be {@code null} to represent an unknown local offset
      *
      * @throws NullPointerException if {@code millis} is {@code null}
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forMillis(BigDecimal, Integer)} instead.
      */
+    @Deprecated
     public Timestamp(BigDecimal millis, Integer localOffset)
     {
         if (millis == null) throw new NullPointerException("millis is null");
@@ -658,8 +691,12 @@ public final class Timestamp
      *          number of milliseconds from the epoch (1970-01-01T00:00:00.000Z)
      * @param localOffset
      *          the local offset from UTC, measured in minutes;
-     *          may be {@code null} to represent an unknown local offset
+     *          may be {@code null} to represent an unknown local offset.
+     *
+     * @deprecated Since IonJava R17.
+     * Use {@link #forMillis(long, Integer)} instead.
      */
+    @Deprecated
     public Timestamp(long millis, Integer localOffset)
     {
         Date d = new Date(millis);  // this will have the system timezone in it whether we want it or not
@@ -946,7 +983,7 @@ public final class Timestamp
     }
 
     /**
-     * Applys the local offset from UTC to each of the applicable time field
+     * Applies the local offset from UTC to each of the applicable time field
      * values and returns the new Timestamp. In short, this makes the Timestamp
      * represent local time.
      *
@@ -979,6 +1016,156 @@ public final class Timestamp
         assert localtime._offset == _offset;
 
         return localtime;
+    }
+
+
+    /**
+     * Returns a Timestamp, precise to the day, with unknown local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
+     */
+    public static Timestamp forDay(int yearZ, int monthZ, int dayZ)
+    {
+        return new Timestamp(yearZ, monthZ, dayZ);
+    }
+
+
+    /**
+     * Returns a Timestamp, precise to the minute, with a given local
+     * offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm+-oo:oo}, where {@code oo:oo} represents the
+     * hour and minutes of the local offset from UTC.
+     *
+     * @param offset
+     *          the local offset from UTC, measured in minutes;
+     *          may be {@code null} to represent an unknown local offset
+     */
+    public static Timestamp forMinute(int year, int month, int day,
+                                      int hour, int minute,
+                                      Integer offset)
+    {
+        return new Timestamp(year, month, day, hour, minute, offset);
+    }
+
+
+    /**
+     * Returns a Timestamp, precise to the second, with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm:ss+-oo:oo}, where {@code oo:oo} represents the
+     * hour and minutes of the local offset from UTC.
+     *
+     * @param offset
+     *          the local offset from UTC, measured in minutes;
+     *          may be {@code null} to represent an unknown local offset
+     */
+    public static Timestamp forSecond(int year, int month, int day,
+                                      int hour, int minute, int second,
+                                      Integer offset)
+    {
+        return new Timestamp(year, month, day, hour, minute, second, offset);
+    }
+
+
+    /**
+     * Returns a Timestamp, precise to the second, with a given local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value
+     * {@code YYYY-MM-DDThh:mm:ss.sss+-oo:oo}, where {@code oo:oo} represents
+     * the hour and minutes of the local offset from UTC.
+     *
+     * @param second must be at least zero and less than 60.
+     * Must not be null.
+     *
+     * @param offset
+     *          the local offset from UTC, measured in minutes;
+     *          may be {@code null} to represent an unknown local offset
+     */
+    public static Timestamp forSecond(int year, int month, int day,
+                                      int hour, int minute, BigDecimal second,
+                                      Integer offset)
+    {
+        if (second.signum() < 0 || second.compareTo(SIXTY) >= 0)
+        {
+            error_in_field("second must be at least 0 and less than 60");
+        }
+        // Tease apart the whole and fractional seconds.
+        // Storing them separately is silly.
+        int s = second.intValue();
+        BigDecimal frac = second.subtract(BigDecimal.valueOf(s));
+        return new Timestamp(year, month, day, hour, minute, s, frac, offset);
+    }
+
+
+    /**
+     * Returns a Timestamp that represents the point in time that is
+     * {@code millis} milliseconds from the epoch, with a given local offset.
+     * <p>
+     * The resulting Timestamp will be precise to the millisecond.
+     *
+     * @param millis
+     * the number of milliseconds from the epoch (1970-01-01T00:00:00.000Z).
+     * @param localOffset
+     *          the local offset from UTC, measured in minutes;
+     *          may be {@code null} to represent an unknown local offset.
+     */
+    public static Timestamp forMillis(long millis, Integer localOffset)
+    {
+        return new Timestamp(millis, localOffset);
+    }
+
+
+    /**
+     * Returns a Timestamp that represents the point in time that is
+     * {@code millis} milliseconds (including any fractional
+     * milliseconds) from the epoch, with a given local offset.
+     *
+     * <p>
+     * The resulting Timestamp will be precise to the second if {@code millis}
+     * doesn't contain information that is more granular than seconds.
+     * For example, a {@code BigDecimal} of
+     * value <tt>132541995e4 (132541995 &times; 10<sup>4</sup>)</tt>
+     * will return a Timestamp of {@code 2012-01-01T12:12:30Z},
+     * precise to the second.
+     *
+     * <p>
+     * The resulting Timestamp will be precise to the fractional second if
+     * {@code millis} contains information that is at least granular to
+     * milliseconds.
+     * For example, a {@code BigDecimal} of
+     * value <tt>1325419950555</tt>
+     * will return a Timestamp of {@code 2012-01-01T12:12:30.555Z},
+     * precise to the fractional second.
+     *
+     * @param millis
+     *          number of milliseconds (including any fractional
+     *          milliseconds) from the epoch (1970-01-01T00:00:00.000Z);
+     *          must not be {@code null}
+     * @param localOffset
+     *          the local offset from UTC, measured in minutes;
+     *          may be {@code null} to represent an unknown local offset
+     *
+     * @throws NullPointerException if {@code millis} is {@code null}
+     */
+    public static Timestamp forMillis(BigDecimal millis, Integer localOffset)
+    {
+        return new Timestamp(millis, localOffset);
+    }
+
+
+    /**
+     * Converts a {@link Calendar} to a Timestamp, preserving the calendar's
+     * time zone as the equivalent local offset.
+     *
+     * @return a Timestamp instance, precise to the millisecond;
+     *   or {@code null} if {@code calendar} is {@code null}
+     */
+    public static Timestamp forCalendar(Calendar calendar)
+    {
+        if (calendar == null) return null;
+        return new Timestamp(calendar);
     }
 
 
