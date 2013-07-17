@@ -62,12 +62,12 @@ public final class Timestamp
     /**
      * Unknown local offset from UTC.
      */
-    public final static Integer UNKNOWN_OFFSET = null;
+    public static final Integer UNKNOWN_OFFSET = null;
 
     /**
      * Local offset of zero hours from UTC.
      */
-    public final static Integer UTC_OFFSET = new Integer(0);
+    public static final Integer UTC_OFFSET = Integer.valueOf(0);
 
     /**
      * The precision of the Timestamp.
@@ -81,7 +81,7 @@ public final class Timestamp
         FRACTION
     }
 
-    private final static int HASH_SIGNATURE =
+    private static final int HASH_SIGNATURE =
         "INTERNAL TIMESTAMP".hashCode();
 
     /**
@@ -114,10 +114,10 @@ public final class Timestamp
      */
     private Integer     _offset;
 
-                                                //jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
-                                                // the first 0 is to make these arrays 1 based (since month values are 1-12)
-    private static int[] _Leap_days_in_month   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
-    private static int[] _Normal_days_in_month = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
+                                                      //   jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
+                                                      // the first 0 is to make these arrays 1 based (since month values are 1-12)
+    private static final int[] LEAP_DAYS_IN_MONTH   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
+    private static final int[] NORMAL_DAYS_IN_MONTH = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
 
     private static int last_day_in_month(int year, int month) {
         boolean is_leap;
@@ -140,7 +140,7 @@ public final class Timestamp
         else {
             is_leap = false;
         }
-        return is_leap ? _Leap_days_in_month[month] : _Normal_days_in_month[month];
+        return is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month];
     }
 
     /**
@@ -263,7 +263,7 @@ public final class Timestamp
 
         switch (this._precision) {
             case FRACTION:
-                BigDecimal millis = new BigDecimal(cal.get(Calendar.MILLISECOND));
+                BigDecimal millis = BigDecimal.valueOf(cal.get(Calendar.MILLISECOND));
                 this._fraction = millis.movePointLeft(3); // convert to fraction
             case SECOND:
                 this._second = (byte)cal.get(Calendar.SECOND);
@@ -1024,7 +1024,7 @@ public final class Timestamp
         long millis = sqlTimestamp.getTime();
         Timestamp ts = new Timestamp(millis, UTC_OFFSET);
         int nanos = sqlTimestamp.getNanos();
-        BigDecimal frac = new BigDecimal(nanos).movePointLeft(9);
+        BigDecimal frac = BigDecimal.valueOf(nanos).movePointLeft(9);
         ts._fraction = frac;
         return ts;
     }
@@ -1167,10 +1167,10 @@ public final class Timestamp
         case MINUTE:
         case SECOND:
             millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-            return new BigDecimal(millis);
+            return BigDecimal.valueOf(millis);
         case FRACTION:
             millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-            dec = new BigDecimal(millis);
+            dec = BigDecimal.valueOf(millis);
             dec = dec.add(this._fraction.movePointRight(3));
             return dec;
         }
