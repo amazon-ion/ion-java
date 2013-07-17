@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -166,7 +166,7 @@ public abstract class IonTextWriterBuilder
     private IvmMinimizing myIvmMinimizing;
     private LstMinimizing myLstMinimizing;
     private SymbolTable[] myImports;
-    private int _long_string_threshold;
+    private int myLongStringThreshold;
 
 
     /** NOT FOR APPLICATION USE! */
@@ -183,7 +183,7 @@ public abstract class IonTextWriterBuilder
         this.myIvmMinimizing        = that.myIvmMinimizing;
         this.myLstMinimizing        = that.myLstMinimizing;
         this.myImports              = that.myImports;
-        this._long_string_threshold = that._long_string_threshold;
+        this.myLongStringThreshold  = that.myLongStringThreshold;
     }
 
     //=========================================================================
@@ -653,7 +653,7 @@ public abstract class IonTextWriterBuilder
      */
     public final int getLongStringThreshold()
     {
-        return _long_string_threshold;
+        return myLongStringThreshold;
     }
 
     /**
@@ -670,7 +670,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setLongStringThreshold(int threshold)
     {
-        _long_string_threshold = threshold;
+        myLongStringThreshold = threshold;
     }
 
     /**
