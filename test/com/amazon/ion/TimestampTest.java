@@ -145,14 +145,14 @@ public class TimestampTest
                              Integer expectedOffset,
                              Timestamp ts)
     {
-        assertEquals(expectedYear,     ts.getYear());
-        assertEquals(expectedMonth,    ts.getMonth());
-        assertEquals(expectedDay,      ts.getDay());
-        assertEquals(expectedHour,     ts.getHour());
-        assertEquals(expectedMinute,   ts.getMinute());
-        assertEquals(expectedSecond,   ts.getSecond());
-        assertEquals(expectedFraction, ts.getFractionalSecond());
-        assertEquals(expectedOffset,   ts.getLocalOffset());
+        assertEquals("year",     expectedYear,     ts.getYear());
+        assertEquals("month",    expectedMonth,    ts.getMonth());
+        assertEquals("day",      expectedDay,      ts.getDay());
+        assertEquals("hour",     expectedHour,     ts.getHour());
+        assertEquals("minute",   expectedMinute,   ts.getMinute());
+        assertEquals("second",   expectedSecond,   ts.getSecond());
+        assertEquals("fraction", expectedFraction, ts.getFractionalSecond());
+        assertEquals("offset",   expectedOffset,   ts.getLocalOffset());
     }
 
     private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
@@ -726,6 +726,12 @@ public class TimestampTest
         checkFields(2010, 2, 1, 10, 11, 12, fraction, null, FRACTION, ts);
         assertEquals("2010-02-01T10:11:12.34-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.34Z", ts.toZString());
+
+        // This was broken prior to R17. It had FRACTION precision, but no
+        // fractional data, and didn't equal the same value created other ways.
+        ts = new Timestamp(2010, 2, 1, 10, 11, 12, BigDecimal.ZERO, 0);
+        assertEquals(Timestamp.valueOf("2010-02-01T10:11:12Z"), ts);
+        checkFields(2010, 2, 1, 10, 11, 12, null, 0, SECOND, ts);
     }
 
     /** Test for {@link Timestamp#Timestamp(BigDecimal, Integer)} */
@@ -856,18 +862,21 @@ public class TimestampTest
 
         p = MINUTE;
         ts = Timestamp.createFromUtcFields(p, zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset);
-        // 2012-02-03T04:05Z
+        // 2012-02-03T04:05-00:00
         checkFields(zyear, zmonth, zday, zhour, zminute, 0, null, offset, p, ts);
 
         p = SECOND;
         ts = Timestamp.createFromUtcFields(p, zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset);
-        // 2012-02-03T04:05:06Z
+        // 2012-02-03T04:05:06-00:00
         checkFields(zyear, zmonth, zday, zhour, zminute, zsecond, null, offset, p, ts);
 
         p = FRACTION;
         ts = Timestamp.createFromUtcFields(p, zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset);
-        // 2012-02-03T04:05:06.007Z
+        // 2012-02-03T04:05:06.007-00:00
         checkFields(zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset, p, ts);
+
+        ts = Timestamp.createFromUtcFields(p, zyear, zmonth, zday, zhour, zminute, zsecond, BigDecimal.ZERO, 0);
+        assertEquals(Timestamp.valueOf("2012-02-03T04:05:06Z"), ts);
     }
 
     /**

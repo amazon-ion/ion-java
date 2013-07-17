@@ -407,8 +407,8 @@ public final class Timestamp
     }
 
     /**
-     * Creates a new Timestamp, precise to the fractional second, with a given
-     * local offset.
+     * Creates a new Timestamp, precise to the second or fractional second,
+     * with a given local offset.
      * <p>
      * This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm:ss.fff+-oo:oo}, where {@code oo:oo} represents
@@ -428,14 +428,25 @@ public final class Timestamp
                      int hour, int minute, int second, BigDecimal frac,
                      Integer offset)
     {
-        this._precision = Precision.FRACTION;
-        this._fraction = frac.abs();
-        this._second   = (byte)second;
-        this._minute   = (byte)minute;
-        this._hour     = (byte)hour;
-        this._day      = (byte)day;  // days are base 1 (as you'd expect)
-        this._month    = (byte)month;
-        this._year     = (short)year;
+        // When there's no fraction, use SECOND precision.  Otherwise, our
+        // comparisons will fail versus other constructors with equivalent
+        // data.
+        if (frac.equals(BigDecimal.ZERO))
+        {
+            _precision = Precision.SECOND;
+            _fraction = null;
+        }
+        else
+        {
+            _precision = Precision.FRACTION;
+            _fraction = frac.abs();
+        }
+        _second   = (byte)second;
+        _minute   = (byte)minute;
+        _hour     = (byte)hour;
+        _day      = (byte)day;  // days are base 1 (as you'd expect)
+        _month    = (byte)month;
+        _year     = (short)year;
 
         validate_fields();
         if (offset != null) {
@@ -464,26 +475,34 @@ public final class Timestamp
                       int zhour, int zminute, int zsecond, BigDecimal frac,
                       Integer offset)
     {
-        this._precision = p;
+        _precision = p;
         switch (p) {
         default:
             throw new IllegalArgumentException("invalid Precision passed to constructor");
         case FRACTION:
-            this._fraction = frac.abs();
+            if (frac.equals(BigDecimal.ZERO))
+            {
+                _precision = Precision.SECOND;
+                _fraction = null;
+            }
+            else
+            {
+                _fraction = frac.abs();
+            }
         case SECOND:
-            this._second = (byte)zsecond;
+            _second = (byte)zsecond;
         case MINUTE:
-            this._minute = (byte)zminute;
-            this._hour   = (byte)zhour;
+            _minute = (byte)zminute;
+            _hour   = (byte)zhour;
         case DAY:
-            this._day    = (byte)zday;  // days are base 1 (as you'd expect)
+            _day    = (byte)zday;  // days are base 1 (as you'd expect)
         case MONTH:
-            this._month  = (byte)zmonth;
+            _month  = (byte)zmonth;
         case YEAR:
-            this._year   = (short)zyear;
+            _year   = (short)zyear;
         }
         validate_fields();
-        this._offset = offset;
+        _offset = offset;
         // This doesn't call applyOffset() like the other constructors because
         // we already expect the time parameters to be in UTC, and that's
         // already what we're supposed to have.
@@ -532,8 +551,9 @@ public final class Timestamp
      * createFromUtcFields(<b>Precision.FRACTION</b>, 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012-02-03T04:05:06.007Z
      * </pre>
      *
-     * @param p
-     *          the precision that the resulting Timestamp will have
+     * @param p the desired timestamp precision. The result may have a
+     * different precision if the input data isn't precise enough.
+     *
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
