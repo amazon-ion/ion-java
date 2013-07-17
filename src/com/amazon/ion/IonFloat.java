@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 import java.math.BigDecimal;
@@ -6,6 +6,17 @@ import java.math.BigDecimal;
 
 /**
  * An Ion <code>float</code> value.
+ *
+ * <h2>WARNING</h2>
+ *
+ * Use of binary floating-point numbers is prone to countless problems.
+ * The vast majority of applications should use {@code decimal} values instead.
+ * Please read the
+ * <a href="http://speleotrove.com/decimal/decifaq1.html">Decimal Arithmetic
+ * FAQ</a> for horror stories.
+ * <p>
+ * If you have any doubt whatsoever whether you should use {@code float} or
+ * {@code decimal}, then you should use {@code decimal}.
  */
 public interface IonFloat
     extends IonValue
