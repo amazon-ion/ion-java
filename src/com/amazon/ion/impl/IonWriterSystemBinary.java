@@ -108,12 +108,11 @@ final class IonWriterSystemBinary
          * to be able to inject a symtab before this value (injectBeforeCurrent)
          *
          * @param st
-         * @param pos Position of the current value being stored before symtab got injected
          * @param injectBeforeCurrent Flags if symbol table must be injected before the current value
          *                            which essentially shifts the array by 1
          * @throws IllegalStateException if the PatchedValues is not a top-level one
          */
-        void injectSymbolTable(SymbolTable st, int pos, boolean injectBeforeCurrent) {
+        void injectSymbolTable(SymbolTable st, boolean injectBeforeCurrent) {
             if (_parent != null) {
                 // we're not on top-level
                 throw new IllegalStateException("Cannot inject a symbol table when not on top-level");
@@ -125,7 +124,6 @@ final class IonWriterSystemBinary
             if (_freePos == _positions.length) {
                 grow();
             }
-            _positions[_freePos] = pos;
             if (injectBeforeCurrent) {
                 // move current value to the right
                 _types[_freePos] = _types[_freePos - 1];
@@ -421,7 +419,7 @@ final class IonWriterSystemBinary
         // inject the symbol table; if @_patch is not the top element, then inject
         // the symtab before this top-level value begins
         super.startValue();
-        top.injectSymbolTable(symbols, _writer.position(), _patch.getParent() != null);
+        top.injectSymbolTable(symbols, _patch.getParent() != null);
         super.endValue();
         return symbols;
     }
@@ -581,7 +579,7 @@ final class IonWriterSystemBinary
         // find the parent
         for (top = _patch; top.getParent() != null; top = top.getParent()) {}
         super.startValue();
-        top.injectSymbolTable(symbols, _writer.position(), _patch.getParent() != null);
+        top.injectSymbolTable(symbols, _patch.getParent() != null);
         super.endValue();
         super.writeLocalSymtab(symbols);
     }

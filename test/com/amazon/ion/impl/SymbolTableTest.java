@@ -20,17 +20,20 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonMutableCatalog;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1178,4 +1181,35 @@ public class SymbolTableTest
                                       "four", "five"},
                          v4);
     }
+
+    /** For ION-333 */
+    @Test
+    public void testSymtabBinaryInjection() throws Exception
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        IonWriter writer = system().newBinaryWriter(baos);
+        writer.stepIn(IonType.LIST);
+        writer.writeNull();
+        writer.writeInt(10);
+        writer.writeFloat(10.0);
+        writer.writeTimestamp(new Timestamp(2013, 1, 1));
+        writer.writeSymbol("abc");  // this is where symbol table injection happens
+        writer.writeString("abc");
+        writer.stepOut();
+        writer.finish();
+
+        IonReader reader = system().newReader(baos.toByteArray());
+        assertEquals(IonType.LIST, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.NULL, reader.next());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(IonType.FLOAT, reader.next());
+        assertEquals(IonType.TIMESTAMP, reader.next());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(null, reader.next());
+        reader.stepOut();
+        assertEquals(null, reader.next());
+    }
+
 }
