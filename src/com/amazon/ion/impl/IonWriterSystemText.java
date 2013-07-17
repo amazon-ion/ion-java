@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.impl._Private_IonConstants.MAX_LONG_TEXT_SIZE;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
@@ -262,8 +263,7 @@ final class IonWriterSystemText
         if (asString) _output.appendAscii('"');
 
         _output.appendAscii('$');
-        // TODO optimize to avoid intermediate string
-        _output.appendAscii(Integer.toString(sid));
+        appendLong(sid);
 
         if (asString) _output.appendAscii('"');
     }
@@ -513,6 +513,7 @@ final class IonWriterSystemText
         _output.appendAscii("null");
         closeValue();
     }
+
     public void writeNull(IonType type) throws IOException
     {
         startValue();
@@ -547,6 +548,7 @@ final class IonWriterSystemText
         _output.appendAscii(nullimage);
         closeValue();
     }
+
     public void writeBool(boolean value)
         throws IOException
     {
@@ -555,48 +557,41 @@ final class IonWriterSystemText
         closeValue();
     }
 
-    // this will convert long to a char array in @_integerBuffer back to front
-    // and return the starting position in the array
-    char[] _fixedIntBuffer = new char[_Private_IonConstants.MAX_LONG_TEXT_SIZE];
-    int longToChar(long value)
+    /** ONLY FOR USE BY {@link #appendLong(long)}. */
+    private final char[] _fixedIntBuffer = new char[MAX_LONG_TEXT_SIZE];
+
+    private void appendLong(long value)
+        throws IOException
     {
-        int j = _fixedIntBuffer.length - 1;
+        int j = _fixedIntBuffer.length;
         if (value == 0) {
-            _fixedIntBuffer[j--] = '0';
+            _fixedIntBuffer[--j] = '0';
         } else {
             if (value < 0) {
                 while (value != 0) {
-                    _fixedIntBuffer[j--] = (char)(0x30 - value % 10);
+                    _fixedIntBuffer[--j] = (char)(0x30 - value % 10);
                     value /= 10;
                 }
-                _fixedIntBuffer[j--] = '-';
+                _fixedIntBuffer[--j] = '-';
             } else {
                 while (value != 0) {
-                    _fixedIntBuffer[j--] = (char)(0x30 + value % 10);
+                    _fixedIntBuffer[--j] = (char)(0x30 + value % 10);
                     value /= 10;
                 }
             }
         }
-        return j + 1;
-    }
 
-    public void writeInt(int value)
-        throws IOException
-    {
-        startValue();
-        int start = longToChar(value);
-        // using CharBuffer to avoid copying of _fixedIntBuffer in String
-        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer), start, _fixedIntBuffer.length);
-        closeValue();
+        // Using CharBuffer avoids copying the _fixedIntBuffer into a String
+        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer),
+                            j,
+                            _fixedIntBuffer.length);
     }
 
     public void writeInt(long value)
         throws IOException
     {
         startValue();
-        int start = longToChar(value);
-        // using CharBuffer to avoid copying of _fixedIntBuffer in String
-        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer), start, _fixedIntBuffer.length);
+        appendLong(value);
         closeValue();
     }
 

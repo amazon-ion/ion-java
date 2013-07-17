@@ -150,31 +150,31 @@ public abstract class _Private_IonTextAppender
     static
     {
         JSON_ESCAPE_CODES = new String[256];
-        JSON_ESCAPE_CODES[0x00] = "\\u0000";
-        JSON_ESCAPE_CODES[0x07] = "\\u0007";
         JSON_ESCAPE_CODES[0x08] = "\\b";
         JSON_ESCAPE_CODES['\t'] = "\\t";
         JSON_ESCAPE_CODES['\n'] = "\\n";
-        JSON_ESCAPE_CODES[0x0B] = "\\u000b";
         JSON_ESCAPE_CODES['\f'] = "\\f";
         JSON_ESCAPE_CODES['\r'] = "\\r";
         JSON_ESCAPE_CODES['\\'] = "\\\\";
         JSON_ESCAPE_CODES['\"'] = "\\\"";
-        for (int i = 1; i < 0x20; ++i) {
+
+        // JSON requires all of these characters to be escaped.
+        for (int i = 0; i < 0x20; ++i) {
             if (JSON_ESCAPE_CODES[i] == null) {
                 String s = Integer.toHexString(i);
                 JSON_ESCAPE_CODES[i] = "\\u" + ZERO_PADDING[4 - s.length()] + s;
             }
         }
+
         for (int i = 0x7F; i < 0x100; ++i) {
             String s = Integer.toHexString(i);
             JSON_ESCAPE_CODES[i] = "\\u00" + s;
         }
     }
 
-    static final String HEX_4_PREFIX = "\\u";
-    static final String HEX_8_PREFIX = "\\U";
-    static final String tripleQuotes = "'''";
+    private static final String HEX_4_PREFIX = "\\u";
+    private static final String HEX_8_PREFIX = "\\U";
+    private static final String TRIPLE_QUOTES = "'''";
 
 
     private final boolean escapeUnicode;
@@ -185,7 +185,8 @@ public abstract class _Private_IonTextAppender
      * @param c
      * @throws IOException
      */
-    public abstract void appendAscii(char c) throws IOException;
+    public abstract void appendAscii(char c)
+        throws IOException;
 
     /**
      * Append a sequence of ASCII characters
@@ -193,7 +194,8 @@ public abstract class _Private_IonTextAppender
      * @param csq
      * @throws IOException
      */
-    public abstract void appendAscii(CharSequence csq) throws IOException;
+    public abstract void appendAscii(CharSequence csq)
+        throws IOException;
 
     /**
      * Append a range in sequence of ASCII characters
@@ -203,7 +205,8 @@ public abstract class _Private_IonTextAppender
      * @param end
      * @throws IOException
      */
-    public abstract void appendAscii(CharSequence csq, int start, int end) throws IOException;
+    public abstract void appendAscii(CharSequence csq, int start, int end)
+        throws IOException;
 
     /**
      * Append a UTF-16 non-surrogate character
@@ -211,7 +214,8 @@ public abstract class _Private_IonTextAppender
      * @param c
      * @throws IOException
      */
-    public abstract void appendUtf16(char c) throws IOException;
+    public abstract void appendUtf16(char c)
+        throws IOException;
 
     /**
      * Append a UTF-16 surrogate pair
@@ -220,9 +224,13 @@ public abstract class _Private_IonTextAppender
      * @param trailSurrogate
      * @throws IOException
      */
-    public abstract void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate) throws IOException;
+    public abstract void appendUtf16Surrogate(char leadSurrogate,
+                                              char trailSurrogate)
+        throws IOException;
 
-    public _Private_IonTextAppender(boolean escapeUnicodeCharacters) {
+
+    public _Private_IonTextAppender(boolean escapeUnicodeCharacters)
+    {
         this.escapeUnicode = escapeUnicodeCharacters;
     }
 
@@ -260,9 +268,9 @@ public abstract class _Private_IonTextAppender
         }
         else
         {
-            appendAscii(tripleQuotes);
+            appendAscii(TRIPLE_QUOTES);
             printCodePoints(text, LONG_STRING_ESCAPE_CODES);
-            appendAscii(tripleQuotes);
+            appendAscii(TRIPLE_QUOTES);
         }
     }
 
@@ -329,10 +337,10 @@ public abstract class _Private_IonTextAppender
             // minimally is very tricky. Must be sure to account for
             // quotes at the end of the content.
 
-            // Account for NL versus CR+NL streams
-            appendAscii(tripleQuotes);
+            // TODO Account for NL versus CR+NL streams
+            appendAscii(TRIPLE_QUOTES);
             printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
-            appendAscii(tripleQuotes);
+            appendAscii(TRIPLE_QUOTES);
         }
     }
 

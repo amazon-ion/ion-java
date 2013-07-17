@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -26,8 +26,10 @@ public final class _Private_IonConstants
 
     public final static int INT32_SIZE            = 4;
 
-    // maximum size of textual representation of a 64bit integer (long)
-    public final static int MAX_LONG_TEXT_SIZE    = 20;
+    /** maximum size of textual representation of a {@code long}. */
+    public final static int MAX_LONG_TEXT_SIZE    =
+        Math.max(Long.toString(Long.MAX_VALUE).length(),
+                 Long.toString(Long.MIN_VALUE).length());
 
     // these are used for various Unicode translation where
     // we need to convert the utf-16 Java characters into

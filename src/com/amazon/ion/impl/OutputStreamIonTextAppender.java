@@ -28,12 +28,12 @@ final class OutputStreamIonTextAppender
     public OutputStreamIonTextAppender(OutputStream out, Charset charset)
     {
         // escape unicode symbols if charset is ASCII
-        super(charset == _Private_Utils.ASCII_CHARSET);
-        assert charset != null;
+        super(charset.equals(_Private_Utils.ASCII_CHARSET));
         out.getClass(); // Efficient null check
-        this._out = out;
-        this._pos = 0;
-        this._byteBuffer = new byte[MAX_BYTES_LEN];
+
+        _out = out;
+        _pos = 0;
+        _byteBuffer = new byte[MAX_BYTES_LEN];
     }
 
 

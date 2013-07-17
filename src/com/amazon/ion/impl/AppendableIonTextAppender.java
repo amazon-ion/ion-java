@@ -18,10 +18,10 @@ final class AppendableIonTextAppender
 
     AppendableIonTextAppender(Appendable out, Charset charset)
     {
-        super(charset == _Private_Utils.ASCII_CHARSET);
-        assert charset != null;
-        out.getClass();
-        this._out = out;
+        super(charset.equals(_Private_Utils.ASCII_CHARSET));
+        out.getClass(); // Efficient null check
+
+        _out = out;
     }
 
     @Override
