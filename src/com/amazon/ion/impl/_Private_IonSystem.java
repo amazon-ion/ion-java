@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -6,7 +6,6 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -20,9 +19,6 @@ import java.util.Iterator;
 public interface _Private_IonSystem
     extends IonSystem
 {
-    /* constructor */
-    // public IonSystemImpl(IonCatalog catalog);
-
     public SymbolTable newSharedSymbolTable(IonStruct ionRep);
 
     /**
@@ -42,15 +38,16 @@ public interface _Private_IonSystem
      */
     public Iterator<IonValue> systemIterate(InputStream ionData);
 
-    public IonTextReader newSystemReader(String ionText);
-
-    public IonTextReader newSystemReader(Reader ionText);
 
     public IonReader newSystemReader(byte[] ionData);
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len);
 
+    public IonReader newSystemReader(String ionText);
+
     public IonReader newSystemReader(InputStream ionData);
+
+    public IonReader newSystemReader(Reader ionText);
 
     public IonReader newSystemReader(IonValue value);
 

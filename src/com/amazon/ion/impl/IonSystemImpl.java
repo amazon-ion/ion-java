@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -365,18 +365,7 @@ final class IonSystemImpl
         return makeReader(this, myCatalog, ionText);
     }
 
-    public IonTextReader newSystemReader(String ionText)
-    {
-        return makeSystemReader(this, ionText);
-    }
-
-
-    public IonTextReader newReader(Reader ionText)
-    {
-        return makeReader(this, ionText);
-    }
-
-    public IonTextReader newSystemReader(Reader ionText)
+    public IonReader newSystemReader(String ionText)
     {
         return makeSystemReader(this, ionText);
     }
@@ -413,6 +402,17 @@ final class IonSystemImpl
     public IonReader newSystemReader(InputStream ionData)
     {
         return makeSystemReader(this, ionData);
+    }
+
+
+    public IonReader newReader(Reader ionText)
+    {
+        return makeReader(this, myCatalog, ionText);
+    }
+
+    public IonReader newSystemReader(Reader ionText)
+    {
+        return makeSystemReader(this, ionText);
     }
 
 

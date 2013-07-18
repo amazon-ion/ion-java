@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -329,26 +329,6 @@ public interface IonSystem
      * enumeration to ensure complete test coverage!
      */
 
-
-    /*
-     * Applications should generally us {@link #newReader(InputStream)}
-     * whenever possible, since this library has much faster UTF-8 decoding
-     * than the Java IO framework.
-     *
-     * @throws IonException if the source throws {@link IOException}.
-     */
-//  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
-
-    /**
-     * Creates an new {@link IonTextReader} instance over Ion text data.
-     * <p>
-     * The text is parsed incrementally by the reader, so any syntax errors
-     * will not be detected during this call.
-     *
-     * @param ionText must not be null.
-     */
-    public IonTextReader newReader(String ionText);
-
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.
@@ -379,6 +359,16 @@ public interface IonSystem
     public IonReader newReader(byte[] ionData, int offset, int len);
 
     /**
+     * Creates an new {@link IonTextReader} instance over Ion text data.
+     * <p>
+     * The text is parsed incrementally by the reader, so any syntax errors
+     * will not be detected during this call.
+     *
+     * @param ionText must not be null.
+     */
+    public IonTextReader newReader(String ionText);
+
+    /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
      * detecting whether it's text or binary data.
      * <p>
@@ -392,6 +382,17 @@ public interface IonSystem
      * @throws IonException if the source throws {@link IOException}.
      */
     public IonReader newReader(InputStream ionData);
+
+    /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * Applications should generally us {@link #newReader(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
+     *
+     * @throws IonException if the source throws {@link IOException}.
+     */
+    public IonReader newReader(Reader ionText);
 
     /**
      * Creates an new {@link IonReader} instance over an {@link IonValue} data

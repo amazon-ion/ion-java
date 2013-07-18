@@ -29,7 +29,6 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
-import com.amazon.ion.impl._Private_IonReaderFactory;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
@@ -170,7 +169,7 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(Reader ionText)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
+        IonReader reader = makeReader(this, _catalog, ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -184,14 +183,14 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
+        IonReader reader = makeReader(this, _catalog, ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, ionData);
+        IonReader reader = makeReader(this, _catalog, ionData);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -719,6 +718,24 @@ final class IonSystemLite
         }
     }
 
+
+    public IonTimestamp newUtcTimestampFromMillis(long millis)
+    {
+        IonTimestamp result = newNullTimestamp();
+        result.setMillisUtc(millis);
+        return result;
+    }
+
+    public IonTimestamp newUtcTimestamp(Date utcDate)
+    {
+        IonTimestamp result = newNullTimestamp();
+        if (utcDate != null)
+        {
+            result.setMillisUtc(utcDate.getTime());
+        }
+        return result;
+    }
+
     public IonTimestamp newCurrentUtcTimestamp()
     {
         IonTimestampLite result = super.newNullTimestamp();
@@ -784,95 +801,13 @@ final class IonSystemLite
         return dg;
     }
 
-    public IonTextReader newReader(String ionText)
-    {
-        IonTextReader reader = _Private_IonReaderFactory.makeReader(this, ionText);
-        return reader;
-    }
+
+    //=========================================================================
+    // IonReader creation
 
     public IonReader newReader(byte[] ionData)
     {
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, getCatalog(), ionData, 0, ionData.length);
-        return reader;
-    }
-
-    public IonReader newReader(IonCatalog catalog, byte[] ionData)
-    {
-        IonReader reader = newReader(catalog, ionData, 0, ionData.length);
-        return reader;
-    }
-
-    public IonReader newReader(byte[] ionData, int offset, int len)
-    {
-        IonReader reader = makeReader(this, _catalog, ionData, offset, len);
-        return reader;
-    }
-
-    public IonReader newReader(IonCatalog catalog, byte[] ionData, int offset, int len)
-    {
-        if (catalog == null) catalog = getCatalog();
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, catalog, ionData, offset, len);
-        return reader;
-    }
-
-    public IonReader newReader(InputStream ionData)
-    {
         return makeReader(this, _catalog, ionData);
-    }
-
-    public IonReader newReader(IonCatalog catalog, InputStream ionData)
-    {
-        if (catalog == null) catalog = getCatalog();
-        IonReader reader = makeReader(this, catalog, ionData);
-        return reader;
-    }
-
-    public IonReader newReader(IonValue value)
-    {
-        IonReader reader = makeReader(this, _catalog, value);
-        return reader;
-    }
-
-    public IonReader newReader(IonCatalog catalog, IonValue value)
-    {
-        if (catalog == null) catalog = getCatalog();
-        IonReader reader = _Private_IonReaderFactory.makeReader(this, catalog, value);
-        return reader;
-    }
-
-
-    public IonTimestamp newUtcTimestamp(Date utcDate)
-    {
-        IonTimestamp result = newNullTimestamp();
-        if (utcDate != null)
-        {
-            result.setMillisUtc(utcDate.getTime());
-        }
-        return result;
-    }
-
-    public IonTimestamp newUtcTimestampFromMillis(long millis)
-    {
-        IonTimestamp result = newNullTimestamp();
-        result.setMillisUtc(millis);
-        return result;
-    }
-
-
-    /*************************************************************
-     *
-     * methods in IonSystemImpl (now declared in IonSystemPrivate)
-     *
-     */
-
-    public IonTextReader newSystemReader(String ionText)
-    {
-        return makeSystemReader(this, ionText);
-    }
-
-    public IonTextReader newSystemReader(Reader ionText)
-    {
-        return makeSystemReader(this, ionText);
     }
 
     public IonReader newSystemReader(byte[] ionData)
@@ -880,9 +815,32 @@ final class IonSystemLite
         return makeSystemReader(this, ionData);
     }
 
+
+    public IonReader newReader(byte[] ionData, int offset, int len)
+    {
+        return makeReader(this, _catalog, ionData, offset, len);
+    }
+
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
         return makeSystemReader(this, ionData, offset, len);
+    }
+
+
+    public IonTextReader newReader(String ionText)
+    {
+        return makeReader(this, _catalog, ionText);
+    }
+
+    public IonReader newSystemReader(String ionText)
+    {
+        return makeSystemReader(this, ionText);
+    }
+
+
+    public IonReader newReader(InputStream ionData)
+    {
+        return makeReader(this, _catalog, ionData);
     }
 
     public IonReader newSystemReader(InputStream ionData)
@@ -890,10 +848,31 @@ final class IonSystemLite
         return makeSystemReader(this, ionData);
     }
 
+
+    public IonReader newReader(Reader ionText)
+    {
+        return makeReader(this, _catalog, ionText);
+    }
+
+    public IonReader newSystemReader(Reader ionText)
+    {
+        return makeSystemReader(this, ionText);
+    }
+
+
+    public IonReader newReader(IonValue value)
+    {
+        return makeReader(this, _catalog, value);
+    }
+
     public IonReader newSystemReader(IonValue value)
     {
         return makeSystemReader(this, value);
     }
+
+
+    //=========================================================================
+    // IonWriter creation
 
 
     /**
