@@ -202,6 +202,9 @@ public interface IonSystem
      * Applications should generally use {@link #iterate(InputStream)}
      * whenever possible, since this library has much faster UTF-8 decoding
      * than the Java IO framework.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -230,6 +233,9 @@ public interface IonSystem
      * schema.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
@@ -373,6 +379,9 @@ public interface IonSystem
      * detecting whether it's text or binary data.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData must not be null.
      *
@@ -389,6 +398,9 @@ public interface IonSystem
      * Applications should generally us {@link #newReader(InputStream)}
      * whenever possible, since this library has much faster UTF-8 decoding
      * than the Java IO framework.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @throws IonException if the source throws {@link IOException}.
      */
