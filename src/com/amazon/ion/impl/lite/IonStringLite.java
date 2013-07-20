@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -26,19 +26,12 @@ final class IonStringLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonString. This calls up to
-     * IonTextImpl to copy the string itself and that in
-     * turn calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
-     */
     @Override
     public IonStringLite clone()
     {
         IonStringLite clone = new IonStringLite(this._context.getSystem(), false);
 
+        // Copy relevant member fields and text value
         clone.copyFrom(this);
 
         return clone;

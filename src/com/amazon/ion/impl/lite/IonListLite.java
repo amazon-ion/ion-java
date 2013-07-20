@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -51,11 +51,6 @@ final class IonListLite
         super(context, elements);
     }
 
-    /**
-     * creates a copy of this IonListImpl.  Most of the work
-     * is actually done by IonContainerImpl.copyFrom() and
-     * IonValueImpl.copyFrom().
-     */
     @Override
     public IonListLite clone()
     {

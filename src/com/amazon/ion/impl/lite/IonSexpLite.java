@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -35,7 +35,7 @@ final class IonSexpLite
      *   instance will have <code>{@link #isNullValue()} == true</code>.
      *
      * @throws ContainedValueException if any value in <code>elements</code>
-     * has <code>{@link IonValue#getContainer()} != null</code>.
+     *  has <code>{@link IonValue#getContainer()} != null</code>.
      */
     IonSexpLite(IonContext context,
                 Collection<? extends IonValue> elements)
@@ -44,12 +44,6 @@ final class IonSexpLite
         super(context, elements);
     }
 
-
-    /**
-     * creates a copy of this IonSexpImpl.  Most of the work
-     * is actually done by IonContainerImpl.copyFrom() and
-     * IonValueImpl.copyFrom().
-     */
     @Override
     public IonSexpLite clone()
     {

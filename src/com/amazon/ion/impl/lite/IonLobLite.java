@@ -47,23 +47,20 @@ abstract class IonLobLite
     }
 
     /**
-     * this copies the contents of the lob from the source to
-     * this instance (or the "null-ness" if the source is null).
-     * It delegates up to IonValueImpl to copy the annotations
-     * and field name as necessary.
+     * Makes a copy of the relevant member fields from the original to this
+     * instance. It also makes a copy of the LOB's bytes.
      *
-     * @param source instance to copy from; must not be null.
-     * Will be materialized as a side-effect.
+     * @param original
      */
-    protected final void copyFrom(IonLobLite source)
+    protected final void copyFrom(IonLobLite original)
     {
-        copyValueContentFrom(source);
+        this.copyMemberFieldsFrom(original);
         byte[] new_bytes;
-        if (source._isNullValue()) {
+        if (original._isNullValue()) {
             new_bytes = null;
         }
         else {
-            new_bytes = source._lob_value;
+            new_bytes = original._lob_value;
         }
         setBytes(new_bytes);
     }

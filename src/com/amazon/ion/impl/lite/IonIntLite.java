@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -40,20 +40,12 @@ final class IonIntLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonInt including a copy
-     * of the Long value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonIntLite clone()
     {
         IonIntLite clone = new IonIntLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         if (this._big_int_value != null)
         {
             clone.doSetValue(this._big_int_value);

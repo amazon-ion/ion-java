@@ -74,19 +74,13 @@ final class IonTimestampLite
         super(system, isNull);
     }
 
-
-    /**
-     * makes a copy of this IonTimestamp. This calls up to
-     * IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * It then copies the time stamp value itself.
-     */
     @Override
     public IonTimestampLite clone()
     {
-        IonTimestampLite clone = new IonTimestampLite(this._context.getSystem(), false);
+        IonTimestampLite clone =
+            new IonTimestampLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         clone._timestamp_value = this._timestamp_value;
 
         return clone;

@@ -156,20 +156,18 @@ abstract class IonValueLite
     }
 
     /*
-     * KEEP ALL MEMBER VALUES HERE
+     * KEEP ALL MEMBER FIELDS HERE!
      *
-     * This impl is intended to have a very light
-     * memory footprint.  So tracking member values
-     * is especially important.
+     * This impl is intended to have a very light memory footprint. So tracking
+     * member fields is especially important.
      *
-     * So KEEP THE MEMBER DECLARATIONS HERE
-     *    AND TOGETHER
+     * SO PLEASE KEEP THE MEMBER DECLARATIONS HERE AND TOGETHER!
      *
      * Thank you.
      *
-     * When this is not a field,
+     * If this instance is not a struct field, then
      *   _fieldId = UNKNOWN_SYMBOL_ID  and  _fieldName = null
-     * Otherwise at least one must be defined.
+     * Otherwise, at least one must be defined.
      */
     private   int              _flags;
     private   int              _fieldId = UNKNOWN_SYMBOL_ID;
@@ -188,9 +186,11 @@ abstract class IonValueLite
     //              64 bit: 3*8 + 4 + 16 = 52 (56 bytes allocated)
 
     /**
-     * the constructor, which is called from the child constructors
-     * simply sets the context and may or may not set the null
-     * bit in the flags member.
+     * The constructor, which is called from the concrete subclasses'
+     * constructors.
+     *
+     * @param context the context that this value is associated with
+     * @param isNull if true, sets the null bit in the flags member field
      */
     IonValueLite(IonContext context, boolean isNull)
     {
@@ -253,37 +253,39 @@ abstract class IonValueLite
     /**
      * {@inheritDoc}
      * <p>
-     * The base classes in IonValue(Impl) should not be called for
-     * cloning directly. The user should be calling clone on the
-     * Actually (leaf) instances class (such as IonIntImpl).  The
-     * shared clone work is handled in copyFrom(src) in any base
-     * classes that need to support this - including IonValueImpl,
-     * IonContainerImpl, IonTextImpl and IonLobImpl.
+     * The user can only call this method on the concrete (not abstract)
+     * subclasses of IonValueLite (e.g. IonIntLite). The shared clone logic
+     * is handled in the method copyFrom(...) in any abstract subclasses that
+     * need to support this - including IonContainerLite, IonTextLite, and
+     * IonLobLite.
      */
     @Override
     public abstract IonValue clone();
 
     /**
-     * copyValueContentFrom is used to make a duplicate
-     * of the value properties during a value clone.
-     * This includes the flags, annotations, and context,
-     * but NOT the field name.
+     * Copy the relevant member fields from the {@code original} instance to
+     * this instance during a {@link #clone()}.
+     * This includes the flags, annotations and context, but NOT the field name.
+     * <p>
+     * Note that <em>flags</em> that is copied consists of the states of the
+     * original value (e.g. isBool, isNull, isIvm, etc).
      * <p>
      * This instance will always be unlocked after calling this method.
      *
-     * @param original value
+     * @param original the value to copy from
      */
-    final void copyValueContentFrom(IonValueLite original)
+    final void copyMemberFieldsFrom(IonValueLite original)
     {
-         assert _context instanceof IonSystemLite; // Baby I was born this way
+        assert _context instanceof IonSystemLite; // Baby I was born this way
 
         // values we copy
         this._flags        = original._flags;
         this._annotations  = original.getTypeAnnotationSymbols();
         if (original._context instanceof TopLevelContext) {
-            // if the original value had context, we need to
-            // copy that too, so we attach our copy to its
-            // system owner through a fresh concrete context
+            // if the original value has a top-level value context, we need to
+            // copy the context too, so we attach the cloned value (this
+            // instance) to the original value's system through a new concrete
+            // TopLevelContext
             TopLevelContext.wrap(getSystem(),
                                  original.getAssignedSymbolTable(),
                                  this);
@@ -375,7 +377,7 @@ abstract class IonValueLite
             // TODO memoize interned text?
         }
         else {
-            // not a field
+            // not a struct field
             return null;
         }
 
@@ -588,12 +590,10 @@ abstract class IonValueLite
         // elements there are in the annotations array
         int count = 0;
         if (_annotations != null) {
-            for (int ii=0; ii<_annotations.length; ) {
-                if (_annotations[ii] == null) {
-                    break;
+            for (int i = 0; i < _annotations.length; i++) {
+                if (_annotations[i] != null) {
+                    count++;
                 }
-                ii++;
-                count = ii;
             }
         }
         // if there aren't any, we're done

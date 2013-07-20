@@ -39,23 +39,12 @@ final class IonBoolLite
         super(context, isNull);
     }
 
-    /**
-     * makes a copy of this IonBool including a copy
-     * of the Boolean value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonBoolLite clone()
     {
         IonBoolLite clone = new IonBoolLite(this._context.getSystem(), this.isNullValue());
 
-        // this copies the flags member which will
-        // copy the is null and is bool true state
-        // as a "side effect"
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
 
         return clone;
     }

@@ -31,7 +31,7 @@ final class IonSymbolLite
     private int _sid = UNKNOWN_SYMBOL_ID;
 
     /**
-     * Constructs a <code>null.symbol</code> value.
+     * @param isNull if {@code true}, constructs a {@code null.symbol} value.
      */
     public IonSymbolLite(IonSystemLite system, boolean isNull)
     {
@@ -179,7 +179,7 @@ final class IonSymbolLite
             if (name != null)
             {
                 // if this is a mutable value we'll hang onto
-                // our know known symbol table so we don't have
+                // our now known symbol table so we don't have
                 // to look it up again.
                 // If the value is immutable, honor that contract.
                 if (_isLocked() == false) {

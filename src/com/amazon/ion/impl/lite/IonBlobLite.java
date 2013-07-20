@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -29,13 +29,6 @@ final class IonBlobLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonBlob including an independant
-     * copy of the bytes. It also calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
-     */
     @Override
     public IonBlobLite clone()
     {

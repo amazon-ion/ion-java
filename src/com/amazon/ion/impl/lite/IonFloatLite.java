@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -17,8 +17,6 @@ final class IonFloatLite
     extends IonValueLite
     implements IonFloat
 {
-    // not needed: static private final int SIZE_OF_IEEE_754_64_BITS = 8;
-
     private static final int HASH_SIGNATURE =
         IonType.FLOAT.toString().hashCode();
 
@@ -32,20 +30,12 @@ final class IonFloatLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonFloat including a copy
-     * of the double value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonFloatLite clone()
     {
         IonFloatLite clone = new IonFloatLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         clone.setValue(this._float_value);
 
         return clone;
@@ -74,13 +64,15 @@ final class IonFloatLite
     public float floatValue()
         throws NullValueException
     {
-        validateThisNotNull();        return _float_value.floatValue();
+        validateThisNotNull();
+        return _float_value.floatValue();
     }
 
     public double doubleValue()
         throws NullValueException
     {
-        validateThisNotNull();        return _float_value.doubleValue();
+        validateThisNotNull();
+        return _float_value.doubleValue();
     }
 
     @Deprecated

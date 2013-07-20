@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -18,9 +18,6 @@ final class IonNullLite
     private static final int HASH_SIGNATURE =
         IonType.NULL.toString().hashCode();
 
-    /**
-     * @param context
-     */
     protected IonNullLite(IonContext context)
     {
         super(context, true);
@@ -32,20 +29,13 @@ final class IonNullLite
         visitor.visit(this);
     }
 
-    /**
-     * makes a copy of this IonNull which, as it has no
-     * value (as such), is immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonNullLite clone()
     {
         IonNullLite clone = new IonNullLite(_context.getSystem());
 
-        clone.copyValueContentFrom(this);
+        // As IonNulls have no value, we only need to copy member fields
+        clone.copyMemberFieldsFrom(this);
 
         return clone;
     }

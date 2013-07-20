@@ -541,8 +541,8 @@ final class IonSystemLite
 
 
     /**
-     * Always returns null, since values in this context are top-level and
-     * stand-alone.
+     * Always returns {@code null}, since all values in this context are
+     * top-level and stand-alone.
      */
     public IonContainerLite getContextContainer()
     {
@@ -559,12 +559,10 @@ final class IonSystemLite
         child.setContext(container);
     }
 
-
-    public SymbolTable getAssignedSymbolTable()
-    {
-        return null;
-    }
-
+    /**
+     * Always return {@code null}, since IonSystems do not own a symbol table
+     * directly (they create them through factories).
+     */
     public SymbolTable getContextSymbolTable()
     {
         return null;

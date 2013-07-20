@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -34,46 +34,37 @@ final class IonStructLite
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
 
-    // TODO: add support for _isOrdered: private boolean _isOrdered = false;
+    // TODO ION-42: add support for _isOrdered
 
-    /**
-     * Constructs a binary-backed struct value.
-     */
     public IonStructLite(IonSystemLite system, boolean isNull)
     {
         super(system, isNull);
     }
 
-    /**
-     * creates a copy of this IonStructImpl.  Most of the work
-     * is actually done by IonContainerImpl.copyFrom() and
-     * IonValueImpl.copyFrom().
-     */
     @Override
     public IonStruct clone()
     {
-       IonStructLite clone = new IonStructLite(_context.getSystem(), false);
+        IonStructLite clone = new IonStructLite(_context.getSystem(), false);
 
-       try {
-          // copy from won't update the map, now call transition to large
-          // to construct the map.  So we'll do that once it's done
-          clone.copyFrom(this);
+        try {
+            clone.copyFrom(this);
 
-          // now force the field map to be built, or
-          // initialized to null
-          if (this._field_map != null) {
-              clone.build_field_map();
-          }
-          else {
-              // this should already be true
-              clone._field_map = null;
-              clone._field_map_duplicate_count = 0;
-          }
-      }
-       catch (IOException e) {
-         throw new IonException(e);
-      }
-       return clone;
+            // copyFrom() won't update the field map, so we call
+            // build_field_map() to build it, if and only if this instance's
+            // field map isn't null
+            if (this._field_map != null) {
+                clone.build_field_map();
+            }
+            else {
+                // this should already be true
+                clone._field_map = null;
+                clone._field_map_duplicate_count = 0;
+            }
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        return clone;
     }
 
     private HashMap<String, Integer> _field_map;
