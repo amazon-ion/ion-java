@@ -471,9 +471,7 @@ abstract class IonContainerLite
 
     public void clearLocalSymbolTable()
     {
-//        if (_context != null) {
-            _context.clearLocalSymbolTable();
-//        }
+        _context.clearLocalSymbolTable();
     }
 
     /**
@@ -614,6 +612,7 @@ abstract class IonContainerLite
                 IonValueLite clonedChild = (IonValueLite) origChild.clone();
                 if (isCloningFieldNames) {
                     String fieldName = origChild.getFieldName();
+                    // THROWS if field name is unknown
                     clonedChild.setFieldName(fieldName);
                 }
                 this.add(i, clonedChild);

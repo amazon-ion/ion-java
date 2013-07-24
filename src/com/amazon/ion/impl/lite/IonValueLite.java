@@ -339,16 +339,6 @@ abstract class IonValueLite
         return this._elementid();
     }
 
-    private int findSymbol(String text)
-    {
-        SymbolTable symbolTable = getSymbolTable();
-        if (symbolTable != null)
-        {
-            SymbolToken tok = symbolTable.find(_fieldName);
-            if (tok != null) return tok.getSid();
-        }
-        return UNKNOWN_SYMBOL_ID;
-    }
 
     public final int getFieldId()
     {
@@ -357,24 +347,36 @@ abstract class IonValueLite
             return _fieldId;
         }
 
-        int sid = findSymbol(_fieldName);
-        return sid;
+        SymbolToken tok = getSymbolTable().find(_fieldName);
+
+        return (tok != null ? tok.getSid() : UNKNOWN_SYMBOL_ID);
     }
 
 
     public final SymbolToken getFieldNameSymbol()
     {
+        // TODO ION-320 We should memoize the results of symtab lookups.
+        // BUT: that could cause thread-safety problems for read-only values.
+        // I think makeReadOnly should populate the tokens fully
+        // so that we only need to lookup from mutable instances.
+        // However, the current invariants on these fields are nonexistant so
+        // I do not trust that its safe to alter them here.
+
         int sid = _fieldId;
-        String text;
-        if (_fieldName != null) {
-            text = _fieldName;
-            if (sid == UNKNOWN_SYMBOL_ID) {
-                sid = findSymbol(_fieldName);
+        String text = _fieldName;
+        if (text != null)
+        {
+            if (sid == UNKNOWN_SYMBOL_ID)
+            {
+                SymbolToken tok = getSymbolTable().find(text);
+                if (tok != null)
+                {
+                    return tok;
+                }
             }
         }
         else if (sid > 0) {
             text = getSymbolTable().findKnownSymbol(sid);
-            // TODO memoize interned text?
         }
         else {
             // not a struct field
@@ -425,11 +427,9 @@ abstract class IonValueLite
 
     void clearSymbolIDValues()
     {
-        IonContext context = getContext();
-        if (context != null) {
-            context.clearLocalSymbolTable();
-        }
-        return;
+        getContext().clearLocalSymbolTable();
+
+        // TODO ION-320 shouldn't we clear sids in field name and annotations?
     }
 
     /** Attempts to intern the given symbol */
@@ -455,7 +455,12 @@ abstract class IonValueLite
         _fieldName = name;
     }
 
-    /** Both parts of the symbol are trusted! */
+    /**
+     * Sets the field name and ID based on a SymbolToken.
+     * Both parts of the SymbolToken are trusted!
+     *
+     * @param name is not retained by this value, but both fields are copied.
+     */
     final void setFieldNameSymbol(SymbolToken name)
     {
         assert(this.getContainer() == null);
@@ -469,6 +474,7 @@ abstract class IonValueLite
         if (_fieldName != null) return _fieldName;
         if (_fieldId < 0) return null;
 
+        // TODO ION-320 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
     }
 
@@ -477,6 +483,9 @@ abstract class IonValueLite
         return getFieldId();
     }
 
+    /**
+     * @return not null, <b>in conflict with the public documentation</b>.
+     */
     public SymbolTable getSymbolTable()
     {
         assert ! (this instanceof IonDatagram);
@@ -869,6 +878,11 @@ abstract class IonValueLite
         // in the values all the symbol value should be
         // represented by their string values so this should
         // not be an issue.
+
+        // BUT IT *IS* AN ISSUE, unless we can guarantee that we have all
+        // symbol text already pulled from the symtab, and it's not clear that
+        // is invariant.
+
         _context = this.getSystem();
 
         _fieldName = null;
