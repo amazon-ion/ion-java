@@ -729,6 +729,14 @@ public final class Timestamp
         return new IllegalArgumentException("invalid timestamp: " + input);
     }
 
+    static final String NULL_TIMESTAMP_IMAGE = "null.timestamp";
+    static final int    LEN_OF_NULL_IMAGE    = NULL_TIMESTAMP_IMAGE.length();
+    static final int    END_OF_YEAR          =  4;  // 1234T
+    static final int    END_OF_MONTH         =  7;  // 1234-67T
+    static final int    END_OF_DAY           = 10;  // 1234-67-90T
+    static final int    END_OF_MINUTES       = 16;
+    static final int    END_OF_SECONDS       = 19;
+
 
     /**
      * Returns a new Timestamp that represents the point in time, precision
@@ -754,35 +762,28 @@ public final class Timestamp
      */
     public static Timestamp valueOf(CharSequence ionFormattedTimestamp)
     {
-        final String NULL_TIMESTAMP_IMAGE = "null.timestamp";
-        final int    LEN_OF_NULL_IMAGE    = NULL_TIMESTAMP_IMAGE.length();
-        final int    END_OF_YEAR          =  4;  // 1234T
-        final int    END_OF_MONTH         =  7;  // 1234-67T
-        final int    END_OF_DAY           = 10;  // 1234-67-90T
-        final int    END_OF_MINUTES       = 16;
-        final int    END_OF_SECONDS       = 19;
+        final CharSequence in = ionFormattedTimestamp;
+        int pos;
 
-        int temp, pos;
-
-        final int length = ionFormattedTimestamp.length();
+        final int length = in.length();
         if (length == 0)
         {
-            throw fail(ionFormattedTimestamp);
+            throw fail(in);
         }
 
         // check for 'null.timestamp'
-        if (ionFormattedTimestamp.charAt(0) == 'n') {
+        if (in.charAt(0) == 'n') {
             if (length >= LEN_OF_NULL_IMAGE
-                && NULL_TIMESTAMP_IMAGE.equals(ionFormattedTimestamp.subSequence(0, LEN_OF_NULL_IMAGE).toString()))
+                && NULL_TIMESTAMP_IMAGE.contentEquals(in.subSequence(0, LEN_OF_NULL_IMAGE)))
             {
                 if (length > LEN_OF_NULL_IMAGE) {
-                    if (!isValidFollowChar(ionFormattedTimestamp.charAt(LEN_OF_NULL_IMAGE))) {
-                        throw fail(ionFormattedTimestamp);
+                    if (!isValidFollowChar(in.charAt(LEN_OF_NULL_IMAGE))) {
+                        throw fail(in);
                     }
                 }
                 return null;
             }
-            throw fail(ionFormattedTimestamp);
+            throw fail(in);
         }
 
         int year  = 1;
@@ -798,46 +799,43 @@ public final class Timestamp
         do {
             // otherwise we expect yyyy-mm-ddThh:mm:ss.ssss+hh:mm
             if (length < END_OF_YEAR + 1) {  // +1 for the "T"
-                throw fail(ionFormattedTimestamp,
-                           "too short (must be at least yyyyT)");
+                throw fail(in, "year is too short (must be at least yyyyT)");
             }
             pos = END_OF_YEAR;
             precision = Precision.YEAR;
-            year  = read_digits(ionFormattedTimestamp, 0, 4, -1, "year");
+            year  = read_digits(in, 0, 4, -1, "year");
 
-            char c = ionFormattedTimestamp.charAt(END_OF_YEAR);
+            char c = in.charAt(END_OF_YEAR);
             if (c == 'T') break;
             if (c != '-') {
-                throw fail(ionFormattedTimestamp,
+                throw fail(in,
                            "expected \"-\" between year and month, found "
                                + printCodePointAsString(c));
             }
             if (length < END_OF_MONTH + 1) {  // +1 for the "T"
-                throw fail(ionFormattedTimestamp,
-                           "month is too short (must be yyyy-mmT)");
+                throw fail(in, "month is too short (must be yyyy-mmT)");
             }
             pos = END_OF_MONTH;
             precision = Precision.MONTH;
-            month = read_digits(ionFormattedTimestamp, END_OF_YEAR + 1, 2, -1, "month");
+            month = read_digits(in, END_OF_YEAR + 1, 2, -1,  "month");
 
-            c = ionFormattedTimestamp.charAt(END_OF_MONTH);
+            c = in.charAt(END_OF_MONTH);
             if (c == 'T') break;
             if (c != '-') {
-                throw fail(ionFormattedTimestamp,
+                throw fail(in,
                            "expected \"-\" between month and day, found "
                                + printCodePointAsString(c));
             }
             if (length < END_OF_DAY) {
-                throw fail(ionFormattedTimestamp,
-                           "too short for yyyy-mm-dd");
+                throw fail(in, "too short for yyyy-mm-dd");
             }
             pos = END_OF_DAY;
             precision = Precision.DAY;
-            day   = read_digits(ionFormattedTimestamp, END_OF_MONTH + 1, 2, -1, "day");
+            day   = read_digits(in, END_OF_MONTH + 1, 2, -1, "day");
             if (length == END_OF_DAY) break;
-            c = ionFormattedTimestamp.charAt(END_OF_DAY);
+            c = in.charAt(END_OF_DAY);
             if (c != 'T') {
-                throw fail(ionFormattedTimestamp,
+                throw fail(in,
                            "expected \"T\" after day, found "
                                + printCodePointAsString(c));
             }
@@ -845,60 +843,65 @@ public final class Timestamp
 
             // now lets see if we have a time value
             if (length < END_OF_MINUTES) {
-                throw fail(ionFormattedTimestamp,
-                           "too short for yyyy-mm-ddThh:mm");
+                throw fail(in, "too short for yyyy-mm-ddThh:mm");
             }
-            hour   = read_digits(ionFormattedTimestamp, 11, 2, ':', "hour");
-            minute = read_digits(ionFormattedTimestamp, 14, 2, -1, "minutes");
+            hour   = read_digits(in, 11, 2, ':', "hour");
+            minute = read_digits(in, 14, 2, -1, "minutes");
             pos = END_OF_MINUTES;
             precision = Precision.MINUTE;
 
             // we may have seconds
-            if (length <= END_OF_MINUTES || ionFormattedTimestamp.charAt(END_OF_MINUTES) != ':') break;
-            if (length < END_OF_SECONDS) {
-                throw fail(ionFormattedTimestamp,
-                           "too short for yyyy-mm-ddThh:mm:ss");
+            if (length <= END_OF_MINUTES || in.charAt(END_OF_MINUTES) != ':')
+            {
+                break;
             }
-            seconds = read_digits(ionFormattedTimestamp, 17, 2, -1, "seconds");
+            if (length < END_OF_SECONDS) {
+                throw fail(in, "too short for yyyy-mm-ddThh:mm:ss");
+            }
+            seconds = read_digits(in, 17, 2, -1, "seconds");
             pos = END_OF_SECONDS;
             precision = Precision.SECOND;
 
-            if (length <= END_OF_SECONDS || ionFormattedTimestamp.charAt(END_OF_SECONDS) != '.') break;
+            if (length <= END_OF_SECONDS || in.charAt(END_OF_SECONDS) != '.')
+            {
+                break;
+            }
             precision = Precision.SECOND;
             pos = END_OF_SECONDS + 1;
-            while (length > pos && Character.isDigit(ionFormattedTimestamp.charAt(pos))) {
+            while (length > pos && Character.isDigit(in.charAt(pos))) {
                 pos++;
             }
             if (pos <= END_OF_SECONDS + 1) {
-                throw fail(ionFormattedTimestamp,
+                throw fail(in,
                            "must have at least one digit after decimal point");
             }
             precision = Precision.FRACTION;
-            fraction = new BigDecimal(ionFormattedTimestamp.subSequence(19, pos).toString());
+            fraction = new BigDecimal(in.subSequence(19, pos).toString());
         } while (false);
 
         Integer offset;
 
         // now see if they included a timezone offset
-        char timezone_start = pos < length ? ionFormattedTimestamp.charAt(pos) : '\n';
+        char timezone_start = pos < length ? in.charAt(pos) : '\n';
         if (timezone_start == 'Z') {
             offset = 0;
             pos++;
         }
-        else if (timezone_start == '+' || timezone_start == '-') {
+        else if (timezone_start == '+' || timezone_start == '-')
+        {
             if (length < pos + 5) {
-                throw fail(ionFormattedTimestamp, "local offset too short");
+                throw fail(in, "local offset too short");
             }
             // +/- hh:mm
             pos++;
-            temp = read_digits(ionFormattedTimestamp, pos, 2, ':', "local offset hours");
+            int temp = read_digits(in, pos, 2, ':', "local offset hours");
             pos += 3;
-            temp = temp * 60 + read_digits(ionFormattedTimestamp, pos, 2, -1, "local offset minutes");
+            temp = temp * 60 + read_digits(in, pos, 2, -1,
+                                           "local offset minutes");
             pos += 2;
             if (temp >= 24*60)
             {
-                throw fail(ionFormattedTimestamp,
-                           "local offset must not be more than 1 day");
+                throw fail(in, "local offset must not be more than 1 day");
             }
             if (timezone_start == '-') {
                 temp = -temp;
@@ -918,14 +921,13 @@ public final class Timestamp
                 case DAY:
                     break;
                 default:
-                    throw fail(ionFormattedTimestamp, "missing local offset");
+                    throw fail(in, "missing local offset");
             }
             offset = null;
         }
-        if (length > (pos + 1)
-            && !isValidFollowChar(ionFormattedTimestamp.charAt(pos + 1)))
+        if (length > (pos + 1) && !isValidFollowChar(in.charAt(pos + 1)))
         {
-            throw fail(ionFormattedTimestamp, "invalid excess characters");
+            throw fail(in, "invalid excess characters");
         }
 
         Timestamp ts =
