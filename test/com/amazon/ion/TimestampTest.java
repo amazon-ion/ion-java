@@ -1099,6 +1099,24 @@ public class TimestampTest
         catch (NullPointerException e) { }
     }
 
+    @Test
+    public void testNewTimestampWithLargeFraction()
+    {
+        BigDecimal frac = new BigDecimal("1.23");
+        try {
+            new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+
+        try {
+            Timestamp.createFromUtcFields(FRACTION,
+                                          2000, 11, 14, 17, 30, 12, frac, 0);
+            fail("Expected exception");
+        }
+        catch (IllegalArgumentException e) { }
+    }
+
 
     @Test
     public void testTimestampForSecondValidation()

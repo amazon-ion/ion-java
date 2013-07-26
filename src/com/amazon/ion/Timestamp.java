@@ -490,6 +490,8 @@ public final class Timestamp
      * than the precision parameter {@code p} will be <em>excluded</em> from the
      * calculation of the resulting Timestamp's point in time.
      *
+     * @param frac must be >= 0 and < 1
+     *
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset

@@ -663,11 +663,11 @@ final class IonBinary
         int len = 0;
         switch (di.getPrecision()) {
         case FRACTION:
-            // TODO why was this explicitly NEGATIVE_ZERO?
-            // As a result we've been generating binary data with wacky
-            // fractions.
-            len += IonBinary.lenIonDecimal(di.getFractionalSecond(),
-                                        /* forceContent */ true);
+            BigDecimal fraction = di.getFractionalSecond();
+            assert fraction.signum() >=0 && ! fraction.equals(BigDecimal.ZERO)
+                : "Bad timestamp fraction: " + fraction;
+
+            len += IonBinary.lenIonDecimal(fraction, /* forceContent */ true);
         case SECOND:
             len++; // len of seconds < 60
         case MINUTE:
@@ -2777,27 +2777,36 @@ done:       for (;;) {
         /** Zero-length byte array. */
         private static final byte[] positiveZeroBitArray = EMPTY_BYTE_ARRAY;
 
+        /** Content for a "forced" positive zero mantissa. */
+        private static final byte[] forcedPositiveZeroBitArray = new byte[] { (byte) 0 };
+
         // also used by writeDate()
         public int writeDecimalContent(BigDecimal bd,
                                        boolean forceContent)
             throws IOException
         {
-            int returnlen = 0;
-
             // check for null and 0. which are encoded in the nibble itself.
             if (bd == null) return 0;
 
             if (isNibbleZero(bd, forceContent)) return 0;
 
-            // otherwise we do it the hard way ....
+            // Ion stores exponent, BigDecimal uses the negation "scale"
+            int exponent = -bd.scale();
+
+            // The exponent isn't optional (except for the 0d0 case above).
+            int returnlen = writeVarIntValue(exponent,
+                                             /* force_zero_write*/ true);
+
             BigInteger mantissa = bd.unscaledValue();
 
             byte[] mantissaBits;
             switch (mantissa.signum()) {
             case 0:
-                // FIXME ION-105 (?) Why does forceContent imply negative zero?
-                if (forceContent || Decimal.isNegativeZero(bd)) {
+                if (Decimal.isNegativeZero(bd)) {
                     mantissaBits = negativeZeroBitArray;
+                }
+                else if (forceContent) {
+                    mantissaBits = forcedPositiveZeroBitArray;
                 }
                 else {
                     mantissaBits = positiveZeroBitArray;
@@ -2818,10 +2827,6 @@ done:       for (;;) {
             default:
                 throw new IllegalStateException("mantissa signum out of range");
             }
-
-            // Ion stores exponent, BigDecimal uses the negation "scale"
-            int exponent = -bd.scale();
-            returnlen += this.writeVarIntValue(exponent, true);
 
             this.write(mantissaBits, 0, mantissaBits.length);
             returnlen += mantissaBits.length;
