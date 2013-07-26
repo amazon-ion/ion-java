@@ -116,26 +116,25 @@ final class IonSystemLite
             return (T) value.clone();
         }
 
-        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
-        IonDatagram datagram = newDatagram();
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
-        IonReader reader = makeSystemReader(value.getSystem(), value);
-
-        try {
-            writer.writeValues(reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
         if (value instanceof IonDatagram)
         {
+            IonDatagram datagram = newDatagram();
+            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+            IonReader reader = makeSystemReader(value.getSystem(), value);
+
+            try {
+                writer.writeValues(reader);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+
             return (T) datagram;
         }
 
-        IonValue copy = datagram.get(0);
-        copy.removeFromContainer();
-        return (T) copy;
+        IonReader reader = newReader(value);
+        reader.next();
+        return (T) newValue(reader);
     }
 
     public IonCatalog getCatalog()

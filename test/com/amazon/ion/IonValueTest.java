@@ -284,4 +284,24 @@ public class IonValueTest
         assertEquals(pretty,
                      v.toPrettyString());
     }
+
+
+    @Test
+    public void testCloningSystemLookingValue()
+    {
+        IonList list = (IonList) oneValue("[$ion_1_0]");
+        IonValue v = list.get(0);
+
+        // Try using the same system.
+        IonValue v2 = system().clone(v);
+        IonAssert.assertIonEquals(v, v2);
+
+        // Try cross-product of system implementations.
+        for (DomType dom : DomType.values())
+        {
+            IonSystem system2 = newSystem(null, dom);
+            v2 = system2.clone(v);
+            IonAssert.assertIonEquals(v, v2);
+        }
+    }
 }

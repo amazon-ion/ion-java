@@ -49,7 +49,6 @@ import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -1082,28 +1081,25 @@ final class IonSystemImpl
             return (T) value.clone();
         }
 
-        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
         if (value instanceof IonDatagram)
         {
-            byte[] data = ((IonDatagram)value).getBytes();
+            IonDatagram datagram = newDatagram();
+            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+            IonReader reader = makeSystemReader(value.getSystem(), value);
 
-            // TODO This can probably be optimized further.
-            return (T) new IonDatagramImpl(this, this.getCatalog(), data);
+            try {
+                writer.writeValues(reader);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+
+            return (T) datagram;
         }
 
-        StringBuilder buffer = new StringBuilder();
-        Printer printer = new Printer();
-        try
-        {
-            printer.print(value, buffer);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
-
-        String text = buffer.toString();
-        return (T) singleValue(text);
+        IonReader reader = newReader(value);
+        reader.next();
+        return (T) newValue(reader);
     }
 
 
