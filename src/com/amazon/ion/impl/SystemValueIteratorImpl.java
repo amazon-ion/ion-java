@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -17,7 +17,6 @@ import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.io.StringReader;
 import java.util.NoSuchElementException;
 
 /**
@@ -32,7 +31,6 @@ final class SystemValueIteratorImpl
 
     private Reader           _input;
     private InputStream      _stream;  // for input of binary byte data
-    private IonParser        _parser;
     private BufferManager    _buffer;
     private int              _buffer_offset;
 
@@ -41,25 +39,8 @@ final class SystemValueIteratorImpl
 
     private boolean      _at_eof;
     private boolean      _currentIsHidden;
-    private boolean      _just_wrote_ivm;
     private IonValueImpl _curr;
     private IonValueImpl _next;
-
-    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
-                                                  String s)
-    {
-        SystemValueIterator reader = new SystemValueIteratorImpl(system, s);
-        return reader;
-    }
-
-    static SystemValueIterator makeSystemIterator(IonSystemImpl system,
-                                                  IonCatalog catalog,
-                                                  Reader input)
-    {
-        SystemValueIterator reader =
-            new SystemValueIteratorImpl(system, catalog, input);
-        return reader;
-    }
 
     static SystemValueIterator makeSystemIterator(IonSystemImpl system,
                                                   IonCatalog catalog,
@@ -79,69 +60,7 @@ final class SystemValueIteratorImpl
         return reader;
     }
 
-    /**
-     * Open a SystemReader over a string as the data source.  A Java
-     * String is, necessarily, text input (as distinct from binary data).
 
-     * @throws NullPointerException if any parameter is null.
-     */
-    private SystemValueIteratorImpl(IonSystemImpl system, String s) {
-        this(system, system.getCatalog(), new StringReader(s));
-    }
-
-    /**
-     * Open a SystemReader over a character data source.  Character
-     * data is necessarily text input (as distinct from binary data).
-     *
-     * @throws NullPointerException if any parameter is null.
-     */
-    private SystemValueIteratorImpl(IonSystemImpl system,
-                        IonCatalog catalog,
-                        Reader input)
-    {
-        // TODO this should be an unmodifiable system symtab
-        // but we can't yet replace it with a local symtab on-demand.
-        // was: this(system, catalog, system.newLocalSymbolTable(), input);
-        this(system, catalog, null, input);
-    }
-
-    /**
-     * Open a SystemReader over a character data source.  Character
-     * data is necessarily text input (as distinct from binary data).
-     *
-     * @param initialSymboltable must be local, not shared.
-     * @throws NullPointerException if any parameter is null.
-     */
-    private SystemValueIteratorImpl(IonSystemImpl system,
-                        IonCatalog catalog,
-                        SymbolTable initialSymboltable,
-                        Reader input)
-    {
-        if (system == null || catalog == null)
-        {
-            throw new NullPointerException();
-        }
-        assert initialSymboltable == null || initialSymboltable.isLocalTable();
-
-        _system = system;
-        _catalog = catalog;
-        _currentSymbolTable = initialSymboltable;
-        initialize(input, 0);
-    }
-
-
-    /**
-     * initializes a SystemReader to read character input
-     * data, which means, implicitly, the underlying data
-     * is character data.
-     *
-     * @throws NullPointerException if input is null.
-     */
-    private void initialize(Reader input, int limit) {
-        _input = input;
-        _parser = new IonParser(_input);
-        _buffer = _parser.getByteBuffer();
-    }
 
     /**
      * Creates a new system reader using a specific catalog, reading data from
@@ -439,34 +358,7 @@ final class SystemValueIteratorImpl
 
             }
             else if (buffer.buffer().size() <= _buffer_offset) {
-                // if the buffer has run out of data then we need to refill it
-                // this happens when we're parsing text (if we were reading
-                // binary either the data would be loaded or we're at eof)
-
-                // we used up the buffer we've seen so far ...
-                // so parse another value out of the input
-                if (_parser != null)
-                {
-                    if (_buffer_offset == 0) {
-                        // Start the buffer with the BVM.
-                        IonBinary.Writer writer = buffer.openWriter();
-                         writer.setPosition(_buffer_offset);
-                        writer.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
-                        _just_wrote_ivm = true;
-                    }
-                    else {
-                        _parser.parse( this
-                                      ,_buffer_offset
-                                      ,_just_wrote_ivm
-                                      ,0
-                        );
-                    }
-                }
-                if (buffer.buffer().size() <= _buffer_offset) {
-                    // we didn't make any progress,
-                    // so there's no more data for us
-                    _at_eof = true;
-                }
+                _at_eof = true;
             }
 
             // now that we've got a value in the buffer
@@ -523,7 +415,6 @@ final class SystemValueIteratorImpl
             SymbolTable sys = _system.getSystemSymbolTable();
             _currentSymbolTable = newLocalSymtab(sys, _catalog, struct);
             _currentIsHidden = true;
-            _just_wrote_ivm = false;
         }
         else if (_system.valueIsSystemId(curr))
         {
@@ -539,11 +430,9 @@ final class SystemValueIteratorImpl
             _currentSymbolTable =
                 ((_Private_IonValue)curr).getAssignedSymbolTable();
             _currentIsHidden = true;
-            _just_wrote_ivm = true;
         }
         else {
             _currentIsHidden = false;
-            _just_wrote_ivm = false;
         }
     }
 

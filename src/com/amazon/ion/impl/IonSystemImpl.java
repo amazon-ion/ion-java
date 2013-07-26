@@ -51,7 +51,6 @@ import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -514,35 +513,6 @@ final class IonSystemImpl
 
 
     /**
-     * Creates a new iterator, wrapping an array of text or binary data.
-     *
-     * @param catalog The catalog to use.
-     * @param ionData may be (UTF-8) text or binary.
-     * <em>This method assumes ownership of the array</em> and may modify it at
-     * will.
-     *
-     * @throws NullPointerException if <code>ionData</code> is null.
-     */
-    @Deprecated // TODO remove!
-    SystemValueIterator newLegacySystemIterator(IonCatalog catalog,
-                                                byte[] ionData)
-    {
-        if (catalog == null) catalog = getCatalog();
-        boolean isBinary = isIonBinary(ionData);
-
-        SystemValueIterator sysReader;
-        if (isBinary) {
-            sysReader = newBinarySystemIterator(catalog, ionData);
-        }
-        else {
-            sysReader = newTextSystemIterator(catalog, ionData);
-        }
-
-        return sysReader;
-    }
-
-
-    /**
      * Creates a new reader, wrapping an array of binary data.
      *
      * @param catalog the catalog to use.
@@ -552,8 +522,8 @@ final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemValueIterator newBinarySystemIterator(IonCatalog catalog,
-                                                        byte[] ionBinary)
+    SystemValueIterator newBinarySystemIterator(IonCatalog catalog,
+                                                byte[] ionBinary)
     {
         if (catalog == null) catalog = getCatalog();
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
@@ -561,26 +531,6 @@ final class IonSystemImpl
         //return new SystemReader(this, catalog, buffer);
         SystemValueIterator reader = makeSystemIterator(this, catalog, buffer);
         return reader;
-    }
-
-
-    /**
-     * Creates a new reader, wrapping bytes holding UTF-8 text.
-     *
-     * @param catalog the catalog to use.
-     * @param ionText must be UTF-8 encoded Ion text data, not binary.
-     * <em>This method assumes ownership of the array</em> and may modify it at
-     * will.
-     *
-     * @throws NullPointerException if <code>ionText</code> is null.
-     */
-    private SystemValueIterator newTextSystemIterator(IonCatalog catalog,
-                                                      byte[] ionText)
-    {
-        if (catalog == null) catalog = getCatalog();
-        ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
-        Reader reader = new InputStreamReader(stream, UTF8_CHARSET);
-        return makeSystemIterator(this, catalog, reader);
     }
 
 

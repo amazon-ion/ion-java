@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -62,9 +62,9 @@ final class IonDatagramImpl
     //=========================================================================
 
     /**
-     * Creates a datagram wrapping bytes containing Ion text or binary data.
+     * Creates a datagram wrapping bytes containing Ion binary data.
      *
-     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+     * @param ionData must be Ion binary data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
@@ -74,7 +74,7 @@ final class IonDatagramImpl
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog,
                            byte[] ionData)
     {
-        this(system, system.newLegacySystemIterator(catalog, ionData));
+        this(system, system.newBinarySystemIterator(catalog, ionData));
     }
 
 
