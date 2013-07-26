@@ -798,13 +798,15 @@ class ReverseBinaryEncoder
     private static final byte[] negativeZeroBitArray = new byte[] { (byte) 0x80 };
     private static final byte[] positiveZeroBitArray = new byte[0];
 
+    /**
+     * @see com.amazon.ion.impl.IonBinary.Writer#writeDecimalContent
+     */
     private void writeIonDecimalContent(BigDecimal bd)
     {
         BigInteger mantissa = bd.unscaledValue();
 
         byte[] mantissaBits;
 
-        // TODO ION-346
         switch (mantissa.signum())
         {
             case 0:

@@ -169,14 +169,17 @@ final class IonBinary
         return len;
     }
 
-    static public int writeVarUInt(OutputStream userstream, long value) throws IOException
+    static public int writeVarUInt(OutputStream userstream, long value)
+        throws IOException
     {
         int len = IonBinary.lenVarUInt(value);
         writeVarUInt(userstream, value, len, false);
         return len;
     }
 
-    static public int writeVarUInt(OutputStream userstream, long value, int len, boolean force_zero_write) throws IOException
+    static public int writeVarUInt(OutputStream userstream, long value, int len,
+                                   boolean force_zero_write)
+        throws IOException
     {
         int mask = 0x7F;
         assert len == IonBinary.lenVarUInt(value);
@@ -207,7 +210,8 @@ final class IonBinary
         return len;
     }
 
-    static public int writeString(OutputStream userstream, String value) throws IOException
+    static public int writeString(OutputStream userstream, String value)
+        throws IOException
     {
         int len = 0;
         for (int ii=0; ii<value.length(); ii++) {
@@ -608,12 +612,10 @@ final class IonBinary
     }
 
     /**
-     * Would this value have a zero length-nibble?  That is: is it 0d0 AND
-     * we are not forcing at least one byte to be encoded?
+     * Would this value have a zero length-nibble?  That is: is it 0d0 ?
      */
-    public static boolean isNibbleZero(BigDecimal bd, boolean forceContent)
+    public static boolean isNibbleZero(BigDecimal bd)
     {
-        if (forceContent) return false;
         if (Decimal.isNegativeZero(bd)) return false;
         if (bd.signum() != 0) return false;
         int scale = bd.scale();
@@ -623,19 +625,19 @@ final class IonBinary
     /**
      * @param bd must not be null.
      */
-    public static int lenIonDecimal(BigDecimal bd, boolean forceContent) {
-
+    public static int lenIonDecimal(BigDecimal bd)
+    {
         // first check for the special cases of null
-        // and 0.0 which are encoded in the nibble
+        // and 0d0 which are encoded in the nibble
         if (bd == null) return 0;
-        if (isNibbleZero(bd, forceContent)) return 0;
+        if (isNibbleZero(bd)) return 0;
 
         // otherwise do this the hard way
         BigInteger mantissa = bd.unscaledValue();
 
-        // negative zero forces the zero to be written, positive zero does not
-        forceContent = forceContent || Decimal.isNegativeZero(bd);
-        int mantissaByteCount = lenInt(mantissa, forceContent);
+        // negative zero mantissa must be written, positive zero does not
+        boolean forceMantissa = Decimal.isNegativeZero(bd);
+        int mantissaByteCount = lenInt(mantissa, forceMantissa);
 
         // We really need the length of the exponent (-scale) but in our
         // representation the length is the same regardless of sign.
@@ -667,7 +669,12 @@ final class IonBinary
             assert fraction.signum() >=0 && ! fraction.equals(BigDecimal.ZERO)
                 : "Bad timestamp fraction: " + fraction;
 
-            len += IonBinary.lenIonDecimal(fraction, /* forceContent */ true);
+            // Since the fraction is not 0d0, at least one subfield of the
+            // exponent and mantissa is non-zero, so this will always write at
+            // least one byte.
+            int fracLen = IonBinary.lenIonDecimal(fraction);
+            assert fracLen > 0;
+            len += fracLen;
         case SECOND:
             len++; // len of seconds < 60
         case MINUTE:
@@ -824,7 +831,7 @@ final class IonBinary
     public static int lenIonDecimalWithTypeDesc(BigDecimal v) {
         int len = 0;
         if (v != null) {
-            int vlen = lenIonDecimal(v, false);
+            int vlen = lenIonDecimal(v);
             len += vlen;
             len += lenLenFieldWithOptionalNibble(vlen);
         }
@@ -2725,8 +2732,9 @@ done:       for (;;) {
             }
             if (precisionIncludes(precision_flags, Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
-                returnlen += this.writeDecimalContent(di.getZFractionalSecond(),
-                                                      true /* forceContent */);
+                BigDecimal fraction = di.getZFractionalSecond();
+                assert ! fraction.equals(BigDecimal.ZERO);
+                returnlen += this.writeDecimalContent(fraction);
             }
             return returnlen;
         }
@@ -2740,13 +2748,13 @@ done:       for (;;) {
                 returnlen =
                     this.writeByte(IonDecimalImpl.NULL_DECIMAL_TYPEDESC);
             }
-            else if (isNibbleZero(bd, false)) {
+            else if (isNibbleZero(bd)) {
                 returnlen =
                     this.writeByte(IonDecimalImpl.ZERO_DECIMAL_TYPEDESC);
             }
             else {
                 // otherwise we to it the hard way ....
-                int len = IonBinary.lenIonDecimal(bd, false);
+                int len = IonBinary.lenIonDecimal(bd);
 
                 if (len < _Private_IonConstants.lnIsVarLen) {
                     returnlen = this.writeByte(
@@ -2765,7 +2773,7 @@ done:       for (;;) {
                         );
                     this.writeVarIntValue(len, false);
                 }
-                int wroteDecimalLen = writeDecimalContent(bd, false);
+                int wroteDecimalLen = writeDecimalContent(bd);
                 assert wroteDecimalLen == len;
                 returnlen += wroteDecimalLen;
             }
@@ -2777,18 +2785,17 @@ done:       for (;;) {
         /** Zero-length byte array. */
         private static final byte[] positiveZeroBitArray = EMPTY_BYTE_ARRAY;
 
-        /** Content for a "forced" positive zero mantissa. */
-        private static final byte[] forcedPositiveZeroBitArray = new byte[] { (byte) 0 };
 
-        // also used by writeDate()
-        public int writeDecimalContent(BigDecimal bd,
-                                       boolean forceContent)
+        /**
+         * @see com.amazon.ion.impl.lite.ReverseBinaryEncoder#writeIonDecimalContent
+         */
+        public int writeDecimalContent(BigDecimal bd)
             throws IOException
         {
             // check for null and 0. which are encoded in the nibble itself.
             if (bd == null) return 0;
 
-            if (isNibbleZero(bd, forceContent)) return 0;
+            if (isNibbleZero(bd)) return 0;
 
             // Ion stores exponent, BigDecimal uses the negation "scale"
             int exponent = -bd.scale();
@@ -2804,9 +2811,6 @@ done:       for (;;) {
             case 0:
                 if (Decimal.isNegativeZero(bd)) {
                     mantissaBits = negativeZeroBitArray;
-                }
-                else if (forceContent) { // TODO ION-346
-                    mantissaBits = forcedPositiveZeroBitArray;
                 }
                 else {
                     mantissaBits = positiveZeroBitArray;

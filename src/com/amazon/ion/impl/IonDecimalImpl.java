@@ -202,7 +202,7 @@ final class IonDecimalImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue() == true;
-        return IonBinary.lenIonDecimal(_decimal_value, false);
+        return IonBinary.lenIonDecimal(_decimal_value);
     }
 
     @Override
@@ -275,7 +275,7 @@ final class IonDecimalImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        int wlen = writer.writeDecimalContent(_decimal_value, false);
+        int wlen = writer.writeDecimalContent(_decimal_value);
         assert wlen == valueLen;
 
         return;

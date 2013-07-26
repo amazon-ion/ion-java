@@ -710,7 +710,7 @@ final class IonWriterSystemBinary
             return;
         }
         startValue(_Private_IonConstants.tidDecimal);
-        int len = _writer.writeDecimalContent(value, false);
+        int len = _writer.writeDecimalContent(value);
         _patch.patchValue(len);
         closeValue();
     }
