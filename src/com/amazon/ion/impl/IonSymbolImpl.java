@@ -99,6 +99,14 @@ final class IonSymbolImpl
     @Override
     public IonSymbolImpl clone()
     {
+        // If this symbol has unknown text but known Sid, this symbol has no
+        // semantic meaning, as such cloning should throw an exception.
+        if (!isNullValue()
+            && mySid != UNKNOWN_SYMBOL_ID
+            && _stringValue() == null) {
+            throw new UnknownSymbolException(mySid);
+        }
+
         IonSymbolImpl clone = new IonSymbolImpl(_system);
 
         clone.copyFrom(this);

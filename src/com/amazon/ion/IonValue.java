@@ -376,17 +376,22 @@ public interface IonValue
 
 
     /**
-     * Creates a copy of this value and all its children.  The clone may use
-     * the same shared symbol tables, but it will have an independant local
+     * Creates a copy of this value and all of its children. The cloned value
+     * may use the same shared symbol tables, but it will have an independent local
      * symbol table if necessary.  The cloned value will
-     * be modifiable whether or not this one {@link #isReadOnly()}.
+     * be modifiable regardless of whether this instance {@link #isReadOnly()}.
      * <p>
      * The cloned value will be created in the context of the same
      * {@link ValueFactory} as this instance; if you want a copy using a
      * different factory, then use {@link ValueFactory#clone(IonValue)}
      * instead.
+     *
+     * @throws UnknownSymbolException
+     *          if any part of this value has unknown text but known Sid for
+     *          its field name, annotation or symbol.
      */
-    public IonValue clone();
+    public IonValue clone()
+        throws UnknownSymbolException;
 
 
     /**

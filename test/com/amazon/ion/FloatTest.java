@@ -152,6 +152,8 @@ public class FloatTest
     {
         checkSpecial(Float.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, "+inf",
                      actual);
+        checkSpecial(Float.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, "+inf",
+                     actual.clone());
     }
 
     public void checkNegInf(IonFloat actual)

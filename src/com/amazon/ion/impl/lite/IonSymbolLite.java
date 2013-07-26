@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -49,7 +49,7 @@ final class IonSymbolLite
 
             if (text != null)
             {
-                if ("".equals(text)) {
+                if (text.length() == 0) {
                     throw new EmptySymbolException();
                 }
                 super.setValue(text);
@@ -69,18 +69,29 @@ final class IonSymbolLite
 
 
     /**
-     * makes a copy of this IonString. This calls up to
-     * IonTextImpl to copy the string itself and that in
-     * turn calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
+     * Make a copy of this instance. This calls up to IonTextLite to copy the
+     * string itself and that in turn calls IonValueLite to copy the value's
+     * contents. The field name is not copied. The symbol table is also not
+     * copied as the value is fully materialized and the symbol table is
+     * unnecessary.
+     *
+     * @throws UnknownSymbolException
+     *          if this symbol has unknown text but known Sid
      */
     @Override
     public IonSymbolLite clone()
     {
-        IonSymbolLite clone = new IonSymbolLite(this._context.getSystem(), false);
+        // If this symbol has unknown text but known Sid, this symbol has no
+        // semantic meaning, as such cloning should throw an exception.
+        if (!isNullValue()
+            && _sid != UNKNOWN_SYMBOL_ID
+            && _stringValue() == null) {
+            throw new UnknownSymbolException(_sid);
+        }
 
+        IonSymbolLite clone = new IonSymbolLite(_context.getSystem(), false);
+
+        // Copy relevant member fields and text value
         clone.copyFrom(this);
         clone._sid = UNKNOWN_SYMBOL_ID;
 

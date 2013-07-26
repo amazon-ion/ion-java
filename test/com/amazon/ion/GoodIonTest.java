@@ -113,4 +113,42 @@ public class GoodIonTest
             i.next();
         }
     }
+
+    /**
+     * Test files containing values with unknown text for symbols.
+     */
+    private static final String[] FILES_WITH_UNKNOWN_SYMBOL_TEXT =
+                                  { "good/item1.10n", "good/symbols.ion" };
+
+    /**
+     * Skipping test files with unknown text for symbols.
+     * This is okay because the appropriate test is covered in
+     * {@link SymbolTest#testClone()}.
+     */
+    @Test
+    public void testClone()
+        throws Exception
+    {
+        for (String fileWithUnknownText : FILES_WITH_UNKNOWN_SYMBOL_TEXT)
+        {
+            if (myTestFile.getPath().endsWith(fileWithUnknownText))
+            {
+                return; // Skip test
+            }
+        }
+
+        IonDatagram dg = loader().load(myTestFile);
+
+        // Test on IonDatagram
+        testCloneVariants(dg);
+
+        // Test on values that are not IonDatagram
+        Iterator<IonValue> iter = dg.iterator();
+        while (iter.hasNext())
+        {
+            IonValue original = iter.next();
+            testCloneVariants(original);
+        }
+    }
+
 }

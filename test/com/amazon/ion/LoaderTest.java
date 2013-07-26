@@ -383,7 +383,7 @@ public class LoaderTest
 
     @Test
     public void testCatalogOnLoader() throws Exception {
-        IonSystem sys = system(Symtabs.CATALOG);
+        IonSystem sys = newSystem(Symtabs.CATALOG);
         IonDatagram dg = sys.newDatagram(Symtabs.CATALOG.getTable("fred", 1));
         dg.add().newSymbol("fred_1");
         byte[] raw = dg.getBytes();

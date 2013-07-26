@@ -1083,6 +1083,7 @@ final class IonSystemImpl
             return (T) value.clone();
         }
 
+        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
         if (value instanceof IonDatagram)
         {
             byte[] data = ((IonDatagram)value).getBytes();

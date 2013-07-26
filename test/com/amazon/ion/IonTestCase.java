@@ -235,28 +235,51 @@ public abstract class IonTestCase
     //=========================================================================
     // Fixture Helpers
 
+    /**
+     * @return
+     *          the singleton IonSystem, binary-backed and/or
+     *          stream-copy optimized depending on the injected
+     *          {@link #myDomType} and {@link #myStreamCopyOptimized}.
+     */
     protected _Private_IonSystem system()
     {
         if (mySystem == null)
         {
-            mySystem = system(myCatalog);
+            mySystem = newSystem(myCatalog, getDomType());
         }
         return mySystem;
     }
 
     /**
-     * Returns a separate IonSystem for each call, since the user is passing
-     * in an IonCatalog which changes the state of the IonSystem.
-     *
      * @return
      *          a new IonSystem instance, binary-backed and/or stream-copy
      *          optimized depending on the injected {@link #myDomType} and
      *          {@link #myStreamCopyOptimized}.
      */
-    protected _Private_IonSystem system(IonCatalog catalog)
+    protected _Private_IonSystem newSystem(IonCatalog catalog)
+    {
+        return newSystem(catalog, getDomType());
+    }
+
+    /**
+     * Returns a new IonSystem for each call, using the passed in IonCatalog
+     * to build the IonSystem.
+     *
+     * @param catalog
+     *          the catalog to use when building the IonSystem
+     * @param domType
+     *          the {@link DomType} that the resulting IonSystem is set to
+     *
+     * @return
+     *          a new IonSystem instance, binary-backed and/or stream-copy
+     *          optimized depending on the passed in {@code domType} and
+     *          injected {@link #myStreamCopyOptimized}.
+     */
+    protected _Private_IonSystem newSystem(IonCatalog catalog,
+                                           DomType domType)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
-        BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
+        BuilderHack.setBinaryBacked(b, domType == DomType.BACKED);
         b.withStreamCopyOptimized(myStreamCopyOptimized);
         IonSystem system = b.build();
         return (_Private_IonSystem) system;
@@ -988,16 +1011,81 @@ public abstract class IonTestCase
         }
     }
 
+    public void testCloneVariants(IonValue original)
+    {
+        // Test on IonValue.clone()
+        testSimpleClone(original);
+
+        // Test on ValueFactory.clone() with the same ValueFactory
+        testValueFactoryClone(original, original.getSystem());
+
+        // Test on ValueFactory.clone() with different ValueFactory (and DOM impls)
+        for (DomType domType : DomType.values())
+        {
+            testValueFactoryClone(original,
+                                  newSystem(new SimpleCatalog(), domType));
+        }
+    }
+
     /**
-     * Tests that some data parses, clones, and prints back to the same text.
-     * @param input  Ion text data
+     * Test that a single IonValue created from {@code input}, is
+     * equal to its clone through {@link IonValue#clone()}.
+     *
+     * @param input the original Ion text data
      */
     public void testSimpleClone(String input)
     {
-        IonValue data = system().singleValue(input);
-        IonValue clone = data.clone();
-        assertEquals(input, clone.toString());
-        assertEquals(data, clone);
+        IonValue original = system().singleValue(input);
+        testSimpleClone(original);
+    }
+
+    /**
+     * Test that a single IonValue is equal to its clone through
+     * {@link IonValue#clone()}.
+     *
+     * @param original the original value
+     */
+    public void testSimpleClone(IonValue original)
+    {
+        IonValue clone = original.clone();
+        IonAssert.assertIonEquals(original, clone);
+        assertEquals(original.toString(), clone.toString());
+
+        assertSame("ValueFactory of cloned value should be the same " +
+                   "reference as the original's",
+                   original.getSystem(), clone.getSystem());
+
+        assertNull("Cloned value should not have a container (parent)",
+                   clone.getContainer());
+
+        assertFalse("Cloned value should be modifiable", clone.isReadOnly());
+    }
+
+    /**
+     * Test that a single IonValue is equal to its clone through
+     * {@link ValueFactory#clone(IonValue)}.
+     *
+     * @param original the original value
+     * @param newFactory the {@link ValueFactory} for the new clone
+     */
+    public void testValueFactoryClone(IonValue original,
+                                      ValueFactory newFactory)
+    {
+        IonValue clone = newFactory.clone(original);
+        IonAssert.assertIonEquals(original, clone);
+
+        // TODO ION-339 IonSystemLite.clone() on a value that is in IonSystemImpl
+        // doesn't seem to copy over local symbol tables.
+//        assertEquals(original.toString(), clone.toString());
+
+        assertSame("ValueFactory of cloned value should be the same " +
+                   "reference as the factory that cloned it",
+                   newFactory, clone.getSystem());
+
+        assertNull("Cloned value should not have a container (parent)",
+                   clone.getContainer());
+
+        assertFalse("Cloned value should be modifiable", clone.isReadOnly());
     }
 
     public void logSkippedTest()

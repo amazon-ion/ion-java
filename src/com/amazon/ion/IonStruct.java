@@ -244,7 +244,8 @@ public interface IonStruct
     // TODO public Collection<V> values();
     // TODO public Set<Map.Entry<K,V>> entrySet();
 
-    public IonStruct clone();
+    public IonStruct clone()
+        throws UnknownSymbolException;
 
 
     /**

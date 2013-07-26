@@ -71,7 +71,8 @@ final class IonIntImpl
 
     /**
      * makes a copy of this IonInt including a copy
-     * of the Long value which is "naturally" immutable.
+     * of the BigInteger/Long (whichever is more precise) value which is
+     * "naturally" immutable.
      * This calls IonValueImpl to copy the annotations and the
      * field name if appropriate.  The symbol table is not
      * copied as the value is fully materialized and the symbol
@@ -84,7 +85,14 @@ final class IonIntImpl
 
         makeReady();
         clone.copyAnnotationsFrom(this);
-        clone.doSetValue(this._long_value, this._isNullValue());
+        if (this._big_int_value != null)
+        {
+            clone.doSetValue(this._big_int_value);
+        }
+        else
+        {
+            clone.doSetValue(this._long_value, this._isNullValue());
+        }
 
         return clone;
     }

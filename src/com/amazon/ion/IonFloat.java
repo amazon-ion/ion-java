@@ -93,6 +93,6 @@ public interface IonFloat
      */
     public void setValue(BigDecimal value);
 
-
-    public IonFloat clone();
+    public IonFloat clone()
+        throws UnknownSymbolException;
 }

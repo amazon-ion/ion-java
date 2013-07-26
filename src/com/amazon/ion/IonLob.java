@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -76,6 +76,6 @@ public interface IonLob
      */
     public int byteSize();
 
-
-    public IonLob clone();
+    public IonLob clone()
+        throws UnknownSymbolException;
 }

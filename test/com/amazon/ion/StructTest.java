@@ -1027,15 +1027,15 @@ public class StructTest
     }
 
     @Test
-    public void testClonedFieldHasNoName()
+    public void testClonedFieldHasNoFieldName()
     {
-        IonStruct s = (IonStruct) oneValue("{f:12}");
-        IonValue f = s.get("f");
-        assertEquals("f", f.getFieldName());
+        IonStruct origStruct = (IonStruct) oneValue("{f:12}");
+        IonValue origStructField = origStruct.get("f");
+        assertEquals("f", origStructField.getFieldName());
 
-        IonValue clone = f.clone();
+        IonValue clone = origStructField.clone();
         assertNull("field name shouldn't be cloned", clone.getFieldName());
-        assertTrue(clone.getFieldId() < 1);
+        assertTrue(clone.getFieldNameSymbol() == null);
     }
 
 

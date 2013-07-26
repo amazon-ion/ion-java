@@ -111,6 +111,7 @@ final class IonSystemLite
             return (T) value.clone();
         }
 
+        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
         IonDatagram datagram = newDatagram();
         IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
         IonReader reader = makeSystemReader(value.getSystem(), value);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -37,5 +37,6 @@ public interface IonClob
     public String stringValue(Charset cs);
 
 
-    public IonClob clone();
+    public IonClob clone()
+        throws UnknownSymbolException;
 }

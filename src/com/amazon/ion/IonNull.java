@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -11,5 +11,6 @@ package com.amazon.ion;
 public interface IonNull
     extends IonValue
 {
-    public IonNull clone();
+    public IonNull clone()
+        throws UnknownSymbolException;
 }

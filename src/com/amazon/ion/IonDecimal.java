@@ -99,5 +99,6 @@ public interface IonDecimal
     public void setValue(BigDecimal value);
 
 
-    public IonDecimal clone();
+    public IonDecimal clone()
+        throws UnknownSymbolException;
 }

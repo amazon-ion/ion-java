@@ -70,5 +70,6 @@ public interface IonSymbol
         throws EmptySymbolException;
 
 
-    public IonSymbol clone();
+    public IonSymbol clone()
+        throws UnknownSymbolException;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -11,5 +11,6 @@ import java.util.Collection;
 public interface IonList
     extends IonValue, IonSequence, Collection<IonValue>
 {
-    public IonList clone();
+    public IonList clone()
+        throws UnknownSymbolException;
 }

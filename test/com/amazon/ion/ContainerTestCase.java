@@ -394,7 +394,7 @@ it.next();
         clone = system().clone(c); // clone w/ same system
         checkClone(c, child, clone);
 
-        clone = system(new SimpleCatalog()).clone(c); // clone w/ other system
+        clone = newSystem(new SimpleCatalog()).clone(c); // clone w/ other system
         checkClone(c, child, clone);
     }
 

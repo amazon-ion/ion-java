@@ -550,7 +550,7 @@ public class SymbolTableTest
         dg.add().newSymbol("s1");
         dg.add().newSymbol("l1");
 
-        final IonSystem ion2 = system(cat);
+        final IonSystem ion2 = newSystem(cat);
 
         dg = ion2.getLoader().load(dg.getBytes());
         checkSymbol("s1", 10, dg.get(0));

@@ -39,5 +39,6 @@ public interface IonBlob
         throws NullValueException, IOException;
 
 
-    public IonBlob clone();
+    public IonBlob clone()
+        throws UnknownSymbolException;
 }

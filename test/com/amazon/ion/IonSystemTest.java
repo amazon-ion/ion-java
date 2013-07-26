@@ -148,21 +148,25 @@ public class IonSystemTest
     // clone(IonValue)
 
     /**
-     * check for clone across two systems failing to
-     * detach the child from the datagram constructing
-     * the clone
+     * Test that the cloned IonValue from IonSystem.clone() successfully
+     * detaches from the internally materialized IonDatagram and the original
+     * value's container (if it exists) when it is cloning across two
+     * different IonSystems.
      */
     @Test
-    public void testTwoSystemsClone()
+    public void testCloneDetachesFromDatagramOnDiffSystemClone()
     {
-        IonSystem system1 = system();
-        IonSystem system2 = system(new SimpleCatalog());
+        IonValue original = system().singleValue("some_symbol");
 
-        IonValue v1 = system1.singleValue("just_a_symbol");
-        IonValue v2 = system2.clone(v1);
+        // Test on ValueFactory.clone() with different ValueFactory (and DOM impls)
+        for (DomType domType : DomType.values())
+        {
+            IonValue clone =
+                newSystem(new SimpleCatalog(), domType).clone(original);
 
-        IonStruct s = system2.newEmptyStruct();
-        s.add("field1", v2);
+            assertNull("Cloned value should not have a container (parent)",
+                       clone.getContainer());
+        }
     }
 
 

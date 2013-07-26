@@ -24,6 +24,6 @@ public interface IonString
      */
     public void setValue(String value);
 
-
-    public IonString clone();
+    public IonString clone()
+        throws UnknownSymbolException;
 }
