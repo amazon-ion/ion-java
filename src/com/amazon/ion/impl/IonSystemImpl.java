@@ -333,11 +333,10 @@ final class IonSystemImpl
         if (ionData == null) throw new NullPointerException();
 
         Iterator<IonValue> systemIterator;
-        boolean binaryData;
         try
         {
             PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-            binaryData = _Private_Utils.streamIsIonBinary(pushback);
+            boolean binaryData = _Private_Utils.streamIsIonBinary(pushback);
             if (binaryData)
             {
                 systemIterator = newPagedBinarySystemIterator(getCatalog(), pushback);

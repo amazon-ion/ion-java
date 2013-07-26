@@ -607,6 +607,10 @@ final class IonBinary
         return _ib_FLOAT64_LEN;
     }
 
+    /**
+     * Would this value have a zero length-nibble?  That is: is it 0d0 AND
+     * we are not forcing at least one byte to be encoded?
+     */
     public static boolean isNibbleZero(BigDecimal bd, boolean forceContent)
     {
         if (forceContent) return false;
@@ -1560,6 +1564,9 @@ done:       for (;;) {
             return bd;
         }
 
+        /**
+         * @see IonReaderBinaryRawX#readTimestamp
+         */
         public Timestamp readTimestampValue(int len) throws IOException
         {
             if (len < 1) {
@@ -1567,30 +1574,26 @@ done:       for (;;) {
                 return null;
             }
 
-            Timestamp  val;
-            Integer    offset = null;
             int        year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
             Decimal    frac = null;
-            int        remaining, end = this.position() + len;
-            Precision  p = null;// FIXME remove
+            int        end = this.position() + len;
 
             // first up is the offset, which requires a special int reader
             // to return the -0 as a null Integer
-            offset = this.readVarIntWithNegativeZero();
+            Integer offset = this.readVarIntWithNegativeZero();
 
             // now we'll read the struct values from the input stream
-            assert position() < end;
-            if (position() < end) {  // FIXME remove
-                // year is from 0001 to 9999
-                // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
-                year  = readVarUIntAsInt();
-                p = Precision.YEAR; // our lowest significant option
+
+            // year is from 0001 to 9999
+            // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
+            year  = readVarUIntAsInt();
+            Precision p = Precision.YEAR; // our lowest significant option
+
+            if (position() < end) {
+                month = readVarUIntAsInt();
+                p = Precision.MONTH; // our lowest significant option
 
                 if (position() < end) {
-                    month = readVarUIntAsInt();
-                    p = Precision.MONTH; // our lowest significant option
-
-                    if (position() < end) {
                     day   = readVarUIntAsInt();
                     p = Precision.DAY; // our lowest significant option
 
@@ -1604,7 +1607,7 @@ done:       for (;;) {
                             second = readVarUIntAsInt();
                             p = Precision.SECOND;
 
-                            remaining = end - position();
+                            int remaining = end - position();
                             if (remaining > 0) {
                                 // now we read in our actual "milliseconds since the epoch"
                                 frac = this.readDecimalValue(remaining);
@@ -1612,15 +1615,15 @@ done:       for (;;) {
                             }
                         }
                     }
-                    }
                 }
             }
 
             // now we let timestamp put it all together
             try {
-                val = Timestamp.createFromUtcFields(p, year, month, day,
-                                                    hour, minute, second,
-                                                    frac, offset);
+                Timestamp val =
+                    Timestamp.createFromUtcFields(p, year, month, day,
+                                                  hour, minute, second,
+                                                  frac, offset);
                 return val;
             }
             catch (IllegalArgumentException e) {
