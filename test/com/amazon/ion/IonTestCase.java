@@ -1090,7 +1090,7 @@ public abstract class IonTestCase
 
     public void logSkippedTest()
     {
-        System.err.println("WARNING: skipped a test in " + getClass().getName());
+        System.out.println("WARNING: skipped a test in " + getClass().getName());
     }
 
     /** Temporary bridge from JUnit 3 */

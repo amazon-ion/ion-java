@@ -49,7 +49,7 @@ public class ReaderSkippingTest
     public static void beforeClass()
     {
         SEED = System.currentTimeMillis();
-        System.err.println(ReaderSkippingTest.class.getSimpleName() +
+        System.out.println(ReaderSkippingTest.class.getSimpleName() +
                            ".SEED=" + SEED + "L");
     }
 

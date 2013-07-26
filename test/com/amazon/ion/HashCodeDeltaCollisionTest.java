@@ -47,7 +47,7 @@ public class HashCodeDeltaCollisionTest
         // range of TIMESTAMP_BASE_MILLIS is [0, 100] from currentMillis
         TIMESTAMP_BASE_MILLIS = currentMillis + randomRange;
 
-        System.err.println(HashCodeDeltaCollisionTest.class.getSimpleName() +
+        System.out.println(HashCodeDeltaCollisionTest.class.getSimpleName() +
                            ".TIMESTAMP_BASE_MILLIS=" +
                            TIMESTAMP_BASE_MILLIS + "L");
     }
