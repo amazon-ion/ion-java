@@ -51,6 +51,11 @@ final class IonWriterSystemText
     boolean     _pending_separator;
 
     /**
+     * Indicates whether we're currently writing an IVM.
+     */
+    private boolean _is_writing_ivm;
+
+    /**
      * True when the last data written was a triple-quoted string, meaning we
      * cannot write another long string lest it be incorrectly concatenated.
      */
@@ -351,8 +356,9 @@ final class IonWriterSystemText
             followingLongString = false;
         }
 
-        // write annotations
-        if (hasAnnotations()) {
+        // write annotations only if they exist and we're not currently
+        // writing an IVM
+        if (hasAnnotations() && !_is_writing_ivm) {
             if (! _options._skip_annotations) {
                 SymbolToken[] annotations = getTypeAnnotationSymbols();
                 for (SymbolToken ann : annotations) {
@@ -386,7 +392,9 @@ final class IonWriterSystemText
     void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
         throws IOException
     {
+        _is_writing_ivm = true;
         writeSymbolAsIs(systemSymtab.getIonVersionId());
+        _is_writing_ivm = false;
     }
 
     @Override

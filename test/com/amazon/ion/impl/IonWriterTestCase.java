@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
@@ -1084,5 +1085,108 @@ public abstract class IonWriterTestCase
         r.next();
         d = r.newBytes();
         assertArrayEquals(lobData, d);
+    }
+
+    // Trap for ION-334
+    @Test
+    public void testAnnotationNotSetToIvmAfterFinish()
+        throws Exception
+    {
+        iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        IonValue value1 = oneValue("1");
+        value1.writeTo(iw);
+        // Resets the stream context, the next TLV that is written must behave
+        // as if it is preceded by an IVM, depending on the writer's config.
+        iw.finish();
+        expected.add(value1);
+
+        IonValue value2 = oneValue("2");
+        value2.addTypeAnnotation("some_annot");
+        value2.writeTo(iw);
+        iw.close();
+        // Expect: an annotation on value2
+        expected.add(value2);
+
+        IonAssert.assertIonEquals(expected, reload());
+    }
+
+    // Trap for ION-334
+    @Test
+    public void testAnnotationNotSetToIvmOnStartOfStream()
+        throws Exception
+    {
+        iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        IonValue value1 = oneValue("1");
+        value1.addTypeAnnotation("some_annot");
+        value1.writeTo(iw);
+        // Expect: an annotation on value1
+        expected.add(value1);
+
+        IonValue value2 = oneValue("2");
+        value2.writeTo(iw);
+        iw.close();
+        expected.add(value2);
+
+        IonAssert.assertIonEquals(expected, reload());
+    }
+
+    @Test
+    public void testAnnotationNotSetToSymbolTable()
+        throws Exception
+    {
+        iw = makeWriter();
+
+        // ===== write =====
+        IonValue value1 = oneValue("1");
+        value1.writeTo(iw);
+        iw.finish();
+
+        // Shared symbol table injected
+        SymbolTable sharedSymTab = loadSharedSymtab(Symtabs.FRED_SERIALIZED[1]);
+        sharedSymTab.writeTo(iw);
+
+        IonValue value2 = oneValue("2");
+        value2.addTypeAnnotation("some_annot_2");
+        value2.writeTo(iw);
+
+        // Local symbol table injected
+        SymbolTable fred1 = Symtabs.CATALOG.getTable("fred", 1);
+        SymbolTable localSymTab = system().newLocalSymbolTable(fred1);
+        checkLocalTable(localSymTab);
+        localSymTab.writeTo(iw);
+
+        IonValue value3 = oneValue("3");
+        value3.addTypeAnnotation("some_annot_3");
+        value3.writeTo(iw);
+        iw.close();
+
+        // ===== re-read and check =====
+        IonReader reader = reread();
+
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+
+        assertEquals(IonType.STRUCT, reader.next());
+        assertArrayEquals(new String[] {ION_SHARED_SYMBOL_TABLE},
+                          reader.getTypeAnnotations());
+
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertArrayEquals(new String[] {"some_annot_2"},
+                          reader.getTypeAnnotations());
+
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(3, reader.intValue());
+        assertArrayEquals(new String[] {"some_annot_3"},
+                          reader.getTypeAnnotations());
+
+        SymbolTable readLocalSymTab = reader.getSymbolTable();
+        checkLocalTable(readLocalSymTab);
+
+        assertNull(reader.next());
     }
 }

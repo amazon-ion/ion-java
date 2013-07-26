@@ -1,8 +1,9 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.ENSURE;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 
@@ -17,7 +18,6 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
-import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.OutputStream;
 import org.junit.Test;
@@ -70,7 +70,7 @@ public class TextWriterTest
         String ionText = outputString();
         assertEquals("null", ionText);
 
-        options.setInitialIvmHandling(InitialIvmHandling.ENSURE);
+        options.setInitialIvmHandling(ENSURE);
         iw = makeWriter();
         iw.writeNull();
         ionText = outputString();
@@ -166,7 +166,7 @@ public class TextWriterTest
                      "$ion_1_0 fred_1 ginger",
                      ionText);
 
-        options.setInitialIvmHandling(InitialIvmHandling.SUPPRESS);
+        options.setInitialIvmHandling(SUPPRESS);
         binaryReader = system().newReader(binaryData);
         iw = makeWriter();
         iw.writeValues(binaryReader);
@@ -428,5 +428,15 @@ public class TextWriterTest
 
         options = IonTextWriterBuilder.standard().withIvmMinimizing(DISTANT);
         super.testFinishDoesReset();
+    }
+
+    // Trap for ION-334
+    @Test @Override
+    public void testAnnotationNotSetToIvmOnStartOfStream()
+        throws Exception
+    {
+        options = IonTextWriterBuilder.standard().withInitialIvmHandling(ENSURE);
+
+        super.testAnnotationNotSetToIvmOnStartOfStream();
     }
 }
