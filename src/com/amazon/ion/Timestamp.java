@@ -315,11 +315,13 @@ public final class Timestamp
 
         if (this._precision == Precision.FRACTION) {
             if (_fraction == null) error_in_field("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
-            if (_fraction.signum() == -1) {
-                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
-            }
-            if (BigDecimal.ONE.compareTo(_fraction) != 1) {
-                error_in_field("fractional seconds must be greater than or equal to 0 and less than 1");
+            if (_fraction.signum() == -1
+                || BigDecimal.ONE.compareTo(_fraction) != 1)
+            {
+                String message =
+                    "fractional seconds must be at least 0 and less than 1, " +
+                    "but was " + _fraction;
+                error_in_field(message);
             }
         }
     }

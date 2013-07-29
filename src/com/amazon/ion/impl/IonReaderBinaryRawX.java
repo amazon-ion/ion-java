@@ -1167,7 +1167,7 @@ done:   for (;;) {
         catch (IllegalArgumentException e)
         {
             // Rewrap to the expected type.
-            throw newErrorAt(e.getMessage());
+            throw newErrorAt("Invalid timestamp encoding: " + e.getMessage());
         }
     }
 
