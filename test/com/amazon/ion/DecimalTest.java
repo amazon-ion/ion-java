@@ -57,6 +57,33 @@ public class DecimalTest
     //=========================================================================
     // Test cases
 
+    /**
+     * Ensure that {@link Decimal#equals} and {@link Decimal#hashCode}
+     * are in sync.
+     */
+    @Test
+    public void testDecimalHash()
+    {
+        BigDecimal d1 = new BigDecimal ("0.");
+        BigDecimal d2 = Decimal.valueOf("0.");
+        assertEquals(d1, d2);
+        assertEquals("hash code", d1.hashCode(), d2.hashCode());
+
+        d1 = new BigDecimal ("0.00");
+        d2 = Decimal.valueOf("0.00");
+        assertEquals(d1, d2);
+        assertEquals("hash code", d1.hashCode(), d2.hashCode());
+
+        // Decimal doesn't override equals() so it negative and positive zeros
+        // are equal.  We can't change that since we can't make it symmetric.
+        // We must also keep the hash codes the same.
+        d1 = new BigDecimal ( "0.00");
+        d2 = Decimal.valueOf("-0.00");
+        assertEquals(d1, d2);
+        assertEquals("hash code", d1.hashCode(), d2.hashCode());
+    }
+
+
     @Test
     public void testFactoryDecimal()
     {

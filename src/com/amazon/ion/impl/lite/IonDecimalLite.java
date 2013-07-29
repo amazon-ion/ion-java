@@ -21,6 +21,10 @@ final class IonDecimalLite
     private static final int HASH_SIGNATURE =
         IonType.DECIMAL.toString().hashCode();
 
+    private static final int NEGATIVE_ZERO_HASH_SIGNATURE =
+        "NEGATIVE ZERO".hashCode();
+
+
     public static boolean isNegativeZero(float value)
     {
         if (value != 0) return false;
@@ -66,7 +70,13 @@ final class IonDecimalLite
         // This is consistent with Decimal.equals(Object), and with Equivalence
         // strict equality checks between two IonDecimals.
         if (!isNullValue())  {
-            result ^= decimalValue().hashCode();
+            Decimal dec = decimalValue();
+            result ^= dec.hashCode();
+
+            if (dec.isNegativeZero())
+            {
+                result ^= NEGATIVE_ZERO_HASH_SIGNATURE;
+            }
         }
 
         return hashTypeAnnotations(result);

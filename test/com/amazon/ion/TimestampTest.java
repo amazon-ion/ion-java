@@ -5,6 +5,7 @@ import static com.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static com.amazon.ion.Decimal.negativeZero;
 import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static com.amazon.ion.Timestamp.UTC_OFFSET;
+import static com.amazon.ion.Timestamp.createFromUtcFields;
 import static com.amazon.ion.Timestamp.Precision.DAY;
 import static com.amazon.ion.Timestamp.Precision.FRACTION;
 import static com.amazon.ion.Timestamp.Precision.MINUTE;
@@ -496,7 +497,7 @@ public class TimestampTest
     }
 
     @Test
-    public void testdateWithOddTzd()
+    public void testDateWithOddTzd()
     {
         checkTime(1969, 02, 23, 1, 15, 0, new BigDecimal("0.00"), new Integer(75),
                   "1969-02-23T01:15:00.00+01:15");
@@ -1074,12 +1075,44 @@ public class TimestampTest
         BigDecimal frac = Decimal.negativeZero(3);
 
         Timestamp ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-        assertEquals("2000-11-14T17:30:12.000Z", ts.toString());
+        Timestamp expected = Timestamp.valueOf("2000-11-14T17:30:12.000Z");
+        assertEquals(expected, ts);
+        assertEquals(expected.hashCode(), ts.hashCode());
 
         frac = new BigDecimal("-0.123");
         ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
         assertEquals("2000-11-14T17:30:12.123Z", ts.toString());
     }
+
+
+    private void checkFraction(String textOfFrac, BigDecimal frac)
+    {
+        Timestamp expected =
+            Timestamp.valueOf("2000-11-14T17:30:12" + textOfFrac + "Z");
+
+        Timestamp ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
+        assertEquals(expected, ts);
+        assertEquals("hash code", expected.hashCode(), ts.hashCode());
+
+        ts = createFromUtcFields(FRACTION, 2000, 11, 14, 17, 30, 12, frac,
+                                 UTC_OFFSET);
+        assertEquals(expected, ts);
+        assertEquals("hash code", expected.hashCode(), ts.hashCode());
+    }
+
+    @Test
+    public void testTimestampWithDecimalFraction()
+    {
+        checkFraction(".00", Decimal.valueOf(".00"));
+        checkFraction(".00", new BigDecimal(".00"));
+
+        checkFraction(".345", Decimal.valueOf(".345"));
+        checkFraction(".345", new BigDecimal (".345"));
+
+        checkFraction(".123", Decimal.valueOf("-0.123"));
+        checkFraction(".123", new BigDecimal ("-0.123"));
+    }
+
 
     @Test
     public void testNewTimestampWithNullFraction()

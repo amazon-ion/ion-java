@@ -120,11 +120,6 @@ public class Decimal
      */
     public static final Decimal NEGATIVE_ZERO = new NegativeZero(0);
 
-    private static final int HASH_SIGNATURE =
-        "INTERNAL DECIMAL".hashCode();
-
-    private static final int NEGATIVE_ZERO_HASH_SIGNATURE =
-        "INTERNAL DECIMAL NEGATIVE ZERO".hashCode();
 
     /**
      * Efficiently determines whether an arbitary decimal value is a negative
@@ -175,19 +170,6 @@ public class Decimal
                 && v1.equals(v2));
     }
 
-    @Override
-    public int hashCode()
-    {
-        final int prime = 8191;
-
-        int result = isNegativeZero()
-            ? NEGATIVE_ZERO_HASH_SIGNATURE
-            : HASH_SIGNATURE;
-
-        result = prime * result + bigDecimalValue().hashCode();
-
-        return result;
-    }
 
     //=========================================================================
 
