@@ -114,10 +114,11 @@ public class EquivsTestCase
                             String message =
                                 "Error comparing children " + i + " and " + j +
                                 " of equivalence sequence " + dgIndex +
-                                " (zero-based), expected: " + expectedEquality +
-                                ", actual: " + !expectedEquality;
-                            message += "\nthisValue: " + thisValue;
-                            message += "\notherValue: " + otherValue;
+                                " (zero-based), expected " +
+                                (expectedEquality ? "" : "in" ) + "equality" +
+                                "\nthisValue: " + thisValue +
+                                "\notherValue: " + otherValue + '\n' +
+                                e.getMessage();
                             fail(message);
                         }
                     }
@@ -182,9 +183,12 @@ public class EquivsTestCase
     public void testEquivsOverString()
     throws Exception
     {
-        String ionText = _Private_Utils.utf8FileToString(myTestFile);
-        IonDatagram dg = loader().load(ionText);
-        runEquivalenceChecks(dg, myExpectedEquality);
+        if (myTestFile.getName().endsWith(".ion"))
+        {
+            String ionText = _Private_Utils.utf8FileToString(myTestFile);
+            IonDatagram dg = loader().load(ionText);
+            runEquivalenceChecks(dg, myExpectedEquality);
+        }
     }
 
 }
