@@ -326,6 +326,7 @@ public abstract class _Private_IonWriterBase
      */
     public void writeValue(IonReader reader) throws IOException
     {
+        // TODO this should do symtab optimization as per writeValues()
         IonType type = reader.getType();
         writeValueRecursively(type, reader);
     }
