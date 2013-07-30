@@ -47,6 +47,9 @@ abstract class IonTextLite
         _set_value(value);
     }
 
+    /**
+     * @return null iff {@link #isNullValue()}
+     */
     protected final String _get_value()
     {
         return _text_value;
@@ -54,10 +57,7 @@ abstract class IonTextLite
 
     public String stringValue()
     {
-        if (isNullValue()) {
-            return null;
-        }
-        return _get_value();
+        return _text_value;
     }
 
     /**
