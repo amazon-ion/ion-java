@@ -310,7 +310,7 @@ class IonWriterUser
     }
 
     @Override
-    final boolean isFieldNameSet()
+    public final boolean isFieldNameSet()
     {
         return _current_writer.isFieldNameSet();
     }

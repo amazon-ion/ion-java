@@ -331,7 +331,7 @@ abstract class IonWriterSystem
 
 
     @Override
-    final boolean isFieldNameSet()
+    public final boolean isFieldNameSet()
     {
         if (_field_name_type != null) {
             switch (_field_name_type) {

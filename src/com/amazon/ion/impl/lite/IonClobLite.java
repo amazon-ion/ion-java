@@ -3,11 +3,11 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonClob;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_Utils;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -71,17 +71,11 @@ final class IonClobLite
         return _Private_Utils.decode(bytes, cs);
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.CLOB);
-            } else {
-                writer.writeClob(getBytesNoCopy());
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
-        }
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeClob(getBytesNoCopy());
     }
 
     @Override

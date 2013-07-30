@@ -1,13 +1,16 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSequence;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonValue;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -363,5 +366,26 @@ abstract class IonSequenceLite
         toArray(array);
         clear();
         return array;
+    }
+
+
+    @Override
+    void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        IonType type = getType();
+        if (isNullValue())
+        {
+            writer.writeNull(type);
+        }
+        else
+        {
+            writer.stepIn(type);
+            for (IonValue iv : this)
+            {
+                iv.writeTo(writer);
+            }
+            writer.stepOut();
+        }
     }
 }

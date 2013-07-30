@@ -489,14 +489,14 @@ final class IonDatagramLite
         return IonType.DATAGRAM;
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.writeSymbol(SystemSymbols.ION_1_0);
-            for (IonValue iv : this) {
-                iv.writeTo(writer);
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO ION-165 ???
+        for (IonValue iv : this)
+        {
+            iv.writeTo(writer);
         }
     }
 

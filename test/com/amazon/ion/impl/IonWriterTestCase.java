@@ -10,6 +10,7 @@ import static com.amazon.ion.TestUtils.FERMATA;
 import static com.amazon.ion.impl._Private_IonWriterBase.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
@@ -20,6 +21,7 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLob;
+import com.amazon.ion.IonNull;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -1186,6 +1188,35 @@ public abstract class IonWriterTestCase
 
         SymbolTable readLocalSymTab = reader.getSymbolTable();
         checkLocalTable(readLocalSymTab);
+
+        assertNull(reader.next());
+    }
+
+
+    @Test
+    public void testWriteToWithFieldName()
+        throws Exception
+    {
+        IonStruct s = system().newEmptyStruct();
+        IonNull n = s.add("f").newNull();
+
+        iw = makeWriter();
+
+        n.writeTo(iw);
+        iw.stepIn(IonType.STRUCT);
+        {
+            n.writeTo(iw);
+            iw.setFieldName("g");
+            n.writeTo(iw);
+        }
+        iw.stepOut();
+
+        IonReader reader = reread();
+        assertEquals(IonType.NULL, reader.next());
+
+        assertEquals(IonType.STRUCT, reader.next());
+        assertIonEquals(oneValue("{f:null, g:null}"),
+                        system().newValue(reader));
 
         assertNull(reader.next());
     }

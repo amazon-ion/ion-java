@@ -1,8 +1,7 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -10,6 +9,7 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -247,17 +247,11 @@ final class IonTimestampLite
         _isNullValue(true);
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.TIMESTAMP);
-            } else {
-                writer.writeTimestamp(_timestamp_value);
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
-        }
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeTimestamp(_timestamp_value);
     }
 
     @Override

@@ -3,7 +3,6 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonBlob;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
@@ -73,17 +72,11 @@ final class IonBlobLite
         }
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.BLOB);
-            } else {
-                writer.writeBlob(getBytesNoCopy());
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
-        }
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeBlob(getBytesNoCopy());
     }
 
     @Override

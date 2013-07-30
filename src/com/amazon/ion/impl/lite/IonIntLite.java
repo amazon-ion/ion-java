@@ -2,12 +2,12 @@
 
 package com.amazon.ion.impl.lite;
 
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -172,20 +172,21 @@ final class IonIntLite
         }
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.INT);
-            } else {
-                if (_big_int_value != null) {
-                    writer.writeInt(_big_int_value);
-                } else {
-                    writer.writeInt(_long_value);
-                }
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        if (isNullValue())
+        {
+            writer.writeNull(IonType.INT);
+        }
+        else if (_big_int_value != null)
+        {
+            writer.writeInt(_big_int_value);
+        }
+        else
+        {
+            writer.writeInt(_long_value);
         }
     }
 

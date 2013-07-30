@@ -796,27 +796,22 @@ final class IonStructLite
         }
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.STRUCT);
-            } else {
-                writer.stepIn(IonType.STRUCT);
-                for (IonValue iv : this) {
-                    // TODO Fix symbol handling
-                    // ION-320 - Get rid of try-catch after bug is fixed
-                    // A million-dollar question is - if text is missing, do
-                    // we throw (cannot serialize) or do we pass the sid thru???
-
-                    // NB! This will through if field name is not set
-                    writer.setFieldName(iv.getFieldName());
-                    iv.writeTo(writer);
-                }
-                writer.stepOut();
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        if (isNullValue())
+        {
+            writer.writeNull(IonType.STRUCT);
+        }
+        else
+        {
+            writer.stepIn(IonType.STRUCT);
+            for (IonValue iv : this)
+            {
+                iv.writeTo(writer);
             }
-        } catch (Exception e) {
-            throw new IonException(e);
+            writer.stepOut();
         }
     }
 

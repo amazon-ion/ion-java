@@ -2,12 +2,12 @@
 
 package com.amazon.ion.impl.lite;
 
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 
 /**
@@ -124,16 +124,17 @@ final class IonFloatLite
         _isNullValue(d == null);
     }
 
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.FLOAT);
-            } else {
-                writer.writeFloat(_float_value);
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        if (isNullValue())
+        {
+            writer.writeNull(IonType.FLOAT);
+        }
+        else
+        {
+            writer.writeFloat(_float_value);
         }
     }
 

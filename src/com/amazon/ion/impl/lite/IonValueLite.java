@@ -13,6 +13,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
@@ -20,6 +21,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl._Private_IonWriterBase;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
@@ -816,6 +818,37 @@ abstract class IonValueLite
         }
         return builder.toString();
     }
+
+    public final void writeTo(IonWriter writer)
+    {
+        if (writer.isInStruct()
+            && ! ((_Private_IonWriterBase)writer).isFieldNameSet())
+        {
+            SymbolToken tok = getFieldNameSymbol();
+            if (tok == null)
+            {
+                throw new IllegalStateException("Field name not set");
+            }
+
+            writer.setFieldNameSymbol(tok);
+        }
+
+        SymbolToken[] annotations = getTypeAnnotationSymbols();
+        writer.setTypeAnnotationSymbols(annotations);
+
+        try
+        {
+            writeBodyTo(writer);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
+    abstract void writeBodyTo(IonWriter writer)
+        throws IOException;
+
 
     public void setSymbolTable(SymbolTable symbols)
     {

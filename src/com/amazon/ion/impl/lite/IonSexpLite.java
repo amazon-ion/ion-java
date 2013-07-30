@@ -7,7 +7,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.util.Collection;
@@ -67,23 +66,6 @@ final class IonSexpLite
     public IonType getType()
     {
         return IonType.SEXP;
-    }
-
-    public final void writeTo(IonWriter writer) {
-        try {
-            writer.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
-            if (isNullValue()) {
-                writer.writeNull(IonType.SEXP);
-            } else {
-                writer.stepIn(IonType.SEXP);
-                for (IonValue iv : this) {
-                    iv.writeTo(writer);
-                }
-                writer.stepOut();
-            }
-        } catch (Exception e) {
-            throw new IonException(e);
-        }
     }
 
     @Override

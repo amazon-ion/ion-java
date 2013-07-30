@@ -105,7 +105,7 @@ public abstract class _Private_IonWriterBase
      * been set.
      * @return true if a field name has been set false otherwise
      */
-    abstract boolean isFieldNameSet();
+    public abstract boolean isFieldNameSet();
 
 
     //========================================================================
