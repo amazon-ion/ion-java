@@ -346,7 +346,7 @@ final class IonReaderBinaryUserX
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX,
-    //  IonReaderBinaryUserX and IonWriterBaseImpl
+    //  IonReaderBinaryUserX and _Private_IonWriterBase
     //
     //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
     //  THREE LOCATIONS AS WELL.

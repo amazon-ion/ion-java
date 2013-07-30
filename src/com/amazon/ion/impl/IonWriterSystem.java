@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -23,7 +23,7 @@ import java.io.IOException;
  *
  */
 abstract class IonWriterSystem
-    extends IonWriterBaseImpl
+    extends _Private_IonWriterBase
 {
     /**
      * The system symtab used when resetting the stream.

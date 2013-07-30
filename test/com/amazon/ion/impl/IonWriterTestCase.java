@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,7 +7,7 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
-import static com.amazon.ion.impl.IonWriterBaseImpl.ERROR_MISSING_FIELD_NAME;
+import static com.amazon.ion.impl._Private_IonWriterBase.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
@@ -995,7 +995,7 @@ public abstract class IonWriterTestCase
     {
         iw = makeWriter();
         iw.writeSymbol("foo");
-        ((IonWriterBaseImpl)iw).writeIonVersionMarker();
+        ((_Private_IonWriterBase)iw).writeIonVersionMarker();
         iw.writeInt(1);
 
         IonDatagram dg = reload();

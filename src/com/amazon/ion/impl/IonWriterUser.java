@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -36,7 +36,7 @@ import java.math.BigInteger;
  * {@link SymbolTable} is installed.
  */
 class IonWriterUser
-    extends IonWriterBaseImpl
+    extends _Private_IonWriterBase
     implements _Private_IonWriter
 {
     /** Factory for constructing the DOM of local symtabs. Not null. */

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -20,7 +20,7 @@ import java.util.Date;
  *  table is available (which it will not be if the underlying writer is a system
  *  writer).
  */
-abstract class IonWriterBaseImpl
+public abstract class _Private_IonWriterBase
     implements IonWriter, _Private_ReaderWriter
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
@@ -423,7 +423,7 @@ abstract class IonWriterBaseImpl
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX,
-    //  IonReaderBinaryUserX and IonWriterBaseImpl
+    //  IonReaderBinaryUserX and _Private_IonWriterBase
     //
     //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
     //  THREE LOCATIONS AS WELL.
