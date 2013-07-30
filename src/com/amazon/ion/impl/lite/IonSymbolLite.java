@@ -298,6 +298,7 @@ final class IonSymbolLite
 
     @Override
     public String stringValue()
+        throws UnknownSymbolException
     {
         if (isNullValue()) {
             return null;

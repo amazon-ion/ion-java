@@ -16,7 +16,8 @@ public interface IonSymbol
      *
      * @throws UnknownSymbolException if this symbol has unknown text.
      */
-    public String stringValue();
+    public String stringValue()
+        throws UnknownSymbolException;
 
     /**
      * Gets the integer symbol id used in the binary encoding of this symbol.

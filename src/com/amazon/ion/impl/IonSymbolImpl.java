@@ -147,6 +147,7 @@ final class IonSymbolImpl
 
 
     public String stringValue()
+        throws UnknownSymbolException
     {
         if (this.isNullValue()) return null;
 
