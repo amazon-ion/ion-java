@@ -795,8 +795,8 @@ public class ReverseBinaryEncoder
         }
     }
 
-    private static byte[] negativeZeroBitArray = new byte[] { (byte) 0x80 };
-    private static byte[] positiveZeroBitArray = new byte[0];
+    private static final byte[] negativeZeroBitArray = new byte[] { (byte) 0x80 };
+    private static final byte[] positiveZeroBitArray = new byte[0];
 
     private void writeIonDecimalContent(BigDecimal bd)
     {
@@ -804,6 +804,7 @@ public class ReverseBinaryEncoder
 
         byte[] mantissaBits;
 
+        // TODO ION-346
         switch (mantissa.signum())
         {
             case 0:
@@ -873,9 +874,9 @@ public class ReverseBinaryEncoder
                 case FRACTION:
                 {
                     BigDecimal fraction = t.getZFractionalSecond();
-                    assert (fraction.signum() >=0
+                    assert (fraction.signum() >= 0
                             && ! fraction.equals(BigDecimal.ZERO))
-                        : "Bad timestamp fraction: " + fraction;
+                            : "Bad timestamp fraction: " + fraction;
 
                     writeIonDecimalContent(fraction);
                 }
@@ -977,7 +978,7 @@ public class ReverseBinaryEncoder
         {
             int c = str.charAt(i);
 
-            if (c <= 0x7f) // U+0000 to U+007f codepoints
+            if (c <= 0x7f)              // U+0000 to U+007f codepoints
             {
                 if (--offset < 0)
                 {
@@ -986,7 +987,7 @@ public class ReverseBinaryEncoder
                 }
                 buffer[offset] = (byte) c;
             }
-            else if (c <= 0x7ff) //U+0080 to U+07ff codepoints
+            else if (c <= 0x7ff)        // U+0080 to U+07ff codepoints
             {
                 if ((offset -= 2) < 0)
                 {
@@ -1011,8 +1012,8 @@ public class ReverseBinaryEncoder
                 }
 
                 // low surrogate not preceded by high surrogate
-                // charAt(--i) is never out of bounds as i == 0 is checked in
-                // previous if-block
+                // charAt(--i) is never out of bounds as i == 0 is asserted to
+                // be false in previous if-block
                 int c2 = str.charAt(--i);
                 if (!(c2 >= 0xd800 && c2 <= 0xdbff))
                 {
@@ -1183,6 +1184,10 @@ public class ReverseBinaryEncoder
                 writeVarUInt(sid);
             }
 
+            // TODO ION-42 Detect if the struct fields are sorted in ascending
+            // order of Sids. If so, 1 should be written into 'length' field.
+            // Note that this 'length' field is not the same as the four-bit
+            // length L in the type descriptor octet.
             writePrefix(TYPE_STRUCT,
                         myBuffer.length - myOffset - originalOffset);
         }

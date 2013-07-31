@@ -2805,7 +2805,7 @@ done:       for (;;) {
                 if (Decimal.isNegativeZero(bd)) {
                     mantissaBits = negativeZeroBitArray;
                 }
-                else if (forceContent) {
+                else if (forceContent) { // TODO ION-346
                     mantissaBits = forcedPositiveZeroBitArray;
                 }
                 else {
