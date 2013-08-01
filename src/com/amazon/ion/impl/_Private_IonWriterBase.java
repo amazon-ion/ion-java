@@ -148,6 +148,15 @@ public abstract class _Private_IonWriterBase
      */
     abstract int[] getTypeAnnotationIds();
 
+    /**
+     * Write symbolId out as an IonSymbol value.  The value does not
+     * have to be valid in the symbol table, unless the output is
+     * text, in which case it does.
+     *
+     * @param symbolId symbol table id to write
+     */
+    abstract void writeSymbol(int symbolId) throws IOException;
+
 
     //========================================================================
 

@@ -1,6 +1,7 @@
 // Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.Decimal;
@@ -166,7 +167,7 @@ public class BinaryStreamingTest
                         wr.writeSymbol((String)value);
                     }
                     else if (value instanceof Integer) {
-                        wr.writeSymbol((Integer)value);
+                        wr.writeSymbolToken(newSymbolToken((Integer) value));
                     }
                     else {
                         throw new IllegalStateException("we only write String or Integer (a symbol id) to an IonSymbol");

@@ -299,12 +299,6 @@ class IonWriterUser
         _current_writer.setFieldName(name);
     }
 
-    @Deprecated
-    public final void setFieldId(int id)
-    {
-        _current_writer.setFieldId(id);
-    }
-
     public final void setFieldNameSymbol(SymbolToken name)
     {
         _current_writer.setFieldNameSymbol(name);
@@ -324,16 +318,6 @@ class IonWriterUser
     public void addTypeAnnotation(String annotation)
     {
         _current_writer.addTypeAnnotation(annotation);
-    }
-
-    public void addTypeAnnotationId(int annotationId)
-    {
-        _current_writer.addTypeAnnotationId(annotationId);
-    }
-
-    public void setTypeAnnotationIds(int... annotationIds)
-    {
-        _current_writer.setTypeAnnotationIds(annotationIds);
     }
 
     public void setTypeAnnotations(String... annotations)
@@ -442,8 +426,8 @@ class IonWriterUser
         _current_writer.writeString(value);
     }
 
-    @Deprecated
-    public final void writeSymbol(int symbolId) throws IOException
+    @Override
+    final void writeSymbol(int symbolId) throws IOException
     {
         _current_writer.writeSymbol(symbolId);
     }

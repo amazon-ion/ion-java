@@ -271,9 +271,8 @@ abstract class IonWriterSystem
     /** Writes a symbol without checking for system ID. */
     abstract void writeSymbolAsIs(String value) throws IOException;
 
-
-    @Deprecated
-    public final void writeSymbol(int symbolId) throws IOException
+    @Override
+    final void writeSymbol(int symbolId) throws IOException
     {
         if (symbolId < 1) {
             throw new IllegalArgumentException("symbol IDs are greater than 0");
@@ -428,17 +427,6 @@ abstract class IonWriterSystem
         }
 
         return id;
-    }
-
-    @Deprecated
-    public final void setFieldId(int id)
-    {
-        if (!this.isInStruct()) {
-            throw new IllegalStateException();
-        }
-        _field_name_type = IonType.INT;
-        _field_name_sid = id;
-        _field_name = null;
     }
 
     final SymbolToken assumeFieldNameSymbol()
@@ -601,18 +589,5 @@ abstract class IonWriterSystem
     final int[] getTypeAnnotationIds()
     {
         return _Private_Utils.toSids(_annotations, _annotation_count);
-    }
-
-    public final void setTypeAnnotationIds(int... annotationIds)
-    {
-        _annotations = newSymbolTokens(getSymbolTable(), annotationIds);
-        _annotation_count = _annotations.length;
-    }
-
-    public final void addTypeAnnotationId(int annotationId)
-    {
-        SymbolToken is = newSymbolToken(getSymbolTable(), annotationId);
-        ensureAnnotationCapacity(_annotation_count + 1);
-        _annotations[_annotation_count++] = is;
     }
 }
