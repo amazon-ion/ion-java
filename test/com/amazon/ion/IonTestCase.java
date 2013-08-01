@@ -974,7 +974,7 @@ public abstract class IonTestCase
         assertTrue(symtab.isSystemTable());
         assertFalse("table is substitute", symtab.isSubstitute());
         assertSame(symtab, symtab.getSystemSymbolTable());
-        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
+        assertEquals(SystemSymbols.ION_1_0_MAX_ID, symtab.getMaxId());
         assertEquals(ION_1_0, symtab.getIonVersionId());
     }
 
