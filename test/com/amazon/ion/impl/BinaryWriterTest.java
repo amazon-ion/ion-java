@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -198,8 +198,8 @@ public class BinaryWriterTest
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
         SymbolTable symtab = iw.getSymbolTable();
-        symtab.addSymbol("fred_1");
-        symtab.addSymbol("fred_2");
+        symtab.intern("fred_1");
+        symtab.intern("fred_2");
 
         iw.writeSymbol("fred_1");
         iw.flush();

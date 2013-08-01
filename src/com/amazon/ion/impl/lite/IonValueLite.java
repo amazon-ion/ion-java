@@ -440,7 +440,7 @@ abstract class IonValueLite
             if (!symbols.isLocalTable()) {
                 symbols = this._context.ensureLocalSymbolTable(this);
             }
-            sid = symbols.addSymbol(name);
+            symbols.intern(name);
         }
         return symbols;
     }
@@ -554,7 +554,8 @@ abstract class IonValueLite
         checkForLock();
 
         SymbolTable symbols = getUpdatableSymbolTable();
-        sid = symbols.addSymbol(name);
+        SymbolToken symToken = symbols.intern(name);
+        sid = symToken.getSid();
         return sid;
     }
 

@@ -850,9 +850,8 @@ public abstract class IonTestCase
 
         if (text != null)
         {
-            if (sid >= 0)
+            if (sid != UNKNOWN_SYMBOL_ID)
             {
-                assertEquals(msg, text, symtab.findSymbol(sid));
                 assertEquals(msg, text, symtab.findKnownSymbol(sid));
             }
 
@@ -860,28 +859,17 @@ public abstract class IonTestCase
             if (! dupe)
             {
                 assertEquals(msg, sid, symtab.findSymbol(text));
-                assertEquals(msg, sid, symtab.addSymbol(text));
 
-                SymbolToken sym = symtab.intern(text);
-                assertEquals(msg, sid, sym.getSid());
+                SymbolToken symToken = symtab.intern(text);
+                assertEquals(msg, sid, symToken.getSid());
 
-                sym = symtab.find(text);
-                assertEquals(msg, sid, sym.getSid());
+                symToken = symtab.find(text);
+                assertEquals(msg, sid, symToken.getSid());
             }
         }
         else // No text expected, must have sid
         {
-            assertEquals(msg, text, symtab.findKnownSymbol(sid));
-
-            try
-            {
-                symtab.findSymbol(sid);
-                fail("Expected " + UnknownSymbolException.class);
-            }
-            catch (UnknownSymbolException e)
-            {
-                assertEquals(sid, e.getSid());
-            }
+            assertEquals(msg, text /* null */, symtab.findKnownSymbol(sid));
         }
     }
 
@@ -907,12 +895,6 @@ public abstract class IonTestCase
         {
             try {
                 symtab.intern(text);
-                fail("Expected exception");
-            }
-            catch (ReadOnlyValueException e) { }
-
-            try {
-                symtab.addSymbol(text);
                 fail("Expected exception");
             }
             catch (ReadOnlyValueException e) { }

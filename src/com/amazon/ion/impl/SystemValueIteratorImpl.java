@@ -13,6 +13,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import java.io.IOException;
 import java.io.InputStream;
@@ -291,7 +292,8 @@ final class SystemValueIteratorImpl
         int sid = symbols.findSymbol(name);
         if (sid == UNKNOWN_SYMBOL_ID) {
             symbols = this.getLocalSymbolTable();
-            sid = symbols.addSymbol(name);
+            SymbolToken symToken = symbols.intern(name);
+            sid = symToken.getSid();
         }
         return sid;
     }

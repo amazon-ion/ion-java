@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,7 +7,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
@@ -169,16 +168,6 @@ final class SubstituteSymbolTable
         return sid;
     }
 
-    @SuppressWarnings("deprecation")
-    public String findSymbol(int id)
-    {
-        if (id > myMaxId || myOriginalSymTab == null)
-        {
-            throw new UnknownSymbolException(id);
-        }
-        return myOriginalSymTab.findSymbol(id);
-    }
-
     public String findKnownSymbol(int id)
     {
         if (id > myMaxId || myOriginalSymTab == null)
@@ -186,20 +175,6 @@ final class SubstituteSymbolTable
             return null;
         }
         return myOriginalSymTab.findKnownSymbol(id);
-    }
-
-    public int addSymbol(String name)
-    {
-        if (myOriginalSymTab != null)
-        {
-            @SuppressWarnings("deprecation")
-            int sid = myOriginalSymTab.addSymbol(name);
-            if (sid <= myMaxId)
-            {
-                return sid;
-            }
-        }
-        throw new ReadOnlyValueException(SymbolTable.class);
     }
 
     @SuppressWarnings("unchecked")

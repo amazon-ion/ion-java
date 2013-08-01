@@ -285,8 +285,14 @@ final class IonSymbolImpl
 
         if (mySid == UNKNOWN_SYMBOL_ID && ! isNull) {
             assert _hasNativeValue() == true && isDirty();
+
+            // No need to call makeReady() before _get_value() as makeReady()
+            // does a no-op when _hasNativeValue() == true, which is asserted
+            // above.
             String name = _get_value();
-            mySid = getSymbolTable().addSymbol(name);
+
+            SymbolToken symTok = getSymbolTable().intern(name);
+            _set_value(symTok.getText());
         }
 
         int ln;

@@ -33,7 +33,6 @@ import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
@@ -740,27 +739,6 @@ final class UnifiedSymbolTable
         if (isSharedTable()) return null;
 
         return _import_list.find(text);
-    }
-
-    @Deprecated
-    public synchronized String findSymbol(int id)
-    {
-        String name = findKnownSymbol(id);
-        if (name == null) {
-            throw new UnknownSymbolException(id);
-        }
-        return name;
-    }
-
-    public synchronized int addSymbol(String name)
-    {
-        int sid = this.findSymbol(name);
-        if (sid == UNKNOWN_SYMBOL_ID) {
-            validateSymbol(name);
-            sid = getMaxId() + 1;
-            putSymbol(name, sid);
-        }
-        return sid;
     }
 
     private static final void validateSymbol(String name)

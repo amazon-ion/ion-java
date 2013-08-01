@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -183,7 +183,7 @@ public interface SymbolTable
     /**
      * Gets the highest symbol id reserved by this table.
      *
-     * @return the largest integer such that {@link #findSymbol(int)} could
+     * @return the largest integer such that {@link #findKnownSymbol(int)} could
      * return a non-<code>null</code> result.  Note that there is no promise
      * that it <em>will</em> return a name, only that any larger id will not
      * have a name defined.
@@ -248,24 +248,6 @@ public interface SymbolTable
 
 
     /**
-     * Gets a name for a symbol ID, throwing if a definition is not known.
-     *
-     * @param id the requested symbol ID.
-     * @return not <code>null</code>.
-     *
-     * @throws IllegalArgumentException if {@code id < 1}.
-     * @throws UnknownSymbolException if the symbol text isn't known.
-     *
-     * @deprecated Since IonJava R15.
-     * This method cannot distinguish between generic identifiers
-     * (like {@code $123}) and known symbols that happen the same text
-     * (like {@code '$123'}).  Use {@link #findKnownSymbol(int)} instead.
-     */
-    @Deprecated
-    public String findSymbol(int id);
-
-
-    /**
      * Gets the interned text for a symbol ID.
      *
      * @param id the requested symbol ID.
@@ -275,24 +257,6 @@ public interface SymbolTable
      * @throws IllegalArgumentException if {@code id < 1}.
      */
     public String findKnownSymbol(int id);
-
-
-    /**
-     * Adds a new symbol to this table, or finds an existing id for it.
-     *
-     * @param name must be non-empty.
-     * @return a value greater than zero.
-     *
-     * @throws IonException if {@link #isReadOnly()}
-     * and the requested symbol is not already defined.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #intern(String)} instead, replacing the caller's
-     * parameter string with the interned instance in
-     * {@link SymbolToken#getText()}.
-     */
-    @Deprecated
-    public int addSymbol(String name);
 
 
     /**

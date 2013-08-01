@@ -164,7 +164,7 @@ public class SymbolTableTest
     public void testSystemSymtabAddSymbol()
     {
         SymbolTable st = system().getSystemSymbolTable();
-        st.addSymbol("hello");
+        st.intern("hello");
     }
 
 
@@ -210,12 +210,12 @@ public class SymbolTableTest
             "null";
 
         SymbolTable symbolTable = oneValue(text).getSymbolTable();
-        symbolTable.addSymbol("baz");
+        symbolTable.intern("baz");
         symbolTable.makeReadOnly();
-        symbolTable.addSymbol("baz");
+        symbolTable.intern("baz");
 
         try {
-            symbolTable.addSymbol("boo");
+            symbolTable.intern("boo");
             fail("expected exception");
         }
         catch (ReadOnlyValueException e) { }
@@ -759,9 +759,9 @@ public class SymbolTableTest
     public void testSymtabImageMaintenance()
     {
         SymbolTable st = system().newLocalSymbolTable();
-        st.addSymbol("foo");
+        st.intern("foo");
         IonStruct image = symtabTree(system(), st);
-        st.addSymbol("bar");
+        st.intern("bar");
         image = symtabTree(system(), st);
         IonList symbols = (IonList) image.get(SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());

@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -122,8 +122,8 @@ public abstract class OutputStreamWriterTestCase
         iw.stepOut();
 
         SymbolTable symtab = iw.getSymbolTable();  // TODO ION-269
-        symtab.addSymbol("fred_1");
-        symtab.addSymbol("fred_2");
+        symtab.intern("fred_1");
+        symtab.intern("fred_2");
         testFlushing();
     }
 

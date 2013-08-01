@@ -16,6 +16,7 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
@@ -268,7 +269,10 @@ final class IonReaderBinaryUserX
             name = null;
         }
         else {
-            name = _symbols.findSymbol(_value_field_id);
+            name = _symbols.findKnownSymbol(_value_field_id);
+            if (name == null) {
+                throw new UnknownSymbolException(_value_field_id);
+            }
         }
         return name;
     }
@@ -300,7 +304,10 @@ final class IonReaderBinaryUserX
         else {
             anns = new String[_annotation_count];
             for (int ii=0; ii<_annotation_count; ii++) {
-                anns[ii] = _symbols.findSymbol(_annotation_ids[ii]);
+                anns[ii] = _symbols.findKnownSymbol(_annotation_ids[ii]);
+                if (anns[ii] == null) {
+                    throw new UnknownSymbolException(_annotation_ids[ii]);
+                }
             }
         }
         return anns;
@@ -315,8 +322,11 @@ final class IonReaderBinaryUserX
         if (_value_type == IonType.SYMBOL) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
                 int sid = getSymbolId();
-                String sym = _symbols.findSymbol(sid);
-                _v.addValue(sym);
+                String name = _symbols.findKnownSymbol(sid);
+                if (name == null) {
+                    throw new UnknownSymbolException(sid);
+                }
+                _v.addValue(name);
             }
         }
         else {

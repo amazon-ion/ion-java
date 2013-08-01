@@ -839,7 +839,8 @@ abstract class IonValueImpl
         checkForLock();
 
         SymbolTable symbols = getUpdatableSymbolTable();
-        sid = symbols.addSymbol(name);
+        SymbolToken symToken = symbols.intern(name);
+        sid = symToken.getSid();
         return sid;
     }
 
@@ -859,7 +860,7 @@ abstract class IonValueImpl
             symbols = getUpdatableSymbolTable();
         }
         checkForLock();
-        symbols.addSymbol(name);
+        symbols.intern(name);
 
         return symbols;
     }
