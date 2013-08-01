@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -116,13 +116,6 @@ final class IonFloatImpl
         makeReady();
         if (_float_value == null) throw new NullValueException();
         return _float_value.doubleValue();
-    }
-
-    @Deprecated
-    public BigDecimal toBigDecimal()
-        throws NullValueException
-    {
-        return bigDecimalValue();
     }
 
     public BigDecimal bigDecimalValue()

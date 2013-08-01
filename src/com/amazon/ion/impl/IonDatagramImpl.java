@@ -545,16 +545,6 @@ final class IonDatagramImpl
      * @return an empty array.
      */
     @Override
-    public String[] getTypeAnnotationStrings()
-    {
-        return EMPTY_STRING_ARRAY;
-    }
-
-
-    /**
-     * @return an empty array.
-     */
-    @Override
     public String[] getTypeAnnotations()
     {
         return EMPTY_STRING_ARRAY;

@@ -125,13 +125,6 @@ final class IonIntLite
         return _big_int_value;
     }
 
-    @Deprecated
-    public BigInteger toBigInteger()
-        throws NullValueException
-    {
-        return bigIntegerValue();
-    }
-
     public void setValue(int value)
     {
         checkForLock();

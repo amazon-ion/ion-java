@@ -162,16 +162,6 @@ public interface IonValue
 
 
     /**
-     * Gets the field name attached to this value,
-     * or <code>null</code> if this is not part of an {@link IonStruct}.
-     *
-     * @deprecated Since 2008. Use {@link #getFieldNameSymbol()} instead.
-     */
-    @Deprecated
-    public int getFieldNameId();
-
-
-    /**
      * Gets the symbol ID of the field name attached to this value.
      *
      * @return the symbol ID of the field name, if this is part of an
@@ -213,18 +203,6 @@ public interface IonValue
      * @since IonJava R15
      */
     public IonValue topLevelValue();
-
-
-    /**
-     * Gets the user type annotations attached to this value
-     * as strings.  This will return an empty array if there are no annotations.
-     *
-     * @throws UnknownSymbolException if any annotation has unknown text.
-     *
-     * @deprecated Since 2008. Use {@link #getTypeAnnotations()} instead.
-     */
-    @Deprecated
-    public String[] getTypeAnnotationStrings();
 
 
     /**

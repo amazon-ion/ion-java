@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -29,18 +29,6 @@ public interface IonDecimal
      */
     public double doubleValue()
         throws NullValueException;
-
-    /**
-     * Gets the value of this Ion {@code decimal} as a Java
-     * {@link BigDecimal} value.
-     *
-     * @return the <code>BigDecimal</code> value,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
-     *
-     * @deprecated Renamed to {@link #bigDecimalValue()}.
-     */
-    @Deprecated
-    public BigDecimal toBigDecimal();
 
     /**
      * Gets the value of this Ion {@code decimal} as a {@link BigDecimal}.

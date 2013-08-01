@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -102,12 +102,6 @@ abstract class IonLobLite
         }
         // TODO this is inefficient.  Should stream directly from binary.
         return new ByteArrayInputStream(_lob_value);
-    }
-
-    @Deprecated
-    public final byte[] newBytes()
-    {
-        return getBytes();
     }
 
     public final byte[] getBytes()

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -172,13 +172,6 @@ final class IonSymbolImpl
         }
 
         return value;
-    }
-
-    @Deprecated
-    public int intValue()
-        throws NullValueException
-    {
-        return getSymbolId();
     }
 
     @Deprecated

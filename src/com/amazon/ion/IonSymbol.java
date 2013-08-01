@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -19,19 +19,6 @@ public interface IonSymbol
     public String stringValue()
         throws UnknownSymbolException;
 
-    /**
-     * Gets the integer symbol id used in the binary encoding of this symbol.
-     *
-     * @return an integer greater than zero, if this value has an associated
-     * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
-     *
-     * @throws NullValueException if this is <code>null.symbol</code>.
-     * @deprecated Since 2008.
-     * Use {@link #symbolValue()} instead.
-     */
-    @Deprecated
-    public int intValue()
-        throws NullValueException;
 
     /**
      * Gets the integer symbol id used in the binary encoding of this symbol.

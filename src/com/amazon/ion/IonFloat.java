@@ -41,21 +41,7 @@ public interface IonFloat
     public double doubleValue()
         throws NullValueException;
 
-    /**
-     * Gets the value of this Ion <code>float</code> as a Java
-     * {@link BigDecimal} value.
-     *
-     * @return the <code>BigDecimal</code> value,
-     * or <code>null</code> if this is <code>null.float</code>.
-     *
-     * @deprecated Renamed to {@link #bigDecimalValue()}.
-     */
-    @Deprecated
-    public BigDecimal toBigDecimal()
-        throws NullValueException;
-
-
-    // TODO add isSpecial to detect nan/+inf/-inf
+    // TODO ION-330 add isSpecial to detect nan/+inf/-inf
     // would be useful before calling bigDecimalValue
 
     /**

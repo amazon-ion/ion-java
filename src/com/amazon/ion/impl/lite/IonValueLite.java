@@ -568,28 +568,6 @@ abstract class IonValueLite
         throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
     }
 
-    public final /* synchronized ?? */ String[] getTypeAnnotationStrings()
-    {
-        // first we have to count the number of non-null
-        // elements there are in the annotations array
-        int count = 0;
-        if (_annotations != null) {
-            for (int ii=0; ii<_annotations.length; ) {
-                if (_annotations[ii] == null) {
-                    break;
-                }
-                ii++;
-                count = ii;
-            }
-        }
-        // if there aren't any, we're done
-        if (count == 0) {
-            return EMPTY_STRING_ARRAY;
-        }
-
-        return _Private_Utils.toStrings(_annotations, count);
-    }
-
     public final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
     {
         // first we have to count the number of non-null
@@ -632,9 +610,26 @@ abstract class IonValueLite
         }
     }
 
-    public final String[] getTypeAnnotations()
+    public final /* synchronized ?? */ String[] getTypeAnnotations()
     {
-        return getTypeAnnotationStrings();
+        // first we have to count the number of non-null
+        // elements there are in the annotations array
+        int count = 0;
+        if (_annotations != null) {
+            for (int ii=0; ii<_annotations.length; ) {
+                if (_annotations[ii] == null) {
+                    break;
+                }
+                ii++;
+                count = ii;
+            }
+        }
+        // if there aren't any, we're done
+        if (count == 0) {
+            return EMPTY_STRING_ARRAY;
+        }
+
+        return _Private_Utils.toStrings(_annotations, count);
     }
 
     public void setTypeAnnotations(String... annotations)

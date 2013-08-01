@@ -130,13 +130,6 @@ final class IonSymbolLite
     }
 
     @Deprecated
-    public int intValue()
-        throws NullValueException
-    {
-        return getSymbolId();
-    }
-
-    @Deprecated
     public int getSymbolId()
         throws NullValueException
     {

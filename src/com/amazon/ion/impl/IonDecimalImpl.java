@@ -143,13 +143,6 @@ final class IonDecimalImpl
         return d;
     }
 
-    @Deprecated
-    public BigDecimal toBigDecimal()
-        throws NullValueException
-    {
-        return bigDecimalValue();
-    }
-
     public BigDecimal bigDecimalValue()
         throws NullValueException
     {

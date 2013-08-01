@@ -379,8 +379,6 @@ abstract class IonContainerLite
      *   public IonContainer getContainer()
      *   public int getFieldId()
      *   public String getFieldName()
-     *   public int getFieldNameId()
-     *   public String[] getTypeAnnotationStrings()
      *   public String[] getTypeAnnotations()
      *   public boolean hasTypeAnnotation(String annotation)
      *   public boolean isNullValue()

@@ -581,13 +581,6 @@ abstract class IonValueImpl
         return symtab;
     }
 
-    @Deprecated
-    public final int getFieldNameId()
-    {
-        return getFieldId();
-    }
-
-
     public final SymbolToken getFieldNameSymbol()
     {
         int sid = _fieldSid;
@@ -929,15 +922,6 @@ abstract class IonValueImpl
     public int getElementId()
     {
         return this._elementid;
-    }
-
-    /**
-     * @deprecated Use {@link #getTypeAnnotations()} instead
-     */
-    @Deprecated
-    public String[] getTypeAnnotationStrings()
-    {
-        return getTypeAnnotations();
     }
 
     public String[] getTypeAnnotations()

@@ -30,6 +30,7 @@ public interface IonInt
     public long longValue()
         throws NullValueException;
 
+
     /**
      * Gets the content of this Ion <code>int</code> as a Java
      * {@link BigInteger} value.
@@ -38,19 +39,6 @@ public interface IonInt
      * or <code>null</code> if this is <code>null.int</code>.
      */
     public BigInteger bigIntegerValue();
-
-    /**
-     * Gets the content of this Ion <code>int</code> as a Java
-     * {@link BigInteger} value.
-     *
-     * @return the <code>BigInteger</code> value,
-     * or <code>null</code> if this is <code>null.int</code>.
-     *
-     * @deprecated Use {@link #bigIntegerValue}.
-     */
-    @Deprecated
-    public BigInteger toBigInteger();
-
 
     /**
      * Sets the content of this value.

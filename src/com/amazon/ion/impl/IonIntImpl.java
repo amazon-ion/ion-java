@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -164,13 +164,6 @@ final class IonIntImpl
             return BigInteger.valueOf(_long_value);
         }
         return _big_int_value;
-    }
-
-    @Deprecated
-    public BigInteger toBigInteger()
-        throws NullValueException
-    {
-        return bigIntegerValue();
     }
 
     public void setValue(int value)

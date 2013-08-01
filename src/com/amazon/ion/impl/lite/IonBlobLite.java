@@ -50,13 +50,6 @@ final class IonBlobLite
     }
 
 
-    @Deprecated
-    public void appendBase64(Appendable out)
-        throws IOException
-    {
-        printBase64(out);
-    }
-
     public void printBase64(Appendable out)
         throws IOException
     {

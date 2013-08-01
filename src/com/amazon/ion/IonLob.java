@@ -26,19 +26,6 @@ public interface IonLob
      *
      * @return a new byte array,
      * or <code>null</code> if <code>this.isNullValue()</code>.
-     *
-     * @deprecated renamed to {@link #getBytes()} for consistency with other
-     * interfaces.
-     */
-    @Deprecated
-    public byte[] newBytes();
-
-    /**
-     * Gets all the data of this lob, or <code>null</code> if this is an Ion
-     * <code>null</code> value.
-     *
-     * @return a new byte array,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
      */
     public byte[] getBytes();
 
