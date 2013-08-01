@@ -321,6 +321,12 @@ public abstract class _Private_IonWriterBase
         if (_debug_on) System.out.print(";");
     }
 
+
+    public boolean isStreamCopyOptimized()
+    {
+        return false;
+    }
+
     /**
      * Overrides can optimize special cases.
      */

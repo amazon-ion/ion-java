@@ -6,6 +6,7 @@ import static com.amazon.ion.impl._Private_IonConstants.tidDATAGRAM;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
+import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.reverseEncode;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
@@ -13,7 +14,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.BlockedBuffer.BlockedByteInputStream;
 import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.lite.ReverseBinaryEncoder;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
@@ -921,9 +921,7 @@ final class IonWriterSystemBinary
             case TID_SYMBOL_TABLE_PATCH:
                 SymbolTable symtab = p._symtabs.remove();
                 if (!symtab.isSystemTable()) {
-                    ReverseBinaryEncoder encoder = new ReverseBinaryEncoder(1024);
-                    encoder.serialize(symtab);
-                    byte[] symtabBytes = encoder.toNewByteArray();
+                    byte[] symtabBytes = reverseEncode(1024, symtab);
                     userstream.write(symtabBytes);
                     totalSize += symtabBytes.length;
                 }

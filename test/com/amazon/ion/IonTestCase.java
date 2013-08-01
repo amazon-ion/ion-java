@@ -6,7 +6,6 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
 import com.amazon.ion.impl._Private_IonSystem;
-import com.amazon.ion.impl.lite.ReverseBinaryEncoder;
 import com.amazon.ion.impl.lite._Private_LiteDomTrampoline;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
@@ -45,7 +44,7 @@ public abstract class IonTestCase
         BACKED,
         /**
          * ReverseBinaryEncoder impl for IonDatagramLite
-         * @see ReverseBinaryEncoder
+         * @see com.amazon.ion.impl.lite.ReverseBinaryEncoder
          */
         LITE_REV_ENC
     }

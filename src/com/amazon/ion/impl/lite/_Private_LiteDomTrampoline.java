@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.lite.IonDatagramLite.REVERSE_BINARY_ENCODER_PR
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.SymbolTable;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -29,5 +30,12 @@ public final class _Private_LiteDomTrampoline
     {
         System.setProperty(REVERSE_BINARY_ENCODER_PROPERTY,
                            Boolean.toString(useReverseEncoder));
+    }
+
+    public static byte[] reverseEncode(int initialSize, SymbolTable symtab)
+    {
+        ReverseBinaryEncoder encoder = new ReverseBinaryEncoder(initialSize);
+        encoder.serialize(symtab);
+        return encoder.toNewByteArray();
     }
 }

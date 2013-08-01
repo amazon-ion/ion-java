@@ -75,7 +75,7 @@ import java.util.ListIterator;
  * nested values of the top-level value being traversed in a similar
  * last-to-first (right-to-left) order.
  */
-public class ReverseBinaryEncoder
+class ReverseBinaryEncoder
 {
     private static final BigInteger MAX_LONG_VALUE =
         BigInteger.valueOf(Long.MAX_VALUE);
@@ -119,7 +119,7 @@ public class ReverseBinaryEncoder
 
     private IonSystem myIonSystem;
 
-    public ReverseBinaryEncoder(int initialSize)
+    ReverseBinaryEncoder(int initialSize)
     {
         myBuffer = new byte[initialSize];
         myOffset = initialSize;
@@ -133,7 +133,7 @@ public class ReverseBinaryEncoder
      *
      * @return the number of bytes of the byte array
      */
-    public int byteSize()
+    int byteSize()
     {
         return myBuffer.length - myOffset;
     }
@@ -148,7 +148,7 @@ public class ReverseBinaryEncoder
      *
      * @return the newly allocated byte array
      */
-    public byte[] toNewByteArray()
+    byte[] toNewByteArray()
     {
         int length = myBuffer.length - myOffset;
         byte[] bytes = new byte[length];
@@ -172,7 +172,7 @@ public class ReverseBinaryEncoder
      *
      * @return the number of bytes copied into {@code dst}
      */
-    public int toNewByteArray(byte[] dst)
+    int toNewByteArray(byte[] dst)
     {
         int length = myBuffer.length - myOffset;
         System.arraycopy(myBuffer, myOffset, dst, 0, length);
@@ -198,7 +198,7 @@ public class ReverseBinaryEncoder
      *
      * @return the number of bytes copied into {@code dst}
      */
-    public int toNewByteArray(byte[] dst, int offset)
+    int toNewByteArray(byte[] dst, int offset)
     {
         int length = myBuffer.length - myOffset;
         System.arraycopy(myBuffer, myOffset, dst, offset, length);
@@ -216,7 +216,7 @@ public class ReverseBinaryEncoder
      *
      * @throws IOException
      */
-    public int writeBytes(OutputStream out)
+    int writeBytes(OutputStream out)
         throws IOException
     {
         int length = myBuffer.length - myOffset;
@@ -236,7 +236,7 @@ public class ReverseBinaryEncoder
      *
      * @throws IonException
      */
-    public void serialize(IonDatagram dg)
+    void serialize(IonDatagram dg)
         throws IonException
     {
         myIonSystem = dg.getSystem();
@@ -256,7 +256,7 @@ public class ReverseBinaryEncoder
         writeBytes(BINARY_VERSION_MARKER_1_0);
     }
 
-    public void serialize(SymbolTable symTab)
+    void serialize(SymbolTable symTab)
         throws IonException
     {
         writeLocalSymbolTable(symTab);

@@ -15,7 +15,7 @@ import java.io.IOException;
 /**
  *
  */
-public class IonWriterUserBinary
+class IonWriterUserBinary
     extends IonWriterUser
     implements _Private_ListWriter
 {
@@ -35,6 +35,13 @@ public class IonWriterUserBinary
     {
         super(catalog, symtabValueFactory, systemWriter, imports);
         myStreamCopyOptimized = streamCopyOptimized;
+    }
+
+
+    @Override
+    public boolean isStreamCopyOptimized()
+    {
+        return myStreamCopyOptimized;
     }
 
 
