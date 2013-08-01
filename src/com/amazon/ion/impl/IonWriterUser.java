@@ -262,17 +262,18 @@ class IonWriterUser
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
 
-        if (symbols.isSystemTable())
-        {
-            writeIonVersionMarker(symbols);
-            return;
-        }
-
         if (getDepth() > 0) {
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
 
-        _system_writer.writeLocalSymtab(symbols);
+        if (symbols.isSystemTable())
+        {
+            writeIonVersionMarker(symbols);
+        }
+        else
+        {
+            _system_writer.writeLocalSymtab(symbols);
+        }
     }
 
 

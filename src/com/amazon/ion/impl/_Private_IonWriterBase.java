@@ -75,7 +75,8 @@ public abstract class _Private_IonWriterBase
      * current top level value.
      *
      * @param symbols base symbol table for encoding. Must not be null.
-     * @throws IllegalArgumentException if symbols is null or a shared symbol table
+     * @throws IllegalArgumentException if symbols is null or a shared symbol
+     * table, or if this writer isn't at top level.
      */
     public abstract void setSymbolTable(SymbolTable symbols)
         throws IOException;
