@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -1084,29 +1084,12 @@ final class UnifiedSymbolTableReader
     }
 
 
-    public int[] getTypeAnnotationIds()
-    {
-        if (_current_state == S_STRUCT) {
-            if (_symbol_table.isLocalTable() || _symbol_table.isSystemTable())
-            {
-                return new int[] { ION_SYMBOL_TABLE_SID };
-            }
-            return new int[] { ION_SHARED_SYMBOL_TABLE_SID };
-        }
-        return _Private_Utils.EMPTY_INT_ARRAY;
-    }
-
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
         return _Private_Utils.stringIterator(annotations);
     }
 
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        int[] ids = getTypeAnnotationIds();
-        return _Private_Utils.intIterator(ids);
-    }
 
     public int getFieldId()
     {
@@ -1377,12 +1360,6 @@ final class UnifiedSymbolTableReader
     {
         // TODO handle null
         throw new UnsupportedOperationException();
-    }
-
-    @Deprecated
-    public int getSymbolId()
-    {
-        throw new IllegalStateException("only valid if the value is a symbol");
     }
 
     public int getBytes(byte[] buffer, int offset, int len)

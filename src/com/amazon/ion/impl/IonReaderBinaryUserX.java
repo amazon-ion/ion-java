@@ -416,7 +416,7 @@ final class IonReaderBinaryUserX
 
             // Ensure there's a contiguous buffer we can copy.
             if (_input instanceof UnifiedInputStreamX.FromByteArray
-                && getTypeAnnotationIds().length == 0
+                && getTypeAnnotationSymbols().length == 0
                 && ! isInStruct())
             {
                 return facetType.cast(new ByteTransferReaderFacet());

@@ -19,7 +19,6 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReaderChecker;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
@@ -84,20 +83,6 @@ public class IonAssert
 
         try {
             Iterator<String> ann = in.iterateTypeAnnotations();
-            assertEquals(false, ann.hasNext());
-//            fail("expected exception");
-        }
-        catch (IllegalStateException e) { }
-
-        try {
-            int[] ann = in.getTypeAnnotationIds();
-            assertEquals(0, ann.length);
-//            fail("expected exception");
-        }
-        catch (IllegalStateException e) { }
-
-        try {
-            Iterator<Integer> ann = in.iterateTypeAnnotationIds();
             assertEquals(false, ann.hasNext());
 //            fail("expected exception");
         }
@@ -181,8 +166,6 @@ public class IonAssert
                          expectedText, in.stringValue());
         }
 
-        assertEquals(expectedSid, in.getSymbolId());
-
         SymbolToken sym = in.symbolValue();
         IonTestCase.checkSymbol(expectedText, expectedSid, sym);
     }
@@ -197,20 +180,14 @@ public class IonAssert
         assertEquals("isNullValue", expectedText == null, in.isNullValue());
         assertEquals("stringValue", expectedText, in.stringValue());
 
-        SymbolToken is = in.symbolValue();
+        SymbolToken symTok = in.symbolValue();
         if (expectedText == null)
         {
-            assertEquals("symbolValue", null, is);
-            try {
-                in.getSymbolId();
-                fail("expected exception on " + in.getType());
-            }
-            catch (NullValueException e) { }
+            assertEquals("symbolValue", null, symTok);
         }
         else
         {
-            assertEquals("symbolValue.text", expectedText, is.getText());
-            in.getSymbolId(); // Shouldn't throw, at least
+            assertEquals("symbolValue.text", expectedText, symTok.getText());
         }
     }
 

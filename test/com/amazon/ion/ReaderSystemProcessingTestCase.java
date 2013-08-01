@@ -2,7 +2,6 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
@@ -188,8 +187,8 @@ public abstract class ReaderSystemProcessingTestCase
         myReader.next();
         Assert.assertArrayEquals(EMPTY_STRING_ARRAY,
                                  myReader.getTypeAnnotations());
-        Assert.assertArrayEquals(EMPTY_INT_ARRAY,
-                                 myReader.getTypeAnnotationIds());
+        Assert.assertArrayEquals(new SymbolToken[0], // Empty SymbolToken array
+                                 myReader.getTypeAnnotationSymbols());
     }
 
 

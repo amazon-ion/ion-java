@@ -297,7 +297,7 @@ public class BinaryStreamingTest
                         assertTrue( ((String)value).equals( r.stringValue()) );
                     }
                     else if (value instanceof Integer) {
-                        assertTrue( ((Integer)value).equals( r.getSymbolId()) );
+                        assertTrue( ((Integer)value).equals( r.symbolValue().getSid()) );
                     }
                     else {
                         throw new IllegalStateException("we only test String or Integer (a symbol id) to an IonSymbol");

@@ -16,7 +16,6 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
@@ -29,7 +28,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
-import java.util.Iterator;
 
 /**
  * This reader calls the {@link IonReaderTextRawX} for low level events.
@@ -378,18 +376,6 @@ class IonReaderTextSystemX
         return result;
     }
 
-    public int[] getTypeAnnotationIds()
-    {
-        SymbolToken[] syms = getTypeAnnotationSymbols();
-        return _Private_Utils.toSids(syms, syms.length);
-    }
-
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        int[] ids = getTypeAnnotationIds();
-        return _Private_Utils.intIterator(ids);
-    }
-
 
     public boolean isNullValue()
     {
@@ -557,16 +543,6 @@ class IonReaderTextSystemX
             sym = _Private_Utils.localize(getSymbolTable(), sym);
         }
         return sym;
-    }
-
-    @Deprecated
-    public final int getSymbolId()
-    {
-        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
-        if (_v.isNull()) throw new NullValueException();
-
-        load_or_cast_cached_value(AS_TYPE.int_value);
-        return _v.getInt();
     }
 
     public SymbolToken symbolValue()

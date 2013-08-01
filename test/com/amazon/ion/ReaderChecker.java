@@ -165,9 +165,6 @@ public class ReaderChecker
             assertFalse(anns.hasNext());
         }
 
-        int[] sids = myReader.getTypeAnnotationIds();
-        assertEquals("sid", expectedSid, sids[0]);
-
         SymbolToken[] annSyms = myReader.getTypeAnnotationSymbols();
         IonTestCase.checkSymbol(expectedText, expectedSid, annSyms[0]);
 
@@ -182,8 +179,13 @@ public class ReaderChecker
         Iterator<String> anns = myReader.iterateTypeAnnotations();
         assertIteratorEquals(stringIterator(expectedTexts), anns);
 
-        int[] sids = myReader.getTypeAnnotationIds();
-        assertArrayEquals(expectedSids, sids);
+        SymbolToken[] tokens = myReader.getTypeAnnotationSymbols();
+        assertEquals(expectedSids.length, tokens.length);
+        int i = 0;
+        for (SymbolToken token : tokens)
+        {
+            assertEquals(expectedSids[i++], token.getSid());
+        }
 
         return this;
     }
