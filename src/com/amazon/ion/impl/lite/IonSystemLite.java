@@ -19,7 +19,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -800,10 +799,6 @@ final class IonSystemLite
         return dg;
     }
 
-
-    //=========================================================================
-    // IonReader creation
-
     public IonReader newReader(byte[] ionData)
     {
         return makeReader(this, _catalog, ionData);
@@ -826,7 +821,7 @@ final class IonSystemLite
     }
 
 
-    public IonTextReader newReader(String ionText)
+    public IonReader newReader(String ionText)
     {
         return makeReader(this, _catalog, ionText);
     }
@@ -847,6 +842,12 @@ final class IonSystemLite
         return makeSystemReader(this, ionData);
     }
 
+
+    /*************************************************************
+     *
+     * methods in IonSystemImpl (now declared in IonSystemPrivate)
+     *
+     */
 
     public IonReader newReader(Reader ionText)
     {

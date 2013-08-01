@@ -38,6 +38,7 @@ public interface _Private_IonSystem
      */
     public Iterator<IonValue> systemIterate(InputStream ionData);
 
+    public IonReader newSystemReader(Reader ionText);
 
     public IonReader newSystemReader(byte[] ionData);
 
@@ -46,8 +47,6 @@ public interface _Private_IonSystem
     public IonReader newSystemReader(String ionText);
 
     public IonReader newSystemReader(InputStream ionData);
-
-    public IonReader newSystemReader(Reader ionText);
 
     public IonReader newSystemReader(IonValue value);
 

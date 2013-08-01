@@ -1,11 +1,10 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.ReaderMaker.valuesExcluding;
 import static com.amazon.ion.util.Spans.currentSpan;
 
-import com.amazon.ion.IonTextReader;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
 import com.amazon.ion.TextSpan;
@@ -33,11 +32,6 @@ public class TextSpanTest
     protected void expectNextSpan(int startLine, int startColumn)
     {
         in.next();
-        if (in instanceof IonTextReader) {
-            IonTextReader text = (IonTextReader) in;
-            assertEquals("startLine",   startLine,   text.getLineNumber());
-            assertEquals("startColumn", startColumn, text.getLineOffset());
-        }
 
         Span s = sp.currentSpan();
         TextSpan ts = Facets.assumeFacet(TextSpan.class, s);

@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -32,7 +32,7 @@ import java.util.Date;
 import java.util.Iterator;
 
 /**
- * This reader calls the IonTextReaderRaw for low level events.
+ * This reader calls the {@link IonReaderTextRawX} for low level events.
  * It surfaces the reader functions that construct instances
  * of various sorts (numbers, java strings, etc). It also
  * caches the fieldname and annotations of the current value.

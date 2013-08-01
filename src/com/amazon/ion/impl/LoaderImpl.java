@@ -8,7 +8,6 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonTextReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -179,7 +178,6 @@ final class LoaderImpl
 
             // Input is text
             IonReader reader = mySystem.newSystemReader(pushback);
-            assert reader instanceof IonTextReader;
 
             IonDatagramImpl dg =
                 new IonDatagramImpl(mySystem, myCatalog, reader);

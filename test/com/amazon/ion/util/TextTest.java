@@ -1,8 +1,9 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.impl._Private_IonTextAppender;
 import org.junit.Test;
 
 /**
@@ -99,40 +100,36 @@ public class TextTest
         checkString(value, oneValue(rendered));
     }
 
-
-    @SuppressWarnings("deprecation")
     private void unquotedAnywhere(String symbol)
     {
         assertEquals(IonTextUtils.SymbolVariant.IDENTIFIER,
                      IonTextUtils.symbolVariant(symbol));
 
         // unquoted in sexp
-        assertFalse(Text.symbolNeedsQuoting(symbol, false));
+        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
         // unquoted elsewhere
-        assertFalse(Text.symbolNeedsQuoting(symbol, true));
+        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
-    @SuppressWarnings("deprecation")
     private void quotedEverywhere(String symbol)
     {
         assertEquals(IonTextUtils.SymbolVariant.QUOTED,
                      IonTextUtils.symbolVariant(symbol));
 
         // Quoted in sexp
-        assertTrue(Text.symbolNeedsQuoting(symbol, false));
+        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
         // Quoted elsewhere
-        assertTrue(Text.symbolNeedsQuoting(symbol, true));
+        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
-    @SuppressWarnings("deprecation")
     private void unquotedInSexp(String symbol)
     {
         assertEquals(IonTextUtils.SymbolVariant.OPERATOR,
                      IonTextUtils.symbolVariant(symbol));
 
         // unquoted in sexp
-        assertFalse(Text.symbolNeedsQuoting(symbol, false));
+        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
         // quoted elsewheres
-        assertTrue(Text.symbolNeedsQuoting(symbol, true));
+        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 }

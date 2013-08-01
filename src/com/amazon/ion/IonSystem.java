@@ -336,6 +336,16 @@ public interface IonSystem
      */
 
     /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * The text is parsed incrementally by the reader, so any syntax errors
+     * will not be detected during this call.
+     *
+     * @param ionText must not be null.
+     */
+    public IonReader newReader(String ionText);
+
+    /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.
      * <p>
@@ -363,16 +373,6 @@ public interface IonSystem
      * {@code ionData.length}.
      */
     public IonReader newReader(byte[] ionData, int offset, int len);
-
-    /**
-     * Creates an new {@link IonTextReader} instance over Ion text data.
-     * <p>
-     * The text is parsed incrementally by the reader, so any syntax errors
-     * will not be detected during this call.
-     *
-     * @param ionText must not be null.
-     */
-    public IonTextReader newReader(String ionText);
 
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,
