@@ -240,16 +240,29 @@ public abstract class IonTestCase
         IonDatagram dg = loader.load(ionFile);
 
         // Flush out any encoding problems in the data.
-        forceMaterialization(dg);
+        forceDeepMaterialization(dg);
 
         return dg;
     }
 
-
-    @SuppressWarnings("deprecation")
-    public void forceMaterialization(IonValue value)
+    /**
+     * Force deep materialization of the IonValue, ensuring that this
+     * value, and all contained data, is fully materialized into
+     * {@link IonValue} instances from any underlying Ion binary buffer.
+     * <p>
+     * This is only applicable for the Lazy DOM, it is a no-op for the Lite DOM.
+     * <p>
+     * TODO ION-165 - There are differences in behavior between Lazy and Lite DOM.
+     */
+    public void forceDeepMaterialization(IonValue value)
     {
-        value.deepMaterialize();
+        // If Lazy DOM, deep Materialize using IonReader to flush out
+        // any problems in the binary backed buffer
+        if (getDomType().equals(DomType.BACKED))
+        {
+            IonReader ionReader = system().newReader(value);
+            TestUtils.deepRead(ionReader, true);
+        }
     }
 
     //=========================================================================

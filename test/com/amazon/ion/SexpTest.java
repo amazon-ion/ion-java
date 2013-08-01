@@ -312,7 +312,7 @@ public class SexpTest
         assertEquals(sexp1, sexp2);
     }
 
-    private String[] termintor_test_values = {
+    private String[] terminator_test_values = {
                 "(1001-12-31'symbol')",
                 "(1001-12-31\"string\")",
                 "(1001-12-31/* coomment */)",
@@ -332,13 +332,13 @@ public class SexpTest
     @Test
     public void testNumericTerminationCharacters()
     {
-        for (String image : termintor_test_values) {
+        for (String image : terminator_test_values) {
             IonReader r = system().newReader(image);
             TestUtils.deepRead(r);
         }
 
         // these should parse correctly
-        for (String image : termintor_test_values) {
+        for (String image : terminator_test_values) {
             IonValue value = oneValue(image);
             IonValue value2 = reload(value);
             assertEquals(value, value2);

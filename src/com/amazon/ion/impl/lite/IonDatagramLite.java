@@ -335,13 +335,6 @@ final class IonDatagramLite
 
 
     @Override
-    public void deepMaterialize()
-    {
-        populateSymbolValues(null);
-    }
-
-
-    @Override
     public <T extends IonValue> T[] extract(Class<T> type)
     {
         if (isNullValue()) return null;

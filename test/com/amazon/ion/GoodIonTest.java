@@ -97,7 +97,7 @@ public class GoodIonTest
             IonDatagram dg = loader().load(ionText);
 
             // Flush out any encoding problems in the data.
-            forceMaterialization(dg);
+            forceDeepMaterialization(dg);
         }
     }
 

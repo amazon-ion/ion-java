@@ -552,9 +552,12 @@ public class DatagramTest
 
         String result = dg.toString();
 
-        // Not all DOM impls will inject the symtab after getBytes()
-        if (dg.systemGet(1) instanceof IonStruct)
+        // TODO ION-165 There are differences in behavior between Lazy and Lite
+        // DOM regarding handling of symtab construction.
+        DomType domType = getDomType();
+        if (domType.equals(DomType.BACKED))
         {
+            // Lazy DOM impls injects symtab after getBytes()
             assertEquals(ION_1_0 + ' '
                          + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
                          + " x",
@@ -562,8 +565,8 @@ public class DatagramTest
         }
         else
         {
+            // Lite DOM impls doesn't inject symtab after getBytes()
             assertEquals(ION_1_0 + " x", result);
-
         }
     }
 

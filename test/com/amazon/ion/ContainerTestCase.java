@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -352,16 +352,6 @@ it.next();
             fail("expected exception");
         }
         catch (IonException e) { }
-    }
-
-    @Test
-    public void testDeepMaterializeReadOnlyContainer()
-    {
-        IonContainer c = makeEmpty();
-        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
-        add(c, child);
-        c.makeReadOnly();
-        c.deepMaterialize();
     }
 
     @Test

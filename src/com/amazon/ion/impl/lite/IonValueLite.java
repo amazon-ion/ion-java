@@ -310,11 +310,6 @@ abstract class IonValueLite
     @Override
     public abstract int hashCode();
 
-    public void deepMaterialize()
-    {
-        return;
-    }
-
     public IonContainerLite getContainer()
     {
         return _context.getContextContainer();

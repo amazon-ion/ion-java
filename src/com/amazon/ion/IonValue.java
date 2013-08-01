@@ -341,18 +341,6 @@ public interface IonValue
 
 
     /**
-     * Ensures that this value, and all contained data, is fully materialized
-     * into {@link IonValue} instances from any underlying Ion binary buffer.
-     *
-     * @deprecated with no direct replacement. This method was once recommended
-     * to make values (somewhat) thread-safe, in which case one should use
-     * {@link #makeReadOnly()} instead.
-     */
-    @Deprecated
-    public void deepMaterialize();
-
-
-    /**
      * Marks this instance and its children to be immutable.
      * In addition, read-only values are safe for simultaneous use
      * from multiple threads.  This may require materializing the Java

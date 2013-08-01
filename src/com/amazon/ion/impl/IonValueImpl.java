@@ -1359,14 +1359,14 @@ abstract class IonValueImpl
     {
         if ( this._isPositionLoaded() == false ) {
             if (this._buffer != null) {
-                throw new IonException("invalid value state - buffer but not loaded!");
+                throw new IonException("invalid value state - backing buffer exists but not loaded");
             }
             // No buffer, so no work to do.
             return;
         }
 
         if (this._buffer == null) {
-            throw new IonException("invalid value state - loaded but no buffer!");
+            throw new IonException("invalid value state - position info loaded but no backing buffer exist");
         }
 
         assert ! this._isLocked();
@@ -1471,7 +1471,7 @@ abstract class IonValueImpl
         throws IOException;
 
 
-    public void deepMaterialize()
+    protected void deepMaterialize()
     {
         try
         {
