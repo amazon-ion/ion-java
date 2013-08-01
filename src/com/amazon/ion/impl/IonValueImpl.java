@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -31,9 +31,8 @@ import com.amazon.ion.impl.IonBinary.Writer;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
-
 /**
- *
+ * Base class for the "lazy DOM" implementation of {@link IonValue}.
  */
 abstract class IonValueImpl
     implements _Private_IonValue
@@ -124,6 +123,9 @@ abstract class IonValueImpl
      * to be an int (4 bytes for 1 bit seems excessive).
      */
     private short _flags;
+
+    private static final int TYPE_ANNOTATION_HASH_SIGNATURE =
+        "TYPE ANNOTATION".hashCode();
 
     private static final int IS_MATERIALIZED    = 0x01;
     private static final int IS_POSITION_LOADED = 0x02;
@@ -579,13 +581,6 @@ abstract class IonValueImpl
         return symtab;
     }
 
-    @Deprecated
-    public final int getFieldNameId()
-    {
-        return getFieldId();
-    }
-
-
     public final SymbolToken getFieldNameSymbol()
     {
         int sid = _fieldSid;
@@ -844,7 +839,8 @@ abstract class IonValueImpl
         checkForLock();
 
         SymbolTable symbols = getUpdatableSymbolTable();
-        sid = symbols.addSymbol(name);
+        SymbolToken symToken = symbols.intern(name);
+        sid = symToken.getSid();
         return sid;
     }
 
@@ -864,7 +860,7 @@ abstract class IonValueImpl
             symbols = getUpdatableSymbolTable();
         }
         checkForLock();
-        symbols.addSymbol(name);
+        symbols.intern(name);
 
         return symbols;
     }
@@ -927,15 +923,6 @@ abstract class IonValueImpl
     public int getElementId()
     {
         return this._elementid;
-    }
-
-    /**
-     * @deprecated Use {@link #getTypeAnnotations()} instead
-     */
-    @Deprecated
-    public String[] getTypeAnnotationStrings()
-    {
-        return getTypeAnnotations();
     }
 
     public String[] getTypeAnnotations()
@@ -1055,6 +1042,41 @@ abstract class IonValueImpl
         this._annotations = temp;
 
         setDirty();
+    }
+
+    protected int hashTypeAnnotations(final int original)
+    {
+        final SymbolToken[] tokens = getTypeAnnotationSymbols();
+        if (tokens.length == 0)
+        {
+            return original;
+        }
+
+        final int sidHashSalt   = 127;      // prime to salt sid of annotation
+        final int textHashSalt  = 31;       // prime to salt text of annotation
+        final int prime = 8191;
+        int result = original ^ TYPE_ANNOTATION_HASH_SIGNATURE;
+
+        result = prime * original + tokens.length;
+
+        for (final SymbolToken token : tokens)
+        {
+            String text = token.getText();
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 19) ^ (tokenHashCode >> 13);
+
+            result = prime * result + tokenHashCode;
+
+            // mixing at each step to make the hash code order-dependent
+            result ^= (result << 25) ^ (result >> 7);
+        }
+
+        return result;
     }
 
     void pos_init()
@@ -1322,14 +1344,14 @@ abstract class IonValueImpl
     {
         if ( this._isPositionLoaded() == false ) {
             if (this._buffer != null) {
-                throw new IonException("invalid value state - buffer but not loaded!");
+                throw new IonException("invalid value state - backing buffer exists but not loaded");
             }
             // No buffer, so no work to do.
             return;
         }
 
         if (this._buffer == null) {
-            throw new IonException("invalid value state - loaded but no buffer!");
+            throw new IonException("invalid value state - position info loaded but no backing buffer exist");
         }
 
         assert ! this._isLocked();
@@ -1434,7 +1456,7 @@ abstract class IonValueImpl
         throws IOException;
 
 
-    public void deepMaterialize()
+    protected void deepMaterialize()
     {
         try
         {
@@ -2118,18 +2140,17 @@ abstract class IonValueImpl
      *          content and annotations.
      */
     @Override
-    public boolean equals(final Object other)
+    public final boolean equals(final Object other)
     {
-        boolean same = false;
         if (other == this) {
             // we shouldn't make 3 deep method calls for this common case
             return true;
         }
         if (other instanceof IonValue)
         {
-            same = ionEquals(this, (IonValue) other);
+            return ionEquals(this, (IonValue) other);
         }
-        return same;
+        return false;
     }
 
 

@@ -437,8 +437,7 @@ done:       for (;;) {
          */
         public Decimal readDecimal(int len) throws IOException
         {
-            // TODO this doesn't seem like the right math context
-            MathContext mathContext = MathContext.DECIMAL128;
+            MathContext mathContext = MathContext.UNLIMITED;
 
             Decimal bd;
 
@@ -1320,7 +1319,7 @@ done:       for (;;) {
             for (int ii=0; ii<value.length(); ii++) {
                 int c = value.charAt(ii);
                 if (c > 127) {
-                    if (c >= 0xD800) {
+                    if (c >= 0xD800 && c <= 0xDFFF) {
                         if (_Private_IonConstants.isHighSurrogate(c)) {
                             ii++;
                             // houston we have a high surrogate (let's hope it has a partner

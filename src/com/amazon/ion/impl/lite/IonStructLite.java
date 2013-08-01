@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,10 +7,12 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
+import com.amazon.ion.util.Equivalence;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -32,46 +34,37 @@ final class IonStructLite
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
 
-    // TODO: add support for _isOrdered: private boolean _isOrdered = false;
+    // TODO ION-42: add support for _isOrdered
 
-    /**
-     * Constructs a binary-backed struct value.
-     */
     public IonStructLite(IonSystemLite system, boolean isNull)
     {
         super(system, isNull);
     }
 
-    /**
-     * creates a copy of this IonStructImpl.  Most of the work
-     * is actually done by IonContainerImpl.copyFrom() and
-     * IonValueImpl.copyFrom().
-     */
     @Override
     public IonStruct clone()
     {
-       IonStructLite clone = new IonStructLite(_context.getSystem(), false);
+        IonStructLite clone = new IonStructLite(_context.getSystem(), false);
 
-       try {
-          // copy from won't update the map, now call transition to large
-          // to construct the map.  So we'll do that once it's done
-          clone.copyFrom(this);
+        try {
+            clone.copyFrom(this);
 
-          // now force the field map to be built, or
-          // initialized to null
-          if (this._field_map != null) {
-              clone.build_field_map();
-          }
-          else {
-              // this should already be true
-              clone._field_map = null;
-              clone._field_map_duplicate_count = 0;
-          }
-      }
-       catch (IOException e) {
-         throw new IonException(e);
-      }
-       return clone;
+            // copyFrom() won't update the field map, so we call
+            // build_field_map() to build it, if and only if this instance's
+            // field map isn't null
+            if (this._field_map != null) {
+                clone.build_field_map();
+            }
+            else {
+                // this should already be true
+                clone._field_map = null;
+                clone._field_map_duplicate_count = 0;
+            }
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+        return clone;
     }
 
     private HashMap<String, Integer> _field_map;
@@ -286,23 +279,52 @@ final class IonStructLite
 
     /**
      * Implements {@link Object#hashCode()} consistent with equals.
-     * This implementation uses a fixed constant XORs with the hash
-     * codes of contents and field names.  This is insensitive to order, as it
-     * should be.
+     * This is insensitive to order of fields.
+     * <p>
+     * This method must follow the contract of {@link Object#equals(Object)},
+     * which is located at {@link Equivalence#ionEquals(IonValue, IonValue)}.
      *
      * @return  An int, consistent with the contracts for
      *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
      */
     @Override
-    public int hashCode() {
-        int hash_code = HASH_SIGNATURE;
+    public int hashCode()
+    {
+        final int nameHashSalt  = 16777619; // prime to salt name of each Field
+        final int valueHashSalt = 8191;     // prime to salt value of each Field
+        final int sidHashSalt   = 127;      // prime to salt sid of fieldname
+        final int textHashSalt  = 31;       // prime to salt text of fieldname
+
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
             for (IonValue v : this)  {
-                hash_code ^= v.hashCode();
-                hash_code ^= v.getFieldName().hashCode();
+                // If fieldname's text is unknown, use its sid instead
+                SymbolToken token = v.getFieldNameSymbol();
+                String text = token.getText();
+
+                int nameHashCode = text == null
+                    ? token.getSid()  * sidHashSalt
+                    : text.hashCode() * textHashSalt;
+
+                // mixing to account for small text and sid deltas
+                nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
+
+                int fieldHashCode = HASH_SIGNATURE;
+                fieldHashCode = valueHashSalt * fieldHashCode + v.hashCode();
+                fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
+
+                // another mix step for each Field of the struct
+                fieldHashCode ^= (fieldHashCode << 19) ^ (fieldHashCode >> 13);
+
+                // Additive hash is used to ensure insensitivity to order of
+                // fields, and will not lose data on value hash codes
+                // Fixes ION-309
+                result += fieldHashCode;
             }
         }
-        return hash_code;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonStruct cloneAndRemove(String... fieldNames)
@@ -774,6 +796,24 @@ final class IonStructLite
         }
     }
 
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        if (isNullValue())
+        {
+            writer.writeNull(IonType.STRUCT);
+        }
+        else
+        {
+            writer.stepIn(IonType.STRUCT);
+            for (IonValue iv : this)
+            {
+                iv.writeTo(writer);
+            }
+            writer.stepOut();
+        }
+    }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception

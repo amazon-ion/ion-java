@@ -411,8 +411,6 @@ public interface IonSequence
     public <T extends IonValue> T[] extract(Class<T> type);
 
 
-    /**
-     * {@inheritDoc}
-     */
-    public IonSequence clone();
+    public IonSequence clone()
+        throws UnknownSymbolException;
 }

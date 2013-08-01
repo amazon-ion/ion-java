@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -6,6 +6,7 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
 import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl.lite._Private_LiteDomTrampoline;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -21,6 +22,7 @@ import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
 
@@ -31,54 +33,89 @@ import org.junit.runner.RunWith;
 public abstract class IonTestCase
     extends Assert
 {
-    protected enum DomType { LITE, BACKED }
+    private static final String ION_TESTS_IONTESTDATA_PATH_PROPERTY =
+        "com.amazon.iontests.iontestdata.path";
+    private static final String ION_TESTS_BULK_PATH_PROPERTY =
+        "com.amazon.iontests.bulk.path";
+
+    /** Test dimensions of the DOM implementations. */
+    protected enum DomType
+    {
+        LITE,
+        BACKED,
+        /**
+         * ReverseBinaryEncoder impl for IonDatagramLite
+         * @see com.amazon.ion.impl.lite.ReverseBinaryEncoder
+         */
+        LITE_REV_ENC
+    }
+
+    protected enum StreamingMode { OLD_STREAMING, NEW_STREAMING }
+
+    // Using an enum makes the test names more understandable than a boolean.
+    protected enum StreamCopySpeed { COPY_OPTIMIZED, COPY_NON_OPTIMIZED }
 
     @Inject("domType")
     public static final DomType[] DOM_TYPES = DomType.values();
 
-
-    public static enum StreamingMode {
-        OLD_STREAMING,
-        NEW_STREAMING
-    }
-
     @Inject("streamingMode")
     public static final StreamingMode[] STREAMING_DIMENSION =
-        //StreamingMode.values();  // ION-180 the old streaming fails numerous regressions.
-    { StreamingMode.NEW_STREAMING };
+        //StreamingMode.values();  // TODO ION-180 the old streaming fails numerous regressions.
+        { StreamingMode.NEW_STREAMING };
+
+    /**
+     * Flag on whether IonSystems generated is
+     * {@link IonSystemBuilder#isStreamCopyOptimized()}.
+     * <p>
+     * This is false by default. Keep this in sync with {@link IonSystemBuilder}!
+     */
+    private boolean                     myStreamCopyOptimized = false;
+    private DomType                     myDomType;
+    private StreamingMode               myStreamingMode;
+
+    private static boolean              ourSystemPropertiesLoaded = false;
+    protected SimpleCatalog             myCatalog;
+    protected _Private_IonSystem        mySystem;
+    protected IonLoader                 myLoader;
+
+    @After
+    public void tearDown()
+        throws Exception
+    {
+        myCatalog = null;
+        mySystem = null;
+    }
 
 
-
-    private static boolean ourSystemPropertiesLoaded = false;
-    protected SimpleCatalog    myCatalog;
-    protected _Private_IonSystem mySystem;
-    protected IonLoader        myLoader;
-
-    //  FIXME: needs java docs
-    private DomType domType;
-    private StreamingMode desiredStreamingMode;
+    //=========================================================================
+    // Setters/Getters for injected values
 
     public DomType getDomType()
     {
-        return domType;
+        return myDomType;
     }
 
     public void setDomType(DomType type)
     {
-        domType = type;
+        myDomType = type;
     }
 
-
-    public void setStreamingMode(StreamingMode mode) {
-        desiredStreamingMode = mode;
+    public StreamingMode getStreamingMode()
+    {
+        return myStreamingMode;
     }
 
-    public StreamingMode getStreamingMode() {
-        return desiredStreamingMode;
+    public void setStreamingMode(StreamingMode mode)
+    {
+        myStreamingMode = mode;
     }
 
+    public void setCopySpeed(StreamCopySpeed speed)
+    {
+        myStreamCopyOptimized = (speed == StreamCopySpeed.COPY_OPTIMIZED);
+    }
 
-    // ========================================================================
+    //=========================================================================
     // Access to test data
 
     public static synchronized void loadSystemProperties()
@@ -155,14 +192,28 @@ public abstract class IonTestCase
     }
 
     /**
-     * Gets a {@link File} contained in the test data suite.
+     * Gets a {@link File} contained in the IonTests "iontestdata" data
+     * directory.
      *
-     * @param path is relative to the {@code testdata} directory.
+     * @param path is relative to the "iontestdata" directory.
      */
     public static File getTestdataFile(String path)
     {
         String testDataPath =
-            requireSystemProperty("com.amazon.iontests.iontestdata.path");
+            requireSystemProperty(ION_TESTS_IONTESTDATA_PATH_PROPERTY);
+        File testDataDir = new File(testDataPath);
+        return new File(testDataDir, path);
+    }
+
+    /**
+     * Gets a {@link File} contained in the IonTests "bulk" data directory.
+     *
+     * @param path is relative to the "bulk" directory
+     */
+    public static File getBulkTestdataFile(String path)
+    {
+        String testDataPath =
+            requireSystemProperty(ION_TESTS_BULK_PATH_PROPERTY);
         File testDataDir = new File(testDataPath);
         return new File(testDataDir, path);
     }
@@ -189,37 +240,84 @@ public abstract class IonTestCase
         IonDatagram dg = loader.load(ionFile);
 
         // Flush out any encoding problems in the data.
-        forceMaterialization(dg);
+        forceDeepMaterialization(dg);
 
         return dg;
     }
 
-
-    @SuppressWarnings("deprecation")
-    public void forceMaterialization(IonValue value)
+    /**
+     * Force deep materialization of the IonValue, ensuring that this
+     * value, and all contained data, is fully materialized into
+     * {@link IonValue} instances from any underlying Ion binary buffer.
+     * <p>
+     * This is only applicable for the Lazy DOM, it is a no-op for the Lite DOM.
+     * <p>
+     * TODO ION-165 - There are differences in behavior between Lazy and Lite DOM.
+     */
+    public void forceDeepMaterialization(IonValue value)
     {
-        value.deepMaterialize();
+        // If Lazy DOM, deep Materialize using IonReader to flush out
+        // any problems in the binary backed buffer
+        if (getDomType().equals(DomType.BACKED))
+        {
+            IonReader ionReader = system().newReader(value);
+            TestUtils.deepRead(ionReader, true);
+        }
     }
 
-    // ========================================================================
+    //=========================================================================
     // Fixture Helpers
 
+    /**
+     * @return
+     *          the singleton IonSystem, binary-backed and/or
+     *          stream-copy optimized depending on the injected
+     *          {@link #myDomType} and {@link #myStreamCopyOptimized}.
+     */
     protected _Private_IonSystem system()
     {
         if (mySystem == null)
         {
-            mySystem = system(myCatalog);
+            mySystem = newSystem(myCatalog, getDomType());
         }
         return mySystem;
     }
 
-    // added helper, this returns a separate system
-    // every time since the user is passing in a catalog
-    // which changes the state of the system object
-    protected _Private_IonSystem system(IonCatalog catalog)
+    /**
+     * @return
+     *          a new IonSystem instance, binary-backed and/or stream-copy
+     *          optimized depending on the injected {@link #myDomType} and
+     *          {@link #myStreamCopyOptimized}.
+     */
+    protected _Private_IonSystem newSystem(IonCatalog catalog)
+    {
+        return newSystem(catalog, getDomType());
+    }
+
+    /**
+     * Returns a new IonSystem for each call, using the passed in IonCatalog
+     * to build the IonSystem.
+     *
+     * @param catalog
+     *          the catalog to use when building the IonSystem
+     * @param domType
+     *          the {@link DomType} that the resulting IonSystem is set to
+     *
+     * @return
+     *          a new IonSystem instance, binary-backed and/or stream-copy
+     *          optimized depending on the passed in {@code domType} and
+     *          injected {@link #myStreamCopyOptimized}.
+     */
+    protected _Private_IonSystem newSystem(IonCatalog catalog,
+                                           DomType domType)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
-        BuilderHack.setBinaryBacked(b, getDomType() == DomType.BACKED);
+
+        BuilderHack.setBinaryBacked(b, domType == DomType.BACKED);
+        _Private_LiteDomTrampoline.setReverseBinaryEncoder(
+            domType == DomType.LITE_REV_ENC);
+        b.withStreamCopyOptimized(myStreamCopyOptimized);
+
         IonSystem system = b.build();
         return (_Private_IonSystem) system;
     }
@@ -263,7 +361,7 @@ public abstract class IonTestCase
     }
 
 
-    // ========================================================================
+    //=========================================================================
     // Encoding helpers
 
     /**
@@ -328,7 +426,7 @@ public abstract class IonTestCase
 
 
 
-    // ========================================================================
+    //=========================================================================
     // Processing Ion text
 
     /**
@@ -752,9 +850,8 @@ public abstract class IonTestCase
 
         if (text != null)
         {
-            if (sid >= 0)
+            if (sid != UNKNOWN_SYMBOL_ID)
             {
-                assertEquals(msg, text, symtab.findSymbol(sid));
                 assertEquals(msg, text, symtab.findKnownSymbol(sid));
             }
 
@@ -762,28 +859,17 @@ public abstract class IonTestCase
             if (! dupe)
             {
                 assertEquals(msg, sid, symtab.findSymbol(text));
-                assertEquals(msg, sid, symtab.addSymbol(text));
 
-                SymbolToken sym = symtab.intern(text);
-                assertEquals(msg, sid, sym.getSid());
+                SymbolToken symToken = symtab.intern(text);
+                assertEquals(msg, sid, symToken.getSid());
 
-                sym = symtab.find(text);
-                assertEquals(msg, sid, sym.getSid());
+                symToken = symtab.find(text);
+                assertEquals(msg, sid, symToken.getSid());
             }
         }
         else // No text expected, must have sid
         {
-            assertEquals(msg, text, symtab.findKnownSymbol(sid));
-
-            try
-            {
-                symtab.findSymbol(sid);
-                fail("Expected " + UnknownSymbolException.class);
-            }
-            catch (UnknownSymbolException e)
-            {
-                assertEquals(sid, e.getSid());
-            }
+            assertEquals(msg, text /* null */, symtab.findKnownSymbol(sid));
         }
     }
 
@@ -809,12 +895,6 @@ public abstract class IonTestCase
         {
             try {
                 symtab.intern(text);
-                fail("Expected exception");
-            }
-            catch (ReadOnlyValueException e) { }
-
-            try {
-                symtab.addSymbol(text);
                 fail("Expected exception");
             }
             catch (ReadOnlyValueException e) { }
@@ -889,7 +969,7 @@ public abstract class IonTestCase
         assertTrue(symtab.isSystemTable());
         assertFalse("table is substitute", symtab.isSubstitute());
         assertSame(symtab, symtab.getSystemSymbolTable());
-        assertEquals(SystemSymbolTable.ION_1_0_MAX_ID, symtab.getMaxId());
+        assertEquals(SystemSymbols.ION_1_0_MAX_ID, symtab.getMaxId());
         assertEquals(ION_1_0, symtab.getIonVersionId());
     }
 
@@ -911,7 +991,6 @@ public abstract class IonTestCase
 
         return null;
     }
-
 
     /**
      * Checks decimal equality, including precision and negative-zero.
@@ -951,28 +1030,91 @@ public abstract class IonTestCase
         }
     }
 
+    public void testCloneVariants(IonValue original)
+    {
+        // Test on IonValue.clone()
+        testSimpleClone(original);
+
+        // Test on ValueFactory.clone() with the same ValueFactory
+        testValueFactoryClone(original, original.getSystem());
+
+        // Test on ValueFactory.clone() with different ValueFactory (and DOM impls)
+        for (DomType domType : DomType.values())
+        {
+            testValueFactoryClone(original,
+                                  newSystem(new SimpleCatalog(), domType));
+        }
+    }
+
     /**
-     * Tests that some data parses, clones, and prints back to the same text.
-     * @param input  Ion text data
+     * Test that a single IonValue created from {@code input}, is
+     * equal to its clone through {@link IonValue#clone()}.
+     *
+     * @param input the original Ion text data
      */
     public void testSimpleClone(String input)
     {
-        IonValue data = system().singleValue(input);
-        IonValue clone = data.clone();
-        assertEquals(input, clone.toString());
-        assertEquals(data, clone);
+        IonValue original = system().singleValue(input);
+        testSimpleClone(original);
+    }
+
+    /**
+     * Test that a single IonValue is equal to its clone through
+     * {@link IonValue#clone()}.
+     *
+     * @param original the original value
+     */
+    public void testSimpleClone(IonValue original)
+    {
+        IonValue clone = original.clone();
+        IonAssert.assertIonEquals(original, clone);
+        assertEquals(original.toString(), clone.toString());
+
+        assertSame("ValueFactory of cloned value should be the same " +
+                   "reference as the original's",
+                   original.getSystem(), clone.getSystem());
+
+        assertNull("Cloned value should not have a container (parent)",
+                   clone.getContainer());
+
+        assertFalse("Cloned value should be modifiable", clone.isReadOnly());
+    }
+
+    /**
+     * Test that a single IonValue is equal to its clone through
+     * {@link ValueFactory#clone(IonValue)}.
+     *
+     * @param original the original value
+     * @param newFactory the {@link ValueFactory} for the new clone
+     */
+    public void testValueFactoryClone(IonValue original,
+                                      ValueFactory newFactory)
+    {
+        IonValue clone = newFactory.clone(original);
+        IonAssert.assertIonEquals(original, clone);
+
+        // TODO ION-339 IonSystemLite.clone() on a value that is in IonSystemImpl
+        // doesn't seem to copy over local symbol tables.
+//        assertEquals(original.toString(), clone.toString());
+
+        assertSame("ValueFactory of cloned value should be the same " +
+                   "reference as the factory that cloned it",
+                   newFactory, clone.getSystem());
+
+        assertNull("Cloned value should not have a container (parent)",
+                   clone.getContainer());
+
+        assertFalse("Cloned value should be modifiable", clone.isReadOnly());
     }
 
     public void logSkippedTest()
     {
-        System.err.println("WARNING: skipped a test in " + getClass().getName());
+        System.out.println("WARNING: skipped a test in " + getClass().getName());
     }
 
     /** Temporary bridge from JUnit 3 */
     public void setUp() throws Exception { }
 
-    /** Temporary bridge from JUnit 3 */
-    public void tearDown() throws Exception { }
 
     /** JUnit 4 disables this */
     public static void assertEquals(double expected, double actual)

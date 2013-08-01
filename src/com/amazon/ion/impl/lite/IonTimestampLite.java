@@ -1,13 +1,15 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -72,39 +74,27 @@ final class IonTimestampLite
         super(system, isNull);
     }
 
-
-    /**
-     * makes a copy of this IonTimestamp. This calls up to
-     * IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * It then copies the time stamp value itself.
-     */
     @Override
     public IonTimestampLite clone()
     {
-        IonTimestampLite clone = new IonTimestampLite(this._context.getSystem(), false);
+        IonTimestampLite clone =
+            new IonTimestampLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         clone._timestamp_value = this._timestamp_value;
 
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the underlying timestamp value XOR'ed
-     * with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
-            hash ^= timestampValue().hashCode();
+            result ^= timestampValue().hashCode();
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -255,6 +245,13 @@ final class IonTimestampLite
         checkForLock();
         _timestamp_value = null;
         _isNullValue(true);
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeTimestamp(_timestamp_value);
     }
 
     @Override

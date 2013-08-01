@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -37,7 +37,7 @@ import java.io.Reader;
  * single buffer.
  *
  */
-public abstract class UnifiedInputStreamX
+abstract class UnifiedInputStreamX
     implements Closeable
 {
     public static final int      EOF = -1;

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -13,9 +13,6 @@ abstract class IonTextLite
 {
     private String _text_value;
 
-    /**
-     * Constructs a binary-backed value.
-     */
     protected IonTextLite(IonSystemLite system, boolean isNull)
     {
         super(system, isNull);
@@ -24,23 +21,23 @@ abstract class IonTextLite
     @Override
     public abstract IonTextLite clone();
 
-
     /**
-     * this copies the annotations and the field name if
-     * either of these exists from the passed in instance.
-     * It overwrites these values on the current instance.
-     * Since these will be the string representations it
-     * is unnecessary to update the symbol table ... yet.
-     * @param source instance to copy from
+     * This copies the original value's member fields (flags, annotations,
+     * context) from the passed in {@code original} instance and overwrites
+     * the corresponding fields of this instance. It also copies the text value.
+     * Since only string representations are copied, it is unnecessary to
+     * update the symbol table.. yet.
+     *
+     * @param original
      */
-    protected final void copyFrom(IonTextLite source)
+    protected final void copyFrom(IonTextLite original)
     {
         // first copy the annotations and such, which
-        // will materialize the value as needed.
-        this.copyValueContentFrom(source);
+        // will materialize the value as needed
+        this.copyMemberFieldsFrom(original);
 
-        // now we can copy the text as a string
-        String s = source._text_value;
+        // now we can copy the text value as a string
+        String s = original._text_value;
         _set_value(s);
     }
 
@@ -50,6 +47,9 @@ abstract class IonTextLite
         _set_value(value);
     }
 
+    /**
+     * @return null iff {@link #isNullValue()}
+     */
     protected final String _get_value()
     {
         return _text_value;
@@ -57,10 +57,7 @@ abstract class IonTextLite
 
     public String stringValue()
     {
-        if (isNullValue()) {
-            return null;
-        }
-        return _get_value();
+        return _text_value;
     }
 
     /**

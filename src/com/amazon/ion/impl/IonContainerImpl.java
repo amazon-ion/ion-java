@@ -465,25 +465,6 @@ abstract class IonContainerImpl
         }
     }
 
-    @SuppressWarnings("deprecation")
-    @Override
-    public void deepMaterialize()
-    {
-        try
-        {
-            materialize();
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
-
-        for (int ii=0; ii<_child_count; ii++) {
-            IonValue contained = get_child(ii);
-            contained.deepMaterialize();
-        }
-    }
-
     @Override
     protected void detachFromBuffer()
         throws IOException

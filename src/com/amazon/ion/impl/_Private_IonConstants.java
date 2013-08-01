@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,8 +7,10 @@ import com.amazon.ion.IonException;
 /**
  * NOT FOR APPLICATION USE!
  */
-public class _Private_IonConstants // TODO ION-271 make final
+public final class _Private_IonConstants
 {
+    private _Private_IonConstants() { }
+
 
     public final static int BB_TOKEN_LEN           =    1;
 
@@ -23,6 +25,11 @@ public class _Private_IonConstants // TODO ION-271 make final
     public final static int BB_MAX_7BIT_INT        =  127;
 
     public final static int INT32_SIZE            = 4;
+
+    /** maximum size of textual representation of a {@code long}. */
+    public final static int MAX_LONG_TEXT_SIZE    =
+        Math.max(Long.toString(Long.MAX_VALUE).length(),
+                 Long.toString(Long.MIN_VALUE).length());
 
     // these are used for various Unicode translation where
     // we need to convert the utf-16 Java characters into
@@ -253,4 +260,32 @@ public class _Private_IonConstants // TODO ION-271 make final
     public static final int False =
         makeTypeDescriptor(_Private_IonConstants.tidBoolean,
                            _Private_IonConstants.lnBooleanFalse);
+
+    /**
+     * Prefix string used in IonStructs' equality checks.
+     * When a IonValue's field name's text is unknown, this String is prepended
+     * to the field name's SID to coerce it to a string to be used as the key.
+     * This will eliminate collisions with IonValues with numbers as their
+     * field names.
+     * <p>
+     * For example, these two IonValues (nested in the IonStructs) will have
+     * distinct keys:
+     *
+     * <pre>
+     * {"$99":random_value},
+     * {$99:random_value}
+     * </pre>
+     *
+     * <p>
+     * TODO ION-272 However, there is still a potential failure if one of the
+     * IonStruct's nested value has a field name with text
+     * {@code " -- UNKNOWN SYMBOL TEXT -- $123"}, and that another nested value
+     * of an IonStruct has a field name with unknown text and sid 123, these
+     * two values will be considered a match within IonStruct's equality checks,
+     * which is wrong.
+     * <p>
+     * See IonAssert for another use of this idiom.
+     */
+    public static final String UNKNOWN_SYMBOL_TEXT_PREFIX =
+        " -- UNKNOWN SYMBOL TEXT -- $";
 }

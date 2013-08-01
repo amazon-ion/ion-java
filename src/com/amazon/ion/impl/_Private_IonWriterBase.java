@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -20,7 +20,7 @@ import java.util.Date;
  *  table is available (which it will not be if the underlying writer is a system
  *  writer).
  */
-abstract class IonWriterBaseImpl
+public abstract class _Private_IonWriterBase
     implements IonWriter, _Private_ReaderWriter
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
@@ -75,7 +75,8 @@ abstract class IonWriterBaseImpl
      * current top level value.
      *
      * @param symbols base symbol table for encoding. Must not be null.
-     * @throws IllegalArgumentException if symbols is null or a shared symbol table
+     * @throws IllegalArgumentException if symbols is null or a shared symbol
+     * table, or if this writer isn't at top level.
      */
     public abstract void setSymbolTable(SymbolTable symbols)
         throws IOException;
@@ -105,7 +106,7 @@ abstract class IonWriterBaseImpl
      * been set.
      * @return true if a field name has been set false otherwise
      */
-    abstract boolean isFieldNameSet();
+    public abstract boolean isFieldNameSet();
 
 
     //========================================================================
@@ -146,6 +147,15 @@ abstract class IonWriterBaseImpl
      * annotations cannot be expressed as IDs.
      */
     abstract int[] getTypeAnnotationIds();
+
+    /**
+     * Write symbolId out as an IonSymbol value.  The value does not
+     * have to be valid in the symbol table, unless the output is
+     * text, in which case it does.
+     *
+     * @param symbolId symbol table id to write
+     */
+    abstract void writeSymbol(int symbolId) throws IOException;
 
 
     //========================================================================
@@ -212,19 +222,6 @@ abstract class IonWriterBaseImpl
         }
     }
 
-
-    public void writeTimestamp(Date value, Integer localOffset)
-        throws IOException
-    {
-        Timestamp time;
-        if (value == null) {
-            writeNull(IonType.TIMESTAMP);
-        }
-        else {
-            time = new Timestamp(value.getTime(), localOffset);
-            writeTimestamp(time);
-        }
-    }
 
     public void writeTimestampUTC(Date value) throws IOException
     {
@@ -320,11 +317,18 @@ abstract class IonWriterBaseImpl
         if (_debug_on) System.out.print(";");
     }
 
+
+    public boolean isStreamCopyOptimized()
+    {
+        return false;
+    }
+
     /**
      * Overrides can optimize special cases.
      */
     public void writeValue(IonReader reader) throws IOException
     {
+        // TODO this should do symtab optimization as per writeValues()
         IonType type = reader.getType();
         writeValueRecursively(type, reader);
     }
@@ -423,7 +427,7 @@ abstract class IonWriterBaseImpl
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX,
-    //  IonReaderBinaryUserX and IonWriterBaseImpl
+    //  IonReaderBinaryUserX and _Private_IonWriterBase
     //
     //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
     //  THREE LOCATIONS AS WELL.

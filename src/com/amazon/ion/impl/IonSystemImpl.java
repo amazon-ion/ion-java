@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -37,21 +37,19 @@ import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
-import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbolTable;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -333,11 +331,10 @@ final class IonSystemImpl
         if (ionData == null) throw new NullPointerException();
 
         Iterator<IonValue> systemIterator;
-        boolean binaryData;
         try
         {
             PushbackInputStream pushback = new PushbackInputStream(ionData, 8);
-            binaryData = _Private_Utils.streamIsIonBinary(pushback);
+            boolean binaryData = _Private_Utils.streamIsIonBinary(pushback);
             if (binaryData)
             {
                 systemIterator = newPagedBinarySystemIterator(getCatalog(), pushback);
@@ -360,23 +357,12 @@ final class IonSystemImpl
     // IonReader creation
 
 
-    public IonTextReader newReader(String ionText)
+    public IonReader newReader(String ionText)
     {
         return makeReader(this, myCatalog, ionText);
     }
 
-    public IonTextReader newSystemReader(String ionText)
-    {
-        return makeSystemReader(this, ionText);
-    }
-
-
-    public IonTextReader newReader(Reader ionText)
-    {
-        return makeReader(this, ionText);
-    }
-
-    public IonTextReader newSystemReader(Reader ionText)
+    public IonReader newSystemReader(String ionText)
     {
         return makeSystemReader(this, ionText);
     }
@@ -416,6 +402,17 @@ final class IonSystemImpl
     }
 
 
+    public IonReader newReader(Reader ionText)
+    {
+        return makeReader(this, myCatalog, ionText);
+    }
+
+    public IonReader newSystemReader(Reader ionText)
+    {
+        return makeSystemReader(this, ionText);
+    }
+
+
     public IonReader newReader(IonValue value)
     {
         return makeReader(this, myCatalog, value);
@@ -450,17 +447,6 @@ final class IonSystemImpl
     public IonWriter newTextWriter(OutputStream out)
     {
         return myTextWriterBuilder.build(out);
-    }
-
-    @Deprecated // TODO ION-271 remove after IMS is migrated
-    public IonWriter newTextWriter(OutputStream out, boolean pretty)
-    {
-        IonTextWriterBuilder b = myTextWriterBuilder;
-        if (pretty)
-        {
-            b = b.withPrettyPrinting();
-        }
-        return b.build(out);
     }
 
     public IonWriter newTextWriter(OutputStream out, SymbolTable... imports)
@@ -526,35 +512,6 @@ final class IonSystemImpl
 
 
     /**
-     * Creates a new iterator, wrapping an array of text or binary data.
-     *
-     * @param catalog The catalog to use.
-     * @param ionData may be (UTF-8) text or binary.
-     * <em>This method assumes ownership of the array</em> and may modify it at
-     * will.
-     *
-     * @throws NullPointerException if <code>ionData</code> is null.
-     */
-    @Deprecated // TODO remove!
-    SystemValueIterator newLegacySystemIterator(IonCatalog catalog,
-                                                byte[] ionData)
-    {
-        if (catalog == null) catalog = getCatalog();
-        boolean isBinary = isIonBinary(ionData);
-
-        SystemValueIterator sysReader;
-        if (isBinary) {
-            sysReader = newBinarySystemIterator(catalog, ionData);
-        }
-        else {
-            sysReader = newTextSystemIterator(catalog, ionData);
-        }
-
-        return sysReader;
-    }
-
-
-    /**
      * Creates a new reader, wrapping an array of binary data.
      *
      * @param catalog the catalog to use.
@@ -564,8 +521,8 @@ final class IonSystemImpl
      *
      * @throws NullPointerException if <code>ionBinary</code> is null.
      */
-    private SystemValueIterator newBinarySystemIterator(IonCatalog catalog,
-                                                        byte[] ionBinary)
+    SystemValueIterator newBinarySystemIterator(IonCatalog catalog,
+                                                byte[] ionBinary)
     {
         if (catalog == null) catalog = getCatalog();
         BlockedBuffer bb = new BlockedBuffer(ionBinary);
@@ -573,26 +530,6 @@ final class IonSystemImpl
         //return new SystemReader(this, catalog, buffer);
         SystemValueIterator reader = makeSystemIterator(this, catalog, buffer);
         return reader;
-    }
-
-
-    /**
-     * Creates a new reader, wrapping bytes holding UTF-8 text.
-     *
-     * @param catalog the catalog to use.
-     * @param ionText must be UTF-8 encoded Ion text data, not binary.
-     * <em>This method assumes ownership of the array</em> and may modify it at
-     * will.
-     *
-     * @throws NullPointerException if <code>ionText</code> is null.
-     */
-    private SystemValueIterator newTextSystemIterator(IonCatalog catalog,
-                                                      byte[] ionText)
-    {
-        if (catalog == null) catalog = getCatalog();
-        ByteArrayInputStream stream = new ByteArrayInputStream(ionText);
-        Reader reader = new InputStreamReader(stream, UTF8_CHARSET);
-        return makeSystemIterator(this, catalog, reader);
     }
 
 
@@ -663,7 +600,7 @@ final class IonSystemImpl
             {
                 return true;
             }
-            else if (sid < 1 || sid > SystemSymbolTable.ION_1_0_MAX_ID) {
+            else if (sid < 1 || sid > SystemSymbols.ION_1_0_MAX_ID) {
                 SymbolToken is = symbol.symbolValue();
                 String image = is.getText();
                 return image != null && textIsSystemId(image);
@@ -1145,6 +1082,7 @@ final class IonSystemImpl
             return (T) value.clone();
         }
 
+        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
         if (value instanceof IonDatagram)
         {
             byte[] data = ((IonDatagram)value).getBytes();

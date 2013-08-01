@@ -2,7 +2,10 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_Utils;
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+
+import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Test;
 
 
@@ -77,12 +80,12 @@ public class SymbolTest
     public void testFactorySymbolWithSid(ValueFactory vf)
     {
         final int sid = 99;
-        SymbolToken tok = _Private_Utils.newSymbolToken((String)null, sid);
+        SymbolToken tok = newSymbolToken((String)null, sid);
 
         IonSymbol value = vf.newSymbol(tok);
         checkUnknownSymbol(99, value);
 
-        tok = _Private_Utils.newSymbolToken("text", sid);
+        tok = newSymbolToken("text", sid);
         value = vf.newSymbol(tok);
         checkSymbol("text", value);
         assertFalse(value.isNullValue());
@@ -172,20 +175,65 @@ public class SymbolTest
 
 
     @Test
-    public void testSymbolClone()
-        throws Exception
+    public void testCloneNullSymbol()
     {
-        testSimpleClone("null.symbol");
-        testSimpleClone("root");
+        // null.symbol
+        IonValue original = system().newSymbol((String) null);
+        assertTrue("original should be a Ion null value", original.isNullValue());
+        testCloneVariants(original);
     }
 
+    @Test
+    public void testCloneSymbolWithKnownText()
+    {
+        //===== known text, known sid =====
+        SymbolToken tok = newSymbolToken("some_text", 99);
+        IonSymbol original = system().newSymbol(tok);
+        assertFalse("original should not be null", original.isNullValue());
+        testCloneVariants(original);
+
+        //===== known text, unknown sid =====
+        tok = newSymbolToken("some_text", UNKNOWN_SYMBOL_ID);
+        original = system().newSymbol(tok);
+        assertFalse("original should not be null", original.isNullValue());
+        testCloneVariants(original);
+    }
 
     @Test
-    public void testClone()
+    public void testCloneSymbolWithUnknownTextKnownSid()
     {
-        IonValue data = system().singleValue("root");
-        IonValue clone = data.clone();
-        assertEquals(data, clone);
+        //===== IonSymbol.clone() =====
+        SymbolToken tok = newSymbolToken(99);
+        IonSymbol original = system().newSymbol(tok);
+        assertFalse("original should not be null", original.isNullValue());
+        try {
+            testSimpleClone(original);
+            fail("Expected UnknownSymbolException");
+        }
+        catch (UnknownSymbolException e) { }
+
+        //===== ValueFactory.clone() with the same ValueFactory =====
+        tok = newSymbolToken(99);
+        original = system().newSymbol(tok);
+        assertFalse("original should not be null", original.isNullValue());
+        try {
+            testValueFactoryClone(original, system());
+            fail("Expected UnknownSymbolException");
+        }
+        catch (UnknownSymbolException e) { }
+
+        //===== ValueFactory.clone() with a different ValueFactory (on each DOM impl) =====
+        for (DomType domType : DomType.values())
+        {
+            tok = newSymbolToken(99);
+            original = system().newSymbol(tok);
+            assertFalse("original should not be null", original.isNullValue());
+            // Different factory, this triggers a deep copy
+            // TODO ION-339 An UnknownSymbolException is expected here, but
+            // it isn't thrown.
+            testValueFactoryClone(original,
+                                  newSystem(new SimpleCatalog(), domType));
+        }
     }
 
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -621,7 +621,7 @@ public class _Private_ScalarConversions
             case FNID_FROM_DECIMAL_TO_DOUBLE:        fn_from_decimal_to_double();             break;
             case FNID_FROM_TIMESTAMP_TO_DATE:        fn_from_timestamp_to_date();             break;
             case FNID_FROM_DATE_TO_TIMESTAMP:        fn_from_date_to_timestamp();             break;
-            default: throw new ConversionException("unrecoginzed conversion fnid ["+castfnid+"]invoked");
+            default: throw new ConversionException("unrecognized conversion fnid ["+castfnid+"]invoked");
             }
         }
 

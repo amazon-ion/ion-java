@@ -21,6 +21,9 @@ import java.util.ArrayList;
 
 /**
  * The Ion text to binary transcoder.
+ * <p>
+ * TODO ION-171 Cleanup IonParser. This class seems to contains dead code.
+ * None of the unit tests calls code within this class.
  */
 final class IonParser
 {

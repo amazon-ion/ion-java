@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -36,7 +36,7 @@ import java.math.BigInteger;
  * {@link SymbolTable} is installed.
  */
 class IonWriterUser
-    extends IonWriterBaseImpl
+    extends _Private_IonWriterBase
     implements _Private_IonWriter
 {
     /** Factory for constructing the DOM of local symtabs. Not null. */
@@ -262,17 +262,18 @@ class IonWriterUser
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
 
-        if (symbols.isSystemTable())
-        {
-            writeIonVersionMarker(symbols);
-            return;
-        }
-
         if (getDepth() > 0) {
             throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
         }
 
-        _system_writer.writeLocalSymtab(symbols);
+        if (symbols.isSystemTable())
+        {
+            writeIonVersionMarker(symbols);
+        }
+        else
+        {
+            _system_writer.writeLocalSymtab(symbols);
+        }
     }
 
 
@@ -298,19 +299,13 @@ class IonWriterUser
         _current_writer.setFieldName(name);
     }
 
-    @Deprecated
-    public final void setFieldId(int id)
-    {
-        _current_writer.setFieldId(id);
-    }
-
     public final void setFieldNameSymbol(SymbolToken name)
     {
         _current_writer.setFieldNameSymbol(name);
     }
 
     @Override
-    final boolean isFieldNameSet()
+    public final boolean isFieldNameSet()
     {
         return _current_writer.isFieldNameSet();
     }
@@ -323,16 +318,6 @@ class IonWriterUser
     public void addTypeAnnotation(String annotation)
     {
         _current_writer.addTypeAnnotation(annotation);
-    }
-
-    public void addTypeAnnotationId(int annotationId)
-    {
-        _current_writer.addTypeAnnotationId(annotationId);
-    }
-
-    public void setTypeAnnotationIds(int... annotationIds)
-    {
-        _current_writer.setTypeAnnotationIds(annotationIds);
     }
 
     public void setTypeAnnotations(String... annotations)
@@ -441,8 +426,8 @@ class IonWriterUser
         _current_writer.writeString(value);
     }
 
-    @Deprecated
-    public final void writeSymbol(int symbolId) throws IOException
+    @Override
+    final void writeSymbol(int symbolId) throws IOException
     {
         _current_writer.writeSymbol(symbolId);
     }

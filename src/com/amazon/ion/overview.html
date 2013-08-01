@@ -121,8 +121,6 @@ There's also several mechanisms for generating Ion data:
   <li>{@link com.amazon.ion.IonWriter IonWriter} is the low-level API for
     generating Ion data in some form. It's agnostic to the output format; in
     theory the actual output could be some other format entirely.
-  <li>{@link com.amazon.ion.util.Printer Printer} is the most flexible way to
-    create Ion text data from an {@link com.amazon.ion.IonValue IonValue}.
   <li>{@link com.amazon.ion.IonValue#toString() IonValue.toString()} will also
     generate Ion text, but it's primarily intended for debugging purposes and
     cannot be customized.  It's format is not guaranteed so don't assume that

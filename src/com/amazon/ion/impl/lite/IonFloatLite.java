@@ -1,11 +1,13 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 
 /**
@@ -15,8 +17,6 @@ final class IonFloatLite
     extends IonValueLite
     implements IonFloat
 {
-    // not needed: static private final int SIZE_OF_IEEE_754_64_BITS = 8;
-
     private static final int HASH_SIGNATURE =
         IonType.FLOAT.toString().hashCode();
 
@@ -30,39 +30,28 @@ final class IonFloatLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonFloat including a copy
-     * of the double value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonFloatLite clone()
     {
         IonFloatLite clone = new IonFloatLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         clone.setValue(this._float_value);
 
         return clone;
     }
 
-    /**
-     * Calculate Ion Float hash code as bits of double value,
-     * folded on themselves to form a 32 bit value.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
             long bits = Double.doubleToLongBits(doubleValue());
-            hash ^= (int) ((bits >>> 32) ^ bits);
+            result ^= (int) ((bits >>> 32) ^ bits);
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -75,20 +64,15 @@ final class IonFloatLite
     public float floatValue()
         throws NullValueException
     {
-        validateThisNotNull();        return _float_value.floatValue();
+        validateThisNotNull();
+        return _float_value.floatValue();
     }
 
     public double doubleValue()
         throws NullValueException
     {
-        validateThisNotNull();        return _float_value.doubleValue();
-    }
-
-    @Deprecated
-    public BigDecimal toBigDecimal()
-        throws NullValueException
-    {
-        return bigDecimalValue();
+        validateThisNotNull();
+        return _float_value.doubleValue();
     }
 
     public BigDecimal bigDecimalValue()
@@ -131,6 +115,20 @@ final class IonFloatLite
         checkForLock();
         _float_value = d;
         _isNullValue(d == null);
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        if (isNullValue())
+        {
+            writer.writeNull(IonType.FLOAT);
+        }
+        else
+        {
+            writer.writeFloat(_float_value);
+        }
     }
 
     @Override

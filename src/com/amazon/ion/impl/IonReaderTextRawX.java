@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,7 +8,7 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonTextReader;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -30,11 +30,10 @@ import java.util.Iterator;
  * token, which is based on as few characters as possible, typically
  * 1 but generally less than 5.
  *
- * This is called by the IonTextSystemReader, which in turn is most
- * often called by the IonTextUserReader.  One these two (system reader
- * or user reader) should be invoked by the user for reading text Ion
- * data.  This class (IonReaderTextRaw) is not intended for general
- * use.
+ * This is called by the {@link IonReaderTextSystemX}, which in turn is most
+ * often called by the {@link IonReaderTextUserX}.  One of these two (system
+ * reader or user reader) should be invoked by the user for reading text Ion
+ * data.  This class is not intended for general use.
  *
  * This reader scan skip values and in doing so it does not
  * materialize the contents and it does not validate the contents.
@@ -58,11 +57,9 @@ import java.util.Iterator;
  *
  */
 abstract class IonReaderTextRawX
-    implements IonTextReader
+    implements IonReader
 {
     public abstract BigInteger bigIntegerValue();
-
-//////////////////////////////////////////////////////////////////////////    debug
 
 //              static final boolean _object_parser           = false;
               static final boolean _debug                   = false;
@@ -437,36 +434,12 @@ abstract class IonReaderTextRawX
         _annotation_count = 0;
     }
 
-
-    /**
-     * return the current position in the input stream.
-     * This will refer to the next character to be read.
-     * The first line is line 1.
-     * @return input line number
-     */
-    public long getLineNumber() {
-        return _value_start_line;
-    }
-
-    /**
-     * get the input position offset of the next character
-     * in the current input line.  This offset will be in
-     * bytes if the input data was sourced from bytes, either
-     * a byte array or an InputStream.  The offset will
-     * be in characters (Java characters) if the input was
-     * a CharSequence or a java.util.Reader.
-     * @return offset of input position in the current line
-     */
-    public long getLineOffset() {
-        return _value_start_column;
-    }
-
     /**
      * this looks forward to see if there is an upcoming value
      * if there is it returns true.  It may have to clean up
      * any value that's partially complete (for example a
      * collection whose annotation has been read and loaded
-     * but the use has chosen not to step into the collection).
+     * but the user has chosen not to step into the collection).
      * @return true if more data remains, false on eof
      */
     public boolean hasNext()

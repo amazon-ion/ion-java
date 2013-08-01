@@ -1,7 +1,9 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.consumeCurrentValue;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
@@ -10,7 +12,6 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.File;
@@ -18,17 +19,16 @@ import java.io.FileInputStream;
 import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class ReaderSkippingTest
-extends IonTestCase
+    extends IonTestCase
 {
-    static final boolean _debug_flag = true;
-
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
-                      "good", "equivs");
+        testdataFiles(GLOBAL_SKIP_LIST,
+                      GOOD_IONTESTS_FILES);
 
     private File myTestFile;
     private IonReader myFullReader;
@@ -45,6 +45,13 @@ extends IonTestCase
         myTestFile = file;
     }
 
+    @BeforeClass
+    public static void beforeClass()
+    {
+        SEED = System.currentTimeMillis();
+        System.out.println(ReaderSkippingTest.class.getSimpleName() +
+                           ".SEED=" + SEED + "L");
+    }
 
     @Override
     @Before
@@ -54,12 +61,6 @@ extends IonTestCase
         super.setUp();
         myFullReader = system().newReader(new FileInputStream(myTestFile));
         mySkipReader = system().newReader(new FileInputStream(myTestFile));
-
-        if (SEED == 0)
-        {
-            SEED = System.currentTimeMillis();
-            System.err.println("ReaderSkippingTest.SEED=" + SEED + "L");
-        }
 
         myRandom = new Random(SEED);
     }

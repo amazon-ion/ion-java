@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -44,6 +44,12 @@ public class BinaryWriterTest
         return outputByteArray();
     }
 
+    /**
+     * Test the byte-copy optimization when copying from a binary reader to a
+     * binary writer, where they have compatible symbol table contexts.
+     *
+     * @see IonWriterUserBinary#writeValue(IonReader)
+     */
     @Test
     public void testOptimizedWriteValue()
     throws Exception
@@ -157,7 +163,7 @@ public class BinaryWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
         iw.writeSymbol("s");
     }
 
@@ -167,7 +173,7 @@ public class BinaryWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
         iw.addTypeAnnotation("a");
         iw.writeNull();
     }
@@ -178,7 +184,7 @@ public class BinaryWriterTest
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
-        PrivateDmsdkUtils.lockLocalSymbolTable(iw.getSymbolTable());
+        iw.getSymbolTable().makeReadOnly();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("f");
         iw.writeNull();
@@ -192,8 +198,8 @@ public class BinaryWriterTest
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
         SymbolTable symtab = iw.getSymbolTable();
-        symtab.addSymbol("fred_1");
-        symtab.addSymbol("fred_2");
+        symtab.intern("fred_1");
+        symtab.intern("fred_2");
 
         iw.writeSymbol("fred_1");
         iw.flush();

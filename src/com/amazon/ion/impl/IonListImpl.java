@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl._Private_IonConstants.lnIsNullSequence;
 import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
@@ -95,12 +96,6 @@ final class IonListImpl
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
         return sequenceHashCode(HASH_SIGNATURE);

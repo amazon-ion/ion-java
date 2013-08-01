@@ -1,10 +1,9 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import java.io.Closeable;
-import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -24,7 +23,7 @@ import java.io.OutputStream;
  * 21 April 2009
  *
  */
-final class IonUTF8 {
+class IonUTF8 {
     private final static int UNICODE_MAX_ONE_BYTE_SCALAR       = 0x0000007F; // 7 bits     =  7 / 1 = 7    bits per byte
     private final static int UNICODE_MAX_TWO_BYTE_SCALAR       = 0x000007FF; // 5 + 6 bits = 11 / 2 = 5.50 bits per byte
     private final static int UNICODE_MAX_THREE_BYTE_SCALAR     = 0x0000FFFF; // 4 + 6+6    = 16 / 3 = 5.33 bits per byte
@@ -412,106 +411,7 @@ final class IonUTF8 {
             super(msg, e);
         }
     }
-    public static final class CharToUTF8
-        implements Appendable, Closeable, Flushable
-    {
-        final private int           NO_SURROGATE = 0; // a surrogate char is necessarily non-zero
-        final private OutputStream _byte_stream;
-              private char         _pending_low_surrogate = NO_SURROGATE;
 
-        public CharToUTF8(OutputStream byteStream) {
-            byteStream.getClass(); // Efficient null check
-            _byte_stream = byteStream;
-        }
-        public final OutputStream getOutputStream() {
-            return _byte_stream;
-        }
-        public final void flush() throws IOException
-        {
-            if (_pending_low_surrogate != NO_SURROGATE) {
-                throw new IOException("unused low surrogate still pending on close");
-            }
-            _byte_stream.flush();
-        }
-
-        public final void close() throws IOException
-        {
-            try
-            {
-                flush();
-            }
-            finally
-            {
-                _byte_stream.close();
-            }
-        }
-
-        public final Appendable append(CharSequence csq) throws IOException
-        {
-            return append(csq, 0, csq.length());
-        }
-        public final Appendable append(CharSequence csq, int start, int end)
-            throws IOException
-        {
-            for (int ii=start; ii < end; ii++) {
-                char c = csq.charAt(ii);
-                append_helper(c);
-            }
-
-            return this;
-        }
-        public final Appendable append(char c) throws IOException
-        {
-            if (c < 0) {
-                throw new IllegalArgumentException("invalid character");
-            }
-            append_helper(c);
-            return this;
-        }
-        private final void append_helper(char c) throws IOException
-        {
-            if (_pending_low_surrogate != NO_SURROGATE) {
-                if (!IonUTF8.isHighSurrogate(c)) {
-                    throw new IOException("invalid surrogate (low surrogate not followed by a high surrogate)");
-                }
-                int scalar = IonUTF8.getUnicodeScalarFromSurrogates(c, _pending_low_surrogate);
-                append_helper_write_utf8(scalar);
-                _pending_low_surrogate = NO_SURROGATE;
-            }
-            else if (c > 127) {
-                _byte_stream.write((byte)c & 0xff);
-            }
-            else if (IonUTF8.isLowSurrogate(c)) {
-                _pending_low_surrogate = c;
-            }
-            else {
-                append_helper_write_utf8(c);
-            }
-        }
-        private final void append_helper_write_utf8(int unicodeScalar) throws IOException
-        {
-            switch (IonUTF8.getUTF8ByteCount(unicodeScalar)) {
-            case 1:
-                _byte_stream.write(unicodeScalar & 0xff);
-                break;
-            case 2:
-                _byte_stream.write(IonUTF8.getByte1Of2(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of2(unicodeScalar) & 0xff);
-                break;
-            case 3:
-                _byte_stream.write(IonUTF8.getByte1Of3(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of3(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte3Of3(unicodeScalar) & 0xff);
-                break;
-            case 4:
-                _byte_stream.write(IonUTF8.getByte1Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte2Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte3Of4(unicodeScalar) & 0xff);
-                _byte_stream.write(IonUTF8.getByte4Of4(unicodeScalar) & 0xff);
-                break;
-            }
-        }
-    }
 
     public static final class UTF8ToChar extends OutputStream implements Closeable
     {

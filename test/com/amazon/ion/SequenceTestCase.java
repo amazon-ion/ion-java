@@ -699,7 +699,7 @@ public abstract class SequenceTestCase
         s.add(v2);
         v2.addTypeAnnotation("foo");
 
-        forceMaterialization(v1);
+        forceDeepMaterialization(v1);
 
         if (s.getType() != IonType.DATAGRAM)
         {

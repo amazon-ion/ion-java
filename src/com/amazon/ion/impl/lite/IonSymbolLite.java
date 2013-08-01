@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -9,12 +9,14 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_Utils;
+import java.io.IOException;
 
 /**
  *
@@ -29,7 +31,7 @@ final class IonSymbolLite
     private int _sid = UNKNOWN_SYMBOL_ID;
 
     /**
-     * Constructs a <code>null.symbol</code> value.
+     * @param isNull if {@code true}, constructs a {@code null.symbol} value.
      */
     public IonSymbolLite(IonSystemLite system, boolean isNull)
     {
@@ -47,7 +49,7 @@ final class IonSymbolLite
 
             if (text != null)
             {
-                if ("".equals(text)) {
+                if (text.length() == 0) {
                     throw new EmptySymbolException();
                 }
                 super.setValue(text);
@@ -67,62 +69,64 @@ final class IonSymbolLite
 
 
     /**
-     * makes a copy of this IonString. This calls up to
-     * IonTextImpl to copy the string itself and that in
-     * turn calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
+     * Make a copy of this instance. This calls up to IonTextLite to copy the
+     * string itself and that in turn calls IonValueLite to copy the value's
+     * contents. The field name is not copied. The symbol table is also not
+     * copied as the value is fully materialized and the symbol table is
+     * unnecessary.
+     *
+     * @throws UnknownSymbolException
+     *          if this symbol has unknown text but known Sid
      */
     @Override
     public IonSymbolLite clone()
     {
-        IonSymbolLite clone = new IonSymbolLite(this._context.getSystem(), false);
+        // If this symbol has unknown text but known Sid, this symbol has no
+        // semantic meaning, as such cloning should throw an exception.
+        if (!isNullValue()
+            && _sid != UNKNOWN_SYMBOL_ID
+            && _stringValue() == null) {
+            throw new UnknownSymbolException(_sid);
+        }
 
+        IonSymbolLite clone = new IonSymbolLite(_context.getSystem(), false);
+
+        // Copy relevant member fields and text value
         clone.copyFrom(this);
         clone._sid = UNKNOWN_SYMBOL_ID;
 
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the string value XOR'ed with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
-    public int hashCode() {
-        int hash = HASH_SIGNATURE;
+    public int hashCode()
+    {
+        final int sidHashSalt   = 127;      // prime to salt sid
+        final int textHashSalt  = 31;       // prime to salt text
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())
         {
             SymbolToken token = symbolValue();
             String text = token.getText();
-            if (text != null)
-            {
-                hash ^= text.hashCode();
-            }
-            else
-            {
-                int sid = token.getSid();
-                hash ^= Integer.valueOf(sid).hashCode();
-            }
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 29) ^ (tokenHashCode >> 3);
+
+            result ^= tokenHashCode;
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override
     public IonType getType()
     {
         return IonType.SYMBOL;
-    }
-
-    @Deprecated
-    public int intValue()
-        throws NullValueException
-    {
-        return getSymbolId();
     }
 
     @Deprecated
@@ -179,7 +183,7 @@ final class IonSymbolLite
             if (name != null)
             {
                 // if this is a mutable value we'll hang onto
-                // our know known symbol table so we don't have
+                // our now known symbol table so we don't have
                 // to look it up again.
                 // If the value is immutable, honor that contract.
                 if (_isLocked() == false) {
@@ -266,8 +270,22 @@ final class IonSymbolLite
         _sid = ION_1_0_SID;
     }
 
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        // TODO ION-320 Fix symbol handling
+        // A million-dollar question is - if text is missing, do
+        // we throw (cannot serialize) or do we pass the sid thru???
+
+        // NB! This will throw if symbol is not set
+        writer.writeSymbol(stringValue());
+    }
+
     @Override
     public String stringValue()
+        throws UnknownSymbolException
     {
         if (isNullValue()) {
             return null;

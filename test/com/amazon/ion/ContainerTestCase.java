@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -355,16 +355,6 @@ it.next();
     }
 
     @Test
-    public void testDeepMaterializeReadOnlyContainer()
-    {
-        IonContainer c = makeEmpty();
-        IonSymbol child = system().newSymbol("s"); // Symbol hits more code
-        add(c, child);
-        c.makeReadOnly();
-        c.deepMaterialize();
-    }
-
-    @Test
     public void testCloneOfReadOnlyContainer()
     {
         IonContainer c = makeEmpty();
@@ -394,7 +384,7 @@ it.next();
         clone = system().clone(c); // clone w/ same system
         checkClone(c, child, clone);
 
-        clone = system(new SimpleCatalog()).clone(c); // clone w/ other system
+        clone = newSystem(new SimpleCatalog()).clone(c); // clone w/ other system
         checkClone(c, child, clone);
     }
 

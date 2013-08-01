@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -29,6 +29,10 @@ final class IonDecimalImpl
 
     private static final int HASH_SIGNATURE =
         IonType.DECIMAL.toString().hashCode();
+
+    private static final int NEGATIVE_ZERO_HASH_SIGNATURE =
+        "NEGATIVE ZERO".hashCode();
+
 
     public static boolean isNegativeZero(float value)
     {
@@ -95,23 +99,24 @@ final class IonDecimalImpl
         return clone;
     }
 
-    /**
-     * Calculate Ion Decimal hash code as hash code of double value,
-     * XOR'ed with IonType hash code. This is required because
-     * {@link IonDecimal#equals(Object)} is not consistent
-     * with {@link BigDecimal#equals(Object)}, but rather with
-     * {@link BigDecimal#compareTo(BigDecimal)}.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
+        // This is consistent with Decimal.equals(Object), and with Equivalence
+        // strict equality checks between two IonDecimals.
         if (!isNullValue())  {
-            long bits = Double.doubleToLongBits(doubleValue());
-            hash ^= (int) ((bits >>> 32) ^ bits);
+            Decimal dec = decimalValue();
+            result ^= dec.hashCode();
+
+            if (dec.isNegativeZero())
+            {
+                result ^= NEGATIVE_ZERO_HASH_SIGNATURE;
+            }
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonType getType()
@@ -136,13 +141,6 @@ final class IonDecimalImpl
         if (_decimal_value == null) throw new NullValueException();
         double d = _decimal_value.doubleValue();
         return d;
-    }
-
-    @Deprecated
-    public BigDecimal toBigDecimal()
-        throws NullValueException
-    {
-        return bigDecimalValue();
     }
 
     public BigDecimal bigDecimalValue()
@@ -197,7 +195,7 @@ final class IonDecimalImpl
     protected int getNativeValueLength()
     {
         assert _hasNativeValue() == true;
-        return IonBinary.lenIonDecimal(_decimal_value, false);
+        return IonBinary.lenIonDecimal(_decimal_value);
     }
 
     @Override
@@ -270,7 +268,7 @@ final class IonDecimalImpl
         assert valueLen == this.getNakedValueLength();
         assert valueLen > 0;
 
-        int wlen = writer.writeDecimalContent(_decimal_value, false);
+        int wlen = writer.writeDecimalContent(_decimal_value);
         assert wlen == valueLen;
 
         return;

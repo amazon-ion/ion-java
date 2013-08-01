@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -202,6 +202,9 @@ public interface IonSystem
      * Applications should generally use {@link #iterate(InputStream)}
      * whenever possible, since this library has much faster UTF-8 decoding
      * than the Java IO framework.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -230,6 +233,9 @@ public interface IonSystem
      * schema.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
@@ -329,25 +335,15 @@ public interface IonSystem
      * enumeration to ensure complete test coverage!
      */
 
-
-    /*
-     * Applications should generally us {@link #newReader(InputStream)}
-     * whenever possible, since this library has much faster UTF-8 decoding
-     * than the Java IO framework.
-     *
-     * @throws IonException if the source throws {@link IOException}.
-     */
-//  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
-
     /**
-     * Creates an new {@link IonTextReader} instance over Ion text data.
+     * Creates an new {@link IonReader} instance over Ion text data.
      * <p>
      * The text is parsed incrementally by the reader, so any syntax errors
      * will not be detected during this call.
      *
      * @param ionText must not be null.
      */
-    public IonTextReader newReader(String ionText);
+    public IonReader newReader(String ionText);
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
@@ -383,6 +379,9 @@ public interface IonSystem
      * detecting whether it's text or binary data.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData must not be null.
      *
@@ -392,6 +391,20 @@ public interface IonSystem
      * @throws IonException if the source throws {@link IOException}.
      */
     public IonReader newReader(InputStream ionData);
+
+    /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * Applications should generally us {@link #newReader(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
+     *
+     * @throws IonException if the source throws {@link IOException}.
+     */
+    public IonReader newReader(Reader ionText);
 
     /**
      * Creates an new {@link IonReader} instance over an {@link IonValue} data

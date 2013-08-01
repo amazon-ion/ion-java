@@ -31,6 +31,12 @@ import com.amazon.ion.system.SimpleCatalog;
  *     requested version, so return the largest of them.
  * </ul>
  * <p>
+ * Catalog implementations should <em>never</em> accept substitute symbol
+ * tables and <em>never</em> return them. Substitute tables are used when the
+ * catalog cannot find an exact match, that is, the catalog cannot find an
+ * imported shared symtab with the same name, version and max_id. Refer to
+ * {@link SymbolTable}.
+ * <p>
  * When encoding Ion binary data, its always best to use an exact match to the
  * requested version whenever possible.  Earlier versions are very likely to be
  * missing symbols that are needed by the data.  Later versions of the table

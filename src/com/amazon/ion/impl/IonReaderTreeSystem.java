@@ -252,18 +252,6 @@ class IonReaderTreeSystem
         return _curr.getTypeAnnotationSymbols();
     }
 
-    public final int[] getTypeAnnotationIds()
-    {
-        SymbolToken[] syms = getTypeAnnotationSymbols(); // Checks nullValue
-        return _Private_Utils.toSids(syms, syms.length);
-    }
-
-    public final Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        int [] ids = getTypeAnnotationIds();
-        return _Private_Utils.intIterator(ids);
-    }
-
     public final Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
@@ -414,16 +402,6 @@ class IonReaderTreeSystem
         }
         if (_curr.isNullValue()) return null;
         return ((IonSymbol)_curr).symbolValue();
-    }
-
-    @Deprecated
-    public int getSymbolId()
-    {
-        if (_curr == null) return -1;
-        if (_curr instanceof IonSymbol) {
-            return ((IonSymbol)_curr).getSymbolId();
-        }
-        throw new IllegalStateException("current value is not a symbol");
     }
 
     public int byteSize()

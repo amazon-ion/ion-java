@@ -10,7 +10,19 @@ noname
 noname
          --20 \fIoffset\fR : VarInt
 noname
-         --20 \fIexponent\fR : VarInt
+         --20 \fIyear\fR : VarUInt
 noname
-         --20 \fImantissa\fR : Int
+         --20-dashed \fImonth\fR : VarUInt
+noname
+         --20-dashed \fIday\fR : VarUInt
+noname
+         --20-dashed \fIhour\fR : VarUInt
+noname
+         --20-dashed \fIminute\fR : VarUInt
+noname
+         --20-dashed \fIsecond\fR : VarUInt
+noname
+         --20-dashed \fIfraction_exponent\fR : VarInt
+noname
+         --20-dashed \fIfraction_mantissa\fR : Int
 .end

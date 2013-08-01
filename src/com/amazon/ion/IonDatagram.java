@@ -298,5 +298,6 @@ public interface IonDatagram
     public boolean retainAll(Collection<?> c);
 
 
-    public IonDatagram clone();
+    public IonDatagram clone()
+        throws UnknownSymbolException;
 }

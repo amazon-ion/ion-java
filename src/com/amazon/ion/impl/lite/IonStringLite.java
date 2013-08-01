@@ -1,10 +1,12 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 
 /**
  *
@@ -24,44 +26,40 @@ final class IonStringLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonString. This calls up to
-     * IonTextImpl to copy the string itself and that in
-     * turn calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
-     */
     @Override
     public IonStringLite clone()
     {
         IonStringLite clone = new IonStringLite(this._context.getSystem(), false);
 
+        // Copy relevant member fields and text value
         clone.copyFrom(this);
 
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the string value XOR'ed with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
-    public int hashCode() {
-        int hash = HASH_SIGNATURE;
-        if (!isNullValue())  {
-            hash ^= stringValue().hashCode();
+    public int hashCode()
+    {
+        int result = HASH_SIGNATURE;
+
+        if (!isNullValue()) {
+            result ^= stringValue().hashCode();
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override
     public IonType getType()
     {
         return IonType.STRING;
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeString(_get_value());
     }
 
     @Override

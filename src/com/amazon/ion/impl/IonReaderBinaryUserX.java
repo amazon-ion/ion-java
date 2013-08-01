@@ -16,6 +16,7 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
@@ -206,7 +207,7 @@ final class IonReaderBinaryUserX
     @Override
     public boolean hasNext()
     {
-        if (!_eof &&_has_next_needed) {
+        if (!_eof && _has_next_needed) {
             clear_system_value_stack();
             try {
                 while (!_eof && _has_next_needed) {
@@ -226,12 +227,15 @@ final class IonReaderBinaryUserX
         super.hasNext();
         if (getDepth() == 0 && !_value_is_null) {
             if (_value_tid == _Private_IonConstants.tidSymbol) {
-                load_cached_value(AS_TYPE.int_value);
-                int sid = _v.getInt();
-                if (sid == ION_1_0_SID) {
-                    _symbols = _system.getSystemSymbolTable();
-                    push_symbol_table(_symbols);
-                    _has_next_needed = true;
+                if (load_annotations() == 0) {
+                    // $ion_1_0 is read as an IVM only if it is not annotated
+                    load_cached_value(AS_TYPE.int_value);
+                    int sid = _v.getInt();
+                    if (sid == ION_1_0_SID) {
+                        _symbols = _system.getSystemSymbolTable();
+                        push_symbol_table(_symbols);
+                        _has_next_needed = true;
+                    }
                 }
             }
             else if (_value_tid == _Private_IonConstants.tidStruct) {
@@ -265,7 +269,10 @@ final class IonReaderBinaryUserX
             name = null;
         }
         else {
-            name = _symbols.findSymbol(_value_field_id);
+            name = _symbols.findKnownSymbol(_value_field_id);
+            if (name == null) {
+                throw new UnknownSymbolException(_value_field_id);
+            }
         }
         return name;
     }
@@ -297,7 +304,10 @@ final class IonReaderBinaryUserX
         else {
             anns = new String[_annotation_count];
             for (int ii=0; ii<_annotation_count; ii++) {
-                anns[ii] = _symbols.findSymbol(_annotation_ids[ii]);
+                anns[ii] = _symbols.findKnownSymbol(_annotation_ids[ii]);
+                if (anns[ii] == null) {
+                    throw new UnknownSymbolException(_annotation_ids[ii]);
+                }
             }
         }
         return anns;
@@ -312,8 +322,11 @@ final class IonReaderBinaryUserX
         if (_value_type == IonType.SYMBOL) {
             if (!_v.hasValueOfType(AS_TYPE.string_value)) {
                 int sid = getSymbolId();
-                String sym = _symbols.findSymbol(sid);
-                _v.addValue(sym);
+                String name = _symbols.findKnownSymbol(sid);
+                if (name == null) {
+                    throw new UnknownSymbolException(sid);
+                }
+                _v.addValue(name);
             }
         }
         else {
@@ -343,7 +356,7 @@ final class IonReaderBinaryUserX
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX,
-    //  IonReaderBinaryUserX and IonWriterBaseImpl
+    //  IonReaderBinaryUserX and _Private_IonWriterBase
     //
     //  SO ANY FIXES HERE WILL BE NEEDED IN THOSE
     //  THREE LOCATIONS AS WELL.
@@ -413,7 +426,7 @@ final class IonReaderBinaryUserX
 
             // Ensure there's a contiguous buffer we can copy.
             if (_input instanceof UnifiedInputStreamX.FromByteArray
-                && getTypeAnnotationIds().length == 0
+                && getTypeAnnotationSymbols().length == 0
                 && ! isInStruct())
             {
                 return facetType.cast(new ByteTransferReaderFacet());
@@ -470,8 +483,7 @@ final class IonReaderBinaryUserX
             int inOffset = (int) _position_start;
             int inLen    = (int) _position_len;
 
-            writer._writer.write(_input._bytes, inOffset, inLen);
-            writer.patch(inLen);
+            writer.writeRaw(_input._bytes, inOffset, inLen);
         }
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,6 +9,8 @@ import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -146,6 +148,20 @@ public enum ReaderMaker
             ionData = ensureText(system, ionData);
             InputStream in = new ByteArrayInputStream(ionData);
             return system.newReader(in);
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(Reader)}.
+     */
+    FROM_READER(Feature.TEXT)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, String ionText)
+        {
+            Reader reader = new StringReader(ionText);
+            return system.newReader(reader);
         }
     },
 

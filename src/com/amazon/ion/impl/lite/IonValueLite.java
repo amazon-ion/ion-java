@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -10,7 +10,6 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -22,6 +21,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl._Private_IonWriterBase;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
@@ -40,6 +40,9 @@ import java.io.PrintWriter;
 abstract class IonValueLite
     implements _Private_IonValue
 {
+    private static final int TYPE_ANNOTATION_HASH_SIGNATURE =
+        "TYPE ANNOTATION".hashCode();
+
     /**
      * this hold all the various boolean flags we have
      * in a single int.  Use set_flag(), clear_flag(), is_true()
@@ -155,20 +158,18 @@ abstract class IonValueLite
     }
 
     /*
-     * KEEP ALL MEMBER VALUES HERE
+     * KEEP ALL MEMBER FIELDS HERE!
      *
-     * This impl is intended to have a very light
-     * memory footprint.  So tracking member values
-     * is especially important.
+     * This impl is intended to have a very light memory footprint. So tracking
+     * member fields is especially important.
      *
-     * So KEEP THE MEMBER DECLARATIONS HERE
-     *    AND TOGETHER
+     * SO PLEASE KEEP THE MEMBER DECLARATIONS HERE AND TOGETHER!
      *
      * Thank you.
      *
-     * When this is not a field,
+     * If this instance is not a struct field, then
      *   _fieldId = UNKNOWN_SYMBOL_ID  and  _fieldName = null
-     * Otherwise at least one must be defined.
+     * Otherwise, at least one must be defined.
      */
     private   int              _flags;
     private   int              _fieldId = UNKNOWN_SYMBOL_ID;
@@ -187,9 +188,11 @@ abstract class IonValueLite
     //              64 bit: 3*8 + 4 + 16 = 52 (56 bytes allocated)
 
     /**
-     * the constructor, which is called from the child constructors
-     * simply sets the context and may or may not set the null
-     * bit in the flags member.
+     * The constructor, which is called from the concrete subclasses'
+     * constructors.
+     *
+     * @param context the context that this value is associated with
+     * @param isNull if true, sets the null bit in the flags member field
      */
     IonValueLite(IonContext context, boolean isNull)
     {
@@ -252,37 +255,39 @@ abstract class IonValueLite
     /**
      * {@inheritDoc}
      * <p>
-     * The base classes in IonValue(Impl) should not be called for
-     * cloning directly. The user should be calling clone on the
-     * Actually (leaf) instances class (such as IonIntImpl).  The
-     * shared clone work is handled in copyFrom(src) in any base
-     * classes that need to support this - including IonValueImpl,
-     * IonContainerImpl, IonTextImpl and IonLobImpl.
+     * The user can only call this method on the concrete (not abstract)
+     * subclasses of IonValueLite (e.g. IonIntLite). The shared clone logic
+     * is handled in the method copyFrom(...) in any abstract subclasses that
+     * need to support this - including IonContainerLite, IonTextLite, and
+     * IonLobLite.
      */
     @Override
     public abstract IonValue clone();
 
     /**
-     * copyValueContentFrom is used to make a duplicate
-     * of the value properties during a value clone.
-     * This includes the flags, annotations, and context,
-     * but NOT the field name.
+     * Copy the relevant member fields from the {@code original} instance to
+     * this instance during a {@link #clone()}.
+     * This includes the flags, annotations and context, but NOT the field name.
+     * <p>
+     * Note that <em>flags</em> that is copied consists of the states of the
+     * original value (e.g. isBool, isNull, isIvm, etc).
      * <p>
      * This instance will always be unlocked after calling this method.
      *
-     * @param original value
+     * @param original the value to copy from
      */
-    final void copyValueContentFrom(IonValueLite original)
+    final void copyMemberFieldsFrom(IonValueLite original)
     {
-         assert _context instanceof IonSystemLite; // Baby I was born this way
+        assert _context instanceof IonSystemLite; // Baby I was born this way
 
         // values we copy
         this._flags        = original._flags;
         this._annotations  = original.getTypeAnnotationSymbols();
         if (original._context instanceof TopLevelContext) {
-            // if the original value had context, we need to
-            // copy that too, so we attach our copy to its
-            // system owner through a fresh concrete context
+            // if the original value has a top-level value context, we need to
+            // copy the context too, so we attach the cloned value (this
+            // instance) to the original value's system through a new concrete
+            // TopLevelContext
             TopLevelContext.wrap(getSystem(),
                                  original.getAssignedSymbolTable(),
                                  this);
@@ -303,15 +308,7 @@ abstract class IonValueLite
      * @return hash code for instance consistent with equals().
      */
     @Override
-    public /* abstract */ int hashCode()
-    {
-        throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
-    }
-
-    public void deepMaterialize()
-    {
-        return;
-    }
+    public abstract int hashCode();
 
     public IonContainerLite getContainer()
     {
@@ -339,16 +336,6 @@ abstract class IonValueLite
         return this._elementid();
     }
 
-    private int findSymbol(String text)
-    {
-        SymbolTable symbolTable = getSymbolTable();
-        if (symbolTable != null)
-        {
-            SymbolToken tok = symbolTable.find(_fieldName);
-            if (tok != null) return tok.getSid();
-        }
-        return UNKNOWN_SYMBOL_ID;
-    }
 
     public final int getFieldId()
     {
@@ -357,27 +344,39 @@ abstract class IonValueLite
             return _fieldId;
         }
 
-        int sid = findSymbol(_fieldName);
-        return sid;
+        SymbolToken tok = getSymbolTable().find(_fieldName);
+
+        return (tok != null ? tok.getSid() : UNKNOWN_SYMBOL_ID);
     }
 
 
     public final SymbolToken getFieldNameSymbol()
     {
+        // TODO ION-320 We should memoize the results of symtab lookups.
+        // BUT: that could cause thread-safety problems for read-only values.
+        // I think makeReadOnly should populate the tokens fully
+        // so that we only need to lookup from mutable instances.
+        // However, the current invariants on these fields are nonexistant so
+        // I do not trust that its safe to alter them here.
+
         int sid = _fieldId;
-        String text;
-        if (_fieldName != null) {
-            text = _fieldName;
-            if (sid == UNKNOWN_SYMBOL_ID) {
-                sid = findSymbol(_fieldName);
+        String text = _fieldName;
+        if (text != null)
+        {
+            if (sid == UNKNOWN_SYMBOL_ID)
+            {
+                SymbolToken tok = getSymbolTable().find(text);
+                if (tok != null)
+                {
+                    return tok;
+                }
             }
         }
         else if (sid > 0) {
             text = getSymbolTable().findKnownSymbol(sid);
-            // TODO memoize interned text?
         }
         else {
-            // not a field
+            // not a struct field
             return null;
         }
 
@@ -425,11 +424,9 @@ abstract class IonValueLite
 
     void clearSymbolIDValues()
     {
-        IonContext context = getContext();
-        if (context != null) {
-            context.clearLocalSymbolTable();
-        }
-        return;
+        getContext().clearLocalSymbolTable();
+
+        // TODO ION-320 shouldn't we clear sids in field name and annotations?
     }
 
     /** Attempts to intern the given symbol */
@@ -443,7 +440,7 @@ abstract class IonValueLite
             if (!symbols.isLocalTable()) {
                 symbols = this._context.ensureLocalSymbolTable(this);
             }
-            sid = symbols.addSymbol(name);
+            symbols.intern(name);
         }
         return symbols;
     }
@@ -455,7 +452,12 @@ abstract class IonValueLite
         _fieldName = name;
     }
 
-    /** Both parts of the symbol are trusted! */
+    /**
+     * Sets the field name and ID based on a SymbolToken.
+     * Both parts of the SymbolToken are trusted!
+     *
+     * @param name is not retained by this value, but both fields are copied.
+     */
     final void setFieldNameSymbol(SymbolToken name)
     {
         assert(this.getContainer() == null);
@@ -469,6 +471,7 @@ abstract class IonValueLite
         if (_fieldName != null) return _fieldName;
         if (_fieldId < 0) return null;
 
+        // TODO ION-320 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
     }
 
@@ -477,6 +480,9 @@ abstract class IonValueLite
         return getFieldId();
     }
 
+    /**
+     * @return not null, <b>in conflict with the public documentation</b>.
+     */
     public SymbolTable getSymbolTable()
     {
         assert ! (this instanceof IonDatagram);
@@ -548,7 +554,8 @@ abstract class IonValueLite
         checkForLock();
 
         SymbolTable symbols = getUpdatableSymbolTable();
-        sid = symbols.addSymbol(name);
+        SymbolToken symToken = symbols.intern(name);
+        sid = symToken.getSid();
         return sid;
     }
 
@@ -562,40 +569,16 @@ abstract class IonValueLite
         throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
     }
 
-    public final /* synchronized ?? */ String[] getTypeAnnotationStrings()
-    {
-        // first we have to count the number of non-null
-        // elements there are in the annotations array
-        int count = 0;
-        if (_annotations != null) {
-            for (int ii=0; ii<_annotations.length; ) {
-                if (_annotations[ii] == null) {
-                    break;
-                }
-                ii++;
-                count = ii;
-            }
-        }
-        // if there aren't any, we're done
-        if (count == 0) {
-            return EMPTY_STRING_ARRAY;
-        }
-
-        return _Private_Utils.toStrings(_annotations, count);
-    }
-
     public final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
         int count = 0;
         if (_annotations != null) {
-            for (int ii=0; ii<_annotations.length; ) {
-                if (_annotations[ii] == null) {
-                    break;
+            for (int i = 0; i < _annotations.length; i++) {
+                if (_annotations[i] != null) {
+                    count++;
                 }
-                ii++;
-                count = ii;
             }
         }
         // if there aren't any, we're done
@@ -603,7 +586,7 @@ abstract class IonValueLite
             return SymbolToken.EMPTY_ARRAY;
         }
 
-        // it there are we allocate a user array and
+        // if there are we allocate a user array and
         // copy the references into it. Note that our
         // count above lets us use arraycopy
         SymbolToken[] users_copy = new SymbolToken[count];
@@ -628,9 +611,26 @@ abstract class IonValueLite
         }
     }
 
-    public final String[] getTypeAnnotations()
+    public final /* synchronized ?? */ String[] getTypeAnnotations()
     {
-        return getTypeAnnotationStrings();
+        // first we have to count the number of non-null
+        // elements there are in the annotations array
+        int count = 0;
+        if (_annotations != null) {
+            for (int ii=0; ii<_annotations.length; ) {
+                if (_annotations[ii] == null) {
+                    break;
+                }
+                ii++;
+                count = ii;
+            }
+        }
+        // if there aren't any, we're done
+        if (count == 0) {
+            return EMPTY_STRING_ARRAY;
+        }
+
+        return _Private_Utils.toStrings(_annotations, count);
     }
 
     public void setTypeAnnotations(String... annotations)
@@ -669,6 +669,41 @@ abstract class IonValueLite
         return -1;
     }
 
+    protected int hashTypeAnnotations(final int original)
+    {
+        final SymbolToken[] tokens = getTypeAnnotationSymbols();
+        if (tokens.length == 0)
+        {
+            return original;
+        }
+
+        final int sidHashSalt   = 127;      // prime to salt sid of annotation
+        final int textHashSalt  = 31;       // prime to salt text of annotation
+        final int prime = 8191;
+        int result = original ^ TYPE_ANNOTATION_HASH_SIGNATURE;
+
+        result = prime * original + tokens.length;
+
+        for (final SymbolToken token : tokens)
+        {
+            String text = token.getText();
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 19) ^ (tokenHashCode >> 13);
+
+            result = prime * result + tokenHashCode;
+
+            // mixing at each step to make the hash code order-dependent
+            result ^= (result << 25) ^ (result >> 7);
+        }
+
+        return result;
+    }
+
     /**
      * Implements equality over values.
      * This is currently defined using the Equivalence class.
@@ -681,15 +716,17 @@ abstract class IonValueLite
      *          content and annotations.
      */
     @Override
-    public boolean equals(final Object other) {
-        // TODO we can make this more efficient since we have impl details
-
-        boolean same = false;
+    public final boolean equals(final Object other)
+    {
+        if (other == this) {
+            // we shouldn't make 3 deep method calls for this common case
+            return true;
+        }
         if (other instanceof IonValue)
         {
-            same = ionEquals(this, (IonValue) other);
+            return ionEquals(this, (IonValue) other);
         }
-        return same;
+        return false;
     }
 
 
@@ -773,6 +810,37 @@ abstract class IonValueLite
         return builder.toString();
     }
 
+    public final void writeTo(IonWriter writer)
+    {
+        if (writer.isInStruct()
+            && ! ((_Private_IonWriterBase)writer).isFieldNameSet())
+        {
+            SymbolToken tok = getFieldNameSymbol();
+            if (tok == null)
+            {
+                throw new IllegalStateException("Field name not set");
+            }
+
+            writer.setFieldNameSymbol(tok);
+        }
+
+        SymbolToken[] annotations = getTypeAnnotationSymbols();
+        writer.setTypeAnnotationSymbols(annotations);
+
+        try
+        {
+            writeBodyTo(writer);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+    }
+
+    abstract void writeBodyTo(IonWriter writer)
+        throws IOException;
+
+
     public void setSymbolTable(SymbolTable symbols)
     {
         _context.setSymbolTableOfChild(symbols, this);
@@ -834,25 +902,16 @@ abstract class IonValueLite
         // in the values all the symbol value should be
         // represented by their string values so this should
         // not be an issue.
+
+        // BUT IT *IS* AN ISSUE, unless we can guarantee that we have all
+        // symbol text already pulled from the symtab, and it's not clear that
+        // is invariant.
+
         _context = this.getSystem();
 
         _fieldName = null;
         _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
-    }
-
-
-    public final void writeTo(IonWriter writer)
-    {
-        IonReader valueReader = getSystem().newReader(this);
-        try
-        {
-            writer.writeValues(valueReader);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
     }
 
 

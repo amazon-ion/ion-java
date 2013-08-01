@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -86,5 +86,6 @@ public interface IonContainer
     public void makeNull();
 
 
-    public IonContainer clone();
+    public IonContainer clone()
+        throws UnknownSymbolException;
 }

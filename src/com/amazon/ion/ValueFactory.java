@@ -566,9 +566,14 @@ public interface ValueFactory
      * shift data from one factory instance to another.
      *
      * @param value the value to copy.
+     *
      * @return a deep copy of value, with no container.
+     *
      * @throws NullPointerException if {@code value} is null.
      * @throws IonException if there's a problem creating the clone.
+     * @throws UnknownSymbolException
+     *          if any part of this value has unknown text but known Sid for
+     *          its field name, annotation or symbol.
      *
      * @see IonValue#clone()
      */

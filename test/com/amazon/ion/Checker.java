@@ -12,7 +12,10 @@ public interface Checker
      */
     Checker fieldName(String expectedText, int expectedSid);
 
-    /** Check the first annotation. */
+    /** Check the first annotation's text */
+    Checker annotation(String expectedText);
+
+    /** Check the first annotation's text and sid */
     Checker annotation(String expectedText, int expectedSid);
 
     /** Check that all the annotations exist in the given order. */

@@ -1,26 +1,28 @@
-// Copyright (c) 2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.EQUIVS_TIMESTAMP_IONTESTS_FILES;
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
-
-
 
 public class EquivTimelineTest
     extends EquivsTest
 {
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
-                      "good/timestamp/equivTimeline");
+        testdataFiles(GLOBAL_SKIP_LIST,
+                      EQUIVS_TIMESTAMP_IONTESTS_FILES);
 
 
     @Override
-    protected void checkEquivalence(IonValue left, IonValue right)
+    protected void checkEquivalence(IonValue left, IonValue right,
+                                    boolean expectedEquality)
     {
+        // expectedEquality isn't used in this method
         IonTimestamp lDom = (IonTimestamp) left;
         IonTimestamp rDom = (IonTimestamp) right;
 

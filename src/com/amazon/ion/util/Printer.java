@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -454,29 +454,6 @@ public class Printer
             writer.writeValues(reader);
             writer.finish();
         }
-    }
-
-    /**
-     *  Convert an IonValue to a legal JSON string:
-     *
-     *  - discard annotations
-     *  - always quote symbols
-     *  - sexp's?
-     *  @deprecated use {@link #setJsonMode()}.
-     */
-
-    @Deprecated
-    public void printJson(IonValue value, Appendable out)
-        throws IOException
-    {
-        // Copy the options so visitor won't see changes made while printing.
-        Options options;
-        synchronized (this)  // So we don't clone in the midst of changes
-        {
-            options = myOptions.clone();
-        }
-
-        _print(value, new JsonPrinterVisitor(options, out));
     }
 
     private void _print(IonValue value, PrinterVisitor pv)
@@ -1167,127 +1144,6 @@ public class Printer
                 {
                     ts.print(myOut);
                 }
-            }
-        } // PrinterVisitor.visit(IonTimestamp)
-    }
-
-    /**
-     * <b>This class is unsupported and will be removed!</b>
-     * @deprecated
-     */
-    @Deprecated
-    public final static class JsonPrinterVisitor
-    extends PrinterVisitor
-    {
-        public JsonPrinterVisitor(Options options, Appendable out)
-        {
-            super(options, out);
-        }
-
-        @Override
-        public void writeAnnotations(IonValue value)
-        throws IOException
-        {}
-
-        @Override
-        public void writeSymbol(String text)
-        throws IOException
-        {
-            IonTextUtils.printJsonString(myOut, text);
-        }
-
-        public void writeFloat(BigDecimal value)
-        throws IOException
-        {
-            BigInteger unscaled = value.unscaledValue();
-
-            myOut.append(unscaled.toString());
-            myOut.append('e');
-            myOut.append(Integer.toString(-value.scale()));
-        }
-
-        @Override
-        public void visit(IonTimestamp value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                myOut.append(Long.toString(value.getMillis()));
-            }
-        }
-
-        @Override
-        public void visit(IonList value) throws IOException, Exception
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                super.visit(value);
-            }
-        }
-
-        @Override
-        public void visit(IonStruct value) throws IOException, Exception
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                super.visit(value);
-            }
-        }
-
-        @Override
-        public void visit(IonString value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                writeString(value.stringValue());
-            }
-        }
-
-        @Override
-        public void visit(IonDecimal value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                writeFloat(value.bigDecimalValue());
-            }
-        }
-
-        @Override
-        public void visit(IonFloat value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                writeFloat(value.bigDecimalValue());
-            }
-        }
-
-        @Override
-        public void visit(IonSexp value) throws IOException, Exception
-        {
-            if (value.isNullValue())
-            {
-                myOut.append("null");
-            }
-            else
-            {
-                myOut.append('[');
-
-                boolean hitOne = false;
-                for (IonValue child : value)
-                {
-                    if (hitOne)
-                    {
-                        myOut.append(',');
-                    }
-                    hitOne = true;
-                    writeChild(child, false);
-                }
-                myOut.append(']');
             }
         }
     }

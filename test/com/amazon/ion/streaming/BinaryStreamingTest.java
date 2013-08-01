@@ -1,6 +1,7 @@
 // Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.Decimal;
@@ -139,7 +140,8 @@ public class BinaryStreamingTest
                     break;
                 case TIMESTAMP:
                     if (value instanceof Date) {
-                        wr.writeTimestampUTC((Date)value);
+                        Timestamp ti = Timestamp.forDateZ((Date) value);
+                        wr.writeTimestamp(ti);
                     }
                     else if (value instanceof String) {
                         Timestamp ti = Timestamp.valueOf((String)value);
@@ -165,7 +167,7 @@ public class BinaryStreamingTest
                         wr.writeSymbol((String)value);
                     }
                     else if (value instanceof Integer) {
-                        wr.writeSymbol((Integer)value);
+                        wr.writeSymbolToken(newSymbolToken((Integer) value));
                     }
                     else {
                         throw new IllegalStateException("we only write String or Integer (a symbol id) to an IonSymbol");
@@ -296,7 +298,7 @@ public class BinaryStreamingTest
                         assertTrue( ((String)value).equals( r.stringValue()) );
                     }
                     else if (value instanceof Integer) {
-                        assertTrue( ((Integer)value).equals( r.getSymbolId()) );
+                        assertTrue( ((Integer)value).equals( r.symbolValue().getSid()) );
                     }
                     else {
                         throw new IllegalStateException("we only test String or Integer (a symbol id) to an IonSymbol");

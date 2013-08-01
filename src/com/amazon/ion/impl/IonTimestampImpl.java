@@ -108,21 +108,15 @@ final class IonTimestampImpl
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the underlying timestamp value XOR'ed
-     * with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
-            hash ^= timestampValue().hashCode();
+            result ^= timestampValue().hashCode();
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonType getType()

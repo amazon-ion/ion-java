@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -968,43 +968,6 @@ public class StructTest
     }
 
     @Test
-    public void testBinaryStruct()
-    {
-        IonSystem ionSystem = system();
-
-        IonStruct s1 = (IonStruct)ionSystem.singleValue("{a:0,b:1,j:{type:\"item\",region:\"NA\"}}");
-        String    i1 = s1.toString();
-        //System.out.println(i1);
-
-        IonStruct s2 = (IonStruct)s1.get("j");
-        IonStruct s3 = ionSystem.clone(s2);
-        s1.put("j", s3);
-        String i2 = s1.toString();
-        //System.out.println(i2);
-
-        // what happened to j?
-        IonDatagram dg = ionSystem.newDatagram(s1);
-        byte[] bytes = dg.getBytes();
-
-        // Force symbol interning for complete symtab coverage
-        // Just getting the bytes doesn't ensure that the DG is updated!
-        dg.deepMaterialize();
-
-        String i3 = dg.toString();
-        //System.out.println(i3);
-
-        IonLoader loader = ionSystem.getLoader();
-        IonDatagram v = loader.load(bytes);
-        assertEquals(s1, v.get(0));
-        String i4 = v.toString();
-        //System.out.println(i4);
-
-        assertEquals(i1, i2);
-//        assertEquals(i2, i3);  // Not true, i3 has system stuff
-        assertEquals(i3, i4);
-    }
-
-    @Test
     public void testStructClone()
         throws Exception
     {
@@ -1027,15 +990,15 @@ public class StructTest
     }
 
     @Test
-    public void testClonedFieldHasNoName()
+    public void testClonedFieldHasNoFieldName()
     {
-        IonStruct s = (IonStruct) oneValue("{f:12}");
-        IonValue f = s.get("f");
-        assertEquals("f", f.getFieldName());
+        IonStruct origStruct = (IonStruct) oneValue("{f:12}");
+        IonValue origStructField = origStruct.get("f");
+        assertEquals("f", origStructField.getFieldName());
 
-        IonValue clone = f.clone();
+        IonValue clone = origStructField.clone();
         assertNull("field name shouldn't be cloned", clone.getFieldName());
-        assertTrue(clone.getFieldId() < 1);
+        assertTrue(clone.getFieldNameSymbol() == null);
     }
 
 

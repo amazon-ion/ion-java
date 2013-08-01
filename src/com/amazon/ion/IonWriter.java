@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -155,29 +155,6 @@ public interface IonWriter
 
 
     /**
-     * Sets the pending field name to the given symbol id.
-     * The id is expected to be already present in the current symbol table
-     * (but this is not checked).
-     * <p>
-     * The pending field name is cleared when the current value is
-     * written via {@link #stepIn(IonType) stepIn()} or one of the
-     * {@code write*()} methods.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @param id symbol id of the field name
-     *
-     * @throws IllegalStateException if the current container isn't a struct,
-     * that is, if {@link #isInStruct()} is false.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #setFieldNameSymbol(SymbolToken)} instead.
-     */
-    @Deprecated
-    public void setFieldId(int id);
-
-    /**
      * Sets the pending field name to the given text.
      * <p>
      * The pending field name is cleared when the current value is
@@ -192,6 +169,7 @@ public interface IonWriter
      * @throws EmptySymbolException if {@code name} is empty.
      */
     public void setFieldName(String name);
+
 
     /**
      * Sets the pending field name to the given token.
@@ -249,28 +227,6 @@ public interface IonWriter
 
 
     /**
-     * Sets the full list of pending annotations to the given symbol ids.
-     * Any pending annotations are cleared.
-     * The contents of the {@code annotations} array are copied into this
-     * writer, so the caller does not need to preserve the array.
-     * <p>
-     * The list of pending annotations is cleared when the current value is
-     * written via {@link #stepIn(IonType) stepIn()} or one of the
-     * {@code write*()} methods.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @param annotationIds array with the annotation symbol ids.
-     * If null or empty, any pending annotations are cleared.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #setTypeAnnotationSymbols(SymbolToken...)} instead.
-     */
-    @Deprecated
-    public void setTypeAnnotationIds(int... annotationIds);
-
-    /**
      * Adds a given string to the list of pending annotations.
      * <p>
      * The list of pending annotations is cleared when the current value is
@@ -280,24 +236,6 @@ public interface IonWriter
      * @param annotation string annotation to append to the annotation list
      */
     public void addTypeAnnotation(String annotation);
-
-    /**
-     * Adds a given symbol id to the list of pending annotations.
-     * <p>
-     * The list of pending annotations is cleared when the current value is
-     * written via {@link #stepIn(IonType) stepIn()} or one of the
-     * {@code write*()} methods.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @param annotationId symbol id to append to the annotation list
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #setTypeAnnotationSymbols(SymbolToken...)} instead.
-     */
-    @Deprecated
-    public void addTypeAnnotationId(int annotationId);
 
 
     //=========================================================================
@@ -460,39 +398,6 @@ public interface IonWriter
      */
     @Deprecated
     public void writeTimestampUTC(Date value) throws IOException;
-
-    /**
-     * writes the passed in Date (in milliseconds since the epoch) as an
-     * IonTimestamp with the associated timezone offset.  The Date value
-     * is treated as a UTC date and time value.  The offset is the offset
-     * of the timezone where the value originated. (the date is expected
-     * to have already be adjusted to UTC if necessary)
-     * @param value java.util Date holding the UTC timestamp;
-     * may be null to represent {@code null.timestamp}.
-     * @param localOffset minutes from UTC where the value was authored
-     *
-     * @deprecated Since IonJava RC2, 2009-03-19.
-     *  Use {@link #writeTimestamp(Timestamp)}.
-     */
-    @Deprecated
-    public void writeTimestamp(Date value, Integer localOffset)
-        throws IOException;
-
-    /**
-     * write symbolId out as an IonSymbol value.  The value does not
-     * have to be valid in the symbol table, unless the output is
-     * text, in which case it does.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @param symbolId symbol table id to write
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #writeSymbolToken(SymbolToken)} instead.
-     */
-    @Deprecated
-    public void writeSymbol(int symbolId) throws IOException;
 
     /**
      * Writes the text of an Ion symbol value.

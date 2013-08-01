@@ -110,6 +110,11 @@ public final class SystemSymbols
      */
     public static final int    ION_SHARED_SYMBOL_TABLE_SID = 9;
 
+    /**
+     * The maximum ID of the IDs of system symbols defined by Ion 1.0.
+     */
+    public static final int    ION_1_0_MAX_ID = 9;
+
 
     /** No touchy! */
     private SystemSymbols() { }

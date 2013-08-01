@@ -70,6 +70,9 @@ public interface IonLoader
      * Loads a stream of Ion text into a single datagram.
      * <p/>
      * The specified reader remains open after this method returns.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionText the reader from which to read Ion text.
      *
@@ -112,6 +115,9 @@ public interface IonLoader
      * The specified stream remains open after this method returns.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData the stream from which to read Ion data.
      *

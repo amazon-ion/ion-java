@@ -1,14 +1,16 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
+import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
-import static com.amazon.ion.impl.IonWriterBaseImpl.ERROR_MISSING_FIELD_NAME;
+import static com.amazon.ion.impl._Private_IonWriterBase.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
 import com.amazon.ion.EmptySymbolException;
@@ -19,6 +21,7 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonLob;
+import com.amazon.ion.IonNull;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
@@ -215,25 +218,7 @@ public abstract class IonWriterTestCase
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("foo");
-        iw.setFieldNameSymbol(new FakeSymbolToken(null, 99)); // Replaces "foo"
-        iw.writeNull();
-        iw.stepOut();
-
-        IonReader r = reread();
-        r.next();
-        r.stepIn();
-        r.next();
-        check(r).fieldName(null, 99);
-    }
-
-    @Test
-    public void testWritingFieldName2()
-        throws Exception
-    {
-        iw = makeWriter();
-        iw.stepIn(IonType.STRUCT);
-        iw.setFieldName("foo");
-        iw.setFieldId(99);      // Replaces "foo"
+        iw.setFieldNameSymbol(newSymbolToken((String) null, 99)); // Replaces "foo"
         iw.writeNull();
         iw.stepOut();
 
@@ -330,17 +315,9 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol(99);
+        iw.writeSymbolToken(newSymbolToken((String) null, 99));
 
         IonReader in = reread();
-        in.next();
-        IonAssert.checkSymbol(in, null, 99);
-
-
-        iw = makeWriter();
-        iw.writeSymbolToken(new FakeSymbolToken(null, 99));
-
-        in = reread();
         in.next();
         IonAssert.checkSymbol(in, null, 99);
     }
@@ -658,37 +635,81 @@ public abstract class IonWriterTestCase
         assertEquals(expected, reload());
     }
 
+    /**
+     * Test case to ensure that {@link IonWriter#setTypeAnnotations(String...)}
+     * and {@link IonWriter#setTypeAnnotationSymbols(SymbolToken...)} clearing
+     * of type annotations behavior is correct.
+     */
     @Test
-    public void testWritingAnnotationIds()
+    public void testWritingClearedAnnotations()
         throws Exception
     {
         iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
-        iw.addTypeAnnotation("b");
-        iw.setTypeAnnotationIds(new int[0]);
+        //===== Test on IonWriter.setTypeAnnotationSymbols(...) =====
+
+        iw.setTypeAnnotationSymbols(new SymbolToken[0]); // empty SymbolToken[]
         iw.writeNull();
         IonValue v = expected.add().newNull();
         v.clearTypeAnnotations();
 
-        iw.addTypeAnnotation("b");
-        iw.setTypeAnnotationIds(null);
+        iw.setTypeAnnotationSymbols((SymbolToken[]) null); // null SymbolToken[]
         iw.writeNull();
         v = expected.add().newNull();
         v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationSymbols(new SymbolToken[0]); // empty SymbolToken[]
+        iw.writeNull(); // expected: the pending "b" annotation is cleared
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotationSymbols((SymbolToken[]) null); // null SymbolToken[]
+        iw.writeNull(); // expected: the pending "b" annotation is cleared
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+
+
+        //===== Test on IonWriter.setTypeAnnotations(...) =====
+
+        iw.setTypeAnnotations(new String[0]); // empty String[]
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.setTypeAnnotations((String[]) null); // null String[]
+        iw.writeNull();
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotations(new String[0]); // empty String[]
+        iw.writeNull(); // expected: the pending "b" annotation is cleared
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
+        iw.addTypeAnnotation("b");
+        iw.setTypeAnnotations((String[]) null); // null String[]
+        iw.writeNull(); // expected: the pending "b" annotation is cleared
+        v = expected.add().newNull();
+        v.clearTypeAnnotations();
+
 
         assertEquals(expected, reload());
     }
 
     @Test
-    public void testWritingUnknownAnnotationId()
+    public void testWritingAnnotationWithUnknownText()
         throws Exception
     {
         iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
-        iw.addTypeAnnotationId(99);
-        iw.writeNull();
+        iw.setTypeAnnotationSymbols(newSymbolToken((String) null, 99));
+        iw.writeNull(); // expected: the type annotation is written
         IonValue v = expected.add().newNull();
         v.setTypeAnnotationSymbols(newSymbolToken(99));
 
@@ -696,14 +717,14 @@ public abstract class IonWriterTestCase
     }
 
     @Test
-    public void testWritingBadAnnotationId()
+    public void testWritingAnnotationWithBadSid()
         throws Exception
     {
         iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
         iw.setTypeAnnotationSymbols(newSymbolToken("a", 99));
-        iw.writeNull();
+        iw.writeNull(); // expected: the type annotation is written
         IonValue v = expected.add().newNull();
         v.setTypeAnnotations("a");
 
@@ -890,35 +911,16 @@ public abstract class IonWriterTestCase
     }
 
     @Test
-    public void testWriteSymbolWithInt()
+    public void testWriteSymbolTokenWithGoodSid()
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol(NAME_SID);
+
+        iw.writeSymbolToken(newSymbolToken((String) null, NAME_SID));
 
         IonDatagram dg = reload();
         IonSymbol s = (IonSymbol) dg.get(0);
         checkSymbol(SystemSymbols.NAME, NAME_SID, s);
-    }
-
-    @Test
-    public void testWriteSymbolWokenWithInt()
-        throws Exception
-    {
-        iw = makeWriter();
-        iw.writeSymbolToken(new FakeSymbolToken(null, NAME_SID));
-
-        IonDatagram dg = reload();
-        IonSymbol s = (IonSymbol) dg.get(0);
-        checkSymbol(SystemSymbols.NAME, NAME_SID, s);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testWriteSymbolWithBadInt()
-        throws Exception
-    {
-        iw = makeWriter();
-        iw.writeSymbol(-12);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -926,6 +928,10 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
+        // Using FakeSymbolToken instead of new SymbolTokenImpl as
+        // newSymbolToken(...) throws an AssertionError during construction
+        // before it reaches the code-block that throws IllegalArgumentException
+        // during writing.
         iw.writeSymbolToken(new FakeSymbolToken(null, -12));
     }
 
@@ -971,7 +977,7 @@ public abstract class IonWriterTestCase
         iw.writeSymbol("foo");
         iw.writeSymbol(SystemSymbols.ION_1_0);
         iw.writeInt(1);
-        iw.writeSymbol(SystemSymbols.ION_1_0_SID);
+        iw.writeSymbolToken(newSymbolToken(SystemSymbols.ION_1_0_SID));
         iw.writeInt(2);
 
         Iterator<IonValue> it = systemIterateOutput();
@@ -994,7 +1000,7 @@ public abstract class IonWriterTestCase
     {
         iw = makeWriter();
         iw.writeSymbol("foo");
-        ((IonWriterBaseImpl)iw).writeIonVersionMarker();
+        ((_Private_IonWriterBase)iw).writeIonVersionMarker();
         iw.writeInt(1);
 
         IonDatagram dg = reload();
@@ -1084,5 +1090,137 @@ public abstract class IonWriterTestCase
         r.next();
         d = r.newBytes();
         assertArrayEquals(lobData, d);
+    }
+
+    // Trap for ION-334
+    @Test
+    public void testAnnotationNotSetToIvmAfterFinish()
+        throws Exception
+    {
+        iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        IonValue value1 = oneValue("1");
+        value1.writeTo(iw);
+        // Resets the stream context, the next TLV that is written must behave
+        // as if it is preceded by an IVM, depending on the writer's config.
+        iw.finish();
+        expected.add(value1);
+
+        IonValue value2 = oneValue("2");
+        value2.addTypeAnnotation("some_annot");
+        value2.writeTo(iw);
+        iw.close();
+        // Expect: an annotation on value2
+        expected.add(value2);
+
+        IonAssert.assertIonEquals(expected, reload());
+    }
+
+    // Trap for ION-334
+    @Test
+    public void testAnnotationNotSetToIvmOnStartOfStream()
+        throws Exception
+    {
+        iw = makeWriter();
+        IonDatagram expected = system().newDatagram();
+
+        IonValue value1 = oneValue("1");
+        value1.addTypeAnnotation("some_annot");
+        value1.writeTo(iw);
+        // Expect: an annotation on value1
+        expected.add(value1);
+
+        IonValue value2 = oneValue("2");
+        value2.writeTo(iw);
+        iw.close();
+        expected.add(value2);
+
+        IonAssert.assertIonEquals(expected, reload());
+    }
+
+    @Test
+    public void testAnnotationNotSetToSymbolTable()
+        throws Exception
+    {
+        iw = makeWriter();
+
+        // ===== write =====
+        IonValue value1 = oneValue("1");
+        value1.writeTo(iw);
+        iw.finish();
+
+        // Shared symbol table injected
+        SymbolTable sharedSymTab = loadSharedSymtab(Symtabs.FRED_SERIALIZED[1]);
+        sharedSymTab.writeTo(iw);
+
+        IonValue value2 = oneValue("2");
+        value2.addTypeAnnotation("some_annot_2");
+        value2.writeTo(iw);
+
+        // Local symbol table injected
+        SymbolTable fred1 = Symtabs.CATALOG.getTable("fred", 1);
+        SymbolTable localSymTab = system().newLocalSymbolTable(fred1);
+        checkLocalTable(localSymTab);
+        localSymTab.writeTo(iw);
+
+        IonValue value3 = oneValue("3");
+        value3.addTypeAnnotation("some_annot_3");
+        value3.writeTo(iw);
+        iw.close();
+
+        // ===== re-read and check =====
+        IonReader reader = reread();
+
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+
+        assertEquals(IonType.STRUCT, reader.next());
+        assertArrayEquals(new String[] {ION_SHARED_SYMBOL_TABLE},
+                          reader.getTypeAnnotations());
+
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertArrayEquals(new String[] {"some_annot_2"},
+                          reader.getTypeAnnotations());
+
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(3, reader.intValue());
+        assertArrayEquals(new String[] {"some_annot_3"},
+                          reader.getTypeAnnotations());
+
+        SymbolTable readLocalSymTab = reader.getSymbolTable();
+        checkLocalTable(readLocalSymTab);
+
+        assertNull(reader.next());
+    }
+
+
+    @Test
+    public void testWriteToWithFieldName()
+        throws Exception
+    {
+        IonStruct s = system().newEmptyStruct();
+        IonNull n = s.add("f").newNull();
+
+        iw = makeWriter();
+
+        n.writeTo(iw);
+        iw.stepIn(IonType.STRUCT);
+        {
+            n.writeTo(iw);
+            iw.setFieldName("g");
+            n.writeTo(iw);
+        }
+        iw.stepOut();
+
+        IonReader reader = reread();
+        assertEquals(IonType.NULL, reader.next());
+
+        assertEquals(IonType.STRUCT, reader.next());
+        assertIonEquals(oneValue("{f:null, g:null}"),
+                        system().newValue(reader));
+
+        assertNull(reader.next());
     }
 }

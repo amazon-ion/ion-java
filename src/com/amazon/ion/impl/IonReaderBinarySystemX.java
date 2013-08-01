@@ -1,11 +1,9 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.IonType.SYMBOL;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_INT_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.intIterator;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonSystem;
@@ -77,27 +75,6 @@ class IonReaderBinarySystemX
         }
 
         return result;
-    }
-
-    public Iterator<Integer> iterateTypeAnnotationIds()
-    {
-        load_annotations();
-        Iterator<Integer> it = intIterator(_annotation_ids, _annotation_count);
-        return it;
-    }
-
-    public int[] getTypeAnnotationIds()
-    {
-        load_annotations();
-        int[] anns;
-        if (_annotation_count < 1) {
-            anns = EMPTY_INT_ARRAY;
-        }
-        else {
-            anns = new int[_annotation_count];
-            System.arraycopy(_annotation_ids, 0, anns, 0, _annotation_count);
-        }
-        return anns;
     }
 
     //
@@ -388,8 +365,7 @@ class IonReaderBinarySystemX
         return new SymbolTokenImpl(text, sid);
     }
 
-    @Deprecated
-    public int getSymbolId()
+    int getSymbolId()
     {
         if (_value_type != SYMBOL) throw new IllegalStateException();
         if (_value_is_null) throw new NullValueException();

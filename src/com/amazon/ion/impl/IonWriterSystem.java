@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -23,7 +23,7 @@ import java.io.IOException;
  *
  */
 abstract class IonWriterSystem
-    extends IonWriterBaseImpl
+    extends _Private_IonWriterBase
 {
     /**
      * The system symtab used when resetting the stream.
@@ -193,8 +193,8 @@ abstract class IonWriterSystem
         throws IOException;
 
 
-    @Override // TODO ION-271 make final after IMS is migrated
-    public void writeIonVersionMarker()
+    @Override
+    public final void writeIonVersionMarker()
         throws IOException
     {
         writeIonVersionMarker(_default_system_symbol_table);
@@ -235,15 +235,17 @@ abstract class IonWriterSystem
 
     final int add_symbol(String name) throws IOException
     {
-        int sid = _symbol_table.findSymbol(name);
-        if (sid != UNKNOWN_SYMBOL_ID) return sid;
-
+        int sid;
         if (_symbol_table.isSystemTable()) {
+            sid = _symbol_table.findSymbol(name);
+            if (sid != UNKNOWN_SYMBOL_ID) {
+                return sid;
+            }
+            // @name is not a system symbol, so we inject a local symtab
             _symbol_table = inject_local_symbol_table();
         }
         assert _symbol_table.isLocalTable();
-
-        sid = _symbol_table.addSymbol(name);
+        sid = _symbol_table.intern(name).getSid();
         return sid;
     }
 
@@ -269,16 +271,17 @@ abstract class IonWriterSystem
     /** Writes a symbol without checking for system ID. */
     abstract void writeSymbolAsIs(String value) throws IOException;
 
-
-    @Deprecated
-    public final void writeSymbol(int symbolId) throws IOException
+    @Override
+    final void writeSymbol(int symbolId) throws IOException
     {
         if (symbolId < 1) {
             throw new IllegalArgumentException("symbol IDs are greater than 0");
         }
 
-        if (symbolId == SystemSymbols.ION_1_0_SID && getDepth() == 0)
-        {
+        if (symbolId == SystemSymbols.ION_1_0_SID
+            && getDepth() == 0
+            && _annotation_count == 0) {
+            // $ion_1_0 is written as an IVM only if it is not annotated
             // TODO ION-285 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
@@ -288,11 +291,12 @@ abstract class IonWriterSystem
         }
     }
 
-    // TODO ION-271 make final when IMS removes its JsonWriter
-    public void writeSymbol(String value) throws IOException
+    public final void writeSymbol(String value) throws IOException
     {
-        if (SystemSymbols.ION_1_0.equals(value) && getDepth() == 0)
-        {
+        if (SystemSymbols.ION_1_0.equals(value)
+            && getDepth() == 0
+            && _annotation_count == 0) {
+            // $ion_1_0 is written as an IVM only if it is not annotated
             // TODO ION-285 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
@@ -326,7 +330,7 @@ abstract class IonWriterSystem
 
 
     @Override
-    final boolean isFieldNameSet()
+    public final boolean isFieldNameSet()
     {
         if (_field_name_type != null) {
             switch (_field_name_type) {
@@ -339,36 +343,6 @@ abstract class IonWriterSystem
             }
         }
         return false;
-    }
-
-    /**
-     * This returns the field name of the value about to be written
-     * if the field name has been set.  If the field name has not been
-     * defined this will return null.
-     *
-     * @return String name of the field about to be written or null if it is
-     * not yet set.
-     */
-    @Deprecated // TODO ION-271 remove after IMS is migrated
-    String getFieldName()
-    {
-        String name;
-
-        if (_field_name_type == null) {
-            throw new IllegalStateException("the field has not be set");
-        }
-        switch (_field_name_type) {
-        case STRING:
-            name = _field_name;
-            break;
-        case INT:
-            name = _symbol_table.findSymbol(_field_name_sid);
-            break;
-        default:
-            throw new IllegalStateException("the field has not be set");
-        }
-
-        return name;
     }
 
     final void clearFieldName()
@@ -453,17 +427,6 @@ abstract class IonWriterSystem
         }
 
         return id;
-    }
-
-    @Deprecated
-    public final void setFieldId(int id)
-    {
-        if (!this.isInStruct()) {
-            throw new IllegalStateException();
-        }
-        _field_name_type = IonType.INT;
-        _field_name_sid = id;
-        _field_name = null;
     }
 
     final SymbolToken assumeFieldNameSymbol()
@@ -626,18 +589,5 @@ abstract class IonWriterSystem
     final int[] getTypeAnnotationIds()
     {
         return _Private_Utils.toSids(_annotations, _annotation_count);
-    }
-
-    public final void setTypeAnnotationIds(int... annotationIds)
-    {
-        _annotations = newSymbolTokens(getSymbolTable(), annotationIds);
-        _annotation_count = _annotations.length;
-    }
-
-    public final void addTypeAnnotationId(int annotationId)
-    {
-        SymbolToken is = newSymbolToken(getSymbolTable(), annotationId);
-        ensureAnnotationCapacity(_annotation_count + 1);
-        _annotations[_annotation_count++] = is;
     }
 }

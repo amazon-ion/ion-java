@@ -1,19 +1,18 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.Symtabs.printLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.intIterator;
 import static com.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 import org.junit.Test;
 
 /**
@@ -98,8 +97,11 @@ public class ReaderTest
         read(ionText);
 
         in.next();
-        Iterator<Integer> typeIds = in.iterateTypeAnnotationIds();
-        IonAssert.assertIteratorEquals(intIterator(10, 11), typeIds);
+        SymbolToken[] tokens = in.getTypeAnnotationSymbols();
+        assertEquals(2, tokens.length);
+        assertEquals(10, tokens[0].getSid());
+        assertEquals(11, tokens[1].getSid());
+
         expectEof();
     }
 
@@ -154,23 +156,6 @@ public class ReaderTest
         {
             try {
                 in.symbolValue();
-                fail("expected exception on " + in.getType());
-            }
-            catch (IllegalStateException e) { }
-        }
-    }
-
-    @Test
-    public void testSymbolIdOnNonSymbol()
-        throws Exception
-    {
-        // All non-symbol types
-        read("null true 1 1e2 1d2 2011-12-01T \"\" {{\"\"}} {{}} [] () {}");
-
-        while (in.next() != null)
-        {
-            try {
-                in.getSymbolId();
                 fail("expected exception on " + in.getType());
             }
             catch (IllegalStateException e) { }

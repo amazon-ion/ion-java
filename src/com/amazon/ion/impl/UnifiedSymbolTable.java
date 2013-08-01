@@ -33,7 +33,6 @@ import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
@@ -125,7 +124,7 @@ final class UnifiedSymbolTable
     private String[] _symbols;
 
     /** The initial length of {@link #_symbols}. */
-    private static final int DEFAULT_CAPACITY = 10;
+    private static final int DEFAULT_CAPACITY = 16;
 
     /**
      * This is the number of symbols defined in this symbol table
@@ -742,52 +741,27 @@ final class UnifiedSymbolTable
         return _import_list.find(text);
     }
 
-    @Deprecated
-    public synchronized String findSymbol(int id)
-    {
-        String name = findKnownSymbol(id);
-        if (name == null) {
-            throw new UnknownSymbolException(id);
-        }
-        return name;
-    }
-
-    public synchronized int addSymbol(String name)
-    {
-        int sid = this.findSymbol(name);
-        if (sid == UNKNOWN_SYMBOL_ID) {
-            validateSymbol(name);
-            sid = getMaxId() + 1;
-            putSymbol(name, sid);
-        }
-        return sid;
-    }
-
     private static final void validateSymbol(String name)
     {
         // not synchronized since this is local to the string which is immutable
         if (name == null || name.length() < 1) {
             throw new IllegalArgumentException("symbols must contain 1 or more characters");
         }
-        boolean pending_high_surrogate = false;
-        int ii=0;
-        for (; ii<name.length(); ii++) {
-            char c = name.charAt(ii);
-            if (_Private_IonConstants.isHighSurrogate(c)) {
-                if (pending_high_surrogate) {
-                    break; // our check at the end will throw for us
+        for (int i = 0; i < name.length(); ++i) {
+            int c = name.charAt(i);
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                if (c >= 0xDC00) {
+                    throw new IllegalArgumentException("unparied trailing surrogate in symbol name at position " + i);
                 }
-                pending_high_surrogate = true;
-            }
-            else if (_Private_IonConstants.isLowSurrogate(c)) {
-                if (!pending_high_surrogate) {
-                    throw new IllegalArgumentException("unparied low surrogate in symbol name at position "+ii);
+                ++i;
+                if (i == name.length()) {
+                    throw new IllegalArgumentException("unmatched leading surrogate in symbol name at position " + i);
                 }
-                pending_high_surrogate = false;
+                c = name.charAt(i);
+                if (c < 0xDC00 || c > 0xDFFF) {
+                    throw new IllegalArgumentException("unmatched leading surrogate in symbol name at position " + i);
+                }
             }
-        }
-        if (pending_high_surrogate) {
-            throw new IllegalArgumentException("unmatched high surrogate in symbol name at position "+ii);
         }
     }
 
@@ -875,7 +849,7 @@ final class UnifiedSymbolTable
     // TODO add to interface to let caller avoid getImports which makes a copy
 
     /**
-     * this checks the import list for symbol tabls other than the
+     * this checks the import list for symbol tables other than the
      * system symbol table, which is doesn't count.  If any non system
      * imports exist it return true.  Otherwise it return false.
      */
@@ -1319,6 +1293,8 @@ final class UnifiedSymbolTable
                 throw new IonException(message);
             }
 
+            // Exact match is found, but max_id is undefined in import
+            // declaration, set max_id to largest sid of shared symtab
             maxid = itab.getMaxId();
         }
 
@@ -1330,7 +1306,9 @@ final class UnifiedSymbolTable
         }
         else if (itab.getVersion() != version || itab.getMaxId() != maxid)
         {
-            // Construct a substitute with correct specs
+            // A match was found BUT specs are not an exact match
+            // Construct a substitute with correct specs, containing the
+            // original import table that was found
             itab = new SubstituteSymbolTable(itab, version, maxid);
         }
 

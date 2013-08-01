@@ -52,6 +52,15 @@ public class IonValueChecker
     }
 
 
+    public IonValueChecker annotation(String expectedText)
+    {
+        String[] typeAnnotations = myCurrentValue.getTypeAnnotations();
+        assertEquals(expectedText, typeAnnotations[0]);
+
+        return this;
+    }
+
+
     public IonValueChecker annotation(String expectedText, int expectedSid)
     {
         if (expectedText == null)
@@ -79,6 +88,7 @@ public class IonValueChecker
 
         return this;
     }
+
 
     public IonValueChecker annotations(String[] expectedTexts, int[] expectedSids)
     {

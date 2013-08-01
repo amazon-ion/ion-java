@@ -1,11 +1,13 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_Utils;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -29,13 +31,6 @@ final class IonClobLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonClob including an independant
-     * copy of the bytes. It also calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
-     */
     @Override
     public IonClobLite clone()
     {
@@ -46,12 +41,6 @@ final class IonClobLite
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
         return lobHashCode(HASH_SIGNATURE);
@@ -80,6 +69,13 @@ final class IonClobLite
         if (bytes == null) return null;
 
         return _Private_Utils.decode(bytes, cs);
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeClob(getBytesNoCopy());
     }
 
     @Override

@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -35,10 +35,10 @@ import java.util.Iterator;
  * would use {@link #stringValue()}, mirroring {@link IonSymbol#stringValue()}.
  *
  * <h2>Exception Handling</h2>
- * {@code IonReader} is a generic interface for traversion Ion data, and it's
+ * {@code IonReader} is a generic interface for traversing Ion data, and it's
  * not possible to fully specify the set of exceptions that could be thrown
  * from the underlying data source.  Thus all failures are thrown as instances
- * of {@link IonException}, wrapping the originating cause.  If an application
+ * of {@link IonException}, wrapping the original cause.  If an application
  * wants to handle (say) {@link IOException}s specially, then it needs to
  * extract that from the wrappers; the documentation of {@link IonException}
  * explains how to do that.
@@ -182,22 +182,6 @@ public interface IonReader
     public SymbolToken[] getTypeAnnotationSymbols();
 
     /**
-     * Return the symbol IDs of the annotations on the current value as an
-     * array of ints.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @return the (ordered) annotations on the current value, or an empty
-     * array (not {@code null}) if there are none.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #getTypeAnnotationSymbols()} instead.
-     */
-    @Deprecated
-    public int[] getTypeAnnotationIds();
-
-    /**
      * Return the annotations on the curent value as an iterator.  The
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
@@ -209,20 +193,6 @@ public interface IonReader
     public Iterator<String> iterateTypeAnnotations();
 
     /**
-     * Return the symbol table IDs of the current value's annotation as
-     * an iterator.  The iterator is empty (hasNext() returns false on
-     * the first call) if there are no annotations on the current value.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @return not null.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #getTypeAnnotationSymbols()} instead.
-     */
-    @Deprecated
-    public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
      * Gets the symbol ID of the field name attached to the current value.
@@ -387,26 +357,6 @@ public interface IonReader
      * @since IonJava R15
      */
     public SymbolToken symbolValue();
-
-
-    /**
-     * Returns the current value as an int symbol ID.
-     * This is only valid when {@link #getType()} returns
-     * {@link IonType#SYMBOL}.
-     * <p>
-     * If the reader cannot determine the symbol ID, this method returns
-     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @see #stringValue()
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #symbolValue()} instead.
-     */
-    @Deprecated
-    public int getSymbolId();
 
 
     /**

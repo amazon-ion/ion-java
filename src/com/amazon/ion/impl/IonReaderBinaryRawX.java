@@ -1057,8 +1057,7 @@ done:   for (;;) {
      */
     protected final Decimal readDecimal(int len) throws IOException
     {
-        // TODO this doesn't seem like the right math context
-        MathContext mathContext = MathContext.DECIMAL128;
+        MathContext mathContext = MathContext.UNLIMITED;
         Decimal bd;
         // we only write out the '0' value as the nibble 0
         if (len == 0) {
@@ -1103,50 +1102,56 @@ done:   for (;;) {
         }
         return bd;
     }
+
+    /**
+     * @see IonBinary.Reader#readTimestampValue
+     */
     protected final Timestamp readTimestamp(int len) throws IOException
     {
         if (len < 1) {
             // nothing to do here - and the timestamp will be NULL
             return null;
         }
-        Precision   p = null;
-        Integer     offset = null;
+
         int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
         BigDecimal  frac = null;
         int         save_limit = _local_remaining - len;
-        _local_remaining = len;
+        _local_remaining = len;  // > 0
+
         // first up is the offset, which requires a special int reader
         // to return the -0 as a null Integer
-        offset = readVarInteger();
+        Integer offset = readVarInteger();
         // now we'll read the struct values from the input stream
-        if (_local_remaining > 0) {  // FIXME remove
-            // year is from 0001 to 9999
-            // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
-            year  = readVarUInt();
-            p = Precision.YEAR; // our lowest significant option
+
+        // year is from 0001 to 9999
+        // or 0x1 to 0x270F or 14 bits - 1 or 2 bytes
+        year  = readVarUInt();
+        Precision p = Precision.YEAR; // our lowest significant option
+
+        // now we look for hours and minutes
+        if (_local_remaining > 0) {
+            month = readVarUInt();
+            p = Precision.MONTH;
+
             // now we look for hours and minutes
             if (_local_remaining > 0) {
-                month = readVarUInt();
-                p = Precision.MONTH;
+                day   = readVarUInt();
+                p = Precision.DAY; // our lowest significant option
+
                 // now we look for hours and minutes
                 if (_local_remaining > 0) {
-                    day   = readVarUInt();
-                    p = Precision.DAY; // our lowest significant option
-                    // now we look for hours and minutes
+                    hour   = readVarUInt();
+                    minute = readVarUInt();
+                    p = Precision.MINUTE;
                     if (_local_remaining > 0) {
-                        hour   = readVarUInt();
-                        minute = readVarUInt();
-                        p = Precision.MINUTE;
-                        if (_local_remaining > 0) {
                         second = readVarUInt();
                         p = Precision.SECOND;
                         if (_local_remaining > 0) {
                             // now we read in our actual "milliseconds since the epoch"
                             frac = readDecimal(_local_remaining);
                             p = Precision.FRACTION;
-                            }
                         }
-                     }
+                    }
                 }
             }
         }
@@ -1162,9 +1167,10 @@ done:   for (;;) {
         catch (IllegalArgumentException e)
         {
             // Rewrap to the expected type.
-            throw newErrorAt(e.getMessage());
+            throw newErrorAt("Invalid timestamp encoding: " + e.getMessage());
         }
     }
+
     protected final String readString(int len) throws IOException
     {
         // len is bytes, which is greater than or equal to java

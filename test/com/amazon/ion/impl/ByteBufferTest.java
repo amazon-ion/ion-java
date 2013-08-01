@@ -5,7 +5,9 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.impl.IonBinary.BufferManager;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Random;
 import org.junit.After;
 import org.junit.Test;
@@ -41,6 +43,53 @@ public class ByteBufferTest
         }
         catch (IOException e) {
             throw new IonException(e);
+        }
+    }
+
+    @Test
+    public void testUnicodeCodepointOverflow() {
+        BufferManager buf = new BufferManager ();
+        IonBinary.Writer writer = buf.openWriter();
+
+        try {
+            writer.writeStringData(new String(new char[] { 0xd799 }, 0, 1));
+            writer.writeStringData(new String(new char[] { 0xe000 }, 0, 1));
+        } catch (Exception e) {
+            fail("Unexpected exception: " + e.getMessage());
+        }
+        try {
+            writer.writeStringData(new String(new char[] { 0xd800 }, 0, 1));
+            fail("Successfully parsed a partial surrogate");
+        } catch (Exception e) {
+        }
+        try {
+            writer.writeStringData(new String(new char[] { 0xdfff}, 0, 1));
+            fail("Successfully parsed a partial surrogate");
+        } catch (Exception e) {
+        }
+    }
+
+    @Test
+    public void testUnicodeCodepointOverflowStatic() {
+        OutputStream os = new ByteArrayOutputStream();
+        try {
+            IonBinary.writeString(os, new String(new char[] { 0xd799 }, 0, 1));
+            IonBinary.writeString(os, new String(new char[] { 0xe000 }, 0, 1));
+            // surrogates
+            IonBinary.writeString(os, new String(new char[] { 0xd800, 0xdc00 }, 0, 2));
+            IonBinary.writeString(os, new String(new char[] { 0xdbff, 0xdfff }, 0, 2));
+        } catch (Exception e) {
+            throw new IonException(e);
+        }
+        try {
+            IonBinary.writeString(os, new String(new int[] { 0xd800 }, 0, 1));
+            fail("Successfully parsed a partial surrogate");
+        } catch (Exception e) {
+        }
+        try {
+            IonBinary.writeString(os, new String(new int[] { 0xdfff}, 0, 1));
+            fail("Successfully parsed a partial surrogate");
+        } catch (Exception e) {
         }
     }
 

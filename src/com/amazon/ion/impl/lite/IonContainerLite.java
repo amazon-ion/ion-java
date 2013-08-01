@@ -16,6 +16,7 @@ import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_IonContainer;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
@@ -30,9 +31,8 @@ abstract class IonContainerLite
 
     protected IonContainerLite(IonContext context, boolean isNull)
     {
-        // really we'll let IonValueLite handle this work
-        // and we always need to know our context and if
-        // we should start out null or not
+        // we'll let IonValueLite handle this work as we always need to know
+        // our context and if we should start out as a null value or not
         super(context, isNull);
     }
 
@@ -379,8 +379,6 @@ abstract class IonContainerLite
      *   public IonContainer getContainer()
      *   public int getFieldId()
      *   public String getFieldName()
-     *   public int getFieldNameId()
-     *   public String[] getTypeAnnotationStrings()
      *   public String[] getTypeAnnotations()
      *   public boolean hasTypeAnnotation(String annotation)
      *   public boolean isNullValue()
@@ -424,6 +422,10 @@ abstract class IonContainerLite
         return _context.ensureLocalSymbolTable(this);
     }
 
+    /**
+     * @return {@code null}, since symbol tables are only directly assigned
+     *          to top-level values.
+     */
     public final SymbolTable getContextSymbolTable()
     {
         return null;
@@ -467,9 +469,7 @@ abstract class IonContainerLite
 
     public void clearLocalSymbolTable()
     {
-//        if (_context != null) {
-            _context.clearLocalSymbolTable();
-//        }
+        _context.clearLocalSymbolTable();
     }
 
     /**
@@ -552,67 +552,68 @@ abstract class IonContainerLite
 
 
     /**
-     * this copies the annotations and the field name if
-     * either of these exists from the passed in instance.
-     * It overwrites these values on the current instance.
-     * Since these will be the string representations it
-     * is unnecessary to update the symbol table ... yet.
-     * Then it copies the children from the source container
+     * This copies the original container's member fields (flags, annotations,
+     * context) and overwrites the corresponding fields of this instance.
+     * It will also recursively copy each of the source container's children
      * to this container.
-     * @param source instance to copy from
-     * @throws IOException
-     * @throws IllegalArgumentException
-     * @throws NullPointerException
-     * @throws ContainedValueException
+     * <p>
+     * The field name of the original container is NOT copied. Field names of
+     * the original container's children are copied only if it is a struct.
+     * <p>
+     * Since only string representations are copied, it is unnecessary to
+     * update the symbol table.. yet.
+     *
+     * @param original the original container value
      */
-    final void copyFrom(IonContainerLite source)
+    final void copyFrom(IonContainerLite original)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException, IOException
     {
         checkForLock();
 
         // first copy the annotations, flags (but not field name)
-        this.copyValueContentFrom(source);
+        this.copyMemberFieldsFrom(original);
         assert ! _isLocked();  // Prior call unlocks us
 
         // now we can copy the contents
 
         // first see if this value is null (in which
         // case we're done here)
-        if (source.isNullValue()) {
+        if (original.isNullValue()) {
             makeNull();
         }
-        else if (source.get_child_count() == 0){
+        else if (original.get_child_count() == 0){
             // non-null, but empty source, we're clear
             clear();
         }
         else {
             // it's not null, and the source says there are children
             // so we're non-null and need to copy the children over
-            assert(source._isNullValue() == false);
+            assert(original._isNullValue() == false);
             _isNullValue(false);
 
             // we should have an empty content list at this point
             assert _children == null && get_child_count() == 0;
 
-            final boolean cloningFields = (this instanceof IonStruct);
-
-            final IonValueLite[] sourceContents = source._children;
-            final int size = source.get_child_count();
+            final IonValueLite[] sourceContents = original._children;
+            final int size = original.get_child_count();
 
             // Preallocate so add() doesn't reallocate repeatedly
             _children = new IonValueLite[size];
 
+            // we want to clone field names if we're cloning a struct
+            final boolean isCloningFieldNames = (this instanceof IonStruct);
+
             for (int i = 0; i < size; i++)
             {
-                IonValueLite child = sourceContents[i];
-                // TODO: remove when we upgrade the Java compiler (???)
-                IonValueLite copy = (IonValueLite)child.clone();
-                if (cloningFields) {
-                    String name = child.getFieldName();
-                    copy.setFieldName(name);
+                IonValueLite origChild = sourceContents[i];
+                IonValueLite clonedChild = (IonValueLite) origChild.clone();
+                if (isCloningFieldNames) {
+                    String fieldName = origChild.getFieldName();
+                    // THROWS if field name is unknown
+                    clonedChild.setFieldName(fieldName);
                 }
-                this.add(i, copy);
+                this.add(i, clonedChild);
                 // no need to patch the element id's since
                 // this is adding to the end
             }
@@ -692,8 +693,10 @@ abstract class IonContainerLite
     }
 
     /**
-     * this is overridden in IonStructImpl to add the hashmap
-     * of field names when the struct becomes modestly large
+     * This is overriden in {@link IonStructLite} to add the {@link HashMap} of
+     * field names when the struct becomes moderately large.
+     *
+     * @param size
      */
     void transitionToLargeSize(int size)
     {

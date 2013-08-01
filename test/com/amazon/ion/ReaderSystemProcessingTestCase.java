@@ -1,8 +1,7 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_INT_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
@@ -188,8 +187,8 @@ public abstract class ReaderSystemProcessingTestCase
         myReader.next();
         Assert.assertArrayEquals(EMPTY_STRING_ARRAY,
                                  myReader.getTypeAnnotations());
-        Assert.assertArrayEquals(EMPTY_INT_ARRAY,
-                                 myReader.getTypeAnnotationIds());
+        Assert.assertArrayEquals(new SymbolToken[0], // Empty SymbolToken array
+                                 myReader.getTypeAnnotationSymbols());
     }
 
 
@@ -197,8 +196,6 @@ public abstract class ReaderSystemProcessingTestCase
     public void testNextAtEnd()
         throws Exception
     {
-        startTestCheckpoint("testNextAtEnd"); // uses simple constants since the number just has to be unique for matching on the break point
-
         String text = "[]";
         startIteration(text);
         myReader.next();
@@ -223,8 +220,6 @@ public abstract class ReaderSystemProcessingTestCase
     public void testIsInStruct()
         throws Exception
     {
-        startTestCheckpoint("testIsInStruct"); // uses simple constants since the number just has to be unique for matching on the break point
-
         String text = "{f:[]}";
         startIteration(text);
         assertFalse(myReader.isInStruct());
@@ -284,8 +279,6 @@ public abstract class ReaderSystemProcessingTestCase
     public void testHasNextLeavesCurrentData()
         throws Exception
     {
-        startTestCheckpoint("testHasNextLeavesCurrentData"); // uses simple constants since the number just has to be unique for matching on the break point
-
         String text = "hello 2";
         startIteration(text);
 
@@ -304,13 +297,11 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.INT, myReader.next());
     }
 
-    // JIRA ION-79 reported by Scott Barber
+    // Trap for ION-79 - reported by Scott Barber
     @Test
     public void testDeepNesting()
         throws Exception
     {
-        startTestCheckpoint("testDeepNesting"); // uses simple constants since the number just has to be unique for matching on the break point
-
         String text =
             "A::{data:B::{items:[C::{itemPromos:[D::{f4:['''12.5''']}]}]}}";
         startIteration(text);
