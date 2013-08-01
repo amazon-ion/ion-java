@@ -214,19 +214,6 @@ public abstract class _Private_IonWriterBase
     }
 
 
-    public void writeTimestamp(Date value, Integer localOffset)
-        throws IOException
-    {
-        Timestamp time;
-        if (value == null) {
-            writeNull(IonType.TIMESTAMP);
-        }
-        else {
-            time = new Timestamp(value.getTime(), localOffset);
-            writeTimestamp(time);
-        }
-    }
-
     public void writeTimestampUTC(Date value) throws IOException
     {
         Timestamp time = Timestamp.forDateZ(value);

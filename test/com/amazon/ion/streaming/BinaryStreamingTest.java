@@ -139,7 +139,8 @@ public class BinaryStreamingTest
                     break;
                 case TIMESTAMP:
                     if (value instanceof Date) {
-                        wr.writeTimestampUTC((Date)value);
+                        Timestamp ti = Timestamp.forDateZ((Date) value);
+                        wr.writeTimestamp(ti);
                     }
                     else if (value instanceof String) {
                         Timestamp ti = Timestamp.valueOf((String)value);

@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -460,23 +460,6 @@ public interface IonWriter
      */
     @Deprecated
     public void writeTimestampUTC(Date value) throws IOException;
-
-    /**
-     * writes the passed in Date (in milliseconds since the epoch) as an
-     * IonTimestamp with the associated timezone offset.  The Date value
-     * is treated as a UTC date and time value.  The offset is the offset
-     * of the timezone where the value originated. (the date is expected
-     * to have already be adjusted to UTC if necessary)
-     * @param value java.util Date holding the UTC timestamp;
-     * may be null to represent {@code null.timestamp}.
-     * @param localOffset minutes from UTC where the value was authored
-     *
-     * @deprecated Since IonJava RC2, 2009-03-19.
-     *  Use {@link #writeTimestamp(Timestamp)}.
-     */
-    @Deprecated
-    public void writeTimestamp(Date value, Integer localOffset)
-        throws IOException;
 
     /**
      * write symbolId out as an IonSymbol value.  The value does not
