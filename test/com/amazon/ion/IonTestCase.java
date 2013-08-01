@@ -22,6 +22,7 @@ import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
 
@@ -76,6 +77,15 @@ public abstract class IonTestCase
     protected SimpleCatalog             myCatalog;
     protected _Private_IonSystem        mySystem;
     protected IonLoader                 myLoader;
+
+    @After
+    public void tearDown()
+        throws Exception
+    {
+        myCatalog = null;
+        mySystem = null;
+    }
+
 
     //=========================================================================
     // Setters/Getters for injected values
@@ -1110,8 +1120,6 @@ public abstract class IonTestCase
     /** Temporary bridge from JUnit 3 */
     public void setUp() throws Exception { }
 
-    /** Temporary bridge from JUnit 3 */
-    public void tearDown() throws Exception { }
 
     /** JUnit 4 disables this */
     public static void assertEquals(double expected, double actual)
