@@ -876,7 +876,7 @@ public class ReverseBinaryEncoder
                     BigDecimal fraction = t.getZFractionalSecond();
                     assert (fraction.signum() >= 0
                             && ! fraction.equals(BigDecimal.ZERO))
-                            : "Bad timestamp fraction: " + fraction;
+                        : "Bad timestamp fraction: " + fraction;
 
                     writeIonDecimalContent(fraction);
                 }

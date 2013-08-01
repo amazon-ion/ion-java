@@ -6,6 +6,8 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
 import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl.lite.ReverseBinaryEncoder;
+import com.amazon.ion.impl.lite._Private_LiteDomTrampoline;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -36,10 +38,17 @@ public abstract class IonTestCase
     private static final String ION_TESTS_BULK_PATH_PROPERTY =
         "com.amazon.iontests.bulk.path";
 
-    /**
-     * Test dimensions of the DOM implementations.
-     */
-    protected enum DomType { LITE, BACKED }
+    /** Test dimensions of the DOM implementations. */
+    protected enum DomType
+    {
+        LITE,
+        BACKED,
+        /**
+         * ReverseBinaryEncoder impl for IonDatagramLite
+         * @see ReverseBinaryEncoder
+         */
+        LITE_REV_ENC
+    }
 
     protected enum StreamingMode { OLD_STREAMING, NEW_STREAMING }
 
@@ -82,11 +91,13 @@ public abstract class IonTestCase
         myDomType = type;
     }
 
-    public StreamingMode getStreamingMode() {
+    public StreamingMode getStreamingMode()
+    {
         return myStreamingMode;
     }
 
-    public void setStreamingMode(StreamingMode mode) {
+    public void setStreamingMode(StreamingMode mode)
+    {
         myStreamingMode = mode;
     }
 
@@ -279,8 +290,12 @@ public abstract class IonTestCase
                                            DomType domType)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
+
         BuilderHack.setBinaryBacked(b, domType == DomType.BACKED);
+        _Private_LiteDomTrampoline.setReverseBinaryEncoder(
+            domType == DomType.LITE_REV_ENC);
         b.withStreamCopyOptimized(myStreamCopyOptimized);
+
         IonSystem system = b.build();
         return (_Private_IonSystem) system;
     }

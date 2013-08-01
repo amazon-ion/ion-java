@@ -81,7 +81,7 @@ final class IonDatagramLite
      * <b>DO NOT USE THIS WITHOUT APPROVAL FROM JONKER@AMAZON.COM!</b>
      * This private feature is subject to change without notice.
      */
-    private static final String REVERSE_BINARY_ENCODER_PROPERTY =
+    static final String REVERSE_BINARY_ENCODER_PROPERTY =
         "com.amazon.ion.IonDatagram.useReverseBinaryEncoder";
 
     private static final int HASH_SIGNATURE =
