@@ -181,6 +181,7 @@ final class IonDatagramImpl
 
         if (ionData != null)  // FIXME refactor, we don't throw in this case
         {
+            // TODO why not use system.newValue(reader) ?  Seems more direct.
             IonWriter treeWriter = system.newTreeSystemWriter(this);
 
             treeWriter.writeValues(ionData);
