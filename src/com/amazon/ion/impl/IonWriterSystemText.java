@@ -67,33 +67,6 @@ final class IonWriterSystemText
     int []      _stack_parent_type = new int[10];
     boolean[]   _stack_pending_comma = new boolean[10];
 
-    /**
-     * Creates a writer to an {@link OutputStream}.
-     *
-     * @throws NullPointerException if any parameter is null.
-     */
-    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
-                                  _Private_IonTextWriterBuilder options,
-                                  OutputStream out)
-    {
-        this(defaultSystemSymtab,
-             options,
-             new OutputStreamIonTextAppender(out, options.getCharset()));
-    }
-
-    /**
-     * Creates a write to an {@link Appendable}.
-     *
-     * @throws NullPointerException if any parameter is null.
-     */
-    protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
-                                  _Private_IonTextWriterBuilder options,
-                                  Appendable out)
-    {
-        this(defaultSystemSymtab,
-             options,
-             new AppendableIonTextAppender(out, options.getCharset()));
-    }
 
     /**
      * @throws NullPointerException if any parameter is null.

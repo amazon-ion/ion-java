@@ -156,38 +156,45 @@ public class _Private_IonTextWriterBuilder
         return (_Private_IonTextWriterBuilder) b.immutable();
     }
 
-    @Override
-    public final IonWriter build(Appendable out)
+
+    /** Assumes that {@link #fillDefaults()} has been called. */
+    private IonWriter build(_Private_IonTextAppender appender)
     {
-        _Private_IonTextWriterBuilder b = fillDefaults();
-        IonCatalog catalog = b.getCatalog();
-        SymbolTable[] imports = b.getImports();
+        IonCatalog catalog = getCatalog();
+        SymbolTable[] imports = getImports();
 
         // TODO We shouldn't need a system here
         IonSystem system =
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
         IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
+            new IonWriterSystemText(system.getSystemSymbolTable(), this,
+                                    appender);
 
         return new IonWriterUser(catalog, system, systemWriter, imports);
+    }
+
+
+    @Override
+    public final IonWriter build(Appendable out)
+    {
+        _Private_IonTextWriterBuilder b = fillDefaults();
+
+        _Private_IonTextAppender appender =
+            new AppendableIonTextAppender(out, b.getCharset());
+
+        return b.build(appender);
     }
 
     @Override
     public final IonWriter build(OutputStream out)
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
-        IonCatalog catalog = b.getCatalog();
-        SymbolTable[] imports = b.getImports();
 
-        // TODO We shouldn't need a system here
-        IonSystem system =
-            IonSystemBuilder.standard().withCatalog(catalog).build();
+        _Private_IonTextAppender appender =
+            new OutputStreamIonTextAppender(out, b.getCharset());
 
-        IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(), b, out);
-
-        return new IonWriterUser(catalog, system, systemWriter, imports);
+        return b.build(appender);
     }
 
     //=========================================================================
