@@ -426,15 +426,15 @@ final class IonBinary
         if (longVal == 0) {
             return 0;
         }
-        if (longVal <=              0x7fL) return 1;  // 7  bits
-        if (longVal <=            0x3fffL) return 2;  // 14 bits
-        if (longVal <=          0x1fffffL) return 3;  // 21 bits
-        if (longVal <=         0xfffffffL) return 4;  // 28 bits
-        if (longVal <=        0x7fffffffL) return 5;  // 35 bits
-        if (longVal <=      0x3fffffffffL) return 6;  // 42 bits
-        if (longVal <=    0x1fffffffffffL) return 7;  // 49 bits
-        if (longVal <=   0xfffffffffffffL) return 8;  // 56 bits
-        if (longVal <= 0x7ffffffffffffffL) return 9;  // 63 bits
+        if (longVal < (1L << (7 * 1))) return 1;  // 7  bits
+        if (longVal < (1L << (7 * 2))) return 2;  // 14 bits
+        if (longVal < (1L << (7 * 3))) return 3;  // 21 bits
+        if (longVal < (1L << (7 * 4))) return 4;  // 28 bits
+        if (longVal < (1L << (7 * 5))) return 5;  // 35 bits
+        if (longVal < (1L << (7 * 6))) return 6;  // 42 bits
+        if (longVal < (1L << (7 * 7))) return 7;  // 49 bits
+        if (longVal < (1L << (7 * 8))) return 8;  // 56 bits
+        if (longVal < (1L << (7 * 9))) return 9;  // 63 bits
         return 10;
     }
 
@@ -445,15 +445,15 @@ final class IonBinary
             return 0;
         }
         if (longVal <  0) longVal = -longVal;
-        if (longVal <=              0x3fL) return 1;  // 6  bits
-        if (longVal <=            0x1fffL) return 2;  // 13 bits
-        if (longVal <=           0xfffffL) return 3;  // 20 bits
-        if (longVal <=         0x7ffffffL) return 4;  // 27 bits
-        if (longVal <=        0x3fffffffL) return 5;  // 34 bits
-        if (longVal <=      0x1fffffffffL) return 6;  // 41 bits
-        if (longVal <=     0xfffffffffffL) return 7;  // 48 bits
-        if (longVal <=   0x7ffffffffffffL) return 8;  // 55 bits
-        if (longVal <= 0x3ffffffffffffffL) return 9;  // 62 bits
+        if (longVal < (1L << (7 * 1 - 1))) return 1;  // 6  bits
+        if (longVal < (1L << (7 * 2 - 1))) return 2;  // 13 bits
+        if (longVal < (1L << (7 * 3 - 1))) return 3;  // 20 bits
+        if (longVal < (1L << (7 * 4 - 1))) return 4;  // 27 bits
+        if (longVal < (1L << (7 * 5 - 1))) return 5;  // 34 bits
+        if (longVal < (1L << (7 * 6 - 1))) return 6;  // 41 bits
+        if (longVal < (1L << (7 * 7 - 1))) return 7;  // 48 bits
+        if (longVal < (1L << (7 * 8 - 1))) return 8;  // 55 bits
+        if (longVal < (1L << (7 * 9 - 1))) return 9;  // 62 bits
         return 10;
     }
 
@@ -467,13 +467,13 @@ final class IonBinary
         if (longVal < 0) {
             throw new BlockedBuffer.BlockedBufferException("fatal signed long where unsigned was promised");
         }
-        if (longVal <=             0xffL) return 1;
-        if (longVal <=           0xffffL) return 2;
-        if (longVal <=         0xffffffL) return 3;
-        if (longVal <=       0xffffffffL) return 4;
-        if (longVal <=     0xffffffffffL) return 5;
-        if (longVal <=   0xffffffffffffL) return 6;
-        if (longVal <= 0x0fffffffffffffL) return 7;
+        if (longVal < (1L << (8 * 1))) return 1;  // 8  bits
+        if (longVal < (1L << (8 * 2))) return 2;  // 16 bits
+        if (longVal < (1L << (8 * 3))) return 3;  // 24 bits
+        if (longVal < (1L << (8 * 4))) return 4;  // 32 bits
+        if (longVal < (1L << (8 * 5))) return 5;  // 40 bits
+        if (longVal < (1L << (8 * 6))) return 6;  // 48 bits
+        if (longVal < (1L << (8 * 7))) return 7;  // 56 bits
         return 8;
     }
 
@@ -502,13 +502,13 @@ final class IonBinary
             return 0;
         }
         if (longVal < 0) longVal = -longVal;
-        if (longVal <=             0x7fL) return 1;
-        if (longVal <=           0x7fffL) return 2;
-        if (longVal <=         0x7fffffL) return 3;
-        if (longVal <=       0x7fffffffL) return 4;
-        if (longVal <=     0x7fffffffffL) return 5;
-        if (longVal <=   0x7fffffffffffL) return 6;
-        if (longVal <= 0x7fffffffffffffL) return 7;
+        if (longVal < (1L << (8 * 1 - 1))) return 1;   // 7  bits
+        if (longVal < (1L << (8 * 2 - 1))) return 2;   // 15 bits
+        if (longVal < (1L << (8 * 3 - 1))) return 3;   // 23 bits
+        if (longVal < (1L << (8 * 4 - 1))) return 4;   // 31 bits
+        if (longVal < (1L << (8 * 5 - 1))) return 5;   // 39 bits
+        if (longVal < (1L << (8 * 6 - 1))) return 6;   // 47 bits
+        if (longVal < (1L << (8 * 7 - 1))) return 7;   // 55 bits
         if (longVal == Long.MIN_VALUE) return 9;
         return 8;
     }

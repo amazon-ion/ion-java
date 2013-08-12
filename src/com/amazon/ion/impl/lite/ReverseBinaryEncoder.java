@@ -349,81 +349,81 @@ class ReverseBinaryEncoder
     {
         int offset = myOffset;
 
-        if (v <= 0xff)
+        if (v < (1L << (8 * 1)))
         {
             if (--offset < 0) {
                 offset = growBuffer(offset);
             }
             myBuffer[offset] = (byte) v;
         }
-        else if (v <= 0xffff)
+        else if (v < (1L << (8 * 2)))
         {
             offset -= 2;
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 8);
-            myBuffer[offset+1] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 1));
+            myBuffer[offset+1] = (byte)  v;
         }
-        else if (v <= 0xffffff)
+        else if (v < (1L << (8 * 3)))
         {
             offset -= 3;
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 16);
-            myBuffer[offset+1] = (byte) (v >>> 8);
-            myBuffer[offset+2] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 2));
+            myBuffer[offset+1] = (byte) (v >>> (8 * 1));
+            myBuffer[offset+2] = (byte)  v;
         }
-        else if (v < 0xffffffffL)
+        else if (v < (1L << (8 * 4)))
         {
             offset -= 4;
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 24);
-            myBuffer[offset+1] = (byte) (v >>> 16);
-            myBuffer[offset+2] = (byte) (v >>> 8);
-            myBuffer[offset+3] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 3));
+            myBuffer[offset+1] = (byte) (v >>> (8 * 2));
+            myBuffer[offset+2] = (byte) (v >>> (8 * 1));
+            myBuffer[offset+3] = (byte)  v;
         }
-        else if (v < 0xffffffffffL)
+        else if (v < (1L << (8 * 5)))
         {
             offset -= 5;
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 32);
-            myBuffer[offset+1] = (byte) (v >>> 24);
-            myBuffer[offset+2] = (byte) (v >>> 16);
-            myBuffer[offset+3] = (byte) (v >>> 8);
-            myBuffer[offset+4] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 4));
+            myBuffer[offset+1] = (byte) (v >>> (8 * 3));
+            myBuffer[offset+2] = (byte) (v >>> (8 * 2));
+            myBuffer[offset+3] = (byte) (v >>> (8 * 1));
+            myBuffer[offset+4] = (byte)  v;
         }
-        else if (v < 0xffffffffffffL)
+        else if (v < (1L << (8 * 6)))
         {
             offset -= 6;
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 40);
-            myBuffer[offset+1] = (byte) (v >>> 32);
-            myBuffer[offset+2] = (byte) (v >>> 24);
-            myBuffer[offset+3] = (byte) (v >>> 16);
-            myBuffer[offset+4] = (byte) (v >>> 8);
-            myBuffer[offset+5] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 5));
+            myBuffer[offset+1] = (byte) (v >>> (8 * 4));
+            myBuffer[offset+2] = (byte) (v >>> (8 * 3));
+            myBuffer[offset+3] = (byte) (v >>> (8 * 2));
+            myBuffer[offset+4] = (byte) (v >>> (8 * 1));
+            myBuffer[offset+5] = (byte)  v;
         }
-        else if (v < 0xffffffffffffffL)
+        else if (v < (1L << (8 * 7)))
         {
             offset -= 7;
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 48);
-            myBuffer[offset+1] = (byte) (v >>> 40);
-            myBuffer[offset+2] = (byte) (v >>> 32);
-            myBuffer[offset+3] = (byte) (v >>> 24);
-            myBuffer[offset+4] = (byte) (v >>> 16);
-            myBuffer[offset+5] = (byte) (v >>> 8);
-            myBuffer[offset+6] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 6));
+            myBuffer[offset+1] = (byte) (v >>> (8 * 5));
+            myBuffer[offset+2] = (byte) (v >>> (8 * 4));
+            myBuffer[offset+3] = (byte) (v >>> (8 * 3));
+            myBuffer[offset+4] = (byte) (v >>> (8 * 2));
+            myBuffer[offset+5] = (byte) (v >>> (8 * 1));
+            myBuffer[offset+6] = (byte)  v;
         }
         else
         {
@@ -431,14 +431,14 @@ class ReverseBinaryEncoder
             if (offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset]   = (byte) (v >>> 56);
-            myBuffer[offset+1] = (byte) (v >>> 48);
-            myBuffer[offset+2] = (byte) (v >>> 40);
-            myBuffer[offset+3] = (byte) (v >>> 32);
-            myBuffer[offset+4] = (byte) (v >>> 24);
-            myBuffer[offset+5] = (byte) (v >>> 16);
-            myBuffer[offset+6] = (byte) (v >>> 8);
-            myBuffer[offset+7] = (byte) v;
+            myBuffer[offset]   = (byte) (v >>> (8 * 7));
+            myBuffer[offset+1] = (byte) (v >>> (8 * 6));
+            myBuffer[offset+2] = (byte) (v >>> (8 * 5));
+            myBuffer[offset+3] = (byte) (v >>> (8 * 4));
+            myBuffer[offset+4] = (byte) (v >>> (8 * 3));
+            myBuffer[offset+5] = (byte) (v >>> (8 * 2));
+            myBuffer[offset+6] = (byte) (v >>> (8 * 1));
+            myBuffer[offset+7] = (byte)  v;
         }
 
         myOffset = offset;
@@ -459,50 +459,50 @@ class ReverseBinaryEncoder
     {
         int offset = myOffset;
 
-        if (v <= 0x7f)                 // 1 byte - 7 bits used - 0x7f max
+        if (v < (1 << (7 * 1)))               // 1 byte - 7 bits used - 0x7f max
         {
             if (--offset < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset] = (byte) (0x80 | v);
+            myBuffer[offset]     = (byte) (v | 0x80 );
         }
-        else if (v <= 0x3fff)          // 2 bytes - 14 bits used - 0x3fff max
+        else if (v < (1 << (7 * 2)))          // 2 bytes - 14 bits used - 0x3fff max
         {
             if ((offset -= 2) < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset] = (byte) (v >>> 7);
-            myBuffer[offset + 1] = (byte) (0x80 | v);
+            myBuffer[offset]     = (byte) (v >>> (7 * 1));
+            myBuffer[offset + 1] = (byte) (v | 0x80);
         }
-        else if (v <= 0x1fffff)        // 3 bytes - 21 bits used - 0x1fffff max
+        else if (v < (1 << (7 * 3)))          // 3 bytes - 21 bits used - 0x1fffff max
         {
             if ((offset -= 3) < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset] = (byte) (v >>> 14);
-            myBuffer[offset + 1] = (byte) (0x7f & (v >>> 7));
-            myBuffer[offset + 2] = (byte) (0x80 | v);
+            myBuffer[offset]     = (byte) ( v >>> (7 * 2));
+            myBuffer[offset + 1] = (byte) ((v >>> (7 * 1)) & 0x7f);
+            myBuffer[offset + 2] = (byte) ( v | 0x80);
         }
-        else if (v <= 0xfffffff)       // 4 bytes - 28 bits used - 0xfffffff max
+        else if (v < (1 << (7 * 4)))          // 4 bytes - 28 bits used - 0xfffffff max
         {
             if ((offset -= 4) < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset] = (byte) (v >>> 21);
-            myBuffer[offset + 1] = (byte) (0x7f & (v >>> 14));
-            myBuffer[offset + 2] = (byte) (0x7f & (v >>> 7));
-            myBuffer[offset + 3] = (byte) (0x80 | v);
+            myBuffer[offset]     = (byte) ( v >>> (7 * 3));
+            myBuffer[offset + 1] = (byte) ((v >>> (7 * 2)) & 0x7f);
+            myBuffer[offset + 2] = (byte) ((v >>> (7 * 1)) & 0x7f);
+            myBuffer[offset + 3] = (byte) ( v | 0x80);
         }
-        else                           // 5 bytes - 32 bits used - 0x7fffffff max (Integer.MAX_VALUE)
+        else                                  // 5 bytes - 32 bits used - 0x7fffffff max (Integer.MAX_VALUE)
         {
             if ((offset -= 5) < 0) {
                 offset = growBuffer(offset);
             }
-            myBuffer[offset] = (byte) (v >>> 28);
-            myBuffer[offset + 1] = (byte) (0x7f & (v >>> 21));
-            myBuffer[offset + 2] = (byte) (0x7f & (v >>> 14));
-            myBuffer[offset + 3] = (byte) (0x7f & (v >>> 7));
-            myBuffer[offset + 4] = (byte) (0x80 | v);
+            myBuffer[offset]     = (byte) ( v >>> (7 * 4));
+            myBuffer[offset + 1] = (byte) ((v >>> (7 * 3)) & 0x7f);
+            myBuffer[offset + 2] = (byte) ((v >>> (7 * 2)) & 0x7f);
+            myBuffer[offset + 3] = (byte) ((v >>> (7 * 1)) & 0x7f);
+            myBuffer[offset + 4] = (byte) ( v | 0x80);
         }
 
         myOffset = offset;
@@ -540,57 +540,49 @@ class ReverseBinaryEncoder
                 v = -v;
             }
 
-            if (v <= 0x3f)             // 1 byte - 6 bits used - 0x3f max
+            if (v < (1 << (7 * 1 - 1)))           // 1 byte - 6 bits used - 0x3f max
             {
                 if (--offset < 0) {
                     offset = growBuffer(offset);
                 }
                 if (is_negative)
                     v |= 0x40;
-                myBuffer[offset] = (byte) (0x80 | v);
-
-                assert (myBuffer[offset] & 0x80) == 0x80;
+                myBuffer[offset]     = (byte) (v | 0x80);
             }
-            else if (v <= 0x1fff)      // 2 bytes - 13 bits used - 0x1fff max
+            else if (v < (1 << (7 * 2 - 1)))      // 2 bytes - 13 bits used - 0x1fff max
             {
                 if ((offset -= 2) < 0) {
                     offset = growBuffer(offset);
                 }
                 if (is_negative)
                     v |= 0x2000;
-                myBuffer[offset] = (byte) (v >>> 7);
-                myBuffer[offset + 1] = (byte) (0x80 | v);
-
-                assert (myBuffer[offset + 1] & 0x80) == 0x80;
+                myBuffer[offset]     = (byte) (v >>> (7 * 1));
+                myBuffer[offset + 1] = (byte) (v | 0x80);
             }
-            else if (v <= 0xfffff)     // 3 bytes - 20 bits used - 0xfffff max
+            else if (v < (1 << (7 * 3 - 1)))      // 3 bytes - 20 bits used - 0xfffff max
             {
                 if ((offset -= 3) < 0) {
                     offset = growBuffer(offset);
                 }
                 if (is_negative)
                     v |= 0x100000;
-                myBuffer[offset] = (byte) (v >>> 14);
-                myBuffer[offset + 1] = (byte) (0x7f & (v >>> 7));
-                myBuffer[offset + 2] = (byte) (0x80 | v);
-
-                assert (myBuffer[offset + 2] & 0x80) == 0x80;
+                myBuffer[offset]     = (byte) ( v >>> (7 * 2));
+                myBuffer[offset + 1] = (byte) ((v >>> (7 * 1)) & 0x7f);
+                myBuffer[offset + 2] = (byte) ( v | 0x80);
             }
-            else if (v <= 0x7ffffff)   // 4 bytes - 27 bits used - 0x7ffffff max
+            else if (v < (1 << (7 * 4 - 1)))      // 4 bytes - 27 bits used - 0x7ffffff max
             {
                 if ((offset -= 4) < 0) {
                     offset = growBuffer(offset);
                 }
                 if (is_negative)
                     v |= 0x8000000;
-                myBuffer[offset] = (byte) (v >>> 21);
-                myBuffer[offset + 1] = (byte) (0x7f & (v >>> 14));
-                myBuffer[offset + 2] = (byte) (0x7f & (v >>> 7));
-                myBuffer[offset + 3] = (byte) (0x80 | v);
-
-                assert (myBuffer[offset + 3] & 0x80) == 0x80;
+                myBuffer[offset]     = (byte) ( v >>> (7 * 3));
+                myBuffer[offset + 1] = (byte) ((v >>> (7 * 2)) & 0x7f);
+                myBuffer[offset + 2] = (byte) ((v >>> (7 * 1)) & 0x7f);
+                myBuffer[offset + 3] = (byte) ( v | 0x80);
             }
-            else                       // 5 bytes - 31 bits used - 0x7fffffff max (Integer.MAX_VALUE)
+            else                                  // 5 bytes - 31 bits used - 0x7fffffff max (Integer.MAX_VALUE)
             {
                 if ((offset -= 5) < 0) {
                     offset = growBuffer(offset);
@@ -599,17 +591,15 @@ class ReverseBinaryEncoder
                 // This is different from the previous if-blocks because we
                 // cannot represent a int with more than 32 bits to perform
                 // the "OR-assignment" (|=).
-                myBuffer[offset] = (byte) (0x7f & (v >>> 28));
+                myBuffer[offset]     = (byte) ((v >>> (7 * 4)) & 0x7f);
                 if (is_negative) {
                     myBuffer[offset] |= 0x40;
                 }
 
-                myBuffer[offset + 1] = (byte) (0x7f & (v >>> 21));
-                myBuffer[offset + 2] = (byte) (0x7f & (v >>> 14));
-                myBuffer[offset + 3] = (byte) (0x7f & (v >>> 7));
-                myBuffer[offset + 4] = (byte) (0x80 | v);
-
-                assert (myBuffer[offset + 4] & 0x80) == 0x80;
+                myBuffer[offset + 1] = (byte) ((v >>> (7 * 3)) & 0x7f);
+                myBuffer[offset + 2] = (byte) ((v >>> (7 * 2)) & 0x7f);
+                myBuffer[offset + 3] = (byte) ((v >>> (7 * 1)) & 0x7f);
+                myBuffer[offset + 4] = (byte) ( v | 0x80);
             }
 
             myOffset = offset;
@@ -728,7 +718,7 @@ class ReverseBinaryEncoder
 
             // Check the value if it's smaller than a long, if so we can use a
             // simpler routine to write the BigInteger value.
-            if (bigInt.compareTo(MAX_LONG_VALUE) == -1)
+            if (bigInt.compareTo(MAX_LONG_VALUE) < 0)
             {
                 long lvalue = bigInt.longValue();
                 writeUInt(lvalue);
@@ -780,14 +770,14 @@ class ReverseBinaryEncoder
                 offset = growBuffer(offset);
             }
 
-            myBuffer[offset] = (byte) (bits >>> 56);
-            myBuffer[offset + 1] = (byte) (bits >>> 48);
-            myBuffer[offset + 2] = (byte) (bits >>> 40);
-            myBuffer[offset + 3] = (byte) (bits >>> 32);
-            myBuffer[offset + 4] = (byte) (bits >>> 24);
-            myBuffer[offset + 5] = (byte) (bits >>> 16);
-            myBuffer[offset + 6] = (byte) (bits >>> 8);
-            myBuffer[offset + 7] = (byte) bits;
+            myBuffer[offset]     = (byte) (bits >>> (8 * 7));
+            myBuffer[offset + 1] = (byte) (bits >>> (8 * 6));
+            myBuffer[offset + 2] = (byte) (bits >>> (8 * 5));
+            myBuffer[offset + 3] = (byte) (bits >>> (8 * 4));
+            myBuffer[offset + 4] = (byte) (bits >>> (8 * 3));
+            myBuffer[offset + 5] = (byte) (bits >>> (8 * 2));
+            myBuffer[offset + 6] = (byte) (bits >>> (8 * 1));
+            myBuffer[offset + 7] = (byte)  bits;
 
             myOffset = offset;
 
