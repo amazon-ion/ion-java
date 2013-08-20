@@ -3,15 +3,19 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
+import com.amazon.ion.Timestamp;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import org.junit.Test;
 
 /**
@@ -39,11 +43,6 @@ public abstract class OutputStreamWriterTestCase
             flushed = true;
             if (myFlushException != null) throw myFlushException;
             super.flush();
-        }
-
-        public void assertWasFlushed()
-        {
-            assertTrue("stream was not flushed", flushed);
         }
 
         @Override
@@ -74,6 +73,7 @@ public abstract class OutputStreamWriterTestCase
                                             SymbolTable... imports)
         throws Exception;
 
+    protected abstract void checkFlushedAfterTopLevelValueWritten();
 
     @Override
     protected byte[] outputByteArray() throws Exception
@@ -90,15 +90,28 @@ public abstract class OutputStreamWriterTestCase
     {
         assertTrue("output stream not flushed", myOutputStreamWrapper.flushed);
         assertTrue("output stream not closed",  myOutputStreamWrapper.closed);
+
+    }
+
+    @Override
+    protected void checkFlushed(boolean expectFlushed)
+    {
+        assertEquals("output stream should be " +
+                     (expectFlushed ? "flushed" : "not flushed"),
+                     expectFlushed, myOutputStreamWrapper.flushed);
     }
 
     @Test
-    public void testCloseFinishThrows()
+    public void testStreamIsClosedIfFinishThrows()
     throws Exception
     {
         iw = makeWriter();
         iw.writeInt(12L);
+
+        // This will make flush() throw, which causes finish()
+        // to throw because finish() calls flush().
         myFlushException = new IOException();
+
         try {
             iw.close();
             fail("Expected exception");
@@ -147,7 +160,7 @@ public abstract class OutputStreamWriterTestCase
         expected.add().newSymbol("fred_1");
 
         iw.flush();
-        myOutputStreamWrapper.assertWasFlushed();
+        checkFlushed(true);
         myOutputStreamWrapper.flushed = false;
 
         byte[] bytes = myOutputStream.toByteArray();
@@ -156,7 +169,7 @@ public abstract class OutputStreamWriterTestCase
         // Try flushing when there's just a pending annotation.
         iw.addTypeAnnotation("fred_1");
         iw.flush();
-        myOutputStreamWrapper.assertWasFlushed();
+        checkFlushed(true);
         myOutputStreamWrapper.flushed = false;
 
         bytes = myOutputStream.toByteArray();
@@ -166,10 +179,186 @@ public abstract class OutputStreamWriterTestCase
         expected.add().newSymbol("fred_2").addTypeAnnotation("fred_1");
 
         iw.flush();
-        myOutputStreamWrapper.assertWasFlushed();
+        checkFlushed(true);
         myOutputStreamWrapper.flushed = false;
 
         bytes = myOutputStream.toByteArray();
         assertEquals(expected, loader().load(bytes));
+    }
+
+    /**
+     * Checks whether the IonWriter implementation auto-flushes after writing
+     * each top-level value. The actual check for the
+     * implementation-specific IonWriter auto-flush mechanism is delegated to
+     * the abstract method
+     * {@link #checkFlushedAfterTopLevelValueWritten()}.
+     */
+    @Test
+    public void testAutoFlushTopLevelValuesForTypedWritesContainers()
+        throws Exception
+    {
+        iw = makeWriter();
+        checkFlushed(false);
+
+
+        iw.stepIn(IonType.LIST); // begin TLV
+        checkFlushed(false);
+        {
+            iw.setTypeAnnotations("some_annot");
+            iw.writeNull();
+            checkFlushed(false);
+
+            iw.writeInt(123);
+            checkFlushed(false);
+
+            iw.stepIn(IonType.SEXP);
+            checkFlushed(false);
+            {
+                iw.setTypeAnnotations("some_annot");
+                iw.writeBool(true);
+                checkFlushed(false);
+
+                iw.writeFloat(123.456e123);
+                checkFlushed(false);
+
+                iw.writeDecimal(new BigDecimal("123.456e123"));
+                checkFlushed(false);
+
+                iw.stepIn(IonType.LIST);
+                checkFlushed(false);
+                {
+                    iw.setTypeAnnotations("some_annot");
+                    iw.writeTimestamp(Timestamp
+                                .forMillis(System.currentTimeMillis(), null));
+                    checkFlushed(false);
+
+                    iw.writeSymbol("some_symbol");
+                    checkFlushed(false);
+
+                    iw.writeString("some_string");
+                    checkFlushed(false);
+
+                    iw.writeClob("some_string".getBytes());
+                    checkFlushed(false);
+
+                    iw.writeBlob("some_string".getBytes());
+                    checkFlushed(false);
+                }
+                iw.stepOut();
+                checkFlushed(false);
+            }
+            iw.stepOut();
+            checkFlushed(false);
+        }
+        iw.stepOut();
+        checkFlushedAfterTopLevelValueWritten(); // end TLV
+
+
+        iw.stepIn(IonType.STRUCT); // begin TLV
+        checkFlushed(false);
+        {
+            iw.setFieldName("first");
+            iw.writeNull();
+            checkFlushed(false);
+
+            iw.setFieldName("second");
+            iw.writeInt(123);
+            checkFlushed(false);
+        }
+        iw.stepOut();
+        checkFlushedAfterTopLevelValueWritten(); // end TLV
+
+
+        iw.stepIn(IonType.SEXP); // begin TLV
+        checkFlushed(false);
+        {
+            iw.writeNull();
+            checkFlushed(false);
+
+            iw.writeInt(123);
+            checkFlushed(false);
+        }
+        iw.stepOut();
+        checkFlushedAfterTopLevelValueWritten(); // end TLV
+    }
+
+    /**
+     * @see #testAutoFlushTopLevelValuesForTypedWritesContainers()
+     */
+    @Test
+    public void testAutoFlushTopLevelValuesForTypedWritesScalars()
+        throws Exception
+    {
+        iw = makeWriter();
+        checkFlushed(false);
+
+        iw.writeNull();
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeInt(123);
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeBool(true);
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeFloat(123.456e123);
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeDecimal(new BigDecimal("123.456e123"));
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.setTypeAnnotations("some_annot");
+        iw.writeTimestamp(Timestamp
+                          .forMillis(System.currentTimeMillis(), null));
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeSymbol("some_symbol");
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeString("some_string");
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeClob("some_string".getBytes());
+        checkFlushedAfterTopLevelValueWritten();
+
+        iw.writeBlob("some_string".getBytes());
+        checkFlushedAfterTopLevelValueWritten();
+    }
+
+    /**
+     * NOTE: This test method tests for the {@code write*()} methods of
+     * the IonWriter that are not typed.
+     *
+     * @see #testAutoFlushTopLevelValuesForTypedWritesContainers()
+     */
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testAutoFlushTopLevelValuesForOtherWrites()
+        throws Exception
+    {
+        IonValue val = system().singleValue("[a, [b, [c]]]");
+
+        //================== IonValue.writeTo(IonWriter) =======================
+        iw = makeWriter();
+        val.writeTo(iw);
+        checkFlushedAfterTopLevelValueWritten();
+
+        //================== IonWriter.writeValue(IonValue) ====================
+        iw = makeWriter();
+        iw.writeValue(val);
+        checkFlushedAfterTopLevelValueWritten();
+
+        //================== IonWriter.writeValues(IonReader) ==================
+        iw = makeWriter();
+        IonReader reader = system().newReader(val);
+        iw.writeValues(reader);
+        checkFlushedAfterTopLevelValueWritten();
+
+        //================== IonWriter.writeValue(IonReader) ===================
+        iw = makeWriter();
+        reader = system().newReader(val);
+        reader.next();
+        iw.writeValue(reader);
+        checkFlushedAfterTopLevelValueWritten();
     }
 }

@@ -47,7 +47,11 @@ import java.util.Date;
  * Once all the top-level values have been written (and stepped-out back to
  * the starting level), the caller must {@link #close()} the writer
  * (or at least {@link #finish()} it) before accessing
- * the data (for example, via {@link ByteArrayOutputStream#toByteArray()}).
+ * the data written to the underlying data sink
+ * (for example, via {@link ByteArrayOutputStream#toByteArray()}).
+ * The writer may have internal buffers and without closing or finishing it,
+ * it may not have written everything to the underlying data sink. In addition,
+ * {@link #flush()} isn't guaranteed to be sufficient for all implementations.
  *
  * <h2>Exception Handling</h2>
  * {@code IonWriter} is a generic interface for generating Ion data, and it's
