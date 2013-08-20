@@ -154,6 +154,9 @@ public class RoundTripTest
             case WRITER_WRITEVALUES_READER:
                 bytes = writerWriteValuesReader(datagram);
                 break;
+            default:
+                throw new UnsupportedOperationException(
+                    "Invalid binary encoder type");
         }
 
         return bytes;

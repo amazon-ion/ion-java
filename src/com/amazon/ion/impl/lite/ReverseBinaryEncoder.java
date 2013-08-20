@@ -56,7 +56,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.ListIterator;
 
 
@@ -1147,30 +1146,22 @@ class ReverseBinaryEncoder
         {
             final int originalOffset = myBuffer.length - myOffset;
 
-            // TODO ION-303: An implementation is not required to retain the
-            // ordering when encoding to binary. Serializing IonStruct into
-            // binary in another ordering of its nested IonValues should not
-            // fail on tests. ReaderCompare#compare(IonReader, IonReader)
-            // currently fails this scenario, as it checks for same ordering
-            // between two IonReaders.
-            Iterator<IonValue> iter = val.iterator();
-            ArrayList<IonValue> listOfIonValues = new ArrayList<IonValue>();
+            // TODO ION-358 should not preserve the ordering of fields
+            ArrayList<IonValue> values = new ArrayList<IonValue>();
 
-            // Fill ArrayList with IonValues
-            while (iter.hasNext())
+            // Fill ArrayList with IonValues, the add() just copies the
+            // references of the IonValues
+            for (IonValue curr : val)
             {
-                IonValue curr = iter.next();
-                listOfIonValues.add(curr);
+                values.add(curr);
             }
 
-            // Get a IonValue array and traverse from last to first
-            IonValue[] values = new IonValue[listOfIonValues.size()];
-            listOfIonValues.toArray(values);
-            for (int i = values.length; --i >= 0;)
+            for (int i = values.size(); --i >= 0; )
             {
-                SymbolToken symToken = values[i].getFieldNameSymbol();
+                IonValue v = values.get(i);
+                SymbolToken symToken = v.getFieldNameSymbol();
 
-                writeIonValue(values[i]);
+                writeIonValue(v);
 
                 int sid = findSid(symToken);
                 writeVarUInt(sid);
