@@ -49,7 +49,13 @@ public class ValueWriterTest
     @Override
     protected void checkClosed()
     {
-        // Nothing to do.
+        // No-op.
+    }
+
+    @Override
+    protected void checkFlushed(boolean expectFlushed)
+    {
+        // No-op.
     }
 
     //=========================================================================

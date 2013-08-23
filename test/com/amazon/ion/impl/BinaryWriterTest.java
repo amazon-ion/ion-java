@@ -280,4 +280,10 @@ public class BinaryWriterTest
         IonAssert.assertIonEquals(dg1, dg3);
         Assert.assertArrayEquals(bytes2, bytes3);
     }
+
+    @Override
+    protected void checkFlushedAfterTopLevelValueWritten()
+    {
+        checkFlushed(false);
+    }
 }

@@ -439,4 +439,11 @@ public class TextWriterTest
 
         super.testAnnotationNotSetToIvmOnStartOfStream();
     }
+
+    @Override
+    protected void checkFlushedAfterTopLevelValueWritten()
+    {
+        checkFlushed(true);
+        myOutputStreamWrapper.flushed = false;
+    }
 }

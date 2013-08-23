@@ -357,6 +357,19 @@ final class IonWriterSystemText
         super.endValue();
         _pending_separator = true;
         _following_long_string = false;  // Caller overwrites this as needed.
+
+        // Flush if a top-level-value was written
+        if (getDepth() == 0)
+        {
+            try
+            {
+                flush();
+            }
+            catch (IOException e)
+            {
+                throw new IonException(e);
+            }
+        }
     }
 
 

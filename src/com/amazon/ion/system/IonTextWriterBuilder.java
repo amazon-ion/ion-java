@@ -24,7 +24,7 @@ import java.nio.charset.Charset;
  * builder:
  * <pre>
  *  IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
- *</pre>
+ * </pre>
  * The standard configuration gives a direct representation of what's written,
  * including version markers and local symbol tables. That's good for
  * diagnostics but it may be more than you want in many situations.
@@ -34,12 +34,24 @@ import java.nio.charset.Charset;
  *  IonWriter w = IonTextWriterBuilder.minimal()
  *                                    .withPrettyPrinting()
  *                                    .build(outputStream);
- *</pre>
+ * </pre>
  *
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
  * {@code with...()} mutation methods that enable a more fluid style.
+ *
+ * <h2>Auto-flushing</h2>
+ * {@link IonWriter}s created by this builder <em>auto-flush</em> to the
+ * underlying data sink after writing every top-level value in the context of
+ * the writer.
+ *
+ * <p>
+ * Currently, there is no configuration point available to disable the
+ * auto-flushing mechanism. Please vote on
+ * <a href="https://jira2.amazon.com/browse/ION-361">JIRA issue ION-361</a>
+ * if you require it.
+ *
  * <p>
  * <b>
  * This class is not intended to be used as an application extension point;

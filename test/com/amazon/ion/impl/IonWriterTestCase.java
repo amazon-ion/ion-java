@@ -134,11 +134,11 @@ public abstract class IonWriterTestCase
     protected abstract byte[] outputByteArray()
         throws Exception;
 
-    /**
-     * Validate that the output stream has been closed.
-     */
+    /** Validate that the output stream has been closed. */
     protected abstract void checkClosed();
 
+    /** Validate whether the output stream has been flushed. */
+    protected abstract void checkFlushed(boolean expectFlushed);
 
     //=========================================================================
 
