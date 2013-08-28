@@ -19,6 +19,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -821,7 +822,7 @@ final class IonSystemLite
     }
 
 
-    public IonReader newReader(String ionText)
+    public IonTextReader newReader(String ionText)
     {
         return makeReader(this, _catalog, ionText);
     }
