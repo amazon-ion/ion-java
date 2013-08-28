@@ -37,6 +37,7 @@ import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -357,7 +358,7 @@ final class IonSystemImpl
     // IonReader creation
 
 
-    public IonReader newReader(String ionText)
+    public IonTextReader newReader(String ionText)
     {
         return makeReader(this, myCatalog, ionText);
     }

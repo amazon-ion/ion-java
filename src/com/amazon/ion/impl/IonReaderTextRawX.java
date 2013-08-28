@@ -8,7 +8,7 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -57,7 +57,7 @@ import java.util.Iterator;
  *
  */
 abstract class IonReaderTextRawX
-    implements IonReader
+    implements IonTextReader
 {
     public abstract BigInteger bigIntegerValue();
 
