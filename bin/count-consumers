@@ -15,5 +15,5 @@ brazil vs -printDependencies --direct -package IonPathJava-1.0 -consumers -versi
     | grep "Total dependencies"
 
 echo "IonPathJava TRANSITIVE"
-brazil vs -printDependencies -package IonJava-1.0 -consumers -versionSet live \
+brazil vs -printDependencies -package IonPathJava-1.0 -consumers -versionSet live \
     | grep "Total dependencies"
