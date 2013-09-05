@@ -3,7 +3,8 @@
 package com.amazon.ion;
 
 /**
- * An error caused by a symbol ID could not be translated into text.
+ * An error caused by a symbol ID that could not be translated into text
+ * because it is not defined by the symbol table in context.
  *
  * @since IonJava R15
  */

@@ -14,28 +14,25 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 
 /**
- * An <em>immutable</em> representation of time. Ion defines a simple
- * representation of date and time that is in Coordinated Universal Time (UTC).
- * In reality the practical use of time could be more accurately described of
+ * An immutable representation of a point in time. Ion defines a simple
+ * representation of time based on Coordinated Universal Time (UTC).
+ * In practice the use of time could be more accurately described as
  * UTC-SLS (UTC Smoothed Leap Seconds) as there is no representation for the
  * 24 (as of February 2009) leap second discontinuities that UTC has added.
  * <p>
- * <b>WARNING:</b> This class should not be extended by code outside of
- * this library.
- * <p>
- * This implementation preserves the "signficant digits" of the value.  The
- * precision defines which fields have been included.  Only common break
+ * Timestamps preserve precision, meaning the fields that are included, and the
+ * signficant digits of any fractional second.  Only common break
  * points in the values are supported.  Any unspecified fields are handled
  * as the start of the new year/month/day.
  *
  *
  * <h4>Equality and Comparison</h4>
  *
- * As with {@link IonValue} classes, the {@link #equals} methods on this class
- * performs a strict equivalence that observes the precision and local offset
+ * As with {@link IonValue} classes, the {@link #equals equals} methods on this class
+ * perform a strict equivalence that observes the precision and local offset
  * of each timestamp.
  * This means that it's possible to have two {@link Timestamp} instances that
- * represent the same point in time but are not equivalent.
+ * represent the same point in time but are not {@code equals}.
  * <p>
  * On the other hand, the {@link #compareTo} methods perform point in time
  * comparison, ignoring precision and local offset.

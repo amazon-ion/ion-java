@@ -12,7 +12,7 @@ public interface IonMutableCatalog extends IonCatalog {
      * the same name and version.
      *
      * @param sharedTable must be shared but not a system table or
-     *        substitute table
+     *        substitute table.
      */
     public void putTable(SymbolTable sharedTable);
 }

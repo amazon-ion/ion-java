@@ -15,8 +15,8 @@ import java.util.Date;
 /**
  * Writes Ion data to an output source.
  *
- * This interface allows the user to logically write the values as they view the
- * data without being concerned about which output format is needed.
+ * This interface allows the user to write Ion data without being concerned
+ * about which output format is being used.
  * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.

@@ -16,8 +16,8 @@ import java.util.Iterator;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * <p>
- * In general, instances returned from one system are not interchangable with
- * those returned by other systems.
+ * In general, {@link IonValue} instances returned from one system instance
+ * are not interoperable with those returned by other instances.
  * The intended usage pattern is for an application to construct a single
  * <code>IonSystem</code> instance and use it throughout,
  * rather than constructing multiple systems and intermingling their use.

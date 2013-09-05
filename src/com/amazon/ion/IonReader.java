@@ -30,14 +30,21 @@ import java.util.Iterator;
  * We still have some work to do before this interface is stable.
  * See <a href="https://jira2.amazon.com/browse/ION-183">issue ION-183</a>
  * <p>
- * {@code IonReader}s uses an internal cursor to keep track of the current value
- * that it is on. Generally, newly created {@code IonReader}s are not
+ * An {@code IonReader} has a "cursor" tracking the <em>current value</em> on
+ * which the reader is positioned. Generally, newly created readers are not
  * positioned on any value. To begin traversing the Ion data, one would use
- * {@link #next()} to position it onto the first value (or learn there isn't
- * one). Once positioned, the current value can be accessed with the
- * {@code *Value()} methods. To access a container, call {@link #stepIn()},
+ * {@link #next()} to advance the cursor onto the first value (or learn there isn't
+ * one). Once positioned, the current value's data can be accessed with the
+ * {@code *Value()} methods.
+ * <p>
+ * When the current value is a container, calling {@link #next()} moves the
+ * cursor to the <em>next sibling</em> of the container, at the same depth,
+ * skipping over any children the container may have.
+ * To read the children, call {@link #stepIn()},
  * then {@link #next()} to position onto the first child value (or learn there
- * isn't one).
+ * isn't one).  Calling {@link #stepOut()} skips over any remaining children
+ * and moves the cursor just beyond the container; call {@link #next()} to
+ * move the cursor to the following value.
  * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one

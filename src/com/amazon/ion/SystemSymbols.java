@@ -1,17 +1,18 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-13 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
  * Constants for symbols defined by the Ion specification.
- * <p>
- * <b>WARNING:</b> This interface should not be implemented or extended by
- * code outside of this library.
  *
  * @since IonJava R13
  */
 public final class SystemSymbols
 {
+    /** No touchy! */
+    private SystemSymbols() { }
+
+
     /**
      * The text of system symbol {@value}, as defined by Ion 1.0.
      */
@@ -117,8 +118,4 @@ public final class SystemSymbols
      * The maximum ID of the IDs of system symbols defined by Ion 1.0.
      */
     public static final int    ION_1_0_MAX_ID = 9;
-
-
-    /** No touchy! */
-    private SystemSymbols() { }
 }
