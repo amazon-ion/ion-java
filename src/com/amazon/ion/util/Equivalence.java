@@ -33,19 +33,19 @@ import java.util.Set;
  * <p>
  * Basic usage of this class is as follows:
  *
- * <pre>
+ *<pre>
  *    IonValue v1 = ...;
  *    IonValue v2 = ...;
  *    com.amazon.ion.util.Equivalence.ionEquals( v1, v2 );
- * </pre>
+ *</pre>
  *
  * More likely, a static import would make using this class easier.
  *
- * <pre>
+ *<pre>
  *    import static com.amazon.ion.util.Equivalence.ionEquals;
  *    ...
  *    boolean equivalent = ionEquals( v1, v2 );
- * </pre>
+ *</pre>
  *
  * </p>
  *
@@ -296,12 +296,12 @@ public final class Equivalence {
      * name/value pair occurs within the multi-set.
      * <p>
      * For example, an IonStruct:
-     * <pre>
+     *<pre>
      *  {
      *    a : 123,
      *    a : 123
      *  }
-     * </pre>
+     *</pre>
      * will be converted into a multi-set {@code Map<Field, Field>} with
      * a single {@code Field} -> {@code Field} with {@code occurrences} of 2.
      * <p>

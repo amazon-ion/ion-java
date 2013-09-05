@@ -48,29 +48,29 @@ import com.amazon.ion.IonWriter;
  * Builder instances are <em>not</em> thread-safe unless they are immutable.
  * <p>
  * The easiest way to get going is to use the {@link #standard()} builder:
- * <pre>
+ *<pre>
  *    IonSystem ion = IonSystemBuilder.standard().build();
- * </pre>
+ *</pre>
  * <p>
  * However, most long-lived applications will want to provide a custom
  * {@link IonCatalog} implementation rather than using the default
  * {@link SimpleCatalog}.  For example:
- * <pre>
+ *<pre>
  *    IonCatalog catalog = newCustomCatalog();
  *    IonSystemBuilder b = IonSystemBuilder.standard().copy();
  *    b.setCatalog(catalog);
  *    IonSystem ion = b.build();
- * </pre>
+ *</pre>
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
  * mutation methods that enable a more fluid style:
- * <pre>
+ *<pre>
  *    IonCatalog catalog = newCustomCatalog();
  *    IonSystem ion = IonSystemBuilder.standard()
  *                                    .withCatalog(catalog)
  *                                    .build();
- * </pre>
+ *</pre>
  *
  * <h2>Configuration Properties</h2>
  * <p>

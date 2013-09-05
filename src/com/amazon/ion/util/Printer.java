@@ -48,9 +48,9 @@ import java.util.Iterator;
  * <p>
  * By default, output is in a compact format with minimal whitespace.
  * For example:
- * <pre>
+ *<pre>
  *    annot::{f1:["hello","goodbye"],'another field':long::0}
- * </pre>
+ *</pre>
  * The format can be tuned through various properties on the Printer instance,
  * as well as through the {@link Printer.Options} structure.
  * <p>

@@ -71,9 +71,9 @@ public interface IonStruct
      * Gets the value of a field in this struct.  If the field name appears
      * more than once, one of the fields will be selected arbitrarily.  For
      * example, calling <code>get("a")</code> on the struct:
-     * <pre>
+     *<pre>
      *    { a:1, b:2, a:3 }
-     * </pre>
+     *</pre>
      * will return either 1 or 3.
      *
      * @param fieldName the desired field.
@@ -118,10 +118,10 @@ public interface IonStruct
      * {@code put}s it into this struct using the given {@code fieldName}.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    str.put("f").newInt(3);
      *    str.put("f", str.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      *
      * @throws NullPointerException
      *   if {@code fieldName} is <code>null</code>.
@@ -205,10 +205,10 @@ public interface IonStruct
      * {@code add}s it to this struct using the given {@code fieldName}.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    str.add("f").newInt(3);
      *    str.add("f", str.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      *
      * @throws NullPointerException
      *   if {@code fieldName} is <code>null</code>.

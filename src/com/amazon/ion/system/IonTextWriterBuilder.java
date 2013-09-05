@@ -25,19 +25,19 @@ import java.nio.charset.Charset;
  * <p>
  * The most general and correct approach is to use the {@link #standard()}
  * builder:
- * <pre>
+ *<pre>
  *    IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
- * </pre>
+ *</pre>
  * The standard configuration gives a direct representation of what's written,
  * including version markers and local symbol tables. That's good for
  * diagnostics but it may be more than you want in many situations.
  * In such cases the {@link #minimal()} or {@link #pretty()} builders (or a
  * combination) may give more satisfying output:
- * <pre>
+ *<pre>
  *    IonWriter w = IonTextWriterBuilder.minimal()
  *                                      .withPrettyPrinting()
  *                                      .build(outputStream);
- * </pre>
+ *</pre>
  *
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be

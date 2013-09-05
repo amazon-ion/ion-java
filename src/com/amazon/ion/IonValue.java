@@ -39,7 +39,7 @@ package com.amazon.ion;
  * <ul>
  *   <li>
  *     Use {@code instanceof} to look for a desired interface:
- * <pre>
+ *<pre>
  *    if (v instanceof IonString)
  *    {
  *        useString((IonString) v);
@@ -49,23 +49,23 @@ package com.amazon.ion;
  *        useStruct((IonStruct) v);
  *    }
  *    // ...
- * </pre>
+ *</pre>
  *   </li>
  *   <li>
  *     Call {@link #getType()} and then {@code switch} over the resulting
  *     {@link IonType}:
- * <pre>
+ *<pre>
  *    switch (v.getType())
  *    {
  *        case IonType.STRING: useString((IonString) v); break;
  *        case IonType.STRUCT: useStruct((IonStruct) v); break;
  *        // ...
  *    }
- * </pre>
+ *</pre>
  *   </li>
  *   <li>
  *     Implement {@link ValueVisitor} and call {@link #accept(ValueVisitor)}:
- * <pre>
+ *<pre>
  *    public class MyVisitor
  *        extends AbstractValueVisitor
  *    {
@@ -79,7 +79,7 @@ package com.amazon.ion;
  *        }
  *        // ...
  *     }
- * </pre>
+ *</pre>
  *   </li>
  * </ul>
  * Use the most appropriate mechanism for your algorithm, depending upon how

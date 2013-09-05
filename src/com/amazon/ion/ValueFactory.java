@@ -287,10 +287,10 @@ public interface ValueFactory
      * Constructs a new {@code list} with the given children.
      * <p>
      * Some edge cases are worth examples:
-     * <pre>
-     *  factory.newList();                     // returns []
-     *  factory.newList((IonValue[]) null);    // returns null.list
-     * </pre>
+     *<pre>
+     *    factory.newList();                     // returns []
+     *    factory.newList((IonValue[]) null);    // returns null.list
+     *</pre>
      * For clarity, applications should prefer {@link #newEmptyList()} and
      * {@link #newNullList()} instead.
      *
@@ -420,10 +420,10 @@ public interface ValueFactory
      * Constructs a new <code>sexp</code> with given child elements.
      * <p>
      * Some edge cases are worth examples:
-     * <pre>
-     *  factory.newSexp();                     // returns ()
-     *  factory.newSexp((IonValue[]) null);    // returns null.sexp
-     * </pre>
+     *<pre>
+     *    factory.newSexp();                     // returns ()
+     *    factory.newSexp((IonValue[]) null);    // returns null.sexp
+     *</pre>
      * For clarity, applications should prefer {@link #newEmptySexp()} and
      * {@link #newNullSexp()} instead.
      *

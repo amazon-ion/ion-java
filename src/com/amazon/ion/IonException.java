@@ -16,7 +16,7 @@ import java.util.IdentityHashMap;
  * there may be a chain of multiple {@link IonException} before getting to the
  * external cause.  Here's an example of how to deal with this in a situation
  * where the caller wants to propagate {@link IOException}s:
- * <pre>
+ *<pre>
  *    try {
  *        // Call some API
  *    }
@@ -25,7 +25,7 @@ import java.util.IdentityHashMap;
  *        if (io != null) throw io;
  *        throw e;
  *    }
- * </pre>
+ *</pre>
  */
 public class IonException extends RuntimeException
 {

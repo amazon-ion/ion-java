@@ -79,10 +79,10 @@ public interface IonSequence
      * {@code add}s it to this sequence.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    seq.add().newInt(3);
      *    seq.add(seq.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      */
     public ValueFactory add();
 
@@ -112,10 +112,10 @@ public interface IonSequence
      * {@code add}s it to this sequence at the specified position.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    seq.add(12).newInt(3);
      *    seq.add(12, seq.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      * <p>
      * The given {@code index} is validated when the factory's creation method
      * is invoked, not when this method is invoked.

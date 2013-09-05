@@ -209,9 +209,9 @@ public interface IonDatagram
      * <p>
      * An invocation of this method of the form {@code dg.get(a)} behaves in
      * exactly the same way as the invocation:
-     * <pre>
+     *<pre>
      *    dg.get(a, 0)
-     * </pre>
+     *</pre>
      *
      * @param dst the array into which bytes are to be written.
      *
