@@ -293,7 +293,7 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      *
-     * @return the first (and only) user value in the data.
+     * @return the first (and only) user value in the data; not null.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws UnexpectedEofException if the data doesn't contain any user
@@ -314,7 +314,7 @@ public interface IonSystem
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
-     * @return the first (and only) user value in the data.
+     * @return the first (and only) user value in the data; not null.
      *
      * @throws NullPointerException if {@code ionData} is null.
      * @throws UnexpectedEofException if the data doesn't contain any user
