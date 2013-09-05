@@ -48,7 +48,7 @@ import java.nio.charset.Charset;
  * <h2>Auto-flushing</h2>
  *
  * {@link IonWriter}s created by this builder <em>auto-flush</em> to the
- * underlying data sink after writing every top-level value in the context of
+ * underlying data sink after writing each top-level value in the context of
  * the writer.
  * <p>
  * Currently, there is no configuration point available to disable the
