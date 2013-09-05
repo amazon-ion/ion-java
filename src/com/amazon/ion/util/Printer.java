@@ -54,11 +54,15 @@ import java.util.Iterator;
  * The format can be tuned through various properties on the Printer instance,
  * as well as through the {@link Printer.Options} structure.
  * <p>
+ * <b>Instances of this class are safe for use by multiple threads.</b>
+ * <p>
  * While printers are inexpensive to create, their configuration facilities
- * make them useful as shared resources. Printers are safe for use from
- * multiple threads.  Changes to configuration settings (<em>e.g.</em>,
- * {@link #setJsonMode()}) do not affect concurrently-running calls to
- * {@link #print}.
+ * make them useful as shared resources. Changes to configuration settings
+ * (<em>e.g.</em>, {@link #setJsonMode()}) do not affect concurrently-running
+ * calls to {@link #print}.
+ *
+ * @see IonWriter
+ * @see IonTextWriterBuilder
  */
 public class Printer
 {

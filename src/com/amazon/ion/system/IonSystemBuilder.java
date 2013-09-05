@@ -45,7 +45,9 @@ import com.amazon.ion.IonWriter;
  * Builders may be configured once and reused to construct multiple
  * objects. They can be {@link #copy() copied} to create a mutable
  * copy of a prototype (presumably for altering some property).
- * Builder instances are <em>not</em> thread-safe unless they are immutable.
+ * <p>
+ * <b>Instances of this class are not safe for use by multiple threads unless
+ * they are {@linkplain #immutable() immutable}.</b>
  * <p>
  * The easiest way to get going is to use the {@link #standard()} builder:
  *<pre>

@@ -3,7 +3,7 @@
 package com.amazon.ion;
 
 /**
- * Provides an {@link IonCatalog} that can be updated.
+ * An {@link IonCatalog} that can be updated.
  */
 public interface IonMutableCatalog extends IonCatalog {
     /**

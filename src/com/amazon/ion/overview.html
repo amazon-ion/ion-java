@@ -6,15 +6,20 @@ IonJava is the reference implementation of the
 Java<sup><font size="-4">TM</font></sup> 2 Platform Standard Edition 5.0
 and above.
 <p>
-This document describes all classes intended for public consumption, limited to
-the packages listed here.  The distribution includes other implementation
-packages not documented here (<em>e.g.</em> {@code com.amazon.ion.impl});
-your use of those packages is not supported, so do us both a favor and
-<b>don't use them!</b>
+This document describes all APIs intended for public consumption, limited to
+the packages listed here. The IonJava library distribution includes other
+packages not documented here; use of those packages is not supported,
+so <b>don't use them</b>!
 <p>
 More generally:
 <b>Any behavior or features not present in this API documentation is
 unsupported, probably untested, and subject to change without notice.</b>
+<p>
+In addition, unless otherwise noted, <b>interfaces and classes listed here
+should not be implemented or extended by code outside of this library</b>! We
+may add or remove API(s) of existing interfaces or classes in future releases.
+If your application does not observe these warnings, it will impede the release
+cycle of this library.
 
 <h1>Start at IonSystem</h1>
 
@@ -26,8 +31,9 @@ throughout the application.  The {@code IonSystem} interface provides access
 to all other components, including the capability to construct
 {@link com.amazon.ion.IonValue IonValue} hierarchies.
 <p>
-This all means your first task is acquiring a system instance, and for that we
-turn to {@link com.amazon.ion.system.IonSystemBuilder IonSystemBuilder}.
+What all this means is that your first task is acquiring a system instance, and
+for that we turn to
+{@link com.amazon.ion.system.IonSystemBuilder IonSystemBuilder}.
 Here's the easiest way to bootstrap:
 <pre>
     IonSystem ion = IonSystemBuilder.standard().build();
@@ -38,15 +44,15 @@ services will probably want to use a non-default
 before calling {@link com.amazon.ion.system.IonSystemBuilder#build() build()}.
 
 <h2>SystemFactory is Deprecated</h2>
+
 As of early 2011, the {@link com.amazon.ion.system.SystemFactory SystemFactory}
 class has been deprecated in favor of {@code IonSystemBuilder}.
 This should be a straightforward application change and we strongly recommend
 that all applications update.
 
 <h2>An Important Caveat</h2>
-Objects
-returned by one {@code IonSystem} cannot by mixed with objects returned by
-another {@code IonSystem}!  For example, the following code is <b>not
+Objects returned by one {@code IonSystem} cannot by mixed with objects returned
+by another {@code IonSystem}!  For example, the following code is <b>not
 guaranteed to work</b>:
 
 <pre>
@@ -103,9 +109,9 @@ create them; for example
 <p>
 To construct an {@code IonLoader}, call
 {@link com.amazon.ion.IonSystem#newLoader()} and configure it as necessary.
-You can reuse a loader many times, even from multiple threads.  The system
-factory also maintains a "default loader" so you don't have to pass one around,
-see {@link com.amazon.ion.IonSystem#getLoader()}.
+{@code IonLoaders} are safe for use by multiple threads. The {@code IonSystem}
+also maintains a "default loader" so you don't have to pass one around, see
+{@link com.amazon.ion.IonSystem#getLoader()}.
 
 <h1>Getting Data Out</h1>
 
@@ -146,5 +152,10 @@ format using an
 This replaces Ion-only datatypes with more-or-less equivalent JSON values.
 (The {@link com.amazon.ion.util.Printer Printer} can also be used, but it is
 no longer recommended and will be deprecated.)
+
+<h1>Thread Safety</h1>
+
+All interfaces and classes are <b>not safe for use by multiple threads</b>
+unless documented otherwise.
 </body>
 </html>

@@ -14,7 +14,11 @@ import java.io.Reader;
  * {@link IonReader} will parse one top-level value at a time, and is better
  * suited for streaming protocols or large inputs.
  * <p>
- * Implementations of this interface must be safe for use by multiple threads.
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
+ * <b>Implementations of this interface are safe for use by multiple
+ * threads.</b>
  *
  * @see IonReader
  */

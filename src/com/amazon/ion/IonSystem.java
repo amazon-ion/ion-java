@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,9 +28,10 @@ import java.util.Iterator;
  * To create an {@code IonSystem},
  * see {@link com.amazon.ion.system.IonSystemBuilder}.
  * <p>
- * Implementations of this interface must be safe for use by multiple threads.
+ * <b>Implementations of this interface are safe for use by multiple
+ * threads.</b>
  *
- * @see IonTextWriterBuilder
+ * @see IonSystemBuilder
  */
 public interface IonSystem
     extends ValueFactory

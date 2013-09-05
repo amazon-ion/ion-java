@@ -85,13 +85,13 @@ package com.amazon.ion;
  * Use the most appropriate mechanism for your algorithm, depending upon how
  * much validation you've done on the data.
  * <p>
- * <b>Mutable instances of {@code IonValue} are not thread-safe!</b>
+ * <b>Mutable {@code IonValues} are not safe for use by multiple threads!</b>
  * Your application must perform its own synchronization if you need to access
- * nodes from multiple threads. This is true even for read-only use cases,
- * since implementations may perform lazy materialization or other state
- * changes under the covers.  Alternatively, you can invoke
+ * {@code IonValues} from multiple threads. This is true even for read-only use
+ * cases, since implementations may perform lazy materialization or other state
+ * changes internally. Alternatively, you can invoke
  * {@link #makeReadOnly()} from a single thread, after which point the value
- * (and all contained values, recursively) will be both immutable and
+ * (and all recursively contained values) will be immutable and hence
  * thread-safe.
  */
 public interface IonValue

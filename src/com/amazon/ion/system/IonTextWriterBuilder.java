@@ -20,8 +20,9 @@ import java.nio.charset.Charset;
  * <p>
  * Builders may be configured once and reused to construct multiple
  * objects.
- * Builder instances are <em>not</em> thread-safe unless they are
- * {@linkplain #immutable() immutable}.
+ * <p>
+ * <b>Instances of this class are not not safe for use by multiple threads
+ * unless they are {@linkplain #immutable() immutable}.</b>
  * <p>
  * The most general and correct approach is to use the {@link #standard()}
  * builder:
@@ -45,10 +46,10 @@ import java.nio.charset.Charset;
  * {@code with...()} mutation methods that enable a more fluid style.
  *
  * <h2>Auto-flushing</h2>
+ *
  * {@link IonWriter}s created by this builder <em>auto-flush</em> to the
  * underlying data sink after writing every top-level value in the context of
  * the writer.
- *
  * <p>
  * Currently, there is no configuration point available to disable the
  * auto-flushing mechanism. Please vote on
