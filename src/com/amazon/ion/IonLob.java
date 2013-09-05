@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,6 +7,9 @@ import java.io.InputStream;
 /**
  * Common functionality of Ion <code>blob</code> and <code>clob</code>
  * types.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonLob
     extends IonValue
@@ -19,19 +22,6 @@ public interface IonLob
      * or <code>null</code> if <code>this.isNullValue()</code>.
      */
     public InputStream newInputStream();
-
-    /**
-     * Gets all the data of this lob, or <code>null</code> if this is an Ion
-     * <code>null</code> value.
-     *
-     * @return a new byte array,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
-     *
-     * @deprecated renamed to {@link #getBytes()} for consistency with other
-     * interfaces.
-     */
-    @Deprecated
-    public byte[] newBytes();
 
     /**
      * Gets all the data of this lob, or <code>null</code> if this is an Ion
@@ -76,6 +66,6 @@ public interface IonLob
      */
     public int byteSize();
 
-
-    public IonLob clone();
+    public IonLob clone()
+        throws UnknownSymbolException;
 }

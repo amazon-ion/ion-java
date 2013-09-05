@@ -6,10 +6,10 @@ package com.amazon.ion;
  * Provide the ability to retrieve {@link Span}s (abstract value positions)
  * of Ion data.
  * <p>
- * This functionality may be accessed as a facet of most {@link IonReader}s.
- * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
+ * <p>
+ * This functionality may be accessed as a facet of most {@link IonReader}s.
  *
  * @since IonJava R13
  */

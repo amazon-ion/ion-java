@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -71,7 +71,8 @@ final class IonIntImpl
 
     /**
      * makes a copy of this IonInt including a copy
-     * of the Long value which is "naturally" immutable.
+     * of the BigInteger/Long (whichever is more precise) value which is
+     * "naturally" immutable.
      * This calls IonValueImpl to copy the annotations and the
      * field name if appropriate.  The symbol table is not
      * copied as the value is fully materialized and the symbol
@@ -84,39 +85,43 @@ final class IonIntImpl
 
         makeReady();
         clone.copyAnnotationsFrom(this);
-        clone.doSetValue(this._long_value, this._isNullValue());
+        if (this._big_int_value != null)
+        {
+            clone.doSetValue(this._big_int_value);
+        }
+        else
+        {
+            clone.doSetValue(this._long_value, this._isNullValue());
+        }
 
         return clone;
     }
 
-    /**
-     * Calculate Ion Int hash code by returning long hash value XOR'ed
-     * with IonType hash code.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
             makeReady();
             if (_big_int_value == null)
             {
                 long lv = longValue();
                 // jonker memorial bug:  throw away top 32 bits if they're not
-                // interesting.  Other n and -(n+1) get the same hash code.
-                hash ^= (int) lv;
+                // interesting.  Otherwise n and -(n+1) get the same hash code.
+                result ^= (int) lv;
                 int hi_word = (int) (lv >>> 32);
                 if (hi_word != 0 && hi_word != -1)  {
-                    hash ^= hi_word;
+                    result ^= hi_word;
                 }
             }
             else
             {
-                hash = _big_int_value.hashCode();
+                result = _big_int_value.hashCode();
             }
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonType getType()
@@ -159,13 +164,6 @@ final class IonIntImpl
             return BigInteger.valueOf(_long_value);
         }
         return _big_int_value;
-    }
-
-    @Deprecated
-    public BigInteger toBigInteger()
-        throws NullValueException
-    {
-        return bigIntegerValue();
     }
 
     public void setValue(int value)

@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -11,76 +11,87 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 
+/*
+ * IonValue DOM Implementations
+ *
+ * ============================== Lite ==============================
+ *
+ * Currently, systems built by this class construct {@link IonValue}s that use
+ * a new, lightweight implementation (Lite) that fully materializes the input
+ * into Java objects and does not retain a copy of the binary image of the
+ * Ion data.
+ *
+ * This is suitable for the vast majority of applications and is the only
+ * available DOM implementation for public use.
+ *
+ * ============================== Lazy ==============================
+ *
+ * In contrast, there is another DOM implementation that retains a copy
+ * (essentially, a buffer) of the Ion binary encoding "underneath" the
+ * materialized Ion value hierarchy, lazily materializing Java objects from
+ * that buffer as needed. It incrementally updates the binary image on-demand,
+ * without necessary re-encoding the entire Ion value hierarchy.
+ *
+ * This is more suitable for applications that take large binary data streams as
+ * input, read or modify only selection portions, and then pass on the results.
+ * Currently, this is not available for public use.
+ */
+
 /**
- * The bootstrap builder for creating an {@link IonSystem}.
+ * The builder for creating {@link IonSystem}s.
  * Most applications will only have one or two system instances;
- * see the documentation of that class for important constraints.
+ * see {@link IonSystem} for important constraints.
  * <p>
  * Builders may be configured once and reused to construct multiple
  * objects. They can be {@link #copy() copied} to create a mutable
  * copy of a prototype (presumably for altering some property).
- * Builder instances are <em>not</em> thread-safe unless they are immutable.
  * <p>
- * The easiest way to get going is to just use the {@link #standard()} builder:
- * <pre>
- *  IonSystem ion = IonSystemBuilder.standard().build();
+ * <b>Instances of this class are not safe for use by multiple threads unless
+ * they are {@linkplain #immutable() immutable}.</b>
+ * <p>
+ * The easiest way to get going is to use the {@link #standard()} builder:
+ *<pre>
+ *    IonSystem ion = IonSystemBuilder.standard().build();
  *</pre>
  * <p>
  * However, most long-lived applications will want to provide a custom
  * {@link IonCatalog} implementation rather than using the default
  * {@link SimpleCatalog}.  For example:
- * <pre>
- *  IonCatalog catalog = newCustomCatalog();
- *  IonSystemBuilder b = IonSystemBuilder.standard().copy();
- *  b.setCatalog(catalog);
- *  IonSystem ion = b.build();
+ *<pre>
+ *    IonCatalog catalog = newCustomCatalog();
+ *    IonSystemBuilder b = IonSystemBuilder.standard().copy();
+ *    b.setCatalog(catalog);
+ *    IonSystem ion = b.build();
  *</pre>
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
  * mutation methods that enable a more fluid style:
- * <pre>
- *  IonCatalog catalog = newCustomCatalog();
- *  IonSystem ion = IonSystemBuilder.standard()
- *                                  .withCatalog(catalog)
- *                                  .build();
+ *<pre>
+ *    IonCatalog catalog = newCustomCatalog();
+ *    IonSystem ion = IonSystemBuilder.standard()
+ *                                    .withCatalog(catalog)
+ *                                    .build();
  *</pre>
- * <!--
- * <h2>IonValue Implementation</h2>
- * Compared to the older {@link SystemFactory} API, systems built by this
- * class construct {@link IonValue}s using a new, lightweight implementation
- * that fully materializes the input into Java objects and does not retain a
- * copy of the Ion binary image.
- * This is suitable for the vast majority of applications.
- * <p>
- * In contrast, {@link SystemFactory}'s older implementation of
- * {@link IonValue} retains a copy of the Ion binary encoding "underneath" the
- * tree, lazily materializing Java objects from that buffer as needed.
- * It incrementally updates the binary image on demand, without necessarily
- * re-encoding the entire data set. This can be more suitable for applications
- * that accept large binary data streams, read or modify only selected portions,
- * and then pass on the results.
- * <p>
- * This class will eventually be expanded to support selection between these
- * implementations, but for now those applications that require the
- * binary-backed value tree should stick with {@link SystemFactory}.
- * -->
+ *
  * <h2>Configuration Properties</h2>
- *
- * <p>This builder provides the following configurable properties:
- * <dl>
- *   <dt>catalog
- *   <dd>The {@link IonCatalog} used as a default when reading Ion data.
- *     If null, each system will be built with a new {@link SimpleCatalog}.
- *
- *   <dt>streamCopyOptimized
- *   <dd>When true, this enables optimizations when copying data between two
- *     Ion streams. For example, in some cases raw binary-encoded Ion can be
- *     copied directly from the input to the output. This can have significant
- *     performance benefits when the appropriate conditions are met.
- *     <b>This feature is experimental! Please test thoroughly and report any
- *     issues.</b>
- * </dl>
+ * <p>
+ * This builder provides the following configurable properties:
+ * <ul>
+ *   <li>
+ *     <b>catalog</b>: The {@link IonCatalog} used as a default when reading Ion
+ *     data. If null, each system will be built with a new
+ *     {@link SimpleCatalog}.
+ *   </li>
+ *   <li>
+ *     <b>streamCopyOptimized</b>: When true, this enables optimizations when
+ *     copying data between two Ion streams. For example, in some cases raw
+ *     binary-encoded Ion can be copied directly from the input to the output.
+ *     This can have significant performance benefits when the appropriate
+ *     conditions are met. <b>This feature is experimental! Please test
+ *     thoroughly and report any issues.</b>
+ *   </li>
+ * </ul>
  */
 public class IonSystemBuilder
 {
@@ -113,8 +124,8 @@ public class IonSystemBuilder
     //=========================================================================
 
     IonCatalog myCatalog;
-    boolean myBinaryBacked;
-    boolean myStreamCopyOptimized;
+    boolean myBinaryBacked = false;
+    boolean myStreamCopyOptimized = false;
 
 
     /** You no touchy. */

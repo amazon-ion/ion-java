@@ -6,9 +6,8 @@ package com.amazon.ion.system;
 /**
  * Common options for writing Ion data streams of any form.
  * <p>
- * <b>
- * This class is not intended to be used as an application extension point;
- * do not extend or implement it.
+ * <b>WARNING:</b> This class should not be extended by code outside of
+ * this library.
  * </b>
  *
  * @since IonJava R15
@@ -19,7 +18,7 @@ public abstract class IonWriterBuilder
      * A strategy for altering emission of Ion version markers at the start of
      * an Ion stream.
      *
-     * @see IonTextWriterBuilder#setInitialIvmHandling(InitialIvmHandling)
+     * @see IonTextWriterBuilder#setInitialIvmHandling(IonWriterBuilder.InitialIvmHandling)
      */
     public enum InitialIvmHandling
     {
@@ -46,7 +45,7 @@ public abstract class IonWriterBuilder
      * This strategy does not affect handling of IVMs at the start of a data
      * stream; that's the job of {@link InitialIvmHandling}.
      *
-     * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
+     * @see IonTextWriterBuilder#setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
      *
      * @since IonJava R16
      */

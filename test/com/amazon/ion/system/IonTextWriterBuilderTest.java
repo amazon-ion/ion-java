@@ -20,7 +20,6 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
-import com.amazon.ion.impl.IonWriterUserText;
 import com.amazon.ion.impl._Private_IonWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -59,7 +58,6 @@ public class IonTextWriterBuilderTest
         StringBuilder out = new StringBuilder();
         IonWriter writer = b.build(out);
         Assert.assertNotNull(writer);
-        Assert.assertTrue(writer instanceof IonWriterUserText);
 
         assertNotSame(b, IonTextWriterBuilder.standard());
     }

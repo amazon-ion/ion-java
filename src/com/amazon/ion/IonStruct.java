@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,6 +7,9 @@ import java.util.Map;
 
 /**
  * An Ion <code>struct</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * Note that this cannot extend {@link java.util.Map} because that interface
  * requires unique keys, while Ion's structs allow duplicate field names.
@@ -26,11 +29,41 @@ public interface IonStruct
         throws NullValueException;
 
 
-    // Treats null.struct like empty struct
+    /**
+     * Determines whether this struct contains one or more fields
+     * for the specified field name (i.e., key). If this struct is an
+     * {@linkplain #isNullValue() Ion null value}, it will behave like an empty
+     * struct.
+     *
+     * @param fieldName field name whose presence in this struct is to be tested
+     *
+     * @return <code>true</code> if this struct contains a field for the
+     *         specified field name
+     *
+     * @throws ClassCastException if the specified field name is not a
+     *         {@link String}
+     * @throws NullPointerException if the specified field name is
+     *         <code>null</code>
+     */
     public boolean containsKey(Object fieldName);
 
-    // Uses reference equality
-    // Treats null.struct like empty struct
+
+    /**
+     * Determines whether this struct contains one or more fields with
+     * the specified value. If this struct is an
+     * {@linkplain #isNullValue() Ion null value}, it will behave like an empty
+     * struct. This uses reference equality to compare the specified value with
+     * the value of the struct fields.
+     *
+     * @param value value whose presence in this struct is to be tested
+     *
+     * @return <code>true</code> if this struct contains a field for the
+     *         specified value
+     *
+     * @throws ClassCastException if the specified value is not an
+     *         {@link IonValue}
+     * @throws NullPointerException if the specified value is <code>null</code>
+     */
     public boolean containsValue(Object value);
 
 
@@ -38,9 +71,9 @@ public interface IonStruct
      * Gets the value of a field in this struct.  If the field name appears
      * more than once, one of the fields will be selected arbitrarily.  For
      * example, calling <code>get("a")</code> on the struct:
-     * <pre>
-     *   { a:1, b:2, a:3 }
-     * </pre>
+     *<pre>
+     *    { a:1, b:2, a:3 }
+     *</pre>
      * will return either 1 or 3.
      *
      * @param fieldName the desired field.
@@ -85,10 +118,10 @@ public interface IonStruct
      * {@code put}s it into this struct using the given {@code fieldName}.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    str.put("f").newInt(3);
      *    str.put("f", str.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      *
      * @throws NullPointerException
      *   if {@code fieldName} is <code>null</code>.
@@ -172,10 +205,10 @@ public interface IonStruct
      * {@code add}s it to this struct using the given {@code fieldName}.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    str.add("f").newInt(3);
      *    str.add("f", str.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      *
      * @throws NullPointerException
      *   if {@code fieldName} is <code>null</code>.
@@ -193,12 +226,12 @@ public interface IonStruct
      * Because Ion structs may have repeated fields, additional fields with the
      * given name may still exist after this method returns.
      * <p>
-     * If this struct is null ({@link #isNullValue()}) or empty,
+     * If this struct is an {@linkplain #isNullValue() Ion null value} or empty,
      * then this method returns null and has no effect.
      *
      * @param fieldName must not be null or empty.
      *
-     * @return previous value associated with the specifed field name, or
+     * @return previous value associated with the specified field name, or
      * {@code null} if there was no such field.
      */
     public IonValue remove(String fieldName);
@@ -209,7 +242,7 @@ public interface IonStruct
      * If multiple fields with a given name exist in this struct,
      * they will all be removed.
      * <p>
-     * If this struct is null ({@link #isNullValue()}) or empty,
+     * If this struct is an {@linkplain #isNullValue() Ion null value} or empty,
      * then this method returns {@code false} and has no effect.
      *
      * @param fieldNames the names of the fields to remove.
@@ -227,7 +260,7 @@ public interface IonStruct
      * In other words, removes all fields with names that are not in
      * {@code fieldNames}.
      * <p>
-     * If this struct is null ({@link #isNullValue()}) or empty,
+     * If this struct is an {@linkplain #isNullValue() Ion null value} or empty,
      * then this method returns {@code false} and has no effect.
      *
      * @param fieldNames the names of the fields to retain.
@@ -244,11 +277,12 @@ public interface IonStruct
     // TODO public Collection<V> values();
     // TODO public Set<Map.Entry<K,V>> entrySet();
 
-    public IonStruct clone();
+    public IonStruct clone()
+        throws UnknownSymbolException;
 
 
     /**
-     * Clones this struct without including certain fields. This can be more
+     * Clones this struct, excluding certain fields. This can be more
      * efficient than cloning the struct and removing fields later on.
      */
     public IonStruct cloneAndRemove(String... fieldNames);

@@ -1,10 +1,13 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
 /**
  * Common functionality of Ion <code>string</code> and <code>symbol</code>
  * types.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonText
     extends IonValue
@@ -33,6 +36,6 @@ public interface IonText
     public void setValue(String value)
         throws EmptySymbolException;
 
-
-    public IonText clone();
+    public IonText clone()
+        throws UnknownSymbolException;
 }

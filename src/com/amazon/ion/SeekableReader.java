@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,13 +7,13 @@ package com.amazon.ion;
  * {@link Span}s (abstract value positions) and seek to positions
  * within the source.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * A span may be used to seek a different reader instance than the one that
  * generated it, provided that the two readers have the same source.
  * Violations of this constraint may not be detected reliably, so be careful
  * or you'll get unsatisfying results.
- * <p>
- * <b>WARNING:</b> This interface should not be implemented or extended by
- * code outside of this library.
  *
  * @since IonJava R13
  */

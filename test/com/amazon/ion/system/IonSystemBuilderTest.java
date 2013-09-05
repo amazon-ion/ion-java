@@ -12,7 +12,7 @@ import static org.junit.Assert.assertTrue;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.IonWriterUserBinary;
+import com.amazon.ion.impl._Private_IonWriterBase;
 import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
@@ -132,7 +132,7 @@ public class IonSystemBuilderTest
         assertTrue(isLiteSystem(ion));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter w = ion.newBinaryWriter(out);
-        assertTrue(((IonWriterUserBinary)w).myStreamCopyOptimized);
+        assertTrue(((_Private_IonWriterBase)w).isStreamCopyOptimized());
     }
 
     @Test

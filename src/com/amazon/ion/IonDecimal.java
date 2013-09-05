@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 
 /**
  * An Ion <code>decimal</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonDecimal
     extends IonNumber
@@ -29,18 +32,6 @@ public interface IonDecimal
      */
     public double doubleValue()
         throws NullValueException;
-
-    /**
-     * Gets the value of this Ion {@code decimal} as a Java
-     * {@link BigDecimal} value.
-     *
-     * @return the <code>BigDecimal</code> value,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
-     *
-     * @deprecated Renamed to {@link #bigDecimalValue()}.
-     */
-    @Deprecated
-    public BigDecimal toBigDecimal();
 
     /**
      * Gets the value of this Ion {@code decimal} as a {@link BigDecimal}.
@@ -99,5 +90,6 @@ public interface IonDecimal
     public void setValue(BigDecimal value);
 
 
-    public IonDecimal clone();
+    public IonDecimal clone()
+        throws UnknownSymbolException;
 }

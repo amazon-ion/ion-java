@@ -17,8 +17,6 @@ import java.io.OutputStream;
 public final class _Private_IonWriterFactory
 {
     /**
-     * static short cut methods to construct IonWriters
-     * quickly.
      * @param container must not be null.
      */
     public static IonWriter makeWriter(IonContainer container)

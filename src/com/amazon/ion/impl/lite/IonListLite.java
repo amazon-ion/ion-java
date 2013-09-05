@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -50,11 +50,6 @@ final class IonListLite
         super(context, elements);
     }
 
-    /**
-     * creates a copy of this IonListImpl.  Most of the work
-     * is actually done by IonContainerImpl.copyFrom() and
-     * IonValueImpl.copyFrom().
-     */
     @Override
     public IonListLite clone()
     {
@@ -69,12 +64,6 @@ final class IonListLite
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
         return sequenceHashCode(HASH_SIGNATURE);
@@ -85,7 +74,6 @@ final class IonListLite
     {
         return IonType.LIST;
     }
-
 
     @Override
     public void accept(ValueVisitor visitor)

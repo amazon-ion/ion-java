@@ -133,9 +133,9 @@ public class SimpleCatalog
 
     public void putTable(SymbolTable table)
     {
-        if (table.isLocalTable() || table.isSystemTable())
+        if (table.isLocalTable() || table.isSystemTable() || table.isSubstitute())
         {
-            throw new IllegalArgumentException("table cannot be local or system table");
+            throw new IllegalArgumentException("table cannot be local or system or substitute table");
         }
 
         String name = table.getName();

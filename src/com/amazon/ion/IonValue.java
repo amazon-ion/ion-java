@@ -1,10 +1,13 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 
 /**
  * Base type for all Ion data nodes.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * The {@code IonValue} hierarchy presents a "tree view" of Ion data;
  * every node in the tree is an instance of this class.  Since the Ion
@@ -75,20 +78,20 @@ package com.amazon.ion;
  *            useStruct(v);
  *        }
  *        // ...
- *    }
+ *     }
  *</pre>
  *   </li>
  * </ul>
  * Use the most appropriate mechanism for your algorithm, depending upon how
  * much validation you've done on the data.
  * <p>
- * <b>Mutable instances of {@code IonValue} are not thread-safe!</b>
+ * <b>Mutable {@code IonValues} are not safe for use by multiple threads!</b>
  * Your application must perform its own synchronization if you need to access
- * nodes from multiple threads. This is true even for read-only use cases,
- * since implementations may perform lazy materialization or other state
- * changes under the covers.  Alternatively, you can invoke
+ * {@code IonValues} from multiple threads. This is true even for read-only use
+ * cases, since implementations may perform lazy materialization or other state
+ * changes internally. Alternatively, you can invoke
  * {@link #makeReadOnly()} from a single thread, after which point the value
- * (and all contained values, recursively) will be both immutable and
+ * (and all recursively contained values) will be immutable and hence
  * thread-safe.
  */
 public interface IonValue
@@ -110,7 +113,7 @@ public interface IonValue
 
 
     /**
-     * Determines whether this in an Ion null-value, <em>e.g.</em>,
+     * Determines whether this in an Ion null value, <em>e.g.</em>,
      * <code>null</code> or <code>null.string</code>.
      * Note that there are unique null values for each Ion type.
      *
@@ -162,23 +165,13 @@ public interface IonValue
 
 
     /**
-     * Gets the field name attached to this value,
-     * or <code>null</code> if this is not part of an {@link IonStruct}.
-     *
-     * @deprecated Since 2008. Use {@link #getFieldNameSymbol()} instead.
-     */
-    @Deprecated
-    public int getFieldNameId();
-
-
-    /**
      * Gets the symbol ID of the field name attached to this value.
      *
      * @return the symbol ID of the field name, if this is part of an
      * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
@@ -213,18 +206,6 @@ public interface IonValue
      * @since IonJava R15
      */
     public IonValue topLevelValue();
-
-
-    /**
-     * Gets the user type annotations attached to this value
-     * as strings.  This will return an empty array if there are no annotations.
-     *
-     * @throws UnknownSymbolException if any annotation has unknown text.
-     *
-     * @deprecated Since 2008. Use {@link #getTypeAnnotations()} instead.
-     */
-    @Deprecated
-    public String[] getTypeAnnotationStrings();
 
 
     /**
@@ -341,18 +322,6 @@ public interface IonValue
 
 
     /**
-     * Ensures that this value, and all contained data, is fully materialized
-     * into {@link IonValue} instances from any underlying Ion binary buffer.
-     *
-     * @deprecated with no direct replacement. This method was once recommended
-     * to make values (somewhat) thread-safe, in which case one should use
-     * {@link #makeReadOnly()} instead.
-     */
-    @Deprecated
-    public void deepMaterialize();
-
-
-    /**
      * Marks this instance and its children to be immutable.
      * In addition, read-only values are safe for simultaneous use
      * from multiple threads.  This may require materializing the Java
@@ -376,17 +345,22 @@ public interface IonValue
 
 
     /**
-     * Creates a copy of this value and all its children.  The clone may use
-     * the same shared symbol tables, but it will have an independant local
+     * Creates a copy of this value and all of its children. The cloned value
+     * may use the same shared symbol tables, but it will have an independent local
      * symbol table if necessary.  The cloned value will
-     * be modifiable whether or not this one {@link #isReadOnly()}.
+     * be modifiable regardless of whether this instance {@link #isReadOnly()}.
      * <p>
      * The cloned value will be created in the context of the same
      * {@link ValueFactory} as this instance; if you want a copy using a
      * different factory, then use {@link ValueFactory#clone(IonValue)}
      * instead.
+     *
+     * @throws UnknownSymbolException
+     *          if any part of this value has unknown text but known Sid for
+     *          its field name, annotation or symbol.
      */
-    public IonValue clone();
+    public IonValue clone()
+        throws UnknownSymbolException;
 
 
     /**
@@ -396,7 +370,8 @@ public interface IonValue
      * return identical results, only that they will be equivalent per
      * the Ion data model.
      * <p>
-     * For more configurable rendering, see {@link com.amazon.ion.util.Printer}.
+     * For more configurable rendering, see
+     * {@link com.amazon.ion.system.IonTextWriterBuilder}.
      *
      * @return Ion text data equivalent to this value.
      */
@@ -406,14 +381,17 @@ public interface IonValue
     /**
      * Compares two Ion values for structural equality, which means that they
      * represent the exact same semantics, including annotations, numeric
-     * precision, and so on.
+     * precision, and so on.  This is a "deep" comparison that recursively
+     * traverse the hierarchy, and as such it should be considered an expensive
+     * operation.
      *
      * @see com.amazon.ion.util.Equivalence
      *
      * @param   other   The value to compare with.
      *
-     * @return  A boolean, true if the other value is an Ion Value that is the same
-     *          content and annotations.
+     * @return  A boolean, true if the argument is an {@link IonValue} that
+     *   is semantically identical within the Ion data model, including
+     *   precision and annotations.
      */
     public boolean equals(Object other);
 

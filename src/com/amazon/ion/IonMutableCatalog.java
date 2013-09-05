@@ -1,7 +1,9 @@
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion;
 
 /**
- * Provides an {@link IonCatalog} that can be updated. 
+ * An {@link IonCatalog} that can be updated.
  */
 public interface IonMutableCatalog extends IonCatalog {
     /**
@@ -9,7 +11,8 @@ public interface IonMutableCatalog extends IonCatalog {
      * behavior of this method if this catalog already contains a table with
      * the same name and version.
      *
-     * @param sharedTable must be shared but not a system table.
+     * @param sharedTable must be shared but not a system table or
+     *        substitute table.
      */
     public void putTable(SymbolTable sharedTable);
 }

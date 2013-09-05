@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -11,6 +11,9 @@ import java.util.ListIterator;
 
 /**
  * Common functionality of Ion <code>list</code> and <code>sexp</code> types.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * Ion sequences implement the standard Java {@link List} interface, behaving
  * generally as expected, with the following exceptions:
@@ -43,7 +46,7 @@ public interface IonSequence
      *
      * @param index identifies the element to return.
      * @return the element at the given index; not <code>null</code>.
-     * @throws NullValueException if <code>this.isNullValue()</code>.
+     * @throws NullValueException if {@link #isNullValue()}.
      * @throws IndexOutOfBoundsException if the index is out of range
      * (<code>index < 0 || index >= size()</code>).
      */
@@ -53,7 +56,7 @@ public interface IonSequence
 
     /**
      * Appends a child value to the end of this sequence.
-     * If <code>this.isNullValue()</code>, then it becomes a single-element
+     * If {@link #isNullValue()}, then it becomes a single-element
      * sequence.
      *
      * @param child is the value to be appended to this sequence.
@@ -76,17 +79,17 @@ public interface IonSequence
      * {@code add}s it to this sequence.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    seq.add().newInt(3);
      *    seq.add(seq.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      */
     public ValueFactory add();
 
 
     /**
      * Inserts a child value at the specified position in this sequence.
-     * If <code>this.isNullValue()</code>, then it becomes a single-element
+     * If {@link #isNullValue()}, then it becomes a single-element
      * sequence.
      *
      * @param child is the element to be appended to this sequence.
@@ -109,10 +112,10 @@ public interface IonSequence
      * {@code add}s it to this sequence at the specified position.
      * <p>
      * These two lines are equivalent:
-     * <pre>
+     *<pre>
      *    seq.add(12).newInt(3);
      *    seq.add(12, seq.getSystem().newInt(3));
-     * </pre>
+     *</pre>
      * <p>
      * The given {@code index} is validated when the factory's creation method
      * is invoked, not when this method is invoked.
@@ -149,7 +152,7 @@ public interface IonSequence
      * Shifts any subsequent elements to the left (subtracts one from their
      * indices). Returns the element that was removed from the list.
      *
-     * @param index the index of the elment to be removed.
+     * @param index the index of the element to be removed.
      *
      * @return the element previously at the specified position.
      *
@@ -283,10 +286,6 @@ public interface IonSequence
     public int lastIndexOf(Object o);
 
 
-    // Use inherited javadoc, this refines the return type.
-    public IonValue[] toArray();
-
-
     /**
      * Appends all of the elements in the specified collection to the end of
      * this sequence, in the order that they are returned by the collection's
@@ -392,7 +391,42 @@ public interface IonSequence
      */
     public List<IonValue> subList(int fromIndex, int toIndex);
 
-    // TODO document that null sequence acts like empty
+
+    /**
+     * Returns an array containing all of the elements in this sequence in
+     * proper order. Obeys the general contract of the
+     * {@link Collection#toArray()} method.
+     * <p>
+     * If this sequence is an {@linkplain #isNullValue() Ion null value}, it
+     * will behave like an empty sequence.
+     *
+     * @return an array containing all of the elements in this sequence in
+     *         proper order.
+     */
+    public IonValue[] toArray();
+
+
+    /**
+     * Returns an array containing all of the elements in this sequence in
+     * proper order; the runtime type of the returned array is that of the
+     * specified array. Obeys the general contract of the
+     * {@link Collection#toArray()} method.
+     * <p>
+     * If this sequence is an {@linkplain #isNullValue() Ion null value}, it
+     * will behave like an empty sequence.
+     *
+     * @param a the array into which the elements of this sequence are to be
+     *        stored, if it is big enough; otherwise, a new array of the same
+     *        runtime type is allocated for this purpose.
+     *
+     * @return an array containing all of the elements in this sequence in
+     *         proper order.
+     *
+     * @throws ArrayStoreException if the runtime type of the specified array
+     *         is not a supertype of the runtime type of every element in this
+     *         sequence.
+     * @throws NullPointerException if the specified array is <code>null</code>.
+     */
     public <T> T[] toArray(T[] a);
 
 
@@ -411,8 +445,6 @@ public interface IonSequence
     public <T extends IonValue> T[] extract(Class<T> type);
 
 
-    /**
-     * {@inheritDoc}
-     */
-    public IonSequence clone();
+    public IonSequence clone()
+        throws UnknownSymbolException;
 }

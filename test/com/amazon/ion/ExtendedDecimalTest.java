@@ -98,7 +98,7 @@ public class ExtendedDecimalTest
         assertEquals("-0.000", NEG_ZERO_3.toEngineeringString());
         assertEquals("-0.000", NEG_ZERO_3.toPlainString());
 
-        assertEquals("-0", negativeZero(0, MathContext.DECIMAL128).toString());
+        assertEquals("-0", negativeZero(0, MathContext.UNLIMITED).toString());
     }
 
 
@@ -112,7 +112,7 @@ public class ExtendedDecimalTest
         // There's strange interaction between the context and doubleValue()
         // and toString().  This tickled some bugs.
         testNegativeZero(0, negativeZero(0));
-        testNegativeZero(0, negativeZero(0, MathContext.DECIMAL128));
+        testNegativeZero(0, negativeZero(0, MathContext.UNLIMITED));
 
         testNegativeZero(-1, negativeZero(-1));
     }

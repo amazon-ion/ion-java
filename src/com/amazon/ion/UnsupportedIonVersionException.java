@@ -1,10 +1,10 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
- * Signals a request for an Ion version that is not supported by this
- * implementation.
+ * An error caused by a request for an Ion version that is not supported by
+ * this implementation.
  */
 public class UnsupportedIonVersionException
     extends IonException

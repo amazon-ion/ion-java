@@ -1,9 +1,10 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_LazyDomTrampoline;
 import java.io.IOException;
@@ -27,13 +28,6 @@ final class IonBlobLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonBlob including an independant
-     * copy of the bytes. It also calls IonValueImpl to copy
-     * the annotations and the field name if appropriate.
-     * The symbol table is not copied as the value is fully
-     * materialized and the symbol table is unnecessary.
-     */
     @Override
     public IonBlobLite clone()
     {
@@ -44,12 +38,6 @@ final class IonBlobLite
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
         return lobHashCode(HASH_SIGNATURE);
@@ -61,13 +49,6 @@ final class IonBlobLite
         return IonType.BLOB;
     }
 
-
-    @Deprecated
-    public void appendBase64(Appendable out)
-        throws IOException
-    {
-        printBase64(out);
-    }
 
     public void printBase64(Appendable out)
         throws IOException
@@ -82,6 +63,13 @@ final class IonBlobLite
         {
             byteStream.close();
         }
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeBlob(getBytesNoCopy());
     }
 
     @Override

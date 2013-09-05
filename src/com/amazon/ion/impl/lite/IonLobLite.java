@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -35,33 +35,32 @@ abstract class IonLobLite
      */
     protected int lobHashCode(int seed)
     {
-        int hash_code = seed;
+        int result = seed;
+
         if (!isNullValue())  {
             CRC32 crc = new CRC32();
             crc.update(getBytes());
-            hash_code ^= (int) crc.getValue();
+            result ^= (int) crc.getValue();
         }
-        return hash_code;
+
+        return hashTypeAnnotations(result);
     }
 
     /**
-     * this copies the contents of the lob from the source to
-     * this instance (or the "null-ness" if the source is null).
-     * It delegates up to IonValueImpl to copy the annotations
-     * and field name as necessary.
+     * Makes a copy of the relevant member fields from the original to this
+     * instance. It also makes a copy of the LOB's bytes.
      *
-     * @param source instance to copy from; must not be null.
-     * Will be materialized as a side-effect.
+     * @param original
      */
-    protected final void copyFrom(IonLobLite source)
+    protected final void copyFrom(IonLobLite original)
     {
-        copyValueContentFrom(source);
+        this.copyMemberFieldsFrom(original);
         byte[] new_bytes;
-        if (source._isNullValue()) {
+        if (original._isNullValue()) {
             new_bytes = null;
         }
         else {
-            new_bytes = source._lob_value;
+            new_bytes = original._lob_value;
         }
         setBytes(new_bytes);
     }
@@ -87,6 +86,14 @@ abstract class IonLobLite
         }
     }
 
+    /**
+     * Get the byte array without copying
+     */
+    protected byte[] getBytesNoCopy()
+    {
+        return _lob_value;
+    }
+
     public final InputStream newInputStream()
     {
         if (_isNullValue())
@@ -95,12 +102,6 @@ abstract class IonLobLite
         }
         // TODO this is inefficient.  Should stream directly from binary.
         return new ByteArrayInputStream(_lob_value);
-    }
-
-    @Deprecated
-    public final byte[] newBytes()
-    {
-        return getBytes();
     }
 
     public final byte[] getBytes()

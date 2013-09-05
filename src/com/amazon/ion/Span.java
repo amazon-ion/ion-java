@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -8,6 +8,9 @@ import com.amazon.ion.util.Spans;
 /**
  * An immutable reference to a consecutive sequence of values (perhaps
  * including large hierarchies) within some base source of Ion data.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * A span is conceptually comprised of two abstract <em>positions</em> or
  * offsets within the base source.  The <em>start</em> position denotes the
@@ -24,9 +27,6 @@ import com.amazon.ion.util.Spans;
  * <p>
  * Since different source types require different positioning techniques,
  * spans is {@link Faceted} to expose the position implementation.
- * <p>
- * <b>WARNING:</b> This interface should not be implemented or extended by
- * code outside of this library.
  *
  * <h2>Acknowledgements</h2>
  * This design and terminology is heavily based on Wilfred J. Hansen's work on

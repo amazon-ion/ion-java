@@ -1,8 +1,9 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.GOOD_TIMESTAMP_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
 import com.amazon.ion.impl._Private_Utils;
@@ -21,9 +22,10 @@ public class TimestampGoodTest
     extends IonTestCase
 {
     @Inject("testFile")
-    public static final File[] FILES = testdataFiles(GLOBAL_SKIP_LIST,
-                                                     /* recurse */ false,
-                                                     "good/timestamp");
+    public static final File[] FILES =
+        testdataFiles(GLOBAL_SKIP_LIST,
+                      false, /* recurse */
+                      GOOD_TIMESTAMP_IONTESTS_FILES);
 
     private File myTestFile;
 

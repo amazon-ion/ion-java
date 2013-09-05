@@ -1,9 +1,16 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
+import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
+import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
+import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
+import static com.amazon.ion.impl._Private_IonTextAppender.ZERO_PADDING;
+import static com.amazon.ion.impl._Private_IonTextAppender.isIdentifierKeyword;
+import static com.amazon.ion.impl._Private_IonTextAppender.symbolNeedsQuoting;
+
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.impl._Private_IonTextAppender;
 import java.io.IOException;
 
 
@@ -17,51 +24,6 @@ public class IonTextUtils
 
     private enum EscapeMode { JSON, ION_SYMBOL, ION_STRING, ION_LONG_STRING }
 
-
-    private static final boolean[] IDENTIFIER_START_CHAR_FLAGS;
-    private static final boolean[] IDENTIFIER_FOLLOW_CHAR_FLAGS;
-    static
-    {
-        IDENTIFIER_START_CHAR_FLAGS = new boolean[256];
-        IDENTIFIER_FOLLOW_CHAR_FLAGS = new boolean[256];
-
-        for (int ii='a'; ii<='z'; ii++) {
-            IDENTIFIER_START_CHAR_FLAGS[ii]  = true;
-            IDENTIFIER_FOLLOW_CHAR_FLAGS[ii] = true;
-        }
-        for (int ii='A'; ii<='Z'; ii++) {
-            IDENTIFIER_START_CHAR_FLAGS[ii]  = true;
-            IDENTIFIER_FOLLOW_CHAR_FLAGS[ii] = true;
-        }
-        IDENTIFIER_START_CHAR_FLAGS ['_'] = true;
-        IDENTIFIER_FOLLOW_CHAR_FLAGS['_'] = true;
-
-        IDENTIFIER_START_CHAR_FLAGS ['$'] = true;
-        IDENTIFIER_FOLLOW_CHAR_FLAGS['$'] = true;
-
-        for (int ii='0'; ii<='9'; ii++) {
-            IDENTIFIER_FOLLOW_CHAR_FLAGS[ii] = true;
-        }
-    }
-
-
-    private static final boolean[] OPERATOR_CHAR_FLAGS;
-    static
-    {
-        final char[] operatorChars = {
-            '<', '>', '=', '+', '-', '*', '&', '^', '%',
-            '~', '/', '?', '.', ';', '!', '|', '@', '`', '#'
-           };
-
-        OPERATOR_CHAR_FLAGS = new boolean[256];
-
-        for (int ii=0; ii<operatorChars.length; ii++) {
-            char operator = operatorChars[ii];
-            OPERATOR_CHAR_FLAGS[operator] = true;
-        }
-    }
-
-    //=========================================================================
 
     /**
      * Ion whitespace is defined as one of the characters space, tab, newline,
@@ -124,10 +86,6 @@ public class IonTextUtils
         }
     }
 
-    private static boolean isDecimalDigit(int codePoint)
-    {
-        return (codePoint >= '0' && codePoint <= '9');
-    }
 
     public static boolean isDigit(int codePoint, int radix)
     {
@@ -144,145 +102,18 @@ public class IonTextUtils
         return false;
     }
 
-    private static boolean is8bitValue(int v) {
-        return (v & ~0xff) == 0;
-    }
     public static boolean isIdentifierStart(int codePoint) {
-        return IDENTIFIER_START_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
+        return _Private_IonTextAppender.isIdentifierStart(codePoint);
     }
 
     public static boolean isIdentifierPart(int codePoint) {
-        return IDENTIFIER_FOLLOW_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
+        return _Private_IonTextAppender.isIdentifierPart(codePoint);
     }
 
     public static boolean isOperatorPart(int codePoint) {
-        return OPERATOR_CHAR_FLAGS[codePoint & 0xff] && is8bitValue(codePoint);
+        return _Private_IonTextAppender.isOperatorPart(codePoint);
     }
 
-    /**
-     * Determines whether the given text matches one of the Ion identifier
-     * keywords <code>null</code>, <code>true</code>, or <code>false</code>.
-     * <p>
-     * This does <em>not</em> check for non-identifier keywords such as
-     * <code>null.int</code>.
-     *
-     * @param text the symbol to check.
-     * @return <code>true</code> if the text is an identifier keyword.
-     */
-    static boolean isIdentifierKeyword(CharSequence text)
-    {
-        int pos = 0;
-        int valuelen = text.length();
-        boolean keyword = false;
-
-        // there has to be at least 1 character or we wouldn't be here
-        switch (text.charAt(pos++)) {
-        case '$':
-            if (valuelen == 1) return false;
-            while (pos < valuelen) {
-                char c = text.charAt(pos++);
-                if (! isDecimalDigit(c)) return false;
-            }
-            return true;
-        case 'f':
-            if (valuelen == 5 //      'f'
-             && text.charAt(pos++) == 'a'
-             && text.charAt(pos++) == 'l'
-             && text.charAt(pos++) == 's'
-             && text.charAt(pos++) == 'e'
-            ) {
-                keyword = true;
-            }
-            break;
-        case 'n':
-            if (valuelen == 4 //      'n'
-             && text.charAt(pos++) == 'u'
-             && text.charAt(pos++) == 'l'
-             && text.charAt(pos++) == 'l'
-            ) {
-                keyword = true;
-            }
-            else if (valuelen == 3 // 'n'
-             && text.charAt(pos++) == 'a'
-             && text.charAt(pos++) == 'n'
-            ) {
-                keyword = true;
-            }
-            break;
-        case 't':
-            if (valuelen == 4 //      't'
-             && text.charAt(pos++) == 'r'
-             && text.charAt(pos++) == 'u'
-             && text.charAt(pos++) == 'e'
-            ) {
-                keyword = true;
-            }
-            break;
-        }
-
-        return keyword;
-    }
-
-
-    /**
-     * Determines whether the text of a symbol requires (single) quotes.
-     *
-     * @param symbol must be a non-empty string.
-     * @param quoteOperators indicates whether the caller wants operators to be
-     * quoted; if <code>true</code> then operator symbols like <code>!=</code>
-     * will return <code>true</code>.
-     * has looser quoting requirements than other containers.
-     * @return <code>true</code> if the given symbol requires quoting.
-     *
-     * @throws NullPointerException
-     *         if <code>symbol</code> is <code>null</code>.
-     * @throws EmptySymbolException if <code>symbol</code> is empty.
-     */
-    static boolean symbolNeedsQuoting(CharSequence symbol,
-                                      boolean      quoteOperators)
-    {
-        int length = symbol.length();
-        if (length == 0) {
-            throw new EmptySymbolException();
-        }
-
-        // If the symbol's text matches an Ion keyword, we must quote it.
-        // Eg, the symbol 'false' must be rendered quoted.
-        if (! isIdentifierKeyword(symbol))
-        {
-            char c = symbol.charAt(0);
-            // Surrogates are neither identifierStart nor operatorPart, so the
-            // first one we hit will fall through and return true.
-            // TODO test that
-
-            if (!quoteOperators && isOperatorPart(c))
-            {
-                for (int ii = 0; ii < length; ii++) {
-                    c = symbol.charAt(ii);
-                    // We don't need to look for escapes since all
-                    // operator characters are ASCII.
-                    if (!isOperatorPart(c)) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else if (isIdentifierStart(c))
-            {
-                for (int ii = 0; ii < length; ii++) {
-                    c = symbol.charAt(ii);
-                    if ((c == '\'' || c < 32 || c > 126)
-                        || !isIdentifierPart(c))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
-
-        return true;
-    }
 
 
     /**
@@ -488,17 +319,6 @@ public class IonTextUtils
         }
     }
 
-    private final static String[] ZERO_PADDING =
-    {
-        "",
-        "0",
-        "00",
-        "000",
-        "0000",
-        "00000",
-        "000000",
-        "0000000",
-    };
 
     /**
      * Generates a two-digit hex escape sequence,
@@ -869,13 +689,13 @@ public class IonTextUtils
         {
             int c = text.charAt(i);
 
-            if (_Private_IonConstants.isHighSurrogate(c))
+            if (isHighSurrogate(c))
             {
                 i++;
                 char c2;
                 // I apologize for the embedded assignment, but the alternative
                 // was worse.
-                if (i >= len || !_Private_IonConstants.isLowSurrogate(c2 = text.charAt(i)))
+                if (i >= len || !isLowSurrogate(c2 = text.charAt(i)))
                 {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +
@@ -883,9 +703,9 @@ public class IonTextUtils
                         " at index " + i;
                     throw new IllegalArgumentException(message);
                 }
-                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+                c = makeUnicodeScalar(c, c2);
             }
-            else if (_Private_IonConstants.isLowSurrogate(c))
+            else if (isLowSurrogate(c))
             {
                 String message =
                     "text is invalid UTF-16. It contains an unmatched " +

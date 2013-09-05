@@ -8,19 +8,33 @@ import org.junit.Test;
 public class EquivalenceTest
 extends IonTestCase
 {
-    private static void assertIonEq(final IonValue v1, final IonValue v2) {
-        assertTrue(Equivalence.ionEquals(v1, v2));
-        assertTrue(Equivalence.ionEquals(v2, v1));
+    private static void assertIonEq(final IonValue left, final IonValue right) {
+        assertTrue(Equivalence.ionEquals(left, right));
+        assertTrue(Equivalence.ionEquals(right, left));
+
+        // Redundancy check included here, in the case that IonValue#equals()
+        // doesn't use Equivalence's implementation anymore.
+        if (left != null && right != null) {
+            assertTrue(left.equals(right));
+            assertTrue(right.equals(left));
+        }
     }
 
-    private static void assertNotIonEq(final IonValue v1, final IonValue v2) {
-        assertFalse(Equivalence.ionEquals(v1, v2));
-        assertFalse(Equivalence.ionEquals(v2, v1));
+    private static void assertNotIonEq(final IonValue left, final IonValue right) {
+        assertFalse(Equivalence.ionEquals(left, right));
+        assertFalse(Equivalence.ionEquals(right, left));
+
+        // Redundancy check included here, in the case that IonValue#equals()
+        // doesn't use Equivalence's implementation anymore.
+        if (left != null && right != null) {
+            assertFalse(left.equals(right));
+            assertFalse(right.equals(left));
+        }
     }
 
-    private static void assertIonEqForm(final IonValue v1, final IonValue v2) {
-        assertTrue(Equivalence.ionEqualsByContent(v1, v2));
-        assertTrue(Equivalence.ionEqualsByContent(v2, v1));
+    private static void assertIonEqForm(final IonValue left, final IonValue right) {
+        assertTrue(Equivalence.ionEqualsByContent(left, right));
+        assertTrue(Equivalence.ionEqualsByContent(right, left));
     }
 
     private IonValue ion(final String raw) {
@@ -28,9 +42,7 @@ extends IonTestCase
     }
 
     private IonFloat ionFloat(final double value) {
-        IonFloat f = system().newNullFloat();
-        f.setValue(value);
-        return f;
+        return system().newFloat(value);
     }
 
     @Test

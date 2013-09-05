@@ -1,12 +1,14 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 
 /**
@@ -18,6 +20,10 @@ final class IonDecimalLite
 {
     private static final int HASH_SIGNATURE =
         IonType.DECIMAL.toString().hashCode();
+
+    private static final int NEGATIVE_ZERO_HASH_SIGNATURE =
+        "NEGATIVE ZERO".hashCode();
+
 
     public static boolean isNegativeZero(float value)
     {
@@ -45,43 +51,35 @@ final class IonDecimalLite
         super(system, isNull);
     }
 
-
-    /**
-     * makes a copy of this IonDecimal including a copy
-     * of the BigDecimal value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonDecimalLite clone()
     {
         IonDecimalLite clone = new IonDecimalLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         clone.setValue(this._decimal_value);
 
         return clone;
     }
 
-    /**
-     * Calculate Ion Decimal hash code as hash code of double value,
-     * XOR'ed with IonType hash code. This is required because
-     * {@link IonDecimal#equals(Object)} is not consistent
-     * with {@link BigDecimal#equals(Object)}, but rather with
-     * {@link BigDecimal#compareTo(BigDecimal)}.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
+        // This is consistent with Decimal.equals(Object), and with Equivalence
+        // strict equality checks between two IonDecimals.
         if (!isNullValue())  {
-            long bits = Double.doubleToLongBits(doubleValue());
-            hash ^= (int) ((bits >>> 32) ^ bits);
+            Decimal dec = decimalValue();
+            result ^= dec.hashCode();
+
+            if (dec.isNegativeZero())
+            {
+                result ^= NEGATIVE_ZERO_HASH_SIGNATURE;
+            }
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -105,13 +103,6 @@ final class IonDecimalLite
         if (_isNullValue()) throw new NullValueException();
         double d = _decimal_value.doubleValue();
         return d;
-    }
-
-    @Deprecated
-    public BigDecimal toBigDecimal()
-        throws NullValueException
-    {
-        return bigDecimalValue();
     }
 
     public BigDecimal bigDecimalValue()
@@ -151,6 +142,12 @@ final class IonDecimalLite
         _isNullValue(value == null);
     }
 
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        writer.writeDecimal(_decimal_value);
+    }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception

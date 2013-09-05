@@ -1,11 +1,13 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -38,20 +40,12 @@ final class IonIntLite
         super(system, isNull);
     }
 
-    /**
-     * makes a copy of this IonInt including a copy
-     * of the Long value which is "naturally" immutable.
-     * This calls IonValueImpl to copy the annotations and the
-     * field name if appropriate.  The symbol table is not
-     * copied as the value is fully materialized and the symbol
-     * table is unnecessary.
-     */
     @Override
     public IonIntLite clone()
     {
         IonIntLite clone = new IonIntLite(this._context.getSystem(), false);
 
-        clone.copyValueContentFrom(this);
+        clone.copyMemberFieldsFrom(this);
         if (this._big_int_value != null)
         {
             clone.doSetValue(this._big_int_value);
@@ -64,33 +58,30 @@ final class IonIntLite
         return clone;
     }
 
-    /**
-     * Calculate Ion Int hash code by returning long hash value XOR'ed
-     * with IonType hash code.
-     * @return hash code
-     */
     @Override
     public int hashCode()
     {
-        int hash = HASH_SIGNATURE;
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())  {
             if (_big_int_value == null)
             {
                 long lv = longValue();
                 // jonker memorial bug:  throw away top 32 bits if they're not
-                // interesting.  Other n and -(n+1) get the same hash code.
-                hash ^= (int) lv;
+                // interesting.  Otherwise n and -(n+1) get the same hash code.
+                result ^= (int) lv;
                 int hi_word = (int) (lv >>> 32);
                 if (hi_word != 0 && hi_word != -1)  {
-                    hash ^= hi_word;
+                    result ^= hi_word;
                 }
             }
             else
             {
-                hash = _big_int_value.hashCode();
+                result = _big_int_value.hashCode();
             }
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -134,13 +125,6 @@ final class IonIntLite
         return _big_int_value;
     }
 
-    @Deprecated
-    public BigInteger toBigInteger()
-        throws NullValueException
-    {
-        return bigIntegerValue();
-    }
-
     public void setValue(int value)
     {
         checkForLock();
@@ -178,6 +162,24 @@ final class IonIntLite
                 // for some types of numbers
                 doSetValue(value.longValue(), false);
             }
+        }
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        if (isNullValue())
+        {
+            writer.writeNull(IonType.INT);
+        }
+        else if (_big_int_value != null)
+        {
+            writer.writeInt(_big_int_value);
+        }
+        else
+        {
+            writer.writeInt(_long_value);
         }
     }
 

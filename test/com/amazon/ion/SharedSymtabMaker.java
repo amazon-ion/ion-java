@@ -56,7 +56,7 @@ public enum SharedSymtabMaker
     },
 
     /**
-     * Invokes {@link IonSystemPrivate#newSharedSymbolTable(IonStruct)}.
+     * Invokes {@link _Private_IonSystem#newSharedSymbolTable(IonStruct)}.
      */
     FROM_STRUCT
     {

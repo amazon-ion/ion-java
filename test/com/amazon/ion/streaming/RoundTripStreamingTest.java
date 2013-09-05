@@ -1,7 +1,9 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.impl._Private_Utils.utf8;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
@@ -13,8 +15,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl.IonWriterUserBinary;
+import com.amazon.ion.RoundTripTest;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -29,51 +30,33 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * TODO ION-332 Refactor this test class, possible duplicate test coverage in
+ * {@link RoundTripTest}.
+ */
 public class RoundTripStreamingTest
-extends IonTestCase
+    extends IonTestCase
 {
     static final boolean _debug_flag = true;
     static final boolean _debug_dump_datagrams = false;
 
+    @Inject("testFile")
+    public static final File[] FILES =
+        testdataFiles(GLOBAL_SKIP_LIST, GOOD_IONTESTS_FILES);
+
+    @Inject("copySpeed")
+    public static final StreamCopySpeed[] STREAM_COPY_SPEEDS =
+        StreamCopySpeed.values();
+
     private Printer       myPrinter;
     private StringBuilder myBuilder;
     private byte[]        myBuffer;
-
-    //------------------------------------------------------------------------
-
-    @Inject("testFile")
-    public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST,
-                      "good", "equivs");
-
-    private File myTestFile;
+    private File          myTestFile;
 
     public void setTestFile(File file)
     {
         myTestFile = file;
     }
-
-    //------------------------------------------------------------------------
-
-    // Using an enum makes the test output more understandable than a boolean.
-    private enum CopySpeed { slow, fast }
-
-    @Inject("copySpeed")
-    public static final CopySpeed[] COPY_SPEEDS = CopySpeed.values();
-
-    public void setCopySpeed(CopySpeed speed)
-    {
-        IonWriterUserBinary.ourFastCopyEnabled = (speed == CopySpeed.fast);
-    }
-
-    @After
-    public void resetFastCopyFlag()
-    {
-        IonWriterUserBinary.ourFastCopyEnabled =
-            IonWriterUserBinary.OUR_FAST_COPY_DEFAULT;
-    }
-
-    //------------------------------------------------------------------------
 
     @Override
     @Before

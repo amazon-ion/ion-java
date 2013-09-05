@@ -319,7 +319,7 @@ public class MiscStreamingTest
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = system().newTextWriter(out);
-        writer.writeValue(system().newSymbol("foo"));
+        system().newSymbol("foo").writeTo(writer);
         writer.close();
 
         assertEquals("foo", utf8(out.toByteArray()));

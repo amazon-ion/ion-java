@@ -1,9 +1,12 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
  * An Ion <code>symbol</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonSymbol
     extends IonText
@@ -16,21 +19,9 @@ public interface IonSymbol
      *
      * @throws UnknownSymbolException if this symbol has unknown text.
      */
-    public String stringValue();
+    public String stringValue()
+        throws UnknownSymbolException;
 
-    /**
-     * Gets the integer symbol id used in the binary encoding of this symbol.
-     *
-     * @return an integer greater than zero, if this value has an associated
-     * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
-     *
-     * @throws NullValueException if this is <code>null.symbol</code>.
-     * @deprecated Since 2008.
-     * Use {@link #symbolValue()} instead.
-     */
-    @Deprecated
-    public int intValue()
-        throws NullValueException;
 
     /**
      * Gets the integer symbol id used in the binary encoding of this symbol.
@@ -40,8 +31,7 @@ public interface IonSymbol
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
      *
-     * @deprecated Since IonJava R15.
-     * Use {@link #symbolValue()} instead.
+     * @deprecated Since IonJava R15. Use {@link #symbolValue()} instead.
      */
     @Deprecated
     public int getSymbolId()
@@ -70,5 +60,6 @@ public interface IonSymbol
         throws EmptySymbolException;
 
 
-    public IonSymbol clone();
+    public IonSymbol clone()
+        throws UnknownSymbolException;
 }

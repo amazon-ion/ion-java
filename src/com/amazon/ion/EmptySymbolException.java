@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
 
 /**
- *
+ * An error caused by a symbol not containing at least one character for
+ * its text.
  */
 public class EmptySymbolException
     extends IonException

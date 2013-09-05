@@ -1,11 +1,15 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
 
+import com.amazon.ion.util.AbstractValueVisitor;
+
 /**
  * A Visitor for the Ion value hierarchy.
+ *
+ * @see AbstractValueVisitor
  */
 public interface ValueVisitor
 {

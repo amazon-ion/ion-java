@@ -14,7 +14,11 @@ import java.io.Reader;
  * {@link IonReader} will parse one top-level value at a time, and is better
  * suited for streaming protocols or large inputs.
  * <p>
- * Implementations of this interface must be safe for use by multiple threads.
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
+ * <b>Implementations of this interface are safe for use by multiple
+ * threads.</b>
  *
  * @see IonReader
  */
@@ -68,8 +72,11 @@ public interface IonLoader
 
     /**
      * Loads a stream of Ion text into a single datagram.
-     * <p/>
+     * <p>
      * The specified reader remains open after this method returns.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionText the reader from which to read Ion text.
      *
@@ -112,6 +119,9 @@ public interface IonLoader
      * The specified stream remains open after this method returns.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData the stream from which to read Ion data.
      *

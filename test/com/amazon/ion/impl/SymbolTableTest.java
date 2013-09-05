@@ -20,17 +20,20 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonMutableCatalog;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -161,7 +164,7 @@ public class SymbolTableTest
     public void testSystemSymtabAddSymbol()
     {
         SymbolTable st = system().getSystemSymbolTable();
-        st.addSymbol("hello");
+        st.intern("hello");
     }
 
 
@@ -207,12 +210,12 @@ public class SymbolTableTest
             "null";
 
         SymbolTable symbolTable = oneValue(text).getSymbolTable();
-        symbolTable.addSymbol("baz");
+        symbolTable.intern("baz");
         symbolTable.makeReadOnly();
-        symbolTable.addSymbol("baz");
+        symbolTable.intern("baz");
 
         try {
-            symbolTable.addSymbol("boo");
+            symbolTable.intern("boo");
             fail("expected exception");
         }
         catch (ReadOnlyValueException e) { }
@@ -414,8 +417,7 @@ public class SymbolTableTest
         final int import2id = systemMaxId() + 2;
         final int fred3id   = systemMaxId() + 3;
 
-        final int local1id = systemMaxId() + IMPORTED_2_MAX_ID + 1;
-        final int local2id = local1id + 1;
+        final int maxLocalId = systemMaxId() + IMPORTED_2_MAX_ID + 2;
 
         registerImportedV1();
         registerImportedV2();
@@ -434,8 +436,9 @@ public class SymbolTableTest
         assertNotNull(catalog.removeTable("imported", 2));
 
         IonDatagram dg = loader().load(binary);
-        checkSymbol("local1", local1id, dg.get(0));
-        checkSymbol("local2", local2id, dg.get(1));
+
+        checkSymbol("local1", dg.get(0));
+        checkSymbol("local2", dg.get(1));
         checkSymbol("imported 1", import1id, dg.get(2));
         checkSymbol("imported 2", import2id, dg.get(3));
         checkUnknownSymbol(fred3id, dg.get(4));
@@ -444,6 +447,8 @@ public class SymbolTableTest
         checkFirstImport("imported", 2,
                          new String[]{"imported 1", "imported 2", null, null},
                          st);
+        assertTrue(st.isLocalTable());
+        assertEquals(maxLocalId, st.getMaxId());
     }
 
     /**
@@ -457,16 +462,11 @@ public class SymbolTableTest
         final int import2id = systemMaxId() + 2;
         final int fred3id   = systemMaxId() + 3;
 
-        final int local1id = systemMaxId() + IMPORTED_2_MAX_ID + 1;
-        final int local2id = local1id + 1;
-        final int local3id = local2id + 1;
+        final int maxLocalId = systemMaxId() + IMPORTED_2_MAX_ID + 3;
 
         registerImportedV1();
         registerImportedV2();
-        SymbolTable i3 = registerImportedV3();
-
-        // Make sure our syms don't overlap.
-        assertTrue(i3.findSymbol("fred5") != local3id);
+        registerImportedV3();
 
         // fred5 is not in table version 2, so it gets local symbol
         String text =
@@ -483,12 +483,13 @@ public class SymbolTableTest
         assertNotNull(catalog.removeTable("imported", 2));
 
         IonDatagram dg = loader().load(binary);
-        checkSymbol("local1", local1id, dg.get(0));
-        checkSymbol("local2", local2id, dg.get(1));
+
+        checkSymbol("local1", dg.get(0));
+        checkSymbol("local2", dg.get(1));
         checkSymbol("imported 1", import1id, dg.get(2));
         checkUnknownSymbol(import2id, dg.get(3));
         checkSymbol("fred3", fred3id, dg.get(4));
-        checkSymbol("fred5", local3id, dg.get(5));
+        checkSymbol("fred5", dg.get(5));
 
         SymbolTable st = dg.get(0).getSymbolTable();
         checkFirstImport("imported", 2,
@@ -496,6 +497,9 @@ public class SymbolTableTest
                          st);
         SymbolTable imported = st.getImportedTables()[0];
         checkUnknownSymbol("fred5", 5, imported);
+
+        assertTrue(st.isLocalTable());
+        assertEquals(maxLocalId, st.getMaxId());
     }
 
     @Test
@@ -546,7 +550,7 @@ public class SymbolTableTest
         dg.add().newSymbol("s1");
         dg.add().newSymbol("l1");
 
-        final IonSystem ion2 = system(cat);
+        final IonSystem ion2 = newSystem(cat);
 
         dg = ion2.getLoader().load(dg.getBytes());
         checkSymbol("s1", 10, dg.get(0));
@@ -755,9 +759,9 @@ public class SymbolTableTest
     public void testSymtabImageMaintenance()
     {
         SymbolTable st = system().newLocalSymbolTable();
-        st.addSymbol("foo");
+        st.intern("foo");
         IonStruct image = symtabTree(system(), st);
-        st.addSymbol("bar");
+        st.intern("bar");
         image = symtabTree(system(), st);
         IonList symbols = (IonList) image.get(SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
@@ -1177,4 +1181,35 @@ public class SymbolTableTest
                                       "four", "five"},
                          v4);
     }
+
+    /** For ION-333 */
+    @Test
+    public void testSymtabBinaryInjection() throws Exception
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        IonWriter writer = system().newBinaryWriter(baos);
+        writer.stepIn(IonType.LIST);
+        writer.writeNull();
+        writer.writeInt(10);
+        writer.writeFloat(10.0);
+        writer.writeTimestamp(new Timestamp(2013, 1, 1));
+        writer.writeSymbol("abc");  // this is where symbol table injection happens
+        writer.writeString("abc");
+        writer.stepOut();
+        writer.finish();
+
+        IonReader reader = system().newReader(baos.toByteArray());
+        assertEquals(IonType.LIST, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.NULL, reader.next());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(IonType.FLOAT, reader.next());
+        assertEquals(IonType.TIMESTAMP, reader.next());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(null, reader.next());
+        reader.stepOut();
+        assertEquals(null, reader.next());
+    }
+
 }

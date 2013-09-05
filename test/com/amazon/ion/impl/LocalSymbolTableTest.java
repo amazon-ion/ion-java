@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -28,9 +28,9 @@ public class LocalSymbolTableTest
     private SymbolTable makeAbcTable(SymbolTable... imports)
     {
         SymbolTable st = system().newLocalSymbolTable(imports);
-        st.addSymbol(A);
-        st.addSymbol("b");
-        st.addSymbol("c");
+        st.intern(A);
+        st.intern("b");
+        st.intern("c");
         return st;
     }
 

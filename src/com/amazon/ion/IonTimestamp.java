@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -9,10 +9,15 @@ import java.util.Date;
 
 /**
  * An Ion <code>timestamp</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonTimestamp
     extends IonValue
 {
+    // TODO ION-367 Deprecate setters and getters
+
     /**
      * Gets the value of this <code>timestamp</code> in a form suitable for
      * use independent of Ion data.
@@ -74,16 +79,54 @@ public interface IonTimestamp
      */
     public void setValue(Timestamp timestamp);
 
+
+    /**
+     * Sets this timestamp to represent the point in time that is
+     * {@code millis} milliseconds after 1970-01-01T00:00:00Z, with
+     * the specified local offset of {@code localOffset}.
+     *
+     * @param millis
+     *                  the number of milliseconds since 1970-01-01T00:00:00Z to
+     *                  be represented by this timestamp.
+     * @param localOffset
+     *                  the local offset of this timestamp, in minutes. Zero
+     *                  indicates UTC. {@code null} indicates the unknown
+     *                  offset ({@code -00:00}).
+     *
+     * @throws IllegalArgumentException
+     *                  if the resulting timestamp would precede
+     *                  0001-01-01T00:00:00Z.
+     * @throws NullPointerException
+     *                  if {@code millis} is {@code null}
+     */
     public void setValue(BigDecimal millis, Integer localOffset);
 
+
+    /**
+     * Sets this timestamp to represent the point in time that is
+     * {@code millis} milliseconds after 1970-01-01T00:00:00Z, with
+     * the specified local offset of {@code localOffset}.
+     *
+     * @param millis
+     *                  the number of milliseconds since 1970-01-01T00:00:00Z to
+     *                  be represented by this timestamp.
+     * @param localOffset
+     *                  the local offset of this timestamp, in minutes. Zero
+     *                  indicates UTC. {@code null} indicates the unknown
+     *                  offset ({@code -00:00}).
+     *
+     * @throws IllegalArgumentException
+     *                  if the resulting timestamp would precede
+     *                  0001-01-01T00:00:00Z.
+     */
     public void setValue(long millis, Integer localOffset);
 
 
     /**
      * Sets this timestamp to represent the point in time that is
-     * <code>millis</code> milliseconds after 1970-01-01T00:00:00Z.
+     * <code>millis</code> milliseconds after 1970-01-01T00:00:00Z, with the
+     * same local offset part.
      * <p>
-     * This method does not change the local offset part.
      * If this is <code>null.timestamp</code>, then the local offset will be
      * unknown.
      *
@@ -94,6 +137,21 @@ public interface IonTimestamp
      */
     public void setMillis(long millis);
 
+
+    /**
+     * Sets this timestamp to represent the point in time that is
+     * <code>millis</code> milliseconds after 1970-01-01T00:00:00Z, with the
+     * same local offset part.
+     * <p>
+     * If this is <code>null.timestamp</code>, then the local offset will be
+     * unknown.
+     *
+     * @param millis the number of milliseconds since 1970-01-01T00:00:00Z to
+     * be represented by this timestamp.
+     * @throws IllegalArgumentException if the resulting timestamp would
+     * precede 0001-01-01T00:00:00Z.
+     * @throws NullPointerException if {@code millis} is {@code null}
+     */
     public void setDecimalMillis(BigDecimal millis);
 
 
@@ -185,5 +243,6 @@ public interface IonTimestamp
      */
     public void makeNull();
 
-    public IonTimestamp clone();
+    public IonTimestamp clone()
+        throws UnknownSymbolException;
 }

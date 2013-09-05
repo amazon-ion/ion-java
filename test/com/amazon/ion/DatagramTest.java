@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonValue;
@@ -246,7 +247,9 @@ public class DatagramTest
         byte[] bytes2 = out.toByteArray();
         assertEquals(size, bytes2.length);
 
-        assertArrayEquals(bytes1, bytes2);
+        // check strict data equivalence
+        IonDatagram dg2 = myLoader.load(bytes2);
+        assertIonEquals(dg, dg2);
 
         // now check extraction into sub-array
         final int OFFSET = 5;
@@ -549,9 +552,12 @@ public class DatagramTest
 
         String result = dg.toString();
 
-        // Not all DOM impls will inject the symtab after getBytes()
-        if (dg.systemGet(1) instanceof IonStruct)
+        // TODO ION-165 There are differences in behavior between Lazy and Lite
+        // DOM regarding handling of symtab construction.
+        DomType domType = getDomType();
+        if (domType.equals(DomType.BACKED))
         {
+            // Lazy DOM impls injects symtab after getBytes()
             assertEquals(ION_1_0 + ' '
                          + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
                          + " x",
@@ -559,8 +565,8 @@ public class DatagramTest
         }
         else
         {
+            // Lite DOM impls doesn't inject symtab after getBytes()
             assertEquals(ION_1_0 + " x", result);
-
         }
     }
 

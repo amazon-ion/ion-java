@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
@@ -16,6 +16,7 @@ import com.amazon.ion.FieldNameEscapesTest;
 import com.amazon.ion.FloatTest;
 import com.amazon.ion.GoodIonTest;
 import com.amazon.ion.HashCodeCorrectnessTest;
+import com.amazon.ion.HashCodeDeltaCollisionTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonExceptionTest;
@@ -25,6 +26,7 @@ import com.amazon.ion.JavaNumericsTest;
 import com.amazon.ion.ListTest;
 import com.amazon.ion.LoaderTest;
 import com.amazon.ion.LongStringTest;
+import com.amazon.ion.NonEquivsTest;
 import com.amazon.ion.NullTest;
 import com.amazon.ion.RoundTripTest;
 import com.amazon.ion.SexpTest;
@@ -41,7 +43,6 @@ import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
-import com.amazon.ion.impl.IonEqualsTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
@@ -54,6 +55,7 @@ import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
 import com.amazon.ion.streaming.InputStreamReaderTest;
 import com.amazon.ion.streaming.MiscStreamingTest;
+import com.amazon.ion.streaming.ReaderDomCopyTest;
 import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
@@ -114,7 +116,7 @@ import org.junit.runners.Suite;
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
 
-    // binary format tests
+    // Binary format tests
     BinaryTest.class,
 
     // Utility tests
@@ -126,19 +128,15 @@ import org.junit.runners.Suite;
     SharedSymbolTableTest.class,
     LocalSymbolTableTest.class,
 
-    // equality testing
+    // Equality tests
     EquivalenceTest.class,
-    IonEqualsTest.class,
-
-    // hash code tests
-    HashCodeCorrectnessTest.class,
-    HashCodeDistributionTest.class,
+    EquivsTest.class,
+    NonEquivsTest.class,
+    EquivTimelineTest.class,
 
     // General processing test suite
     GoodIonTest.class,
     BadIonTest.class,
-    EquivsTest.class,
-    EquivTimelineTest.class,
     RoundTripTest.class,
 
     // Some tests are collected to make it easier to run interesting subsets.
@@ -156,12 +154,18 @@ import org.junit.runners.Suite;
     BadIonStreamingTest.class,
     GoodIonStreamingTest.class,
     RoundTripStreamingTest.class,
+    ReaderDomCopyTest.class,
     ReaderSkippingTest.class,
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,
     IonSystemBuilderTest.class,
-    IonTextWriterBuilderTest.class
+    IonTextWriterBuilderTest.class,
+
+    // Hash code tests
+    HashCodeCorrectnessTest.class,
+    HashCodeDistributionTest.class,
+    HashCodeDeltaCollisionTest.class
 })
 public class AllTests
 {

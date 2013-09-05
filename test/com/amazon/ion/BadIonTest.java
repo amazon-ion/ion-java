@@ -1,6 +1,8 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion;
 
+import static com.amazon.ion.TestUtils.BAD_IONTESTS_FILES;
+import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
 import com.amazon.ion.impl._Private_Utils;
@@ -15,7 +17,7 @@ public class BadIonTest
 {
     @Inject("testFile")
     public static final File[] FILES =
-        testdataFiles(TestUtils.GLOBAL_SKIP_LIST, "bad");
+        testdataFiles(GLOBAL_SKIP_LIST, BAD_IONTESTS_FILES);
 
 
     private File myTestFile;

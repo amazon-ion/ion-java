@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -99,6 +99,14 @@ final class IonSymbolImpl
     @Override
     public IonSymbolImpl clone()
     {
+        // If this symbol has unknown text but known Sid, this symbol has no
+        // semantic meaning, as such cloning should throw an exception.
+        if (!isNullValue()
+            && mySid != UNKNOWN_SYMBOL_ID
+            && _stringValue() == null) {
+            throw new UnknownSymbolException(mySid);
+        }
+
         IonSymbolImpl clone = new IonSymbolImpl(_system);
 
         clone.copyFrom(this);
@@ -107,31 +115,29 @@ final class IonSymbolImpl
         return clone;
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals. This
-     * implementation uses the hash of the string value XOR'ed with a constant.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
-    public int hashCode() {
-        int hash = HASH_SIGNATURE;
+    public int hashCode()
+    {
+        final int sidHashSalt   = 127;      // prime to salt sid
+        final int textHashSalt  = 31;       // prime to salt text
+        int result = HASH_SIGNATURE;
+
         if (!isNullValue())
         {
             SymbolToken token = symbolValue();
             String text = token.getText();
-            if (text != null)
-            {
-                hash ^= text.hashCode();
-            }
-            else
-            {
-                int sid = token.getSid();
-                hash ^= Integer.valueOf(sid).hashCode();
-            }
+
+            int tokenHashCode = text == null
+                ? token.getSid()  * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            tokenHashCode ^= (tokenHashCode << 29) ^ (tokenHashCode >> 3);
+
+            result ^= tokenHashCode;
         }
-        return hash;
+
+        return hashTypeAnnotations(result);
     }
 
     public IonType getType()
@@ -141,6 +147,7 @@ final class IonSymbolImpl
 
 
     public String stringValue()
+        throws UnknownSymbolException
     {
         if (this.isNullValue()) return null;
 
@@ -165,13 +172,6 @@ final class IonSymbolImpl
         }
 
         return value;
-    }
-
-    @Deprecated
-    public int intValue()
-        throws NullValueException
-    {
-        return getSymbolId();
     }
 
     @Deprecated
@@ -285,8 +285,14 @@ final class IonSymbolImpl
 
         if (mySid == UNKNOWN_SYMBOL_ID && ! isNull) {
             assert _hasNativeValue() == true && isDirty();
+
+            // No need to call makeReady() before _get_value() as makeReady()
+            // does a no-op when _hasNativeValue() == true, which is asserted
+            // above.
             String name = _get_value();
-            mySid = getSymbolTable().addSymbol(name);
+
+            SymbolToken symTok = getSymbolTable().intern(name);
+            _set_value(symTok.getText());
         }
 
         int ln;

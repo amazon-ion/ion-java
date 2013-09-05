@@ -1,15 +1,17 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
+import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonLob;
+import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonText;
@@ -17,33 +19,33 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Provides strict equivalence between two Ion Values.
+ * Provides equivalence comparisons between two {@link IonValue}s, following
+ * the contract of {@link IonValue#equals(Object)}.
  *
  * <p>
- * Basic usage of this class is as follows.
+ * Basic usage of this class is as follows:
  *
- * <pre>
- *   IonValue v1 = ...;
- *   IonValue v2 = ...;
- *   com.amazon.ion.util.Equivalence.ionEquals( v1, v2 );
- * </pre>
+ *<pre>
+ *    IonValue v1 = ...;
+ *    IonValue v2 = ...;
+ *    com.amazon.ion.util.Equivalence.ionEquals( v1, v2 );
+ *</pre>
  *
  * More likely, a static import would make using this class easier.
  *
- * <pre>
- *   import static com.amazon.authority.ion.Equivalence.ionEquals;
- *   ...
- *   boolean equivalent = ionEquals( v1, v2 );
- * </pre>
+ *<pre>
+ *    import static com.amazon.ion.util.Equivalence.ionEquals;
+ *    ...
+ *    boolean equivalent = ionEquals( v1, v2 );
+ *</pre>
  *
  * </p>
  *
@@ -51,17 +53,22 @@ import java.util.Map;
  * <h3>Ion Equivalence</h3>
  * In order to make Ion a useful model to describe data, we must first define
  * the notion of equivalence for all values representable in Ion. Equivalence
- * with respect to Ion values mean that if two Ion values, X and Y, are
+ * with respect to Ion values means that if two Ion values, X and Y, are
  * equivalent, they represent the same data and can be substituted for the other
  * without loss of information.
  *
  * This relationship is:
  * <ul>
- * <li> symmetric: X is equivalent to Y if and only if Y is equivalent to X.
- * </li>
- * <li> transitive: if X is equivalent to Y and Y is equivalent to Z, then X is
- * equivalent to Z. </li>
- * <li> reflexive: X is equivalent to X. </li>
+ *   <li>
+ *     symmetric: X is equivalent to Y if and only if Y is equivalent to X.
+ *   </li>
+ *   <li>
+ *     transitive: if X is equivalent to Y and Y is equivalent to Z, then X is
+ *     equivalent to Z.
+ *   </li>
+ *   <li>
+ *     reflexive: X is equivalent to X.
+ *   </li>
  * </ul>
  *
  * <h4>Ordered Sequence Equivalence</h4>
@@ -86,33 +93,41 @@ import java.util.Map;
  * (A, V), where A is an ordered list of annotations, and V is an Ion Primitive
  * Data or Ion Complex Data value. The list of annotations, A is an tuple of Ion
  * Symbols (a specific type of Ion Primitive).
- * </p>
+ * <p>
  *
  * @author Almann Goo
  */
 public final class Equivalence {
 
     /**
-     * Marker for code that needs to be altered in order to support a public
-     * comparison API to determine ordering of values, not just equality.
+     * TODO ION-319 Marker for code that needs to be altered in order to
+     * support a public comparison API to determine ordering of values, not
+     * just equality.
      */
     private static final boolean PUBLIC_COMPARISON_API = false;
-
-    private static final boolean _debug_stop_on_false = true;
 
     private Equivalence() {
     }
 
 
-    private static int compare(int i1, int i2)
+    private static int compareAnnotations(SymbolToken[] ann1,
+                                          SymbolToken[] ann2)
     {
-        if (i1 < i2) return -1;
-        if (i2 > i2) return  1;
-        return 0;
+        int len = ann1.length;
+        int result = len - ann2.length;
+
+        if (result == 0) {
+            for (int i=0; (result == 0) && (i < len); i++) {
+                result = compareSymbolTokens(ann1[i], ann2[i]);
+            }
+        }
+
+        return result;
     }
 
 
-    private static int compare(SymbolToken tok1, SymbolToken tok2)
+    private static int compareSymbolTokens(SymbolToken tok1,
+                                           SymbolToken tok2)
     {
         String text1 = tok1.getText();
         String text2 = tok2.getText();
@@ -120,20 +135,117 @@ public final class Equivalence {
             if (text1 != null) return  1;
             if (text2 != null) return -1;
 
-            // otherwise v1 == v2 == null
-            return compare(tok1.getSid(), tok2.getSid());
+            int sid1 = tok1.getSid();
+            int sid2 = tok2.getSid();
+            if (sid1 < sid2) return -1;
+            if (sid1 > sid2) return  1;
+            return 0;
         }
 
         return text1.compareTo(text2);
     }
 
 
+    /**
+     * Converts an IonStruct to a multi-set for use in IonStruct equality
+     * checks. This method returns the multi-set as a {@code Map<Field, Field>}.
+     * <p>
+     * A multi-set supports order-independent equality, and may have duplicate
+     * elements.
+     * <p>
+     * Take special note that {@link Set} is missing a {@code get()} API,
+     * and cannot contain duplicate elements, hence we cannot use it.
+     */
+    private static final Map<Field, Field>
+        convertToMultiSet(final IonStruct struct, final boolean strict) {
+
+        final Map<Field, Field> structMultiSet =
+            new HashMap<Field, Field>();
+
+        for (final IonValue val : struct) {
+            final Field item = new Field(val, strict);
+            Field curr = structMultiSet.put(item, item);
+            // curr will be non-null if the multi-set already contains the
+            // name/value pair
+            if (curr != null) {
+                // Set the 'occurrences' of the Field that is contained in
+                // the multi-set (i.e. item) to that of the previously mapped
+                // Field (i.e. curr)
+                item.occurrences = curr.occurrences;
+            }
+            // At this point, item will be an existing
+            // name/value pair in the multi-set - increment its occurrence
+            item.occurrences++;
+        }
+
+        return structMultiSet;
+    }
+
+
+    private static int compareStructs(final IonStruct s1,
+                                      final IonStruct s2,
+                                      boolean strict)
+    {
+        int result = s1.size() - s2.size();
+        if (result == 0) {
+            // We convert IonStruct s1 to a multi-set (which is a
+            // Map<Field, Field>). Refer to convertToMultiSet()'s
+            // documentation for more info
+            final Map<Field, Field> s1MultiSet
+                    = convertToMultiSet(s1, strict);
+
+            // Iterates through each name/value pair in IonStruct s2 and
+            // determine if it also occurs in s1MultiSet.
+            // During each iteration:
+            //          If it does, remove an occurrence from s1MultiSet
+            //          If it doesn't, the two IonStructs aren't equal
+            for (IonValue val : s2) {
+                Field field = new Field(val, strict);
+
+                // Find an occurrence of the name/value pair in s1MultiSet
+                Field mappedValue = s1MultiSet.get(field);
+
+                if (mappedValue == null || mappedValue.occurrences == 0) {
+                    // No match in occurrences, the IonStructs aren't equal
+                    return -1;
+                }
+
+                // Remove an occurrence by decrementing count instead of
+                // explicitly calling Map.remove(), as Map.remove() is a slower
+                // operation
+                mappedValue.occurrences--;
+            }
+        }
+        return result;
+    }
+
+
+    private static int compareSequences(final IonSequence s1,
+                                        final IonSequence s2,
+                                        boolean strict)
+    {
+        int result = s1.size() - s2.size();
+        if (result == 0) {
+            Iterator<IonValue> iter1 = s1.iterator();
+            Iterator<IonValue> iter2 = s2.iterator();
+            while (iter1.hasNext()) {
+                result = ionCompareToImpl(iter1.next(),
+                                          iter2.next(),
+                                          strict);
+                if (result != 0) {
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+
     /** Compare LOB content by stream--assuming non-null. */
-    private static int lobContentCompare(final IonLob lob1, final IonLob lob2)
+    private static int compareLobContents(final IonLob lob1, final IonLob lob2)
     {
         int in1 = lob1.byteSize();
         int in2 = lob2.byteSize();
-        int pos = 0;
         int result = (in1- in2);
 
         if (result == 0) {
@@ -153,7 +265,6 @@ public final class Equivalence {
                         break;
                       }
                       result = (in1 - in2);
-                      pos++;
                   }
                 } finally {
                   stream1.close();
@@ -167,149 +278,101 @@ public final class Equivalence {
                 throw new IonException(e);
             }
         }
-        if (_debug_stop_on_false && result != 0) debugStopOnFalse();
+
         return result;
     }
 
 
-    static private int _false_count = 0;
-    static private int _false_target = -1;
-
-    @SuppressWarnings("unused")
-    static void debugStopOnFalse() {
-        _false_count++;
-        if (_debug_stop_on_false) {
-            // you can put a break point here to catch failures
-            return;
-        }
-        if (_false_count == _false_target) {
-            return;
-        }
-        return;
-    }
-
-    /** Struct type item to aid in struct equality */
-    private static class StructItem implements Comparable<StructItem> {
-        public final String key;
-        public final IonValue value;
-        private final boolean strict;
-        private int count;
+    /**
+     * Class that denotes a name/value pair in Structs.
+     * <p>
+     * Structs are unordered collections of name/value pairs. The names are
+     * symbol tokens, and the values are unrestricted. Each name/value pair is
+     * called a <em>field</em>.
+     * <p>
+     * The responsibilities of this class is to expose a
+     * {@code Map<Field, Field>} as a multi-set. A Field instance holds the name
+     * and value of a Struct field, and counts the number of times that
+     * name/value pair occurs within the multi-set.
+     * <p>
+     * For example, an IonStruct:
+     *<pre>
+     *  {
+     *    a : 123,
+     *    a : 123
+     *  }
+     *</pre>
+     * will be converted into a multi-set {@code Map<Field, Field>} with
+     * a single {@code Field} -> {@code Field} with {@code occurrences} of 2.
+     * <p>
+     * Refer to
+     * {@link Equivalence#convertToMultiSet(IonStruct, boolean)} and
+     * {@link Field#equals(Object)} for more info.
+     * <p>
+     * NOTE: This class should only be instantiated for the sole purpose of
+     * using it as either a <em>key</em> or <em>value</em> in a {@link Map}.
+     */
+    private static class Field implements Comparable<Field> {
+        private final String    name; // aka field name
+        private final IonValue  value;
+        private final boolean   strict;
 
         /**
-         * Problematic with unknown field names.
-         * See IonAssert for another use of this idiom.
+         * Number of times that this specific field (with the same name
+         * and value) occurs within the struct.
          */
-        public StructItem(final IonValue myValue, final boolean myStrict)
+        private int occurrences;
+
+        public Field(final IonValue value, final boolean strict)
         {
-            SymbolToken tok = myValue.getFieldNameSymbol();
-            String k = tok.getText();
-            if (k == null) {
-                k = " -- UNKNOWN SYMBOL -- $" + tok.getSid(); // TODO ION-272
+            SymbolToken tok = value.getFieldNameSymbol();
+            String name = tok.getText();
+            if (name == null) {
+                // TODO ION-272 Problematic with unknown field names.
+                name = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid();
             }
-            key = k;
-            value = myValue;
-            strict = myStrict;
-            // we use -1 for searching
-            count = -1;
-        }
+            this.name = name;
+            this.value = value;
+            this.strict = strict;
 
-        public void incrementCount() {
-            // increment count in a -1, means we are realizing this
-            // as a true bag item
-            count = count == -1 ? 1 : count + 1;
-        }
-
-        public int decrementCount() {
-            count -= 1;
-            return count;
+            // Occurrences of this name/value pair is 0 initially
+            this.occurrences = 0;
         }
 
         @Override
         public int hashCode() {
-            return key.hashCode();
+            return name.hashCode();
         }
 
+        /**
+         * This method is implicitly called by {@link Map#get(Object)} to
+         * obtain a value to which {@code other} is mapped.
+         */
         @Override
         public boolean equals(final Object other) {
-            // we can assume this is always a struct--internal usage dictates it
-            final StructItem sOther = (StructItem) other;
+            // We can assume other is always a Field and strict
+            // is the same - internal usage dictates it.
+            final Field sOther = (Field) other;
 
-            // we can also assume strict is the same--internal usage dictates it
-            boolean answer = key.equals(sOther.key)
-                && ionEqualsImpl(value, sOther.value, strict)
-                // special case -1 means count matches always (for
-                // searching)
-                && (count == -1 || sOther.count == -1 || count == sOther.count);
-            if (_debug_stop_on_false) {
-                if (!answer) debugStopOnFalse();
-            }
-            return answer;
+            return name.equals(sOther.name)
+                && ionEqualsImpl(value, ((Field) other).value, strict);
         }
 
-        public int compareTo(StructItem other) {
-            // we can also assume strict is the same--internal usage dictates it
-            int answer = 0;
+        // TODO ION-319 Implement IonStruct comparison functionality.
+        // This method is currently not used by any code paths.
+        public int compareTo(Field other) {
+            // We can assume strict is the same - internal usage dictates it
+            int answer = name.compareTo(other.name);
 
-            answer = key.compareTo(other.key);
             if (answer == 0) {
                 answer = ionCompareToImpl(value, other.value, strict);
-                // special case -1 means count matches always (for
-                // searching)
                 if (answer == 0) {
-                    if (count == 0 || other.count == -1) {
-                        answer = 0;
-                    }
-                    else {
-                        answer = count - other.count;
-                    }
+                    answer = occurrences - other.occurrences;
                 }
             }
-            if (_debug_stop_on_false) {
-                if (answer != 0) debugStopOnFalse();
-            }
+
             return answer;
         }
-    }
-
-    /**
-     * We generate a map because we need to access the contents of the set
-     * NB -- java.util.Set is missing a get() sort of API which is why this
-     * doesn't work with Set.
-     */
-    private static final Map<StructItem, StructItem> createStructItems(final IonStruct source, final boolean strict) {
-        final Map<StructItem, StructItem> values = new HashMap<StructItem, StructItem>();
-        for (final IonValue val : source) {
-            final StructItem item = new StructItem(val, strict);
-            StructItem curr = values.get(item);
-            if (curr == null) {
-                // new item--put it in
-                values.put(item, item);
-                curr = item;
-            }
-            // at this point curr is an item in our bag,
-            // we need to increment its count, if this is new it will
-            // materialize it
-            curr.incrementCount();
-        }
-        return values;
-    }
-
-    private static int ionCompareAnnotations(SymbolToken[] an1,
-                                             SymbolToken[] an2)
-    {
-        int result = 0;
-
-        int len = an1.length;
-        if (len != an2.length) {
-            result = len - an2.length;
-        }
-        else {
-            for (int ii=0; (result == 0) && (ii < len); ii++) {
-                result = compare(an1[ii], an2[ii]);
-            }
-        }
-
-        return result;
     }
 
     private static final boolean ionEqualsImpl(final IonValue v1,
@@ -325,23 +388,10 @@ public final class Equivalence {
     {
         int result = 0;
 
-        boolean      bo1, bo2;
-        BigInteger   bi1, bi2;
-        double       do1, do2;
-        String       string1, string2;
-        IonValue     stop_value;
-        IonValue     next1, next2;
-
-
-        if (_debug_stop_on_false) {
-            stop_value = null;
-        }
-
         if (v1 == null || v2 == null) {
             if (v1 != null) result = 1;
             if (v2 != null) result = -1;
             // otherwise v1 == v2 == null and result == 0
-            if (_debug_stop_on_false) debugStopOnFalse();
             return result;
         }
 
@@ -351,137 +401,86 @@ public final class Equivalence {
         result = ty1.compareTo(ty2);
 
         if (result == 0) {
+            boolean bo1 = v1.isNullValue();
+            boolean bo2 = v2.isNullValue();
 
-            if (v1.isNullValue() || v2.isNullValue()) {
+            if (bo1 || bo2) {
                  // null combination case--we already know they are
                  // the same type
-                if (!v1.isNullValue()) result = 1;
-                if (!v2.isNullValue()) result = -1;
+                if (!bo1) result = 1;
+                if (!bo2) result = -1;
                 // othersize they're equal (and null values)
-
             }
             else {
                 // value compare only if both are not null
                 switch (ty1)
                 {
                 case NULL:
-                    // never visited -- let it stay false
+                    // never visited, precondition is that both are not null
                     break;
                 case BOOL:
-                    bo1 = ((IonBool) v1).booleanValue();
-                    bo2 = ((IonBool) v2).booleanValue();
-                    if (bo1) {
-                        result = bo2 ? 0 : 1;
+                    if (((IonBool) v1).booleanValue()) {
+                        result = ((IonBool) v2).booleanValue() ? 0 : 1;
                     }
                     else {
-                        result = bo2 ? -1 : 0;
+                        result = ((IonBool) v2).booleanValue() ? -1 : 0;
                     }
                     break;
                 case INT:
-                    bi1 = ((IonInt) v1).bigIntegerValue();
-                    bi2 = ((IonInt) v2).bigIntegerValue();
-                    result = bi1.compareTo(bi2);
+                    result = ((IonInt) v1).bigIntegerValue().compareTo(
+                             ((IonInt) v2).bigIntegerValue());
                     break;
                 case FLOAT:
-                    do1 = ((IonFloat) v1).doubleValue();
-                    do2 = ((IonFloat) v2).doubleValue();
-                    result = Double.compare(do1, do2);
+                    result = Double.compare(((IonFloat) v1).doubleValue(),
+                                            ((IonFloat) v2).doubleValue());
                     break;
                 case DECIMAL:
-                {
-                    IonDecimal d1 = (IonDecimal) v1;
-                    IonDecimal d2 = (IonDecimal) v2;
-
-                    Decimal dec1 = d1.decimalValue();
-                    Decimal dec2 = d2.decimalValue();
-
-                    assert !PUBLIC_COMPARISON_API;
-                    boolean eq = Decimal.equals(dec1, dec2);
-                    result = (eq ? 0 : 1);
+                    assert !PUBLIC_COMPARISON_API; // TODO ION-319
+                    result = Decimal.equals(((IonDecimal) v1).decimalValue(),
+                                            ((IonDecimal) v2).decimalValue())
+                                            ? 0 : 1;
                     break;
-                }
                 case TIMESTAMP:
-                {
-                    Timestamp t1 = ((IonTimestamp) v1).timestampValue();
-                    Timestamp t2 = ((IonTimestamp) v2).timestampValue();
-                    // There's no "strict" before/after in Timestamp, so
-                    // fall through to non-strict comparison.
                     if (strict) {
-                        assert !PUBLIC_COMPARISON_API;
-                        // Report inequality, but not proper ordering.
-                        result = (t1.equals(t2) ? 0 : 1);
+                        assert !PUBLIC_COMPARISON_API; // TODO ION-319
+                        result = (((IonTimestamp) v1).timestampValue().equals(
+                                  ((IonTimestamp) v2).timestampValue())
+                                  ? 0 : 1);
                     }
                     else {
-                        result = t1.compareTo(t2);
+                        // This is kind of lying here, the 'strict' boolean
+                        // (if false) denotes ONLY that annotations are not
+                        // check for equality. But what this is doing here is
+                        // that it is also ignoring IonTimesamps' precision and
+                        // local offset.
+                        result = ((IonTimestamp) v1).timestampValue().compareTo(
+                                 ((IonTimestamp) v2).timestampValue());
                     }
                     break;
-                }
                 case STRING:
-                    string1 = ((IonText) v1).stringValue();
-                    string2 = ((IonText) v2).stringValue();
-                    result = string1.compareTo(string2);
+                    result = (((IonText) v1).stringValue()).compareTo(
+                              ((IonText) v2).stringValue());
                     break;
                 case SYMBOL:
-                    result = compare(((IonSymbol) v1).symbolValue(),
-                                     ((IonSymbol) v2).symbolValue());
+                    result = compareSymbolTokens(((IonSymbol) v1).symbolValue(),
+                                                 ((IonSymbol) v2).symbolValue());
                     break;
                 case BLOB:
                 case CLOB:
-                    result = lobContentCompare((IonLob) v1, (IonLob) v2);
+                    result = compareLobContents((IonLob) v1, (IonLob) v2);
                     break;
                 case STRUCT:
-                    final IonStruct s1 = (IonStruct) v1;
-                    final IonStruct s2 = (IonStruct) v2;
-                    result = s1.size() - s2.size();
-                    if (result == 0) {
-                        // unfortunately struct's interface doesn't give us much
-                        // options here
-                        final Map<StructItem, StructItem> items1
-                                = createStructItems(s1, strict);
-
-                        for (IonValue val : s2) {
-                            StructItem key = new StructItem(val, strict);
-                            // this matches both the key and the value:
-                            StructItem active = items1.get(key);
-                            if (active == null) {
-                                // nope we already have an inconsistency
-                                result = -1;
-                                if (_debug_stop_on_false) {
-                                    stop_value = val;
-                                }
-                                break;
-                            }
-                            if (active.decrementCount() == 0) {
-                                // we have nothing more left
-                                // eliminate it from the source bag
-                                items1.remove(key);
-                            }
-                        }
-                        if (result == 0) {
-                            result = items1.isEmpty() ? 0 : 1;
-                        }
-                    }
+                    assert !PUBLIC_COMPARISON_API; // TODO ION-319
+                    result = compareStructs((IonStruct) v1,
+                                            (IonStruct) v2,
+                                            strict);
                     break;
                 case LIST:
                 case SEXP:
                 case DATAGRAM:
-                    final IonContainer c1 = (IonContainer) v1;
-                    final IonContainer c2 = (IonContainer) v2;
-                    result = c1.size() - c2.size();
-                    if (result == 0) {
-                        Iterator<IonValue> iter1 = c1.iterator();
-                        Iterator<IonValue> iter2 = c2.iterator();
-                        int ii = 0;
-                        while (iter1.hasNext()) {
-                            next1 = iter1.next();
-                            next2 = iter2.next();
-                            result = ionCompareToImpl(next1, next2, strict);
-                            if (result != 0) {
-                                break;
-                            }
-                            ii++;
-                        }
-                    }
+                    result = compareSequences((IonSequence) v1,
+                                              (IonSequence) v2,
+                                              strict);
                     break;
                 }
             }
@@ -489,27 +488,18 @@ public final class Equivalence {
 
         // if the values are otherwise equal, but the caller wants strict
         // comparison, then we check the annotations
-        if (strict && (result == 0)) {
+        if ((result == 0) && strict) {
             // check tuple equality over the annotations
-            // (which are strings)
-            SymbolToken[] an1 = v1.getTypeAnnotationSymbols();
-            SymbolToken[] an2 = v2.getTypeAnnotationSymbols();
-            result = ionCompareAnnotations(an1, an2);
+            // (which are symbol tokens)
+            result = compareAnnotations(v1.getTypeAnnotationSymbols(),
+                                        v2.getTypeAnnotationSymbols());
         }
 
-        if (_debug_stop_on_false) {
-            if (result != 0) {
-                // just so we read stop value
-                if (stop_value != null || true) {
-                    debugStopOnFalse();
-                }
-            }
-        }
         return result;
     }
 
     /**
-     * Defines strict data equivalence over two Ion Values.
+     * Checks for strict data equivalence over two Ion Values.
      *
      * @param v1
      *            The first Ion value to compare.
@@ -525,7 +515,7 @@ public final class Equivalence {
     }
 
     /**
-     * Defines structural data equivalence over two Ion Values. That is,
+     * Checks for structural data equivalence over two Ion Values. That is,
      * equivalence without considering any annotations.
      *
      * @param v1

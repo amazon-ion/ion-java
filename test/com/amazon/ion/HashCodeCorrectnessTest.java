@@ -1,15 +1,16 @@
-// Copyright 2009-2011 Amazon.com.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion;
 
-import com.amazon.ion.util.Equivalence;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
 /**
- * Test cases for Ion hashes
+ * Test cases for {@link IonValue#hashCode()} implementations.
  */
-public class HashCodeCorrectnessTest extends IonTestCase
+public class HashCodeCorrectnessTest
+    extends IonTestCase
 {
     /**
      * Helper function to construct an integer.
@@ -40,19 +41,31 @@ public class HashCodeCorrectnessTest extends IonTestCase
 
     /**
      * Verify that the relationship between equals() and hashCode() is
-     * honored.
+     * honored. That is, if {@link Object#equals(Object)}, then their
+     * {@link Object#hashCode()}s return the same result.
+     *
      * @param v1 IonValue 1
      * @param v2 IonValue 2
      */
     private static void assertIonEqImpliesHashEq(final IonValue v1,
-                                                 final IonValue v2) {
-        assertTrue(String.format("Contract between equals and"
-                                 + " hashCode violated, v1 %1$s (hash %2$x),"
-                                 + " v2 %3$s (hash %4$x)",
-                                 v1, v1.hashCode(),
-                                 v2, v2.hashCode()),
-                   !Equivalence.ionEquals(v1, v2)
-                   || v1.hashCode() == v1.hashCode());
+                                                 final IonValue v2)
+    {
+        // We only care about equal IonValues
+        if (v1.equals(v2))
+        {
+            int hashCode1 = v1.hashCode();
+            int hashCode2 = v2.hashCode();
+
+            if (hashCode1 != hashCode2)
+            {
+                fail(String.format("Equal IonValues must have same "
+                    + "hash codes:\n"
+                    + " v1 %1$s (hash %2$x)\n"
+                    + " v2 %3$s (hash %4$x)",
+                    v1, hashCode1,
+                    v2, hashCode2));
+            }
+        }
     }
 
     /**
@@ -126,6 +139,13 @@ public class HashCodeCorrectnessTest extends IonTestCase
                 assertIonEqImpliesHashEq(bools[i], bools[j]);
             }
         }
+
+        IonValue trueIonBool = oneValue("true");
+        IonValue falseIonBool = oneValue("false");
+
+        assertTrue(trueIonBool.hashCode() != Boolean.TRUE.hashCode());
+        assertTrue(falseIonBool.hashCode() != Boolean.FALSE.hashCode());
+        assertTrue(trueIonBool.hashCode() != falseIonBool.hashCode());
     }
 
     /**
@@ -182,12 +202,10 @@ public class HashCodeCorrectnessTest extends IonTestCase
                                  decimal("100.0001"),
                                  decimal("100.00010"),
                                  decimal("100.00010001"),};
-        // IonDecimal's are hashed as doubles, so the unique values don't
-        // include all the possible precision
-        Set<Double> unique_values = new HashSet<Double>();
+        Set<IonDecimal> unique_values = new HashSet<IonDecimal>();
         Set<Integer> unique_hashes = new HashSet<Integer>();
         for (int i = 0; i < decimals.length; ++i)  {
-            unique_values.add(((IonDecimal) decimals[i]).doubleValue());
+            unique_values.add(decimals[i]);
             unique_hashes.add(decimals[i].hashCode());
             for (int j = i; j < decimals.length; ++j)  {
                 assertIonEqImpliesHashEq(decimals[i], decimals[j]);
@@ -460,4 +478,129 @@ public class HashCodeCorrectnessTest extends IonTestCase
                      unique_values.size(),
                      unique_hashes.size());
     }
+
+
+
+    /**
+     * Checks that two unequal IonValue's hash codes are distinct integers.
+     * Note that it is NOT required that two unequal objects must return
+     * distinct hash code results. However, we are enforcing this here to
+     * improve the performance of hash tables.
+     * <p>
+     * Refer to Effective Java Ed2 (Joshua Bloch) Item 9.
+     */
+    private void assertIonNotEqImpliesHashNotEq(final String s1,
+                                                final String s2)
+    {
+        final IonValue v1 = oneValue(s1);
+        final IonValue v2 = oneValue(s2);
+
+        assertTrue("v1 should be not equal to v2", !v1.equals(v2));
+
+        int hashCode1 = v1.hashCode();
+        int hashCode2 = v2.hashCode();
+
+        if (hashCode1 == hashCode2)
+        {
+            fail(String.format("Unequal IonValues should have distinct "
+                + "hash codes:\n"
+                + " v1 %1$s (hash %2$x)\n"
+                + " v2 %3$s (hash %4$x)",
+                v1, hashCode1,
+                v2, hashCode2));
+        }
+    }
+
+    // Trap for ION-309
+    @Test
+    public void testIonStructEvenEquivChildValueHashCode()
+    {
+        assertIonNotEqImpliesHashNotEq("{ts1:2010-03-12T, ts2:2010-03-12T}",
+                                       "{ts1:2013-05-10T, ts2:2013-05-10T}");
+        assertIonNotEqImpliesHashNotEq("{a:123, b:123}",
+                                       "{a:456, b:456}");
+        assertIonNotEqImpliesHashNotEq("{a:annot::123, b:123}",
+                                       "{a:456, b:annot::456}");
+        assertIonNotEqImpliesHashNotEq("{$99:123, $98:123}",
+                                       "{$99:456, $98:456}");
+        assertIonNotEqImpliesHashNotEq("{$99:annot::123, $98:123}",
+                                       "{$99:456, $98:annot::456}");
+    }
+
+    // Trap for ION-309
+    @Test
+    public void testIonStructSwappedFieldNameAndValueHashCode()
+    {
+        assertIonNotEqImpliesHashNotEq("{\"a\":\"1\"}",
+                                       "{\"1\":\"a\"}");
+        assertIonNotEqImpliesHashNotEq("{\"a\":\"1\", \"b\":\"2\"}",
+                                       "{\"1\":\"a\", \"2\":\"b\"}");
+        assertIonNotEqImpliesHashNotEq("{\"a\":\"1\", \"b\":\"2\", \"c\":\"3\"}",
+                                       "{\"1\":\"a\", \"2\":\"b\", \"3\":\"c\"}");
+        assertIonNotEqImpliesHashNotEq("{a:alpha}",
+                                       "{alpha:a}");
+        assertIonNotEqImpliesHashNotEq("{a:alpha, b:beta}",
+                                       "{alpha:a, beta:b}");
+        assertIonNotEqImpliesHashNotEq("{a:alpha, b:beta, c:charlie}",
+                                       "{alpha:a, beta:b, charlie:c}");
+        assertIonNotEqImpliesHashNotEq("{$99:a}",
+                                       "{a:$99}");
+        assertIonNotEqImpliesHashNotEq("{$99:a, $999:b}",
+                                       "{a:$99, b:$999}");
+        assertIonNotEqImpliesHashNotEq("{$99:a, $999:b, $9999:c}",
+                                       "{a:$99, b:$999, c:$9999}");
+    }
+
+    protected void testTypeAnnotationHashCode(String text, IonType type)
+    {
+        checkType(type, oneValue("annot1::" + text));
+        checkType(type, oneValue("$99::" + text));
+
+        assertIonEqImpliesHashEq(oneValue("annot1::" + text),
+                                 oneValue("annot2::" + text));
+        assertIonEqImpliesHashEq(oneValue("annot1::annot2::" + text),
+                                 oneValue("annot1::annot2::" + text));
+        assertIonEqImpliesHashEq(oneValue("annot1::annot2::annot3::" + text),
+                                 oneValue("annot1::annot2::annot3::" + text));
+
+        assertIonEqImpliesHashEq(oneValue("$99::" + text),
+                                 oneValue("$98::" + text));
+        assertIonEqImpliesHashEq(oneValue("$99::$98::" + text),
+                                 oneValue("$99::$98::" + text));
+        assertIonEqImpliesHashEq(oneValue("$99::$98::$97::" + text),
+                                 oneValue("$99::$98::$97::" + text));
+
+        assertIonNotEqImpliesHashNotEq("annot1::" + text,
+                                       "annot2::" + text);
+        assertIonNotEqImpliesHashNotEq("annot1::annot2::" + text,
+                                       "annot2::annot1::" + text);
+        assertIonNotEqImpliesHashNotEq("annot1::annot2::annot3::" + text,
+                                       "annot3::annot2::annot1::" + text);
+
+        assertIonNotEqImpliesHashNotEq("$99::" + text,
+                                       "$98::" + text);
+        assertIonNotEqImpliesHashNotEq("$99::$98::" + text,
+                                       "$98::$99::" + text);
+        assertIonNotEqImpliesHashNotEq("$99::$98::$97::" + text,
+                                       "$97::$98::$99::" + text);
+    }
+
+    @Test
+    public void testTypeAnnotationHashCode()
+    {
+        testTypeAnnotationHashCode("null",              IonType.NULL);
+        testTypeAnnotationHashCode("true",              IonType.BOOL);
+        testTypeAnnotationHashCode("1",                 IonType.INT);
+        testTypeAnnotationHashCode("0.1e123",           IonType.FLOAT);
+        testTypeAnnotationHashCode("0.1d123",           IonType.DECIMAL);
+        testTypeAnnotationHashCode("2013-01-01",        IonType.TIMESTAMP);
+        testTypeAnnotationHashCode("'''string'''",      IonType.STRING);
+        testTypeAnnotationHashCode("'symbol'",          IonType.SYMBOL);
+        testTypeAnnotationHashCode("{{MTIz}}",          IonType.BLOB);
+        testTypeAnnotationHashCode("{{'''clob'''}}",    IonType.CLOB);
+        testTypeAnnotationHashCode("{a:1, b:2, c:3}",   IonType.STRUCT);
+        testTypeAnnotationHashCode("[a,b,c]",           IonType.LIST);
+        testTypeAnnotationHashCode("(a b c)",           IonType.SEXP);
+    }
+
 }

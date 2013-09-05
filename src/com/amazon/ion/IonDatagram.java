@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -13,14 +13,15 @@ import java.util.ListIterator;
  * A datagram is a "top-level" container of Ion values, and the granularity of
  * binary encoding Ion content.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library. Some inherited methods are not yet implemented
+ * or are unsupported for datagrams.
+ * <p>
  * Along with the normal user values, datagrams contain system values, notably
  * the symbol table(s) used to atomize all symbols. Most uses of a datagram
  * will not see system values,
  * but applications that need visibility into that data can use the
  * <code>system*()</code> methods.
- * <p>
- * <b>Warning:</b> some inherited methods are not yet implemented or are
- * unsupported for datagrams.
  */
 public interface IonDatagram
     extends IonSequence
@@ -73,7 +74,7 @@ public interface IonDatagram
 
 
     /**
-     * Returns {@code false} at all times, since datagrams cannot be null.
+     * Returns {@code false} at every call, since datagrams cannot be null.
      *
      * @return <code>false</code>
      */
@@ -154,7 +155,7 @@ public interface IonDatagram
      * This iterator does not support the modification methods
      * {@link Iterator#remove()}, {@link ListIterator#add(Object)}, or
      * {@link ListIterator#set(Object)}.
-     * operation.
+     *
      * @return not null.
      *
      * @see #iterator()
@@ -182,8 +183,8 @@ public interface IonDatagram
      *
      * @throws IonException if there's an error encoding the data.
      *
-     * @deprecated renamed to {@link #getBytes()} for consistency with other
-     * interfaces.
+     * @deprecated Since IonJava RC1 (2009). Use {@link #getBytes()} instead,
+     * which is renamed for consistency with other interfaces.
      */
     @Deprecated
     public byte[] toBytes()
@@ -207,10 +208,10 @@ public interface IonDatagram
      * datagram.
      * <p>
      * An invocation of this method of the form {@code dg.get(a)} behaves in
-     * exactly the same way as the invocation
-     * <pre>
-     *     dg.get(a, 0)
-     * </pre>
+     * exactly the same way as the invocation:
+     *<pre>
+     *    dg.get(a, 0)
+     *</pre>
      *
      * @param dst the array into which bytes are to be written.
      *
@@ -221,8 +222,11 @@ public interface IonDatagram
      * smaller than the result of {@link #byteSize()}.
      *
      * @see #getBytes(byte[],int)
+     *
+     * @deprecated Since IonJava R17, with no direct replacement.
      */
-    public int getBytes(byte[] dst)
+    @Deprecated
+    public int getBytes(byte[] dst) // TODO ION-365 Remove
         throws IonException;
 
 
@@ -241,8 +245,11 @@ public interface IonDatagram
      * @throws IonException if there's an error encoding the data.
      * @throws IndexOutOfBoundsException if {@code (dst.length - offset)} is
      * smaller than the result of {@link #byteSize()}.
+     *
+     * @deprecated Since IonJava R17, with no direct replacement.
      */
-    public int getBytes(byte[] dst, int offset)
+    @Deprecated
+    public int getBytes(byte[] dst, int offset) // TODO ION-365 Remove
         throws IonException;
 
 
@@ -298,5 +305,6 @@ public interface IonDatagram
     public boolean retainAll(Collection<?> c);
 
 
-    public IonDatagram clone();
+    public IonDatagram clone()
+        throws UnknownSymbolException;
 }

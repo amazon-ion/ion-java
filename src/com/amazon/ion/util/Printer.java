@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -48,17 +48,21 @@ import java.util.Iterator;
  * <p>
  * By default, output is in a compact format with minimal whitespace.
  * For example:
- * <pre>
+ *<pre>
  *    annot::{f1:["hello","goodbye"],'another field':long::0}
- * </pre>
+ *</pre>
  * The format can be tuned through various properties on the Printer instance,
  * as well as through the {@link Printer.Options} structure.
  * <p>
+ * <b>Instances of this class are safe for use by multiple threads.</b>
+ * <p>
  * While printers are inexpensive to create, their configuration facilities
- * make them useful as shared resources. Printers are safe for use from
- * multiple threads.  Changes to configuration settings (<em>e.g.</em>,
- * {@link #setJsonMode()}) do not affect concurrently-running calls to
- * {@link #print}.
+ * make them useful as shared resources. Changes to configuration settings
+ * (<em>e.g.</em>, {@link #setJsonMode()}) do not affect concurrently-running
+ * calls to {@link #print}.
+ *
+ * @see IonWriter
+ * @see IonTextWriterBuilder
  */
 public class Printer
 {
@@ -454,29 +458,6 @@ public class Printer
             writer.writeValues(reader);
             writer.finish();
         }
-    }
-
-    /**
-     *  Convert an IonValue to a legal JSON string:
-     *
-     *  - discard annotations
-     *  - always quote symbols
-     *  - sexp's?
-     *  @deprecated use {@link #setJsonMode()}.
-     */
-
-    @Deprecated
-    public void printJson(IonValue value, Appendable out)
-        throws IOException
-    {
-        // Copy the options so visitor won't see changes made while printing.
-        Options options;
-        synchronized (this)  // So we don't clone in the midst of changes
-        {
-            options = myOptions.clone();
-        }
-
-        _print(value, new JsonPrinterVisitor(options, out));
     }
 
     private void _print(IonValue value, PrinterVisitor pv)
@@ -1167,127 +1148,6 @@ public class Printer
                 {
                     ts.print(myOut);
                 }
-            }
-        } // PrinterVisitor.visit(IonTimestamp)
-    }
-
-    /**
-     * <b>This class is unsupported and will be removed!</b>
-     * @deprecated
-     */
-    @Deprecated
-    public final static class JsonPrinterVisitor
-    extends PrinterVisitor
-    {
-        public JsonPrinterVisitor(Options options, Appendable out)
-        {
-            super(options, out);
-        }
-
-        @Override
-        public void writeAnnotations(IonValue value)
-        throws IOException
-        {}
-
-        @Override
-        public void writeSymbol(String text)
-        throws IOException
-        {
-            IonTextUtils.printJsonString(myOut, text);
-        }
-
-        public void writeFloat(BigDecimal value)
-        throws IOException
-        {
-            BigInteger unscaled = value.unscaledValue();
-
-            myOut.append(unscaled.toString());
-            myOut.append('e');
-            myOut.append(Integer.toString(-value.scale()));
-        }
-
-        @Override
-        public void visit(IonTimestamp value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                myOut.append(Long.toString(value.getMillis()));
-            }
-        }
-
-        @Override
-        public void visit(IonList value) throws IOException, Exception
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                super.visit(value);
-            }
-        }
-
-        @Override
-        public void visit(IonStruct value) throws IOException, Exception
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                super.visit(value);
-            }
-        }
-
-        @Override
-        public void visit(IonString value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                writeString(value.stringValue());
-            }
-        }
-
-        @Override
-        public void visit(IonDecimal value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                writeFloat(value.bigDecimalValue());
-            }
-        }
-
-        @Override
-        public void visit(IonFloat value) throws IOException
-        {
-            if (value.isNullValue()) {
-                myOut.append("null");
-            } else {
-                writeFloat(value.bigDecimalValue());
-            }
-        }
-
-        @Override
-        public void visit(IonSexp value) throws IOException, Exception
-        {
-            if (value.isNullValue())
-            {
-                myOut.append("null");
-            }
-            else
-            {
-                myOut.append('[');
-
-                boolean hitOne = false;
-                for (IonValue child : value)
-                {
-                    if (hitOne)
-                    {
-                        myOut.append(',');
-                    }
-                    hitOne = true;
-                    writeChild(child, false);
-                }
-                myOut.append(']');
             }
         }
     }

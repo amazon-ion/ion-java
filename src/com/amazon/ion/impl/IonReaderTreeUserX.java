@@ -86,7 +86,9 @@ final class IonReaderTreeUserX
                             sid = _system.getSystemSymbolTable().findSymbol(name);
                         }
                     }
-                    if (sid == ION_1_0_SID) {
+                    if (sid == ION_1_0_SID
+                        && _next.getTypeAnnotationSymbols().length == 0) {
+                        // $ion_1_0 is read as an IVM only if it is not annotated
                         SymbolTable symbols = _system.getSystemSymbolTable();
                         set_symbol_table(symbols);
                         push_symbol_table(symbols);

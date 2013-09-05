@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -30,15 +30,31 @@ import java.util.Iterator;
  * We still have some work to do before this interface is stable.
  * See <a href="https://jira2.amazon.com/browse/ION-183">issue ION-183</a>
  * <p>
+ * An {@code IonReader} has a "cursor" tracking the <em>current value</em> on
+ * which the reader is positioned. Generally, newly created readers are not
+ * positioned on any value. To begin traversing the Ion data, one would use
+ * {@link #next()} to advance the cursor onto the first value (or learn there isn't
+ * one). Once positioned, the current value's data can be accessed with the
+ * {@code *Value()} methods.
+ * <p>
+ * When the current value is a container, calling {@link #next()} moves the
+ * cursor to the <em>next sibling</em> of the container, at the same depth,
+ * skipping over any children the container may have.
+ * To read the children, call {@link #stepIn()},
+ * then {@link #next()} to position onto the first child value (or learn there
+ * isn't one).  Calling {@link #stepOut()} skips over any remaining children
+ * and moves the cursor just beyond the container; call {@link #next()} to
+ * move the cursor to the following value.
+ * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()}, mirroring {@link IonSymbol#stringValue()}.
  *
  * <h2>Exception Handling</h2>
- * {@code IonReader} is a generic interface for traversion Ion data, and it's
+ * {@code IonReader} is a generic interface for traversing Ion data, and it's
  * not possible to fully specify the set of exceptions that could be thrown
  * from the underlying data source.  Thus all failures are thrown as instances
- * of {@link IonException}, wrapping the originating cause.  If an application
+ * of {@link IonException}, wrapping the original cause.  If an application
  * wants to handle (say) {@link IOException}s specially, then it needs to
  * extract that from the wrappers; the documentation of {@link IonException}
  * explains how to do that.
@@ -71,7 +87,7 @@ import java.util.Iterator;
  * This facet is support by all readers of Ion binary and text data.
  *
  * <h3>The {@link TextSpan} Facet</h3>
- * This facet is supported by all text readers.
+ * This facet is supported by all readers of Ion text data.
  */
 public interface IonReader
     extends Closeable, Faceted
@@ -88,8 +104,9 @@ public interface IonReader
      * that you cannot reliably get values from the "current" element. The only
      * thing you should call after {@code hasNext()} is {@link #next()}!
      *
-     * @deprecated Applications should detect the end of the current level by
-     * checking for a {@code null} response from {@link #next()}.
+     * @deprecated Since IonJava R8, with no direct replacement. Applications
+     * should detect the end of the current level by checking for a {@code null}
+     * response from {@link #next()}.
      */
     @Deprecated
     public boolean hasNext();
@@ -97,7 +114,7 @@ public interface IonReader
     /**
      * Positions this reader on the next sibling after the current value,
      * returning the type of that value.  Once so positioned the contents of
-     * this value can be accessed with the {@code *value()} methods.
+     * this value can be accessed with the {@code *Value()} methods.
      * <p>
      * A sequence of {@code next()} calls traverses the data at a constant
      * depth, within the same container.
@@ -182,22 +199,6 @@ public interface IonReader
     public SymbolToken[] getTypeAnnotationSymbols();
 
     /**
-     * Return the symbol IDs of the annotations on the current value as an
-     * array of ints.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @return the (ordered) annotations on the current value, or an empty
-     * array (not {@code null}) if there are none.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #getTypeAnnotationSymbols()} instead.
-     */
-    @Deprecated
-    public int[] getTypeAnnotationIds();
-
-    /**
      * Return the annotations on the curent value as an iterator.  The
      * iterator is empty (hasNext() returns false on the first call) if
      * there are no annotations on the current value.
@@ -209,20 +210,6 @@ public interface IonReader
     public Iterator<String> iterateTypeAnnotations();
 
     /**
-     * Return the symbol table IDs of the current value's annotation as
-     * an iterator.  The iterator is empty (hasNext() returns false on
-     * the first call) if there are no annotations on the current value.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @return not null.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #getTypeAnnotationSymbols()} instead.
-     */
-    @Deprecated
-    public Iterator<Integer> iterateTypeAnnotationIds();
 
     /**
      * Gets the symbol ID of the field name attached to the current value.
@@ -235,8 +222,7 @@ public interface IonReader
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since IonJava R15.
-     * Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
@@ -387,26 +373,6 @@ public interface IonReader
      * @since IonJava R15
      */
     public SymbolToken symbolValue();
-
-
-    /**
-     * Returns the current value as an int symbol ID.
-     * This is only valid when {@link #getType()} returns
-     * {@link IonType#SYMBOL}.
-     * <p>
-     * If the reader cannot determine the symbol ID, this method returns
-     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @see #stringValue()
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #symbolValue()} instead.
-     */
-    @Deprecated
-    public int getSymbolId();
 
 
     /**

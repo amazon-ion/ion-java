@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,10 +9,28 @@ import java.util.Iterator;
  * A symbol table maps symbols between their textual form and an integer ID
  * used in the binary encoding.
  * <p>
- * Implementations of this interface must be safe for use by multiple threads.
- * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
+ * <p>
+ * There are two kinds of symbol tables: <em>shared</em> and <em>local</em>.
+ * With that, there are two further distinctions of shared symbol tables:
+ * <em>system</em> and <em>substitute</em>.
+ *
+ * <h2>Notes about Substitute symbol tables</h2>
+ * Substitute tables are used when the relevant catalog cannot find an exact
+ * match, that is, the catalog cannot find an imported shared symtab with the
+ * same name, version and max_id.
+ * <p>
+ * In order to ensure that we retain the correct import declarations,
+ * a substitute table is created, <em>substituting</em> the originally matched
+ * shared symtab from the catalog. The substitute table in turns exposes the
+ * correct name, version and max_id for any callers that require it, and
+ * becomes a delegate of the substituted symtab's interface.
+ * <p>
+ * <b>Implementations of this interface are safe for use by multiple
+ * threads.</b>
+ *
+ * @see <a href="https://w.amazon.com/index.php/Ion/Symbols">Ion Symbols wiki page</a>
  */
 public interface SymbolTable
 {
@@ -139,9 +157,16 @@ public interface SymbolTable
      * Gets the sequence of shared symbol tables imported by this (local)
      * symbol table. The result does not include a system table.
      * <p>
-     * If this local table imported a shared table that was not available in
-     * the appropriate {@link IonCatalog}, then that entry will be a dummy
-     * table with no known symbol text.
+     * If this local table imported a shared table for which the relevant
+     * {@link IonCatalog} has the same name but different version and/or max_id,
+     * then that entry will be a substitute table with the
+     * correct version and max_id, wrapping the original shared symbol table
+     * that was found.
+     * <p>
+     * If this local table imported a shared table for which the relevant
+     * {@link IonCatalog} has no entry with the same name, but the import
+     * declaration has a max_id available, then that entry will
+     * be a substitute table with max_id undefined symbols.
      *
      * @return {@code null} if this is a shared or system table, otherwise a
      * non-null but potentially zero-length array of shared tables (but no
@@ -162,7 +187,7 @@ public interface SymbolTable
     /**
      * Gets the highest symbol id reserved by this table.
      *
-     * @return the largest integer such that {@link #findSymbol(int)} could
+     * @return the largest integer such that {@link #findKnownSymbol(int)} could
      * return a non-<code>null</code> result.  Note that there is no promise
      * that it <em>will</em> return a name, only that any larger id will not
      * have a name defined.
@@ -227,24 +252,6 @@ public interface SymbolTable
 
 
     /**
-     * Gets a name for a symbol ID, throwing if a definition is not known.
-     *
-     * @param id the requested symbol ID.
-     * @return not <code>null</code>.
-     *
-     * @throws IllegalArgumentException if {@code id < 1}.
-     * @throws UnknownSymbolException if the symbol text isn't known.
-     *
-     * @deprecated Since IonJava R15.
-     * This method cannot distinguish between generic identifiers
-     * (like {@code $123}) and known symbols that happen the same text
-     * (like {@code '$123'}).  Use {@link #findKnownSymbol(int)} instead.
-     */
-    @Deprecated
-    public String findSymbol(int id);
-
-
-    /**
      * Gets the interned text for a symbol ID.
      *
      * @param id the requested symbol ID.
@@ -254,24 +261,6 @@ public interface SymbolTable
      * @throws IllegalArgumentException if {@code id < 1}.
      */
     public String findKnownSymbol(int id);
-
-
-    /**
-     * Adds a new symbol to this table, or finds an existing id for it.
-     *
-     * @param name must be non-empty.
-     * @return a value greater than zero.
-     *
-     * @throws IonException if {@link #isReadOnly()}
-     * and the requested symbol is not already defined.
-     *
-     * @deprecated Since IonJava R15.
-     * Use {@link #intern(String)} instead, replacing the caller's
-     * parameter string with the interned instance in
-     * {@link SymbolToken#getText()}.
-     */
-    @Deprecated
-    public int addSymbol(String name);
 
 
     /**

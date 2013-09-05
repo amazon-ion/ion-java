@@ -1,9 +1,10 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 /**
- * Indicates that a symbol ID could not be translated into text.
+ * An error caused by a symbol ID that could not be translated into text
+ * because it is not defined by the symbol table in context.
  *
  * @since IonJava R15
  */

@@ -1,7 +1,8 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,20 +14,24 @@ import java.util.Iterator;
 /**
  * Entry point to all things Ion.
  * <p>
- * In general, instances returned from one system are not interchangable with
- * those returned by other systems.
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
+ * In general, {@link IonValue} instances returned from one system instance
+ * are not interoperable with those returned by other instances.
  * The intended usage pattern is for an application to construct a single
  * <code>IonSystem</code> instance and use it throughout,
- * rather than constructing multiples and intermingling their use.
+ * rather than constructing multiple systems and intermingling their use.
  * To create a copy of a value for use by a different system, use
  * {@link #clone(IonValue)}.
  * <p>
  * To create an {@code IonSystem},
  * see {@link com.amazon.ion.system.IonSystemBuilder}.
  * <p>
- * Implementations of this interface must be safe for use by multiple threads.
+ * <b>Implementations of this interface are safe for use by multiple
+ * threads.</b>
  *
- * @see IonTextWriterBuilder
+ * @see IonSystemBuilder
  */
 public interface IonSystem
     extends ValueFactory
@@ -202,6 +207,9 @@ public interface IonSystem
      * Applications should generally use {@link #iterate(InputStream)}
      * whenever possible, since this library has much faster UTF-8 decoding
      * than the Java IO framework.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
@@ -230,6 +238,9 @@ public interface IonSystem
      * schema.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
@@ -284,7 +295,7 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      *
-     * @return the first (and only) user value in the data.
+     * @return the first (and only) user value in the data; not null.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws UnexpectedEofException if the data doesn't contain any user
@@ -305,7 +316,7 @@ public interface IonSystem
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
-     * @return the first (and only) user value in the data.
+     * @return the first (and only) user value in the data; not null.
      *
      * @throws NullPointerException if {@code ionData} is null.
      * @throws UnexpectedEofException if the data doesn't contain any user
@@ -329,24 +340,15 @@ public interface IonSystem
      * enumeration to ensure complete test coverage!
      */
 
-
-    /*
-     * Applications should generally us {@link #newReader(InputStream)}
-     * whenever possible, since this library has much faster UTF-8 decoding
-     * than the Java IO framework.
-     *
-     * @throws IonException if the source throws {@link IOException}.
-     */
-//  public IonReader newReader(Reader ionText); // TODO add newReader(Reader)
-
     /**
-     * Creates an new {@link IonTextReader} instance over Ion text data.
+     * Creates an new {@link IonReader} instance over Ion text data.
      * <p>
      * The text is parsed incrementally by the reader, so any syntax errors
      * will not be detected during this call.
      *
      * @param ionText must not be null.
      */
+    @SuppressWarnings("deprecation")
     public IonTextReader newReader(String ionText);
 
     /**
@@ -383,6 +385,9 @@ public interface IonSystem
      * detecting whether it's text or binary data.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
      *
      * @param ionData must not be null.
      *
@@ -392,6 +397,20 @@ public interface IonSystem
      * @throws IonException if the source throws {@link IOException}.
      */
     public IonReader newReader(InputStream ionData);
+
+    /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * Applications should generally us {@link #newReader(InputStream)}
+     * whenever possible, since this library has much faster UTF-8 decoding
+     * than the Java IO framework.
+     * <p>
+     * Because this library performs its own buffering, it's recommended that
+     * you avoid adding additional buffering to the given stream.
+     *
+     * @throws IonException if the source throws {@link IOException}.
+     */
+    public IonReader newReader(Reader ionText);
 
     /**
      * Creates an new {@link IonReader} instance over an {@link IonValue} data
@@ -510,7 +529,8 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      *
-     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
+     * @deprecated Since IonJava R10. Use
+     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
      */
     @Deprecated
     public IonBinaryWriter newBinaryWriter();
@@ -526,7 +546,8 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      *
-     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
+     * @deprecated Since IonJava R10. Use
+     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
      */
     @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
@@ -578,6 +599,7 @@ public interface IonSystem
      *
      * @see #newLocalSymbolTable(SymbolTable...)
      */
+    @SuppressWarnings("javadoc")
     public IonDatagram newDatagram(SymbolTable... imports);
 
 

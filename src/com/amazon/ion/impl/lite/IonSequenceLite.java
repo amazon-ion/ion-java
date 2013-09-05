@@ -1,13 +1,16 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSequence;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonValue;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -67,23 +70,20 @@ abstract class IonSequenceLite
     @Override
     public abstract IonSequenceLite clone();
 
-    /**
-     * Calculate Ion Sequence hash code as seed value XORed with hash
-     * codes of contents, rotating 3 at each step to make the code
-     * order-dependent.
-     * @param seed Seed value
-     * @return hash code
-     */
     protected int sequenceHashCode(int seed)
     {
-        int hash_code = seed;
-        if (!isNullValue())  {
-            for (IonValue v : this)  {
-                hash_code ^= v.hashCode();
-                hash_code = hash_code << 29 | hash_code >>> 3;
+        final int prime = 8191;
+        int result = seed;
+
+        if (!isNullValue()) {
+            for (IonValue v : this) {
+                result = prime * result + v.hashCode();
+                // mixing at each step to make the hash code order-dependent
+                result ^= (result << 29) ^ (result >> 3);
             }
         }
-        return hash_code;
+
+        return hashTypeAnnotations(result);
     }
 
 
@@ -368,4 +368,24 @@ abstract class IonSequenceLite
         return array;
     }
 
+
+    @Override
+    void writeBodyTo(IonWriter writer)
+        throws IOException
+    {
+        IonType type = getType();
+        if (isNullValue())
+        {
+            writer.writeNull(type);
+        }
+        else
+        {
+            writer.stepIn(type);
+            for (IonValue iv : this)
+            {
+                iv.writeTo(writer);
+            }
+            writer.stepOut();
+        }
+    }
 }

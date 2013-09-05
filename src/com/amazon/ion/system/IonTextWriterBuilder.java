@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -15,36 +15,46 @@ import java.nio.charset.Charset;
 /**
  * The builder for creating {@link IonWriter}s emitting the Ion text syntax.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * Builders may be configured once and reused to construct multiple
  * objects.
- * Builder instances are <em>not</em> thread-safe unless they are
- * {@linkplain #immutable() immutable}.
+ * <p>
+ * <b>Instances of this class are not not safe for use by multiple threads
+ * unless they are {@linkplain #immutable() immutable}.</b>
  * <p>
  * The most general and correct approach is to use the {@link #standard()}
  * builder:
- * <pre>
- *  IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
+ *<pre>
+ *    IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
  *</pre>
  * The standard configuration gives a direct representation of what's written,
  * including version markers and local symbol tables. That's good for
  * diagnostics but it may be more than you want in many situations.
  * In such cases the {@link #minimal()} or {@link #pretty()} builders (or a
  * combination) may give more satisfying output:
- * <pre>
- *  IonWriter w = IonTextWriterBuilder.minimal()
- *                                    .withPrettyPrinting()
- *                                    .build(outputStream);
+ *<pre>
+ *    IonWriter w = IonTextWriterBuilder.minimal()
+ *                                      .withPrettyPrinting()
+ *                                      .build(outputStream);
  *</pre>
  *
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
  * friendly to dependency injection systems.  They also provide alternative
  * {@code with...()} mutation methods that enable a more fluid style.
+ *
+ * <h2>Auto-flushing</h2>
+ *
+ * {@link IonWriter}s created by this builder <em>auto-flush</em> to the
+ * underlying data sink after writing each top-level value in the context of
+ * the writer.
  * <p>
- * <b>
- * This class is not intended to be used as an application extension point;
- * do not extend or implement it.
- * </b>
+ * Currently, there is no configuration point available to disable the
+ * auto-flushing mechanism. Please vote on
+ * <a href="https://jira2.amazon.com/browse/ION-361">JIRA issue ION-361</a>
+ * if you require it.
  *
  * @since IonJava R15
  */
@@ -76,7 +86,7 @@ public abstract class IonTextWriterBuilder
          * If {@link com.amazon.ion.system.IonWriterBuilder.IvmMinimizing}
          * is also in effect, then even that IVM may be suppressed.
          *
-         * @see IonTextWriterBuilder#setIvmMinimizing(IvmMinimizing)
+         * @see IonTextWriterBuilder#setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
          */
         EVERYTHING
     }
@@ -166,7 +176,7 @@ public abstract class IonTextWriterBuilder
     private IvmMinimizing myIvmMinimizing;
     private LstMinimizing myLstMinimizing;
     private SymbolTable[] myImports;
-    private int _long_string_threshold;
+    private int myLongStringThreshold;
 
 
     /** NOT FOR APPLICATION USE! */
@@ -183,7 +193,7 @@ public abstract class IonTextWriterBuilder
         this.myIvmMinimizing        = that.myIvmMinimizing;
         this.myLstMinimizing        = that.myLstMinimizing;
         this.myImports              = that.myImports;
-        this._long_string_threshold = that._long_string_threshold;
+        this.myLongStringThreshold  = that.myLongStringThreshold;
     }
 
     //=========================================================================
@@ -653,7 +663,7 @@ public abstract class IonTextWriterBuilder
      */
     public final int getLongStringThreshold()
     {
-        return _long_string_threshold;
+        return myLongStringThreshold;
     }
 
     /**
@@ -670,7 +680,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setLongStringThreshold(int threshold)
     {
-        _long_string_threshold = threshold;
+        myLongStringThreshold = threshold;
     }
 
     /**

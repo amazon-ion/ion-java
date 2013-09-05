@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2008 Amazon.com, Inc.  All rights reserved. */
+/* Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. */
 
 package com.amazon.ion;
 
@@ -6,6 +6,9 @@ package com.amazon.ion;
 
 /**
  * An Ion <code>bool</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonBool
     extends IonValue
@@ -35,6 +38,6 @@ public interface IonBool
      */
     public void setValue(Boolean b);
 
-
-    public IonBool clone();
+    public IonBool clone()
+        throws UnknownSymbolException;
 }

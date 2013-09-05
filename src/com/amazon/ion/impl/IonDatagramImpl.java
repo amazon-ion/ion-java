@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -62,9 +62,9 @@ final class IonDatagramImpl
     //=========================================================================
 
     /**
-     * Creates a datagram wrapping bytes containing Ion text or binary data.
+     * Creates a datagram wrapping bytes containing Ion binary data.
      *
-     * @param ionData may be either Ion binary data, or UTF-8 Ion text.
+     * @param ionData must be Ion binary data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
@@ -74,7 +74,7 @@ final class IonDatagramImpl
     public IonDatagramImpl(IonSystemImpl system, IonCatalog catalog,
                            byte[] ionData)
     {
-        this(system, system.newLegacySystemIterator(catalog, ionData));
+        this(system, system.newBinarySystemIterator(catalog, ionData));
     }
 
 
@@ -85,12 +85,6 @@ final class IonDatagramImpl
         return new IonDatagramImpl(this._system, _catalog, data);
     }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
     public int hashCode() {
         return sequenceHashCode(HASH_SIGNATURE);
@@ -187,6 +181,7 @@ final class IonDatagramImpl
 
         if (ionData != null)  // FIXME refactor, we don't throw in this case
         {
+            // TODO why not use system.newValue(reader) ?  Seems more direct.
             IonWriter treeWriter = system.newTreeSystemWriter(this);
 
             treeWriter.writeValues(ionData);
@@ -543,16 +538,6 @@ final class IonDatagramImpl
     public String getFieldName()
     {
         return null;
-    }
-
-
-    /**
-     * @return an empty array.
-     */
-    @Override
-    public String[] getTypeAnnotationStrings()
-    {
-        return EMPTY_STRING_ARRAY;
     }
 
 

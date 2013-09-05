@@ -1,11 +1,37 @@
 #!/bin/sh
 
+function printDep()
+{
+    local package=$1
+    local arg=$2
+
+    brazil vs -printDependencies \
+        -package "$package"      \
+        -consumers               \
+        -versionSet live         \
+        $arg                     \
+    | grep "Total dependencies"
+}
+
+function count()
+{
+    local package=$1
+
+    echo "$package"
+
+    local direct=$(printDep "$package" --direct)
+    echo "Direct     $direct" 
+
+    local trans=$(printDep "$package")
+    echo "Transitive $trans"
+}
+
+
 date
 
-echo "DIRECT"
-brazil vs -printDependencies --direct -package IonJava-1.0 -consumers -versionSet live \
-    | grep "Total dependencies"
-
-echo "TRANSITIVE"
-brazil vs -printDependencies -package IonJava-1.0 -consumers -versionSet live \
-    | grep "Total dependencies"
+echo
+count IonJava-1.0
+echo
+count IonPathJava-1.0
+echo
+count IonCpp-1.2

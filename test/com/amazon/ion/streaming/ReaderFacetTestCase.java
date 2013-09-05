@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -22,6 +22,8 @@ public abstract class ReaderFacetTestCase
 {
     /**
      * These readers don't support the {@link SpanProvider} facet.
+     *
+     * @see NonSpanReaderTest
      */
     public static final ReaderMaker[] NON_SPAN_READERS =
     {
@@ -41,9 +43,16 @@ public abstract class ReaderFacetTestCase
 
     /**
      * These readers don't support the {@link SeekableReader} facet.
+     *
+     * @see NonSeekableReaderTest
      */
-    public static final ReaderMaker[] NON_SEEKABLE_READERS =
-        ReaderMaker.valuesWith(ReaderMaker.Feature.STREAM); // TODO ION-243
+    public static final ReaderMaker[] NON_SEEKABLE_READERS =  // TODO ION-243
+    {
+        ReaderMaker.FROM_INPUT_STREAM_BINARY,
+        ReaderMaker.FROM_INPUT_STREAM_TEXT,
+        ReaderMaker.FROM_READER
+    };
+
 
 
     protected SpanProvider sp;

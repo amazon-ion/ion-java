@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -8,6 +8,9 @@ import com.amazon.ion.util.Spans;
 /**
  * Exposes the positions of a {@link Span} in the form of <em>one-based</em>
  * line and column numbers within the source text stream.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * As with all spans, positions lie <em>between</em> values, and when the start
  * and finish positions are equal, the span is said to be <em>empty</em>.

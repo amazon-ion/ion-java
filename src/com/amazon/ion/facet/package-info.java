@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 /**
  * A design pattern for optional extension interfaces, in a manner more
@@ -60,6 +60,6 @@
  * This is an adaptation of the Extension Objects pattern as written by
  * Erich Gamma.  It was primarily inspired by ISO C++ {@code locale} facets.
  *
- * @since R13
+ * @since IonJava R13
  */
 package com.amazon.ion.facet;

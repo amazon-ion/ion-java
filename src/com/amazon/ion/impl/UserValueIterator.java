@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class UserValueIterator
+class UserValueIterator
     implements Iterator<IonValue>
 {
     /** if true we reset the system reader for each user value */
