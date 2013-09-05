@@ -4,6 +4,9 @@ package com.amazon.ion;
 
 /**
  * Constants for symbols defined by the Ion specification.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  *
  * @since IonJava R13
  */

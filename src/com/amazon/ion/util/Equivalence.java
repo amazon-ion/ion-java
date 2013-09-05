@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -31,20 +31,20 @@ import java.util.Set;
  * the contract of {@link IonValue#equals(Object)}.
  *
  * <p>
- * Basic usage of this class is as follows.
+ * Basic usage of this class is as follows:
  *
  * <pre>
- *   IonValue v1 = ...;
- *   IonValue v2 = ...;
- *   com.amazon.ion.util.Equivalence.ionEquals( v1, v2 );
+ *    IonValue v1 = ...;
+ *    IonValue v2 = ...;
+ *    com.amazon.ion.util.Equivalence.ionEquals( v1, v2 );
  * </pre>
  *
  * More likely, a static import would make using this class easier.
  *
  * <pre>
- *   import static com.amazon.authority.ion.Equivalence.ionEquals;
- *   ...
- *   boolean equivalent = ionEquals( v1, v2 );
+ *    import static com.amazon.ion.util.Equivalence.ionEquals;
+ *    ...
+ *    boolean equivalent = ionEquals( v1, v2 );
  * </pre>
  *
  * </p>
@@ -53,17 +53,22 @@ import java.util.Set;
  * <h3>Ion Equivalence</h3>
  * In order to make Ion a useful model to describe data, we must first define
  * the notion of equivalence for all values representable in Ion. Equivalence
- * with respect to Ion values mean that if two Ion values, X and Y, are
+ * with respect to Ion values means that if two Ion values, X and Y, are
  * equivalent, they represent the same data and can be substituted for the other
  * without loss of information.
  *
  * This relationship is:
  * <ul>
- * <li> symmetric: X is equivalent to Y if and only if Y is equivalent to X.
- * </li>
- * <li> transitive: if X is equivalent to Y and Y is equivalent to Z, then X is
- * equivalent to Z. </li>
- * <li> reflexive: X is equivalent to X. </li>
+ *   <li>
+ *     symmetric: X is equivalent to Y if and only if Y is equivalent to X.
+ *   </li>
+ *   <li>
+ *     transitive: if X is equivalent to Y and Y is equivalent to Z, then X is
+ *     equivalent to Z.
+ *   </li>
+ *   <li>
+ *     reflexive: X is equivalent to X.
+ *   </li>
  * </ul>
  *
  * <h4>Ordered Sequence Equivalence</h4>
@@ -88,7 +93,7 @@ import java.util.Set;
  * (A, V), where A is an ordered list of annotations, and V is an Ion Primitive
  * Data or Ion Complex Data value. The list of annotations, A is an tuple of Ion
  * Symbols (a specific type of Ion Primitive).
- * </p>
+ * <p>
  *
  * @author Almann Goo
  */
@@ -494,7 +499,7 @@ public final class Equivalence {
     }
 
     /**
-     * Defines strict data equivalence over two Ion Values.
+     * Checks for strict data equivalence over two Ion Values.
      *
      * @param v1
      *            The first Ion value to compare.
@@ -510,7 +515,7 @@ public final class Equivalence {
     }
 
     /**
-     * Defines structural data equivalence over two Ion Values. That is,
+     * Checks for structural data equivalence over two Ion Values. That is,
      * equivalence without considering any annotations.
      *
      * @param v1

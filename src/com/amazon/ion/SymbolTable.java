@@ -9,6 +9,9 @@ import java.util.Iterator;
  * A symbol table maps symbols between their textual form and an integer ID
  * used in the binary encoding.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * Implementations of this interface must be safe for use by multiple threads.
  * <p>
  * There are two kinds of symbol tables: shared and local. With that, there are
@@ -24,9 +27,6 @@ import java.util.Iterator;
  * shared symtab from the catalog. The substitute table in turns exposes the
  * correct name, version and max_id for any callers that require it, and
  * becomes a delegate of the substituted symtab's interface.
- * <p>
- * <b>WARNING:</b> This interface should not be implemented or extended by
- * code outside of this library.
  */
 public interface SymbolTable
 {

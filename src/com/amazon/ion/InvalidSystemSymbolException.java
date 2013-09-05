@@ -1,12 +1,13 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion;
 
 
 /**
- * Signals use of an invalid symbol starting with <code>"$ion_"</code>.
+ * An error caused by use of an invalid symbol starting with
+ * <code>"$ion_"</code>.
  */
 public class InvalidSystemSymbolException
     extends IonException

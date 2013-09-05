@@ -6,6 +6,9 @@ package com.amazon.ion;
 /**
  * Base type for all Ion data nodes.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * The {@code IonValue} hierarchy presents a "tree view" of Ion data;
  * every node in the tree is an instance of this class.  Since the Ion
  * type system is highly orthogonal, most operations use this
@@ -36,7 +39,7 @@ package com.amazon.ion;
  * <ul>
  *   <li>
  *     Use {@code instanceof} to look for a desired interface:
- *<pre>
+ * <pre>
  *    if (v instanceof IonString)
  *    {
  *        useString((IonString) v);
@@ -46,23 +49,23 @@ package com.amazon.ion;
  *        useStruct((IonStruct) v);
  *    }
  *    // ...
- *</pre>
+ * </pre>
  *   </li>
  *   <li>
  *     Call {@link #getType()} and then {@code switch} over the resulting
  *     {@link IonType}:
- *<pre>
+ * <pre>
  *    switch (v.getType())
  *    {
  *        case IonType.STRING: useString((IonString) v); break;
  *        case IonType.STRUCT: useStruct((IonStruct) v); break;
  *        // ...
  *    }
- *</pre>
+ * </pre>
  *   </li>
  *   <li>
  *     Implement {@link ValueVisitor} and call {@link #accept(ValueVisitor)}:
- *<pre>
+ * <pre>
  *    public class MyVisitor
  *        extends AbstractValueVisitor
  *    {
@@ -75,8 +78,8 @@ package com.amazon.ion;
  *            useStruct(v);
  *        }
  *        // ...
- *    }
- *</pre>
+ *     }
+ * </pre>
  *   </li>
  * </ul>
  * Use the most appropriate mechanism for your algorithm, depending upon how
@@ -110,7 +113,7 @@ public interface IonValue
 
 
     /**
-     * Determines whether this in an Ion null-value, <em>e.g.</em>,
+     * Determines whether this in an Ion null value, <em>e.g.</em>,
      * <code>null</code> or <code>null.string</code>.
      * Note that there are unique null values for each Ion type.
      *
@@ -168,7 +171,7 @@ public interface IonValue
      * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();

@@ -8,6 +8,9 @@ import java.util.Iterator;
 /**
  * Common functionality of Ion <code>struct</code>, <code>list</code>, and
  * <code>sexp</code> types.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonContainer
     extends IonValue, Iterable<IonValue>
@@ -37,8 +40,8 @@ public interface IonContainer
 
     /**
      * Removes the given element from this container.
-     * If this is a null value (that is, {@link #isNullValue()}), then this
-     * method returns {@code false}.
+     * If this is a Ion null value (that is,
+     * {@link #isNullValue()}), then this method returns {@code false}.
      * <p>
      * Note that, unlike {@link Collection#remove(Object)}, this method uses
      * object identity, not {@link Object#equals(Object)}, to find the element.

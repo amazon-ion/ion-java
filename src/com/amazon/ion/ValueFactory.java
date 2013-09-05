@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,10 +9,8 @@ import java.util.Collection;
 /**
  * The factory for all {@link IonValue}s.
  * <p>
- * <b>
- * This interface changes frequently and is not intended to be used as an
- * application extension point; do not extend or implement it.
- * </b>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface ValueFactory
 {
@@ -254,8 +252,9 @@ public interface ValueFactory
      * @throws IllegalArgumentException
      *   if any value in {@code values} is an {@link IonDatagram}.
      *
-     * @deprecated This method can be invoked (accidentally and incorrectly)
-     *  with an {@link IonSequence}!  Use either {@link #newList(IonValue...)}
+     * @deprecated Since IonJava R10. This method can be invoked
+     *  (accidentally and incorrectly) with an {@link IonSequence}!
+     *  Use either {@link #newList(IonValue...)}
      *  or {@link #newList(IonValue...) newList()}{@link
      *  IonSequence#addAll(Collection) .addAll(Collection)}.
      */
@@ -387,8 +386,9 @@ public interface ValueFactory
      * @throws IllegalArgumentException
      *   if any value in {@code values} is an {@link IonDatagram}.
      *
-     * @deprecated This method can be invoked (accidentally and incorrectly)
-     *  with an {@link IonSequence}!  Use either {@link #newSexp(IonValue...)}
+     * @deprecated Since IonJava R10. This method can be invoked
+     *  (accidentally and incorrectly) with an {@link IonSequence}!
+     *  Use either {@link #newSexp(IonValue...)}
      *  or {@link #newSexp(IonValue...) newSexp()}{@link
      *  IonSequence#addAll(Collection) .addAll(Collection)}.
      */

@@ -1,3 +1,5 @@
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion;
 
 /**

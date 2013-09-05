@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -7,11 +7,14 @@ package com.amazon.ion;
  * ion numeric value types.  Currently only IonDecimal extends this
  * interface. In due course IonFloat and IonInt will be added to the
  * the family.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  *
  * @author csuver
  *
  */
-public interface IonNumber
+public interface IonNumber // TODO ION-95 Complete this interface
     extends IonValue
 {
 }

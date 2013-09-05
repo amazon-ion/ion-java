@@ -5,6 +5,9 @@ package com.amazon.ion;
 /**
  * Common functionality of Ion <code>string</code> and <code>symbol</code>
  * types.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonText
     extends IonValue

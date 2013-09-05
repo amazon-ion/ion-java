@@ -1,4 +1,4 @@
-// Copyright (c) 2009 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -10,7 +10,10 @@ import java.math.MathContext;
  * An extension of {@link BigDecimal} that can represent negative zeros.
  * The primary change is the addition of {@link #isNegativeZero()}.
  * <p>
- * <b>WARNING:</b> This class currently does not have any behavioral difference
+ * <b>WARNING:</b> This class should not be extended by code outside of
+ * this library.
+ * <p>
+ * This class currently does not have any behavioral difference
  * from {@link BigDecimal} except for the following:
  * <ul>
  *   <li>{@link #toString()}, {@link #toEngineeringString()}, and

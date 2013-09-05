@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -8,8 +8,8 @@ import java.io.OutputStream;
 /**
  * An {@link IonWriter} that encodes Ion binary data.
  *
- * @deprecated As of R10, use
- * {@link IonSystem#newBinaryWriter(OutputStream, SymbolTable...)}.
+ * @deprecated Since IonJava R10. Use
+ * {@link IonSystem#newBinaryWriter(OutputStream, SymbolTable...)} instead.
  */
 @Deprecated
 public interface IonBinaryWriter
@@ -22,6 +22,8 @@ public interface IonBinaryWriter
      * {@link #getBytes(byte[], int, int)}.
      *
      * @return the size in bytes.
+     *
+     * @deprecated Since IonJava R10.
      */
     @Deprecated
     public int byteSize();
@@ -34,6 +36,8 @@ public interface IonBinaryWriter
      *
      * @return the byte array with the writers output
      * @throws IOException
+     *
+     * @deprecated Since IonJava R10.
      */
     @Deprecated
     public byte[] getBytes()
@@ -52,6 +56,8 @@ public interface IonBinaryWriter
      * @param maxlen maximum number of bytes to write
      * @return number of bytes written
      * @throws IOException
+     *
+     * @deprecated Since IonJava R10.
      */
     @Deprecated
     public int getBytes(byte[] bytes, int offset, int maxlen)
@@ -65,6 +71,8 @@ public interface IonBinaryWriter
      * @param userstream OutputStream to write the bytes to
      * @return int length of bytes written
      * @throws IOException
+     *
+     * @deprecated Since IonJava R10.
      */
     @Deprecated
     public int writeBytes(OutputStream userstream)

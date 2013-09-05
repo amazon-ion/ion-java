@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -6,15 +6,16 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 
 /**
- * The bootstrap factory to create an application's {@link IonSystem}.
- * See the documentation of that class for important constraints.
+ * The factory for creating {@link IonSystem}s.
+ * Most applications will only have one or two system instances;
+ * see {@link IonSystem} for important constraints.
  * <p>
  * Most long-lived applications will want to provide a custom
  * {@link IonCatalog} implementation rather than using the default
  * {@link SimpleCatalog}.
  *
- * @deprecated As of release R10, this class is replaced by
- * {@link IonSystemBuilder}.
+ * @deprecated Since IonJava R10. Use the more configurable
+ * {@link IonSystemBuilder} instead.
  */
 @Deprecated
 public final class SystemFactory
@@ -28,9 +29,8 @@ public final class SystemFactory
      *
      * @return a new {@link IonSystem} instance; not null.
      *
-     * @deprecated Use the more configurable {@link IonSystemBuilder} instead.
-     * You can use your IDE to inline this method with the equivalent code:
-     * <pre>IonSystemBuilder.standard().build()</pre>
+     * @deprecated Since IonJava R10. Use
+     * {@link IonSystemBuilder IonSystemBuilder.standard().build()} instead.
      */
     @Deprecated
     public static IonSystem newSystem()
@@ -45,9 +45,8 @@ public final class SystemFactory
      *   If null, a new {@link SimpleCatalog} will be used.
      * @return a new {@link IonSystem} instance; not null.
      *
-     * @deprecated Use the more configurable {@link IonSystemBuilder} instead.
-     * You can use your IDE to inline this method with the equivalent code:
-     * <pre>IonSystemBuilder.standard().withCatalog(catalog).build()</pre>
+     * @deprecated Since IonJava R10. Use
+     * {@link IonSystemBuilder IonSystemBuilder.standard().withCatalog(catalog).build()} instead.
      */
     @Deprecated
     public static IonSystem newSystem(IonCatalog catalog)

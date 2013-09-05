@@ -68,7 +68,7 @@ public interface IonLoader
 
     /**
      * Loads a stream of Ion text into a single datagram.
-     * <p/>
+     * <p>
      * The specified reader remains open after this method returns.
      * <p>
      * Because this library performs its own buffering, it's recommended that

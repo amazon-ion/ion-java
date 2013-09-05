@@ -3,7 +3,10 @@
 package com.amazon.ion;
 
 /**
- * The Ion <code>null</code> value, a.k.a. <code>null.null</code>.
+ * The Ion <code>null</code> value, also known as <code>null.null</code>.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * Because this value is always null, there's no interesting functionality
  * beyond what's defined by {@link IonValue}.

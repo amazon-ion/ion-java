@@ -14,11 +14,14 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 
 /**
- * An <b>immutable</b> representation of time. Ion defines a simple
+ * An <em>immutable</em> representation of time. Ion defines a simple
  * representation of date and time that is in Coordinated Universal Time (UTC).
  * In reality the practical use of time could be more accurately described of
  * UTC-SLS (UTC Smoothed Leap Seconds) as there is no representation for the
  * 24 (as of February 2009) leap second discontinuities that UTC has added.
+ * <p>
+ * <b>WARNING:</b> This class should not be extended by code outside of
+ * this library.
  * <p>
  * This implementation preserves the "signficant digits" of the value.  The
  * precision defines which fields have been included.  Only common break
@@ -585,7 +588,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated Since IonJava R17, with no direct replacement.
      */
     @Deprecated
     public static Timestamp
@@ -1003,6 +1006,13 @@ public final class Timestamp
         }
     }
 
+    /**
+     * Creates a copy of this Timestamp. The resulting Timestamp will
+     * represent the same point in time and has the same precision and local
+     * offset.
+     * <p>
+     * {@inheritDoc}
+     */
     @Override
     public Timestamp clone()
     {
@@ -1061,6 +1071,8 @@ public final class Timestamp
      * Returns a Timestamp, precise to the day, with unknown local offset.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
+     *
+     * @since IonJava R17
      */
     public static Timestamp forDay(int yearZ, int monthZ, int dayZ)
     {
@@ -1079,6 +1091,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @since IonJava R17
      */
     public static Timestamp forMinute(int year, int month, int day,
                                       int hour, int minute,
@@ -1098,6 +1112,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @since IonJava R17
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, int second,
@@ -1120,6 +1136,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @since IonJava R17
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, BigDecimal second,
@@ -1148,6 +1166,8 @@ public final class Timestamp
      * @param localOffset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
+     *
+     * @since IonJava R17
      */
     public static Timestamp forMillis(long millis, Integer localOffset)
     {
@@ -1186,6 +1206,8 @@ public final class Timestamp
      *          may be {@code null} to represent an unknown local offset
      *
      * @throws NullPointerException if {@code millis} is {@code null}
+     *
+     * @since IonJava R17
      */
     public static Timestamp forMillis(BigDecimal millis, Integer localOffset)
     {
@@ -1199,6 +1221,8 @@ public final class Timestamp
      *
      * @return a Timestamp instance, precise to the millisecond;
      *   or {@code null} if {@code calendar} is {@code null}
+     *
+     * @since IonJava R17
      */
     public static Timestamp forCalendar(Calendar calendar)
     {
@@ -1889,6 +1913,11 @@ public final class Timestamp
         out.append(temp);
     }
 
+    /**
+     * Returns a hash code consistent with {@link #equals(Object)}.
+     * <p>
+     * {@inheritDoc}
+     */
     @Override
     public int hashCode()
     {

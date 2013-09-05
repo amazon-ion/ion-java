@@ -6,9 +6,8 @@ package com.amazon.ion.system;
 /**
  * Common options for writing Ion data streams of any form.
  * <p>
- * <b>
- * This class is not intended to be used as an application extension point;
- * do not extend or implement it.
+ * <b>WARNING:</b> This class should not be extended by code outside of
+ * this library.
  * </b>
  *
  * @since IonJava R15

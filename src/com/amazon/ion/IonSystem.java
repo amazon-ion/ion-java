@@ -13,11 +13,14 @@ import java.util.Iterator;
 /**
  * Entry point to all things Ion.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * In general, instances returned from one system are not interchangable with
  * those returned by other systems.
  * The intended usage pattern is for an application to construct a single
  * <code>IonSystem</code> instance and use it throughout,
- * rather than constructing multiples and intermingling their use.
+ * rather than constructing multiple systems and intermingling their use.
  * To create a copy of a value for use by a different system, use
  * {@link #clone(IonValue)}.
  * <p>
@@ -524,7 +527,8 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      *
-     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
+     * @deprecated Since IonJava R10. Use
+     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
      */
     @Deprecated
     public IonBinaryWriter newBinaryWriter();
@@ -540,7 +544,8 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      *
-     * @deprecated Use {@link #newBinaryWriter(OutputStream, SymbolTable...)}.
+     * @deprecated Since IonJava R10. Use
+     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
      */
     @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
@@ -592,6 +597,7 @@ public interface IonSystem
      *
      * @see #newLocalSymbolTable(SymbolTable...)
      */
+    @SuppressWarnings("javadoc")
     public IonDatagram newDatagram(SymbolTable... imports);
 
 
