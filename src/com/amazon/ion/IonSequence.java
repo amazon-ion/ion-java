@@ -46,7 +46,7 @@ public interface IonSequence
      *
      * @param index identifies the element to return.
      * @return the element at the given index; not <code>null</code>.
-     * @throws NullValueException if <code>this.isNullValue()</code>.
+     * @throws NullValueException if {@link #isNullValue()}.
      * @throws IndexOutOfBoundsException if the index is out of range
      * (<code>index < 0 || index >= size()</code>).
      */
@@ -56,7 +56,7 @@ public interface IonSequence
 
     /**
      * Appends a child value to the end of this sequence.
-     * If <code>this.isNullValue()</code>, then it becomes a single-element
+     * If {@link #isNullValue()}, then it becomes a single-element
      * sequence.
      *
      * @param child is the value to be appended to this sequence.
@@ -89,7 +89,7 @@ public interface IonSequence
 
     /**
      * Inserts a child value at the specified position in this sequence.
-     * If <code>this.isNullValue()</code>, then it becomes a single-element
+     * If {@link #isNullValue()}, then it becomes a single-element
      * sequence.
      *
      * @param child is the element to be appended to this sequence.
@@ -152,7 +152,7 @@ public interface IonSequence
      * Shifts any subsequent elements to the left (subtracts one from their
      * indices). Returns the element that was removed from the list.
      *
-     * @param index the index of the elment to be removed.
+     * @param index the index of the element to be removed.
      *
      * @return the element previously at the specified position.
      *
@@ -397,8 +397,8 @@ public interface IonSequence
      * proper order. Obeys the general contract of the
      * {@link Collection#toArray()} method.
      * <p>
-     * If this sequence is an {@link #isNullValue() Ion null value}, it will
-     * behave like an empty sequence.
+     * If this sequence is an {@linkplain #isNullValue() Ion null value}, it
+     * will behave like an empty sequence.
      *
      * @return an array containing all of the elements in this sequence in
      *         proper order.
@@ -412,8 +412,8 @@ public interface IonSequence
      * specified array. Obeys the general contract of the
      * {@link Collection#toArray()} method.
      * <p>
-     * If this sequence is an {@link #isNullValue() Ion null value}, it will
-     * behave like an empty sequence.
+     * If this sequence is an {@linkplain #isNullValue() Ion null value}, it
+     * will behave like an empty sequence.
      *
      * @param a the array into which the elements of this sequence are to be
      *        stored, if it is big enough; otherwise, a new array of the same

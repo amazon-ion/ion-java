@@ -25,10 +25,10 @@ public interface IonContainer
 
     /**
      * Creates an iterator providing the (direct) elements of this container.
-     * If this is a null value (that is, {@link #isNullValue()}), then this
+     * If this is an {@linkplain #isNullValue() Ion null value}, then this
      * method returns an empty iterator.
      * <p>
-     * Note that iteraton over a {@link IonStruct} has unspecified ordering,
+     * Note that iteration over a {@link IonStruct} has unspecified ordering,
      * while iteration over an {@link IonSequence} ({@link IonList} or
      * {@link IonSexp}) must return elements
      * in order of their appearance in the Ion representation.
@@ -40,8 +40,8 @@ public interface IonContainer
 
     /**
      * Removes the given element from this container.
-     * If this is a Ion null value (that is,
-     * {@link #isNullValue()}), then this method returns {@code false}.
+     * If this is an {@linkplain #isNullValue() Ion null value}, then this
+     * method returns {@code false}.
      * <p>
      * Note that, unlike {@link Collection#remove(Object)}, this method uses
      * object identity, not {@link Object#equals(Object)}, to find the element.
