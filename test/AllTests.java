@@ -50,6 +50,7 @@ import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
+import com.amazon.ion.impl.lite.IonContextTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
 import com.amazon.ion.streaming.GoodIonStreamingTest;
@@ -127,6 +128,7 @@ import org.junit.runners.Suite;
     SymbolTableTest.class,
     SharedSymbolTableTest.class,
     LocalSymbolTableTest.class,
+    IonContextTest.class,
 
     // Equality tests
     EquivalenceTest.class,

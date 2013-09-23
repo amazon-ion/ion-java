@@ -426,7 +426,28 @@ abstract class IonValueLite
     {
         getContext().clearLocalSymbolTable();
 
-        // TODO ION-320 shouldn't we clear sids in field name and annotations?
+        if (_fieldName != null)
+        {
+            _fieldId = UNKNOWN_SYMBOL_ID;
+        }
+
+        if (_annotations != null)
+        {
+            for (int i = 0; i < _annotations.length; i++)
+            {
+                SymbolToken annotation = _annotations[i];
+
+                // _annotations may have nulls at the end.
+                if (annotation == null) break;
+
+                String text = annotation.getText();
+                if (text != null && annotation.getSid() != UNKNOWN_SYMBOL_ID)
+                {
+                    _annotations[i] =
+                        newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+                }
+            }
+        }
     }
 
     /** Attempts to intern the given symbol */
@@ -586,12 +607,26 @@ abstract class IonValueLite
             return SymbolToken.EMPTY_ARRAY;
         }
 
-        // if there are we allocate a user array and
-        // copy the references into it. Note that our
-        // count above lets us use arraycopy
         SymbolToken[] users_copy = new SymbolToken[count];
-        // TODO should try to fill in sids
-        System.arraycopy(_annotations, 0, users_copy, 0, count);
+        for (int i = 0; i < count; i++)
+        {
+            SymbolToken token = _annotations[i];
+            String text = token.getText();
+            if (text != null && token.getSid() == UNKNOWN_SYMBOL_ID)
+            {
+                // TODO ION-320 We should memoize the result of symtab lookups
+                // into _annotations.
+                // See getFieldNameSymbol() for challenges doing so.
+
+                SymbolToken interned = getSymbolTable().find(text);
+                if (interned != null)
+                {
+                    token = interned;
+                }
+            }
+
+            users_copy[i] = token;
+        }
         return users_copy;
     }
 

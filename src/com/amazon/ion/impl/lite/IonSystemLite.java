@@ -2,12 +2,14 @@
 
 package com.amazon.ion.impl.lite;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
+import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.impl._Private_Utils.systemSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -384,16 +386,37 @@ final class IonSystemLite
             default: throw new IonException("unexpected type encountered reading value: "+t.toString());
             }
         }
+
+        // Forget any incoming SIDs on field names.
         if (reader.isInStruct()) {
-            SymbolToken sym = reader.getFieldNameSymbol();
-            v.setFieldNameSymbol(sym);
+            SymbolToken token = reader.getFieldNameSymbol();
+            String text = token.getText();
+            if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
+            {
+                token = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+            }
+            v.setFieldNameSymbol(token);
             symbol_is_present = true;
         }
-        SymbolToken[] uta = reader.getTypeAnnotationSymbols();
-        if (uta.length > 0) {
-            v.setTypeAnnotationSymbols(uta);
+
+        // Forget any incoming SIDs on annotations.
+        // This is a fresh array so we can modify it:
+        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
+        if (annotations.length != 0)
+        {
+            for (int i = 0; i < annotations.length; i++)
+            {
+                SymbolToken token = annotations[i];
+                String text = token.getText();
+                if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID )
+                {
+                    annotations[i] = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+                }
+            }
+            v.setTypeAnnotationSymbols(annotations);
             symbol_is_present = true;
         }
+
         if (!reader.isNullValue()) {
             switch (t) {
             case BOOL:
@@ -555,6 +578,10 @@ final class IonSystemLite
     {
         assert child._context == this;
 //        assert container.getSystem() == this : "system mismatch";
+
+        // We must unset the sids within this child as they may not be
+        // correct in the context of the container!
+        child.clearSymbolIDValues();
 
         // The new container becomes the context, we replace ourself.
         child.setContext(container);

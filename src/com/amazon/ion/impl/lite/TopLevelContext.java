@@ -148,6 +148,8 @@ final class TopLevelContext
         assert child._context == this;
         assert _datagram == null;
 
+        child.clearSymbolIDValues();
+
         // HACK: we need to refactor this to make it simpler and take
         //       away the need to check the parent type
 
