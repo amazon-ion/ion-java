@@ -1068,7 +1068,6 @@ public abstract class IonTestCase
     {
         IonValue clone = original.clone();
         IonAssert.assertIonEquals(original, clone);
-        assertEquals(original.toString(), clone.toString());
 
         assertSame("ValueFactory of cloned value should be the same " +
                    "reference as the original's",

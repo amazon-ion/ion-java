@@ -768,11 +768,6 @@ public class StructTest
     {
         IonValue f = s.get("f");
 
-        // TODO ION-273
-        if (getDomType() == DomType.LITE) {
-            assertTrue(f.getFieldId() > 0);
-        }
-
         f.removeFromContainer();
         assertEquals(null, f.getFieldName());
         assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, f.getFieldId());

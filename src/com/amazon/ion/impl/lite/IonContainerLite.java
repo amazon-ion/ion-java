@@ -464,7 +464,6 @@ abstract class IonContainerLite
             IonValueLite child = get_child(ii);
             child.clearSymbolIDValues();
         }
-        return;
     }
 
     public void clearLocalSymbolTable()
