@@ -176,10 +176,10 @@ final class IonDatagramLite
     @Override
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        assert child._context == this;
-
         if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
-            throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
+            String message =
+                "you can only set a symbol table to a system or local table";
+            throw new IllegalArgumentException(message);
         }
 
         TopLevelContext context = _system.allocateConcreteContext(this, child);
@@ -253,9 +253,10 @@ final class IonDatagramLite
         // handled in super.add(): patch_elements_helper(index + 1);
 
         SymbolTable symbols = concrete.getAssignedSymbolTable();
-        if (symbols == null && this._pending_symbol_table != null && this._pending_symbol_table_idx == concrete._elementid())
+        if (symbols == null
+            && _pending_symbol_table != null
+            && _pending_symbol_table_idx == concrete._elementid())
         {
-            assert concrete._context == this;
             setSymbolTableOfChild(_pending_symbol_table, concrete);
         }
 

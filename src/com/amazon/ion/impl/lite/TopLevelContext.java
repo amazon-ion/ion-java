@@ -25,7 +25,7 @@ final class TopLevelContext
     private IonDatagramLite _datagram;
 
     /**
-     * This will be a local symbol table.  It is not valid
+     * This will be a local symbol table, or null.  It is not valid
      * for this to be a shared symbol table since shared
      * symbol tables are only shared.  It will not be a
      * system symbol table as the system object will be
@@ -148,7 +148,7 @@ final class TopLevelContext
         assert child._context == this;
         assert _datagram == null;
 
-        child.clearSymbolIDValues();
+        child.clearSymbolIDValues();  // This sets the child's symtab to null
 
         // HACK: we need to refactor this to make it simpler and take
         //       away the need to check the parent type

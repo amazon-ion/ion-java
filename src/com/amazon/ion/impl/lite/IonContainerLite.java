@@ -754,7 +754,7 @@ abstract class IonContainerLite
 
         assert child._context instanceof TopLevelContext
             || child._context instanceof IonSystemLite;
-
+        // Because the child must not have a container since we are adding it.
         child._context.setContextContainer(this, child);
 
         child._elementid(idx);

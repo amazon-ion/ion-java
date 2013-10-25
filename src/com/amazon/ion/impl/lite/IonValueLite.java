@@ -422,6 +422,10 @@ abstract class IonValueLite
         return symbols;
     }
 
+    /**
+     * Sets this value's symbol table to null, and erases any SIDs here and
+     * recursively.
+     */
     void clearSymbolIDValues()
     {
         getContext().clearLocalSymbolTable();
