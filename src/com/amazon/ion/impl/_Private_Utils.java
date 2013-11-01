@@ -12,6 +12,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -899,6 +900,15 @@ public final class _Private_Utils
         }
 
         return false;
+    }
+
+
+    /**
+     * Determines whether the passed-in data type is a scalar and not a symbol.
+     */
+    public static boolean isNonSymbolScalar(IonType type)
+    {
+        return ! IonType.isContainer(type) && ! type.equals(IonType.SYMBOL);
     }
 
 

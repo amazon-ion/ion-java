@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.printLocalSymtab;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
 import static com.amazon.ion.impl._Private_Utils.symtabExtends;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
@@ -172,15 +173,17 @@ public class OptimizedBinaryWriterTest
 
     /**
      * Checks that the writer's symtab is not an extension of the reader's,
-     * and that optimized write has not taken place.
+     * and that optimized write has taken place depending on whether the
+     * the writer {@link #isStreamCopyOptimized()} and reader's current value
+     * is a non-symbol scalar.
      */
     private void checkWriteValueWithIncompatibleSymtab()
         throws Exception
     {
-        ir.next();
+        IonType type = ir.next();
 
         assertFalse(symtabExtends(iw.getSymbolTable(), ir.getSymbolTable()));
-        checkWriteValue(false);
+        checkWriteValue(isStreamCopyOptimized() && isNonSymbolScalar(type));
     }
 
     /**
