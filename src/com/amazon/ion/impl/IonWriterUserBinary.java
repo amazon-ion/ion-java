@@ -2,6 +2,7 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
 import static com.amazon.ion.impl._Private_Utils.symtabExtends;
 
 import com.amazon.ion.IonCatalog;
@@ -49,10 +50,9 @@ class IonWriterUserBinary
     public void writeValue(IonReader reader)
         throws IOException
     {
-        // TODO check reader state, is it on a value?
-
+        // If reader is not on a value, type is null, and NPE will be thrown
+        // by calls below
         IonType type = reader.getType();
-        // TODO ION-253 Don't bother optimizing trivial scalars (except symbol?)
 
         // See if we can copy bytes directly from the source. This test should
         // only happen at the outermost call, not recursively down the tree.
@@ -62,7 +62,8 @@ class IonWriterUserBinary
         if (myStreamCopyOptimized
             && transfer != null
             && _current_writer instanceof IonWriterSystemBinary
-            && symtabExtends(getSymbolTable(), reader.getSymbolTable()))
+            && (isNonSymbolScalar(type) ||
+                symtabExtends(getSymbolTable(), reader.getSymbolTable())))
         {
             IonWriterSystemBinary systemOut =
                 (IonWriterSystemBinary) _current_writer;

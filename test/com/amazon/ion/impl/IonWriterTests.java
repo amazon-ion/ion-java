@@ -12,6 +12,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     TextWriterTest.class,
     BinaryWriterTest.class,
+    OptimizedBinaryWriterTest.class,
     OldBinaryWriterTest.class,
     ValueWriterTest.class
 })

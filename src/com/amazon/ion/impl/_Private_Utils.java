@@ -12,6 +12,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -856,7 +857,14 @@ public final class _Private_Utils
 
     public static boolean symtabExtends(SymbolTable superset, SymbolTable subset)
     {
+        // NB: system symtab 1.0 is a singleton, hence if both symtabs
+        //     are one this will be true.
         if (superset == subset) return true;
+
+        // TODO ION-253 Currently, system symtab-ness are irrelevant to the
+        //      conditions for copy optimized to be safe.
+        //      However, it will be relevant if multiple versions of system
+        //      symtabs exist (only 1.0 exists for now).
 
         if (superset.isLocalTable() && subset.isLocalTable())
         {
@@ -892,6 +900,15 @@ public final class _Private_Utils
         }
 
         return false;
+    }
+
+
+    /**
+     * Determines whether the passed-in data type is a scalar and not a symbol.
+     */
+    public static boolean isNonSymbolScalar(IonType type)
+    {
+        return ! IonType.isContainer(type) && ! type.equals(IonType.SYMBOL);
     }
 
 

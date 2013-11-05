@@ -60,15 +60,17 @@ final class IonWriterSystemBinary
 
         private final static int DEFAULT_PATCH_COUNT    = 10;
 
-        // first free position in the array
+        /** first free position in the _types/_positions/_lengths arrays */
         int _freePos;
-        // types of the container
+        /** types of the container */
         int[] _types;
-        // positions where values start in buffer
+        /** positions where values start in buffer */
         int[] _positions;
-        // lengths of the values. The high 32bits of this value store the length
-        // of the field name, the low 32bits store the actual value length. We need the
-        // field name length to properly adjust the total @_parent length in @endPatch
+        /**
+         * lengths of the values. The high 32bits of this value store the length
+         * of the field name, the low 32bits store the actual value length. We need the
+         * field name length to properly adjust the total @_parent length in @endPatch
+         */
         long[] _lengths;
         // the parent
         PatchedValues _parent;
@@ -183,7 +185,7 @@ final class IonWriterSystemBinary
             if (_parent != null) {
                 int memberLen = (int)(_lengths[_freePos] >> 32);
                 int valueLen = (int)(_lengths[_freePos] & 0xFFFFFFFF);
-                int totalLen = (int)(memberLen + valueLen);
+                int totalLen = memberLen + valueLen;
                 switch (_types[_freePos]) {
                 case TID_SYMBOL_TABLE_PATCH:
                 case TID_RAW:
@@ -192,10 +194,10 @@ final class IonWriterSystemBinary
                 default:
                     // add the type if it's specified
                     ++totalLen;
-                }
-                // add actual length of @totalLen :)
-                if (valueLen >= _Private_IonConstants.lnIsVarLen) {
-                    totalLen += IonBinary.lenVarUInt(valueLen) ;
+                    // add actual length of @totalLen :)
+                    if (valueLen >= _Private_IonConstants.lnIsVarLen) {
+                        totalLen += IonBinary.lenVarUInt(valueLen);
+                    }
                 }
                 _parent.patchValue(totalLen);
             }

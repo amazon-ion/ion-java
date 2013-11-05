@@ -114,9 +114,8 @@ interface IonContext
     abstract void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child);
 
     /**
-     * clears the reference to any local symbol table.  This is used after
-     * (or during) the clear symbol ID process called when marking a value
-     * as read only.
+     * Clears the reference to any local symbol table.  This is used while
+     * clearing symbol IDs from a tree.
      */
     abstract void clearLocalSymbolTable();
 }

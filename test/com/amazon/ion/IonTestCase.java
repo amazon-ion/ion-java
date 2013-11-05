@@ -110,6 +110,11 @@ public abstract class IonTestCase
         myStreamingMode = mode;
     }
 
+    public boolean isStreamCopyOptimized()
+    {
+        return myStreamCopyOptimized;
+    }
+
     public void setCopySpeed(StreamCopySpeed speed)
     {
         myStreamCopyOptimized = (speed == StreamCopySpeed.COPY_OPTIMIZED);

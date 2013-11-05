@@ -57,7 +57,7 @@ public class IonContextTest
         myOutputContext = outputContext;
     }
 
-    //==========================================================================
+    //=========================================================================
 
     /**
      * Abstracts the various ways that an {@link IonValue} can be created with
@@ -147,31 +147,41 @@ public class IonContextTest
         FRESH_DATAGRAM
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonDatagram dg = system.newDatagram();
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
                 dg.add(value);
             }
         },
         FRESH_DATAGRAM_WITH_IMPORT
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 SymbolTable symtab = CATALOG.getTable(Symtabs.FRED_NAME);
                 IonDatagram dg = system.newDatagram(symtab);
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
                 dg.add(value);
             }
         },
         ENCODED_DATAGRAM
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonDatagram dg = system.newDatagram();
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
+
                 byte[] bytes = dg.getBytes();
 
                 dg = system.getLoader().load(bytes);
@@ -182,11 +192,15 @@ public class IonContextTest
         ENCODED_DATAGRAM_WITH_IMPORT
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 SymbolTable symtab = CATALOG.getTable(Symtabs.FRED_NAME);
                 IonDatagram dg = system.newDatagram(symtab);
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
+
                 byte[] bytes = dg.getBytes();
 
                 dg = system.getLoader().load(bytes);
@@ -197,86 +211,113 @@ public class IonContextTest
         FRESH_STRUCT
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonStruct c = system.newEmptyStruct();
-                c.add("pad").newSymbol("padding");
+                if (usePadding) {
+                    c.add("pad").newSymbol("padding");
+                }
                 c.add("value", value);
             }
         },
         TOP_STRUCT
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonDatagram dg = system.newDatagram();
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
                 IonStruct c = dg.add().newEmptyStruct();
-                c.add("pad").newSymbol("padding");
+                if (usePadding) {
+                    c.add("pad").newSymbol("padding");
+                }
                 c.add("value", value);
             }
         },
         ENCODED_STRUCT
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonDatagram dg = system.newDatagram();
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
                 IonStruct c = dg.add().newEmptyStruct();
-                c.add("pad").newSymbol("padding");
+                if (usePadding) {
+                    c.add("pad").newSymbol("padding");
+                }
                 byte[] bytes = dg.getBytes();
 
                 dg = system.getLoader().load(bytes);
-                c = (IonStruct) dg.get(1);
+                c = (IonStruct) dg.get(usePadding? 1 : 0);
                 c.add("value", value);
             }
         },
         FRESH_LIST
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonList c = system.newEmptyList();
-                c.add().newSymbol("padding");
+                if (usePadding) {
+                    c.add().newSymbol("padding");
+                }
                 c.add(value);
             }
         },
         TOP_LIST
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonDatagram dg = system.newDatagram();
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
                 IonList c = dg.add().newEmptyList();
-                c.add().newSymbol("padding");
+                if (usePadding) {
+                    c.add().newSymbol("padding");
+                }
                 c.add(value);
             }
         },
         ENCODED_LIST
         {
             @Override
-            public void addToContainer(IonSystem system, IonValue value)
+            public void addToContainer(IonSystem system, IonValue value,
+                                       boolean usePadding)
             {
                 IonDatagram dg = system.newDatagram();
-                dg.add().newSymbol("padding");
+                if (usePadding) {
+                    dg.add().newSymbol("padding");
+                }
                 IonList c = dg.add().newEmptyList();
-                c.add().newSymbol("padding");
+                if (usePadding) {
+                    c.add().newSymbol("padding");
+                }
+
                 byte[] bytes = dg.getBytes();
 
                 dg = system.getLoader().load(bytes);
-                c = (IonList) dg.get(1);
+                c = (IonList) dg.get(usePadding ? 1 : 0);
                 c.add(value);
             }
         };
 
         public abstract void
-        addToContainer(IonSystem system, IonValue value);
+        addToContainer(IonSystem system, IonValue value, boolean usePadding);
     }
 
 
-    //==========================================================================
+    //=========================================================================
 
 
     private void checkSymbolToken(String expectedText,
@@ -297,8 +338,7 @@ public class IonContextTest
     }
 
 
-    @Test
-    public void testInsertion()
+    private void testInsertion(boolean usePadding)
         throws Exception
     {
         // String representation of the IonValue (input IonContext) to be added
@@ -309,7 +349,7 @@ public class IonContextTest
         IonStruct struct = (IonStruct)
             getInputContextMaker().newIonValue(system(), ionText);
 
-        getOutputContext().addToContainer(system(), struct);
+        getOutputContext().addToContainer(system(), struct, usePadding);
 
         SymbolTable symtab = struct.getSymbolTable();
 
@@ -327,5 +367,23 @@ public class IonContextTest
         checkSymbolToken("c",      symtab, elt.getFieldNameSymbol());
         checkSymbolToken("ann2",   symtab, elt.getTypeAnnotationSymbols()[0]);
         checkSymbolToken("fred_1", symtab, ((IonSymbol) elt).symbolValue());
+    }
+
+    @Test
+    public void testInsertionWithoutPadding()
+        throws Exception
+    {
+        testInsertion(false);
+    }
+
+    /**
+     * This attempts to force the input and output contexts to have distinct
+     * symbol IDs.
+     */
+    @Test
+    public void testInsertionWithPadding()
+        throws Exception
+    {
+        testInsertion(true);
     }
 }
