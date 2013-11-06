@@ -1,239 +1,103 @@
 <?xml version="1.0"?>
+<!-- Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. -->
 
 <project name="IonJava" basedir="." default="test"
          xmlns:ht="happytrails">
 
-  <import file="${happytrails.root}/happytrails.xml"/>
-  <ht:import file="javadoc.xml"/>
+  <import file="${happytrails.root}/happytrails.xml" />
+  <import file="build-common.xml" />
 
-  <target name="build.properties">
-    <tstamp>
-      <format property="build_time"
-        pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
-    </tstamp>
+  <!-- Define HappierTrails property overrides here -->
+  
+  <!-- Override default of tst/ -->
+  <property name="tests.dir" location="${basedir}/test" />
+  <property name="findbugs.failOnError"   value="false" /> <!-- TODO ION-375 -->
+  <property name="checkstyle.failOnError" value="false" />
+  
+  <!-- Disable Cobertura checks, currently this takes a very long time 
+       TODO ION-374 -->
+  <target name="reports" 
+          depends="checkstyle, findbugs, javadoc" 
+          description="Overriding to exclude cobertura" />
+  <target name="review-reports" 
+          depends="checkstyle, findbugs, javadoc" 
+          description="Overriding to exclude cobertura" />
 
-    <property name="dir.output"  location="${output.dir}/private"/>
-    <property name="dir.src"     location="${basedir}/src"/>
-    <property name="dir.doc"     location="${output.dir}/docs"/>
-    <property name="dir.classes" location="${dir.output}/classes"/>
-    <property name="dir.release" location="${output.dir}/lib"/>
-
-    <property name="dir.test"         location="${basedir}/test"/>
-    <property name="dir.test.src"     location="${dir.test}"/>
-    <property name="dir.test.classes" location="${dir.output}/test"/>
-
-
-    <propertycopy property="dir.IonTests.src" from="bp:{IonTests}pkg.src"/>
-    <property name="dir.test.data"
-              location="${dir.IonTests.src}/iontestdata"/>
-    <property name="dir.test.data.bulk"
-              location="${dir.IonTests.src}/bulk"/>
-
-    <property name="jar.output.src"  location="${dir.release}/${ant.project.name}.jar"/>
-    <property name="jar.output.test" location="${dir.release}/${ant.project.name}-test.jar"/>
-
-    <property name="dir.output.logs" location="${dir.output}/log"/>
-  </target>
-
-  <target name="build.dirs" depends="build.properties">
-    <mkdir dir="${dir.doc}" />
-    <mkdir dir="${dir.classes}" />
-    <mkdir dir="${dir.release}" />
-    <mkdir dir="${dir.output}" />
-    <mkdir dir="${dir.test.classes}" />
-    <mkdir dir="${dir.output.logs}" />
-  </target>
-
+  
+  <ht:import file="happier-trails.xml" />
+  
+  <!-- For more information on how to fill in your build logic using
+       HappierTrails, please read: https://w.amazon.com/?HappierTrails-3.0 -->
 
   <!-- ==================================================================== -->
-
-
-  <target name="build" depends="build.dirs, eclipse-build">
-    <javac srcdir="${dir.src}" debug="on"
-           destdir="${dir.classes}"
-           source="1.5" target="1.5">
-      <classpath>
-        <path path="${bp:direct.classpath}"/>
-      </classpath>
-    </javac>
-
-    <!-- Copy resource files -->
-    <copy todir="${dir.classes}">
-      <fileset dir="${dir.src}">
-        <include name="**/*.properties" />
-      </fileset>
-    </copy>
-
-    <copy-jar-info classes-dir="${dir.classes}"/>
+  <!-- HappierTrails target overrides -->
+  
+  <target name="compile" depends="standard-compile, build.properties"
+          description="Default compile target which compiles source files">
+    
+    <copy-jar-info classes-dir="${classes.dir}" />
   </target>
-
-
-  <target name="jars" depends="build">
-    <jar destfile="${jar.output.src}"
-         basedir="${dir.classes}">
+  
+  <!-- Override the MANIFEST.MF of the built Jar, to set a Main-Class 
+       entry point -->
+  <target name="compile-jar" depends="standard-compile-jar">
+    <jar destfile="${build.jar}" update="true">
       <manifest>
-        <attribute name="Main-Class" value="com.amazon.ion.impl._Private_CommandLine"/>
+        <attribute name="Main-Class" 
+                   value="com.amazon.ion.impl._Private_CommandLine"/>
       </manifest>
     </jar>
   </target>
-
-  <target name="build.test" depends="jars">
-    <javac srcdir="${dir.test.src}"
-           destdir="${dir.test.classes}"
-           debug="true"
-           source="1.5" target="1.5">
-      <classpath>
-        <path path="${bp:testlib.classpath}"/>
-      </classpath>
-    </javac>
-  </target>
-
-  <target name="jars.test" depends="build.test">
-    <jar destfile="${jar.output.test}" basedir="${dir.test.classes}"/>
-  </target>
-
-  <target name="test" depends="jars.test"
-      description="Run unit tests">
-    <property name="teardown" value="true"/>
-    <property name="testcaseOverride" value="()"/>
-    <property name="domain" value="test"/>
-    <property name="loglevel" value="DEBUG"/>
-    <property name="suite" value="AllTests"/>
-    <mkdir dir="${unit.test.dir}" />
-
-    <junit printsummary="false"
-           haltonfailure="false" haltonerror="false"
-           failureproperty="test.failure"
-           dir="${basedir}"
-           fork="true"
-           includeantruntime="false">
-      <batchtest todir="${unit.test.dir}">
-        <fileset dir="${dir.test.classes}">
-          <include name="**/*Test.class"/>
-        </fileset>
-      </batchtest>
-
-      <!-- JUnit task adds the minimum Ant libs to make things work. -->
-      <classpath>
-        <path path="${bp:testrun.classpath}"/>
-        <path path="${bp:tool.classpath}"/><!-- for Ant's JUnitTestRunner -->
-        <pathelement location="${jar.output.test}"/>
-      </classpath>
-
-      <sysproperty key="java.library.path" value="${java.libraryPath.test}" />
-      <sysproperty key="com.amazon.iontests.iontestdata.path"
-                   value="${dir.test.data}"/>
-      <sysproperty key="com.amazon.iontests.bulk.path"
-                   value="${dir.test.data.bulk}"/>
-
-      <assertions enableSystemAssertions="true">
-        <!--
-          This syntax gives no easy way to turn assertions on/off by property
-          -->
-        <enable />
-      </assertions>
-
-      <!-- Log messages to the console. -->
-      <formatter type="brief" usefile="false" />
-
-      <!-- Long logs to file. -->
-      <formatter type="xml" />
-    </junit>
-
-    <junitreport todir="${unit.test.dir}" tofile="BRAZIL-UNIT-TESTS.xml">
-      <fileset dir="${unit.test.dir}">
-        <include name="TEST*.xml" />
-      </fileset>
-      <report format="frames" todir="${unit.test.dir}" />
-    </junitreport>
-
-    <fail message="Test(s) failed" if="test.failure" />
-  </target>
-
-
-  <!--
-    http://w.amazon.com/?BrazilBuildSystem/Concepts/UnitTestingInBrazil/JavaUnitTesting
-  -->
-  <target name="unit-tests" depends="test" />
-
-  <!-- ==================================================================== -->
-
 
   <target name="javadoc" depends="build.properties">
     <tstamp>
       <format property="javadoc.year" pattern="yyyy" />
     </tstamp>
-    <!-- Good luck finding documentation on this task. -->
-    <ht:javadoc
-        overview= "${dir.src}/com/amazon/ion/overview.html"
-        windowtitle="IonJava API"
-        doctitle="The IonJava API Reference"
-        header="IonJava API Reference"
+    
+    <!-- Load release_label property -->
+    <loadproperties srcfile="${basedir}/build.properties" />
+
+    <!-- This will create cross-referenced docs rewrites urls against 
+         package directory -->
+    <!-- Arguments passed to this task are documented here:
+         http://ant.apache.org/manual/Tasks/javadoc.html -->
+    <ht:javadoc 
+        overview= "${sources.dir}/com/amazon/ion/overview.html"
+        windowtitle="IonJava ${release_label}"
+        doctitle="The IonJava ${release_label} API Reference"
+        header="IonJava ${release_label} API Reference"
+        destDir="${doc.dir}" 
+        maxmemory="${javadoc.maxmemory}"
         docencoding="UTF-8"
+        encoding="${javadoc.encoding}"
+        failonerror="true"
         useexternalfile="true">
-      <fileset dir="${dir.src}">
+      
+      <fileset dir="${sources.dir}">
         <include name="**/*.java"/>
         <exclude name="com/amazon/ion/apps/**" />
         <exclude name="com/amazon/ion/impl/**" />
         <exclude name="**/_Private_*" />
       </fileset>
-      <classpath>
-       <path path="${bp:testrun.classpath}"/>
-      </classpath>
-      <link href="http://docs.oracle.com/javase/6/docs/api" />
-      <!-- Don't break this line. Ant 1.7 is buggy. Ant 1.8 fixes it but HT3
-           seems to block use of it. -->
-      <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
+      <classpath path="${bp:testrun.classpath}" />
+      
+      <bottom>
+        <![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} 
+        Amazon.com. All Rights Reserved.</center>]]>
+      </bottom>
     </ht:javadoc>
   </target>
-
-
-  <target name="doc" depends="javadoc">
-    <!-- Also build manuals etc. -->
-  </target>
-
-
-  <!-- ==================================================================== -->
-
-
-  <target name="release" depends="test, doc"
-          description="Build and test all release artifacts.">
-  </target>
-
-
-  <target name="all" depends="release"
-          description="Build everything.">
-  </target>
-
-
-  <macrodef name="copy-jar-info"
-      description="Update JarInfo utility with current Brazil info">
-    <attribute name="classes-dir" />
-
-    <sequential>
-      <!--property name="jar_info_file"
-        location="${classes-dir}/com/amazon/ion/util/JarInfo.properties" /-->
-      <copy file="${basedir}/build.properties"
-            tofile="@{classes-dir}/com/amazon/ion/util/JarInfo.properties" />
-      <propertyfile file="@{classes-dir}/com/amazon/ion/util/JarInfo.properties">
-        <entry key="brazil_major_version" value="${bp:package-major-version}" />
-        <entry key="brazil_package_version"
-               value="${bp:package-name-full-version}" />
-        <entry key="build_time" value="${build_time}" />
-      </propertyfile>
-    </sequential>
-  </macrodef>
-
-  <target name="eclipse-build" depends="build.properties"
-          description="Called from Eclipse to perform custom build logic">
-    <mkdir dir="${basedir}/.eclipseout"/>
-    <propertyfile file="${basedir}/.eclipseout/system.properties">
-      <entry key="com.amazon.iontests.iontestdata.path"
-             value="${dir.test.data}" />
-      <entry key="com.amazon.iontests.bulk.path"
-             value="${dir.test.data.bulk}" />
-    </propertyfile>
-    <copy-jar-info classes-dir="${basedir}/.eclipseout"/>
+  
+  <target name="pre-test" extensionOf="ht-pre-test" depends="build.properties">
+    <property name="tests.additional.jvmargs"
+      value="-ea 
+             -D${sys.prop.iontests.iontestdata}=${dir.test.data} 
+             -D${sys.prop.iontests.bulk}=${dir.test.data.bulk}" />
+    
+    <fileset id="unit.test.sources" dir="${tests.dir}">
+      <include name="**/*Test.java" />
+      <exclude name="**/*Tests.java" /> <!-- Exclude "Tests" suffix -->
+    </fileset>
   </target>
 
 </project>
