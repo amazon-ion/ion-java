@@ -894,15 +894,21 @@ public final class Timestamp
             }
             // +/- hh:mm
             pos++;
-            int temp = read_digits(in, pos, 2, ':', "local offset hours");
-            pos += 3;
-            temp = temp * 60 + read_digits(in, pos, 2, -1,
-                                           "local offset minutes");
-            pos += 2;
-            if (temp >= 24*60)
-            {
-                throw fail(in, "local offset must not be more than 1 day");
+            int tzdHours = read_digits(in, pos, 2, ':', "local offset hours");
+            if (tzdHours < 0 || tzdHours > 23) {
+                throw fail(in,
+                           "local offset hours must be between 0 and 23 inclusive");
             }
+            pos += 3;
+
+            int tzdMinutes = read_digits(in, pos, 2, -1, "local offset minutes");
+            if (tzdMinutes > 59) {
+                throw fail(in,
+                           "local offset minutes must be between 0 and 59 inclusive");
+            }
+            pos += 2;
+
+            int temp = tzdHours * 60 + tzdMinutes;
             if (timezone_start == '-') {
                 temp = -temp;
             }
