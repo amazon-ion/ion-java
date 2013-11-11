@@ -269,7 +269,7 @@ final class IonSystemLite
     }
 
     public SymbolTable newSharedSymbolTable(IonReader reader,
-                                                   boolean isOnStruct)
+                                            boolean isOnStruct)
     {
         return _Private_Utils.newSharedSymtab(reader, isOnStruct);
     }

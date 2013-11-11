@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -1147,7 +1147,6 @@ final class UnifiedSymbolTable
     }
 
     static
-    private
     final
     int get_symbol_sid_helper(String fieldName)
     {

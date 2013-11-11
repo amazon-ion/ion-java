@@ -763,21 +763,20 @@ public final class _Private_Utils
 
     public static SymbolTable systemSymtab(int version)
     {
-        return UnifiedSymbolTable.systemSymbolTable(version);
+        return SharedSymbolTable.getSystemSymbolTable(version);
     }
 
 
     public static SymbolTable newSharedSymtab(IonStruct ionRep)
     {
-        return UnifiedSymbolTable.makeNewSharedSymbolTable(ionRep);
+        return SharedSymbolTable.newSharedSymbolTable(ionRep);
     }
 
 
     public static SymbolTable newSharedSymtab(IonReader reader,
                                               boolean alreadyInStruct)
     {
-        return UnifiedSymbolTable.makeNewSharedSymbolTable(reader,
-                                                           alreadyInStruct);
+        return SharedSymbolTable.newSharedSymbolTable(reader, alreadyInStruct);
     }
 
 
@@ -794,10 +793,10 @@ public final class _Private_Utils
                                               SymbolTable priorSymtab,
                                               Iterator<String> symbols)
     {
-        return UnifiedSymbolTable.makeNewSharedSymbolTable(name,
-                                                           version,
-                                                           priorSymtab,
-                                                           symbols);
+        return SharedSymbolTable.newSharedSymbolTable(name,
+                                                      version,
+                                                      priorSymtab,
+                                                      symbols);
     }
 
 
