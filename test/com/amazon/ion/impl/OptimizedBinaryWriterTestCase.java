@@ -6,10 +6,12 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static java.lang.reflect.Proxy.newProxyInstance;
 
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.system.IonSystemBuilder;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
@@ -22,7 +24,7 @@ import java.lang.reflect.Method;
  * @see IonSystemBuilder#withStreamCopyOptimized(boolean)
  */
 public class OptimizedBinaryWriterTestCase
-    extends OutputStreamWriterTestCase
+    extends IonTestCase
 {
     @Inject("copySpeed")
     public static final StreamCopySpeed[] COPY_SPEEDS =
@@ -41,14 +43,13 @@ public class OptimizedBinaryWriterTestCase
     protected static final String importFred2 = ION_SYMBOL_TABLE +
         "::{imports:[{name:\"fred\",version:2,max_id:4}]}";
 
+    protected ByteArrayOutputStream myOutputStream;
+    protected IonWriter iw;
     protected IonReader ir;
 
-    @Override
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
     {
-        myOutputForm = OutputForm.BINARY;
-
         IonWriter iw = system().newBinaryWriter(out, imports);
 
         if (isStreamCopyOptimized())
@@ -63,10 +64,21 @@ public class OptimizedBinaryWriterTestCase
         return iw;
     }
 
-    @Override
-    protected void checkFlushedAfterTopLevelValueWritten()
+    protected IonWriter makeWriter(SymbolTable... imports)
+        throws Exception
     {
-        checkFlushed(false);
+        myOutputStream = new ByteArrayOutputStream();
+        iw = makeWriter(myOutputStream, imports);
+        return iw;
+    }
+
+    protected byte[] outputByteArray()
+        throws Exception
+    {
+        iw.close();
+
+        byte[] bytes = myOutputStream.toByteArray();
+        return bytes;
     }
 
     private class TransferCurrentValueWatchingReader
