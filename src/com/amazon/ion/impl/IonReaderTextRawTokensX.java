@@ -138,7 +138,20 @@ final class IonReaderTextRawTokensX
     protected final int read_char() throws IOException
     {
         int c = _stream.read();
+        if (c == '\r' || c == '\n') {
+            c = line_count(c);
+        }
+        return c;
+    }
 
+    /**
+     * NOT for use outside of string/symbol/clob!
+     * Absorbs backslash-NL pairs, returning
+     * {@link #CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1} etc.
+     */
+    protected final int read_string_char() throws IOException
+    {
+        int c = _stream.read();
         // the c == '\\' clause will cause us to eat ALL slash-newlines
         if (c == '\r' || c == '\n' || c == '\\') {
             c = line_count(c);
@@ -1790,7 +1803,7 @@ final class IonReaderTextRawTokensX
         // quoted symbol
 
         for (;;) {
-            c = read_char();
+            c = read_string_char();
             switch (c) {
             case -1: unexpected_eof();
             case '\'':
@@ -1811,7 +1824,7 @@ final class IonReaderTextRawTokensX
         int c;
 
         for (;;) {
-            c = read_char();
+            c = read_string_char();
             switch (c) {
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
@@ -1862,7 +1875,7 @@ final class IonReaderTextRawTokensX
     {
         int c;
         for (;;) {
-            c = read_char();
+            c = read_string_char();
             switch (c) {
             case -1:
                 unexpected_eof(); // throws
@@ -1886,7 +1899,7 @@ final class IonReaderTextRawTokensX
         int c;
 
         for (;;) {
-            c = read_char();
+            c = read_string_char();
             switch (c) {
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
@@ -2024,7 +2037,7 @@ final class IonReaderTextRawTokensX
 
     protected int read_triple_quoted_char(boolean is_clob) throws IOException
     {
-        int c = read_char();
+        int c = read_string_char();
         switch (c) {
         case '\'':
             if (is_2_single_quotes_helper()) {
@@ -2112,7 +2125,7 @@ final class IonReaderTextRawTokensX
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 // loop again, we don't want empty escape chars
-                c = read_char();
+                c = read_string_char();
                 continue;
             case '\\':
                 c = read_char();
@@ -2125,7 +2138,7 @@ final class IonReaderTextRawTokensX
                  || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
                 ) {
                     // loop again, we don't want empty escape chars
-                    c = read_char();
+                    c = read_string_char();
                     continue;
                 }
                 if (c == IonTokenConstsX.ESCAPE_NOT_DEFINED) bad_escape_sequence();
