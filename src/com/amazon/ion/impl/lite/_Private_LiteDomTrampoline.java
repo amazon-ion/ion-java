@@ -10,8 +10,9 @@ import com.amazon.ion.SymbolTable;
 
 /**
  * NOT FOR APPLICATION USE!
+ * <p>
  * Isolates private APIs that are needed from other packages in this library.
- * The leading $ reduces the chance of somebody finding this via autocomplete.
+ * The leading _ reduces the chance of somebody finding this via autocomplete.
  */
 public final class _Private_LiteDomTrampoline
 {

@@ -14,7 +14,7 @@ import java.io.Reader;
 import java.util.Iterator;
 
 /**
- *
+ * NOT FOR APPLICATION USE!
  */
 public interface _Private_IonSystem
     extends IonSystem

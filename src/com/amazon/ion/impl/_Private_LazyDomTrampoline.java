@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -9,6 +9,7 @@ import java.io.InputStream;
 
 /**
  * NOT FOR APPLICATION USE!
+ * <p>
  * Isolates private APIs that are needed from other packages in this library.
  */
 public final class _Private_LazyDomTrampoline

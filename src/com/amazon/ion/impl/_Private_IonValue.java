@@ -8,7 +8,7 @@ import com.amazon.ion.SymbolTable;
 import java.io.PrintWriter;
 
 /**
- *
+ * NOT FOR APPLICATION USE!
  */
 public interface _Private_IonValue
     extends IonValue

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -11,8 +11,9 @@ import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import java.io.OutputStream;
 
 /**
- *  This is the factory class for constructing writers
- *  with various capabilities.
+ * NOT FOR APPLICATION USE!
+ * <p>
+ * This is the factory class for constructing writers with various capabilities.
  */
 public final class _Private_IonWriterFactory
 {

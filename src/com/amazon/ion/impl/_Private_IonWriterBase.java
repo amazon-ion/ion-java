@@ -15,10 +15,12 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- *  Base type for Ion writers.  This handles the writeIonEvents and provides default
- *  handlers for the list forms of write.  This also resolves symbols if a symbol
- *  table is available (which it will not be if the underlying writer is a system
- *  writer).
+ * NOT FOR APPLICATION USE!
+ * <p>
+ * Base type for Ion writers.  This handles the writeIonEvents and provides default
+ * handlers for the list forms of write.  This also resolves symbols if a symbol
+ * table is available (which it will not be if the underlying writer is a system
+ * writer).
  */
 public abstract class _Private_IonWriterBase
     implements IonWriter, _Private_ReaderWriter
