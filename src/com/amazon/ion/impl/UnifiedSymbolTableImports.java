@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -41,17 +41,6 @@ final class UnifiedSymbolTableImports
         }
     }
 
-    /**
-     * checks the _is_read_only flag and if the flag is set
-     * this throws an error.  This is used by the various
-     * methods that may modify a value.
-     */
-    private void verify_not_read_only() {
-        if (_is_read_only) {
-            throw new ReadOnlyValueException(SymbolTable.class);
-        }
-    }
-
     synchronized void makeReadOnly() {
         _is_read_only = true;
     }
@@ -71,9 +60,9 @@ final class UnifiedSymbolTableImports
 
     private final void add_import_helper(SymbolTable symtab)
     {
-        assert symtab.isReadOnly();
-
-        verify_not_read_only();
+        if (_is_read_only) {
+            throw new ReadOnlyValueException(SymbolTable.class);
+        }
 
         // (_import_count+1) so we have room for the base_sid sentinel
         if (_imports == null || (_import_count+1) >= _imports.length) {
