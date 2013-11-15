@@ -18,16 +18,16 @@ import java.util.Iterator;
  */
 final class UnifiedSymbolTableImports
 {
-    static final int DEFAULT_IMPORT_LENGTH = 4;
+    static final int      DEFAULT_IMPORT_LENGTH = 4;
 
-    private int           _max_id;
-    private boolean       _is_read_only;
+    private int           myMaxId;
+    private boolean       isReadOnly;
 
-    private int           _import_count;
-    private SymbolTable[] _imports;
-    private int[]         _import_base_sid;
+    private int           myImportsCount;
+    private SymbolTable[] myImports;
+    private int[]         myImportsBaseSid;
 
-    static final UnifiedSymbolTableImports emptyImportList =
+    static final UnifiedSymbolTableImports EMPTY_IMPORTS =
         new UnifiedSymbolTableImports();
 
     private UnifiedSymbolTableImports()
@@ -35,14 +35,22 @@ final class UnifiedSymbolTableImports
         makeReadOnly();
     }
 
-    UnifiedSymbolTableImports(SymbolTable systemSymbols) {
-        if (systemSymbols != null) {
-            add_import_helper(systemSymbols);
+    /**
+     * Constructor, uses a system symtab to bootstrap the instance.
+     *
+     * @param systemSymtab must be a system symbol table
+     */
+    UnifiedSymbolTableImports(SymbolTable systemSymtab)
+    {
+        if (systemSymtab != null)
+        {
+            add_import_helper(systemSymtab);
         }
     }
 
-    synchronized void makeReadOnly() {
-        _is_read_only = true;
+    synchronized void makeReadOnly()
+    {
+        isReadOnly = true;
     }
 
 
@@ -52,7 +60,8 @@ final class UnifiedSymbolTableImports
      */
     void addImport(SymbolTable symtab)
     {
-        if (symtab.isLocalTable() || symtab.isSystemTable()) {
+        if (symtab.isLocalTable() || symtab.isSystemTable())
+        {
             throw new IllegalArgumentException("only non-system shared tables can be imported");
         }
         add_import_helper(symtab);
@@ -60,66 +69,76 @@ final class UnifiedSymbolTableImports
 
     private final void add_import_helper(SymbolTable symtab)
     {
-        if (_is_read_only) {
+        if (isReadOnly)
+        {
             throw new ReadOnlyValueException(SymbolTable.class);
         }
 
         // (_import_count+1) so we have room for the base_sid sentinel
-        if (_imports == null || (_import_count+1) >= _imports.length) {
-            do {
+        if (myImports == null || (myImportsCount+1) >= myImports.length)
+        {
+            do
+            {
                 grow_imports();
-            } while ((_import_count+1) >= _imports.length);
+            } while ((myImportsCount+1) >= myImports.length);
         }
 
-        int idx = _import_count++;
-        _imports[idx] = symtab;
-        _import_base_sid[idx] = _max_id;  // 0 based
+        int idx = myImportsCount++;
+        myImports[idx] = symtab;
+        myImportsBaseSid[idx] = myMaxId;  // 0 based
 
-        _max_id += symtab.getMaxId();
-        _import_base_sid[idx+1] = _max_id;  // sentinel for max id loops
+        myMaxId += symtab.getMaxId();
+        myImportsBaseSid[idx+1] = myMaxId;  // sentinel for max id loops
     }
 
-    void grow_imports() {
-        int oldlen = _imports == null ? 0 : _imports.length;
+    void grow_imports()
+    {
+        int oldlen = myImports == null ? 0 : myImports.length;
         int newlen = oldlen * 2;
-        if (newlen < DEFAULT_IMPORT_LENGTH) {
+        if (newlen < DEFAULT_IMPORT_LENGTH)
+        {
             newlen = DEFAULT_IMPORT_LENGTH;
         }
 
         SymbolTable[] temp1 = new SymbolTable[newlen];
         int[]         temp2 = new int[newlen];
 
-        if (oldlen > 0) {
-            System.arraycopy(_imports, 0, temp1, 0, oldlen);
-            System.arraycopy(_import_base_sid, 0, temp2, 0, oldlen);
-
+        if (oldlen > 0)
+        {
+            System.arraycopy(myImports, 0, temp1, 0, oldlen);
+            System.arraycopy(myImportsBaseSid, 0, temp2, 0, oldlen);
         }
-        _imports         = temp1;
-        _import_base_sid = temp2;
+        myImports         = temp1;
+        myImportsBaseSid = temp2;
     }
 
     String findKnownSymbol(int sid)
     {
         String name = null;
 
-        if (sid > _max_id) {
+        if (sid > myMaxId)
+        {
             // do nothing it's not found so name will be null
         }
-        else {
+        else
+        {
             // the sid is in one of the imported tables, find out
             // which one by checking the base values
             int ii, previous_base = 0;
-            for (ii=0; ii<_import_count; ii++) {
-                int base = _import_base_sid[ii];
-                if (sid <= base) {
+            for (ii=0; ii<myImportsCount; ii++)
+            {
+                int base = myImportsBaseSid[ii];
+                if (sid <= base)
+                {
                     break;
                 }
                 previous_base = base;
             }
             // if we run over _import_count the sid is in the last table
             int idx = sid - previous_base;
-            if (idx <= getMaxIdForExport(ii-1)) {
-                name = _imports[ii-1].findKnownSymbol(idx);
+            if (idx <= getMaxIdForExport(ii-1))
+            {
+                name = myImports[ii-1].findKnownSymbol(idx);
             }
         }
 
@@ -146,14 +165,16 @@ final class UnifiedSymbolTableImports
      */
     SymbolToken find(String text)
     {
-        for (int ii=0; ii<_import_count; ii++) {
-            SymbolToken tok = _imports[ii].find(text);
+        for (int ii=0; ii<myImportsCount; ii++)
+        {
+            SymbolToken tok = myImports[ii].find(text);
             if (tok != null)
             {
                 int local_sid = tok.getSid();
                 int local_max = getMaxIdForExport(ii);
-                if (local_sid <= local_max) {
-                    int this_base = _import_base_sid[ii];
+                if (local_sid <= local_max)
+                {
+                    int this_base = myImportsBaseSid[ii];
                     int sid = local_sid + this_base;
                     text = tok.getText(); // Use interned instance
                     assert text != null;
@@ -165,44 +186,56 @@ final class UnifiedSymbolTableImports
     }
 
 
-    int getMaxId() {
-        return _max_id;
+    int getMaxId()
+    {
+        return myMaxId;
     }
-    int getMaxIdForExportAdjusted(int idx) {
+    int getMaxIdForExportAdjusted(int idx)
+    {
         int adjusted_idx = idx;
-        if (this.hasSystemSymbolsImported()) {
+        if (this.hasSystemSymbolsImported())
+        {
             adjusted_idx++;
         }
-        if (idx < 0 || adjusted_idx >= _import_count) {
+        if (idx < 0 || adjusted_idx >= myImportsCount)
+        {
             throw new ArrayIndexOutOfBoundsException();
         }
-        int max_id = _imports[adjusted_idx].getMaxId();
+        int max_id = myImports[adjusted_idx].getMaxId();
         return max_id;
     }
-    int getMaxIdForExport(int idx) {
-        if (idx < 0 || idx >= _import_count) {
+    int getMaxIdForExport(int idx)
+    {
+        if (idx < 0 || idx >= myImportsCount)
+        {
             throw new ArrayIndexOutOfBoundsException();
         }
-        int max_id = _imports[idx].getMaxId();
+        int max_id = myImports[idx].getMaxId();
         return max_id;
     }
 
-    private final boolean hasSystemSymbolsImported() {
-        if (_import_count >= 1 && _imports[0].isSystemTable()) {
+    private final boolean hasSystemSymbolsImported()
+    {
+        if (myImportsCount >= 1 && myImports[0].isSystemTable())
+        {
             return true;
         }
         return false;
     }
-    SymbolTable getSystemSymbolTable() {
-        if (hasSystemSymbolsImported()) {
-            assert _imports[0].isSystemTable();
-            return _imports[0];
+    SymbolTable getSystemSymbolTable()
+    {
+        if (hasSystemSymbolsImported())
+        {
+            assert myImports[0].isSystemTable();
+            return myImports[0];
         }
         return null;
     }
-    int getImportCount() {
-        int non_system_count = _import_count;
-        if (hasSystemSymbolsImported()) {
+    int getImportCount()
+    {
+        int non_system_count = myImportsCount;
+        if (hasSystemSymbolsImported())
+        {
             non_system_count--;
         }
         return non_system_count;
@@ -210,20 +243,22 @@ final class UnifiedSymbolTableImports
     void getImports(SymbolTable[] imports, int count)
     {
         int non_system_base_offset = 0;
-        if (hasSystemSymbolsImported()) {
+        if (hasSystemSymbolsImported())
+        {
             non_system_base_offset++;
         }
-        System.arraycopy(_imports, non_system_base_offset, imports, 0, count);
+        System.arraycopy(myImports, non_system_base_offset, imports, 0, count);
     }
 
 
     @Override
     public String toString()
     {
-        return Arrays.toString(_imports);
+        return Arrays.toString(myImports);
     }
 
-    Iterator<SymbolTable> getImportIterator() {
+    Iterator<SymbolTable> getImportIterator()
+    {
         return new ImportIterator();
     }
 
@@ -231,17 +266,20 @@ final class UnifiedSymbolTableImports
     {
         int _idx;
 
-        ImportIterator() {
+        ImportIterator()
+        {
             _idx = 0;
-            if (hasSystemSymbolsImported()) {
+            if (hasSystemSymbolsImported())
+            {
                 _idx++;
-                assert _imports[0].isSharedTable();
+                assert myImports[0].isSharedTable();
             }
         }
 
         public boolean hasNext()
         {
-            if (_idx < _import_count) {
+            if (_idx < myImportsCount)
+            {
                 return true;
             }
             return false;
@@ -249,8 +287,9 @@ final class UnifiedSymbolTableImports
 
         public SymbolTable next()
         {
-            while (_idx < _import_count) {
-                SymbolTable obj = _imports[_idx];
+            while (_idx < myImportsCount)
+            {
+                SymbolTable obj = myImports[_idx];
                 _idx++;
                 assert ! obj.isSystemTable();
                 return obj;
