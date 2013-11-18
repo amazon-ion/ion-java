@@ -116,6 +116,12 @@ public final class _Private_Utils
         return (ListIterator<T>) EMPTY_ITERATOR;
     }
 
+    public static boolean equalsWithNullCheck(Object a, Object b)
+    {
+        // Written for the common case where they are not the same instance
+        return (a != null ? a.equals(b) : b == null);
+    }
+
     /**
      * Replacement for Java6 {@link Arrays#copyOf(byte[], int)}.
      */
@@ -854,51 +860,50 @@ public final class _Private_Utils
     }
 
 
+    /**
+     * Determines whether the passed-in {@code superset} symtab is an extension
+     * of {@code subset}.
+     * <p>
+     * If both are LSTs, their imported tables and locally declared symbols are
+     * exhaustively checked, which can be expensive. Callers of this method
+     * should cache the results of these comparisons.
+     *
+     * @param superset
+     *                  either a system or local symbol table
+     * @param subset
+     *                  either a system or local symbol table
+     *
+     * @return true if {@code superset} extends {@code subset}, false if not
+     */
     public static boolean symtabExtends(SymbolTable superset, SymbolTable subset)
     {
+        assert superset.isSystemTable() || superset.isLocalTable();
+        assert subset.isSystemTable() || subset.isLocalTable();
+
         // NB: system symtab 1.0 is a singleton, hence if both symtabs
         //     are one this will be true.
         if (superset == subset) return true;
 
-        // TODO ION-253 Currently, system symtab-ness are irrelevant to the
-        //      conditions for copy optimized to be safe.
-        //      However, it will be relevant if multiple versions of system
-        //      symtabs exist (only 1.0 exists for now).
+        // If the subset's symtab is a system symtab, the superset's is always
+        // an extension of the subset's as system symtab-ness is irrelevant to
+        // the conditions for copy opt. to be safe.
+        // TODO ION-285 System symtab-ness ARE relevant if there's multiple
+        //      versions.
+        if (subset.isSystemTable()) return true;
 
-        if (superset.isLocalTable() && subset.isLocalTable())
+        // From here on, subset is a LST because isSystemTable() is false.
+
+        if (superset.isLocalTable())
         {
-            // TODO ION-253 compare Ion version
-
-            if (superset.getMaxId() < subset.getMaxId()) return false;
-
-            // Stupid hack to prevent this from running away on big symtabs.
-            if (20 < subset.getMaxId()) return false;
-
-            // TODO ION-253 Optimize more by checking name, version, max ids of each import
-            SymbolTable[] superImports = superset.getImportedTables();
-            SymbolTable[] subImports = subset.getImportedTables();
-
-            if (! Arrays.equals(superImports, subImports)) return false;
-
-            // TODO ION-253 This is a ridiculous thing to do frequently.
-            // What happen when we do this repeatedly (eg copying a stream)
-            // and the symtabs are large?  That's O(n) effort each time!!
-            // Can we memoize the result somehow?
-            // Or just limit this comparison to "small" symtabs?
-            Iterator<String> subSymbols = subset.iterateDeclaredSymbolNames();
-            Iterator<String> superSymbols = superset.iterateDeclaredSymbolNames();
-            while (subSymbols.hasNext())
-            {
-                if (! superSymbols.hasNext()) return false;
-
-                String sub = subSymbols.next();
-                String sup = superSymbols.next();
-                if (! sub.equals(sup)) return false;
-            }
-            return true;
+            return ((UnifiedSymbolTable) superset).symtabExtends(subset);
         }
 
-        return false;
+        // From here on, superset is a system symtab.
+
+        // If LST subset has no local symbols or imports, and it's system
+        // symbols are same as those of system symtab superset's, then
+        // superset extends subset
+        return subset.getMaxId() == superset.getMaxId();
     }
 
 

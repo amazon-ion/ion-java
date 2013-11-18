@@ -257,6 +257,17 @@ final class UnifiedSymbolTableImports
         return Arrays.toString(myImports);
     }
 
+    /**
+     * Determines whether the passed-in instance has the same sequence of
+     * symbol table imports as this instance. Note that equality of these
+     * imports are checked using their reference, instead of their semantic
+     * state.
+     */
+    boolean equalImports(UnifiedSymbolTableImports other)
+    {
+        return Arrays.equals(myImports, other.myImports);
+    }
+
     Iterator<SymbolTable> getImportIterator()
     {
         return new ImportIterator();

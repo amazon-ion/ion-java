@@ -58,7 +58,7 @@ public class OptimizedBinaryWriterTestCase
                        iw instanceof IonWriterUserBinary);
             IonWriterUserBinary iwUserBinary = (IonWriterUserBinary) iw;
             assertTrue("IonWriterUserBinary should be stream copy optimized",
-                       iwUserBinary.myStreamCopyOptimized);
+                       iwUserBinary.isStreamCopyOptimized());
         }
 
         return iw;

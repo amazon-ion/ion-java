@@ -16,6 +16,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.impl._Private_Utils.equalsWithNullCheck;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
@@ -1075,6 +1076,49 @@ final class UnifiedSymbolTable
         {
             throw new UnsupportedOperationException();
         }
+    }
+
+    boolean symtabExtends(SymbolTable other)
+    {
+        // Throws ClassCastException if other isn't a local symtab
+        UnifiedSymbolTable subset = (UnifiedSymbolTable) other;
+
+        // Superset must have same/more known symbols than subset.
+        if (getMaxId() < subset.getMaxId()) return false;
+
+        // TODO ION-253 Currently, we check imports by their refs. which
+        //      might be overly strict; imports which are not the same ref.
+        //      but have the same semantic states fails the extension check.
+        if (! myImportsList.equalImports(subset.myImportsList))
+            return false;
+
+        int subLocalSymbolCount = subset.mySymbolsCount;
+
+        // Superset extends subset if subset doesn't have any declared symbols.
+        if (subLocalSymbolCount == 0) return true;
+
+        // Superset must have same/more declared (local) symbols than subset.
+        if (mySymbolsCount < subLocalSymbolCount) return false;
+
+        String[] subsetSymbols = subset.mySymbolNames;
+
+        // Before we go through the expensive iteration from the front,
+        // check the last (largest) declared symbol in subset beforehand
+        if (! equalsWithNullCheck(mySymbolNames[subLocalSymbolCount- 1],
+                                  subsetSymbols[subLocalSymbolCount- 1]))
+        {
+            return false;
+        }
+
+        // Now, we iterate from the first declared symbol, note that the
+        // iteration below is O(n)!
+        for (int i = 0; i < subLocalSymbolCount - 1; i++)
+        {
+            if (! equalsWithNullCheck(mySymbolNames[i], subsetSymbols[i]))
+                return false;
+        }
+
+        return true;
     }
 
 }

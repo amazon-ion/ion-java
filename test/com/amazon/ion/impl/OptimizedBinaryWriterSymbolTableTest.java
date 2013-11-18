@@ -102,6 +102,13 @@ public class OptimizedBinaryWriterSymbolTableTest
         assertArrayEquals(source, outputByteArray());
     }
 
+    // TODO ION-377
+    // Test for the use-case where there are gaps in reader's LSTs.
+    // This covers the case in UnifiedSymbolTable.isExtensionOf(SymbolTable),
+    // for which at least one of its symbol's text are unknown.
+    // We can't test this at the moment as there's no way to forcibly inject
+    // gaps into a writer's LST.
+
     /**
      * Writer's LST subset of Reader's - no optimize.
      */
