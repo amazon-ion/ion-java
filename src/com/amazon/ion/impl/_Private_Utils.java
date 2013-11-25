@@ -840,13 +840,38 @@ public final class _Private_Utils
     }
 
 
+    /**
+     * Returns a minimal symtab, either system or local depending on the
+     * given values. If the imports are empty, the default system symtab is
+     * returned.
+     *
+     * @param imageFactory
+     *          the factory to use when building a DOM image, may be null
+     * @param defaultSystemSymtab
+     *          the default system symtab, which will be used if the first
+     *          import in {@code imports} isn't a system symtab, never null
+     * @param imports
+     *          the set of shared symbol tables to import; the first (and only
+     *          the first) may be a system table, in which case the
+     *          {@code defaultSystemSymtab is ignored}
+     */
     public static SymbolTable initialSymtab(ValueFactory imageFactory,
                                             SymbolTable defaultSystemSymtab,
                                             SymbolTable... imports)
     {
-        return UnifiedSymbolTable.initialSymbolTable(imageFactory,
-                                                     defaultSystemSymtab,
-                                                     imports);
+        if (imports == null || imports.length == 0)
+        {
+            return defaultSystemSymtab;
+        }
+
+        if (imports.length == 1 && imports[0].isSystemTable())
+        {
+            return imports[0];
+        }
+
+        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                          defaultSystemSymtab,
+                                                          imports);
     }
 
 

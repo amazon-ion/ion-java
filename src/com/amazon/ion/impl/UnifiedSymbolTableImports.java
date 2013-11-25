@@ -9,6 +9,11 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+
+// TODO ION-385 This class should be immutable. It should only be constructed
+//              during the construction of a local symbol table.
 
 /**
  * This class managed the referenced system symbol table and
@@ -27,12 +32,78 @@ final class UnifiedSymbolTableImports
     private SymbolTable[] myImports;
     private int[]         myImportsBaseSid;
 
-    static final UnifiedSymbolTableImports EMPTY_IMPORTS =
-        new UnifiedSymbolTableImports();
-
-    private UnifiedSymbolTableImports()
+    // TODO ION-385 This can be optimized as we already know the size of
+    //      myImports that we want to create (skipping growing of the array);
+    //      we also have enough data for all other member fields.
+    //      We can remove add_import_helper() and addImport() methods.
+    UnifiedSymbolTableImports(List<SymbolTable> importTables)
     {
-        makeReadOnly();
+        assert importTables != null && importTables.size() >= 1
+            : "there must be at least one SymbolTable for construction";
+
+        assert importTables.get(0).isSystemTable()
+            : "first imported table must be a system symtab";
+
+        add_import_helper(importTables.get(0));
+
+        ListIterator<SymbolTable> iter = importTables.listIterator(1);
+
+        while (iter.hasNext())
+        {
+            SymbolTable importTable = iter.next();
+            addImport(importTable);
+        }
+    }
+
+    /**
+     * @param defaultSystemSymtab
+     *          the default system symtab, which will be used if the first
+     *          import in {@code imports} isn't a system symtab, never null
+     * @param imports
+     *          the set of shared symbol tables to import; the first (and only
+     *          the first) may be a system table, in which case the
+     *          {@code defaultSystemSymtab is ignored}
+     *
+     * @throws IllegalArgumentException
+     *          if any import is a local table, or if any but the first is a
+     *          system table
+     * @throws NullPointerException
+     *          if any import is null
+     */
+    UnifiedSymbolTableImports(SymbolTable defaultSystemSymtab,
+                              SymbolTable... imports)
+    {
+        assert defaultSystemSymtab.isSystemTable()
+            : "defaultSystemSymtab isn't a system symtab";
+
+        if (imports != null && imports.length > 0)
+        {
+            int importsIdx = 0;
+            // Determine which system symtab to be used for first imported table
+            if (imports[importsIdx].isSystemTable())
+            {
+                // Use the passed-in system symtab
+                add_import_helper(imports[importsIdx]);
+                importsIdx++;
+            }
+            else
+            {
+                // Use the default system symtab
+                add_import_helper(defaultSystemSymtab);
+            }
+
+            // Append the rest of var-args imports
+            while (importsIdx < imports.length)
+            {
+                addImport(imports[importsIdx]);
+                importsIdx++;
+            }
+        }
+        else
+        {
+            // Use the default system symtab, there are no imports
+            add_import_helper(defaultSystemSymtab);
+        }
     }
 
     /**
@@ -190,20 +261,6 @@ final class UnifiedSymbolTableImports
     {
         return myMaxId;
     }
-    int getMaxIdForExportAdjusted(int idx)
-    {
-        int adjusted_idx = idx;
-        if (this.hasSystemSymbolsImported())
-        {
-            adjusted_idx++;
-        }
-        if (idx < 0 || adjusted_idx >= myImportsCount)
-        {
-            throw new ArrayIndexOutOfBoundsException();
-        }
-        int max_id = myImports[adjusted_idx].getMaxId();
-        return max_id;
-    }
     int getMaxIdForExport(int idx)
     {
         if (idx < 0 || idx >= myImportsCount)
@@ -214,40 +271,20 @@ final class UnifiedSymbolTableImports
         return max_id;
     }
 
-    private final boolean hasSystemSymbolsImported()
-    {
-        if (myImportsCount >= 1 && myImports[0].isSystemTable())
-        {
-            return true;
-        }
-        return false;
-    }
     SymbolTable getSystemSymbolTable()
     {
-        if (hasSystemSymbolsImported())
-        {
-            assert myImports[0].isSystemTable();
-            return myImports[0];
-        }
-        return null;
+        assert myImports[0].isSystemTable();
+        return myImports[0];
     }
-    int getImportCount()
+    SymbolTable[] getImportedTables()
     {
-        int non_system_count = myImportsCount;
-        if (hasSystemSymbolsImported())
+        int count = myImportsCount - 1;
+        SymbolTable[] imports = new SymbolTable[count];
+        if (count > 0)
         {
-            non_system_count--;
+            System.arraycopy(myImports, 1, imports, 0, count);
         }
-        return non_system_count;
-    }
-    void getImports(SymbolTable[] imports, int count)
-    {
-        int non_system_base_offset = 0;
-        if (hasSystemSymbolsImported())
-        {
-            non_system_base_offset++;
-        }
-        System.arraycopy(myImports, non_system_base_offset, imports, 0, count);
+        return imports;
     }
 
 
@@ -279,12 +316,8 @@ final class UnifiedSymbolTableImports
 
         ImportIterator()
         {
-            _idx = 0;
-            if (hasSystemSymbolsImported())
-            {
-                _idx++;
-                assert myImports[0].isSharedTable();
-            }
+            _idx = 1;
+            assert myImports[0].isSystemTable();
         }
 
         public boolean hasNext()
