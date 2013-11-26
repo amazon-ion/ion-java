@@ -59,7 +59,10 @@ final class UnifiedSymbolTable
     private static final int DEFAULT_CAPACITY = 16;
 
     /**
-     * Our imports, never null.
+     * The system and shared symtabs imported by this symtab. Never null.
+     * <p>
+     * Note: this member field is immutable and assigned only during
+     * construction, hence no synchronization is needed for its method calls.
      */
     private final UnifiedSymbolTableImports myImportsList;
 
@@ -359,15 +362,10 @@ final class UnifiedSymbolTable
 
     public synchronized void makeReadOnly()
     {
-        if (! isReadOnly)
-        {
-            // TODO ION-385 should always be read-only
-            myImportsList.makeReadOnly();
-            isReadOnly = true;
-        }
+        isReadOnly = true;
     }
 
-    public synchronized int getImportedMaxId()
+    public int getImportedMaxId()
     {
         return myImportsList.getMaxId();
     }
@@ -622,7 +620,6 @@ final class UnifiedSymbolTable
 
     public SymbolTable getSystemSymbolTable()
     {
-        // Not synchronized since this member never changes after construction.
         return myImportsList.getSystemSymbolTable();
     }
 
