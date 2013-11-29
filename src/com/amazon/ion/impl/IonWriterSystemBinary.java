@@ -572,7 +572,7 @@ final class IonWriterSystemBinary
     }
 
     @Override
-    void writeLocalSymtab(SymbolTable symbols)
+    void setLocalSymtab(SymbolTable symbols)
         throws IOException
     {
         // this method *should* be called when @_patch is a top-level value, but
@@ -583,7 +583,7 @@ final class IonWriterSystemBinary
         super.startValue();
         top.injectSymbolTable(symbols, _patch.getParent() != null);
         super.endValue();
-        super.writeLocalSymtab(symbols);
+        super.setLocalSymtab(symbols);
     }
 
     public final void stepIn(IonType containerType) throws IOException

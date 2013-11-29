@@ -853,7 +853,7 @@ public final class _Private_Utils
      * @param imports
      *          the set of shared symbol tables to import; the first (and only
      *          the first) may be a system table, in which case the
-     *          {@code defaultSystemSymtab is ignored}
+     *          {@code defaultSystemSymtab} is ignored
      */
     public static SymbolTable initialSymtab(ValueFactory imageFactory,
                                             SymbolTable defaultSystemSymtab,

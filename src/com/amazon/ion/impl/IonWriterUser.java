@@ -122,6 +122,9 @@ class IonWriterUser
                 throw new IonException(e);
             }
         }
+
+        assert _system_writer == _current_writer &&
+               _system_writer == systemWriter;
     }
 
     //========================================================================
@@ -258,12 +261,20 @@ class IonWriterUser
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (symbols == null || _Private_Utils.symtabIsSharedNotSystem(symbols)) {
-            throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
+        if (symbols == null ||
+            _Private_Utils.symtabIsSharedNotSystem(symbols))
+        {
+            String message =
+                "symbol table must be local or system to be set, or reset";
+            throw new IllegalArgumentException(message);
         }
 
-        if (getDepth() > 0) {
-            throw new IllegalStateException("the symbol table cannot be set, or reset, while a container is open");
+        if (getDepth() > 0)
+        {
+            String message =
+                "the symbol table cannot be set, or reset, while a container " +
+                "is open";
+            throw new IllegalStateException(message);
         }
 
         if (symbols.isSystemTable())
@@ -272,7 +283,7 @@ class IonWriterUser
         }
         else
         {
-            _system_writer.writeLocalSymtab(symbols);
+            _system_writer.setLocalSymtab(symbols);
         }
     }
 

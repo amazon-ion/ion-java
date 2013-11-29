@@ -100,9 +100,9 @@ final class IonSystemLite
         _value_factory.set_system(this);
     }
 
-    /**
-     * IonSystem Methods
-     */
+    //==========================================================================
+    // IonSystem Methods
+    //==========================================================================
 
     @SuppressWarnings("unchecked")
     public <T extends IonValue> T clone(T value) throws IonException
@@ -871,11 +871,9 @@ final class IonSystemLite
     }
 
 
-    /*************************************************************
-     *
-     * methods in IonSystemImpl (now declared in IonSystemPrivate)
-     *
-     */
+    //==========================================================================
+    // methods in IonSystemImpl (now declared in IonSystemPrivate)
+    //==========================================================================
 
     public IonReader newReader(Reader ionText)
     {
@@ -899,9 +897,9 @@ final class IonSystemLite
     }
 
 
-    //=========================================================================
+    //==========================================================================
     // IonWriter creation
-
+    //==========================================================================
 
     /**
      * @param container must not be null.
