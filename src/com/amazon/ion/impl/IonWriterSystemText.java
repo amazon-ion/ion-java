@@ -384,7 +384,7 @@ final class IonWriterSystemText
     }
 
     @Override
-    void setLocalSymtab(SymbolTable symtab)
+    void writeLocalSymtab(SymbolTable symtab)
         throws IOException
     {
         SymbolTable[] imports = symtab.getImportedTables();
@@ -435,7 +435,7 @@ final class IonWriterSystemText
             writeIonVersionMarker(systemSymtab);
         }
 
-        super.setLocalSymtab(symtab);
+        super.writeLocalSymtab(symtab);
     }
 
 

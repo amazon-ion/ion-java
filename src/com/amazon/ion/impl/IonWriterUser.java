@@ -283,7 +283,7 @@ class IonWriterUser
         }
         else
         {
-            _system_writer.setLocalSymtab(symbols);
+            _system_writer.writeLocalSymtab(symbols);
         }
     }
 

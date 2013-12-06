@@ -201,7 +201,7 @@ abstract class IonWriterSystem
     }
 
 
-    void setLocalSymtab(SymbolTable symtab)
+    void writeLocalSymtab(SymbolTable symtab)
         throws IOException
     {
         assert symtab.isLocalTable();

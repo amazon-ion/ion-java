@@ -231,13 +231,13 @@ final class IonWriterSystemTree
 
 
     @Override
-    void setLocalSymtab(SymbolTable symtab)
+    void writeLocalSymtab(SymbolTable symtab)
         throws IOException
     {
         IonValue root = get_root();
         ((_Private_IonDatagram)root).appendTrailingSymbolTable(symtab);
 
-        super.setLocalSymtab(symtab);
+        super.writeLocalSymtab(symtab);
     }
 
     @Override
