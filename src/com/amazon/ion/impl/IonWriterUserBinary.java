@@ -81,9 +81,9 @@ class IonWriterUserBinary
                         ValueFactory symtabValueFactory,
                         IonWriterSystemBinary systemWriter,
                         boolean streamCopyOptimized,
-                        SymbolTable... imports)
+                        SymbolTable symtab)
     {
-        super(catalog, symtabValueFactory, systemWriter, imports);
+        super(catalog, symtabValueFactory, systemWriter, symtab);
 
         mySymtabExtendsCache =
             streamCopyOptimized ? new SymtabExtendsCache() : null;

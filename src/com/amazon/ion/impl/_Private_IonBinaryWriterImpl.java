@@ -27,16 +27,15 @@ public final class _Private_IonBinaryWriterImpl
     public _Private_IonBinaryWriterImpl(IonCatalog catalog,
                                         SymbolTable defaultSystemSymtab,
                                         ValueFactory symtabValueFactory,
+                                        IonWriterSystemBinary systemWriter,
                                         boolean streamCopyOptimized,
-                                        SymbolTable... imports)
+                                        SymbolTable symtab)
     {
-        super(catalog, symtabValueFactory,
-              new IonWriterSystemBinary(defaultSystemSymtab,
-                                        new BufferedOutputStream(),
-                                        false /* autoflush */,
-                                        true /* ensureInitialIvm */),
+        super(catalog,
+              symtabValueFactory,
+              systemWriter,
               streamCopyOptimized,
-              imports);
+              symtab);
     }
 
 

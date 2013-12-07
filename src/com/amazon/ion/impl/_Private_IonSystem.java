@@ -9,6 +9,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.system.IonSystemBuilder;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.Iterator;
@@ -57,4 +58,12 @@ public interface _Private_IonSystem
 
 
     public boolean valueIsSharedSymbolTable(IonValue value);
+
+    /**
+     * Indicates whether writers built by this system may attempt to optimize
+     * {@link IonWriter#writeValue(IonReader)} by copying raw source data.
+     *
+     * @see IonSystemBuilder#isStreamCopyOptimized()
+     */
+    public boolean isStreamCopyOptimized();
 }

@@ -61,21 +61,15 @@ public class OptimizedBinaryWriterSymbolTableTest
         String readerLST = printLocalSymtab("amazon", "website");
         byte[] source = encode(readerLST + "amazon website");
         ir = makeReaderProxy(source);
-        iw = makeWriter();
+        iw = makeWriterWithLocalSymtab("amazon", "website");
 
-        // Prime the writer with LST symbols "amazon" and "website"
-        // TODO-373 The only way to guarantee that the writer has the same LST
-        //          as the reader would be to pass the LST over. Clean this up
-        //          when this API is available.
-        iw.writeSymbol("amazon");                         // amazon
-        iw.writeSymbol("website");                        // website
-
-        checkWriteValueWithCompatibleSymtab();            // amazon
-        checkWriteValueWithCompatibleSymtab();            // website
+        // writer's symtab same as reader's
+        checkWriteValueWithCompatibleSymtab(); // amazon
+        checkWriteValueWithCompatibleSymtab(); // website
 
         iw.close();
 
-        IonDatagram expected = loader().load("amazon website amazon website");
+        IonDatagram expected = loader().load("amazon website");
         IonDatagram actual   = loader().load(outputByteArray());
         assertIonEquals(expected, actual);
     }
@@ -102,34 +96,48 @@ public class OptimizedBinaryWriterSymbolTableTest
         assertArrayEquals(source, outputByteArray());
     }
 
-    // TODO ION-377
-    // Test for the use-case where there are gaps in reader's LSTs.
-    // This covers the case in UnifiedSymbolTable.isExtensionOf(SymbolTable),
-    // for which at least one of its symbol's text are unknown.
-    // We can't test this at the moment as there's no way to forcibly inject
-    // gaps into a writer's LST.
-
     /**
      * Writer's LST subset of Reader's - no optimize.
      */
     @Test
-    public void testOptimizedWriteValueSubsetWriterLST()
+    public void testOptimizedWriteValueSubsetWriterLST1()
         throws Exception
     {
         String readerLST = printLocalSymtab("amazon", "website");
         byte[] source = encode(readerLST + "amazon website");
         ir = makeReaderProxy(source);
-        iw = makeWriter();
-
-        // Prime the writer with LST symbol "amazon"
-        iw.writeSymbol("amazon");                             // amazon
+        iw = makeWriterWithLocalSymtab("amazon");
 
         checkWriteValueWithIncompatibleSymtab();              // amazon
         checkWriteValueWithIncompatibleSymtab();              // website
 
         iw.close();
 
-        IonDatagram expected = loader().load("amazon amazon website");
+        IonDatagram expected = loader().load("amazon website");
+        IonDatagram actual   = loader().load(outputByteArray());
+        assertIonEquals(expected, actual);
+    }
+
+    /**
+     * Writer's LST subset of Reader's - no optimize.
+     * Reader's symtab has a gap at the end.
+     */
+    @Test
+    public void testOptimizedWriteValueSubsetWriterLST2()
+        throws Exception
+    {
+        // Create reader with LST with a gap at the end
+        String readerLST = printLocalSymtab("amazon", "website", null);
+        byte[] source = encode(readerLST + "amazon website");
+        ir = makeReaderProxy(source);
+        iw = makeWriterWithLocalSymtab("amazon", "website");
+
+        checkWriteValueWithIncompatibleSymtab();              // amazon
+        checkWriteValueWithIncompatibleSymtab();              // website
+
+        iw.close();
+
+        IonDatagram expected = loader().load("amazon website");
         IonDatagram actual   = loader().load(outputByteArray());
         assertIonEquals(expected, actual);
     }
@@ -138,23 +146,42 @@ public class OptimizedBinaryWriterSymbolTableTest
      * Writer's LST superset of Reader's - optimize.
      */
     @Test
-    public void testOptimizedWriteValueSupersetWriterLST()
+    public void testOptimizedWriteValueSupersetWriterLST1()
         throws Exception
     {
         String readerLST = printLocalSymtab("amazon");
         byte[] source = encode(readerLST + "amazon");
         ir = makeReaderProxy(source);
-        iw = makeWriter();
-
-        // Prime the writer with LST symbols "amazon" and "website"
-        iw.writeSymbol("amazon");                         // amazon
-        iw.writeSymbol("website");                        // website
+        iw = makeWriterWithLocalSymtab("amazon", "website");
 
         checkWriteValueWithCompatibleSymtab();            // amazon
 
         iw.close();
 
-        IonDatagram expected = loader().load("amazon website amazon");
+        IonDatagram expected = loader().load("amazon");
+        IonDatagram actual   = loader().load(outputByteArray());
+        assertIonEquals(expected, actual);
+    }
+
+    /**
+     * Writer's LST superset of Reader's - optimize.
+     * Writer's symtab has a gap at the end.
+     */
+    @Test
+    public void testOptimizedWriteValueSupersetWriterLST2()
+        throws Exception
+    {
+        String readerLST = printLocalSymtab("amazon", "website");
+        byte[] source = encode(readerLST + "amazon website");
+        ir = makeReaderProxy(source);
+        iw = makeWriterWithLocalSymtab("amazon", "website", null);
+
+        checkWriteValueWithCompatibleSymtab();              // amazon
+        checkWriteValueWithCompatibleSymtab();              // website
+
+        iw.close();
+
+        IonDatagram expected = loader().load("amazon website");
         IonDatagram actual   = loader().load(outputByteArray());
         assertIonEquals(expected, actual);
     }
@@ -246,6 +273,37 @@ public class OptimizedBinaryWriterSymbolTableTest
         iw.close();
         assertIonIteratorEquals(system().iterate(source),
                                 system().iterate(outputByteArray()));
+    }
+
+    /**
+     * Reader's source contains interspersed LSTs.
+     * TODO ION-394 Investigate allowing a config. option to copy reader's LST
+     *              over to the writer.
+     */
+    @Test
+    public void testOptimizedWriteValue_InterspersedReaderLSTs()
+        throws Exception
+    {
+        String readerLST1 = printLocalSymtab("a", "aa");
+        String readerLST2 = printLocalSymtab("b", "bb");
+        byte[] source = encode(readerLST1 + "a aa " +
+                               readerLST2 + "b bb");
+        ir = makeReaderProxy(source);
+        iw = makeWriterWithLocalSymtab("a", "aa");
+
+        // writer's symtab same as reader's - optimize
+        checkWriteValueWithCompatibleSymtab();            // a
+        checkWriteValueWithCompatibleSymtab();            // aa
+
+        // writer's symtab diff. from reader's - no optimize
+        checkWriteValueWithIncompatibleSymtab();          // b
+        checkWriteValueWithIncompatibleSymtab();          // bb
+
+        iw.close();
+
+        IonDatagram expected = loader().load("a aa b bb");
+        IonDatagram actual   = loader().load(outputByteArray());
+        assertIonEquals(expected, actual);
     }
 
 }

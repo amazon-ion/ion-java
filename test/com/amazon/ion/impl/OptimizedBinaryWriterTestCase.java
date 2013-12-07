@@ -2,7 +2,9 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.Symtabs.makeLocalSymtab;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl._Private_DmsdkUtils.newBinaryWriterWithLocalSymbolTable;
 import static java.lang.reflect.Proxy.newProxyInstance;
 
 import com.amazon.ion.IonReader;
@@ -13,7 +15,6 @@ import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
@@ -47,28 +48,39 @@ public class OptimizedBinaryWriterTestCase
     protected IonWriter iw;
     protected IonReader ir;
 
-    protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
-        throws Exception
+    protected void checkWriterStreamCopyOptimized(IonWriter writer)
     {
-        IonWriter iw = system().newBinaryWriter(out, imports);
-
         if (isStreamCopyOptimized())
         {
             assertTrue("IonWriter should be instance of IonWriterUserBinary",
-                       iw instanceof IonWriterUserBinary);
-            IonWriterUserBinary iwUserBinary = (IonWriterUserBinary) iw;
+                       writer instanceof IonWriterUserBinary);
+            IonWriterUserBinary iwUserBinary = (IonWriterUserBinary) writer;
             assertTrue("IonWriterUserBinary should be stream copy optimized",
                        iwUserBinary.isStreamCopyOptimized());
         }
-
-        return iw;
     }
 
     protected IonWriter makeWriter(SymbolTable... imports)
         throws Exception
     {
         myOutputStream = new ByteArrayOutputStream();
-        iw = makeWriter(myOutputStream, imports);
+        iw = system().newBinaryWriter(myOutputStream, imports);
+        checkWriterStreamCopyOptimized(iw);
+
+        return iw;
+    }
+
+    protected IonWriter makeWriterWithLocalSymtab(String... localSymbols)
+    {
+        myOutputStream = new ByteArrayOutputStream();
+
+        SymbolTable localSymtab = makeLocalSymtab(system(), localSymbols);
+
+        iw = newBinaryWriterWithLocalSymbolTable(system(),
+                                                 myOutputStream,
+                                                 localSymtab);
+        checkWriterStreamCopyOptimized(iw);
+
         return iw;
     }
 

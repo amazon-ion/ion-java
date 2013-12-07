@@ -248,6 +248,23 @@ final class UnifiedSymbolTableImports
         return imports;
     }
 
+    /**
+     * Returns the {@link #myImports} member field without making a copy.
+     * <p>
+     * <b>Note:</b> Callers must not modify the resulting SymbolTable array!
+     * This will violate the immutability property of this class.
+     *
+     * @return
+     *          the backing array of imported symtabs, as-is; the first element
+     *          is a system symtab, the rest are non-system shared symtabs
+     *
+     * @see #getImportedTables()
+     */
+    SymbolTable[] getImportedTablesNoCopy()
+    {
+        return myImports;
+    }
+
     @Override
     public String toString()
     {

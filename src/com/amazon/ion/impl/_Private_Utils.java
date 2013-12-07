@@ -37,6 +37,7 @@ import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
@@ -128,6 +129,14 @@ public final class _Private_Utils
     public static byte[] copyOf(byte[] original, int newLength)
     {
         byte[] result = new byte[newLength];
+        System.arraycopy(original, 0, result, 0,
+                         Math.min(newLength, original.length));
+        return result;
+    }
+
+    public static String[] copyOf(String[] original, int newLength)
+    {
+        String[] result = new String[newLength];
         System.arraycopy(original, 0, result, 0,
                          Math.min(newLength, original.length));
         return result;
@@ -808,10 +817,23 @@ public final class _Private_Utils
 
     public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
                                              SymbolTable systemSymtab,
+                                             List<String> localSymbols,
                                              SymbolTable... imports)
     {
         return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
                                                           systemSymtab,
+                                                          localSymbols,
+                                                          imports);
+    }
+
+
+    public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
+                                             SymbolTable systemSymtab,
+                                             SymbolTable... imports)
+    {
+        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                          systemSymtab,
+                                                          null /*localSymbols*/,
                                                           imports);
     }
 
@@ -871,6 +893,7 @@ public final class _Private_Utils
 
         return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
                                                           defaultSystemSymtab,
+                                                          null, /*localSymbols*/
                                                           imports);
     }
 

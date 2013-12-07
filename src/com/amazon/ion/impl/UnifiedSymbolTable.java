@@ -14,6 +14,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.impl._Private_Utils.copyOf;
 import static com.amazon.ion.impl._Private_Utils.equalsWithNullCheck;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
@@ -117,7 +118,7 @@ final class UnifiedSymbolTable
     /**
      * @param imageFactory      never null
      * @param imports           never null
-     * @param symbolsList       may be null
+     * @param symbolsList       may be null or empty
      */
     private UnifiedSymbolTable(ValueFactory imageFactory,
                                UnifiedSymbolTableImports imports,
@@ -151,19 +152,44 @@ final class UnifiedSymbolTable
         }
     }
 
+    /**
+     * Copy-constructor, performs defensive copying of member fields where
+     * necessary. The returned instance is mutable.
+     */
+    private UnifiedSymbolTable(UnifiedSymbolTable other)
+    {
+        isReadOnly      = false;
+        myFirstLocalSid = other.myFirstLocalSid;
+        myImage         = null;
+        myImageFactory  = other.myImageFactory;
+        myImportsList   = other.myImportsList;
+        mySymbolsCount  = other.mySymbolsCount;
+
+        String[] symbolNames = copyOf(other.mySymbolNames, mySymbolsCount);
+
+        Map<String, Integer> symbolsMap =
+            new HashMap<String, Integer>(other.mySymbolsMap); // shallow-copy
+
+        mySymbolNames   = symbolNames;
+        mySymbolsMap    = symbolsMap;
+    }
+
 
     /**
-     * Constructs a new local symtab with given imports and no local symbols.
+     * Constructs a new local symtab with given imports and local symbols.
      *
      * @param imageFactory
      *          the factory to use when building a DOM image, may be null
      * @param defaultSystemSymtab
      *          the default system symtab, which will be used if the first
      *          import in {@code imports} isn't a system symtab, never null
+     * @param localSymbols
+     *          the list of local symbols; may be null or empty to indicate
+     *          no local symbols
      * @param imports
      *          the set of shared symbol tables to import; the first (and only
      *          the first) may be a system table, in which case the
-     *          {@code defaultSystemSymtab is ignored}
+     *          {@code defaultSystemSymtab} is ignored
      *
      * @throws IllegalArgumentException
      *          if any import is a local table, or if any but the first is a
@@ -174,14 +200,15 @@ final class UnifiedSymbolTable
     static UnifiedSymbolTable
     makeNewLocalSymbolTable(ValueFactory imageFactory,
                             SymbolTable defaultSystemSymtab,
+                            List<String> localSymbols,
                             SymbolTable... imports)
     {
         UnifiedSymbolTableImports unifiedSymtabImports =
             new UnifiedSymbolTableImports(defaultSystemSymtab, imports);
 
-        // Construct a local symtab with no local symbols.
-        return new UnifiedSymbolTable(imageFactory, unifiedSymtabImports,
-                                      null /* symbolsList */);
+        return new UnifiedSymbolTable(imageFactory,
+                                      unifiedSymtabImports,
+                                      localSymbols);
     }
 
     /**
@@ -332,6 +359,12 @@ final class UnifiedSymbolTable
 
         // We have all necessary data, pass it over to the private constructor
         return new UnifiedSymbolTable(imageFactory, imports, symbolsList);
+    }
+
+
+    synchronized UnifiedSymbolTable makeCopy()
+    {
+        return new UnifiedSymbolTable(this);
     }
 
     public boolean isLocalTable()
@@ -628,6 +661,23 @@ final class UnifiedSymbolTable
     public SymbolTable[] getImportedTables()
     {
         return myImportsList.getImportedTables();
+    }
+
+    /**
+     * Returns the imported symbol tables without making a copy.
+     * <p>
+     * <b>Note:</b> Callers must not modify the resulting SymbolTable array!
+     * This will violate the immutability property of this class.
+     *
+     * @return
+     *          the imported symtabs, as-is; the first element is a system
+     *          symtab, the rest are non-system shared symtabs
+     *
+     * @see #getImportedTables()
+     */
+    SymbolTable[] getImportedTablesNoCopy()
+    {
+        return myImportsList.getImportedTablesNoCopy();
     }
 
     /**
@@ -1018,6 +1068,7 @@ final class UnifiedSymbolTable
         }
     }
 
+    // TODO ION-363 Thread-safety issue
     boolean symtabExtends(SymbolTable other)
     {
         // Throws ClassCastException if other isn't a local symtab

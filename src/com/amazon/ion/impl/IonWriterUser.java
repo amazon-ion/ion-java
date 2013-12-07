@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
-import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -97,26 +96,29 @@ class IonWriterUser
      * POSTCONDITION: {@link IonWriterUser#_system_writer} ==
      * {@link #_current_writer} == systemWriter
      *
-     * @param catalog may be null.
-     * @param symtabValueFactory must not be null.
-     * @param systemWriter must not be null.
+     * @param catalog
+     *          may be null
+     * @param symtabValueFactory
+     *          must not be null
+     * @param systemWriter
+     *          must not be null
+     * @param symtab
+     *          must not be null
      */
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
-                  SymbolTable... imports)
+                  SymbolTable symtab)
     {
         this(catalog, symtabValueFactory, systemWriter);
 
         SymbolTable defaultSystemSymtab =
             systemWriter.getDefaultSystemSymtab();
 
-        SymbolTable initialSymtab =
-            initialSymtab(symtabValueFactory, defaultSystemSymtab, imports);
-        if (initialSymtab.isLocalTable() || initialSymtab != defaultSystemSymtab)
+        if (symtab.isLocalTable() || symtab != defaultSystemSymtab)
         {
             try {
-                setSymbolTable(initialSymtab);
+                setSymbolTable(symtab);
             }
             catch (IOException e) {
                 throw new IonException(e);
