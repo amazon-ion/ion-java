@@ -50,7 +50,7 @@ public class _Private_DmsdkUtils
         }
 
         SymbolTable[] imports =
-            ((UnifiedSymbolTable) symtab).getImportedTablesNoCopy();
+            ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
 
         // Iterate over each import, we assume that the list of imports
         // rarely exceeds 5.
@@ -66,7 +66,7 @@ public class _Private_DmsdkUtils
             }
         }
 
-        return ((UnifiedSymbolTable) symtab).makeCopy();
+        return ((LocalSymbolTable) symtab).makeCopy();
     }
 
     /**

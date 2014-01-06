@@ -64,7 +64,7 @@ public interface _Private_IonValue
      *
      * @param name text for the symbol of interest
      * @return int symbol id if found or
-     *          UnifiedSymbolTable.UNKNOWN_SID if
+     *          {@link SymbolTable#UNKNOWN_SYMBOL_ID} if
      *          it is not already defined
      */
     public int resolveSymbol(String name);

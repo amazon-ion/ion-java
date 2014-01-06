@@ -3,7 +3,17 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.SystemSymbols.IMPORTS;
+import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.MAX_ID;
+import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
+import static com.amazon.ion.SystemSymbols.NAME;
+import static com.amazon.ion.SystemSymbols.NAME_SID;
+import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
+import static com.amazon.ion.SystemSymbols.VERSION;
+import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.EmptySymbolException;
@@ -820,10 +830,10 @@ public final class _Private_Utils
                                              List<String> localSymbols,
                                              SymbolTable... imports)
     {
-        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                          systemSymtab,
-                                                          localSymbols,
-                                                          imports);
+        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                        systemSymtab,
+                                                        localSymbols,
+                                                        imports);
     }
 
 
@@ -831,10 +841,10 @@ public final class _Private_Utils
                                              SymbolTable systemSymtab,
                                              SymbolTable... imports)
     {
-        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                          systemSymtab,
-                                                          null /*localSymbols*/,
-                                                          imports);
+        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                        systemSymtab,
+                                                        null /*localSymbols*/,
+                                                        imports);
     }
 
 
@@ -842,9 +852,9 @@ public final class _Private_Utils
                                              IonCatalog catalog,
                                              IonStruct ionRep)
     {
-        return UnifiedSymbolTable.makeNewLocalSymbolTable(systemSymbtab,
-                                                          catalog,
-                                                          ionRep);
+        return LocalSymbolTable.makeNewLocalSymbolTable(systemSymbtab,
+                                                        catalog,
+                                                        ionRep);
     }
 
 
@@ -854,11 +864,11 @@ public final class _Private_Utils
                                              IonReader reader,
                                              boolean alreadyInStruct)
     {
-        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                          systemSymbolTable,
-                                                          catalog,
-                                                          reader,
-                                                          alreadyInStruct);
+        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                        systemSymbolTable,
+                                                        catalog,
+                                                        reader,
+                                                        alreadyInStruct);
     }
 
 
@@ -891,20 +901,20 @@ public final class _Private_Utils
             return imports[0];
         }
 
-        return UnifiedSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                          defaultSystemSymtab,
-                                                          null, /*localSymbols*/
-                                                          imports);
+        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
+                                                        defaultSystemSymtab,
+                                                        null, /*localSymbols*/
+                                                        imports);
     }
 
 
     /**
      * Trampoline to
-     * {@link UnifiedSymbolTable#getIonRepresentation(ValueFactory)};
+     * {@link LocalSymbolTable#getIonRepresentation(ValueFactory)};
      */
     public static IonStruct symtabTree(ValueFactory vf, SymbolTable symtab)
     {
-        return ((UnifiedSymbolTable)symtab).getIonRepresentation(vf);
+        return ((LocalSymbolTable)symtab).getIonRepresentation(vf);
     }
 
 
@@ -943,7 +953,7 @@ public final class _Private_Utils
 
         if (superset.isLocalTable())
         {
-            return ((UnifiedSymbolTable) superset).symtabExtends(subset);
+            return ((LocalSymbolTable) superset).symtabExtends(subset);
         }
 
         // From here on, superset is a system symtab.
@@ -961,6 +971,58 @@ public final class _Private_Utils
     public static boolean isNonSymbolScalar(IonType type)
     {
         return ! IonType.isContainer(type) && ! type.equals(IonType.SYMBOL);
+    }
+
+
+    /**
+     * Returns the symbol ID matching a system symbol text of a
+     * local or shared symtab field.
+     */
+    public static final int getSidForSymbolTableField(String text)
+    {
+        final int shortestFieldNameLength = 4; // 'name'
+
+        if (text != null && text.length() >= shortestFieldNameLength)
+        {
+            int c = text.charAt(0);
+            switch (c)
+            {
+                case 'v':
+                    if (VERSION.equals(text))
+                    {
+                        return VERSION_SID;
+                    }
+                    break;
+                case 'n':
+                    if (NAME.equals(text))
+                    {
+                        return NAME_SID;
+                    }
+                    break;
+                case 's':
+                    if (SYMBOLS.equals(text))
+                    {
+                        return  SYMBOLS_SID;
+                    }
+                    break;
+
+                case 'i':
+                    if (IMPORTS.equals(text))
+                    {
+                        return IMPORTS_SID;
+                    }
+                    break;
+                case 'm':
+                    if (MAX_ID.equals(text))
+                    {
+                        return MAX_ID_SID;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        return UNKNOWN_SYMBOL_ID;
     }
 
 

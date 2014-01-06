@@ -368,7 +368,7 @@ public class SymbolTableTest
         throws IOException
     {
         // Use a big symtab to get beyond any default allocation within the
-        // dummy symtab.  This was done to trap a bug in UnifiedSymbolTable.
+        // dummy symtab.  This was done to trap a bug in LocalSymbolTable.
         ArrayList<String> syms = new ArrayList<String>();
         int maxId = 50;
         for (int i = 1; i <= maxId; i++)

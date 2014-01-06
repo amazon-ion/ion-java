@@ -194,7 +194,7 @@ final class SubstituteSymbolTable
 
     public void writeTo(IonWriter writer) throws IOException
     {
-        IonReader reader = new UnifiedSymbolTableReader(this);
+        IonReader reader = new SymbolTableReader(this);
         writer.writeValues(reader);
     }
 

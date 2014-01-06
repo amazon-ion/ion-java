@@ -7,6 +7,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
@@ -222,9 +223,15 @@ final class SharedSymbolTable
                 // This is a user-defined IonReader or a pure DOM, fall
                 // back to text
                 final String fieldName = reader.getFieldName();
-                sid = UnifiedSymbolTable.get_symbol_sid_helper(fieldName);
+                sid = getSidForSymbolTableField(fieldName);
             }
 
+            // TODO ION-386 If there's more than one 'symbols' or 'imports'
+            //      field, they will be merged together.
+            // TODO ION-387 Switching over SIDs doesn't cover the case
+            //      where the relevant field names are defined by a prev LST;
+            //      the prev LST could have 'symbols' defined locally with a
+            //      different SID!
             switch (sid)
             {
                 case VERSION_SID:
@@ -570,7 +577,7 @@ final class SharedSymbolTable
 
     public void writeTo(IonWriter writer) throws IOException
     {
-        IonReader reader = new UnifiedSymbolTableReader(this);
+        IonReader reader = new SymbolTableReader(this);
         writer.writeValues(reader);
     }
 

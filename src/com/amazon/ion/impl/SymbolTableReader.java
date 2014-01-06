@@ -34,14 +34,14 @@ import java.util.Date;
 import java.util.Iterator;
 
 /**
- *   This is a reader that traverses a UnifiedSymbolTable
+ *   This is a reader that traverses a {@link SymbolTable}
  *   and returns the contents as if the table was serialized
  *   in Ion in a standard fashion (in fact this serialization
  *   defines the "standard fashion").
  *
  *   This does not support open content in symbol tables and
  *   should.  Support for open content will require additional
- *   data be kept in the UnifiedSymbolTable, probably as an
+ *   data be kept in the {@link SymbolTable}, probably as an
  *   IonStruct or an IonReader or binary buffer.
  *
  *   The reader uses the _state member to track its progress
@@ -279,7 +279,7 @@ S_SYMBOL_LIST_CLOSE(2)     system
 */
 
 
-final class UnifiedSymbolTableReader
+final class SymbolTableReader
     implements IonReader
 {
 
@@ -450,7 +450,7 @@ final class UnifiedSymbolTableReader
     private SymbolTable          _current_import;
     Iterator<String>             _local_symbols;
 
-    public UnifiedSymbolTableReader(SymbolTable symbol_table)
+    public SymbolTableReader(SymbolTable symbol_table)
     {
         _symbol_table = symbol_table;
         if (symbol_table.isLocalTable() == false) {
@@ -922,7 +922,7 @@ final class UnifiedSymbolTableReader
 
         default:
             String message = "UnifiedSymbolTableReader in state "
-                           + UnifiedSymbolTableReader.get_state_name(new_state)
+                           + SymbolTableReader.get_state_name(new_state)
                            + " has no state to load.";
             throw new IonException(message);
         }

@@ -18,7 +18,7 @@ import java.util.List;
  */
 // TODO ION-389 Create specialized class to handle the common case where
 //      there are zero or one imported non-system shared symtab(s).
-final class UnifiedSymbolTableImports
+final class LocalSymbolTableImports
 {
     /**
      * The symtabs imported by a local symtab, never null or empty. The first
@@ -59,7 +59,7 @@ final class UnifiedSymbolTableImports
      * @throws NullPointerException
      *          if any import is null
      */
-    UnifiedSymbolTableImports(List<SymbolTable> importTables)
+    LocalSymbolTableImports(List<SymbolTable> importTables)
     {
         int importTablesSize = importTables.size();
 
@@ -83,8 +83,8 @@ final class UnifiedSymbolTableImports
      * @throws NullPointerException
      *          if any import is null
      */
-    UnifiedSymbolTableImports(SymbolTable defaultSystemSymtab,
-                              SymbolTable... imports)
+    LocalSymbolTableImports(SymbolTable defaultSystemSymtab,
+                            SymbolTable... imports)
     {
         assert defaultSystemSymtab.isSystemTable()
             : "defaultSystemSymtab isn't a system symtab";
@@ -277,7 +277,7 @@ final class UnifiedSymbolTableImports
      * imports are checked using their reference, instead of their semantic
      * state.
      */
-    boolean equalImports(UnifiedSymbolTableImports other)
+    boolean equalImports(LocalSymbolTableImports other)
     {
         return Arrays.equals(myImports, other.myImports);
     }

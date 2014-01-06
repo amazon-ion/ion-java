@@ -225,8 +225,8 @@ public class LocalSymbolTableTest
         SymbolTable orig = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
         SymbolTable copy = copyLocalSymbolTable(orig);  // method under test
 
-        assertTrue(((UnifiedSymbolTable) copy).symtabExtends(orig));
-        assertTrue(((UnifiedSymbolTable) orig).symtabExtends(copy));
+        assertTrue(((LocalSymbolTable) copy).symtabExtends(orig));
+        assertTrue(((LocalSymbolTable) orig).symtabExtends(copy));
     }
 
 

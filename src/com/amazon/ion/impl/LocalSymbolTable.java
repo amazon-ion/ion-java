@@ -16,6 +16,7 @@ import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl._Private_Utils.copyOf;
 import static com.amazon.ion.impl._Private_Utils.equalsWithNullCheck;
+import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
 import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
@@ -42,16 +43,9 @@ import java.util.Map;
 /**
  * A local symbol table.
  * <p>
- * symbol "inheritance" is":
- *  first load system symbol table
- *   then imported tables in order offset by prev _max_id
- *        and we remember their "max id" so they get a range
- *        and skip any names already present
- *   then local names from the new max id
- *
+ * Instances of this class are safe for use by multiple threads.
  */
-
-final class UnifiedSymbolTable
+final class LocalSymbolTable
     implements SymbolTable
 {
     /**
@@ -65,7 +59,7 @@ final class UnifiedSymbolTable
      * Note: this member field is immutable and assigned only during
      * construction, hence no synchronization is needed for its method calls.
      */
-    private final UnifiedSymbolTableImports myImportsList;
+    private final LocalSymbolTableImports myImportsList;
 
     /**
      * The factory used to build the {@link #myImage} of a local symtab.
@@ -87,7 +81,6 @@ final class UnifiedSymbolTable
 
     /**
      * Memoized result of {@link #getIonRepresentation(ValueFactory)};
-     * only valid for local symtabs.
      * Once this is created, we maintain it as symbols are added.
      */
     private IonStruct myImage;
@@ -120,9 +113,9 @@ final class UnifiedSymbolTable
      * @param imports           never null
      * @param symbolsList       may be null or empty
      */
-    private UnifiedSymbolTable(ValueFactory imageFactory,
-                               UnifiedSymbolTableImports imports,
-                               List<String> symbolsList)
+    private LocalSymbolTable(ValueFactory imageFactory,
+                             LocalSymbolTableImports imports,
+                             List<String> symbolsList)
     {
         if (symbolsList == null || symbolsList.isEmpty())
         {
@@ -156,7 +149,7 @@ final class UnifiedSymbolTable
      * Copy-constructor, performs defensive copying of member fields where
      * necessary. The returned instance is mutable.
      */
-    private UnifiedSymbolTable(UnifiedSymbolTable other)
+    private LocalSymbolTable(LocalSymbolTable other)
     {
         isReadOnly      = false;
         myFirstLocalSid = other.myFirstLocalSid;
@@ -173,7 +166,6 @@ final class UnifiedSymbolTable
         mySymbolNames   = symbolNames;
         mySymbolsMap    = symbolsMap;
     }
-
 
     /**
      * Constructs a new local symtab with given imports and local symbols.
@@ -197,18 +189,18 @@ final class UnifiedSymbolTable
      * @throws NullPointerException
      *          if any import is null
      */
-    static UnifiedSymbolTable
+    static LocalSymbolTable
     makeNewLocalSymbolTable(ValueFactory imageFactory,
                             SymbolTable defaultSystemSymtab,
                             List<String> localSymbols,
                             SymbolTable... imports)
     {
-        UnifiedSymbolTableImports unifiedSymtabImports =
-            new UnifiedSymbolTableImports(defaultSystemSymtab, imports);
+        LocalSymbolTableImports unifiedSymtabImports =
+            new LocalSymbolTableImports(defaultSystemSymtab, imports);
 
-        return new UnifiedSymbolTable(imageFactory,
-                                      unifiedSymtabImports,
-                                      localSymbols);
+        return new LocalSymbolTable(imageFactory,
+                                    unifiedSymtabImports,
+                                    localSymbols);
     }
 
     /**
@@ -222,14 +214,14 @@ final class UnifiedSymbolTable
      * @param ionRep
      *          the struct represented the local symtab
      */
-    static UnifiedSymbolTable
+    static LocalSymbolTable
     makeNewLocalSymbolTable(SymbolTable systemSymbolTable,
                             IonCatalog catalog,
                             IonStruct ionRep)
     {
         ValueFactory imageFactory = ionRep.getSystem();
         IonReader reader = new IonReaderTreeSystem(ionRep);
-        UnifiedSymbolTable table =
+        LocalSymbolTable table =
             makeNewLocalSymbolTable(imageFactory, systemSymbolTable,
                                     catalog, reader, false);
 
@@ -259,7 +251,7 @@ final class UnifiedSymbolTable
      *          denotes whether the reader is already positioned on the struct;
      *          false if it is positioned before the struct
      */
-    static UnifiedSymbolTable
+    static LocalSymbolTable
     makeNewLocalSymbolTable(ValueFactory imageFactory,
                             SymbolTable systemSymbolTable,
                             IonCatalog catalog,
@@ -296,7 +288,7 @@ final class UnifiedSymbolTable
                 // This is a user-defined IonReader or a pure DOM, fall
                 // back to text
                 final String fieldName = reader.getFieldName();
-                sid = get_symbol_sid_helper(fieldName);
+                sid = getSidForSymbolTableField(fieldName);
             }
 
             // TODO ION-386 If there's more than one 'symbols' or 'imports'
@@ -354,17 +346,16 @@ final class UnifiedSymbolTable
 
         reader.stepOut();
 
-        UnifiedSymbolTableImports imports =
-            new UnifiedSymbolTableImports(importsList);
+        LocalSymbolTableImports imports =
+            new LocalSymbolTableImports(importsList);
 
         // We have all necessary data, pass it over to the private constructor
-        return new UnifiedSymbolTable(imageFactory, imports, symbolsList);
+        return new LocalSymbolTable(imageFactory, imports, symbolsList);
     }
 
-
-    synchronized UnifiedSymbolTable makeCopy()
+    synchronized LocalSymbolTable makeCopy()
     {
-        return new UnifiedSymbolTable(this);
+        return new LocalSymbolTable(this);
     }
 
     public boolean isLocalTable()
@@ -425,12 +416,10 @@ final class UnifiedSymbolTable
         return system_table.getIonVersionId();
     }
 
-
     public synchronized Iterator<String> iterateDeclaredSymbolNames()
     {
         return new SymbolIterator();
     }
-
 
     public synchronized String findKnownSymbol(int id)
     {
@@ -656,8 +645,6 @@ final class UnifiedSymbolTable
         return myImportsList.getSystemSymbolTable();
     }
 
-    // TODO add to interface to let caller avoid getImports which makes a copy
-
     public SymbolTable[] getImportedTables()
     {
         return myImportsList.getImportedTables();
@@ -686,17 +673,16 @@ final class UnifiedSymbolTable
      */
     public synchronized void writeTo(IonWriter writer) throws IOException
     {
-        IonReader reader = new UnifiedSymbolTableReader(this);
+        IonReader reader = new SymbolTableReader(this);
         writer.writeValues(reader);
     }
-
 
     //
     // TODO: there needs to be a better way to associate a System with
     //       the symbol table, which is required if someone is to be
     //       able to generate an instance.  The other way to resolve
     //       this dependency would be for the IonSystem object to be
-    //       able to take a UnifiedSymbolTable and synthesize an Ion
+    //       able to take a SymbolTable and synthesize an Ion
     //       value from it, by using the public API's to see the useful
     //       contents.  But what about open content?  If the origin of
     //       the symbol table was an IonValue you could get the sys
@@ -733,7 +719,6 @@ final class UnifiedSymbolTable
 
         return myImage;
     }
-
 
     /**
      * NOT SYNCHRONIZED! Call only from a synch'd method.
@@ -781,7 +766,6 @@ final class UnifiedSymbolTable
         return ionRep;
     }
 
-
     /**
      * NOT SYNCHRONIZED! Call within constructor or from synched method.
      * @param symbolName can be null when there's a gap in the local symbols list.
@@ -812,54 +796,6 @@ final class UnifiedSymbolTable
         IonValue name = sys.newString(symbolName);
         ((IonList)syms).add(this_offset, name);
     }
-
-    static final int get_symbol_sid_helper(String fieldName)
-    {
-        final int shortestFieldNameLength = 4; // 'name'
-
-        if (fieldName != null && fieldName.length() >= shortestFieldNameLength)
-        {
-            int c = fieldName.charAt(0);
-            switch (c)
-            {
-                case 'v':
-                    if (VERSION.equals(fieldName))
-                    {
-                        return VERSION_SID;
-                    }
-                    break;
-                case 'n':
-                    if (NAME.equals(fieldName))
-                    {
-                        return NAME_SID;
-                    }
-                    break;
-                case 's':
-                    if (SYMBOLS.equals(fieldName))
-                    {
-                        return  SYMBOLS_SID;
-                    }
-                    break;
-
-                case 'i':
-                    if (IMPORTS.equals(fieldName))
-                    {
-                        return IMPORTS_SID;
-                    }
-                    break;
-                case 'm':
-                    if (MAX_ID.equals(fieldName))
-                    {
-                        return MAX_ID_SID;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-        return UNKNOWN_SYMBOL_ID;
-    }
-
 
     /**
      * Collects the necessary imports from the reader and catalog, and load
@@ -918,7 +854,7 @@ final class UnifiedSymbolTable
                 // this is a user defined reader or a pure DOM
                 // we fall back to text here
                 final String fieldName = ionRep.getFieldName();
-                field_id = get_symbol_sid_helper(fieldName);
+                field_id = getSidForSymbolTableField(fieldName);
             }
             switch(field_id)
             {
@@ -1003,7 +939,6 @@ final class UnifiedSymbolTable
         return itab;
     }
 
-
     /**
      * Generate the string representation of a symbol with an unknown id.
      * @param id must be a value greater than zero.
@@ -1019,7 +954,7 @@ final class UnifiedSymbolTable
     @Override
     public String toString()
     {
-        StringBuilder buf = new StringBuilder("(UnifiedSymbolTable ");
+        StringBuilder buf = new StringBuilder("(LocalSymbolTable ");
         buf.append("local");
         buf.append(" max_id::"+this.getMaxId());
         buf.append(')');
@@ -1035,7 +970,6 @@ final class UnifiedSymbolTable
             super(msg);
         }
     }
-
 
     private final class SymbolIterator implements Iterator<String>
     {
@@ -1072,7 +1006,7 @@ final class UnifiedSymbolTable
     boolean symtabExtends(SymbolTable other)
     {
         // Throws ClassCastException if other isn't a local symtab
-        UnifiedSymbolTable subset = (UnifiedSymbolTable) other;
+        LocalSymbolTable subset = (LocalSymbolTable) other;
 
         // Superset must have same/more known symbols than subset.
         if (getMaxId() < subset.getMaxId()) return false;
