@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -17,7 +17,6 @@ import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl._Private_Utils.copyOf;
 import static com.amazon.ion.impl._Private_Utils.equalsWithNullCheck;
 import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
-import static com.amazon.ion.util.IonTextUtils.printQuotedSymbol;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonCatalog;
@@ -39,6 +38,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * A local symbol table.
@@ -485,8 +485,7 @@ final class LocalSymbolTable
         if (is == null)
         {
             validateSymbol(text);
-            int sid = getMaxId() + 1;
-            putSymbol(text, sid);
+            int sid = putSymbol(text);
             is = new SymbolTokenImpl(text, sid);
         }
         return is;
@@ -534,21 +533,21 @@ final class LocalSymbolTable
                 if (c >= 0xDC00)
                 {
                     String message = "unpaired trailing surrogate in symbol " +
-                    		"name at position " + i;
+                            "name at position " + i;
                     throw new IllegalArgumentException(message);
                 }
                 ++i;
                 if (i == name.length())
                 {
                     String message = "unmatched leading surrogate in symbol " +
-                    		"name at position " + i;
+                            "name at position " + i;
                     throw new IllegalArgumentException(message);
                 }
                 c = name.charAt(i);
                 if (c < 0xDC00 || c > 0xDFFF)
                 {
                     String message = "unmatched leading surrogate in symbol " +
-                    		"name at position " + i;
+                            "name at position " + i;
                     throw new IllegalArgumentException(message);
                 }
             }
@@ -558,70 +557,43 @@ final class LocalSymbolTable
     /**
      * NOT SYNCHRONIZED! Call within constructor or from synch'd method.
      *
-     * TODO streamline: we no longer accept arbitrary sid, its always > max_id
-     *
-     * @param symbolName may be null, indicating a gap in the symbol table.
+     * @param symbolName must be nonempty.
      */
-    private void putSymbol(String symbolName, int sid)
+    private int putSymbol(String symbolName)
     {
+        assert symbolName.length() != 0;
+
         if (isReadOnly)
         {
             throw new ReadOnlyValueException(SymbolTable.class);
         }
 
-        assert mySymbolNames != null;
-
-        int idx = sid - myFirstLocalSid;
-        assert idx >= 0;
-
-        if (idx >= mySymbolsCount)
+        if (mySymbolsCount == mySymbolNames.length)
         {
-            int oldlen = mySymbolsCount;
-            if (oldlen >= mySymbolNames.length)
+            int newlen = mySymbolsCount * 2;
+            if (newlen < DEFAULT_CAPACITY)
             {
-                int newlen = oldlen * 2;
-                if (newlen < DEFAULT_CAPACITY)
-                {
-                    newlen = DEFAULT_CAPACITY;
-                }
-                while (newlen < idx)
-                {
-                    newlen *= 2;
-                }
-                String[] temp = new String[newlen];
-                if (oldlen > 0)
-                {
-                    System.arraycopy(mySymbolNames, 0, temp, 0, oldlen);
-                }
-                mySymbolNames = temp;
+                newlen = DEFAULT_CAPACITY;
             }
-        }
-        else if (mySymbolNames[idx] != null)
-        {
-            String message =
-                "Cannot redefine $" + sid + " from "
-                + printQuotedSymbol(mySymbolNames[idx])
-                + " to " + printQuotedSymbol(symbolName);
-            throw new IonException(message);
+            String[] temp = new String[newlen];
+            System.arraycopy(mySymbolNames, 0, temp, 0, mySymbolsCount);
+            mySymbolNames = temp;
         }
 
-        if (symbolName != null)
-        {
-            putToMapIfNotThere(mySymbolsMap, symbolName, sid);
-        }
+        int sid = mySymbolsCount + myFirstLocalSid;
+        assert sid == getMaxId() + 1;
 
-        mySymbolNames[idx] = symbolName;
+        putToMapIfNotThere(mySymbolsMap, symbolName, sid);
 
-        if (idx >= mySymbolsCount)
-        {
-            mySymbolsCount = idx + 1;
-        }
+        mySymbolNames[mySymbolsCount] = symbolName;
+        mySymbolsCount++;
 
         if (myImage != null)
         {
-            assert mySymbolsCount > 0;
             recordLocalSymbolInIonRep(myImage, symbolName, sid);
         }
+
+        return sid;
     }
 
     private static void putToMapIfNotThere(Map<String, Integer> symbolsMap,
@@ -731,12 +703,12 @@ final class LocalSymbolTable
 
         ionRep.addTypeAnnotation(ION_SYMBOL_TABLE);
 
-        SymbolTable[] importedTables = getImportedTables();
+        SymbolTable[] importedTables = getImportedTablesNoCopy();
 
-        if (importedTables.length > 0)
+        if (importedTables.length > 1)
         {
             IonList importsList = factory.newEmptyList();
-            for (int i = 0; i < importedTables.length; i++)
+            for (int i = 1; i < importedTables.length; i++)
             {
                 SymbolTable importedTable = importedTables[i];
                 IonStruct importStruct = factory.newEmptyStruct();
@@ -954,11 +926,7 @@ final class LocalSymbolTable
     @Override
     public String toString()
     {
-        StringBuilder buf = new StringBuilder("(LocalSymbolTable ");
-        buf.append("local");
-        buf.append(" max_id::"+this.getMaxId());
-        buf.append(')');
-        return buf.toString();
+        return "(LocalSymbolTable max_id:" + getMaxId() + ')';
     }
 
     static class IonExceptionNoSystem extends IonException
@@ -986,14 +954,11 @@ final class LocalSymbolTable
 
         public String next()
         {
-            // TODO bad failure mode if next() called beyond end
             if (_idx < mySymbolsCount)
             {
-                String name = (_idx < mySymbolNames.length) ? mySymbolNames[_idx] : null;
-                _idx++;
-                return name;
+                return mySymbolNames[_idx++];
             }
-            return null;
+            throw new NoSuchElementException();
         }
 
         public void remove()
