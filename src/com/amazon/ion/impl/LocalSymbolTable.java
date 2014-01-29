@@ -102,7 +102,7 @@ final class LocalSymbolTable
      * The sid of the first local symbol, which is stored at
      * {@link #mySymbolNames}[0].
      */
-    private int myFirstLocalSid = 1;
+    private final int myFirstLocalSid;
 
     //==========================================================================
     // Private constructor(s) and static factory methods
@@ -378,8 +378,7 @@ final class LocalSymbolTable
         return false;
     }
 
-    // TODO ION-363 Thread-safety bug
-    public boolean isReadOnly()
+    public synchronized boolean isReadOnly()
     {
         return isReadOnly;
     }
@@ -418,10 +417,10 @@ final class LocalSymbolTable
 
     public synchronized Iterator<String> iterateDeclaredSymbolNames()
     {
-        return new SymbolIterator();
+        return new SymbolIterator(mySymbolNames, mySymbolsCount);
     }
 
-    public synchronized String findKnownSymbol(int id)
+    public String findKnownSymbol(int id)
     {
         String name = null;
 
@@ -437,16 +436,23 @@ final class LocalSymbolTable
         else
         {
             int offset = id - myFirstLocalSid;
-            if (offset < mySymbolNames.length)
+
+            String[] names;
+            synchronized (this)
             {
-                name = mySymbolNames[offset];
+                names = mySymbolNames;
+            }
+
+            if (offset < names.length)
+            {
+                name = names[offset];
             }
         }
 
         return name;
     }
 
-    public synchronized int findSymbol(String name)
+    public int findSymbol(String name)
     {
         if (name.length() < 1) // throws NPE if null
         {
@@ -469,7 +475,12 @@ final class LocalSymbolTable
     {
         assert(name.length() > 0);
 
-        Integer isid = mySymbolsMap.get(name);
+        Integer isid;
+        synchronized (this)
+        {
+            isid = mySymbolsMap.get(name);
+        }
+
         if (isid != null)
         {
             assert isid != UNKNOWN_SYMBOL_ID;
@@ -478,8 +489,8 @@ final class LocalSymbolTable
         return UNKNOWN_SYMBOL_ID;
     }
 
-    // TODO ION-363 Thread-safety bug
-    public SymbolToken intern(String text)
+
+    public synchronized SymbolToken intern(String text)
     {
         SymbolToken is = find(text);
         if (is == null)
@@ -491,7 +502,6 @@ final class LocalSymbolTable
         return is;
     }
 
-    // TODO ION-363 Thread-safety bug
     public SymbolToken find(String text)
     {
         if (text.length() < 1)
@@ -505,11 +515,18 @@ final class LocalSymbolTable
         // Look in local symbols
         if (symTok == null)
         {
-            int sid = findLocalSymbol(text);
-            if (sid != UNKNOWN_SYMBOL_ID)
+            Integer  sid;
+            String[] names;
+            synchronized (this)
+            {
+                sid = mySymbolsMap.get(text);
+                names = mySymbolNames;
+            }
+
+            if (sid != null)
             {
                 int offset = sid - myFirstLocalSid;
-                String internedText = mySymbolNames[offset];
+                String internedText = names[offset];
                 assert internedText != null;
                 symTok = new SymbolTokenImpl(internedText, sid);
             }
@@ -639,11 +656,7 @@ final class LocalSymbolTable
         return myImportsList.getImportedTablesNoCopy();
     }
 
-    /**
-     * Synchronized to ensure that this symtab isn't changed while being
-     * written.
-     */
-    public synchronized void writeTo(IonWriter writer) throws IOException
+    public void writeTo(IonWriter writer) throws IOException
     {
         IonReader reader = new SymbolTableReader(this);
         writer.writeValues(reader);
@@ -671,7 +684,7 @@ final class LocalSymbolTable
      *   It must be identical to the {@link #myImageFactory} and not null.
      * @return Not null.
      */
-    synchronized IonStruct getIonRepresentation(ValueFactory imageFactory)
+    IonStruct getIonRepresentation(ValueFactory imageFactory)
     {
         if (imageFactory == null)
         {
@@ -683,13 +696,19 @@ final class LocalSymbolTable
             throw new IonException("wrong system");
         }
 
-        if (myImage == null)
+        IonStruct image;
+        synchronized (this)
         {
-            // Start a new image from scratch
-            myImage = makeIonRepresentation(myImageFactory);
+            image = myImage;
+
+            if (image == null)
+            {
+                // Start a new image from scratch
+                myImage = image = makeIonRepresentation(myImageFactory);
+            }
         }
 
-        return myImage;
+        return image;
     }
 
     /**
@@ -939,9 +958,18 @@ final class LocalSymbolTable
         }
     }
 
-    private final class SymbolIterator implements Iterator<String>
+    private static final class SymbolIterator
+        implements Iterator<String>
     {
-        int _idx = 0;
+        private final String[] mySymbolNames;
+        private final int      mySymbolsCount;
+        private int            _idx = 0;
+
+        SymbolIterator(String[] symbolNames, int count)
+        {
+            mySymbolNames = symbolNames;
+            mySymbolsCount = count;
+        }
 
         public boolean hasNext()
         {
@@ -967,11 +995,17 @@ final class LocalSymbolTable
         }
     }
 
-    // TODO ION-363 Thread-safety issue
+    /**
+     * This method, and the context from which it is called, assumes that the
+     * symtabs are not being mutated by another thread.
+     * Therefore it doesn't use synchronization.
+     */
     boolean symtabExtends(SymbolTable other)
     {
         // Throws ClassCastException if other isn't a local symtab
         LocalSymbolTable subset = (LocalSymbolTable) other;
+
+        // Gather snapshots of each LST's data, so we don't
 
         // Superset must have same/more known symbols than subset.
         if (getMaxId() < subset.getMaxId()) return false;

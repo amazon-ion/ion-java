@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -420,9 +420,14 @@ final class SymbolTableReader
 
 
     /**
-     * this is the symbol table this reader iterators over
+     * The symbol table we are reading.
+     *
+     * We MUST NOT call methods whose value may change! Otherwise there's a
+     * thread-safety problem.
      */
-    final SymbolTable _symbol_table;
+    private final SymbolTable _symbol_table;
+
+    private final int _maxId;
 
     /**
      * _state tracks the progress through the various
@@ -453,18 +458,25 @@ final class SymbolTableReader
     public SymbolTableReader(SymbolTable symbol_table)
     {
         _symbol_table = symbol_table;
+
+        synchronized (symbol_table)
+        {
+            _maxId = symbol_table.getMaxId();
+            _local_symbols = symbol_table.iterateDeclaredSymbolNames();
+        }
+
         if (symbol_table.isLocalTable() == false) {
             set_flag(HAS_NAME, true);
             set_flag(HAS_VERSION, true);
         }
-        if (symbol_table.getMaxId() > 0) {
+        if (_maxId > 0) {
             // FIXME: is this ever true?            set_flag(HAS_MAX_ID, true);
         }
         _imported_tables = _symbol_table.getImportedTables();
         if (_imported_tables != null && _imported_tables.length != 0) {
             set_flag(HAS_IMPORT_LIST, true);
         }
-        if (_symbol_table.getImportedMaxId() < _symbol_table.getMaxId()) {
+        if (_symbol_table.getImportedMaxId() < _maxId) {
             set_flag(HAS_SYMBOL_LIST, true);
         }
     }
@@ -821,12 +833,12 @@ final class SymbolTableReader
             break;
 
         case S_AFTER_IMPORT_LIST:
-            assert(_symbol_table.getImportedMaxId() < _symbol_table.getMaxId());
+            assert(_symbol_table.getImportedMaxId() < _maxId);
             new_state = S_SYMBOL_LIST;
             break;
 
         case S_SYMBOL_LIST:
-            assert(_symbol_table.getImportedMaxId() < _symbol_table.getMaxId());
+            assert(_symbol_table.getImportedMaxId() < _maxId);
             new_state = stateFollowingLocalSymbols();
             break;
 
@@ -895,7 +907,7 @@ final class SymbolTableReader
             break;
 
         case S_MAX_ID:
-            _int_value = _symbol_table.getMaxId();
+            _int_value = _maxId;
             break;
 
         case S_IMPORT_LIST:
@@ -945,7 +957,6 @@ final class SymbolTableReader
             new_state = S_IN_IMPORT_STRUCT;
             break;
         case S_SYMBOL_LIST:
-            _local_symbols = _symbol_table.iterateDeclaredSymbolNames();
             new_state = S_IN_SYMBOLS;
             break;
         default:
