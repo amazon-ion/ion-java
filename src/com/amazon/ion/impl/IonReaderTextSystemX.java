@@ -567,6 +567,8 @@ class IonReaderTextSystemX
 
     public int byteSize()
     {
+        ensureLob("byteSize");
+
         long len;
         try {
             len = load_lob_contents();
@@ -590,7 +592,7 @@ class IonReaderTextSystemX
 
     private final long load_lob_save_point() throws IOException
     {
-        if (LOB_STATE.EMPTY.equals(_lob_loaded)) {
+        if (_lob_loaded == LOB_STATE.EMPTY) {
             assert(!_current_value_save_point_loaded && _current_value_save_point.isClear());
             _scanner.save_point_start(_current_value_save_point);
             _scanner.skip_over_lob(_lob_token, _current_value_save_point);
@@ -604,10 +606,10 @@ class IonReaderTextSystemX
     }
     private int load_lob_contents() throws IOException
     {
-        if (LOB_STATE.EMPTY.equals(_lob_loaded)) {
+        if (_lob_loaded == LOB_STATE.EMPTY) {
             load_lob_save_point();
         }
-        if (LOB_STATE.READ.equals(_lob_loaded)) {
+        if (_lob_loaded == LOB_STATE.READ) {
             long raw_size =  _current_value_save_point.length();
             if (raw_size < 0 || raw_size > Integer.MAX_VALUE) {
                 load_lob_length_overflow_error(raw_size);
@@ -631,9 +633,28 @@ class IonReaderTextSystemX
         return _lob_actual_len;
     }
 
+    private void ensureLob(String apiName)
+    {
+        switch (_value_type) {
+            case CLOB:
+            case BLOB:
+                break;
+            default:
+            {
+                String msg =
+                    apiName +
+                    " is only valid if the reader is on a lob value, not a " +
+                    _value_type +
+                    " value";
+                throw new IllegalStateException(msg);
+            }
+        }
+    }
 
     public byte[] newBytes()
     {
+        ensureLob("newBytes");
+
         byte[] bytes;
         int    len;
 
@@ -651,17 +672,9 @@ class IonReaderTextSystemX
 
     public int getBytes(byte[] buffer, int offset, int len)
     {
-        int len_read;
+        ensureLob("getBytes");
 
-        switch (_value_type) {
-        case CLOB:
-        case BLOB:
-            break;
-        default:
-            throw new IllegalStateException("getBytes is only valid if the reader is on a lob value, not a "+_value_type+" value");
-        }
-
-        if (LOB_STATE.READ.equals(_lob_loaded)) {
+        if (_lob_loaded == LOB_STATE.READ) {
             // if we've already read through the lob
             // (and therefore have it's length and the
             // bytes cached in our input buffer) anyway
@@ -675,7 +688,8 @@ class IonReaderTextSystemX
             }
         }
 
-        if (LOB_STATE.FINISHED.equals(_lob_loaded)) {
+        int len_read;
+        if (_lob_loaded == LOB_STATE.FINISHED) {
             // if we have loaded data, just copy it
             len_read = len;
             if (len_read > _lob_actual_len) {
@@ -709,16 +723,10 @@ class IonReaderTextSystemX
         }
         return len_read;
     }
-    public int readBytes(byte[] buffer, int offset, int len) throws IOException
-    {
-        switch (_value_type) {
-        case CLOB:
-        case BLOB:
-            break;
-        default:
-            throw new IllegalStateException("readBytes is only valid if the reader is on a lob value, not a "+_value_type+" value");
-        }
 
+    private int readBytes(byte[] buffer, int offset, int len)
+        throws IOException
+    {
         int starting_offset = offset;
         int c = -1;
 
