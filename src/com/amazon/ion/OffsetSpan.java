@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -12,6 +12,9 @@ import java.io.InputStream;
  * source type: for byte arrays or {@link InputStream}s, the offsets count
  * octets, but for {@link String}s or {@link java.io.Reader}s the offsets count
  * UTF-16 code units.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  * <p>
  * As with all spans, positions lie <em>between</em> values, and when the start
  * and finish positions are equal, the span is said to be <em>empty</em>.

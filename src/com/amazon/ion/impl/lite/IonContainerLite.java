@@ -464,7 +464,6 @@ abstract class IonContainerLite
             IonValueLite child = get_child(ii);
             child.clearSymbolIDValues();
         }
-        return;
     }
 
     public void clearLocalSymbolTable()
@@ -755,7 +754,7 @@ abstract class IonContainerLite
 
         assert child._context instanceof TopLevelContext
             || child._context instanceof IonSystemLite;
-
+        // Because the child must not have a container since we are adding it.
         child._context.setContextContainer(this, child);
 
         child._elementid(idx);

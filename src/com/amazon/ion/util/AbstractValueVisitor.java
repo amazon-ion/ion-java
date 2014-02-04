@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Amazon.com, Inc.  All rights reserved.
+ * Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
  */
 
 package com.amazon.ion.util;
@@ -22,7 +22,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
 
 /**
- * A base class for creating Ion {@link ValueVisitor}s.
+ * A base class for extending Ion {@link ValueVisitor}s.
  * All <code>visit</code> methods are implemented to call
  * {@link #defaultVisit(IonValue)}.
  */

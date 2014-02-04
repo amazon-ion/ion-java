@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-13 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -9,6 +9,10 @@ package com.amazon.ion;
  */
 public final class SystemSymbols
 {
+    /** No touchy! */
+    private SystemSymbols() { }
+
+
     /**
      * The text of system symbol {@value}, as defined by Ion 1.0.
      */
@@ -114,8 +118,4 @@ public final class SystemSymbols
      * The maximum ID of the IDs of system symbols defined by Ion 1.0.
      */
     public static final int    ION_1_0_MAX_ID = 9;
-
-
-    /** No touchy! */
-    private SystemSymbols() { }
 }

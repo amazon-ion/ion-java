@@ -15,26 +15,30 @@ import java.nio.charset.Charset;
 /**
  * The builder for creating {@link IonWriter}s emitting the Ion text syntax.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * Builders may be configured once and reused to construct multiple
  * objects.
- * Builder instances are <em>not</em> thread-safe unless they are
- * {@linkplain #immutable() immutable}.
+ * <p>
+ * <b>Instances of this class are not not safe for use by multiple threads
+ * unless they are {@linkplain #immutable() immutable}.</b>
  * <p>
  * The most general and correct approach is to use the {@link #standard()}
  * builder:
- * <pre>
- *  IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
- * </pre>
+ *<pre>
+ *    IonWriter w = IonTextWriterBuilder.standard().build(outputStream);
+ *</pre>
  * The standard configuration gives a direct representation of what's written,
  * including version markers and local symbol tables. That's good for
  * diagnostics but it may be more than you want in many situations.
  * In such cases the {@link #minimal()} or {@link #pretty()} builders (or a
  * combination) may give more satisfying output:
- * <pre>
- *  IonWriter w = IonTextWriterBuilder.minimal()
- *                                    .withPrettyPrinting()
- *                                    .build(outputStream);
- * </pre>
+ *<pre>
+ *    IonWriter w = IonTextWriterBuilder.minimal()
+ *                                      .withPrettyPrinting()
+ *                                      .build(outputStream);
+ *</pre>
  *
  * <p>
  * Configuration properties follow the standard JavaBeans idiom in order to be
@@ -42,21 +46,15 @@ import java.nio.charset.Charset;
  * {@code with...()} mutation methods that enable a more fluid style.
  *
  * <h2>Auto-flushing</h2>
- * {@link IonWriter}s created by this builder <em>auto-flush</em> to the
- * underlying data sink after writing every top-level value in the context of
- * the writer.
  *
+ * {@link IonWriter}s created by this builder <em>auto-flush</em> to the
+ * underlying data sink after writing each top-level value in the context of
+ * the writer.
  * <p>
  * Currently, there is no configuration point available to disable the
  * auto-flushing mechanism. Please vote on
  * <a href="https://jira2.amazon.com/browse/ION-361">JIRA issue ION-361</a>
  * if you require it.
- *
- * <p>
- * <b>
- * This class is not intended to be used as an application extension point;
- * do not extend or implement it.
- * </b>
  *
  * @since IonJava R15
  */

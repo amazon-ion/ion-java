@@ -15,15 +15,13 @@ import java.util.Date;
 /**
  * Writes Ion data to an output source.
  *
- * This interface allows
- * the user to logically write the values as they view the data
- * without being concerned about which output format is needed.
+ * This interface allows the user to write Ion data without being concerned
+ * about which output format is being used.
  * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://jira2.amazon.com/browse/ION-182">JIRA issue
- * ION-182</a>
+ * See <a href="https://jira2.amazon.com/browse/ION-182">JIRA issue ION-182</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
@@ -290,8 +288,8 @@ public interface IonWriter
      *
      * @param value may be null, in which case this method does nothing.
      *
-     * @deprecated Since IonJava R13.
-     *  Use {@link IonValue#writeTo(IonWriter)} instead.
+     * @deprecated Since IonJava R13. Use
+     * {@link IonValue#writeTo(IonWriter)} instead.
      */
     @Deprecated // TODO ION-247 remove this
     public void writeValue(IonValue value) throws IOException;
@@ -396,9 +394,9 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      *
-     * @deprecated Since IonJava RC2, 2009-03-19.
-     *  Use {@link Timestamp#forDateZ(Date)} and
-     *  {@link #writeTimestamp(Timestamp)}.
+     * @deprecated Since IonJava RC2 (2009). Use
+     * {@link #writeTimestamp(Timestamp) IonWriter.writeTimestamp(}{@link
+     * Timestamp#forDateZ(Date) Timestamp.forDateZ(Date))} instead.
      */
     @Deprecated
     public void writeTimestampUTC(Date value) throws IOException;

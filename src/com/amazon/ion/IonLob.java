@@ -7,6 +7,9 @@ import java.io.InputStream;
 /**
  * Common functionality of Ion <code>blob</code> and <code>clob</code>
  * types.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonLob
     extends IonValue

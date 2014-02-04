@@ -7,6 +7,9 @@ import java.nio.charset.Charset;
 
 /**
  * An Ion <code>clob</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonClob
     extends IonValue, IonLob

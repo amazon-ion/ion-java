@@ -1,14 +1,17 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 
 /**
- * Represents an Ion symbol token (field name, annotation, and symbol values)
+ * An Ion symbol token (field name, annotation, and symbol values)
  * providing both the symbol text and the assigned symbol ID.
- * Symbol tokens may be interned into a {@link SymbolTable},
+ * Symbol tokens may be interned into a {@link SymbolTable}.
  * <p>
  * Any instance will have at least one of the two properties defined.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  *
  * @since IonJava R15
  */
@@ -51,7 +54,7 @@ public interface SymbolToken
      * In such cases {@link #getText()} will be non-null.
      *
      * @return the symbol ID (sid) of this symbol, or
-     * {@link SymbolTable#UNKNOWN_SYMBOL_ID} if the sid unknown.
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID} if the sid is unknown.
      */
     public int getSid();
 }

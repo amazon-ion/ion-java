@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Properties;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 /**
@@ -78,6 +80,9 @@ public abstract class IonTestCase
     protected _Private_IonSystem        mySystem;
     protected IonLoader                 myLoader;
 
+    @Rule
+    public ExpectedException myExpectedException = ExpectedException.none();
+
     @After
     public void tearDown()
         throws Exception
@@ -108,6 +113,11 @@ public abstract class IonTestCase
     public void setStreamingMode(StreamingMode mode)
     {
         myStreamingMode = mode;
+    }
+
+    public boolean isStreamCopyOptimized()
+    {
+        return myStreamCopyOptimized;
     }
 
     public void setCopySpeed(StreamCopySpeed speed)
@@ -1021,12 +1031,21 @@ public abstract class IonTestCase
     }
 
 
-    public void assertEqualBytes(byte[] expected, int start, int limit,
-                                 byte[] actual)
+    public static void assertEqualBytes(byte[] expected, int start, int limit,
+                                        byte[] actual)
     {
         for (int i = start; i < limit; i++)
         {
             assertEquals(expected[i], actual[i - start]);
+        }
+    }
+
+    public static void assertArrayContentsSame(Object[] expected, Object[] actual)
+    {
+        assertEquals(expected.length, actual.length);
+        for (int i = 0; i < expected.length; i++)
+        {
+            assertSame(expected[i], actual[i]);
         }
     }
 
@@ -1068,7 +1087,6 @@ public abstract class IonTestCase
     {
         IonValue clone = original.clone();
         IonAssert.assertIonEquals(original, clone);
-        assertEquals(original.toString(), clone.toString());
 
         assertSame("ValueFactory of cloned value should be the same " +
                    "reference as the original's",

@@ -29,7 +29,7 @@ public enum IonType
 
 
     /**
-     * Determines whether a type reperesents an Ion container.
+     * Determines whether a type represents an Ion container.
      * This includes {@link #DATAGRAM}.
      *
      * @param t may be null.
@@ -45,7 +45,7 @@ public enum IonType
     }
 
     /**
-     * Determines whether a type reperesents an Ion text scalar, namely
+     * Determines whether a type represents an Ion text scalar, namely
      * {@link #STRING} or {@link #SYMBOL} (but not {@link #CLOB}).
      *
      * @param t may be null.
@@ -60,7 +60,7 @@ public enum IonType
     }
 
     /**
-     * Determines whether a type reperesents an Ion LOB scalar, namely
+     * Determines whether a type represents an Ion LOB scalar, namely
      * {@link #BLOB} or {@link #CLOB}.
      *
      * @param t may be null.

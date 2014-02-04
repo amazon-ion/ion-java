@@ -7,6 +7,9 @@ import java.util.Collection;
 
 /**
  * An Ion <code>list</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonList
     extends IonValue, IonSequence, Collection<IonValue>

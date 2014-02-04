@@ -6,6 +6,9 @@ package com.amazon.ion;
 /**
  * Base type for all Ion data nodes.
  * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
+ * <p>
  * The {@code IonValue} hierarchy presents a "tree view" of Ion data;
  * every node in the tree is an instance of this class.  Since the Ion
  * type system is highly orthogonal, most operations use this
@@ -75,20 +78,20 @@ package com.amazon.ion;
  *            useStruct(v);
  *        }
  *        // ...
- *    }
+ *     }
  *</pre>
  *   </li>
  * </ul>
  * Use the most appropriate mechanism for your algorithm, depending upon how
  * much validation you've done on the data.
  * <p>
- * <b>Mutable instances of {@code IonValue} are not thread-safe!</b>
+ * <b>Mutable {@code IonValues} are not safe for use by multiple threads!</b>
  * Your application must perform its own synchronization if you need to access
- * nodes from multiple threads. This is true even for read-only use cases,
- * since implementations may perform lazy materialization or other state
- * changes under the covers.  Alternatively, you can invoke
+ * {@code IonValues} from multiple threads. This is true even for read-only use
+ * cases, since implementations may perform lazy materialization or other state
+ * changes internally. Alternatively, you can invoke
  * {@link #makeReadOnly()} from a single thread, after which point the value
- * (and all contained values, recursively) will be both immutable and
+ * (and all recursively contained values) will be immutable and hence
  * thread-safe.
  */
 public interface IonValue
@@ -110,7 +113,7 @@ public interface IonValue
 
 
     /**
-     * Determines whether this in an Ion null-value, <em>e.g.</em>,
+     * Determines whether this in an Ion null value, <em>e.g.</em>,
      * <code>null</code> or <code>null.string</code>.
      * Note that there are unique null values for each Ion type.
      *
@@ -168,7 +171,7 @@ public interface IonValue
      * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since R15. Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();

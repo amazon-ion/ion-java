@@ -14,25 +14,25 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 
 /**
- * An <b>immutable</b> representation of time. Ion defines a simple
- * representation of date and time that is in Coordinated Universal Time (UTC).
- * In reality the practical use of time could be more accurately described of
+ * An immutable representation of a point in time. Ion defines a simple
+ * representation of time based on Coordinated Universal Time (UTC).
+ * In practice the use of time could be more accurately described as
  * UTC-SLS (UTC Smoothed Leap Seconds) as there is no representation for the
  * 24 (as of February 2009) leap second discontinuities that UTC has added.
  * <p>
- * This implementation preserves the "signficant digits" of the value.  The
- * precision defines which fields have been included.  Only common break
+ * Timestamps preserve precision, meaning the fields that are included, and the
+ * signficant digits of any fractional second.  Only common break
  * points in the values are supported.  Any unspecified fields are handled
  * as the start of the new year/month/day.
  *
  *
  * <h4>Equality and Comparison</h4>
  *
- * As with {@link IonValue} classes, the {@link #equals} methods on this class
- * performs a strict equivalence that observes the precision and local offset
+ * As with {@link IonValue} classes, the {@link #equals equals} methods on this class
+ * perform a strict equivalence that observes the precision and local offset
  * of each timestamp.
  * This means that it's possible to have two {@link Timestamp} instances that
- * represent the same point in time but are not equivalent.
+ * represent the same point in time but are not {@code equals}.
  * <p>
  * On the other hand, the {@link #compareTo} methods perform point in time
  * comparison, ignoring precision and local offset.
@@ -548,17 +548,15 @@ public final class Timestamp
      * <p>
      * For example, the following method calls will return Timestamps with
      * values (in its local time) respectively:
-     * <pre>
+     *<pre>
      * createFromUtcFields(Precision.FRACTION, 2012, 2, 3, 4, 5, 6, 0.007, <b>null</b>)    will return 2012-02-03T04:05:06.007-00:00 (match)
      * createFromUtcFields(Precision.FRACTION, 2012, 2, 3, 4, 5, 6, 0.007, <b>0</b>)       will return 2012-02-03T04:05:06.007+00:00 (match)
      * createFromUtcFields(Precision.FRACTION, 2012, 2, 3, 4, 5, 6, 0.007, <b>480</b>)     will return 2012-02-03T<b>12</b>:05:06.007<b>+08:00</b> (do not match)
      * createFromUtcFields(Precision.FRACTION, 2012, 2, 3, 4, 5, 6, 0.007, <b>-480</b>)    will return 2012-02-<b>02</b>T<b>20</b>:05:06.007<b>-08:00</b> (do not match)
      * createFromUtcFields(Precision.FRACTION, 2012, 2, 3, 4, 5, 6, 0.007, <b>720</b>)     will return 2012-02-03T<b>16</b>:05:06.007<b>+12:00</b> (do not match)
      * createFromUtcFields(Precision.FRACTION, 2012, 2, 3, 4, 5, 6, 0.007, <b>-720</b>)    will return 2012-02-<b>02</b>T<b>16</b>:05:06.007<b>-12:00</b> (do not match)
-     *
+     *</pre>
      * Note: All of these resulting Timestamps have the similar value (in UTC) 2012-02-03T04:05:06.007Z.
-     * </pre>
-     *
      *
      * <h4>Precision "Narrowing"</h4>
      *
@@ -569,14 +567,14 @@ public final class Timestamp
      * <p>
      * For example, the following method calls will return Timestamps with
      * values respectively:
-     * <pre>
+     *<pre>
      * createFromUtcFields(<b>Precision.YEAR</b>    , 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012T
      * createFromUtcFields(<b>Precision.MONTH</b>   , 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012-02T
      * createFromUtcFields(<b>Precision.DAY</b>     , 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012-02-03T
      * createFromUtcFields(<b>Precision.MINUTE</b>  , 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012-02-03T04:05Z
      * createFromUtcFields(<b>Precision.SECOND</b>  , 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012-02-03T04:05:06Z
      * createFromUtcFields(<b>Precision.FRACTION</b>, 2012, 2, 3, 4, 5, 6, 0.007, 0)    will return 2012-02-03T04:05:06.007Z
-     * </pre>
+     *</pre>
      *
      * @param p the desired timestamp precision. The result may have a
      * different precision if the input data isn't precise enough.
@@ -585,7 +583,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated Since IonJava R17, with no direct replacement.
      */
     @Deprecated
     public static Timestamp
@@ -896,15 +894,21 @@ public final class Timestamp
             }
             // +/- hh:mm
             pos++;
-            int temp = read_digits(in, pos, 2, ':', "local offset hours");
-            pos += 3;
-            temp = temp * 60 + read_digits(in, pos, 2, -1,
-                                           "local offset minutes");
-            pos += 2;
-            if (temp >= 24*60)
-            {
-                throw fail(in, "local offset must not be more than 1 day");
+            int tzdHours = read_digits(in, pos, 2, ':', "local offset hours");
+            if (tzdHours < 0 || tzdHours > 23) {
+                throw fail(in,
+                           "local offset hours must be between 0 and 23 inclusive");
             }
+            pos += 3;
+
+            int tzdMinutes = read_digits(in, pos, 2, -1, "local offset minutes");
+            if (tzdMinutes > 59) {
+                throw fail(in,
+                           "local offset minutes must be between 0 and 59 inclusive");
+            }
+            pos += 2;
+
+            int temp = tzdHours * 60 + tzdMinutes;
             if (timezone_start == '-') {
                 temp = -temp;
             }
@@ -1003,6 +1007,13 @@ public final class Timestamp
         }
     }
 
+    /**
+     * Creates a copy of this Timestamp. The resulting Timestamp will
+     * represent the same point in time and has the same precision and local
+     * offset.
+     * <p>
+     * {@inheritDoc}
+     */
     @Override
     public Timestamp clone()
     {
@@ -1061,6 +1072,8 @@ public final class Timestamp
      * Returns a Timestamp, precise to the day, with unknown local offset.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
+     *
+     * @since IonJava R17
      */
     public static Timestamp forDay(int yearZ, int monthZ, int dayZ)
     {
@@ -1079,6 +1092,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @since IonJava R17
      */
     public static Timestamp forMinute(int year, int month, int day,
                                       int hour, int minute,
@@ -1098,6 +1113,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @since IonJava R17
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, int second,
@@ -1120,6 +1137,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
+     *
+     * @since IonJava R17
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, BigDecimal second,
@@ -1148,6 +1167,8 @@ public final class Timestamp
      * @param localOffset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
+     *
+     * @since IonJava R17
      */
     public static Timestamp forMillis(long millis, Integer localOffset)
     {
@@ -1186,6 +1207,8 @@ public final class Timestamp
      *          may be {@code null} to represent an unknown local offset
      *
      * @throws NullPointerException if {@code millis} is {@code null}
+     *
+     * @since IonJava R17
      */
     public static Timestamp forMillis(BigDecimal millis, Integer localOffset)
     {
@@ -1199,6 +1222,8 @@ public final class Timestamp
      *
      * @return a Timestamp instance, precise to the millisecond;
      *   or {@code null} if {@code calendar} is {@code null}
+     *
+     * @since IonJava R17
      */
     public static Timestamp forCalendar(Calendar calendar)
     {
@@ -1889,6 +1914,11 @@ public final class Timestamp
         out.append(temp);
     }
 
+    /**
+     * Returns a hash code consistent with {@link #equals(Object)}.
+     * <p>
+     * {@inheritDoc}
+     */
     @Override
     public int hashCode()
     {

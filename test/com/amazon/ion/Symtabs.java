@@ -4,6 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
@@ -12,6 +13,7 @@ import static org.junit.Assert.assertTrue;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
+import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -23,7 +25,7 @@ public class Symtabs
     public static final String LocalSymbolTablePrefix = ION_SYMBOL_TABLE + "::";
     public static final String SharedSymbolTablePrefix = ION_SHARED_SYMBOL_TABLE + "::";
 
-
+    public static final String[] LOCAL_SYMBOLS_ABC = new String[] {"a", "b", "c"};
 
     public static final SimpleCatalog CATALOG = new SimpleCatalog();
 
@@ -161,6 +163,7 @@ public class Symtabs
 
 
     public static String printLocalSymtab(String... symbols)
+        throws IOException
     {
         StringBuilder s = new StringBuilder(LocalSymbolTablePrefix);
 
@@ -168,12 +171,55 @@ public class Symtabs
 
         for (String symbol : symbols)
         {
-            s.append(printString(symbol));
+            // If symbol is the null ref., print it as null to indicate a gap
+            if (symbol == null)
+            {
+                s.append("null");
+            }
+            else
+            {
+                printString(s, symbol);
+            }
             s.append(',');
         }
 
         s.append("]} ");
 
         return s.toString();
+    }
+
+
+    /**
+     * Creates a local symtab with local symbols but no imports.
+     *
+     * @param system
+     * @param localSymbols
+     *          the array (var-args) of local symbols that the resulting
+     *          local symtab to contain; may be {@code null} to indicate no
+     *          local symbols; elements may be {@code null} to indicate a gap
+     */
+    public static SymbolTable makeLocalSymtab(IonSystem system,
+                                              String... localSymbols)
+    {
+        return newLocalSymtab(system, system.getSystemSymbolTable(),
+                              Arrays.asList(localSymbols));
+    }
+
+
+    /**
+     * Creates a local symtab with local symbols and imports.
+     */
+    public static SymbolTable makeLocalSymtab(IonSystem system,
+                                              String[] localSymbols,
+                                              SymbolTable... imports)
+    {
+        SymbolTable localSymtab = system.newLocalSymbolTable(imports);
+
+        for (String localSymbol : localSymbols)
+        {
+            localSymtab.intern(localSymbol);
+        }
+
+        return localSymtab;
     }
 }

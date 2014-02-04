@@ -4,6 +4,9 @@ package com.amazon.ion;
 
 /**
  * An Ion <code>symbol</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonSymbol
     extends IonText
@@ -28,8 +31,7 @@ public interface IonSymbol
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
      *
-     * @deprecated Since IonJava R15.
-     * Use {@link #symbolValue()} instead.
+     * @deprecated Since IonJava R15. Use {@link #symbolValue()} instead.
      */
     @Deprecated
     public int getSymbolId()

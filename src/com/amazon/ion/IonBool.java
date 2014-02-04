@@ -6,6 +6,9 @@ package com.amazon.ion;
 
 /**
  * An Ion <code>bool</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonBool
     extends IonValue

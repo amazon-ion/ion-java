@@ -2,6 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonWriterFactory.newTextWriterWithImports;
+
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
@@ -167,11 +169,11 @@ public class _Private_IonTextWriterBuilder
         IonSystem system =
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
-        IonWriterSystemText systemWriter =
-            new IonWriterSystemText(system.getSystemSymbolTable(), this,
-                                    appender);
-
-        return new IonWriterUser(catalog, system, systemWriter, imports);
+        return newTextWriterWithImports(system,
+                                        catalog,
+                                        this,
+                                        appender,
+                                        imports);
     }
 
 

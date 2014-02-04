@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.Symtabs.printLocalSymtab;
 import static com.amazon.ion.SystemSymbols.ION;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
@@ -132,6 +133,22 @@ public class SymbolTableTest
 
     //=========================================================================
     // Test cases
+
+    @Test
+    public void testSymtabsPrintLocalSymtabWithGaps()
+        throws Exception
+    {
+        String expected =
+            "$ion_symbol_table::{" +
+            "  symbols:[\"amazon\",\"website\",null,]" + // NB: unquoted null
+            "}";
+
+        String actual = printLocalSymtab("amazon", "website", null);
+
+        // remove all whitespaces before check
+        assertEquals(expected.replaceAll("\\s+", ""),
+                     actual.replaceAll("\\s+", ""));
+    }
 
     @Test
     public void testInitialSystemSymtab()
@@ -351,7 +368,7 @@ public class SymbolTableTest
         throws IOException
     {
         // Use a big symtab to get beyond any default allocation within the
-        // dummy symtab.  This was done to trap a bug in UnifiedSymbolTable.
+        // dummy symtab.  This was done to trap a bug in LocalSymbolTable.
         ArrayList<String> syms = new ArrayList<String>();
         int maxId = 50;
         for (int i = 1; i <= maxId; i++)

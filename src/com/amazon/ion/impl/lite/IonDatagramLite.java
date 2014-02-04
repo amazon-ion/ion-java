@@ -4,6 +4,7 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
@@ -22,7 +23,6 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonDatagram;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -176,10 +176,10 @@ final class IonDatagramLite
     @Override
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
-        assert child._context == this;
-
         if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
-            throw new IllegalArgumentException("you can only set a symbol table to a system or local table");
+            String message =
+                "you can only set a symbol table to a system or local table";
+            throw new IllegalArgumentException(message);
         }
 
         TopLevelContext context = _system.allocateConcreteContext(this, child);
@@ -253,9 +253,10 @@ final class IonDatagramLite
         // handled in super.add(): patch_elements_helper(index + 1);
 
         SymbolTable symbols = concrete.getAssignedSymbolTable();
-        if (symbols == null && this._pending_symbol_table != null && this._pending_symbol_table_idx == concrete._elementid())
+        if (symbols == null
+            && _pending_symbol_table != null
+            && _pending_symbol_table_idx == concrete._elementid())
         {
-            assert concrete._context == this;
             setSymbolTableOfChild(_pending_symbol_table, concrete);
         }
 
@@ -510,11 +511,12 @@ final class IonDatagramLite
     throws IOException
     {
         boolean streamCopyOptimized = false;
-        _Private_IonBinaryWriterImpl writer =
-            new _Private_IonBinaryWriterImpl(_catalog,
-                                             _system.getSystemSymbolTable(),
-                                             _system,
-                                             streamCopyOptimized);
+
+        IonBinaryWriter writer =
+            newIonBinaryWriterWithImports(_system,
+                                          _catalog,
+                                          streamCopyOptimized);
+
         IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);
         writer.finish();

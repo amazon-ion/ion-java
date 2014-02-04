@@ -6,6 +6,9 @@ import java.math.BigInteger;
 
 /**
  * An Ion <code>int</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  */
 public interface IonInt
     extends IonValue

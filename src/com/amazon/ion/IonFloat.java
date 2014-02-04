@@ -6,8 +6,11 @@ import java.math.BigDecimal;
 
 /**
  * An Ion <code>float</code> value.
+ * <p>
+ * <b>WARNING:</b> This interface should not be implemented or extended by
+ * code outside of this library.
  *
- * <h2>WARNING</h2>
+ * <h2>Precision Problems</h2>
  *
  * Use of binary floating-point numbers is prone to countless problems.
  * The vast majority of applications should use {@code decimal} values instead.
@@ -15,8 +18,10 @@ import java.math.BigDecimal;
  * <a href="http://speleotrove.com/decimal/decifaq1.html">Decimal Arithmetic
  * FAQ</a> for horror stories.
  * <p>
- * If you have any doubt whatsoever whether you should use {@code float} or
+ * If you have any doubt whatsoever on whether you should use {@code float} or
  * {@code decimal}, then you should use {@code decimal}.
+ *
+ * @see IonDecimal
  */
 public interface IonFloat
     extends IonValue

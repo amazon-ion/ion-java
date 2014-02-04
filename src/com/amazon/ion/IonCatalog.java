@@ -22,7 +22,7 @@ import com.amazon.ion.system.SimpleCatalog;
  * This interface defines two methods with subtly different semantics.
  * The first variant takes only a symbol table name, and returns the highest
  * version possible. The second takes a version number and attempts to match it
- * exactly, and if that's not possible falls back to the the "best match"
+ * exactly, and if that's not possible it falls back to the the "best match"
  * possible:
  * <ul>
  *   <li>If any versions <em>larger</em> than the requested version are
@@ -37,6 +37,15 @@ import com.amazon.ion.system.SimpleCatalog;
  * imported shared symtab with the same name, version and max_id. Refer to
  * {@link SymbolTable}.
  * <p>
+ * This interface is the <em>only</em> abstraction point for caching shared
+ * symbol tables. Within this library, there is no caching mechanism in place on
+ * shared symbol tables that are loaded into the {@link IonSystem}.
+ * This means that when a shared symbol table needs to be retrieved by the
+ * library's code-paths, methods of this interface are invoked directly,
+ * without any additional caching whatsoever.
+ * As such, implementors of this interface should implement their own caching
+ * mechanism if desired.
+ * <p>
  * When encoding Ion binary data, its always best to use an exact match to the
  * requested version whenever possible.  Earlier versions are very likely to be
  * missing symbols that are needed by the data.  Later versions of the table
@@ -49,8 +58,9 @@ import com.amazon.ion.system.SimpleCatalog;
  * <p>
  * Binary <em>decoding</em> prefers an exact match, and in a couple edge cases,
  * requires it. Therefore a single "get latest version" method is insufficient.
- * See <a href="https://w?Ion/Symbols">https://w?Ion/Symbols</a> for more
- * details on this topic.
+ * See the
+ * <a href="https://w.amazon.com/index.php/Ion/Symbols">Ion Symbols wiki page</a>
+ * for more details on this topic.
  * <p>
  * It's expected that many if not most applications will implement a dynamic
  * catalog that can fetch symtabs from some source.  In such cases the catalog

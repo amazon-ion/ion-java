@@ -30,6 +30,22 @@ import java.util.Iterator;
  * We still have some work to do before this interface is stable.
  * See <a href="https://jira2.amazon.com/browse/ION-183">issue ION-183</a>
  * <p>
+ * An {@code IonReader} has a "cursor" tracking the <em>current value</em> on
+ * which the reader is positioned. Generally, newly created readers are not
+ * positioned on any value. To begin traversing the Ion data, one would use
+ * {@link #next()} to advance the cursor onto the first value (or learn there isn't
+ * one). Once positioned, the current value's data can be accessed with the
+ * {@code *Value()} methods.
+ * <p>
+ * When the current value is a container, calling {@link #next()} moves the
+ * cursor to the <em>next sibling</em> of the container, at the same depth,
+ * skipping over any children the container may have.
+ * To read the children, call {@link #stepIn()},
+ * then {@link #next()} to position onto the first child value (or learn there
+ * isn't one).  Calling {@link #stepOut()} skips over any remaining children
+ * and moves the cursor just beyond the container; call {@link #next()} to
+ * move the cursor to the following value.
+ * <p>
  * In general, method names are intended to parallel similar methods in the
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()}, mirroring {@link IonSymbol#stringValue()}.
@@ -71,7 +87,7 @@ import java.util.Iterator;
  * This facet is support by all readers of Ion binary and text data.
  *
  * <h3>The {@link TextSpan} Facet</h3>
- * This facet is supported by all text readers.
+ * This facet is supported by all readers of Ion text data.
  */
 public interface IonReader
     extends Closeable, Faceted
@@ -88,8 +104,9 @@ public interface IonReader
      * that you cannot reliably get values from the "current" element. The only
      * thing you should call after {@code hasNext()} is {@link #next()}!
      *
-     * @deprecated Applications should detect the end of the current level by
-     * checking for a {@code null} response from {@link #next()}.
+     * @deprecated Since IonJava R8, with no direct replacement. Applications
+     * should detect the end of the current level by checking for a {@code null}
+     * response from {@link #next()}.
      */
     @Deprecated
     public boolean hasNext();
@@ -97,7 +114,7 @@ public interface IonReader
     /**
      * Positions this reader on the next sibling after the current value,
      * returning the type of that value.  Once so positioned the contents of
-     * this value can be accessed with the {@code *value()} methods.
+     * this value can be accessed with the {@code *Value()} methods.
      * <p>
      * A sequence of {@code next()} calls traverses the data at a constant
      * depth, within the same container.
@@ -205,8 +222,7 @@ public interface IonReader
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since IonJava R15.
-     * Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
