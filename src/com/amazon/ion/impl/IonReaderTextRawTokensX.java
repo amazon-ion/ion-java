@@ -2093,7 +2093,7 @@ final class IonReaderTextRawTokensX
             skip_over_blob(sp);
             break;
         default:
-            error("unexpected token "+IonTokenConstsX.getTokenName(getToken())+
+            error("unexpected token "+IonTokenConstsX.getTokenName(lobToken)+
                   " encountered for lob content");
         }
     }
@@ -2111,7 +2111,7 @@ final class IonReaderTextRawTokensX
             load_blob(sb);
             break;
         default:
-            error("unexpected token "+IonTokenConstsX.getTokenName(getToken())+
+            error("unexpected token "+IonTokenConstsX.getTokenName(lobToken)+
                   " encountered for lob content");
         }
     }
