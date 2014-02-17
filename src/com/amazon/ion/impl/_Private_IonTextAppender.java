@@ -13,6 +13,8 @@ import java.io.IOException;
 
 
 /**
+ * NOT FOR APPLICATION USE!
+ * <p>
  * Generic text sink that enables optimized output of both ASCII and UTF-16.
  */
 public abstract class _Private_IonTextAppender

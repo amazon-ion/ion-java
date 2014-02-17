@@ -4,6 +4,7 @@ package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
@@ -22,7 +23,6 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonDatagram;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -511,11 +511,12 @@ final class IonDatagramLite
     throws IOException
     {
         boolean streamCopyOptimized = false;
-        _Private_IonBinaryWriterImpl writer =
-            new _Private_IonBinaryWriterImpl(_catalog,
-                                             _system.getSystemSymbolTable(),
-                                             _system,
-                                             streamCopyOptimized);
+
+        IonBinaryWriter writer =
+            newIonBinaryWriterWithImports(_system,
+                                          _catalog,
+                                          streamCopyOptimized);
+
         IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);
         writer.finish();

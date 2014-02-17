@@ -54,7 +54,7 @@ public interface SymbolToken
      * In such cases {@link #getText()} will be non-null.
      *
      * @return the symbol ID (sid) of this symbol, or
-     * {@link SymbolTable#UNKNOWN_SYMBOL_ID} if the sid unknown.
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID} if the sid is unknown.
      */
     public int getSid();
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2012-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,6 +7,7 @@ import java.io.IOException;
 
 /**
  * NOT FOR APPLICATION USE!
+ * <p>
  * An IonWriter that has optimized list-writing.
  */
 public interface _Private_ListWriter

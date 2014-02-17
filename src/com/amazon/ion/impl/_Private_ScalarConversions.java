@@ -11,7 +11,7 @@ import java.math.BigInteger;
 import java.util.Date;
 
 /**
- *
+ * NOT FOR APPLICATION USE!
  */
 public class _Private_ScalarConversions
 {

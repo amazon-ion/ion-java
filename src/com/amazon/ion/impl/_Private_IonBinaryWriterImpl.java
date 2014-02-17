@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -14,6 +14,7 @@ import java.io.OutputStream;
 
 /**
  * NOT FOR APPLICATION USE!
+ * <p>
  * Adapts the binary {@link IonWriter} implementation to the deprecated
  * {@link IonBinaryWriter} interface.
  */
@@ -26,16 +27,15 @@ public final class _Private_IonBinaryWriterImpl
     public _Private_IonBinaryWriterImpl(IonCatalog catalog,
                                         SymbolTable defaultSystemSymtab,
                                         ValueFactory symtabValueFactory,
+                                        IonWriterSystemBinary systemWriter,
                                         boolean streamCopyOptimized,
-                                        SymbolTable... imports)
+                                        SymbolTable symtab)
     {
-        super(catalog, symtabValueFactory,
-              new IonWriterSystemBinary(defaultSystemSymtab,
-                                        new BufferedOutputStream(),
-                                        false /* autoflush */,
-                                        true /* ensureInitialIvm */),
+        super(catalog,
+              symtabValueFactory,
+              systemWriter,
               streamCopyOptimized,
-              imports);
+              symtab);
     }
 
 

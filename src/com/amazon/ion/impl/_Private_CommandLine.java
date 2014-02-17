@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,6 +8,9 @@ import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.JarInfo;
 import java.io.IOException;
 
+/**
+ * NOT FOR APPLICATION USE!
+ */
 public final class _Private_CommandLine
 {
     static final int argid_VERSION = 2;

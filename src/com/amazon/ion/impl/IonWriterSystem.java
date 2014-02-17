@@ -122,7 +122,7 @@ abstract class IonWriterSystem
         _symbol_table = symbols;
     }
 
-    boolean shouldWriteIvm(SymbolTable systemSymtab)
+    boolean shouldWriteIvm()
     {
         if (_initial_ivm_handling == InitialIvmHandling.ENSURE)
         {
@@ -173,7 +173,7 @@ abstract class IonWriterSystem
             throw new UnsupportedOperationException(message);
         }
 
-        if (shouldWriteIvm(systemSymtab))
+        if (shouldWriteIvm())
         {
             _initial_ivm_handling = null;
 

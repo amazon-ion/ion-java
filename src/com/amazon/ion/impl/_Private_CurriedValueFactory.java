@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -28,10 +28,10 @@ import java.math.BigInteger;
 import java.util.Collection;
 
 /**
+ * NOT FOR APPLICATION USE!
+ * <p>
  * Helper for implementing curried container insertion methods such as
  * {@link IonStruct#put(String)}.
- * <p>
- * <b>NOT FOR APPLICATION USE!</b>
  */
 public abstract class _Private_CurriedValueFactory
     implements ValueFactory

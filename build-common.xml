@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!-- Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. -->
+
+<project name="IonJava-common">
+
+  <!-- ==================================================================== -->
+  <!-- Preparing properties for IonTests static test files -->
+  
+  <target name="build.properties">
+    <tstamp>
+      <format property="build_time"
+        pattern="yyyy-MM-dd'T'HH:mm:ss'Z'" timezone="GMT"/>
+    </tstamp>
+
+    <property name="sys.prop.iontests.iontestdata"
+              value="com.amazon.iontests.iontestdata.path" />
+    <property name="sys.prop.iontests.bulk"
+              value="com.amazon.iontests.bulk.path" />
+
+    <propertycopy property="dir.IonTests.src" from="bp:{IonTests}pkg.src"/>
+    <property name="dir.test.data"
+              location="${dir.IonTests.src}/iontestdata"/>
+    <property name="dir.test.data.bulk"
+              location="${dir.IonTests.src}/bulk"/>
+  </target>
+
+  <!-- ==================================================================== -->
+  <!-- Building the JarInfo properties file -->
+  
+  <macrodef name="copy-jar-info"
+      description="Update JarInfo utility with current Brazil info">
+    <attribute name="classes-dir" />
+
+    <sequential>
+      <copy file="${basedir}/build.properties"
+            tofile="@{classes-dir}/com/amazon/ion/util/JarInfo.properties" />
+      <propertyfile file="@{classes-dir}/com/amazon/ion/util/JarInfo.properties">
+        <entry key="brazil_major_version" value="${bp:package-major-version}" />
+        <entry key="brazil_package_version"
+               value="${bp:package-name-full-version}" />
+        <entry key="build_time" value="${build_time}" />
+      </propertyfile>
+    </sequential>
+  </macrodef>
+
+</project>

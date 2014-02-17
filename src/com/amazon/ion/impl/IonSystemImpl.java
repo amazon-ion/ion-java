@@ -10,6 +10,8 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl._Private_IonWriterFactory.newBinaryWriterWithImports;
+import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.systemSymtab;
@@ -104,6 +106,12 @@ final class IonSystemImpl
     }
 
 
+    public boolean isStreamCopyOptimized()
+    {
+        return myStreamCopyOptimized;
+    }
+
+
     public final SymbolTable getSystemSymbolTable()
     {
         return mySystemSymbols;
@@ -128,7 +136,10 @@ final class IonSystemImpl
 
     public SymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        return _Private_Utils.newLocalSymtab(this, mySystemSymbols, imports);
+        return _Private_Utils.newLocalSymtab(this,
+                                             mySystemSymbols,
+                                             null /* localSymbols */,
+                                             imports);
     }
 
 
@@ -467,22 +478,19 @@ final class IonSystemImpl
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
-        _Private_IonBinaryWriterImpl writer =
-            new _Private_IonBinaryWriterImpl(myCatalog,
-                                             defaultSystemSymtab,
-                                             this,
+        return newIonBinaryWriterWithImports(this,
+                                             getCatalog(),
                                              myStreamCopyOptimized,
                                              imports);
-        return writer;
     }
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriter writer =
-            _Private_IonWriterFactory.newBinaryWriter(this, getCatalog(),
+        IonWriter writer = newBinaryWriterWithImports(this,
+                                                      getCatalog(),
                                                       myStreamCopyOptimized,
-                                                      out, imports);
+                                                      out,
+                                                      imports);
         return writer;
     }
 

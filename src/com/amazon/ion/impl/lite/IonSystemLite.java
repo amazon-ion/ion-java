@@ -7,6 +7,8 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl._Private_IonWriterFactory.newBinaryWriterWithImports;
+import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
@@ -30,7 +32,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl._Private_IonBinaryWriterImpl;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
@@ -100,9 +101,14 @@ final class IonSystemLite
         _value_factory.set_system(this);
     }
 
-    /**
-     * IonSystem Methods
-     */
+    //==========================================================================
+    // IonSystem Methods
+    //==========================================================================
+
+    public boolean isStreamCopyOptimized()
+    {
+        return myStreamCopyOptimized;
+    }
 
     @SuppressWarnings("unchecked")
     public <T extends IonValue> T clone(T value) throws IonException
@@ -208,21 +214,16 @@ final class IonSystemLite
     @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        SymbolTable defaultSystemSymtab = getSystemSymbolTable();
-        _Private_IonBinaryWriterImpl writer =
-            new _Private_IonBinaryWriterImpl(_catalog,
-                                             defaultSystemSymtab,
-                                             this,
+        return newIonBinaryWriterWithImports(this,
+                                             getCatalog(),
                                              myStreamCopyOptimized,
                                              imports);
-        return writer;
     }
 
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriter writer =
-            _Private_IonWriterFactory.newBinaryWriter(this, getCatalog(),
+        IonWriter writer = newBinaryWriterWithImports(this, getCatalog(),
                                                       myStreamCopyOptimized,
                                                       out, imports);
         return writer;
@@ -255,6 +256,7 @@ final class IonSystemLite
     {
         return _Private_Utils.newLocalSymtab(this,
                                              getSystemSymbolTable(),
+                                             null /* localSymbols */,
                                              imports);
     }
 
@@ -269,7 +271,7 @@ final class IonSystemLite
     }
 
     public SymbolTable newSharedSymbolTable(IonReader reader,
-                                                   boolean isOnStruct)
+                                            boolean isOnStruct)
     {
         return _Private_Utils.newSharedSymtab(reader, isOnStruct);
     }
@@ -871,11 +873,9 @@ final class IonSystemLite
     }
 
 
-    /*************************************************************
-     *
-     * methods in IonSystemImpl (now declared in IonSystemPrivate)
-     *
-     */
+    //==========================================================================
+    // methods in IonSystemImpl (now declared in IonSystemPrivate)
+    //==========================================================================
 
     public IonReader newReader(Reader ionText)
     {
@@ -899,9 +899,9 @@ final class IonSystemLite
     }
 
 
-    //=========================================================================
+    //==========================================================================
     // IonWriter creation
-
+    //==========================================================================
 
     /**
      * @param container must not be null.

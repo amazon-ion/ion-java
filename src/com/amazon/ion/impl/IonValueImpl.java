@@ -738,15 +738,6 @@ abstract class IonValueImpl
         return this._symboltable;
     }
 
-    /**
-     * this returns the current values symbol table,
-     * which is typically
-     * owned by the top level value, if the current
-     * symbol table is a local symbol table.  Otherwise
-     * this replaces the current symbol table with a
-     * new local symbol table based on the current Ion system version.
-     * @return SymbolTable that is updatable (i.e. a local symbol table)
-     */
     public SymbolTable getUpdatableSymbolTable()
     {
         IonValueImpl topLevel = topLevelValue();
@@ -764,16 +755,6 @@ abstract class IonValueImpl
         return symbols;
     }
 
-    /**
-     * checks in the current symbol table for this
-     * symbol (name) and returns the symbol id if
-     * this symbol is defined.
-     *
-     * @param name text for the symbol of interest
-     * @return int symbol id if found or
-     *          UnifiedSymbolTable.UNKNOWN_SID if
-     *          it is not already defined
-     */
     public int resolveSymbol(String name)
     {
         SymbolTable symbols = getSymbolTable();
@@ -784,15 +765,6 @@ abstract class IonValueImpl
         return sid;
     }
 
-    /**
-     * checks in the current symbol table for this
-     * symbol id (sid) and returns the symbol text if
-     * this symbol is defined.
-     *
-     * @param sid symbol id of interest
-     * @return String symbol text if found or
-     *          null if it is not already defined
-     */
     public String resolveSymbol(int sid)
     {
         SymbolTable symbols = getSymbolTable();
@@ -821,15 +793,6 @@ abstract class IonValueImpl
         return sym;
     }
 
-    /**
-     * adds a symbol name to the current symbol
-     * table.  This may change the current symbol
-     * table if the current symbol table is either
-     * null or not updatable.
-     * @param name symbol text to be added
-     * @return int symbol id of the existing, or
-     *             newly defined, symbol
-     */
     public int addSymbol(String name)
     {
         int sid = resolveSymbol(name);

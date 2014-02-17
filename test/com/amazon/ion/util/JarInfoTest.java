@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -23,7 +23,7 @@ public class JarInfoTest
         // succeed in that case.
         if (System.getProperty("NOBRAZIL") != null) return;
 
-        assertTrue(info.getReleaseLabel().startsWith("R1"));
+        assertTrue(info.getReleaseLabel().startsWith("R2"));
         assertTrue(info.getBrazilMajorVersion().startsWith("1."));
         assertTrue(info.getBrazilPackageVersion().startsWith("IonJava-1."));
         assertNotNull(info.getBuildTime());

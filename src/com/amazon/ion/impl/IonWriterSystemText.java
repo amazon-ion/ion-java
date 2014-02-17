@@ -398,7 +398,7 @@ final class IonWriterSystemText
         {
             // Copy the symtab, but filter out local symbols.
 
-            IonReader reader = new UnifiedSymbolTableReader(symtab);
+            IonReader reader = new SymbolTableReader(symtab);
 
             // move onto and write the struct header
             IonType t = reader.next();

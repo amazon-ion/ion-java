@@ -2,8 +2,15 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
+import static com.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
+import static com.amazon.ion.Symtabs.makeLocalSymtab;
+import static com.amazon.ion.impl._Private_DmsdkUtils.copyLocalSymbolTable;
+import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
@@ -22,17 +29,6 @@ public class LocalSymbolTableTest
         Symtabs.CATALOG.getTable("fred", 2);
     private static final SymbolTable ST_GINGER_V1 =
         Symtabs.CATALOG.getTable("ginger", 1);
-
-
-
-    private SymbolTable makeAbcTable(SymbolTable... imports)
-    {
-        SymbolTable st = system().newLocalSymbolTable(imports);
-        st.intern(A);
-        st.intern("b");
-        st.intern("c");
-        return st;
-    }
 
 
     //-------------------------------------------------------------------------
@@ -61,14 +57,16 @@ public class LocalSymbolTableTest
     @Test
     public void testInternKnownText()
     {
-        SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC,
+                                         ST_FRED_V2, ST_GINGER_V1);
         internKnownText(st);
     }
 
     @Test
     public void testInternUnknownText()
     {
-        SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC,
+                                         ST_FRED_V2, ST_GINGER_V1);
 
         String D = "d";
         checkUnknownSymbol(D, st);
@@ -84,7 +82,8 @@ public class LocalSymbolTableTest
     @Test
     public void testInternKnownTextWhenReadOnly()
     {
-        SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC,
+                                         ST_FRED_V2, ST_GINGER_V1);
         st.makeReadOnly();
         internKnownText(st);
     }
@@ -92,7 +91,8 @@ public class LocalSymbolTableTest
     @Test(expected = IonException.class)
     public void testInternUnknownTextWhenReadOnly()
     {
-        SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC,
+                                         ST_FRED_V2, ST_GINGER_V1);
         st.makeReadOnly();
         st.intern("d");
     }
@@ -101,8 +101,132 @@ public class LocalSymbolTableTest
     @Test(expected = NullPointerException.class)
     public void testInternNull()
     {
-        SymbolTable st = makeAbcTable();
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
         st.intern(null);
+    }
+
+    //-------------------------------------------------------------------------
+    // Tests for _Private_DmsdkUtils.makeCopy(SymbolTable)
+
+    @Test
+    public void testCopyLSTWithSubstitutedImports()
+    {
+        SubstituteSymbolTable subFred2 =
+            new SubstituteSymbolTable("fred", 2, FRED_MAX_IDS[2]);
+        Symtabs.register("fred", 1, catalog());
+
+        SymbolTable localSymtab =
+            makeLocalSymtab(system(), EMPTY_STRING_ARRAY, subFred2);
+
+        SymbolTable[] imports = localSymtab.getImportedTables();
+        assertTrue(imports[0].isSubstitute());
+
+        myExpectedException.expect(SubstituteSymbolTableException.class);
+        copyLocalSymbolTable(localSymtab); // method under test
+    }
+
+    @Test
+    public void testCopyLSTOnSystemSymtab()
+    {
+        SymbolTable systemSymtab = system().getSystemSymbolTable();
+
+        myExpectedException.expect(IllegalArgumentException.class);
+        copyLocalSymbolTable(systemSymtab); // method under test
+    }
+
+    @Test
+    public void testCopyLSTOnImport()
+    {
+        SymbolTable fred1 = Symtabs.register("fred", 1, catalog());
+
+        myExpectedException.expect(IllegalArgumentException.class);
+        copyLocalSymbolTable(fred1); // method under test
+    }
+
+    @Test
+    public void testCopyLSTOnSubstitutedImport()
+    {
+        SubstituteSymbolTable subFred2 =
+            new SubstituteSymbolTable("fred", 2, FRED_MAX_IDS[2]);
+
+        myExpectedException.expect(IllegalArgumentException.class);
+        copyLocalSymbolTable(subFred2); // method under test
+    }
+
+    @Test
+    public void testCopyLST()
+    {
+        SymbolTable orig = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
+        SymbolTable copy = copyLocalSymbolTable(orig); // method under test
+
+        assertNotSame(orig, copy);
+
+        assertTrue(copy.isLocalTable());
+
+        int systemMaxId = orig.getSystemSymbolTable().getMaxId();
+        checkSymbol("a", systemMaxId + 1, copy.find("a"));
+        checkSymbol("b", systemMaxId + 2, copy.find("b"));
+        checkSymbol("c", systemMaxId + 3, copy.find("c"));
+    }
+
+    @Test
+    public void testCopyLSTThenAddSymbols()
+    {
+        SymbolTable orig = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
+        SymbolTable copy = copyLocalSymbolTable(orig); // method under test
+
+        // interning in copy doesn't modify orig
+        assertNull(orig.find("amazon"));
+        copy.intern("amazon");
+        assertNull(orig.find("amazon"));
+
+        // interning in orig doesn't modify copy
+        assertNull(copy.find("dotcom"));
+        orig.intern("dotcom");
+        assertNull(copy.find("dotcom"));
+    }
+
+    @Test
+    public void testCopyLSTWithImports()
+    {
+        SymbolTable fred1 = Symtabs.register("fred", 1, catalog());
+        SymbolTable orig = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC, fred1);
+
+        SymbolTable copy = copyLocalSymbolTable(orig);  // method under test
+
+        SymbolTable[] origImports = orig.getImportedTables();
+        SymbolTable[] copyImports = copy.getImportedTables();
+
+        assertNotSame(origImports, copyImports);
+
+        // check that the imported SymbolTables point to the same refs.
+        assertArrayContentsSame(origImports, copyImports);
+    }
+
+    @Test
+    public void testCopyLSTNotReadOnly()
+    {
+        SymbolTable orig = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
+
+        // original is not read only
+        assertFalse(orig.isReadOnly());
+        SymbolTable copy = copyLocalSymbolTable(orig); // method under test
+        assertFalse(copy.isReadOnly());
+
+        // original is read only
+        orig.makeReadOnly();
+        copy = copyLocalSymbolTable(orig); // method under test
+        assertFalse(copy.isReadOnly());
+    }
+
+    @Test
+    public void testCopyLSTIsSymtabsExtends()
+    {
+        SymbolTable orig = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
+        SymbolTable copy = copyLocalSymbolTable(orig);  // method under test
+
+        assertTrue(((LocalSymbolTable) copy).symtabExtends(orig));
+        assertTrue(((LocalSymbolTable) orig).symtabExtends(copy));
     }
 
 
@@ -136,14 +260,16 @@ public class LocalSymbolTableTest
     @Test
     public void testFindSymbolToken()
     {
-        SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC,
+                                         ST_FRED_V2, ST_GINGER_V1);
         testFindSymbolToken(st);
     }
 
     @Test
     public void testFindSymbolTokenWhenReadOnly()
     {
-        SymbolTable st = makeAbcTable(ST_FRED_V2, ST_GINGER_V1);
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC,
+                                         ST_FRED_V2, ST_GINGER_V1);
         st.makeReadOnly();
         testFindSymbolToken(st);
     }
@@ -152,7 +278,7 @@ public class LocalSymbolTableTest
     @Test(expected = NullPointerException.class)
     public void testFindSymbolTokenNull()
     {
-        SymbolTable st = makeAbcTable();
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
         st.find(null);
     }
 }

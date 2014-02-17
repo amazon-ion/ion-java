@@ -216,7 +216,7 @@ public abstract class SystemProcessingTestCase
         SymbolTable table3 = currentSymtab();
         assertNotSame(table1, table3);
         // nope, this may be the next local that will hold 'far' and 'boo':
-        // assertTrue("the reset table should be a trivial table (system or null)", UnifiedSymbolTable.isTrivialTable(table3));
+        // assertTrue("the reset table should be a trivial table (system or null)", _Private_Utils.isTrivialTable(table3));
 
         nextValue();
         checkSymbol("far");
