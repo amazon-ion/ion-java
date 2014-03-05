@@ -670,7 +670,7 @@ public final class Timestamp
         set_fields_from_millis(date);
 
         int scale = millis.scale();
-        if (scale < -3) {
+        if (scale <= -3) {
             this._precision = Precision.SECOND;
             this._fraction = null;
         }

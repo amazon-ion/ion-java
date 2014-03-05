@@ -139,6 +139,14 @@ public class TimestampTest
                     expectedOffset,
                     ts);
         assertEquals(expectedPrecision, ts.getPrecision());
+
+        @SuppressWarnings("deprecation")
+        Timestamp ts2 =
+            createFromUtcFields(expectedPrecision,
+                                ts.getZYear(), ts.getZMonth(), ts.getZDay(),
+                                ts.getZHour(), ts.getZMinute(), ts.getZSecond(),
+                                ts.getZFractionalSecond(), expectedOffset);
+        assertEquals(ts2, ts);
     }
 
     private void checkFields(int expectedYear, int expectedMonth, int expectedDay,
@@ -786,6 +794,7 @@ public class TimestampTest
      * Timestamps (with correct precision of second/fractional seconds) as
      * expected.
      */
+    @SuppressWarnings("deprecation")
     @Test
     public void testNewTimestampFromBigDecimalWithDifferentScales()
     {
@@ -812,7 +821,7 @@ public class TimestampTest
         checkFields(2012, 1, 1, 12, 12, 30, null, null, SECOND, ts);
 
         ts = new Timestamp(decScaleNegThree, null);
-        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0"), null, FRACTION, ts);
+        checkFields(2012, 1, 1, 12, 12, 30, null, null, SECOND, ts);
 
         ts = new Timestamp(decScaleNegTwo, null);
         checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.5"), null, FRACTION, ts);
@@ -825,6 +834,12 @@ public class TimestampTest
 
         ts = new Timestamp(decScalePosOne, null);
         checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.5555"), null, FRACTION, ts);
+
+        ts = new Timestamp(new BigDecimal("0e3"), null);
+        checkFields(1970, 1, 1, 0, 0, 0, null, null, SECOND, ts);
+
+        ts = new Timestamp(new BigDecimal("1e3"), null);
+        checkFields(1970, 1, 1, 0, 0, 1, null, null, SECOND, ts);
     }
 
     /** Test for {@link Timestamp#Timestamp(long, Integer)} */
