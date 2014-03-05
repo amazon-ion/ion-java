@@ -1281,14 +1281,13 @@ public final class Timestamp
 
 
     /**
-     * Returns a Timestamp representing the current time in milliseconds from
-     * the epoch using the JVM clock, with an unknown local offset.
+     * Returns a Timestamp representing the current time (based on the JVM
+     * clock), with an unknown local offset.
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
      * @return
-     *          a new Timestamp instance representing the current time in
-     *          milliseconds from the epoch (1970-01-01T00:00:00.000Z)
+     *          a new Timestamp instance representing the current time.
      */
     public static Timestamp now()
     {
@@ -1297,14 +1296,14 @@ public final class Timestamp
     }
 
     /**
-     * Returns a Timestamp in UTC representing the current time in milliseconds
-     * from the epoch using the JVM clock.
+     * Returns a Timestamp in UTC representing the current time (based on the
+     * the JVM clock).
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
      * @return
      *          a new Timestamp instance, in UTC, representing the current
-     *          time in milliseconds from the epoch (1970-01-01T00:00:00.000Z)
+     *          time.
      *
      * @since IonJava R13
      */
