@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -115,7 +115,8 @@ public interface IonStruct
 
     /**
      * Provides a factory that when invoked constructs a new value and
-     * {@code put}s it into this struct using the given {@code fieldName}.
+     * {@link #put(String,IonValue) put}s it into this struct using the given
+     * {@code fieldName}.
      * <p>
      * These two lines are equivalent:
      *<pre>
@@ -127,6 +128,8 @@ public interface IonStruct
      *   if {@code fieldName} is <code>null</code>.
      * @throws IllegalArgumentException
      *   if {@code fieldName} is empty.
+     *
+     * @see #put(String, IonValue)
      */
     public ValueFactory put(String fieldName);
 
@@ -202,7 +205,8 @@ public interface IonStruct
 
     /**
      * Provides a factory that when invoked constructs a new value and
-     * {@code add}s it to this struct using the given {@code fieldName}.
+     * {@link #add(String,IonValue) add}s it to this struct using the given
+     * {@code fieldName}.
      * <p>
      * These two lines are equivalent:
      *<pre>
@@ -214,6 +218,8 @@ public interface IonStruct
      *   if {@code fieldName} is <code>null</code>.
      * @throws IllegalArgumentException
      *   if {@code fieldName} is empty.
+     *
+     * @see #add(String, IonValue)
      */
     public ValueFactory add(String fieldName);
 

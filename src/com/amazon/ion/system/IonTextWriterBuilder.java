@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -735,6 +735,10 @@ public abstract class IonTextWriterBuilder
     /**
      * Creates a new writer that will write text to the given output
      * stream.
+     * <p>
+     * If you have an {@link OutputStream}, you'll get better performance using
+     * {@link #build(OutputStream)} as opposed to wrapping your stream in an
+     * {@link Appendable} and calling this method.
      *
      * @param out the stream that will receive Ion text data.
      * Must not be null.
