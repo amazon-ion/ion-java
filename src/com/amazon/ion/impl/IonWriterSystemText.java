@@ -641,15 +641,15 @@ final class IonWriterSystemText
 
 
     @Override
-    public void writeDecimal(BigDecimal value) throws IOException
+    public void writeDecimal(BigDecimal decimal)
+        throws IOException
     {
-        if (value == null) {
+        if (decimal == null) {
             writeNull(IonType.DECIMAL);
             return;
         }
 
         startValue();
-        BigDecimal decimal = value;
         BigInteger unscaled = decimal.unscaledValue();
 
         int signum = decimal.signum();
@@ -684,33 +684,31 @@ final class IonWriterSystemText
             _output.appendAscii(unscaledText);
             _output.appendAscii('.');
         }
-        else if (0 < scale)
+        else if (exponent < 0)
         {
-            int wholeDigits;
-            int remainingScale;
-            if (significantDigits > scale)
+            // Avoid printing small negative exponents using a heuristic
+            // adapted from http://speleotrove.com/decimal/daconvs.html
+
+            final int adjustedExponent = significantDigits - 1 - scale;
+            if (adjustedExponent >= 0)
             {
-                wholeDigits = significantDigits - scale;
-                remainingScale = 0;
+                int wholeDigits = significantDigits - scale;
+                _output.appendAscii(unscaledText, 0, wholeDigits);
+                _output.appendAscii('.');
+                _output.appendAscii(unscaledText, wholeDigits,
+                                    significantDigits);
+            }
+            else if (adjustedExponent >= -6)
+            {
+                _output.appendAscii("0.");
+                _output.appendAscii("00000", 0, scale - significantDigits);
+                _output.appendAscii(unscaledText);
             }
             else
             {
-                wholeDigits = 1;
-                remainingScale = scale - significantDigits + 1;
-            }
-
-            _output.appendAscii(unscaledText, 0, wholeDigits);
-            if (wholeDigits < significantDigits)
-            {
-                _output.appendAscii('.');
-                _output.appendAscii(unscaledText, wholeDigits,
-                             significantDigits);
-            }
-
-            if (remainingScale != 0)
-            {
+                _output.appendAscii(unscaledText);
                 _output.appendAscii("d-");
-                _output.appendAscii(Integer.toString(remainingScale));
+                _output.appendAscii(Integer.toString(scale));
             }
         }
         else // (exponent > 0)
