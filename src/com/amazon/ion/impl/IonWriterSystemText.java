@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -16,7 +16,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
-import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
@@ -42,11 +41,12 @@ final class IonWriterSystemText
 
     private final _Private_IonTextAppender _output;
 
-    BufferManager _manager;
-
     /** Ensure we don't use a closed {@link #output} stream. */
     private boolean _closed;
-    /** Flags if current container to be written is struct enforcing writing of member names */
+
+    /**
+     * True when the current container is a struct, so we write field names.
+     */
     boolean     _in_struct;
     boolean     _pending_separator;
 
