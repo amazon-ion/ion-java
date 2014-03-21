@@ -8,11 +8,14 @@ import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.FastAppendable;
+import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.system.IonTextWriterBuilder;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
 
@@ -616,6 +619,61 @@ public final class _Private_IonTextAppender
 
     //=========================================================================
     // LOBs
+
+
+    public void printBlob(_Private_IonTextWriterBuilder _options,
+                          byte[] value, int start, int len)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.blob");
+            return;
+        }
+
+        @SuppressWarnings("resource")
+        TextStream ts =
+            new TextStream(new ByteArrayInputStream(value, start, len));
+
+        // base64 encoding is 6 bits per char so
+        // it evens out at 3 bytes in 4 characters
+        char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
+        CharBuffer cb = CharBuffer.wrap(buf);
+
+        if (_options._blob_as_string)
+        {
+            appendAscii('"');
+        }
+        else
+        {
+            appendAscii("{{");
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+        }
+
+        for (;;)
+        {
+            // TODO is it better to fill up the CharBuffer before outputting?
+            int clen = ts.read(buf, 0, buf.length);
+            if (clen < 1) break;
+            appendAscii(cb, 0, clen);
+        }
+
+        if (_options._blob_as_string)
+        {
+            appendAscii('"');
+        }
+        else
+        {
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+            appendAscii("}}");
+        }
+    }
 
 
     private void printClobBytes(byte[] value, int start, int end,

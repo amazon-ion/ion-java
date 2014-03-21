@@ -825,42 +825,8 @@ final class IonWriterSystemText
             return;
         }
 
-        TextStream ts = new TextStream(new ByteArrayInputStream(value, start, len));
-
-        // base64 encoding is 6 bits per char so
-        // it evens out at 3 bytes in 4 characters
-        char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
-        CharBuffer cb = CharBuffer.wrap(buf);
-
         startValue();
-
-        if (_options._blob_as_string) {
-            _output.appendAscii('"');
-        }
-        else {
-            _output.appendAscii("{{");
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(' ');
-            }
-        }
-
-        for (;;) {
-            // TODO is it better to fill up the CharBuffer before outputting?
-            int clen = ts.read(buf, 0, buf.length);
-            if (clen < 1) break;
-            _output.appendAscii(cb, 0, clen);
-        }
-
-
-        if (_options._blob_as_string) {
-            _output.appendAscii('"');
-        }
-        else {
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(' ');
-            }
-            _output.appendAscii("}}");
-        }
+        _output.printBlob(_options, value, start, len);
         closeValue();
     }
 
