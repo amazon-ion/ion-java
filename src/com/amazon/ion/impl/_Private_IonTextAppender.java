@@ -360,75 +360,6 @@ public final class _Private_IonTextAppender
         }
     }
 
-    /**
-     * Print Ion Clob type
-     * @param value
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public final void printClob(byte[] value, int start, int end)
-        throws IOException
-    {
-        if (value == null)
-        {
-            appendAscii("null.clob");
-        }
-        else
-        {
-            appendAscii('"');
-            printBytes(value, start, end, STRING_ESCAPE_CODES);
-            appendAscii('"');
-        }
-    }
-
-    /**
-     * Print triple-quoted Ion Clob type
-     * @param value
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public final void printLongClob(byte[] value, int start, int end)
-        throws IOException
-    {
-        if (value == null) {
-            appendAscii("null.clob");
-        }
-        else
-        {
-            // TODO Some points on printing long clobs:
-
-            // This may escape more often than is necessary, but doing it
-            // minimally is very tricky. Must be sure to account for
-            // quotes at the end of the content.
-
-            // TODO Account for NL versus CR+NL streams
-            appendAscii(TRIPLE_QUOTES);
-            printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
-            appendAscii(TRIPLE_QUOTES);
-        }
-    }
-
-    /**
-     * Print an Ion Clob in JSON format (eg as JSON text)
-     * @param value
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public final void printJsonClob(byte[] value, int start, int end)
-        throws IOException
-    {
-        if (value == null) {
-            appendAscii("null");
-        } else {
-            appendAscii('"');
-            printBytes(value, start, end, JSON_ESCAPE_CODES);
-            appendAscii('"');
-        }
-    }
-
 
     /**
      * Determines whether the given text matches one of the Ion identifier
@@ -607,20 +538,6 @@ public final class _Private_IonTextAppender
         }
     }
 
-    private final void printBytes(byte[] value, int start, int end,
-                                  String[] escapes)
-        throws IOException
-    {
-        for (int i = start; i < end; i++) {
-            char c = (char)(value[i] & 0xff);
-            if (escapes[c] != null) {
-                appendAscii(escapes[c]);
-            } else {
-                appendAscii(c);
-            }
-        }
-    }
-
     private final void printCodePoints(CharSequence text, String[] escapes)
         throws IOException
     {
@@ -693,6 +610,87 @@ public final class _Private_IonTextAppender
                     " at index " + i;
                 throw new IllegalArgumentException(message);
             }
+        }
+    }
+
+
+    //=========================================================================
+    // LOBs
+
+
+    private void printClobBytes(byte[] value, int start, int end,
+                                String[] escapes)
+        throws IOException
+    {
+        for (int i = start; i < end; i++) {
+            char c = (char)(value[i] & 0xff);
+            String escapedByte = escapes[c];
+            if (escapedByte != null) {
+                appendAscii(escapedByte);
+            } else {
+                appendAscii(c);
+            }
+        }
+    }
+
+
+    public void printClob(_Private_IonTextWriterBuilder _options,
+                          byte[] value, int start, int len)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.clob");
+            return;
+        }
+
+
+        final boolean json =
+            _options._clob_as_string && _options._string_as_json;
+
+        final int threshold = _options.getLongStringThreshold();
+        final boolean longString = (0 < threshold && threshold < value.length);
+
+        if (!_options._clob_as_string)
+        {
+            appendAscii("{{");
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+        }
+
+        if (json)
+        {
+            appendAscii('"');
+            printClobBytes(value, start, start + len, JSON_ESCAPE_CODES);
+            appendAscii('"');
+        }
+        else if (longString)
+        {
+            // This may escape more often than is necessary, but doing it
+            // minimally is very tricky. Must be sure to account for
+            // quotes at the end of the content.
+
+            // TODO Account for NL versus CR+NL streams
+            appendAscii(TRIPLE_QUOTES);
+            printClobBytes(value, start, start + len, LONG_STRING_ESCAPE_CODES);
+            appendAscii(TRIPLE_QUOTES);
+        }
+        else
+        {
+            appendAscii('"');
+            printClobBytes(value, start, start + len, STRING_ESCAPE_CODES);
+            appendAscii('"');
+        }
+
+        if (! _options._clob_as_string)
+        {
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+            appendAscii("}}");
         }
     }
 }

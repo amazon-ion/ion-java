@@ -782,17 +782,6 @@ final class IonWriterSystemText
         }
     }
 
-    // escape sequences for character below ascii 32 (space)
-    static final String [] LOW_ESCAPE_SEQUENCES = {
-          "\\0",   "\\x01", "\\x02", "\\x03",
-          "\\x04", "\\x05", "\\x06", "\\a",
-          "\\b",   "\\t",   "\\n",   "\\v",
-          "\\f",   "\\r",   "\\x0e", "\\x0f",
-          "\\x10", "\\x11", "\\x12", "\\x13",
-          "\\x14", "\\x15", "\\x16", "\\x17",
-          "\\x18", "\\x19", "\\x1a", "\\x1b",
-          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
-    };
 
     @Override
     void writeSymbolAsIs(int symbolId)
@@ -885,34 +874,7 @@ final class IonWriterSystemText
         }
 
         startValue();
-
-        final boolean json =
-            _options._clob_as_string && _options._string_as_json;
-
-        final boolean longString = (_long_string_threshold < value.length);
-
-        if (!_options._clob_as_string) {
-            _output.appendAscii("{{");
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(" ");
-            }
-        }
-
-        if (json) {
-            _output.printJsonClob(value, start, start + len);
-        } else if (longString) {
-            _output.printLongClob(value, start, start + len);
-        } else {
-            _output.printClob(value, start, start + len);
-        }
-
-        if (! _options._clob_as_string) {
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(" ");
-            }
-            _output.appendAscii("}}");
-        }
-
+        _output.printClob(_options, value, start, len);
         closeValue();
     }
 
