@@ -187,12 +187,12 @@ public abstract class _Private_IonTextAppender
     //=========================================================================
 
 
-    private final boolean escapeUnicode;
+    private final boolean escapeNonAscii;
 
 
-    _Private_IonTextAppender(boolean escapeUnicodeCharacters)
+    _Private_IonTextAppender(boolean escapeNonAscii)
     {
-        this.escapeUnicode = escapeUnicodeCharacters;
+        this.escapeNonAscii = escapeNonAscii;
     }
 
 
@@ -584,14 +584,14 @@ public abstract class _Private_IonTextAppender
                 appendAscii(escapes[c]);
             } else if (c < 0x100) {
                 assert escapes[c] != null;
-                if (escapeUnicode) {
+                if (escapeNonAscii) {
                     appendAscii(escapes[c]);
                 } else {
                     appendUtf16(c);
                 }
             } else if (c < 0xD800 || c >= 0xE000) {
                 String s = Integer.toHexString(c);
-                if (escapeUnicode) {
+                if (escapeNonAscii) {
                     appendAscii(HEX_4_PREFIX);
                     appendAscii(ZERO_PADDING[4 - s.length()]);
                     appendAscii(s);
@@ -608,7 +608,7 @@ public abstract class _Private_IonTextAppender
                         " at index " + (i-1);
                     throw new IllegalArgumentException(message);
                 }
-                if (escapeUnicode) {
+                if (escapeNonAscii) {
                     int cp = makeUnicodeScalar(c, c2);
                     String s = Integer.toHexString(cp);
                     appendAscii(HEX_8_PREFIX);
