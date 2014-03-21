@@ -197,6 +197,14 @@ public final class _Private_IonTextAppender
     }
 
 
+    public static _Private_IonTextAppender
+    forFastAppendable(FastAppendable out, Charset charset)
+    {
+        boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
+        return new _Private_IonTextAppender(out, escapeNonAscii);
+    }
+
+
     /**
      * @param charset must be either {@link IonTextWriterBuilder#ASCII} or
      * {@link IonTextWriterBuilder#UTF8}. When ASCII is used, all non-ASCII
@@ -207,9 +215,9 @@ public final class _Private_IonTextAppender
                                                          Charset charset)
     {
         FastAppendable fast = new AppendableIonTextAppender(out);
-        boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
-        return new _Private_IonTextAppender(fast, escapeNonAscii);
+        return forFastAppendable(fast, charset);
     }
+
 
     /**
      * Doesn't escape non-ASCII characters.
@@ -232,8 +240,7 @@ public final class _Private_IonTextAppender
                                                            Charset charset)
     {
         FastAppendable fast = new OutputStreamIonTextAppender(out);
-        boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
-        return new _Private_IonTextAppender(fast, escapeNonAscii);
+        return forFastAppendable(fast, charset);
     }
 
 

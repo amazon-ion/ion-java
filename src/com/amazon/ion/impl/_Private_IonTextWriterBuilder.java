@@ -1,9 +1,10 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonWriterFactory.newTextWriterWithImports;
 
+import com.amazon.ion.FastAppendable;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
@@ -160,7 +161,7 @@ public class _Private_IonTextWriterBuilder
 
 
     /** Assumes that {@link #fillDefaults()} has been called. */
-    private IonWriter build(_Private_IonTextAppender appender)
+    private IonWriter build(FastAppendable appender)
     {
         IonCatalog catalog = getCatalog();
         SymbolTable[] imports = getImports();
@@ -182,21 +183,20 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        _Private_IonTextAppender appender =
-            _Private_IonTextAppender.forAppendable(out, b.getCharset());
+        FastAppendable fast = new AppendableIonTextAppender(out);
 
-        return b.build(appender);
+        return b.build(fast);
     }
+
 
     @Override
     public final IonWriter build(OutputStream out)
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        _Private_IonTextAppender appender =
-            _Private_IonTextAppender.forOutputStream(out, b.getCharset());
+        FastAppendable fast = new OutputStreamIonTextAppender(out);
 
-        return b.build(appender);
+        return b.build(fast);
     }
 
     //=========================================================================

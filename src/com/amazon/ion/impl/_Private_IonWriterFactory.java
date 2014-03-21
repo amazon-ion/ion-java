@@ -1,9 +1,10 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
+import com.amazon.ion.FastAppendable;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -116,10 +117,10 @@ public final class _Private_IonWriterFactory
                                       true /* ensureInitialIvm */);
 
         IonWriterUserBinary writer =
-            new IonWriterUserBinary(catalog, 
-                                    system, 
+            new IonWriterUserBinary(catalog,
+                                    system,
                                     systemWriter,
-                                    streamCopyOptimized, 
+                                    streamCopyOptimized,
                                     initialSymtab);
         return writer;
     }
@@ -129,13 +130,15 @@ public final class _Private_IonWriterFactory
     newTextWriterWithImports(IonSystem system,
                              IonCatalog catalog,
                              _Private_IonTextWriterBuilder options,
-                             _Private_IonTextAppender output,
+                             FastAppendable output,
                              SymbolTable... imports)
     {
         SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
 
         IonWriterSystemText systemWriter =
-            new IonWriterSystemText(defaultSystemSymtab, options, output);
+            new IonWriterSystemText(defaultSystemSymtab,
+                                    options,
+                                    output);
 
         SymbolTable initialSymtab =
             initialSymtab(system, defaultSystemSymtab, imports);
