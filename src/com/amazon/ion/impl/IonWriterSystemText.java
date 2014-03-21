@@ -3,12 +3,10 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl._Private_IonConstants.MAX_LONG_TEXT_SIZE;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
 
-import com.amazon.ion.Decimal;
 import com.amazon.ion.FastAppendable;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -16,16 +14,13 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.CharBuffer;
 
 /**
  *
@@ -242,7 +237,7 @@ final class IonWriterSystemText
         if (asString) _output.appendAscii('"');
 
         _output.appendAscii('$');
-        appendLong(sid);
+        _output.printInt(sid);
 
         if (asString) _output.appendAscii('"');
     }
@@ -552,41 +547,12 @@ final class IonWriterSystemText
         closeValue();
     }
 
-    /** ONLY FOR USE BY {@link #appendLong(long)}. */
-    private final char[] _fixedIntBuffer = new char[MAX_LONG_TEXT_SIZE];
-
-    private void appendLong(long value)
-        throws IOException
-    {
-        int j = _fixedIntBuffer.length;
-        if (value == 0) {
-            _fixedIntBuffer[--j] = '0';
-        } else {
-            if (value < 0) {
-                while (value != 0) {
-                    _fixedIntBuffer[--j] = (char)(0x30 - value % 10);
-                    value /= 10;
-                }
-                _fixedIntBuffer[--j] = '-';
-            } else {
-                while (value != 0) {
-                    _fixedIntBuffer[--j] = (char)(0x30 + value % 10);
-                    value /= 10;
-                }
-            }
-        }
-
-        // Using CharBuffer avoids copying the _fixedIntBuffer into a String
-        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer),
-                            j,
-                            _fixedIntBuffer.length);
-    }
 
     public void writeInt(long value)
         throws IOException
     {
         startValue();
-        appendLong(value);
+        _output.printInt(value);
         closeValue();
     }
 
@@ -598,7 +564,7 @@ final class IonWriterSystemText
         }
 
         startValue();
-        _output.appendAscii(value.toString());
+        _output.printInt(value);
         closeValue();
     }
 
@@ -606,120 +572,22 @@ final class IonWriterSystemText
         throws IOException
     {
         startValue();
-
-        // shortcut zero cases
-        if (value == 0.0) {
-            if (Double.compare(value, 0d) == 0) {
-                // positive zero
-                _output.appendAscii("0e0");
-            }
-            else {
-                // negative zero
-                _output.appendAscii("-0e0");
-            }
-        }
-        else if (Double.isNaN(value)) {
-            _output.appendAscii("nan");
-        }
-        else if (Double.isInfinite(value)) {
-            if (value > 0) {
-                _output.appendAscii("+inf");
-            }
-            else {
-                _output.appendAscii("-inf");
-            }
-        }
-        else {
-            String str = Double.toString(value);
-            if (str.indexOf('E') == -1) {
-                str += "e0";
-            }
-            _output.appendAscii(str);
-        }
-
+        _output.printFloat(value);
         closeValue();
     }
 
 
     @Override
-    public void writeDecimal(BigDecimal decimal)
+    public void writeDecimal(BigDecimal value)
         throws IOException
     {
-        if (decimal == null) {
+        if (value == null) {
             writeNull(IonType.DECIMAL);
             return;
         }
 
         startValue();
-        BigInteger unscaled = decimal.unscaledValue();
-
-        int signum = decimal.signum();
-        if (signum < 0)
-        {
-            _output.appendAscii('-');
-            unscaled = unscaled.negate();
-        }
-        else if (decimal instanceof Decimal
-             && ((Decimal)decimal).isNegativeZero())
-        {
-            // for the various forms of negative zero we have to
-            // write the sign ourselves, since neither BigInteger
-            // nor BigDecimal recognize negative zero, but Ion does.
-            _output.appendAscii('-');
-        }
-
-        final String unscaledText = unscaled.toString();
-        final int significantDigits = unscaledText.length();
-
-        final int scale = decimal.scale();
-        final int exponent = -scale;
-
-        if (_options._decimal_as_float)
-        {
-            _output.appendAscii(unscaledText);
-            _output.appendAscii('e');
-            _output.appendAscii(Integer.toString(exponent));
-        }
-        else if (exponent == 0)
-        {
-            _output.appendAscii(unscaledText);
-            _output.appendAscii('.');
-        }
-        else if (exponent < 0)
-        {
-            // Avoid printing small negative exponents using a heuristic
-            // adapted from http://speleotrove.com/decimal/daconvs.html
-
-            final int adjustedExponent = significantDigits - 1 - scale;
-            if (adjustedExponent >= 0)
-            {
-                int wholeDigits = significantDigits - scale;
-                _output.appendAscii(unscaledText, 0, wholeDigits);
-                _output.appendAscii('.');
-                _output.appendAscii(unscaledText, wholeDigits,
-                                    significantDigits);
-            }
-            else if (adjustedExponent >= -6)
-            {
-                _output.appendAscii("0.");
-                _output.appendAscii("00000", 0, scale - significantDigits);
-                _output.appendAscii(unscaledText);
-            }
-            else
-            {
-                _output.appendAscii(unscaledText);
-                _output.appendAscii("d-");
-                _output.appendAscii(Integer.toString(scale));
-            }
-        }
-        else // (exponent > 0)
-        {
-            // We cannot move the decimal point to the right, adding
-            // rightmost zeros, because that would alter the precision.
-            _output.appendAscii(unscaledText);
-            _output.appendAscii('d');
-            _output.appendAscii(Integer.toString(exponent));
-        }
+        _output.printDecimal(_options, value);
         closeValue();
     }
 

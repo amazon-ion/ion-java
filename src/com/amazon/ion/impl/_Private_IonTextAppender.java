@@ -2,10 +2,12 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.MAX_LONG_TEXT_SIZE;
 import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.FastAppendable;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
@@ -15,6 +17,8 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
@@ -613,6 +617,191 @@ public final class _Private_IonTextAppender
                     " at index " + i;
                 throw new IllegalArgumentException(message);
             }
+        }
+    }
+
+
+    //=========================================================================
+    // Numeric scalars
+
+
+    /** ONLY FOR USE BY {@link #printInt(long)}. */
+    private final char[] _fixedIntBuffer = new char[MAX_LONG_TEXT_SIZE];
+
+    public void printInt(long value)
+        throws IOException
+    {
+        int j = _fixedIntBuffer.length;
+        if (value == 0) {
+            _fixedIntBuffer[--j] = '0';
+        } else {
+            if (value < 0) {
+                while (value != 0) {
+                    _fixedIntBuffer[--j] = (char)(0x30 - value % 10);
+                    value /= 10;
+                }
+                _fixedIntBuffer[--j] = '-';
+            } else {
+                while (value != 0) {
+                    _fixedIntBuffer[--j] = (char)(0x30 + value % 10);
+                    value /= 10;
+                }
+            }
+        }
+
+        // Using CharBuffer avoids copying the _fixedIntBuffer into a String
+        appendAscii(CharBuffer.wrap(_fixedIntBuffer),
+                    j,
+                    _fixedIntBuffer.length);
+    }
+
+
+    public void printInt(BigInteger value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.int");
+            return;
+        }
+
+        appendAscii(value.toString());
+    }
+
+
+    public void printDecimal(_Private_IonTextWriterBuilder _options,
+                             BigDecimal                    value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.decimal");
+            return;
+        }
+
+        BigInteger unscaled = value.unscaledValue();
+
+        int signum = value.signum();
+        if (signum < 0)
+        {
+            appendAscii('-');
+            unscaled = unscaled.negate();
+        }
+        else if (value instanceof Decimal
+             && ((Decimal)value).isNegativeZero())
+        {
+            // for the various forms of negative zero we have to
+            // write the sign ourselves, since neither BigInteger
+            // nor BigDecimal recognize negative zero, but Ion does.
+            appendAscii('-');
+        }
+
+        final String unscaledText = unscaled.toString();
+        final int significantDigits = unscaledText.length();
+
+        final int scale = value.scale();
+        final int exponent = -scale;
+
+        if (_options._decimal_as_float)
+        {
+            appendAscii(unscaledText);
+            appendAscii('e');
+            appendAscii(Integer.toString(exponent));
+        }
+        else if (exponent == 0)
+        {
+            appendAscii(unscaledText);
+            appendAscii('.');
+        }
+        else if (exponent < 0)
+        {
+            // Avoid printing small negative exponents using a heuristic
+            // adapted from http://speleotrove.com/decimal/daconvs.html
+
+            final int adjustedExponent = significantDigits - 1 - scale;
+            if (adjustedExponent >= 0)
+            {
+                int wholeDigits = significantDigits - scale;
+                appendAscii(unscaledText, 0, wholeDigits);
+                appendAscii('.');
+                appendAscii(unscaledText, wholeDigits,
+                                    significantDigits);
+            }
+            else if (adjustedExponent >= -6)
+            {
+                appendAscii("0.");
+                appendAscii("00000", 0, scale - significantDigits);
+                appendAscii(unscaledText);
+            }
+            else
+            {
+                appendAscii(unscaledText);
+                appendAscii("d-");
+                appendAscii(Integer.toString(scale));
+            }
+        }
+        else // (exponent > 0)
+        {
+            // We cannot move the decimal point to the right, adding
+            // rightmost zeros, because that would alter the precision.
+            appendAscii(unscaledText);
+            appendAscii('d');
+            appendAscii(Integer.toString(exponent));
+        }
+    }
+
+
+    public void printFloat(double value)
+        throws IOException
+    {
+        // shortcut zero cases
+        if (value == 0.0)
+        {
+            if (Double.compare(value, 0d) == 0)  // Only matches positive zero
+            {
+                appendAscii("0e0");
+            }
+            else
+            {
+                appendAscii("-0e0");
+            }
+        }
+        else if (Double.isNaN(value))
+        {
+            appendAscii("nan");
+        }
+        else if (Double.isInfinite(value))
+        {
+            if (value > 0)
+            {
+                appendAscii("+inf");
+            }
+            else
+            {
+                appendAscii("-inf");
+            }
+        }
+        else
+        {
+            String str = Double.toString(value);
+            if (str.indexOf('E') == -1)
+            {
+                str += "e0";
+            }
+            appendAscii(str);
+        }
+    }
+
+    public void printFloat(Double value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.float");
+        }
+        else
+        {
+            printFloat(value.doubleValue());
         }
     }
 
