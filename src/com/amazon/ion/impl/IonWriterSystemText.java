@@ -20,8 +20,6 @@ import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -925,7 +923,7 @@ final class IonWriterSystemText
     public void flush() throws IOException
     {
         if (! _closed) {
-            ((Flushable)_output).flush();
+            _output.flush();
         }
     }
 
@@ -943,7 +941,7 @@ final class IonWriterSystemText
                 // Do this first so we are closed even if the call below throws.
                 _closed = true;
 
-                ((Closeable)_output).close();
+                _output.close();
             }
         }
     }

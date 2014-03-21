@@ -4,16 +4,18 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
+import com.amazon.ion.FastAppendable;
+import java.io.Closeable;
+import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 
 /**
- * Implementation of {@link _Private_IonTextAppender} that writes to an
- * {@link OutputStream}.
+ * Adapts an {@link OutputStream} to implement {@link FastAppendable}.
+ * <b>This always outputs UTF-8!</b>
  */
 final class OutputStreamIonTextAppender
-    extends _Private_IonTextAppender
+    implements Closeable, FastAppendable, Flushable
 {
     private static final int MAX_BYTES_LEN = 4096;
 
@@ -25,10 +27,8 @@ final class OutputStreamIonTextAppender
     /** Position in {@link #_byteBuffer} where we'll write the next byte. */
     private int _pos;
 
-    OutputStreamIonTextAppender(OutputStream out, Charset charset)
+    OutputStreamIonTextAppender(OutputStream out)
     {
-        // escape unicode symbols if charset is ASCII
-        super(charset.equals(_Private_Utils.ASCII_CHARSET));
         out.getClass(); // Efficient null check
 
         _out = out;

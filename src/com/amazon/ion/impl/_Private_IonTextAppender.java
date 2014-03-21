@@ -5,7 +5,6 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
-import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.FastAppendable;
@@ -22,8 +21,8 @@ import java.nio.charset.Charset;
  * <p>
  * Generic text sink that enables optimized output of both ASCII and UTF-16.
  */
-public abstract class _Private_IonTextAppender
-    implements Closeable, Flushable, FastAppendable
+public final class _Private_IonTextAppender
+    implements Closeable, Flushable
 {
     private static boolean is8bitValue(int v)
     {
@@ -187,11 +186,13 @@ public abstract class _Private_IonTextAppender
     //=========================================================================
 
 
+    private final FastAppendable myAppendable;
     private final boolean escapeNonAscii;
 
 
-    _Private_IonTextAppender(boolean escapeNonAscii)
+    _Private_IonTextAppender(FastAppendable out, boolean escapeNonAscii)
     {
+        this.myAppendable   = out;
         this.escapeNonAscii = escapeNonAscii;
     }
 
@@ -205,7 +206,9 @@ public abstract class _Private_IonTextAppender
     public static _Private_IonTextAppender forAppendable(Appendable out,
                                                          Charset charset)
     {
-        return new AppendableIonTextAppender(out, charset);
+        FastAppendable fast = new AppendableIonTextAppender(out);
+        boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
+        return new _Private_IonTextAppender(fast, escapeNonAscii);
     }
 
     /**
@@ -213,7 +216,9 @@ public abstract class _Private_IonTextAppender
      */
     public static _Private_IonTextAppender forAppendable(Appendable out)
     {
-        return new AppendableIonTextAppender(out, UTF8);
+        FastAppendable fast = new AppendableIonTextAppender(out);
+        boolean escapeNonAscii = false;
+        return new _Private_IonTextAppender(fast, escapeNonAscii);
     }
 
 
@@ -226,11 +231,67 @@ public abstract class _Private_IonTextAppender
     public static _Private_IonTextAppender forOutputStream(OutputStream out,
                                                            Charset charset)
     {
-        return new OutputStreamIonTextAppender(out, charset);
+        FastAppendable fast = new OutputStreamIonTextAppender(out);
+        boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
+        return new _Private_IonTextAppender(fast, escapeNonAscii);
     }
 
 
     //=========================================================================
+
+
+    public void flush()
+        throws IOException
+    {
+        if (myAppendable instanceof Flushable)
+        {
+            ((Flushable) myAppendable).flush();
+        }
+    }
+
+    public void close()
+        throws IOException
+    {
+        if (myAppendable instanceof Closeable)
+        {
+            ((Closeable) myAppendable).close();
+        }
+    }
+
+
+    public void appendAscii(char c)
+        throws IOException
+    {
+        myAppendable.appendAscii(c);
+    }
+
+    public void appendAscii(CharSequence csq)
+        throws IOException
+    {
+        myAppendable.appendAscii(csq);
+    }
+
+    public void appendAscii(CharSequence csq, int start, int end)
+        throws IOException
+    {
+        myAppendable.appendAscii(csq, start, end);
+    }
+
+    public void appendUtf16(char c)
+        throws IOException
+    {
+        myAppendable.appendUtf16(c);
+    }
+
+    public void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate)
+        throws IOException
+    {
+        myAppendable.appendUtf16Surrogate(leadSurrogate, trailSurrogate);
+    }
+
+
+    //=========================================================================
+
 
     /**
      * Print an Ion String type
