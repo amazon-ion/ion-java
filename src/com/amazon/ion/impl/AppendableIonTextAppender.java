@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -24,35 +24,51 @@ final class AppendableIonTextAppender
         _out = out;
     }
 
-    @Override
+    public Appendable append(CharSequence csq)
+        throws IOException
+    {
+        _out.append(csq);
+        return this;
+    }
+
+    public Appendable append(char c)
+        throws IOException
+    {
+        _out.append(c);
+        return this;
+    }
+
+    public Appendable append(CharSequence csq, int start, int end)
+        throws IOException
+    {
+        _out.append(csq, start, end);
+        return this;
+    }
+
     public final void appendAscii(char c)
         throws IOException
     {
         _out.append(c);
     }
 
-    @Override
     public final void appendAscii(CharSequence csq)
         throws IOException
     {
         _out.append(csq);
     }
 
-    @Override
     public final void appendAscii(CharSequence csq, int start, int end)
         throws IOException
     {
         _out.append(csq, start, end);
     }
 
-    @Override
     public final void appendUtf16(char c)
         throws IOException
     {
         _out.append(c);
     }
 
-    @Override
     public final void appendUtf16Surrogate(char leadSurrogate,
                                            char trailSurrogate)
         throws IOException
@@ -60,7 +76,6 @@ final class AppendableIonTextAppender
         _out.append(leadSurrogate);
         _out.append(trailSurrogate);
     }
-
 
     public void flush()
         throws IOException

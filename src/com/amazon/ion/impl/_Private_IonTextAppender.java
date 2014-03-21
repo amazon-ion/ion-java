@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -7,6 +7,7 @@ import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.FastAppendable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -18,7 +19,7 @@ import java.io.IOException;
  * Generic text sink that enables optimized output of both ASCII and UTF-16.
  */
 public abstract class _Private_IonTextAppender
-    implements Closeable, Flushable
+    implements Closeable, Flushable, FastAppendable
 {
     private static boolean is8bitValue(int v)
     {
@@ -180,55 +181,6 @@ public abstract class _Private_IonTextAppender
 
 
     private final boolean escapeUnicode;
-
-    /**
-     * Append an ASCII character.
-     * NB! METHOD DOESN'T VERIFY IF CHARACTER IS ACTUALLY ASCII!!!
-     * @param c
-     * @throws IOException
-     */
-    public abstract void appendAscii(char c)
-        throws IOException;
-
-    /**
-     * Append a sequence of ASCII characters
-     * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
-     * @param csq
-     * @throws IOException
-     */
-    public abstract void appendAscii(CharSequence csq)
-        throws IOException;
-
-    /**
-     * Append a range in sequence of ASCII characters
-     * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
-     * @param csq
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public abstract void appendAscii(CharSequence csq, int start, int end)
-        throws IOException;
-
-    /**
-     * Append a UTF-16 non-surrogate character
-     * NB! METHOD DOESN'T VERIFY IF CHARACTER IS/IS-NOT SURROGATE!!!
-     * @param c
-     * @throws IOException
-     */
-    public abstract void appendUtf16(char c)
-        throws IOException;
-
-    /**
-     * Append a UTF-16 surrogate pair
-     * NB! METHOD DOESN'T VERIFY IF LEAD AND TRIAL SURROGATES ARE VALID!!!
-     * @param leadSurrogate
-     * @param trailSurrogate
-     * @throws IOException
-     */
-    public abstract void appendUtf16Surrogate(char leadSurrogate,
-                                              char trailSurrogate)
-        throws IOException;
 
 
     public _Private_IonTextAppender(boolean escapeUnicodeCharacters)

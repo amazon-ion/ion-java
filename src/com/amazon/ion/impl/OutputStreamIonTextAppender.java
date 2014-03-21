@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -37,7 +37,34 @@ final class OutputStreamIonTextAppender
     }
 
 
-    @Override
+    public Appendable append(char c)
+        throws IOException
+    {
+        // Choose what method to use depending on type of character.
+        if (c < 0x80) {
+            appendAscii(c);
+        } else {
+            appendUtf16(c);
+        }
+        return this;
+    }
+
+    public Appendable append(CharSequence csq)
+        throws IOException
+    {
+        append(csq, 0, csq.length());
+        return this;
+    }
+
+    public Appendable append(CharSequence csq, int start, int end)
+        throws IOException
+    {
+        for (int ii = start; ii < end; ++ii) {
+            append(csq.charAt(ii));
+        }
+        return this;
+    }
+
     public final void appendAscii(char c)
         throws IOException
     {
@@ -49,14 +76,13 @@ final class OutputStreamIonTextAppender
         _byteBuffer[_pos++] = (byte)c;
     }
 
-    @Override
     public final void appendAscii(CharSequence csq)
         throws IOException
     {
         appendAscii(csq, 0, csq.length());
     }
 
-    @Override
+    @SuppressWarnings("deprecation")
     public final void appendAscii(CharSequence csq, int start, int end)
         throws IOException
     {
@@ -94,7 +120,6 @@ final class OutputStreamIonTextAppender
         }
     }
 
-    @Override
     public final void appendUtf16(char c)
         throws IOException
     {
@@ -115,7 +140,6 @@ final class OutputStreamIonTextAppender
         }
     }
 
-    @Override
     public final void appendUtf16Surrogate(char leadSurrogate,
                                            char trailSurrogate)
         throws IOException
