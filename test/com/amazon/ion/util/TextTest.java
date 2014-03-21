@@ -2,8 +2,12 @@
 
 package com.amazon.ion.util;
 
+import com.amazon.ion.BlobTest;
+import com.amazon.ion.BlobTest.TestData;
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.impl._Private_IonTextAppender;
+import java.math.BigDecimal;
 import org.junit.Test;
 
 /**
@@ -131,5 +135,106 @@ public class TextTest
         assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
         // quoted elsewheres
         assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+    }
+
+
+
+    private void checkDecimal(String expected, BigDecimal value)
+        throws Exception
+    {
+        StringBuilder buf = new StringBuilder();
+        IonTextUtils.printDecimal(buf, value);
+        assertEquals(expected, buf.toString());
+
+        assertEquals(expected, IonTextUtils.printDecimal(value));
+    }
+
+    @Test
+    public void testPrintDecimal()
+        throws Exception
+    {
+        checkDecimal("null.decimal", null);
+        checkDecimal("-0.", Decimal.NEGATIVE_ZERO);
+        checkDecimal("0.",  Decimal.ZERO);
+        checkDecimal("1.",  Decimal.ONE);
+    }
+
+
+
+    private void checkFloat(String expected, Double value)
+        throws Exception
+    {
+        StringBuilder buf = new StringBuilder();
+        IonTextUtils.printFloat(buf, value);
+        assertEquals(expected, buf.toString());
+
+        assertEquals(expected, IonTextUtils.printFloat(value));
+
+        if (value != null)
+        {
+            double d = value.doubleValue();
+
+            buf.setLength(0);
+            IonTextUtils.printFloat(buf, d);
+            assertEquals(expected, buf.toString());
+
+            assertEquals(expected, IonTextUtils.printFloat(d));
+        }
+    }
+
+    @Test
+    public void testPrintFloat()
+        throws Exception
+    {
+        checkFloat("null.float", null);
+        checkFloat("0e0", 0.0);
+        checkFloat("1.0e0", 1.0);
+    }
+
+
+
+
+
+    private void checkBlob(String expected, byte[] value)
+        throws Exception
+    {
+        StringBuilder buf = new StringBuilder();
+        IonTextUtils.printBlob(buf, value);
+        assertEquals(expected, buf.toString());
+
+        assertEquals(expected, IonTextUtils.printBlob(value));
+    }
+
+    @Test
+    public void testPrintBlob()
+        throws Exception
+    {
+        checkBlob("null.blob", null);
+
+        for (TestData data : BlobTest.TEST_DATA)
+        {
+            checkBlob("{{" + data.base64 + "}}", data.bytes);
+        }
+    }
+
+
+
+    private void checkClob(String expected, byte[] value)
+        throws Exception
+    {
+        StringBuilder buf = new StringBuilder();
+        IonTextUtils.printClob(buf, value);
+        assertEquals(expected, buf.toString());
+
+        assertEquals(expected, IonTextUtils.printClob(value));
+    }
+
+    @Test
+    public void testPrintClob()
+        throws Exception
+    {
+        checkClob("null.clob", null);
+        checkClob("{{\"\"}}", new byte[0]);
+        checkClob("{{\"\\0a\\xff\"}}", new byte[]{ 0, 'a', (byte) 0xff });
     }
 }

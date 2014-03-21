@@ -8,10 +8,12 @@ import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 import static com.amazon.ion.impl._Private_IonTextAppender.ZERO_PADDING;
 import static com.amazon.ion.impl._Private_IonTextAppender.isIdentifierKeyword;
 import static com.amazon.ion.impl._Private_IonTextAppender.symbolNeedsQuoting;
+import static com.amazon.ion.impl._Private_IonTextWriterBuilder.STANDARD;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.impl._Private_IonTextAppender;
 import java.io.IOException;
+import java.math.BigDecimal;
 
 
 /**
@@ -800,4 +802,156 @@ public class IonTextUtils
     //     \xhh ASCII character in hexadecimal notation (1-2 digits)
     //    \\uhhhh Unicode character in hexadecimal
     //     \Uhhhhhhhh Unicode character in hexadecimal
+
+
+    //=========================================================================
+    // Numeric scalars
+
+
+    public static void printDecimal(Appendable out, BigDecimal decimal)
+        throws IOException
+    {
+        _Private_IonTextAppender appender =
+            _Private_IonTextAppender.forAppendable(out);
+        appender.printDecimal(STANDARD, decimal);
+    }
+
+    public static String printDecimal(BigDecimal decimal)
+    {
+        if (decimal == null)
+        {
+            return "null.decimal";
+        }
+
+        StringBuilder builder = new StringBuilder(64);
+        try
+        {
+            printDecimal(builder, decimal);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    public static void printFloat(Appendable out, double value)
+        throws IOException
+    {
+        _Private_IonTextAppender appender =
+            _Private_IonTextAppender.forAppendable(out);
+        appender.printFloat(value);
+    }
+
+    public static String printFloat(double value)
+    {
+        StringBuilder builder = new StringBuilder(64);
+        try
+        {
+            printFloat(builder, value);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    public static void printFloat(Appendable out, Double value)
+        throws IOException
+    {
+        _Private_IonTextAppender appender =
+            _Private_IonTextAppender.forAppendable(out);
+        appender.printFloat(value);
+    }
+
+    public static String printFloat(Double value)
+    {
+        if (value == null)
+        {
+            return "null.float";
+        }
+
+        return printFloat(value.doubleValue());
+    }
+
+
+    //=========================================================================
+    // LOBs
+
+
+    public static void printBlob(Appendable out, byte[] value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            out.append("null.blob");
+        }
+        else
+        {
+            _Private_IonTextAppender appender =
+                _Private_IonTextAppender.forAppendable(out);
+            appender.printBlob(STANDARD, value, 0, value.length);
+        }
+    }
+
+    public static String printBlob(byte[] value)
+    {
+        if (value == null)
+        {
+            return "null.blob";
+        }
+
+        StringBuilder builder = new StringBuilder(64);
+        try
+        {
+            printBlob(builder, value);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
+
+
+    public static void printClob(Appendable out, byte[] value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            out.append("null.clob");
+        }
+        else
+        {
+            _Private_IonTextAppender appender =
+                _Private_IonTextAppender.forAppendable(out);
+            appender.printClob(STANDARD, value, 0, value.length);
+        }
+    }
+
+    public static String printClob(byte[] value)
+    {
+        if (value == null)
+        {
+            return "null.clob";
+        }
+
+        StringBuilder builder = new StringBuilder(64);
+        try
+        {
+            printClob(builder, value);
+        }
+        catch (IOException e)
+        {
+            // Shouldn't happen
+            throw new Error(e);
+        }
+        return builder.toString();
+    }
 }

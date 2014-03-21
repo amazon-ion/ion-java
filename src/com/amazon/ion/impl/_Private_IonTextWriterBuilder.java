@@ -31,6 +31,9 @@ public class _Private_IonTextWriterBuilder
         return new _Private_IonTextWriterBuilder();
     }
 
+    public static _Private_IonTextWriterBuilder STANDARD =
+        standard().immutable();
+
 
     //=========================================================================
 
