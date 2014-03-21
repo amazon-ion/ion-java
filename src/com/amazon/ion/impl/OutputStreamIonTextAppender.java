@@ -25,7 +25,7 @@ final class OutputStreamIonTextAppender
     /** Position in {@link #_byteBuffer} where we'll write the next byte. */
     private int _pos;
 
-    public OutputStreamIonTextAppender(OutputStream out, Charset charset)
+    OutputStreamIonTextAppender(OutputStream out, Charset charset)
     {
         // escape unicode symbols if charset is ASCII
         super(charset.equals(_Private_Utils.ASCII_CHARSET));

@@ -5,12 +5,16 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
+import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.FastAppendable;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 
 /**
@@ -180,13 +184,53 @@ public abstract class _Private_IonTextAppender
     private static final String TRIPLE_QUOTES = "'''";
 
 
+    //=========================================================================
+
+
     private final boolean escapeUnicode;
 
 
-    public _Private_IonTextAppender(boolean escapeUnicodeCharacters)
+    _Private_IonTextAppender(boolean escapeUnicodeCharacters)
     {
         this.escapeUnicode = escapeUnicodeCharacters;
     }
+
+
+    /**
+     * @param charset must be either {@link IonTextWriterBuilder#ASCII} or
+     * {@link IonTextWriterBuilder#UTF8}. When ASCII is used, all non-ASCII
+     * characters will be escaped. Otherwise, only select code points will be
+     * escaped.
+     */
+    public static _Private_IonTextAppender forAppendable(Appendable out,
+                                                         Charset charset)
+    {
+        return new AppendableIonTextAppender(out, charset);
+    }
+
+    /**
+     * Doesn't escape non-ASCII characters.
+     */
+    public static _Private_IonTextAppender forAppendable(Appendable out)
+    {
+        return new AppendableIonTextAppender(out, UTF8);
+    }
+
+
+    /**
+     * @param charset must be either {@link IonTextWriterBuilder#ASCII} or
+     * {@link IonTextWriterBuilder#UTF8}. When ASCII is used, all non-ASCII
+     * characters will be escaped. Otherwise, only select code points will be
+     * escaped.
+     */
+    public static _Private_IonTextAppender forOutputStream(OutputStream out,
+                                                           Charset charset)
+    {
+        return new OutputStreamIonTextAppender(out, charset);
+    }
+
+
+    //=========================================================================
 
     /**
      * Print an Ion String type

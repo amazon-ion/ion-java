@@ -79,7 +79,7 @@ public class _Private_IonTextWriterBuilder
     }
 
     @Override
-    public IonTextWriterBuilder immutable()
+    public _Private_IonTextWriterBuilder immutable()
     {
         return new Immutable(this);
     }
@@ -183,7 +183,7 @@ public class _Private_IonTextWriterBuilder
         _Private_IonTextWriterBuilder b = fillDefaults();
 
         _Private_IonTextAppender appender =
-            new AppendableIonTextAppender(out, b.getCharset());
+            _Private_IonTextAppender.forAppendable(out, b.getCharset());
 
         return b.build(appender);
     }
@@ -194,7 +194,7 @@ public class _Private_IonTextWriterBuilder
         _Private_IonTextWriterBuilder b = fillDefaults();
 
         _Private_IonTextAppender appender =
-            new OutputStreamIonTextAppender(out, b.getCharset());
+            _Private_IonTextAppender.forOutputStream(out, b.getCharset());
 
         return b.build(appender);
     }
@@ -210,7 +210,7 @@ public class _Private_IonTextWriterBuilder
         }
 
         @Override
-        public IonTextWriterBuilder immutable()
+        public _Private_IonTextWriterBuilder immutable()
         {
             return this;
         }
