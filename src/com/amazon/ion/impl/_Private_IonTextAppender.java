@@ -221,7 +221,7 @@ public final class _Private_IonTextAppender
     public static _Private_IonTextAppender forAppendable(Appendable out,
                                                          Charset charset)
     {
-        _Private_FastAppendable fast = new AppendableIonTextAppender(out);
+        _Private_FastAppendable fast = new AppendableFastAppendable(out);
         return forFastAppendable(fast, charset);
     }
 
@@ -231,7 +231,7 @@ public final class _Private_IonTextAppender
      */
     public static _Private_IonTextAppender forAppendable(Appendable out)
     {
-        _Private_FastAppendable fast = new AppendableIonTextAppender(out);
+        _Private_FastAppendable fast = new AppendableFastAppendable(out);
         boolean escapeNonAscii = false;
         return new _Private_IonTextAppender(fast, escapeNonAscii);
     }

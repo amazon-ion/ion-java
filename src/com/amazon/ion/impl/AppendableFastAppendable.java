@@ -10,12 +10,12 @@ import java.io.IOException;
 /**
  * Adapts an {@link Appendable} to implement {@link _Private_FastAppendable}.
  */
-final class AppendableIonTextAppender
+final class AppendableFastAppendable
     implements _Private_FastAppendable, Closeable, Flushable
 {
     private final Appendable _out;
 
-    AppendableIonTextAppender(Appendable out)
+    AppendableFastAppendable(Appendable out)
     {
         out.getClass(); // Efficient null check
 
