@@ -109,7 +109,10 @@ public final class _Private_IonTextAppender
     };
 
 
-    // escape sequences for character below ascii 32 (space)
+    /**
+     * Escapes for U+00 through U+FF, for use in double-quoted Ion strings.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     private static final String[] STRING_ESCAPE_CODES;
     static
     {
@@ -136,6 +139,10 @@ public final class _Private_IonTextAppender
         }
     }
 
+    /**
+     * Escapes for U+00 through U+FF, for use in triple-quoted Ion strings.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     static final String[] LONG_STRING_ESCAPE_CODES;
     static
     {
@@ -148,6 +155,10 @@ public final class _Private_IonTextAppender
         LONG_STRING_ESCAPE_CODES['\"'] = null; // Treat as normal code point for long string
     }
 
+    /**
+     * Escapes for U+00 through U+FF, for use in single-quoted Ion symbols.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     static final String[] SYMBOL_ESCAPE_CODES;
     static
     {
@@ -159,6 +170,10 @@ public final class _Private_IonTextAppender
         SYMBOL_ESCAPE_CODES['\"'] = null; // Treat as normal code point for symbol.
     }
 
+    /**
+     * Escapes for U+00 through U+FF, for use in double-quoted JSON strings.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     static final String[] JSON_ESCAPE_CODES;
     static
     {
@@ -551,13 +566,16 @@ public final class _Private_IonTextAppender
         int len = text.length();
         for (int i = 0; i < len; ++i)
         {
-            // write as many bytes in a sequence as possible
+            // Find a span of non-escaped ASCII code points so we can write
+            // them as quickly as possible.
             char c = 0;
             int j;
             for (j = i; j < len; ++j) {
                 c = text.charAt(j);
-                if (c >= 0x100 || escapes[c] != null) {
-                    // append sequence then continue the normal loop
+                // The escapes array always includes U+80 through U+FF.
+                if (c >= 0x100 || escapes[c] != null)
+                {
+                    // c is escaped and/or outside ASCII range.
                     if (j > i) {
                         appendAscii(text, i, j);
                         i = j;
@@ -570,18 +588,31 @@ public final class _Private_IonTextAppender
                 appendAscii(text, i, j);
                 break;
             }
-            // write the non Latin-1 character
-            if (c < 0x80) {
+
+            // We've found a code point that's escaped and/or non-ASCII.
+
+            if (c < 0x80)
+            {
+                // An escaped ASCII character.
                 assert escapes[c] != null;
                 appendAscii(escapes[c]);
-            } else if (c < 0x100) {
+            }
+            else if (c < 0x100)
+            {
+                // Non-ASCII LATIN-1; we will have an escape sequence but may
+                // not use it.
                 assert escapes[c] != null;
-                if (escapeNonAscii) {
+
+                // Always escape the C1 control codes U+80 through U+9F.
+                if (escapeNonAscii || c <= 0x9F) {
                     appendAscii(escapes[c]);
                 } else {
                     appendUtf16(c);
                 }
-            } else if (c < 0xD800 || c >= 0xE000) {
+            }
+            else if (c < 0xD800 || c >= 0xE000)
+            {
+                // Not LATIN-1, but still in the BMP.
                 String s = Integer.toHexString(c);
                 if (escapeNonAscii) {
                     appendAscii(HEX_4_PREFIX);
@@ -590,13 +621,15 @@ public final class _Private_IonTextAppender
                 } else {
                     appendUtf16(c);
                 }
-            } else if (isHighSurrogate(c)) {
-                // high surrogate
+            }
+            else if (isHighSurrogate(c))
+            {
+                // Outside the BMP! High surrogate must be followed by low.
                 char c2;
                 if (++i == len || !isLowSurrogate(c2 = text.charAt(i))) {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +
-                        "high surrogate 0x" + Integer.toHexString(c) +
+                        "leading surrogate 0x" + Integer.toHexString(c) +
                         " at index " + (i-1);
                     throw new IllegalArgumentException(message);
                 }
@@ -609,11 +642,15 @@ public final class _Private_IonTextAppender
                 } else {
                     appendUtf16Surrogate(c, c2);
                 }
-            } else {
+            }
+            else
+            {
                 // unmatched low surrogate
+                assert isLowSurrogate(c);
+
                 String message =
                     "text is invalid UTF-16. It contains an unmatched " +
-                    "low surrogate 0x" + Integer.toHexString(c) +
+                    "trailing surrogate 0x" + Integer.toHexString(c) +
                     " at index " + i;
                 throw new IllegalArgumentException(message);
             }
