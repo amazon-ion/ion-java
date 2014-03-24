@@ -9,9 +9,9 @@ import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.FastAppendable;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
 import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -193,11 +193,11 @@ public final class _Private_IonTextAppender
     //=========================================================================
 
 
-    private final FastAppendable myAppendable;
+    private final _Private_FastAppendable myAppendable;
     private final boolean escapeNonAscii;
 
 
-    _Private_IonTextAppender(FastAppendable out, boolean escapeNonAscii)
+    _Private_IonTextAppender(_Private_FastAppendable out, boolean escapeNonAscii)
     {
         this.myAppendable   = out;
         this.escapeNonAscii = escapeNonAscii;
@@ -205,7 +205,7 @@ public final class _Private_IonTextAppender
 
 
     public static _Private_IonTextAppender
-    forFastAppendable(FastAppendable out, Charset charset)
+    forFastAppendable(_Private_FastAppendable out, Charset charset)
     {
         boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
         return new _Private_IonTextAppender(out, escapeNonAscii);
@@ -221,7 +221,7 @@ public final class _Private_IonTextAppender
     public static _Private_IonTextAppender forAppendable(Appendable out,
                                                          Charset charset)
     {
-        FastAppendable fast = new AppendableIonTextAppender(out);
+        _Private_FastAppendable fast = new AppendableIonTextAppender(out);
         return forFastAppendable(fast, charset);
     }
 
@@ -231,7 +231,7 @@ public final class _Private_IonTextAppender
      */
     public static _Private_IonTextAppender forAppendable(Appendable out)
     {
-        FastAppendable fast = new AppendableIonTextAppender(out);
+        _Private_FastAppendable fast = new AppendableIonTextAppender(out);
         boolean escapeNonAscii = false;
         return new _Private_IonTextAppender(fast, escapeNonAscii);
     }
@@ -246,7 +246,7 @@ public final class _Private_IonTextAppender
     public static _Private_IonTextAppender forOutputStream(OutputStream out,
                                                            Charset charset)
     {
-        FastAppendable fast = new OutputStreamIonTextAppender(out);
+        _Private_FastAppendable fast = new OutputStreamIonTextAppender(out);
         return forFastAppendable(fast, charset);
     }
 

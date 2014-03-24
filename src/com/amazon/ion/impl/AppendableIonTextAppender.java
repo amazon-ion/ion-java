@@ -2,16 +2,16 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.FastAppendable;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 
 /**
- * Adapts an {@link Appendable} to implement {@link FastAppendable}.
+ * Adapts an {@link Appendable} to implement {@link _Private_FastAppendable}.
  */
 final class AppendableIonTextAppender
-    implements Closeable, FastAppendable, Flushable
+    implements _Private_FastAppendable, Closeable, Flushable
 {
     private final Appendable _out;
 

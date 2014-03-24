@@ -1,10 +1,11 @@
 // Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
-package com.amazon.ion;
+
+package com.amazon.ion.util;
 
 import java.io.IOException;
 
 
-public interface FastAppendable
+public interface _Private_FastAppendable
     extends Appendable
 {
     /**

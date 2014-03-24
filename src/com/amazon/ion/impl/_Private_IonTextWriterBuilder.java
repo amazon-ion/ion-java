@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonWriterFactory.newTextWriterWithImports;
 
-import com.amazon.ion.FastAppendable;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
@@ -12,6 +11,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
@@ -164,7 +164,7 @@ public class _Private_IonTextWriterBuilder
 
 
     /** Assumes that {@link #fillDefaults()} has been called. */
-    private IonWriter build(FastAppendable appender)
+    private IonWriter build(_Private_FastAppendable appender)
     {
         IonCatalog catalog = getCatalog();
         SymbolTable[] imports = getImports();
@@ -186,7 +186,7 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        FastAppendable fast = new AppendableIonTextAppender(out);
+        _Private_FastAppendable fast = new AppendableIonTextAppender(out);
 
         return b.build(fast);
     }
@@ -197,7 +197,7 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        FastAppendable fast = new OutputStreamIonTextAppender(out);
+        _Private_FastAppendable fast = new OutputStreamIonTextAppender(out);
 
         return b.build(fast);
     }

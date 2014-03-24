@@ -7,7 +7,6 @@ import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
 
-import com.amazon.ion.FastAppendable;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -17,6 +16,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -67,7 +67,7 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
-                                  FastAppendable out)
+                                  _Private_FastAppendable out)
     {
         super(defaultSystemSymtab,
               options.getInitialIvmHandling(),

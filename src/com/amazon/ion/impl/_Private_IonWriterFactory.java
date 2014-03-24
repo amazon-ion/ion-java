@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
-import com.amazon.ion.FastAppendable;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -13,6 +12,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.OutputStream;
 
 /**
@@ -130,7 +130,7 @@ public final class _Private_IonWriterFactory
     newTextWriterWithImports(IonSystem system,
                              IonCatalog catalog,
                              _Private_IonTextWriterBuilder options,
-                             FastAppendable output,
+                             _Private_FastAppendable output,
                              SymbolTable... imports)
     {
         SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
