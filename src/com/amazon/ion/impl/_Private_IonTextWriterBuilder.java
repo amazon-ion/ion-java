@@ -197,7 +197,7 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        _Private_FastAppendable fast = new OutputStreamIonTextAppender(out);
+        _Private_FastAppendable fast = new OutputStreamFastAppendable(out);
 
         return b.build(fast);
     }

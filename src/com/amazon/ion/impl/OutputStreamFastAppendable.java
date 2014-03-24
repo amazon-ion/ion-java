@@ -14,7 +14,7 @@ import java.io.OutputStream;
  * Adapts an {@link OutputStream} to implement {@link _Private_FastAppendable}.
  * <b>This always outputs UTF-8!</b>
  */
-final class OutputStreamIonTextAppender
+final class OutputStreamFastAppendable
     implements _Private_FastAppendable, Closeable, Flushable
 {
     private static final int MAX_BYTES_LEN = 4096;
@@ -27,7 +27,7 @@ final class OutputStreamIonTextAppender
     /** Position in {@link #_byteBuffer} where we'll write the next byte. */
     private int _pos;
 
-    OutputStreamIonTextAppender(OutputStream out)
+    OutputStreamFastAppendable(OutputStream out)
     {
         out.getClass(); // Efficient null check
 

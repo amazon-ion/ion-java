@@ -246,7 +246,7 @@ public final class _Private_IonTextAppender
     public static _Private_IonTextAppender forOutputStream(OutputStream out,
                                                            Charset charset)
     {
-        _Private_FastAppendable fast = new OutputStreamIonTextAppender(out);
+        _Private_FastAppendable fast = new OutputStreamFastAppendable(out);
         return forFastAppendable(fast, charset);
     }
 
