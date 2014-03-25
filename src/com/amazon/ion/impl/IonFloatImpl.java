@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -6,6 +6,7 @@ import static com.amazon.ion.impl._Private_IonConstants.lnIsNullAtom;
 import static com.amazon.ion.impl._Private_IonConstants.makeTypeDescriptor;
 import static com.amazon.ion.impl._Private_IonConstants.tidFloat;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonType;
@@ -123,7 +124,7 @@ final class IonFloatImpl
     {
         makeReady();
         if (_float_value == null) return null;
-        return new BigDecimal(_float_value.doubleValue());
+        return Decimal.valueOf(_float_value.doubleValue());
     }
 
     public void setValue(float value)
