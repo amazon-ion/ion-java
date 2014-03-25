@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -332,15 +332,13 @@ public class PrinterTest
         checkRendering("an::0e0", value);
 
         value = (IonFloat) oneValue("1e4");
-        // TODO this prints as 10000e0 which is less than ideal.
-//      checkRendering("1e4", value);
+        checkRendering("10000e0", value);
 
         value = (IonFloat) oneValue("1e+4");
-        // TODO this prints as 10000e0 which is less than ideal.
-//      checkRendering("1e4", value);
+        checkRendering("10000e0", value);
 
         value = (IonFloat) oneValue("125e-2");
-        checkRendering("125e-2", value);
+        checkRendering("1.25e0", value);
     }
 
 

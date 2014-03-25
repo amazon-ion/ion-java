@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -188,7 +188,7 @@ public class TextTest
     {
         checkFloat("null.float", null);
         checkFloat("0e0", 0.0);
-        checkFloat("1.0e0", 1.0);
+        checkFloat("1e0", 1.0);
     }
 
 

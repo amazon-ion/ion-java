@@ -807,25 +807,32 @@ public final class _Private_IonTextAppender
         {
             appendAscii("nan");
         }
-        else if (Double.isInfinite(value))
+        else if (value == Double.POSITIVE_INFINITY)
         {
-            if (value > 0)
-            {
-                appendAscii("+inf");
-            }
-            else
-            {
-                appendAscii("-inf");
-            }
+            appendAscii("+inf");
+        }
+        else if (value == Double.NEGATIVE_INFINITY)
+        {
+            appendAscii("-inf");
         }
         else
         {
+            // Double.toString() forces a digit after the decimal point.
+            // Remove it when it's not meaningful.
             String str = Double.toString(value);
-            if (str.indexOf('E') == -1)
+            if (str.endsWith(".0"))
             {
-                str += "e0";
+                appendAscii(str, 0, str.length() - 2);
+                appendAscii("e0");
             }
-            appendAscii(str);
+            else
+            {
+                appendAscii(str);
+                if (str.indexOf('E') == -1)
+                {
+                    appendAscii("e0");
+                }
+            }
         }
     }
 
