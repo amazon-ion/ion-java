@@ -338,7 +338,7 @@ public class TimestampTest
     public void testTimestampConstants()
     {
         checkFields(1, 1, 1, 0, 0, 0, null, null, DAY, EARLIEST_ION_TIMESTAMP);
-        assertEquals("0001-01-01Z", EARLIEST_ION_TIMESTAMP.toZString());
+        assertEquals("0001-01-01", EARLIEST_ION_TIMESTAMP.toZString());
         assertEquals("0001-01-01", EARLIEST_ION_TIMESTAMP.toString());
         assertEquals(-62135769600000L, EARLIEST_ION_TIMESTAMP.getMillis());
 
@@ -702,7 +702,7 @@ public class TimestampTest
         Timestamp ts = new Timestamp(2010, 2, 1);
         checkFields(2010, 2, 1, 0, 0, 0, null, UNKNOWN_OFFSET, DAY, ts);
         assertEquals("2010-02-01", ts.toString());
-        assertEquals("2010-02-01Z", ts.toZString());
+        assertEquals("2010-02-01", ts.toZString());
 
         // ===== Test on Timestamp(...) minute precise constructor =====
         ts = new Timestamp(2010, 2, 1, 10, 11, PST_OFFSET);
@@ -983,7 +983,7 @@ public class TimestampTest
         assertFalse(cal.isSet(Calendar.MONTH));
 
         Timestamp ts = new Timestamp(cal);
-        checkFields(2009, 1, 1, 0, 0, 0, null, 0, YEAR, ts);
+        checkFields(2009, 1, 1, 0, 0, 0, null, UNKNOWN_OFFSET, YEAR, ts);
         assertEquals("2009T", ts.toString());
         assertEquals("2009T", ts.toZString());
 
@@ -994,7 +994,7 @@ public class TimestampTest
         assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));
 
         ts = new Timestamp(cal);
-        checkFields(2009, 3, 1, 0, 0, 0, null, 0, MONTH, ts);
+        checkFields(2009, 3, 1, 0, 0, 0, null, UNKNOWN_OFFSET, MONTH, ts);
         assertEquals("2009-03T", ts.toString());
         assertEquals("2009-03T", ts.toZString());
 
@@ -1005,9 +1005,9 @@ public class TimestampTest
                     cal.isSet(Calendar.MINUTE));
 
         ts = new Timestamp(cal);
-        checkFields(2009, 3, 18, 0, 0, 0, null, 0, DAY, ts);
-        assertEquals("2009-03-18Z", ts.toString());
-        assertEquals("2009-03-18Z", ts.toZString());
+        checkFields(2009, 3, 18, 0, 0, 0, null, UNKNOWN_OFFSET, DAY, ts);
+        assertEquals("2009-03-18", ts.toString());
+        assertEquals("2009-03-18", ts.toZString());
 
         // ===== Timestamp minute precision =====
         cal.clear();
@@ -1473,4 +1473,28 @@ public class TimestampTest
         assertEquals(expectedTs, actualTs);
     }
 
+
+    /**
+     * Timestamps with precision coarser than minutes always have unknown
+     * local offset.
+     */
+    @Test
+    public void testCreateWithBogusLocalOffset()
+        throws Exception
+    {
+        Timestamp ts = createFromUtcFields(Precision.DAY, 2014, 4, 25,
+                                           1, 2, 3, null,
+                                           60);
+        assertEquals(Timestamp.valueOf("2014-04-25"), ts);
+
+        ts = createFromUtcFields(Precision.MONTH, 2014, 4, 25,
+                                 1, 2, 3, null,
+                                 60);
+        assertEquals(Timestamp.valueOf("2014-04T"), ts);
+
+        ts = createFromUtcFields(Precision.YEAR, 2014, 4, 25,
+                                 1, 2, 3, null,
+                                 60);
+        assertEquals(Timestamp.valueOf("2014T"), ts);
+    }
 }

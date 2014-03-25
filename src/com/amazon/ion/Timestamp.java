@@ -266,6 +266,8 @@ public final class Timestamp
             throw new IllegalArgumentException("Calendar has no fields set");
         }
 
+        _offset = UNKNOWN_OFFSET;
+
         switch (this._precision) {
             case FRACTION:
                 BigDecimal millis = BigDecimal.valueOf(cal.get(Calendar.MILLISECOND));
@@ -273,8 +275,22 @@ public final class Timestamp
             case SECOND:
                 this._second = (byte)cal.get(Calendar.SECOND);
             case MINUTE:
+            {
                 this._hour   = (byte)cal.get(Calendar.HOUR_OF_DAY);
                 this._minute = (byte)cal.get(Calendar.MINUTE);
+
+                // If this test is made before calling get(), it will return
+                // false even when Calendar.setTimeZone() was called.
+                if (cal.isSet(Calendar.ZONE_OFFSET)) {
+                    int offset = cal.get(Calendar.ZONE_OFFSET);
+                    if (cal.isSet(Calendar.DST_OFFSET)) {
+                        offset += cal.get(Calendar.DST_OFFSET);
+                    }
+
+                    // convert ms to minutes
+                    _offset = offset / (1000*60);
+                }
+            }
             case DAY:
                 this._day    = (byte)cal.get(Calendar.DAY_OF_MONTH);
             case MONTH:
@@ -284,16 +300,7 @@ public final class Timestamp
                 this._year   = (short)cal.get(Calendar.YEAR);
         }
 
-        // Strangely, if this test is made before calling get(), it will return
-        // false even when Calendar.setTimeZone() was called.
-        if (cal.isSet(Calendar.ZONE_OFFSET)) {
-            int offset = cal.get(Calendar.ZONE_OFFSET);
-            if (cal.isSet(Calendar.DST_OFFSET)) {
-                offset += cal.get(Calendar.DST_OFFSET);
-            }
-
-            // convert ms to minutes
-            _offset = offset / (1000*60);
+        if (_offset != UNKNOWN_OFFSET) {
             // Transform our members from local time to Zulu
             this.apply_offset(_offset);
         }
@@ -521,6 +528,7 @@ public final class Timestamp
         case MINUTE:
             _minute = (byte)zminute;
             _hour   = (byte)zhour;
+            _offset = offset;      // offset must be null for years/months/days
         case DAY:
             _day    = (byte)zday;  // days are base 1 (as you'd expect)
         case MONTH:
@@ -529,7 +537,6 @@ public final class Timestamp
             _year   = (short)zyear;
         }
         validate_fields();
-        _offset = offset;
         // This doesn't call applyOffset() like the other constructors because
         // we already expect the time parameters to be in UTC, and that's
         // already what we're supposed to have.
@@ -605,9 +612,9 @@ public final class Timestamp
      *
      * For example, the calendar field will have a Timestamp precision accordingly:
      * <ul>
-     *   <li>{@link Calendar#YEAR} - year precision</li>
-     *   <li>{@link Calendar#MONTH} - month precision</li>
-     *   <li>{@link Calendar#DAY_OF_MONTH} - day precision</li>
+     *   <li>{@link Calendar#YEAR} - year precision, unknown local offset</li>
+     *   <li>{@link Calendar#MONTH} - month precision, unknown local offset</li>
+     *   <li>{@link Calendar#DAY_OF_MONTH} - day precision, unknown local offset</li>
      *   <li>{@link Calendar#HOUR_OF_DAY} or {@link Calendar#MINUTE} - minute precision</li>
      *   <li>{@link Calendar#SECOND} - second precision</li>
      *   <li>{@link Calendar#MILLISECOND} - fractional second precision</li>
@@ -1218,9 +1225,11 @@ public final class Timestamp
 
     /**
      * Converts a {@link Calendar} to a Timestamp, preserving the calendar's
-     * time zone as the equivalent local offset.
+     * time zone as the equivalent local offset when it has at least minutes
+     * precision.
      *
-     * @return a Timestamp instance, precise to the millisecond;
+     * @return a Timestamp instance, with precision determined by the smallest
+     *   field set in the {@code Calendar};
      *   or {@code null} if {@code calendar} is {@code null}
      *
      * @since IonJava R17
@@ -1794,9 +1803,27 @@ public final class Timestamp
     public void printZ(Appendable out)
         throws IOException
     {
-        Timestamp ztime = this.clone();
-        ztime._offset = UTC_OFFSET;
-        ztime.print(out);
+        switch (_precision)
+        {
+            case YEAR:
+            case MONTH:
+            case DAY:
+            {
+                assert _offset == UNKNOWN_OFFSET;
+                // No need to adjust offset, we won't be using it.
+                print(out);
+                break;
+            }
+            case MINUTE:
+            case SECOND:
+            case FRACTION:
+            {
+                Timestamp ztime = this.clone();
+                ztime._offset = UTC_OFFSET;
+                ztime.print(out);
+                break;
+            }
+        }
     }
 
 
@@ -1822,6 +1849,7 @@ public final class Timestamp
         // which we always have
         print_digits(out, adjusted._year, 4);
         if (adjusted._precision == Precision.YEAR) {
+            assert adjusted._offset == UNKNOWN_OFFSET;
             out.append("T");
             return;
         }
@@ -1829,38 +1857,35 @@ public final class Timestamp
         out.append("-");
         print_digits(out, adjusted._month, 2);  // convert calendar months to a base 1 value
         if (adjusted._precision == Precision.MONTH) {
+            assert adjusted._offset == UNKNOWN_OFFSET;
             out.append("T");
             return;
         }
 
         out.append("-");
         print_digits(out, adjusted._day, 2);
-        if (adjusted._precision == Precision.DAY && adjusted._offset == null) {
+        if (adjusted._precision == Precision.DAY) {
+            assert adjusted._offset == UNKNOWN_OFFSET;
             // out.append("T");
             return;
         }
 
-        // see if we have some time
-        if (adjusted._precision == Precision.MINUTE
-            || adjusted._precision == Precision.SECOND
+        out.append("T");
+        print_digits(out, adjusted._hour, 2);
+        out.append(":");
+        print_digits(out, adjusted._minute, 2);
+        // ok, so how much time do we have ?
+        if (adjusted._precision == Precision.SECOND
             || adjusted._precision == Precision.FRACTION
-        ) {
-            out.append("T");
-            print_digits(out, adjusted._hour, 2);
-            out.append(":");
-            print_digits(out, adjusted._minute, 2);
-            // ok, so how much time do we have ?
-            if (adjusted._precision == Precision.SECOND
-                || adjusted._precision == Precision.FRACTION
             ) {
-                out.append(":");
-                print_digits(out, adjusted._second, 2);
-            }
-            if (adjusted._precision == Precision.FRACTION) {
-                print_fractional_digits(out, adjusted._fraction);
-            }
+            out.append(":");
+            print_digits(out, adjusted._second, 2);
         }
-        if (adjusted._offset != null) {
+        if (adjusted._precision == Precision.FRACTION) {
+            print_fractional_digits(out, adjusted._fraction);
+        }
+
+        if (adjusted._offset != UNKNOWN_OFFSET) {
             int min, hour;
             min = adjusted._offset;
             if (min == 0) {
