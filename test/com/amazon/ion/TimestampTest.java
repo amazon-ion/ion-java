@@ -1,4 +1,5 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+
 package com.amazon.ion;
 
 import static com.amazon.ion.Decimal.NEGATIVE_ZERO;
@@ -1496,5 +1497,94 @@ public class TimestampTest
                                  1, 2, 3, null,
                                  60);
         assertEquals(Timestamp.valueOf("2014T"), ts);
+    }
+
+
+    private Timestamp checkWithLocalOffset(Timestamp orig, Integer offset,
+                                           Timestamp expected)
+        throws Exception
+    {
+        Timestamp actual = orig.withLocalOffset(offset);
+        assertEquals(0, actual.compareTo(orig));         // same point-in-time
+        assertEquals(orig.getPrecision(), actual.getPrecision());
+        assertEquals(expected, actual);
+
+        return actual;
+    }
+
+    Timestamp checkWithLocalOffset(Timestamp orig, Integer offset,
+                                   String expected)
+        throws Exception
+    {
+        Timestamp e = Timestamp.valueOf(expected);
+        return checkWithLocalOffset(orig, offset, e);
+    }
+
+    @Test
+    public void testWithLocalOffset()
+        throws Exception
+    {
+        Timestamp ts = Timestamp.valueOf("2014-04-25T13:50:12.34Z");
+
+        checkWithLocalOffset(ts, UTC_OFFSET, ts); // No change
+
+        Timestamp ts2 =
+            checkWithLocalOffset(ts, null, "2014-04-25T13:50:12.34-00:00");
+
+        ts2 = checkWithLocalOffset(ts2, UTC_OFFSET, ts);
+        ts2 = checkWithLocalOffset(ts2, -10, "2014-04-25T13:40:12.34-00:10");
+        ts2 = checkWithLocalOffset(ts2,  10, "2014-04-25T14:00:12.34+00:10");
+
+
+        // Seconds precision
+        ts = Timestamp.valueOf("2014-04-25T13:50:12Z");
+
+        checkWithLocalOffset(ts, UTC_OFFSET, ts); // No change
+
+        ts2 = checkWithLocalOffset(ts, null, "2014-04-25T13:50:12-00:00");
+        ts2 = checkWithLocalOffset(ts2, UTC_OFFSET, ts);
+        ts2 = checkWithLocalOffset(ts2, -10, "2014-04-25T13:40:12-00:10");
+        ts2 = checkWithLocalOffset(ts2,  10, "2014-04-25T14:00:12+00:10");
+
+
+        // Minutes precision
+        ts = Timestamp.valueOf("2014-04-25T13:50Z");
+
+        checkWithLocalOffset(ts, UTC_OFFSET, ts); // No change
+
+        ts2 = checkWithLocalOffset(ts, null, "2014-04-25T13:50-00:00");
+        ts2 = checkWithLocalOffset(ts2, UTC_OFFSET, ts);
+        ts2 = checkWithLocalOffset(ts2, -10, "2014-04-25T13:40-00:10");
+        ts2 = checkWithLocalOffset(ts2,  10, "2014-04-25T14:00+00:10");
+
+
+        // Not sure if this is meaningful since non-GMT timestamps must have
+        // at least minutes precision.
+
+        ts = Timestamp.valueOf("2014-04-25T");
+        assertNull(ts.getLocalOffset());         // A reminder to the reader.
+
+        ts2 = checkWithLocalOffset(ts, null,       ts);  // No change
+        ts2 = checkWithLocalOffset(ts, UTC_OFFSET, ts);
+        ts2 = checkWithLocalOffset(ts, -10,        ts);
+        ts2 = checkWithLocalOffset(ts,  10,        ts);
+
+
+        ts = Timestamp.valueOf("2014-04T");
+        assertNull(ts.getLocalOffset());         // A reminder to the reader.
+
+        ts2 = checkWithLocalOffset(ts, null,       ts);  // No change
+        ts2 = checkWithLocalOffset(ts, UTC_OFFSET, ts);
+        ts2 = checkWithLocalOffset(ts, -10,        ts);
+        ts2 = checkWithLocalOffset(ts,  10,        ts);
+
+
+        ts = Timestamp.valueOf("2014T");
+        assertNull(ts.getLocalOffset());         // A reminder to the reader.
+
+        ts2 = checkWithLocalOffset(ts, null,       ts);  // No change
+        ts2 = checkWithLocalOffset(ts, UTC_OFFSET, ts);
+        ts2 = checkWithLocalOffset(ts, -10,        ts);
+        ts2 = checkWithLocalOffset(ts,  10,        ts);
     }
 }

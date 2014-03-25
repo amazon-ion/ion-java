@@ -1,7 +1,8 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.impl._Private_Utils.safeEquals;
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
 import com.amazon.ion.impl._Private_Utils;
@@ -83,7 +84,12 @@ public final class Timestamp
         DAY,
         MINUTE,
         SECOND,
-        FRACTION
+        FRACTION;
+
+        private boolean alwaysUnknownOffset()
+        {
+            return this.ordinal() <= DAY.ordinal();
+        }
     }
 
     private static final int HASH_SIGNATURE =
@@ -1710,6 +1716,41 @@ public final class Timestamp
     {
         return this._fraction;
     }
+
+
+    //=========================================================================
+    // Modification methods
+
+
+    /**
+     * Returns a timestamp at the same point in time, but with the given local
+     * offset.  If this timestamp has precision coarser than minutes, then it
+     * is returned unchanged since such timpstamps always have an unknown
+     * offset.
+     */
+    Timestamp withLocalOffset(Integer offset)
+    {
+        Precision precision = getPrecision();
+        if (precision.alwaysUnknownOffset() ||
+            safeEquals(offset, getLocalOffset()))
+        {
+            return this;
+        }
+
+        Timestamp ts = createFromUtcFields(precision,
+                                           getZYear(),
+                                           getZMonth(),
+                                           getZDay(),
+                                           getZHour(),
+                                           getZMinute(),
+                                           getZSecond(),
+                                           getZFractionalSecond(),
+                                           offset);
+        return ts;
+    }
+
+
+    //=========================================================================
 
 
     /**
