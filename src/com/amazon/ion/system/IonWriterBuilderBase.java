@@ -13,7 +13,11 @@ import com.amazon.ion.SymbolTable;
 abstract class IonWriterBuilderBase<T extends IonWriterBuilderBase>
     extends IonWriterBuilder
 {
-    // TODO reuseImportsAfterFinish
+    // TODO reuseInitialSymtabAfterFinish property
+    //      Causes the same local symbol table to be installed when more data
+    //      is written after finish().  The "reused" LST will only contain
+    //      those symbols that were interned when setInitialSymbolTable() was
+    //      called.
 
     private IonCatalog    myCatalog;
     private SymbolTable[] myImports;

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -35,6 +35,12 @@ public final class _Private_IonBinaryWriterImpl
               systemWriter,
               streamCopyOptimized,
               symtab);
+    }
+
+    _Private_IonBinaryWriterImpl(_Private_IonBinaryWriterBuilder options,
+                                 IonWriterSystemBinary           systemWriter)
+    {
+        super(options, systemWriter);
     }
 
 

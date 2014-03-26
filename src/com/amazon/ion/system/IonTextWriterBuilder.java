@@ -103,7 +103,7 @@ public abstract class IonTextWriterBuilder
 
 
     /**
-     * The standard builder of {@link IonWriter}s, with all configuration
+     * The standard builder of text {@link IonWriter}s, with all configuration
      * properties having their default values. The resulting output is a
      * direct representation of what's written to the writer, including
      * version markers and local symbol tables.

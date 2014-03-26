@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
@@ -61,6 +61,7 @@ import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanTests;
+import com.amazon.ion.system.IonBinaryWriterBuilderTest;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.IonTextWriterBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
@@ -163,6 +164,7 @@ import org.junit.runners.Suite;
     ValueFactorySequenceTest.class,
     IonSystemBuilderTest.class,
     IonTextWriterBuilderTest.class,
+    IonBinaryWriterBuilderTest.class,
 
     // Hash code tests
     HashCodeCorrectnessTest.class,
