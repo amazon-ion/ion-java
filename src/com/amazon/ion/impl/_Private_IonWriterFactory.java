@@ -10,9 +10,9 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
-import com.amazon.ion.util._Private_FastAppendable;
 import java.io.OutputStream;
 
 /**
@@ -103,7 +103,7 @@ public final class _Private_IonWriterFactory
 
 
     public static IonWriterUserBinary
-    newBinaryWriterWithInitialSymtab(IonSystem system,
+    newBinaryWriterWithInitialSymtab(ValueFactory symtabValueFactory,
                                      IonCatalog catalog,
                                      boolean streamCopyOptimized,
                                      OutputStream output,
@@ -118,32 +118,11 @@ public final class _Private_IonWriterFactory
 
         IonWriterUserBinary writer =
             new IonWriterUserBinary(catalog,
-                                    system,
+                                    symtabValueFactory,
                                     systemWriter,
                                     streamCopyOptimized,
                                     initialSymtab);
         return writer;
-    }
-
-
-    public static IonWriterUser
-    newTextWriterWithImports(IonSystem system,
-                             IonCatalog catalog,
-                             _Private_IonTextWriterBuilder options,
-                             _Private_FastAppendable output,
-                             SymbolTable... imports)
-    {
-        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
-
-        IonWriterSystemText systemWriter =
-            new IonWriterSystemText(defaultSystemSymtab,
-                                    options,
-                                    output);
-
-        SymbolTable initialSymtab =
-            initialSymtab(system, defaultSystemSymtab, imports);
-
-        return new IonWriterUser(catalog, system, systemWriter, initialSymtab);
     }
 
 

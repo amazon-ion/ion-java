@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_IonWriterFactory.newTextWriterWithImports;
+import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -94,6 +94,7 @@ public class _Private_IonTextWriterBuilder
         return copy();
     }
 
+
     //=========================================================================
 
     @Override
@@ -173,11 +174,15 @@ public class _Private_IonTextWriterBuilder
         IonSystem system =
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
-        return newTextWriterWithImports(system,
-                                        catalog,
-                                        this,
-                                        appender,
-                                        imports);
+        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
+
+        IonWriterSystemText systemWriter =
+            new IonWriterSystemText(defaultSystemSymtab, this, appender);
+
+        SymbolTable initialSymtab =
+            initialSymtab(system, defaultSystemSymtab, imports);
+
+        return new IonWriterUser(catalog, system, systemWriter, initialSymtab);
     }
 
 
