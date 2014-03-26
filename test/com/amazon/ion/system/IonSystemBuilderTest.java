@@ -123,6 +123,9 @@ public class IonSystemBuilderTest
         assertTrue(isLazySystem(ion));
     }
 
+
+    //-------------------------------------------------------------------------
+
     @Test
     public void testStreamCopyOptimized()
     {
@@ -134,6 +137,21 @@ public class IonSystemBuilderTest
         IonWriter w = ion.newBinaryWriter(out);
         assertTrue(((_Private_IonWriterBase)w).isStreamCopyOptimized());
     }
+
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testStreamCopyOptimizedImmutability()
+    {
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
+        b.setStreamCopyOptimized(true);
+
+        IonSystemBuilder b2 = b.immutable();
+        assertTrue(b2.isStreamCopyOptimized());
+        b2.setStreamCopyOptimized(false);
+    }
+
+
+    //-------------------------------------------------------------------------
 
     @Test
     public void testFluidStyle()

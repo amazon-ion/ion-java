@@ -13,7 +13,6 @@ import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import com.amazon.ion.util._Private_FastAppendable;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -23,12 +22,13 @@ public class _Private_IonTextWriterBuilder
 {
     private final static CharSequence SPACE_CHARACTER = " ";
     /** TODO shouldn't be platform-specific */
-    private final static CharSequence LINE_SEPARATOR = System.getProperty("line.separator");
+    private final static CharSequence LINE_SEPARATOR =
+        System.getProperty("line.separator");
 
 
     public static _Private_IonTextWriterBuilder standard()
     {
-        return new _Private_IonTextWriterBuilder();
+        return new _Private_IonTextWriterBuilder.Mutable();
     }
 
     public static _Private_IonTextWriterBuilder STANDARD =
@@ -77,21 +77,21 @@ public class _Private_IonTextWriterBuilder
 
 
     @Override
-    public final IonTextWriterBuilder copy()
+    public final _Private_IonTextWriterBuilder copy()
     {
-        return new _Private_IonTextWriterBuilder(this);
+        return new Mutable(this);
     }
 
     @Override
     public _Private_IonTextWriterBuilder immutable()
     {
-        return new Immutable(this);
+        return this;
     }
 
     @Override
     public _Private_IonTextWriterBuilder mutable()
     {
-        return this;
+        return copy();
     }
 
     //=========================================================================
@@ -204,10 +204,12 @@ public class _Private_IonTextWriterBuilder
 
     //=========================================================================
 
-    private static final class Immutable
+    private static final class Mutable
         extends _Private_IonTextWriterBuilder
     {
-        private Immutable(_Private_IonTextWriterBuilder that)
+        private Mutable() { }
+
+        private Mutable(_Private_IonTextWriterBuilder that)
         {
             super(that);
         }
@@ -215,61 +217,18 @@ public class _Private_IonTextWriterBuilder
         @Override
         public _Private_IonTextWriterBuilder immutable()
         {
-            return this;
+            return new _Private_IonTextWriterBuilder(this);
         }
 
         @Override
         public _Private_IonTextWriterBuilder mutable()
         {
-            return new _Private_IonTextWriterBuilder(this);
-        }
-
-
-        private void mutationFailure()
-        {
-            throw new UnsupportedOperationException("This builder is immutable");
+            return this;
         }
 
         @Override
-        public void setCatalog(IonCatalog catalog)
+        protected void mutationCheck()
         {
-            mutationFailure();
-        }
-
-        @Override
-        public void setCharset(Charset charset)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setInitialIvmHandling(InitialIvmHandling handling)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setIvmMinimizing(IvmMinimizing minimizing)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setLstMinimizing(LstMinimizing minimizing)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setImports(SymbolTable... imports)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setLongStringThreshold(int threshold)
-        {
-            mutationFailure();
         }
     }
 }

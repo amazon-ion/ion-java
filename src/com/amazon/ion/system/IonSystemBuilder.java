@@ -156,7 +156,7 @@ public class IonSystemBuilder
      */
     public final IonSystemBuilder copy()
     {
-        return new IonSystemBuilder.Mutable(this);
+        return new Mutable(this);
     }
 
     /**
@@ -185,10 +185,11 @@ public class IonSystemBuilder
         return copy();
     }
 
-    private void mutationFailure()
+    void mutationCheck()
     {
         throw new UnsupportedOperationException("This builder is immutable");
     }
+
 
     //=========================================================================
     // Properties
@@ -201,7 +202,7 @@ public class IonSystemBuilder
      * @see #withCatalog(IonCatalog)
      * @see IonSystem#getCatalog()
      */
-    final public IonCatalog getCatalog()
+    public final IonCatalog getCatalog()
     {
         return myCatalog;
     }
@@ -218,9 +219,10 @@ public class IonSystemBuilder
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
-    public void setCatalog(IonCatalog catalog)
+    public final void setCatalog(IonCatalog catalog)
     {
-        mutationFailure();
+        mutationCheck();
+        myCatalog = catalog;
     }
 
     /**
@@ -242,6 +244,7 @@ public class IonSystemBuilder
     }
 
 
+    //=========================================================================
 
 
     /**
@@ -261,9 +264,10 @@ public class IonSystemBuilder
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
-    void setBinaryBacked(boolean backed)
+    final void setBinaryBacked(boolean backed)
     {
-        mutationFailure();
+        mutationCheck();
+        myBinaryBacked = backed;
     }
 
     final IonSystemBuilder withBinaryBacked(boolean backed)
@@ -274,6 +278,7 @@ public class IonSystemBuilder
     }
 
 
+    //=========================================================================
 
 
     /**
@@ -306,9 +311,10 @@ public class IonSystemBuilder
      *
      * @since R13
      */
-    public void setStreamCopyOptimized(boolean optimized)
+    public final void setStreamCopyOptimized(boolean optimized)
     {
-        mutationFailure();
+        mutationCheck();
+        myStreamCopyOptimized = optimized;
     }
 
     /**
@@ -359,7 +365,7 @@ public class IonSystemBuilder
     //=========================================================================
 
     private static final class Mutable
-    extends IonSystemBuilder
+        extends IonSystemBuilder
     {
         private Mutable(IonSystemBuilder that)
         {
@@ -379,21 +385,8 @@ public class IonSystemBuilder
         }
 
         @Override
-        public void setCatalog(IonCatalog catalog)
+        void mutationCheck()
         {
-            myCatalog = catalog;
-        }
-
-        @Override
-        void setBinaryBacked(boolean backed)
-        {
-            myBinaryBacked = backed;
-        }
-
-        @Override
-        public void setStreamCopyOptimized(boolean optimized)
-        {
-            myStreamCopyOptimized = optimized;
         }
     }
 }

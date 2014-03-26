@@ -196,6 +196,42 @@ public abstract class IonTextWriterBuilder
         this.myLongStringThreshold  = that.myLongStringThreshold;
     }
 
+
+    //=========================================================================
+
+    /**
+     * Creates a mutable copy of this builder.
+     *
+     * @return a new builder with the same configuration as {@code this}.
+     */
+    public abstract IonTextWriterBuilder copy();
+
+    /**
+     * Returns an immutable builder configured exactly like this one.
+     *
+     * @return this instance, if immutable;
+     * otherwise an immutable copy of this instance.
+     */
+    public abstract IonTextWriterBuilder immutable();
+
+    /**
+     * Returns a mutable builder configured exactly like this one.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public abstract IonTextWriterBuilder mutable();
+
+
+    /**
+     * NOT FOR APPLICATION USE!
+     */
+    protected void mutationCheck()
+    {
+        throw new UnsupportedOperationException("This builder is immutable");
+    }
+
+
     //=========================================================================
 
     /**
@@ -225,6 +261,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setCatalog(IonCatalog catalog)
     {
+        mutationCheck();
         myCatalog = catalog;
     }
 
@@ -279,6 +316,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setCharset(Charset charset)
     {
+        mutationCheck();
         if (charset == null
             || charset.equals(ASCII)
             || charset.equals(UTF8))
@@ -428,6 +466,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setInitialIvmHandling(InitialIvmHandling handling)
     {
+        mutationCheck();
         myInitialIvmHandling = handling;
     }
 
@@ -490,6 +529,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setIvmMinimizing(IvmMinimizing minimizing)
     {
+        mutationCheck();
         myIvmMinimizing = minimizing;
     }
 
@@ -551,6 +591,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setLstMinimizing(LstMinimizing minimizing)
     {
+        mutationCheck();
         myLstMinimizing = minimizing;
     }
 
@@ -621,6 +662,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setImports(SymbolTable... imports)
     {
+        mutationCheck();
         myImports = safeCopy(imports);
     }
 
@@ -680,6 +722,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setLongStringThreshold(int threshold)
     {
+        mutationCheck();
         myLongStringThreshold = threshold;
     }
 
@@ -702,31 +745,6 @@ public abstract class IonTextWriterBuilder
         b.setLongStringThreshold(threshold);
         return b;
     }
-
-    //=========================================================================
-
-    /**
-     * Creates a mutable copy of this builder.
-     *
-     * @return a new builder with the same configuration as {@code this}.
-     */
-    public abstract IonTextWriterBuilder copy();
-
-    /**
-     * Returns an immutable builder configured exactly like this one.
-     *
-     * @return this instance, if immutable;
-     * otherwise an immutable copy of this instance.
-     */
-    public abstract IonTextWriterBuilder immutable();
-
-    /**
-     * Returns a mutable builder configured exactly like this one.
-     *
-     * @return this instance, if mutable;
-     * otherwise a mutable copy of this instance.
-     */
-    public abstract IonTextWriterBuilder mutable();
 
 
     //=========================================================================
