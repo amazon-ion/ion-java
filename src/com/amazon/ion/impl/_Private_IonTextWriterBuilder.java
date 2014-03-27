@@ -149,15 +149,17 @@ public class _Private_IonTextWriterBuilder
 
     private _Private_IonTextWriterBuilder fillDefaults()
     {
-        IonTextWriterBuilder b = this;
+        // Ensure that we don't modify the user's builder.
+        IonTextWriterBuilder b = copy();
+
         if (b.getCatalog() == null)
         {
-            b = b.withCatalog(new SimpleCatalog());
+            b.setCatalog(new SimpleCatalog());
         }
 
         if (b.getCharset() == null)
         {
-            b = b.withCharset(UTF8);
+            b.setCharset(UTF8);
         }
 
         return (_Private_IonTextWriterBuilder) b.immutable();

@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -290,6 +290,10 @@ public class IonTextWriterBuilderTest
         b.setCharset(ASCII);
         assertSame(ASCII, b.getCharset());
         b.setCharset(null);
+        assertSame(null, b.getCharset());
+
+        // Building shouldn't mutate the builder.
+        b.build(new StringBuilder());
         assertSame(null, b.getCharset());
 
         // Test with...() on mutable builder
