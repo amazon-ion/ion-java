@@ -73,7 +73,6 @@ public final class _Private_IonWriterFactory
             initialSymtab(system, defaultSystemSymtab, imports);
 
         return new _Private_IonBinaryWriterImpl(catalog,
-                                                defaultSystemSymtab,
                                                 system,
                                                 systemWriter,
                                                 streamCopyOptimized,

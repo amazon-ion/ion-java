@@ -25,7 +25,6 @@ public final class _Private_IonBinaryWriterImpl
     implements IonBinaryWriter
 {
     public _Private_IonBinaryWriterImpl(IonCatalog catalog,
-                                        SymbolTable defaultSystemSymtab,
                                         ValueFactory symtabValueFactory,
                                         IonWriterSystemBinary systemWriter,
                                         boolean streamCopyOptimized,
