@@ -10,6 +10,9 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
+import com.amazon.ion.impl._Private_Utils;
 
 /*
  * IonValue DOM Implementations
@@ -354,14 +357,27 @@ public class IonSystemBuilder
             IonTextWriterBuilder.standard().withCharsetAscii();
         twb.setCatalog(catalog);
 
+        _Private_IonBinaryWriterBuilder bwb =
+            _Private_IonBinaryWriterBuilder.standard();
+        bwb.setCatalog(catalog);
+        bwb.setStreamCopyOptimized(myStreamCopyOptimized);
+
+        // TODO Would be nice to remove this since it's implied by the BWB.
+        //      However that currently causes problems in the IonSystem
+        //      constructors (which get a null initialSymtab).
+        SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);
+        bwb.setInitialSymtab(systemSymtab);
+        // This is what we need, more or less.
+//        bwb = bwb.fillDefaults();
+
         IonSystem sys;
         if (isBinaryBacked())
         {
-            sys = newLazySystem(twb, myStreamCopyOptimized);
+            sys = newLazySystem(twb, bwb);
         }
         else
         {
-            sys = newLiteSystem(twb, myStreamCopyOptimized);
+            sys = newLiteSystem(twb, bwb);
         }
         return sys;
     }

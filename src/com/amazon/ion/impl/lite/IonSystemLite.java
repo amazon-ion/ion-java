@@ -7,12 +7,9 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newBinaryWriterWithImports;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
-import static com.amazon.ion.impl._Private_Utils.systemSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.IonBinaryWriter;
@@ -32,6 +29,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
@@ -57,40 +55,47 @@ final class IonSystemLite
 {
     private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 
-    private final SymbolTable _system_symbol_table = systemSymtab(1);
+    private final SymbolTable _system_symbol_table;
 
     /** Not null. */
     private final IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
-    private final boolean myStreamCopyOptimized;
     /** Immutable. */
     private final IonTextWriterBuilder myTextWriterBuilder;
+    /** Immutable. */
+    private final _Private_IonBinaryWriterBuilder myBinaryWriterBuilder;
 
 
-    public IonSystemLite(IonTextWriterBuilder twb, boolean streamCopyOptimized)
+    public IonSystemLite(IonTextWriterBuilder twb,
+                         _Private_IonBinaryWriterBuilder bwb)
     {
-        this(twb, streamCopyOptimized, DEFAULT_CONTEXT_FREE_LIST_SIZE);
+        this(twb, bwb, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
     private IonSystemLite(IonTextWriterBuilder twb,
-                          boolean streamCopyOptimized,
+                          _Private_IonBinaryWriterBuilder bwb,
                           int context_free_list_size)
     {
         IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
+        assert catalog == bwb.getCatalog();
 
         set_context_free_list_max(context_free_list_size);
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
-        myStreamCopyOptimized = streamCopyOptimized;
+        _system_symbol_table = bwb.getInitialSymtab();
+        assert _system_symbol_table.isSystemTable();
 
         myTextWriterBuilder = twb.immutable();
 
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
         _value_factory.set_system(this);
+
+        bwb.setSymtabValueFactory(_value_factory);
+        myBinaryWriterBuilder = bwb.immutable();
     }
 
     //==========================================================================
@@ -99,7 +104,7 @@ final class IonSystemLite
 
     public boolean isStreamCopyOptimized()
     {
-        return myStreamCopyOptimized;
+        return myBinaryWriterBuilder.isStreamCopyOptimized();
     }
 
     @SuppressWarnings("unchecked")
@@ -199,26 +204,22 @@ final class IonSystemLite
     @Deprecated
     public IonBinaryWriter newBinaryWriter()
     {
-        SymbolTable[] imports = null;
-        return newBinaryWriter(imports);
+        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;
+        return b.buildLegacy();
     }
 
     @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        return newIonBinaryWriterWithImports(this,
-                                             getCatalog(),
-                                             myStreamCopyOptimized,
-                                             imports);
+        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)
+            myBinaryWriterBuilder.withImports(imports);
+        return b.buildLegacy();
     }
 
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriter writer = newBinaryWriterWithImports(this, getCatalog(),
-                                                      myStreamCopyOptimized,
-                                                      out, imports);
-        return writer;
+        return myBinaryWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(Appendable out)

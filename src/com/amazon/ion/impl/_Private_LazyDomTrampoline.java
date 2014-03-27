@@ -14,10 +14,11 @@ import java.io.InputStream;
  */
 public final class _Private_LazyDomTrampoline
 {
-    public static _Private_IonSystem newLazySystem(IonTextWriterBuilder twb,
-                                                   boolean streamCopyOptimized)
+    public static
+    _Private_IonSystem newLazySystem(IonTextWriterBuilder twb,
+                                     _Private_IonBinaryWriterBuilder bwb)
     {
-        return new IonSystemImpl(twb, streamCopyOptimized);
+        return new IonSystemImpl(twb, bwb);
     }
 
 

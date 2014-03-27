@@ -3,11 +3,8 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBinaryWriter;
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,19 +21,6 @@ public final class _Private_IonBinaryWriterImpl
     extends IonWriterUserBinary
     implements IonBinaryWriter
 {
-    public _Private_IonBinaryWriterImpl(IonCatalog catalog,
-                                        ValueFactory symtabValueFactory,
-                                        IonWriterSystemBinary systemWriter,
-                                        boolean streamCopyOptimized,
-                                        SymbolTable symtab)
-    {
-        super(catalog,
-              symtabValueFactory,
-              systemWriter,
-              streamCopyOptimized,
-              symtab);
-    }
-
     _Private_IonBinaryWriterImpl(_Private_IonBinaryWriterBuilder options,
                                  IonWriterSystemBinary           systemWriter)
     {

@@ -10,11 +10,8 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl.SystemValueIteratorImpl.makeSystemIterator;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newBinaryWriterWithImports;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
-import static com.amazon.ion.impl._Private_Utils.systemSymtab;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
@@ -76,35 +73,39 @@ import java.util.List;
 final class IonSystemImpl
     implements _Private_IonSystem
 {
-    public static final int SYSTEM_VERSION = 1;
-
     private final SymbolTable mySystemSymbols;
 
     /** Not null. */
     private final IonCatalog myCatalog;
     private final IonLoader myLoader;
-    private final boolean myStreamCopyOptimized;
     /** Immutable. */
     private final IonTextWriterBuilder myTextWriterBuilder;
+    /** Immutable. */
+    private final _Private_IonBinaryWriterBuilder myBinaryWriterBuilder;
 
 
     public IonSystemImpl(IonTextWriterBuilder twb,
-                         boolean streamCopyOptimized)
+                         _Private_IonBinaryWriterBuilder bwb)
     {
         IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
+        assert catalog == bwb.getCatalog();
+
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
-        mySystemSymbols = systemSymtab(SYSTEM_VERSION);
-        myStreamCopyOptimized = streamCopyOptimized;
+        mySystemSymbols = bwb.getInitialSymtab();
+        assert mySystemSymbols.isSystemTable();
 
         myTextWriterBuilder = twb.immutable();
+
+        bwb.setSymtabValueFactory(this);
+        myBinaryWriterBuilder = bwb.immutable();
     }
 
 
     public boolean isStreamCopyOptimized()
     {
-        return myStreamCopyOptimized;
+        return myBinaryWriterBuilder.isStreamCopyOptimized();
     }
 
 
@@ -467,27 +468,21 @@ final class IonSystemImpl
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter()
     {
-        SymbolTable[] imports = null;
-        return newBinaryWriter(imports);
+        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;
+        return b.buildLegacy();
     }
 
     @Deprecated
     public com.amazon.ion.IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        return newIonBinaryWriterWithImports(this,
-                                             getCatalog(),
-                                             myStreamCopyOptimized,
-                                             imports);
+        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)
+            myBinaryWriterBuilder.withImports(imports);
+        return b.buildLegacy();
     }
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriter writer = newBinaryWriterWithImports(this,
-                                                      getCatalog(),
-                                                      myStreamCopyOptimized,
-                                                      out,
-                                                      imports);
-        return writer;
+        return myBinaryWriterBuilder.withImports(imports).build(out);
     }
 
 

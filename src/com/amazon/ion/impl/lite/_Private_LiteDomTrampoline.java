@@ -6,6 +6,7 @@ import static com.amazon.ion.impl.lite.IonDatagramLite.REVERSE_BINARY_ENCODER_PR
 
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 
 /**
@@ -17,9 +18,9 @@ import com.amazon.ion.system.IonTextWriterBuilder;
 public final class _Private_LiteDomTrampoline
 {
     public static IonSystem newLiteSystem(IonTextWriterBuilder twb,
-                                          boolean streamCopyOptimized)
+                                          _Private_IonBinaryWriterBuilder bwb)
     {
-        return new IonSystemLite(twb, streamCopyOptimized);
+        return new IonSystemLite(twb, bwb);
     }
 
     public static boolean isLiteSystem(IonSystem system)

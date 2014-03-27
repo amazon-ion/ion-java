@@ -2,18 +2,12 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.initialSymtab;
-
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
-import java.io.OutputStream;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -51,77 +45,6 @@ public final class _Private_IonWriterFactory
                                     InitialIvmHandling.SUPPRESS);
 
         return new IonWriterUser(catalog, sys, system_writer);
-    }
-
-
-    @SuppressWarnings("deprecation")
-    public static IonBinaryWriter
-    newIonBinaryWriterWithImports(IonSystem system,
-                                  IonCatalog catalog,
-                                  boolean streamCopyOptimized,
-                                  SymbolTable... imports)
-    {
-        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
-
-        IonWriterSystemBinary systemWriter =
-            new IonWriterSystemBinary(defaultSystemSymtab,
-                                      new BufferedOutputStream(),
-                                      false /* autoflush */,
-                                      true /* ensureInitialIvm */);
-
-        SymbolTable initialSymtab =
-            initialSymtab(system, defaultSystemSymtab, imports);
-
-        return new _Private_IonBinaryWriterImpl(catalog,
-                                                system,
-                                                systemWriter,
-                                                streamCopyOptimized,
-                                                initialSymtab);
-    }
-
-
-    public static IonWriterUserBinary
-    newBinaryWriterWithImports(IonSystem system,
-                               IonCatalog catalog,
-                               boolean streamCopyOptimized,
-                               OutputStream output,
-                               SymbolTable... imports)
-    {
-        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
-
-        SymbolTable initialSymtab =
-            initialSymtab(system, defaultSystemSymtab, imports);
-
-        return newBinaryWriterWithInitialSymtab(system,
-                                                catalog,
-                                                streamCopyOptimized,
-                                                output,
-                                                defaultSystemSymtab,
-                                                initialSymtab);
-    }
-
-
-    public static IonWriterUserBinary
-    newBinaryWriterWithInitialSymtab(ValueFactory symtabValueFactory,
-                                     IonCatalog catalog,
-                                     boolean streamCopyOptimized,
-                                     OutputStream output,
-                                     SymbolTable defaultSystemSymtab,
-                                     SymbolTable initialSymtab)
-    {
-        IonWriterSystemBinary systemWriter =
-            new IonWriterSystemBinary(defaultSystemSymtab,
-                                      output,
-                                      false /* autoFlush */,
-                                      true /* ensureInitialIvm */);
-
-        IonWriterUserBinary writer =
-            new IonWriterUserBinary(catalog,
-                                    symtabValueFactory,
-                                    systemWriter,
-                                    streamCopyOptimized,
-                                    initialSymtab);
-        return writer;
     }
 
 

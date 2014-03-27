@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -883,9 +883,9 @@ public final class _Private_Utils
      *          the default system symtab, which will be used if the first
      *          import in {@code imports} isn't a system symtab, never null
      * @param imports
-     *          the set of shared symbol tables to import; the first (and only
-     *          the first) may be a system table, in which case the
-     *          {@code defaultSystemSymtab} is ignored
+     * the set of shared symbol tables to import; may be null or empty.
+     * The first (and only the first) may be a system table, in which case the
+     * {@code defaultSystemSymtab} is ignored.
      */
     public static SymbolTable initialSymtab(ValueFactory imageFactory,
                                             SymbolTable defaultSystemSymtab,
