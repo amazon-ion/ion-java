@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -350,14 +350,18 @@ public class IonSystemBuilder
         IonCatalog catalog =
             (myCatalog != null ? myCatalog : new SimpleCatalog());
 
+        IonTextWriterBuilder twb =
+            IonTextWriterBuilder.standard().withCharsetAscii();
+        twb.setCatalog(catalog);
+
         IonSystem sys;
         if (isBinaryBacked())
         {
-            sys = newLazySystem(catalog, myStreamCopyOptimized);
+            sys = newLazySystem(twb, myStreamCopyOptimized);
         }
         else
         {
-            sys = newLiteSystem(catalog, myStreamCopyOptimized);
+            sys = newLiteSystem(twb, myStreamCopyOptimized);
         }
         return sys;
     }

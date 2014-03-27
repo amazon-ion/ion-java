@@ -1,12 +1,12 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.impl.lite.IonDatagramLite.REVERSE_BINARY_ENCODER_PROPERTY;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.system.IonTextWriterBuilder;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -16,10 +16,10 @@ import com.amazon.ion.SymbolTable;
  */
 public final class _Private_LiteDomTrampoline
 {
-    public static IonSystem newLiteSystem(IonCatalog catalog,
+    public static IonSystem newLiteSystem(IonTextWriterBuilder twb,
                                           boolean streamCopyOptimized)
     {
-        return new IonSystemLite(catalog, streamCopyOptimized);
+        return new IonSystemLite(twb, streamCopyOptimized);
     }
 
     public static boolean isLiteSystem(IonSystem system)

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -88,20 +88,16 @@ final class IonSystemImpl
     private final IonTextWriterBuilder myTextWriterBuilder;
 
 
-    /**
-     * @param catalog must not be null.
-     */
-    public IonSystemImpl(IonCatalog catalog, boolean streamCopyOptimized)
+    public IonSystemImpl(IonTextWriterBuilder twb,
+                         boolean streamCopyOptimized)
     {
+        IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
         mySystemSymbols = systemSymtab(SYSTEM_VERSION);
         myStreamCopyOptimized = streamCopyOptimized;
 
-        IonTextWriterBuilder twb =
-            IonTextWriterBuilder.standard().withCharsetAscii();
-        twb.setCatalog(catalog);
         myTextWriterBuilder = twb.immutable();
     }
 

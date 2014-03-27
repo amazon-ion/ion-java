@@ -1,9 +1,9 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -14,10 +14,10 @@ import java.io.InputStream;
  */
 public final class _Private_LazyDomTrampoline
 {
-    public static _Private_IonSystem newLazySystem(IonCatalog catalog,
+    public static _Private_IonSystem newLazySystem(IonTextWriterBuilder twb,
                                                    boolean streamCopyOptimized)
     {
-        return new IonSystemImpl(catalog, streamCopyOptimized);
+        return new IonSystemImpl(twb, streamCopyOptimized);
     }
 
 

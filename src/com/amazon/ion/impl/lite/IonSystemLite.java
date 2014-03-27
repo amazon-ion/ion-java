@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -68,21 +68,16 @@ final class IonSystemLite
     private final IonTextWriterBuilder myTextWriterBuilder;
 
 
-    /**
-     * @param catalog must not be null.
-     */
-    public IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized)
+    public IonSystemLite(IonTextWriterBuilder twb, boolean streamCopyOptimized)
     {
-        this(catalog, streamCopyOptimized, DEFAULT_CONTEXT_FREE_LIST_SIZE);
+        this(twb, streamCopyOptimized, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
-    /**
-     * @param catalog must not be null.
-     * @param context_free_list_size
-     */
-    private IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized,
+    private IonSystemLite(IonTextWriterBuilder twb,
+                          boolean streamCopyOptimized,
                           int context_free_list_size)
     {
+        IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
 
         set_context_free_list_max(context_free_list_size);
@@ -91,9 +86,6 @@ final class IonSystemLite
         _loader = new IonLoaderLite(this, catalog);
         myStreamCopyOptimized = streamCopyOptimized;
 
-        IonTextWriterBuilder twb =
-            IonTextWriterBuilder.standard().withCharsetAscii();
-        twb.setCatalog(catalog);
         myTextWriterBuilder = twb.immutable();
 
         // whacked but I'm not going to figure this out right now
