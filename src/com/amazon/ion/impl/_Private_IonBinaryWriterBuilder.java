@@ -6,6 +6,7 @@ import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
@@ -123,6 +124,9 @@ public class _Private_IonBinaryWriterBuilder
      * @param symtab must be a local or system symbol table.
      * May be null, in which case the initial symtab is that of
      * {@code $ion_1_0}.
+     *
+     * @throws SubstituteSymbolTableException
+     * if any imported table is a substitute (see {@link SymbolTable}).
      */
     public void setInitialSymtab(SymbolTable symtab)
     {
@@ -132,7 +136,21 @@ public class _Private_IonBinaryWriterBuilder
                 || symtab.isSystemTable()
                 || symtab.isLocalTable());
 
-        // TODO ensure there are no substitute imports
+        if (symtab != null && symtab.isLocalTable())
+        {
+            SymbolTable[] imports =
+                ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
+            for (SymbolTable imported : imports)
+            {
+                if (imported.isSubstitute())
+                {
+                    String message =
+                        "Cannot encode with substitute symbol table: " +
+                        imported.getName();
+                    throw new SubstituteSymbolTableException(message);
+                }
+            }
+        }
 
         myInitialSymbolTable      = symtab;
         myInitialSymbolTableMaxId = (symtab == null ? 0 : symtab.getMaxId());
