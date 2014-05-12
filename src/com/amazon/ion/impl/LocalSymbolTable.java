@@ -108,6 +108,20 @@ final class LocalSymbolTable
     // Private constructor(s) and static factory methods
     //==========================================================================
 
+    private void buildSymbolsMap()
+    {
+        int sid = myFirstLocalSid;
+        for (int i = 0; i < mySymbolNames.length; i++, sid++)
+        {
+            String symbolText = mySymbolNames[i];
+            if (symbolText != null)
+            {
+                putToMapIfNotThere(mySymbolsMap, symbolText, sid);
+            }
+        }
+    }
+
+
     /**
      * @param imageFactory      never null
      * @param imports           never null
@@ -134,37 +148,35 @@ final class LocalSymbolTable
 
         // Copy locally declared symbols to mySymbolsMap
         mySymbolsMap = new HashMap<String, Integer>();
-        int sid = myFirstLocalSid;
-        for (int i = 0; i < mySymbolNames.length; i++, sid++)
-        {
-            String symbolText = mySymbolNames[i];
-            if (symbolText != null)
-            {
-                putToMapIfNotThere(mySymbolsMap, symbolText, sid);
-            }
-        }
+        buildSymbolsMap();
     }
 
     /**
      * Copy-constructor, performs defensive copying of member fields where
      * necessary. The returned instance is mutable.
      */
-    private LocalSymbolTable(LocalSymbolTable other)
+    private LocalSymbolTable(LocalSymbolTable other, int maxId)
     {
         isReadOnly      = false;
         myFirstLocalSid = other.myFirstLocalSid;
         myImage         = null;
         myImageFactory  = other.myImageFactory;
         myImportsList   = other.myImportsList;
-        mySymbolsCount  = other.mySymbolsCount;
+        mySymbolsCount  = maxId - myImportsList.getMaxId();
 
-        String[] symbolNames = copyOf(other.mySymbolNames, mySymbolsCount);
+        mySymbolNames   = copyOf(other.mySymbolNames, mySymbolsCount);
 
-        Map<String, Integer> symbolsMap =
-            new HashMap<String, Integer>(other.mySymbolsMap); // shallow-copy
-
-        mySymbolNames   = symbolNames;
-        mySymbolsMap    = symbolsMap;
+        // Copy locally declared symbols to mySymbolsMap
+        if (maxId == other.getMaxId())
+        {
+            // Shallow copy
+            mySymbolsMap = new HashMap<String, Integer>(other.mySymbolsMap);
+        }
+        else
+        {
+            mySymbolsMap = new HashMap<String, Integer>(mySymbolsCount);
+            buildSymbolsMap();
+        }
     }
 
     /**
@@ -355,7 +367,12 @@ final class LocalSymbolTable
 
     synchronized LocalSymbolTable makeCopy()
     {
-        return new LocalSymbolTable(this);
+        return new LocalSymbolTable(this, getMaxId());
+    }
+
+    synchronized LocalSymbolTable makeCopy(int maxId)
+    {
+        return new LocalSymbolTable(this, maxId);
     }
 
     public boolean isLocalTable()

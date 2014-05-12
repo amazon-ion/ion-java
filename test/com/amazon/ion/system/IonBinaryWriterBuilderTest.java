@@ -20,6 +20,7 @@ import com.amazon.ion.impl._Private_IonWriter;
 import com.amazon.ion.impl._Private_IonWriterBase;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collections;
 import org.junit.Assert;
@@ -166,6 +167,7 @@ public class IonBinaryWriterBuilderTest
 
     @Test
     public void testInitialSymtab()
+        throws IOException
     {
         IonSystem system = IonSystemBuilder.standard().build();
         SymbolTable sst = _Private_Utils.systemSymtab(1);
@@ -183,11 +185,46 @@ public class IonBinaryWriterBuilderTest
         IonWriter writer = b.build(out);
         assertEquals(sst.getMaxId() + 1,
                      writer.getSymbolTable().findSymbol("hello"));
-        assertNotSame(lst, writer.getSymbolTable());
+        assertSame(lst, writer.getSymbolTable());
         assertSame(lst, b.getInitialSymtab());
 
+        // Second call to build with unchanged LST: reuse the LST.
+        writer = b.build(out);
+        assertSame(lst, writer.getSymbolTable());
+        writer.writeSymbol("addition");
+
+        // Now the LST has been extended, so the builder should make a copy
+        // with the original max_id
+        writer = b.build(out);
+        assertEquals(sst.getMaxId() + 1,
+                     writer.getSymbolTable().findSymbol("hello"));
+        assertEquals(sst.getMaxId() + 1, writer.getSymbolTable().getMaxId());
+        assertNotSame(lst, writer.getSymbolTable());
+        assertSame(lst, b.getInitialSymtab());
+    }
+
+
+    @Test
+    public void testImmutableInitialSymtab()
+    {
+        IonSystem system = IonSystemBuilder.standard().build();
+        SymbolTable sst = _Private_Utils.systemSymtab(1);
+
         // Immutable local symtabs shouldn't get copied.
+        SymbolTable lst = newLocalSymtab(system, sst,
+                                         Collections.<String>emptyList());
+        lst.intern("hello");
         lst.makeReadOnly();
+
+        _Private_IonBinaryWriterBuilder b =
+            _Private_IonBinaryWriterBuilder.standard();
+        b.setInitialSymtab(lst);
+        assertSame(lst, b.getInitialSymtab());
+
+        OutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = b.build(out);
+        assertSame(lst, writer.getSymbolTable());
+
         writer = b.build(out);
         assertSame(lst, writer.getSymbolTable());
     }

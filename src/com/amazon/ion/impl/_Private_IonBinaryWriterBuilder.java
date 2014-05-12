@@ -25,6 +25,7 @@ public class _Private_IonBinaryWriterBuilder
 
     /** System or local */
     private SymbolTable  myInitialSymbolTable;
+    private int          myInitialSymbolTableMaxId;
 
 
     private _Private_IonBinaryWriterBuilder()
@@ -37,9 +38,10 @@ public class _Private_IonBinaryWriterBuilder
     {
         super(that);
 
-        this.myDefaultSystemSymtab = that.myDefaultSystemSymtab;
-        this.mySymtabValueFactory  = that.mySymtabValueFactory;
-        this.myInitialSymbolTable  = that.myInitialSymbolTable;
+        this.myDefaultSystemSymtab     = that.myDefaultSystemSymtab;
+        this.mySymtabValueFactory      = that.mySymtabValueFactory;
+        this.myInitialSymbolTable      = that.myInitialSymbolTable;
+        this.myInitialSymbolTableMaxId = that.myInitialSymbolTableMaxId;
     }
 
 
@@ -102,9 +104,6 @@ public class _Private_IonBinaryWriterBuilder
 
     //=========================================================================
 
-    // TODO Should this set "local" symtab or "initial"?
-    //      What about behavior after a finish?  Does it get reused?
-    //      That doesn't really make sense for a local symtab, does it?
 
     public SymbolTable getInitialSymtab()
     {
@@ -112,8 +111,18 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     /**
-     * Defaults to $ion_1_0 if null.
-     * @param symtab may be null.
+     * Declares the symbol table to use for encoded data.
+     * <p>
+     * The given symbol table's max_id is recorded when this method is called.
+     * When {@code build} is called, if any more symbols have been added, then
+     * a new symbol table is created with the recorded max_id (and that many
+     * symbols).  In other words: the effective symbol table will have the same
+     * state as the one given to this method at the time it was called, and a
+     * copy will be used if necessary.
+     *
+     * @param symtab must be a local or system symbol table.
+     * May be null, in which case the initial symtab is that of
+     * {@code $ion_1_0}.
      */
     public void setInitialSymtab(SymbolTable symtab)
     {
@@ -123,16 +132,10 @@ public class _Private_IonBinaryWriterBuilder
                 || symtab.isSystemTable()
                 || symtab.isLocalTable());
 
-        // TODO Should snapshot the LST here so later additions aren't used.
-        //      That ensures predictable behavior in the face of mutation.
-        //      Currently the copy happens when the writer is built, but it
-        //      should happen here so the same data is used for every writer.
-        // TODO Then again, maybe that behavior is desirable.
-        // TODO But if the symtab is reused after finish, what data is used?
-
         // TODO ensure there are no substitute imports
 
-        myInitialSymbolTable = symtab;
+        myInitialSymbolTable      = symtab;
+        myInitialSymbolTableMaxId = (symtab == null ? 0 : symtab.getMaxId());
     }
 
     /**
@@ -198,16 +201,18 @@ public class _Private_IonBinaryWriterBuilder
 
     /**
      * Returns a symtab usable in a local context.
-     * This copies {@link #myInitialSymbolTable} if it's mutable.
+     * This copies {@link #myInitialSymbolTable} if symbols have been added to
+     * it since {@link #setInitialSymtab(SymbolTable)} was called.
      */
     SymbolTable buildContextSymbolTable()
     {
-        if (myInitialSymbolTable.isReadOnly())
+        int maxId = myInitialSymbolTableMaxId;
+        if (myInitialSymbolTable.getMaxId() == maxId)
         {
             return myInitialSymbolTable;
         }
 
-        return ((LocalSymbolTable) myInitialSymbolTable).makeCopy();
+        return ((LocalSymbolTable) myInitialSymbolTable).makeCopy(maxId);
     }
 
 
