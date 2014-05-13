@@ -645,8 +645,7 @@ public class PrinterTest
 
     @Test
     public void testJsonEscapeNonBmp() throws Exception {
-        // JIRA ION-33
-        // JIRA ION-64
+        // ION-33 ION-64
         final String literal = new StringBuilder()
             .append("'''")
             .append('\uDAF7')

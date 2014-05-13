@@ -419,8 +419,8 @@ final class IonDatagramLite
     {
         if (true)
         {
-            // TODO JIRA ION-90
-            throw new UnsupportedOperationException("JIRA issue ION-90");
+            // TODO ION-90
+            throw new UnsupportedOperationException("issue ION-90");
         }
 
         IonValue previous = super.set(index, element);

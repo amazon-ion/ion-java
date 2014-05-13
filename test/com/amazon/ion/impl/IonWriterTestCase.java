@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -266,7 +266,7 @@ public abstract class IonWriterTestCase
 
 
     /**
-     * Trap for JIRA ION-52
+     * Trap for ION-52
      */
     @Test
     public void testWritingNonAscii()
@@ -368,8 +368,7 @@ public abstract class IonWriterTestCase
     }
 
     /**
-     * Trap for JIRA ION-53
-     * @throws Exception
+     * Trap for ION-53
      */
     @Test
     public void testWritingClob()
@@ -426,7 +425,7 @@ public abstract class IonWriterTestCase
 
     @Test
     public void testWritingDeepNestedList() throws Exception {
-        // JIRA ION-60
+        // ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         iw = makeWriter();
         dg.writeTo(iw);

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -327,30 +327,30 @@ final class IonDatagramImpl
     {
         add(index, element, true);
 
-//        // TODO JIRA ION-84
-//        throw new UnsupportedOperationException("JIRA issue ION-84");
+//        // TODO ION-84
+//        throw new UnsupportedOperationException("issue ION-84");
     }
 
     @Override
     public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException
     {
-        // TODO JIRA ION-84
-        throw new UnsupportedOperationException("JIRA issue ION-84");
+        // TODO ION-84
+        throw new UnsupportedOperationException("issue ION-84");
     }
 
     @Override
     public boolean addAll(int index, Collection<? extends IonValue> c)
     {
-        // TODO JIRA ION-83
-        throw new UnsupportedOperationException("JIRA issue ION-83");
+        // TODO ION-83
+        throw new UnsupportedOperationException("issue ION-83");
     }
 
     @Override
     public IonValue set(int index, IonValue element)
     {
-        // TODO JIRA ION-90
-        throw new UnsupportedOperationException("JIRA issue ION-90");
+        // TODO ION-90
+        throw new UnsupportedOperationException("issue ION-90");
 
     }
 

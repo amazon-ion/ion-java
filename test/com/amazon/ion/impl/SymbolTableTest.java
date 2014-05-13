@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -547,12 +547,12 @@ public class SymbolTableTest
         checkSymbol("fred3", 14, symbolTable);
         checkSymbol("fred4", 15, symbolTable);
 
-        // JIRA ION-76, redundant symbols should retain identity
+        // ION-76, redundant symbols should retain identity
         checkSymbol("imported 1", 12, /* dupe */ true, symbolTable);
         checkSymbol("imported 2", 13, /* dupe */ true, symbolTable);
     }
 
-    // JIRA ION-75
+    // ION-75
     @Test @Ignore
     public void testDupLocalSymbolOnDatagram() throws Exception {
         final IonSystem ion1 = system();
@@ -1095,7 +1095,7 @@ public class SymbolTableTest
 
     @Test
     public void testDoubleWrite() throws IOException {
-        // JIRA ION-73
+        // ION-73
         final SymbolTable table =
             system().newSharedSymbolTable("foobar", 1, Arrays.asList("moo").iterator());
         assertEquals(serialize(table), serialize(table));
@@ -1114,7 +1114,7 @@ public class SymbolTableTest
     @Test
     public void testWriteWithSymbolTable() throws IOException
     {
-        // this example code is the fix for JIRA IMSVT-2573
+        // this example code is the fix for IMSVT-2573
         // which resulted in an assertion due to a but in
         // IonWriterUser.close_local_symbol_table_copy
 

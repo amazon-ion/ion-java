@@ -53,7 +53,7 @@ import java.nio.charset.Charset;
  * <p>
  * Currently, there is no configuration point available to disable the
  * auto-flushing mechanism. Please vote on
- * <a href="https://jira2.amazon.com/browse/ION-361">JIRA issue ION-361</a>
+ * <a href="https://issues.amazon.com/ION-361">issue ION-361</a>
  * if you require it.
  *
  * @since IonJava R15

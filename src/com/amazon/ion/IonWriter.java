@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -21,7 +21,7 @@ import java.util.Date;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://jira2.amazon.com/browse/ION-182">JIRA issue ION-182</a>
+ * See <a href="https://issues.amazon.com/ION-182">issue ION-182</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
