@@ -127,7 +127,7 @@ public final class _Private_Utils
         return (ListIterator<T>) EMPTY_ITERATOR;
     }
 
-    public static boolean equalsWithNullCheck(Object a, Object b)
+    public static boolean safeEquals(Object a, Object b)
     {
         // Written for the common case where they are not the same instance
         return (a != null ? a.equals(b) : b == null);

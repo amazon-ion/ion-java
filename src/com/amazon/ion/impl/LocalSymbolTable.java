@@ -15,8 +15,8 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl._Private_Utils.copyOf;
-import static com.amazon.ion.impl._Private_Utils.equalsWithNullCheck;
 import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
+import static com.amazon.ion.impl._Private_Utils.safeEquals;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonCatalog;
@@ -1045,7 +1045,7 @@ final class LocalSymbolTable
 
         // Before we go through the expensive iteration from the front,
         // check the last (largest) declared symbol in subset beforehand
-        if (! equalsWithNullCheck(mySymbolNames[subLocalSymbolCount- 1],
+        if (! safeEquals(mySymbolNames[subLocalSymbolCount- 1],
                                   subsetSymbols[subLocalSymbolCount- 1]))
         {
             return false;
@@ -1055,7 +1055,7 @@ final class LocalSymbolTable
         // iteration below is O(n)!
         for (int i = 0; i < subLocalSymbolCount - 1; i++)
         {
-            if (! equalsWithNullCheck(mySymbolNames[i], subsetSymbols[i]))
+            if (! safeEquals(mySymbolNames[i], subsetSymbols[i]))
                 return false;
         }
 
