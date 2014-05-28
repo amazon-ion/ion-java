@@ -248,30 +248,11 @@ public final class Timestamp
      *
      * @throws IllegalArgumentException if the calendar has no fields set.
      */
-    private void set_fields_from_calendar(Calendar cal)
+    private void set_fields_from_calendar(Calendar cal,
+                                          Precision precision,
+                                          boolean setLocalOffset)
     {
-        if (cal.isSet(Calendar.MILLISECOND)) {
-            this._precision = Precision.FRACTION;
-        }
-        else if (cal.isSet(Calendar.SECOND)) {
-             this._precision = Precision.SECOND;
-        }
-        else if (cal.isSet(Calendar.HOUR_OF_DAY) || cal.isSet(Calendar.MINUTE)) {
-            this._precision = Precision.MINUTE;
-        }
-        else if (cal.isSet(Calendar.DAY_OF_MONTH)) {
-            this._precision = Precision.DAY;
-       }
-        else if (cal.isSet(Calendar.MONTH)) {
-            this._precision = Precision.MONTH;
-       }
-        else if (cal.isSet(Calendar.YEAR)) {
-            this._precision = Precision.YEAR;
-        }
-        else {
-            throw new IllegalArgumentException("Calendar has no fields set");
-        }
-
+        _precision = precision;
         _offset = UNKNOWN_OFFSET;
 
         switch (this._precision) {
@@ -287,7 +268,8 @@ public final class Timestamp
 
                 // If this test is made before calling get(), it will return
                 // false even when Calendar.setTimeZone() was called.
-                if (cal.isSet(Calendar.ZONE_OFFSET)) {
+                if (setLocalOffset && cal.isSet(Calendar.ZONE_OFFSET))
+                {
                     int offset = cal.get(Calendar.ZONE_OFFSET);
                     if (cal.isSet(Calendar.DST_OFFSET)) {
                         offset += cal.get(Calendar.DST_OFFSET);
@@ -635,8 +617,46 @@ public final class Timestamp
     @Deprecated
     public Timestamp(Calendar cal)
     {
-        set_fields_from_calendar(cal);
+        Precision precision;
+
+        if (cal.isSet(Calendar.MILLISECOND)) {
+            precision = Precision.FRACTION;
+        }
+        else if (cal.isSet(Calendar.SECOND)) {
+            precision = Precision.SECOND;
+        }
+        else if (cal.isSet(Calendar.HOUR_OF_DAY) || cal.isSet(Calendar.MINUTE)) {
+            precision = Precision.MINUTE;
+        }
+        else if (cal.isSet(Calendar.DAY_OF_MONTH)) {
+            precision = Precision.DAY;
+        }
+        else if (cal.isSet(Calendar.MONTH)) {
+            precision = Precision.MONTH;
+        }
+        else if (cal.isSet(Calendar.YEAR)) {
+            precision = Precision.YEAR;
+        }
+        else {
+            throw new IllegalArgumentException("Calendar has no fields set");
+        }
+
+        set_fields_from_calendar(cal, precision, true);
     }
+
+
+    private Timestamp(Calendar cal, Precision precision, BigDecimal fraction,
+                      Integer offset)
+    {
+        set_fields_from_calendar(cal, precision, false);
+        _fraction = fraction;
+        if (offset != null)
+        {
+            _offset = offset;
+            apply_offset(offset);
+        }
+    }
+
 
     /**
      * Creates a new Timestamp that represents the point in time that is
@@ -1978,6 +1998,21 @@ public final class Timestamp
         }
         out.append(temp);
     }
+
+
+    //=========================================================================
+    // Timestamp arithmetic
+
+
+    public final Timestamp addYear(int amount)
+    {
+        Calendar cal = calendarValue();
+        cal.add(Calendar.YEAR, amount);
+        return new Timestamp(cal, _precision, _fraction, _offset);
+    }
+
+
+    //=========================================================================
 
     /**
      * Returns a hash code consistent with {@link #equals(Object)}.

@@ -1052,6 +1052,17 @@ public class TimestampTest
         checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, FRACTION, ts);
         assertEquals("2009-02-01T10:11:12.345-08:00", ts.toString());
         assertEquals("2009-02-01T18:11:12.345Z", ts.toZString());
+
+        // ===== Timestamp zone offset =====
+        cal.clear();
+        cal.set(2009, 1, 1, 10, 11, 12);
+        cal.set(Calendar.MILLISECOND, 345);
+        cal.set(Calendar.ZONE_OFFSET, -28800000);
+
+        ts = new Timestamp(cal);
+        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, FRACTION, ts);
+        assertEquals("2009-02-01T10:11:12.345-08:00", ts.toString());
+        assertEquals("2009-02-01T18:11:12.345Z", ts.toZString());
     }
 
 
@@ -1586,5 +1597,67 @@ public class TimestampTest
         ts2 = checkWithLocalOffset(ts, UTC_OFFSET, ts);
         ts2 = checkWithLocalOffset(ts, -10,        ts);
         ts2 = checkWithLocalOffset(ts,  10,        ts);
+    }
+
+
+    //=========================================================================
+    // Timestamp arithmetic
+
+
+    private void addYear(String orig, int amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addYear(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addYear(String orig, int amount, String expected,
+                         String suffix)
+    {
+        addYear(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addYearWithOffsets(String orig, int amount, String expected,
+                                    String suffix)
+    {
+        addYear(orig, amount, expected, suffix + "-00:00");
+        addYear(orig, amount, expected, suffix + "Z");
+        addYear(orig, amount, expected, suffix + "+01:23");
+        addYear(orig, amount, expected, suffix + "-01:23");
+    }
+
+    private void addYearForDay(String orig, int amount, String expected)
+    {
+        addYear(orig, amount, expected);
+
+        addYearWithOffsets(orig, amount, expected, "T19:03");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23.0");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23.00");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23.000");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23.456");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23.0000");
+        addYearWithOffsets(orig, amount, expected, "T19:03:23.45678");
+    }
+
+    @Test
+    public void testAddYear()
+    {
+        addYear("2012T",     1, "2013T");
+        addYear("2012T",    -1, "2011T");
+
+        addYear("2012-04T",  1, "2013-04T");
+        addYear("2012-04T", -1, "2011-04T");
+
+        addYearForDay("2012-04-23",  1, "2013-04-23");
+        addYearForDay("2012-04-23", -1, "2011-04-23");
+
+        // Leap-year handling
+        addYearForDay("2012-02-29", -5, "2007-02-28");
+        addYearForDay("2012-02-29", -4, "2008-02-29");
+        addYearForDay("2012-02-29", -1, "2011-02-28");
+        addYearForDay("2012-02-29",  1, "2013-02-28");
+        addYearForDay("2012-02-29",  4, "2016-02-29");
+        addYearForDay("2012-02-29",  5, "2017-02-28");
     }
 }
