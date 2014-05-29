@@ -658,6 +658,40 @@ public final class Timestamp
     }
 
 
+    private Timestamp(BigDecimal millis, Precision precision, Integer localOffset)
+    {
+        long ms = millis.longValue();
+        Date date = new Date(ms);
+        set_fields_from_millis(date);
+
+        _precision = precision;
+
+        switch (precision)
+        {
+            case YEAR:
+                _month  = 1;
+            case MONTH:
+                _day    = 1;
+            case DAY:
+                _hour   = 0;
+                _minute = 0;
+            case MINUTE:
+                _second = 0;
+            case SECOND:
+                _fraction = null;
+                break;
+
+            case FRACTION:
+                BigDecimal secs = millis.movePointLeft(3);
+                BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
+                _fraction = secs.subtract(secsDown);
+        }
+
+        _offset = localOffset;
+        validate_fields();
+    }
+
+
     /**
      * Creates a new Timestamp that represents the point in time that is
      * {@code millis} milliseconds (including any fractional
@@ -2006,6 +2040,8 @@ public final class Timestamp
 
     public final Timestamp addYear(int amount)
     {
+        if (amount == 0) return this;
+
         Calendar cal = calendarValue();
         cal.add(Calendar.YEAR, amount);
         return new Timestamp(cal, _precision, _fraction, _offset);
@@ -2014,6 +2050,8 @@ public final class Timestamp
 
     public final Timestamp addMonth(int amount)
     {
+        if (amount == 0) return this;
+
         Calendar cal = calendarValue();
         cal.add(Calendar.MONTH, amount);
         return new Timestamp(cal, _precision, _fraction, _offset);
@@ -2022,9 +2060,32 @@ public final class Timestamp
 
     public final Timestamp addDay(int amount)
     {
+        if (amount == 0) return this;
+
         Calendar cal = calendarValue();
         cal.add(Calendar.DAY_OF_MONTH, amount);
         return new Timestamp(cal, _precision, _fraction, _offset);
+    }
+
+
+    public final Timestamp addHour(int amount)
+    {
+        if (amount == 0) return this;
+
+        BigDecimal millis = this.make_localtime().getDecimalMillis();
+        long delta = (long) amount * 60 * 60 * 1000;
+        millis = millis.add(BigDecimal.valueOf(delta));
+
+        Timestamp ts = new Timestamp(millis, _precision, _offset);
+
+        // Anything with courser-than-millis precision will have been extended
+        // to 3 decimal places due to use of getDecimalMillis().  Fix that.
+        ts._fraction = _fraction;
+        if (_offset != null && _offset != 0)
+        {
+            ts.apply_offset(_offset);
+        }
+        return ts;
     }
 
 

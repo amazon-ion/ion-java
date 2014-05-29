@@ -1624,9 +1624,11 @@ public class TimestampTest
         addYear(orig, amount, expected, suffix + "Z");
         addYear(orig, amount, expected, suffix + "+01:23");
         addYear(orig, amount, expected, suffix + "-01:23");
+        addYear(orig, amount, expected, suffix + "+23:59");
+        addYear(orig, amount, expected, suffix + "-23:59");
     }
 
-    private void addYearForDay(String orig, int amount, String expected)
+    private void addYearWithMins(String orig, int amount, String expected)
     {
         addYear(orig, amount, expected);
 
@@ -1649,16 +1651,16 @@ public class TimestampTest
         addYear("2012-04T",  1, "2013-04T");
         addYear("2012-04T", -1, "2011-04T");
 
-        addYearForDay("2012-04-23",  1, "2013-04-23");
-        addYearForDay("2012-04-23", -1, "2011-04-23");
+        addYearWithMins("2012-04-23",  1, "2013-04-23");
+        addYearWithMins("2012-04-23", -1, "2011-04-23");
 
         // Leap-year handling
-        addYearForDay("2012-02-29", -5, "2007-02-28");
-        addYearForDay("2012-02-29", -4, "2008-02-29");
-        addYearForDay("2012-02-29", -1, "2011-02-28");
-        addYearForDay("2012-02-29",  1, "2013-02-28");
-        addYearForDay("2012-02-29",  4, "2016-02-29");
-        addYearForDay("2012-02-29",  5, "2017-02-28");
+        addYearWithMins("2012-02-29", -5, "2007-02-28");
+        addYearWithMins("2012-02-29", -4, "2008-02-29");
+        addYearWithMins("2012-02-29", -1, "2011-02-28");
+        addYearWithMins("2012-02-29",  1, "2013-02-28");
+        addYearWithMins("2012-02-29",  4, "2016-02-29");
+        addYearWithMins("2012-02-29",  5, "2017-02-28");
     }
 
     //-------------------------------------------------------------------------
@@ -1683,9 +1685,11 @@ public class TimestampTest
         addMonth(orig, amount, expected, suffix + "Z");
         addMonth(orig, amount, expected, suffix + "+01:23");
         addMonth(orig, amount, expected, suffix + "-01:23");
+        addMonth(orig, amount, expected, suffix + "+23:59");
+        addMonth(orig, amount, expected, suffix + "-23:59");
     }
 
-    private void addMonthForDay(String orig, int amount, String expected)
+    private void addMonthWithMins(String orig, int amount, String expected)
     {
         addMonth(orig, amount, expected);
 
@@ -1702,7 +1706,8 @@ public class TimestampTest
     @Test
     public void testAddMonth()
     {
-        addMonth("2012T",    -1, "2011T"); // TODO ???
+        // TODO Is it reasonable to add months to TSs that aren't that precise?
+        addMonth("2012T",    -1, "2011T");
         addMonth("2012T",     1, "2012T");
 
         addMonth("2012-04T", -4, "2011-12T");
@@ -1710,21 +1715,21 @@ public class TimestampTest
         addMonth("2012-04T",  1, "2012-05T");
         addMonth("2012-04T",  9, "2013-01T");
 
-        addMonthForDay("2012-04-23", -4, "2011-12-23");
-        addMonthForDay("2012-04-23", -1, "2012-03-23");
-        addMonthForDay("2012-04-23",  1, "2012-05-23");
-        addMonthForDay("2012-04-23",  9, "2013-01-23");
+        addMonthWithMins("2012-04-23", -4, "2011-12-23");
+        addMonthWithMins("2012-04-23", -1, "2012-03-23");
+        addMonthWithMins("2012-04-23",  1, "2012-05-23");
+        addMonthWithMins("2012-04-23",  9, "2013-01-23");
 
-        addMonthForDay("2011-01-31",  1, "2011-02-28");
-        addMonthForDay("2011-02-28", 12, "2012-02-28");
-        addMonthForDay("2012-01-31",  1, "2012-02-29");
-        addMonthForDay("2012-01-31",  2, "2012-03-31");
-        addMonthForDay("2012-01-31",  3, "2012-04-30");
-        addMonthForDay("2012-02-29", -1, "2012-01-29");
-        addMonthForDay("2012-02-29", 12, "2013-02-28");
-        addMonthForDay("2012-02-29", 24, "2014-02-28");
-        addMonthForDay("2012-02-29", 48, "2016-02-29");
-        addMonthForDay("2013-01-31",-11, "2012-02-29");
+        addMonthWithMins("2011-01-31",  1, "2011-02-28");
+        addMonthWithMins("2011-02-28", 12, "2012-02-28");
+        addMonthWithMins("2012-01-31",  1, "2012-02-29");
+        addMonthWithMins("2012-01-31",  2, "2012-03-31");
+        addMonthWithMins("2012-01-31",  3, "2012-04-30");
+        addMonthWithMins("2012-02-29", -1, "2012-01-29");
+        addMonthWithMins("2012-02-29", 12, "2013-02-28");
+        addMonthWithMins("2012-02-29", 24, "2014-02-28");
+        addMonthWithMins("2012-02-29", 48, "2016-02-29");
+        addMonthWithMins("2013-01-31",-11, "2012-02-29");
     }
 
 
@@ -1750,9 +1755,11 @@ public class TimestampTest
         addDay(orig, amount, expected, suffix + "Z");
         addDay(orig, amount, expected, suffix + "+01:23");
         addDay(orig, amount, expected, suffix + "-01:23");
+        addDay(orig, amount, expected, suffix + "+23:59");
+        addDay(orig, amount, expected, suffix + "-23:59");
     }
 
-    private void addDayForDay(String orig, int amount, String expected)
+    private void addDayWithMins(String orig, int amount, String expected)
     {
         addDay(orig, amount, expected);
 
@@ -1769,8 +1776,9 @@ public class TimestampTest
     @Test
     public void testAddDay()
     {
+        // TODO Is it reasonable to add days to TSs that aren't that precise?
         addDay("2012T",     1, "2012T");
-        addDay("2012T",    -1, "2011T"); // TODO ???
+        addDay("2012T",    -1, "2011T");
 
         addDay("2012-04T",-32, "2012-02T");
         addDay("2012-04T",-31, "2012-03T");
@@ -1781,16 +1789,97 @@ public class TimestampTest
         addDay("2012-04T", 31, "2012-05T");
 
 
-        addDayForDay("2011-01-31",-31, "2010-12-31");
-        addDayForDay("2011-01-31",-30, "2011-01-01");
-        addDayForDay("2011-01-31",  1, "2011-02-01");
-        addDayForDay("2011-01-31", 28, "2011-02-28");
-        addDayForDay("2011-01-31", 29, "2011-03-01");
-        addDayForDay("2011-01-31", 30, "2011-03-02");
-        addDayForDay("2012-01-31",  1, "2012-02-01");
-        addDayForDay("2012-01-31", 28, "2012-02-28");
-        addDayForDay("2012-01-31", 29, "2012-02-29");
-        addDayForDay("2012-01-31", 30, "2012-03-01");
-        addDayForDay("2012-03-01",-30, "2012-01-31");
+        addDayWithMins("2011-01-31",-31, "2010-12-31");
+        addDayWithMins("2011-01-31",-30, "2011-01-01");
+        addDayWithMins("2011-01-31",  1, "2011-02-01");
+        addDayWithMins("2011-01-31", 28, "2011-02-28");
+        addDayWithMins("2011-01-31", 29, "2011-03-01");
+        addDayWithMins("2011-01-31", 30, "2011-03-02");
+        addDayWithMins("2012-01-31",  1, "2012-02-01");
+        addDayWithMins("2012-01-31", 28, "2012-02-28");
+        addDayWithMins("2012-01-31", 29, "2012-02-29");
+        addDayWithMins("2012-01-31", 30, "2012-03-01");
+        addDayWithMins("2012-03-01",-30, "2012-01-31");
+    }
+
+    //-------------------------------------------------------------------------
+
+    private void addHour(String orig, int amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addHour(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addHour(String orig, int amount, String expected,
+                         String suffix)
+    {
+        addHour(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addHourWithOffsets(String orig, int amount, String expected,
+                                    String suffix)
+    {
+        addHour(orig, amount, expected, suffix + "-00:00");
+        addHour(orig, amount, expected, suffix + "Z");
+        addHour(orig, amount, expected, suffix + "+01:23");
+        addHour(orig, amount, expected, suffix + "-01:23");
+        addHour(orig, amount, expected, suffix + "+23:59");
+        addHour(orig, amount, expected, suffix + "-23:59");
+    }
+
+    private void addHourWithMins(String orig, int amount, String expected)
+    {
+        addHourWithOffsets(orig, amount, expected, ":03");
+        addHourWithOffsets(orig, amount, expected, ":03:23");
+        addHourWithOffsets(orig, amount, expected, ":03:23.0");
+        addHourWithOffsets(orig, amount, expected, ":03:23.00");
+        addHourWithOffsets(orig, amount, expected, ":03:23.000");
+        addHourWithOffsets(orig, amount, expected, ":03:23.456");
+        addHourWithOffsets(orig, amount, expected, ":03:23.0000");
+        addHourWithOffsets(orig, amount, expected, ":03:23.45678");
+    }
+
+    @Test
+    public void testAddHour()
+    {
+        // TODO Is it reasonable to add hours to TSs that aren't that precise?
+        addHour("2012T",    -1, "2011T");
+        addHour("2012T",     0, "2012T");
+        addHour("2012T",     1, "2012T");
+
+        addHour("2012-04T", -745, "2012-02T");
+        addHour("2012-04T", -744, "2012-03T");
+        addHour("2012-04T",   -1, "2012-03T");
+        addHour("2012-04T",    0, "2012-04T");
+        addHour("2012-04T",    1, "2012-04T");
+        addHour("2012-04T",  719, "2012-04T");
+        addHour("2012-04T",  720, "2012-05T");
+
+        addHour("2011-02-28",  -1, "2011-02-27");
+        addHour("2011-02-28",   0, "2011-02-28");
+        addHour("2011-02-28",   1, "2011-02-28");
+        addHour("2011-02-28",  24, "2011-03-01");
+        addHour("2011-03-01", -24, "2011-02-28");
+        addHour("2012-02-28",  24, "2012-02-29");
+        addHour("2012-02-29", -24, "2012-02-28");
+        addHour("2012-02-29",  24, "2012-03-01");
+
+        addHour("2012-10-04",-48, "2012-10-02");
+        addHour("2012-10-04",-24, "2012-10-03");
+        addHour("2012-10-04", -1, "2012-10-03");
+        addHour("2012-10-04",  1, "2012-10-04");
+        addHour("2012-10-04", 24, "2012-10-05");
+        addHour("2012-10-04", 48, "2012-10-06");
+
+
+        addHourWithMins("2011-01-31T12",  0, "2011-01-31T12");
+        addHourWithMins("2011-01-31T12", 12, "2011-02-01T00");
+
+        addHourWithMins("2011-02-28T02", 25, "2011-03-01T03");
+        addHourWithMins("2012-02-28T02", 25, "2012-02-29T03");
+
+        addHourWithMins("2011-03-01T02", -4, "2011-02-28T22");
+        addHourWithMins("2012-03-01T02", -4, "2012-02-29T22");
     }
 }
