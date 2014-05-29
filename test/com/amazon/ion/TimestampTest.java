@@ -1660,4 +1660,137 @@ public class TimestampTest
         addYearForDay("2012-02-29",  4, "2016-02-29");
         addYearForDay("2012-02-29",  5, "2017-02-28");
     }
+
+    //-------------------------------------------------------------------------
+
+    private void addMonth(String orig, int amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addMonth(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addMonth(String orig, int amount, String expected,
+                          String suffix)
+    {
+        addMonth(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addMonthWithOffsets(String orig, int amount, String expected,
+                                     String suffix)
+    {
+        addMonth(orig, amount, expected, suffix + "-00:00");
+        addMonth(orig, amount, expected, suffix + "Z");
+        addMonth(orig, amount, expected, suffix + "+01:23");
+        addMonth(orig, amount, expected, suffix + "-01:23");
+    }
+
+    private void addMonthForDay(String orig, int amount, String expected)
+    {
+        addMonth(orig, amount, expected);
+
+        addMonthWithOffsets(orig, amount, expected, "T19:03");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23.0");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23.00");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23.000");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23.456");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23.0000");
+        addMonthWithOffsets(orig, amount, expected, "T19:03:23.45678");
+    }
+
+    @Test
+    public void testAddMonth()
+    {
+        addMonth("2012T",    -1, "2011T"); // TODO ???
+        addMonth("2012T",     1, "2012T");
+
+        addMonth("2012-04T", -4, "2011-12T");
+        addMonth("2012-04T", -1, "2012-03T");
+        addMonth("2012-04T",  1, "2012-05T");
+        addMonth("2012-04T",  9, "2013-01T");
+
+        addMonthForDay("2012-04-23", -4, "2011-12-23");
+        addMonthForDay("2012-04-23", -1, "2012-03-23");
+        addMonthForDay("2012-04-23",  1, "2012-05-23");
+        addMonthForDay("2012-04-23",  9, "2013-01-23");
+
+        addMonthForDay("2011-01-31",  1, "2011-02-28");
+        addMonthForDay("2011-02-28", 12, "2012-02-28");
+        addMonthForDay("2012-01-31",  1, "2012-02-29");
+        addMonthForDay("2012-01-31",  2, "2012-03-31");
+        addMonthForDay("2012-01-31",  3, "2012-04-30");
+        addMonthForDay("2012-02-29", -1, "2012-01-29");
+        addMonthForDay("2012-02-29", 12, "2013-02-28");
+        addMonthForDay("2012-02-29", 24, "2014-02-28");
+        addMonthForDay("2012-02-29", 48, "2016-02-29");
+        addMonthForDay("2013-01-31",-11, "2012-02-29");
+    }
+
+
+    //-------------------------------------------------------------------------
+
+    private void addDay(String orig, int amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addDay(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addDay(String orig, int amount, String expected,
+                          String suffix)
+    {
+        addDay(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addDayWithOffsets(String orig, int amount, String expected,
+                                     String suffix)
+    {
+        addDay(orig, amount, expected, suffix + "-00:00");
+        addDay(orig, amount, expected, suffix + "Z");
+        addDay(orig, amount, expected, suffix + "+01:23");
+        addDay(orig, amount, expected, suffix + "-01:23");
+    }
+
+    private void addDayForDay(String orig, int amount, String expected)
+    {
+        addDay(orig, amount, expected);
+
+        addDayWithOffsets(orig, amount, expected, "T19:03");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23.0");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23.00");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23.000");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23.456");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23.0000");
+        addDayWithOffsets(orig, amount, expected, "T19:03:23.45678");
+    }
+
+    @Test
+    public void testAddDay()
+    {
+        addDay("2012T",     1, "2012T");
+        addDay("2012T",    -1, "2011T"); // TODO ???
+
+        addDay("2012-04T",-32, "2012-02T");
+        addDay("2012-04T",-31, "2012-03T");
+        addDay("2012-04T", -1, "2012-03T");
+        addDay("2012-04T",  1, "2012-04T");
+        addDay("2012-04T",  9, "2012-04T");
+        addDay("2012-04T", 30, "2012-05T");
+        addDay("2012-04T", 31, "2012-05T");
+
+
+        addDayForDay("2011-01-31",-31, "2010-12-31");
+        addDayForDay("2011-01-31",-30, "2011-01-01");
+        addDayForDay("2011-01-31",  1, "2011-02-01");
+        addDayForDay("2011-01-31", 28, "2011-02-28");
+        addDayForDay("2011-01-31", 29, "2011-03-01");
+        addDayForDay("2011-01-31", 30, "2011-03-02");
+        addDayForDay("2012-01-31",  1, "2012-02-01");
+        addDayForDay("2012-01-31", 28, "2012-02-28");
+        addDayForDay("2012-01-31", 29, "2012-02-29");
+        addDayForDay("2012-01-31", 30, "2012-03-01");
+        addDayForDay("2012-03-01",-30, "2012-01-31");
+    }
 }

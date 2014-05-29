@@ -2012,6 +2012,22 @@ public final class Timestamp
     }
 
 
+    public final Timestamp addMonth(int amount)
+    {
+        Calendar cal = calendarValue();
+        cal.add(Calendar.MONTH, amount);
+        return new Timestamp(cal, _precision, _fraction, _offset);
+    }
+
+
+    public final Timestamp addDay(int amount)
+    {
+        Calendar cal = calendarValue();
+        cal.add(Calendar.DAY_OF_MONTH, amount);
+        return new Timestamp(cal, _precision, _fraction, _offset);
+    }
+
+
     //=========================================================================
 
     /**
