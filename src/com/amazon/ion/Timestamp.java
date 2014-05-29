@@ -225,13 +225,18 @@ public final class Timestamp
      * on the mobile Java platform (which has Date but does not have Calendar).
      */
     @SuppressWarnings("deprecation")
-    private void set_fields_from_millis(Date date) {
+    private void set_fields_from_millis(long millis)
+    {
+        Date date = new Date(millis);
+
+        // These fields are in the system timezone!
         this._year    = (short)(date.getYear() + 1900);
         this._month   = (byte)(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
         this._day     = (byte)date.getDate();
         this._hour    = (byte)date.getHours();
         this._minute  = (byte)date.getMinutes();
         this._second  = (byte)date.getSeconds();
+
         // this is done because the y-m-d values are in the local timezone
         // so this adjusts the value back to zulu time (UTC)
         // Note that the sign on this is opposite of Ion (and Calendar) offset.
@@ -661,8 +666,7 @@ public final class Timestamp
     private Timestamp(BigDecimal millis, Precision precision, Integer localOffset)
     {
         long ms = millis.longValue();
-        Date date = new Date(ms);
-        set_fields_from_millis(date);
+        set_fields_from_millis(ms);
 
         _precision = precision;
 
@@ -733,8 +737,7 @@ public final class Timestamp
         if (millis == null) throw new NullPointerException("millis is null");
 
         long ms = millis.longValue();
-        Date date = new Date(ms);
-        set_fields_from_millis(date);
+        set_fields_from_millis(ms);
 
         int scale = millis.scale();
         if (scale <= -3) {
@@ -769,8 +772,7 @@ public final class Timestamp
     @Deprecated
     public Timestamp(long millis, Integer localOffset)
     {
-        Date d = new Date(millis);  // this will have the system timezone in it whether we want it or not
-        this.set_fields_from_millis(d);
+        this.set_fields_from_millis(millis);
 
         // fractional seconds portion
         this._precision = Precision.FRACTION;
@@ -2038,64 +2040,14 @@ public final class Timestamp
     // Timestamp arithmetic
 
 
-    public final Timestamp addYear(int amount)
+    public final Timestamp addMillis(long amount)
     {
         if (amount == 0) return this;
 
-        Calendar cal = calendarValue();
-        cal.add(Calendar.YEAR, amount);
-        return new Timestamp(cal, _precision, _fraction, _offset);
-    }
-
-
-    public final Timestamp addMonth(int amount)
-    {
-        if (amount == 0) return this;
-
-        Calendar cal = calendarValue();
-        cal.add(Calendar.MONTH, amount);
-        return new Timestamp(cal, _precision, _fraction, _offset);
-    }
-
-
-    public final Timestamp addDay(int amount)
-    {
-        if (amount == 0) return this;
-
-        Calendar cal = calendarValue();
-        cal.add(Calendar.DAY_OF_MONTH, amount);
-        return new Timestamp(cal, _precision, _fraction, _offset);
-    }
-
-
-    public final Timestamp addHour(int amount)
-    {
-        if (amount == 0) return this;
-
-        BigDecimal millis = this.make_localtime().getDecimalMillis();
-        long delta = (long) amount * 60 * 60 * 1000;
-        millis = millis.add(BigDecimal.valueOf(delta));
-
-        Timestamp ts = new Timestamp(millis, _precision, _offset);
-
-        // Anything with courser-than-millis precision will have been extended
-        // to 3 decimal places due to use of getDecimalMillis().  Fix that.
-        ts._fraction = _fraction;
-        if (_offset != null && _offset != 0)
-        {
-            ts.apply_offset(_offset);
-        }
-        return ts;
-    }
-
-
-    public final Timestamp addMinute(int amount)
-    {
-        if (amount == 0) return this;
-
-        BigDecimal millis = this.make_localtime().getDecimalMillis();
-        long delta = (long) amount * 60 * 1000;
-        millis = millis.add(BigDecimal.valueOf(delta));
+        // This strips off the local offset, expressing our fields as if they
+        // were UTC.
+        BigDecimal millis = make_localtime().getDecimalMillis();
+        millis = millis.add(BigDecimal.valueOf(amount));
 
         Timestamp ts = new Timestamp(millis, _precision, _offset);
 
@@ -2112,22 +2064,53 @@ public final class Timestamp
 
     public final Timestamp addSecond(int amount)
     {
+        long delta = (long) amount * 1000;
+        return addMillis(delta);
+    }
+
+
+    public final Timestamp addMinute(int amount)
+    {
+        long delta = (long) amount * 60 * 1000;
+        return addMillis(delta);
+    }
+
+
+    public final Timestamp addHour(int amount)
+    {
+        long delta = (long) amount * 60 * 60 * 1000;
+        return addMillis(delta);
+    }
+
+
+    public final Timestamp addDay(int amount)
+    {
+        long delta = (long) amount * 24 * 60 * 60 * 1000;
+        return addMillis(delta);
+    }
+
+
+    // Shifting month and year are more complicated since the length of a month
+    // varies and we want the day-of-month to stay the same when possible.
+    // We rely on Calendar for the logic.
+
+    public final Timestamp addMonth(int amount)
+    {
         if (amount == 0) return this;
 
-        BigDecimal millis = this.make_localtime().getDecimalMillis();
-        long delta = (long) amount * 1000;
-        millis = millis.add(BigDecimal.valueOf(delta));
+        Calendar cal = calendarValue();
+        cal.add(Calendar.MONTH, amount);
+        return new Timestamp(cal, _precision, _fraction, _offset);
+    }
 
-        Timestamp ts = new Timestamp(millis, _precision, _offset);
 
-        // Anything with courser-than-millis precision will have been extended
-        // to 3 decimal places due to use of getDecimalMillis().  Fix that.
-        ts._fraction = _fraction;
-        if (_offset != null && _offset != 0)
-        {
-            ts.apply_offset(_offset);
-        }
-        return ts;
+    public final Timestamp addYear(int amount)
+    {
+        if (amount == 0) return this;
+
+        Calendar cal = calendarValue();
+        cal.add(Calendar.YEAR, amount);
+        return new Timestamp(cal, _precision, _fraction, _offset);
     }
 
 
