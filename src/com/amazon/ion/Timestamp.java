@@ -1781,10 +1781,10 @@ public final class Timestamp
     /**
      * Returns a timestamp at the same point in time, but with the given local
      * offset.  If this timestamp has precision coarser than minutes, then it
-     * is returned unchanged since such timpstamps always have an unknown
+     * is returned unchanged since such timestamps always have an unknown
      * offset.
      */
-    Timestamp withLocalOffset(Integer offset)
+    public Timestamp withLocalOffset(Integer offset)
     {
         Precision precision = getPrecision();
         if (precision.alwaysUnknownOffset() ||
@@ -2040,6 +2040,12 @@ public final class Timestamp
     // Timestamp arithmetic
 
 
+    /**
+     * Returns a timestamp relative to this one by the given number of
+     * milliseconds.
+     *
+     * @param amount a (positive or negative) number of milliseconds.
+     */
     public final Timestamp addMillis(long amount)
     {
         if (amount == 0) return this;
@@ -2062,6 +2068,11 @@ public final class Timestamp
     }
 
 
+    /**
+     * Returns a timestamp relative to this one by the given number of seconds.
+     *
+     * @param amount a (positive or negative) number of seconds.
+     */
     public final Timestamp addSecond(int amount)
     {
         long delta = (long) amount * 1000;
@@ -2069,6 +2080,11 @@ public final class Timestamp
     }
 
 
+    /**
+     * Returns a timestamp relative to this one by the given number of minutes.
+     *
+     * @param amount a (positive or negative) number of minutes.
+     */
     public final Timestamp addMinute(int amount)
     {
         long delta = (long) amount * 60 * 1000;
@@ -2076,6 +2092,11 @@ public final class Timestamp
     }
 
 
+    /**
+     * Returns a timestamp relative to this one by the given number of hours.
+     *
+     * @param amount a (positive or negative) number of hours.
+     */
     public final Timestamp addHour(int amount)
     {
         long delta = (long) amount * 60 * 60 * 1000;
@@ -2083,6 +2104,11 @@ public final class Timestamp
     }
 
 
+    /**
+     * Returns a timestamp relative to this one by the given number of days.
+     *
+     * @param amount a (positive or negative) number of hours.
+     */
     public final Timestamp addDay(int amount)
     {
         long delta = (long) amount * 24 * 60 * 60 * 1000;
@@ -2094,6 +2120,14 @@ public final class Timestamp
     // varies and we want the day-of-month to stay the same when possible.
     // We rely on Calendar for the logic.
 
+    /**
+     * Returns a timestamp relative to this one by the given number of months.
+     * The day field may be adjusted to account for different month length and
+     * leap days.  For example, adding one month to {@code 2011-01-31}
+     * results in {@code 2011-02-28}.
+     *
+     * @param amount a (positive or negative) number of hours.
+     */
     public final Timestamp addMonth(int amount)
     {
         if (amount == 0) return this;
@@ -2104,6 +2138,13 @@ public final class Timestamp
     }
 
 
+    /**
+     * Returns a timestamp relative to this one by the given number of years.
+     * The day field may be adjusted to account for leap days.  For example,
+     * adding one year to {@code 2012-02-29} results in {@code 2013-02-28}.
+     *
+     * @param amount a (positive or negative) number of hours.
+     */
     public final Timestamp addYear(int amount)
     {
         if (amount == 0) return this;
