@@ -2089,6 +2089,48 @@ public final class Timestamp
     }
 
 
+    public final Timestamp addMinute(int amount)
+    {
+        if (amount == 0) return this;
+
+        BigDecimal millis = this.make_localtime().getDecimalMillis();
+        long delta = (long) amount * 60 * 1000;
+        millis = millis.add(BigDecimal.valueOf(delta));
+
+        Timestamp ts = new Timestamp(millis, _precision, _offset);
+
+        // Anything with courser-than-millis precision will have been extended
+        // to 3 decimal places due to use of getDecimalMillis().  Fix that.
+        ts._fraction = _fraction;
+        if (_offset != null && _offset != 0)
+        {
+            ts.apply_offset(_offset);
+        }
+        return ts;
+    }
+
+
+    public final Timestamp addSecond(int amount)
+    {
+        if (amount == 0) return this;
+
+        BigDecimal millis = this.make_localtime().getDecimalMillis();
+        long delta = (long) amount * 1000;
+        millis = millis.add(BigDecimal.valueOf(delta));
+
+        Timestamp ts = new Timestamp(millis, _precision, _offset);
+
+        // Anything with courser-than-millis precision will have been extended
+        // to 3 decimal places due to use of getDecimalMillis().  Fix that.
+        ts._fraction = _fraction;
+        if (_offset != null && _offset != 0)
+        {
+            ts.apply_offset(_offset);
+        }
+        return ts;
+    }
+
+
     //=========================================================================
 
     /**

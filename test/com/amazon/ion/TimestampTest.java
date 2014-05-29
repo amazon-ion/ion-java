@@ -1848,13 +1848,13 @@ public class TimestampTest
         addHour("2012T",     0, "2012T");
         addHour("2012T",     1, "2012T");
 
-        addHour("2012-04T", -745, "2012-02T");
-        addHour("2012-04T", -744, "2012-03T");
-        addHour("2012-04T",   -1, "2012-03T");
-        addHour("2012-04T",    0, "2012-04T");
-        addHour("2012-04T",    1, "2012-04T");
-        addHour("2012-04T",  719, "2012-04T");
-        addHour("2012-04T",  720, "2012-05T");
+        addHour("2012-04T", -31 * 24 - 1, "2012-02T");
+        addHour("2012-04T", -31 * 24    , "2012-03T");
+        addHour("2012-04T",           -1, "2012-03T");
+        addHour("2012-04T",            0, "2012-04T");
+        addHour("2012-04T",            1, "2012-04T");
+        addHour("2012-04T",  30 * 24 - 1, "2012-04T");
+        addHour("2012-04T",  30 * 24    , "2012-05T");
 
         addHour("2011-02-28",  -1, "2011-02-27");
         addHour("2011-02-28",   0, "2011-02-28");
@@ -1881,5 +1881,173 @@ public class TimestampTest
 
         addHourWithMins("2011-03-01T02", -4, "2011-02-28T22");
         addHourWithMins("2012-03-01T02", -4, "2012-02-29T22");
+    }
+
+    //-------------------------------------------------------------------------
+
+    private void addMinute(String orig, int amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addMinute(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addMinute(String orig, int amount, String expected,
+                           String suffix)
+    {
+        addMinute(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addMinuteWithOffsets(String orig, int amount, String expected,
+                                      String suffix)
+    {
+        addMinute(orig, amount, expected, suffix + "-00:00");
+        addMinute(orig, amount, expected, suffix + "Z");
+        addMinute(orig, amount, expected, suffix + "+01:23");
+        addMinute(orig, amount, expected, suffix + "-01:23");
+        addMinute(orig, amount, expected, suffix + "+23:59");
+        addMinute(orig, amount, expected, suffix + "-23:59");
+    }
+
+    private void addMinuteWithsSecs(String orig, int amount, String expected)
+    {
+        addMinuteWithOffsets(orig, amount, expected, "");
+        addMinuteWithOffsets(orig, amount, expected, ":23");
+        addMinuteWithOffsets(orig, amount, expected, ":23.0");
+        addMinuteWithOffsets(orig, amount, expected, ":23.00");
+        addMinuteWithOffsets(orig, amount, expected, ":23.000");
+        addMinuteWithOffsets(orig, amount, expected, ":23.456");
+        addMinuteWithOffsets(orig, amount, expected, ":23.0000");
+        addMinuteWithOffsets(orig, amount, expected, ":23.45678");
+    }
+
+    @Test
+    public void testAddMinute()
+    {
+        // TODO Is it reasonable to add minutes to TSs that aren't that precise?
+        addMinute("2012T",    -1, "2011T");
+        addMinute("2012T",     0, "2012T");
+        addMinute("2012T",     1, "2012T");
+
+        addMinute("2012-04T", -31 * 24 * 60 - 1, "2012-02T");
+        addMinute("2012-04T", -31 * 24 * 60    , "2012-03T");
+        addMinute("2012-04T",                -1, "2012-03T");
+        addMinute("2012-04T",                 0, "2012-04T");
+        addMinute("2012-04T",                 1, "2012-04T");
+        addMinute("2012-04T",  30 * 24 * 60 - 1, "2012-04T");
+        addMinute("2012-04T",  30 * 24 * 60    , "2012-05T");
+
+        addMinute("2011-02-28",       -1, "2011-02-27");
+        addMinute("2011-02-28",        0, "2011-02-28");
+        addMinute("2011-02-28",        1, "2011-02-28");
+        addMinute("2011-02-28",  24 * 60, "2011-03-01");
+        addMinute("2011-03-01", -24 * 60, "2011-02-28");
+        addMinute("2012-02-28",  24 * 60, "2012-02-29");
+        addMinute("2012-02-29", -24 * 60, "2012-02-28");
+        addMinute("2012-02-29",  24 * 60, "2012-03-01");
+
+        addMinute("2012-10-04", -48 * 60, "2012-10-02");
+        addMinute("2012-10-04", -24 * 60, "2012-10-03");
+        addMinute("2012-10-04",       -1, "2012-10-03");
+        addMinute("2012-10-04",        1, "2012-10-04");
+        addMinute("2012-10-04",  24 * 60, "2012-10-05");
+        addMinute("2012-10-04",  48 * 60, "2012-10-06");
+
+
+
+        addMinuteWithsSecs("2011-01-31T12:03",  -60, "2011-01-31T11:03");
+        addMinuteWithsSecs("2011-01-31T12:03",    0, "2011-01-31T12:03");
+        addMinuteWithsSecs("2011-01-31T12:03",   60, "2011-01-31T13:03");
+        addMinuteWithsSecs("2011-01-31T23:03",   57, "2011-02-01T00:00");
+
+        addMinuteWithsSecs("2011-02-28T02:03", 25 * 60, "2011-03-01T03:03");
+        addMinuteWithsSecs("2012-02-28T02:03", 25 * 60, "2012-02-29T03:03");
+
+        addMinuteWithsSecs("2011-03-01T02:35", -4 * 60, "2011-02-28T22:35");
+        addMinuteWithsSecs("2012-03-01T02:35", -4 * 60, "2012-02-29T22:35");
+    }
+
+
+    //-------------------------------------------------------------------------
+
+    private void addSecond(String orig, int amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addSecond(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addSecond(String orig, int amount, String expected,
+                           String suffix)
+    {
+        addSecond(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addSecondWithOffsets(String orig, int amount, String expected,
+                                      String suffix)
+    {
+        addSecond(orig, amount, expected, suffix + "-00:00");
+        addSecond(orig, amount, expected, suffix + "Z");
+        addSecond(orig, amount, expected, suffix + "+01:23");
+        addSecond(orig, amount, expected, suffix + "-01:23");
+        addSecond(orig, amount, expected, suffix + "+23:59");
+        addSecond(orig, amount, expected, suffix + "-23:59");
+    }
+
+    private void addSecondWithsFrac(String orig, int amount, String expected)
+    {
+        addSecondWithOffsets(orig, amount, expected, "");
+        addSecondWithOffsets(orig, amount, expected, ".0");
+        addSecondWithOffsets(orig, amount, expected, ".00");
+        addSecondWithOffsets(orig, amount, expected, ".000");
+        addSecondWithOffsets(orig, amount, expected, ".456");
+        addSecondWithOffsets(orig, amount, expected, ".0000");
+        addSecondWithOffsets(orig, amount, expected, ".45678");
+    }
+
+    @Test
+    public void testAddSecond()
+    {
+        // TODO Is it reasonable to add seconds to TSs that aren't that precise?
+        addSecond("2012T",    -1, "2011T");
+        addSecond("2012T",     0, "2012T");
+        addSecond("2012T",     1, "2012T");
+
+        addSecond("2012-04T", -31 * 24 * 60 * 60 - 1, "2012-02T");
+        addSecond("2012-04T", -31 * 24 * 60 * 60    , "2012-03T");
+        addSecond("2012-04T",                     -1, "2012-03T");
+        addSecond("2012-04T",                      0, "2012-04T");
+        addSecond("2012-04T",                      1, "2012-04T");
+        addSecond("2012-04T",  30 * 24 * 60 * 60 - 1, "2012-04T");
+        addSecond("2012-04T",  30 * 24 * 60 * 60    , "2012-05T");
+
+
+        addSecond("2011-02-28",            -1, "2011-02-27");
+        addSecond("2011-02-28",             0, "2011-02-28");
+        addSecond("2011-02-28",             1, "2011-02-28");
+        addSecond("2011-02-28",  24 * 60 * 60, "2011-03-01");
+        addSecond("2011-03-01", -24 * 60 * 60, "2011-02-28");
+        addSecond("2012-02-28",  24 * 60 * 60, "2012-02-29");
+        addSecond("2012-02-29", -24 * 60 * 60, "2012-02-28");
+        addSecond("2012-02-29",  24 * 60 * 60, "2012-03-01");
+
+        addSecond("2012-10-04", -24 * 60 * 60 - 1, "2012-10-02");
+        addSecond("2012-10-04", -24 * 60 * 60    , "2012-10-03");
+        addSecond("2012-10-04",                -1, "2012-10-03");
+        addSecond("2012-10-04",                 1, "2012-10-04");
+        addSecond("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05");
+        addSecond("2012-10-04",  48 * 60 * 60    , "2012-10-06");
+
+
+        addSecondWithsFrac("2011-01-31T12:03:23",  -60 * 60, "2011-01-31T11:03:23");
+        addSecondWithsFrac("2011-01-31T12:03:23",         0, "2011-01-31T12:03:23");
+        addSecondWithsFrac("2011-01-31T12:03:23",   60 * 60, "2011-01-31T13:03:23");
+        addSecondWithsFrac("2011-01-31T23:03:23",   57 * 60, "2011-02-01T00:00:23");
+
+        addSecondWithsFrac("2011-02-28T02:03:23", 25 * 60 * 60, "2011-03-01T03:03:23");
+        addSecondWithsFrac("2012-02-28T02:03:23", 25 * 60 * 60, "2012-02-29T03:03:23");
+
+        addSecondWithsFrac("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23");
+        addSecondWithsFrac("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23");
     }
 }
