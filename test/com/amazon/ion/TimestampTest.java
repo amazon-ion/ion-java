@@ -1333,6 +1333,11 @@ public class TimestampTest
         frac = frac.movePointRight(9); // Convert to nanos
         assertEquals("nanos", now.getNanos(), frac.intValue());
 
+        BigDecimal second = BigDecimal.valueOf(ts.getSecond());
+        frac = ts.getDecimalSecond().subtract(second);
+        frac = frac.movePointRight(9); // Convert to nanos
+        assertEquals("nanos", now.getNanos(), frac.intValue());
+
         now.setTime(0);
         ts = Timestamp.forSqlTimestampZ(now);
         assertEquals(0, ts.getMillis());

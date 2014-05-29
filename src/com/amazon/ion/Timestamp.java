@@ -84,6 +84,15 @@ public final class Timestamp
         DAY,
         MINUTE,
         SECOND,
+
+        /**
+         * DEPRECATED! Treating the fractional part of seconds separate from
+         * the integer part has led to countless bugs. We intend to combine
+         * the two under the SECOND precision.
+         *
+         * @deprecated As of IonJava R21.
+         */
+        @Deprecated
         FRACTION;
 
         private boolean alwaysUnknownOffset()
@@ -1630,7 +1639,7 @@ public final class Timestamp
 
 
     /**
-     * Returns the second of this Timestamp.
+     * Returns the seconds of this Timestamp, truncated to an integer.
      * <p>
      * Seconds are not affected by local offsets.
      * As such, this method produces the same output as {@link #getZSecond()}.
@@ -1648,6 +1657,30 @@ public final class Timestamp
 
 
     /**
+     * Returns the seconds of this Timestamp.
+     * <p>
+     * Seconds are not affected by local offsets.
+     * As such, this method produces the same output as
+     * {@link #getZDecimalSecond()}.
+     *
+     * @return
+     *          a number within the range [0, 60);
+     *          0 is returned if the Timestamp isn't precise to the second
+     *
+     * @see #getZDecimalSecond()
+     */
+    public BigDecimal getDecimalSecond()
+    {
+        BigDecimal sec = BigDecimal.valueOf(_second);
+        if (_fraction != null)
+        {
+            sec = sec.add(_fraction);
+        }
+        return sec;
+    }
+
+
+    /**
      * Returns the fractional second of this Timestamp.
      * <p>
      * Fractional seconds are not affected by local offsets.
@@ -1660,7 +1693,11 @@ public final class Timestamp
      *          precise to the fractional second
      *
      * @see #getZFractionalSecond()
+     *
+     * @deprecated As of IonJava R21.
+     * Use {@link #getDecimalSecond()} instead.
      */
+    @Deprecated
     public BigDecimal getFractionalSecond()
     {
         return this._fraction;
@@ -1755,6 +1792,25 @@ public final class Timestamp
 
 
     /**
+     * Returns the seconds of this Timestamp.
+     * <p>
+     * Seconds are not affected by local offsets.
+     * As such, this method produces the same output as
+     * {@link #getDecimalSecond()}.
+     *
+     * @return
+     *          a number within the range [0, 60);
+     *          0 is returned if the Timestamp isn't precise to the second
+     *
+     * @see #getDecimalSecond()
+     */
+    public BigDecimal getZDecimalSecond()
+    {
+        return getDecimalSecond();
+    }
+
+
+    /**
      * Returns the fractional second of this Timestamp.
      * <p>
      * Fractional seconds are not affected by local offsets.
@@ -1767,7 +1823,11 @@ public final class Timestamp
      *          precise to the fractional second
      *
      * @see #getFractionalSecond()
+     *
+     * @deprecated As of IonJava R21.
+     * Use {@link #getZDecimalSecond()} instead.
      */
+    @Deprecated
     public BigDecimal getZFractionalSecond()
     {
         return this._fraction;

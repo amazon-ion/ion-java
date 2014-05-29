@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -665,18 +665,24 @@ final class IonBinary
         int len = 0;
         switch (di.getPrecision()) {
         case FRACTION:
-            BigDecimal fraction = di.getFractionalSecond();
-            assert fraction.signum() >=0 && ! fraction.equals(BigDecimal.ZERO)
-                : "Bad timestamp fraction: " + fraction;
-
-            // Since the fraction is not 0d0, at least one subfield of the
-            // exponent and mantissa is non-zero, so this will always write at
-            // least one byte.
-            int fracLen = IonBinary.lenIonDecimal(fraction);
-            assert fracLen > 0;
-            len += fracLen;
         case SECOND:
+        {
+            BigDecimal fraction = di.getFractionalSecond();
+            if (fraction != null)
+            {
+                assert fraction.signum() >=0 && ! fraction.equals(BigDecimal.ZERO)
+                    : "Bad timestamp fraction: " + fraction;
+
+                // Since the fraction is not 0d0, at least one subfield of the
+                // exponent and mantissa is non-zero, so this will always write at
+                // least one byte.
+                int fracLen = IonBinary.lenIonDecimal(fraction);
+                assert fracLen > 0;
+                len += fracLen;
+            }
+
             len++; // len of seconds < 60
+        }
         case MINUTE:
             len += 2; // len of hour and minutes (both < 127)
         case DAY:
