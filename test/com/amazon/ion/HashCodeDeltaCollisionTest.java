@@ -24,13 +24,14 @@ public class HashCodeDeltaCollisionTest
     private static final int DELTA_LIMIT = 1 << 4;
 
     /**
-     * Generated non-deterministically by {@link #beforeClass()}.
+     * A point in time within +-100 years from now.
+     * Generated non-deterministically by {@link #initTimestampBaseMillis()}.
      * Used by Timestamp delta collision test methods as a base millis value.
      */
     private static long TIMESTAMP_BASE_MILLIS;
 
     @BeforeClass
-    public static void beforeClass()
+    public static void initTimestampBaseMillis()
     {
         long currentMillis = System.currentTimeMillis();
         long yearMillis = 60 * 60 * 24 * 365 * 1000L; // milliseconds in a year
@@ -38,16 +39,11 @@ public class HashCodeDeltaCollisionTest
         Random random = new Random(currentMillis);
         long randomRange = random.nextInt(100) * yearMillis; // 100 years range
 
-
-        // TODO ION-324 Negative Epoch (with fractional precision) is failing
         // Timestamp internal validation.
-        // range of TIMESTAMP_BASE_MILLIS is [-100, 100] from currentMillis
-//        TIMESTAMP_BASE_MILLIS = random.nextBoolean()
-//            ? currentMillis + randomRange
-//            : currentMillis - randomRange;
-
-        // range of TIMESTAMP_BASE_MILLIS is [0, 100] from currentMillis
-        TIMESTAMP_BASE_MILLIS = currentMillis + randomRange;
+        // Range of TIMESTAMP_BASE_MILLIS is [-100, 100] from currentMillis.
+        TIMESTAMP_BASE_MILLIS = (random.nextBoolean()
+                                     ? currentMillis + randomRange
+                                     : currentMillis - randomRange);
 
         System.out.println(HashCodeDeltaCollisionTest.class.getSimpleName() +
                            ".TIMESTAMP_BASE_MILLIS=" +
