@@ -1,6 +1,8 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import static com.amazon.ion.Timestamp.UTC_OFFSET;
 
 import com.amazon.ion.IonValueDeltaGenerator.IonDecimalDeltaType;
 import com.amazon.ion.IonValueDeltaGenerator.IonFloatDeltaType;
@@ -189,7 +191,7 @@ public class HashCodeDeltaCollisionTest
     {
         IonSystem ionSystem = system();
         IonTimestamp baseTimestamp = ionSystem
-            .newTimestamp(new Timestamp(TIMESTAMP_BASE_MILLIS, Timestamp.UTC_OFFSET));
+            .newTimestamp(Timestamp.forMillis(TIMESTAMP_BASE_MILLIS, UTC_OFFSET));
 
         for (IonTimestampDeltaType deltaType : IonTimestampDeltaType.values())
         {
@@ -233,4 +235,46 @@ public class HashCodeDeltaCollisionTest
         }
     }
 
+
+    /**
+     * Trap for ION-310 / IONJAVA-194.  Sometimes there are sets of
+     * timestamps within a brief period, and they shouldn't collide.
+     */
+    @Test
+    public void testTimestampDeltaCollisions()
+        throws Exception
+    {
+        final long limit = NO_COLLISION;
+
+        // Walk through this many adjacent windows of time.
+        final int windowCount = 100;
+
+        // Each window is this long.
+        final int windowMillis = 10031;
+
+        for (int i = 0; i < windowCount; ++i)
+        {
+            // Look for collisions across each millisecond within the window.
+            final long base = TIMESTAMP_BASE_MILLIS + i*windowMillis;
+
+            Set<Integer> hashCodeSet = new HashSet<Integer>();
+            int collisions = 0;
+
+            for (int j = 0; j < windowMillis; ++j)
+            {
+                Timestamp value = Timestamp.forMillis(base+j, UTC_OFFSET);
+                boolean collision = !hashCodeSet.add(value.hashCode());
+                if (collision)
+                {
+                    collisions++;
+                }
+            }
+
+            if (collisions > limit)
+            {
+                fail("Timestamp collisions: " + collisions +
+                         " limit: " + limit);
+            }
+        }
+    }
 }
