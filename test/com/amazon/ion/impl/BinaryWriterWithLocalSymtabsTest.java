@@ -75,7 +75,7 @@ public class BinaryWriterWithLocalSymtabsTest
         makeBinaryWriterWithLocalSymbols(localSymtab);
         SymbolTable writerSymtab = myWriter.getSymbolTable();
 
-        assertSame(localSymtab, writerSymtab);
+        assertNotSame(localSymtab, writerSymtab);
 
         checkInternedSymbols(writerSymtab, localSymbols);
 
@@ -174,7 +174,9 @@ public class BinaryWriterWithLocalSymtabsTest
         // write test data
 
         myWriter.writeSymbol("a");
-        assertSame(localSymtab, myWriter.getSymbolTable());
+        // Builder makes a copy of the symtab
+        assertNotSame(localSymtab, myWriter.getSymbolTable());
+        localSymtab = myWriter.getSymbolTable();
 
         myWriter.writeSymbol("not_interned");
         assertSame(localSymtab, myWriter.getSymbolTable());
@@ -215,7 +217,9 @@ public class BinaryWriterWithLocalSymtabsTest
         // write test data
 
         myWriter.writeSymbol("a");
-        assertSame(localSymtab, myWriter.getSymbolTable());
+        // Builder makes a copy of the symtab
+        assertNotSame(localSymtab, myWriter.getSymbolTable());
+        localSymtab = myWriter.getSymbolTable();
 
         myWriter.writeSymbol("not_interned");
         assertSame(localSymtab, myWriter.getSymbolTable());

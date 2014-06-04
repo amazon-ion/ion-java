@@ -26,7 +26,6 @@ public class _Private_IonBinaryWriterBuilder
 
     /** System or local */
     private SymbolTable  myInitialSymbolTable;
-    private int          myInitialSymbolTableMaxId;
 
 
     private _Private_IonBinaryWriterBuilder()
@@ -42,7 +41,6 @@ public class _Private_IonBinaryWriterBuilder
         this.myDefaultSystemSymtab     = that.myDefaultSystemSymtab;
         this.mySymtabValueFactory      = that.mySymtabValueFactory;
         this.myInitialSymbolTable      = that.myInitialSymbolTable;
-        this.myInitialSymbolTableMaxId = that.myInitialSymbolTableMaxId;
     }
 
 
@@ -113,13 +111,8 @@ public class _Private_IonBinaryWriterBuilder
 
     /**
      * Declares the symbol table to use for encoded data.
-     * <p>
-     * The given symbol table's max_id is recorded when this method is called.
-     * When {@code build} is called, if any more symbols have been added, then
-     * a new symbol table is created with the recorded max_id (and that many
-     * symbols).  In other words: the effective symbol table will have the same
-     * state as the one given to this method at the time it was called, and a
-     * copy will be used if necessary.
+     * To avoid conflicts between different data streams, if the given instance
+     * is mutable, it will be copied when {@code build()} is called.
      *
      * @param symtab must be a local or system symbol table.
      * May be null, in which case the initial symtab is that of
@@ -152,8 +145,7 @@ public class _Private_IonBinaryWriterBuilder
             }
         }
 
-        myInitialSymbolTable      = symtab;
-        myInitialSymbolTableMaxId = (symtab == null ? 0 : symtab.getMaxId());
+        myInitialSymbolTable = symtab;
     }
 
     /**
@@ -224,13 +216,12 @@ public class _Private_IonBinaryWriterBuilder
      */
     SymbolTable buildContextSymbolTable()
     {
-        int maxId = myInitialSymbolTableMaxId;
-        if (myInitialSymbolTable.getMaxId() == maxId)
+        if (myInitialSymbolTable.isReadOnly())
         {
             return myInitialSymbolTable;
         }
 
-        return ((LocalSymbolTable) myInitialSymbolTable).makeCopy(maxId);
+        return ((LocalSymbolTable) myInitialSymbolTable).makeCopy();
     }
 
 

@@ -172,35 +172,42 @@ public class IonBinaryWriterBuilderTest
         IonSystem system = IonSystemBuilder.standard().build();
         SymbolTable sst = _Private_Utils.systemSymtab(1);
 
-        SymbolTable lst = newLocalSymtab(system, sst,
-                                         Collections.<String>emptyList());
-        lst.intern("hello");
+        SymbolTable lst0 = newLocalSymtab(system, sst,
+                                          Collections.<String>emptyList());
+        lst0.intern("hello");
 
         _Private_IonBinaryWriterBuilder b =
             _Private_IonBinaryWriterBuilder.standard();
-        b.setInitialSymtab(lst);
-        assertSame(lst, b.getInitialSymtab());
+        b.setInitialSymtab(lst0);
+        assertSame(lst0, b.getInitialSymtab());
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter writer = b.build(out);
         assertEquals(sst.getMaxId() + 1,
                      writer.getSymbolTable().findSymbol("hello"));
-        assertSame(lst, writer.getSymbolTable());
-        assertSame(lst, b.getInitialSymtab());
+        // Builder makes a copy of the symtab
+        SymbolTable lst1 = writer.getSymbolTable();
+        assertNotSame(lst0, lst1);
+        assertSame(lst0, b.getInitialSymtab());
 
-        // Second call to build with unchanged LST: reuse the LST.
+        // Second call to build, we get another copy.
         writer = b.build(out);
-        assertSame(lst, writer.getSymbolTable());
+        SymbolTable lst2 = writer.getSymbolTable();
+        assertNotSame(lst0, lst2);
+        assertNotSame(lst1, lst2);
         writer.writeSymbol("addition");
 
         // Now the LST has been extended, so the builder should make a copy
-        // with the original max_id
+        // with the original max_id.
         writer = b.build(out);
+        SymbolTable lst3 = writer.getSymbolTable();
         assertEquals(sst.getMaxId() + 1,
-                     writer.getSymbolTable().findSymbol("hello"));
-        assertEquals(sst.getMaxId() + 1, writer.getSymbolTable().getMaxId());
-        assertNotSame(lst, writer.getSymbolTable());
-        assertSame(lst, b.getInitialSymtab());
+                     lst3.findSymbol("hello"));
+        assertEquals(sst.getMaxId() + 1, lst3.getMaxId());
+        assertNotSame(lst0, lst3);
+        assertNotSame(lst1, lst3);
+        assertNotSame(lst2, lst3);
+        assertSame(lst0, b.getInitialSymtab());
     }
 
 
