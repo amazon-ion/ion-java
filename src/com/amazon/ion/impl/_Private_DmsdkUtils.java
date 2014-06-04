@@ -108,7 +108,7 @@ public class _Private_DmsdkUtils
         b.setCatalog(system.getCatalog());
         b.setStreamCopyOptimized(sys.isStreamCopyOptimized());
         b.setSymtabValueFactory(system);
-        b.setInitialSymtab(localSymtab);
+        b.setInitialSymbolTable(localSymtab);
 
         return b.build(out);
     }

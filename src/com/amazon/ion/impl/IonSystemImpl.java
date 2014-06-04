@@ -93,7 +93,7 @@ final class IonSystemImpl
 
         myCatalog = catalog;
         myLoader = new LoaderImpl(this, myCatalog);
-        mySystemSymbols = bwb.getInitialSymtab();
+        mySystemSymbols = bwb.getInitialSymbolTable();
         assert mySystemSymbols.isSystemTable();
 
         myTextWriterBuilder = twb.immutable();

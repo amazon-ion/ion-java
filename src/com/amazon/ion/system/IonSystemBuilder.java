@@ -366,7 +366,7 @@ public class IonSystemBuilder
         //      However that currently causes problems in the IonSystem
         //      constructors (which get a null initialSymtab).
         SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);
-        bwb.setInitialSymtab(systemSymtab);
+        bwb.setInitialSymbolTable(systemSymtab);
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
 

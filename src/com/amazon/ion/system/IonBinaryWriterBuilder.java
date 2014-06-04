@@ -5,6 +5,7 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import java.io.OutputStream;
@@ -108,6 +109,58 @@ public abstract class IonBinaryWriterBuilder
     {
         return null;
     }
+
+
+    //=========================================================================
+
+
+    /**
+     * Gets the symbol table to use for encoded data.
+     * To avoid conflicts between different data streams, if the given instance
+     * is mutable, it will be copied when {@code build()} is called.
+     *
+     * @return a local or system symbol table.
+     * May be null, in which case the initial symbol table is that of
+     * {@code $ion_1_0}.
+     *
+     * @see #setInitialSymbolTable(SymbolTable)
+     * @see #withInitialSymbolTable(SymbolTable)
+     */
+    public abstract SymbolTable getInitialSymbolTable();
+
+
+    /**
+     * Declares the symbol table to use for encoded data.
+     * To avoid conflicts between different data streams, if the given instance
+     * is mutable, it will be copied when {@code build()} is called.
+     *
+     * @param symtab must be a local or system symbol table.
+     * May be null, in which case the initial symbol table is that of
+     * {@code $ion_1_0}.
+     *
+     * @throws SubstituteSymbolTableException
+     * if any imported table is a substitute (see {@link SymbolTable}).
+     *
+     * @see #getInitialSymbolTable()
+     * @see #withInitialSymbolTable(SymbolTable)
+     */
+    public abstract void setInitialSymbolTable(SymbolTable symtab);
+
+
+    /**
+     * Declares the symbol table to use for encoded data.
+     * To avoid conflicts between different data streams, if the given instance
+     * is mutable, it will be copied when {@code build()} is called.
+     *
+     * @param symtab must be a local or system symbol table.
+     * May be null, in which case the initial symbol table is that of
+     * {@code $ion_1_0}.
+     *
+     * @throws SubstituteSymbolTableException
+     * if any imported table is a substitute (see {@link SymbolTable}).
+     */
+    public abstract
+    IonBinaryWriterBuilder withInitialSymbolTable(SymbolTable symtab);
 
 
     //=========================================================================

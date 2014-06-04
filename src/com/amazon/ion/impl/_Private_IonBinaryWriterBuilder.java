@@ -104,7 +104,8 @@ public class _Private_IonBinaryWriterBuilder
     //=========================================================================
 
 
-    public SymbolTable getInitialSymtab()
+    @Override
+    public SymbolTable getInitialSymbolTable()
     {
         return myInitialSymbolTable;
     }
@@ -121,7 +122,8 @@ public class _Private_IonBinaryWriterBuilder
      * @throws SubstituteSymbolTableException
      * if any imported table is a substitute (see {@link SymbolTable}).
      */
-    public void setInitialSymtab(SymbolTable symtab)
+    @Override
+    public void setInitialSymbolTable(SymbolTable symtab)
     {
         mutationCheck();
 
@@ -152,10 +154,12 @@ public class _Private_IonBinaryWriterBuilder
      * Defaults to $ion_1_0 if null.
      * @param symtab may be null.
      */
-    _Private_IonBinaryWriterBuilder withInitialSymtab(SymbolTable symtab)
+    @Override
+    public
+    _Private_IonBinaryWriterBuilder withInitialSymbolTable(SymbolTable symtab)
     {
         _Private_IonBinaryWriterBuilder b = mutable();
-        b.setInitialSymtab(symtab);
+        b.setInitialSymbolTable(symtab);
         return b;
     }
 
@@ -177,20 +181,20 @@ public class _Private_IonBinaryWriterBuilder
             b.setSymtabValueFactory(system);
         }
 
-        SymbolTable initialSymtab = b.getInitialSymtab();
+        SymbolTable initialSymtab = b.getInitialSymbolTable();
         if (initialSymtab == null)
         {
             initialSymtab = initialSymtab(b.getSymtabValueFactory(),
                                           _Private_Utils.systemSymtab(1),
                                           b.getImports());
-            b.setInitialSymtab(initialSymtab);
+            b.setInitialSymbolTable(initialSymtab);
         }
         else if (initialSymtab.isSystemTable())
         {
             initialSymtab = initialSymtab(b.getSymtabValueFactory(),
                                           initialSymtab,
                                           b.getImports());
-            b.setInitialSymtab(initialSymtab);
+            b.setInitialSymbolTable(initialSymtab);
         }
 
         return b.immutable();
@@ -212,7 +216,7 @@ public class _Private_IonBinaryWriterBuilder
     /**
      * Returns a symtab usable in a local context.
      * This copies {@link #myInitialSymbolTable} if symbols have been added to
-     * it since {@link #setInitialSymtab(SymbolTable)} was called.
+     * it since {@link #setInitialSymbolTable(SymbolTable)} was called.
      */
     SymbolTable buildContextSymbolTable()
     {

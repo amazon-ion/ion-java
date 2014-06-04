@@ -85,7 +85,7 @@ final class IonSystemLite
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
-        _system_symbol_table = bwb.getInitialSymtab();
+        _system_symbol_table = bwb.getInitialSymbolTable();
         assert _system_symbol_table.isSystemTable();
 
         myTextWriterBuilder = twb.immutable();

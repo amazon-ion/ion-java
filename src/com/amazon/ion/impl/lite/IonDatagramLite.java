@@ -514,7 +514,7 @@ final class IonDatagramLite
             _Private_IonBinaryWriterBuilder.standard();
         b.setCatalog(_catalog);
         b.setSymtabValueFactory(_system);
-        b.setInitialSymtab(_system.getSystemSymbolTable());
+        b.setInitialSymbolTable(_system.getSystemSymbolTable());
 
         IonBinaryWriter writer = b.buildLegacy();
 

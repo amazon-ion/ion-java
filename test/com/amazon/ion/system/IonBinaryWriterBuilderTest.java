@@ -178,8 +178,8 @@ public class IonBinaryWriterBuilderTest
 
         _Private_IonBinaryWriterBuilder b =
             _Private_IonBinaryWriterBuilder.standard();
-        b.setInitialSymtab(lst0);
-        assertSame(lst0, b.getInitialSymtab());
+        b.setInitialSymbolTable(lst0);
+        assertSame(lst0, b.getInitialSymbolTable());
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter writer = b.build(out);
@@ -188,7 +188,7 @@ public class IonBinaryWriterBuilderTest
         // Builder makes a copy of the symtab
         SymbolTable lst1 = writer.getSymbolTable();
         assertNotSame(lst0, lst1);
-        assertSame(lst0, b.getInitialSymtab());
+        assertSame(lst0, b.getInitialSymbolTable());
 
         // Second call to build, we get another copy.
         writer = b.build(out);
@@ -207,7 +207,7 @@ public class IonBinaryWriterBuilderTest
         assertNotSame(lst0, lst3);
         assertNotSame(lst1, lst3);
         assertNotSame(lst2, lst3);
-        assertSame(lst0, b.getInitialSymtab());
+        assertSame(lst0, b.getInitialSymbolTable());
     }
 
 
@@ -225,8 +225,8 @@ public class IonBinaryWriterBuilderTest
 
         _Private_IonBinaryWriterBuilder b =
             _Private_IonBinaryWriterBuilder.standard();
-        b.setInitialSymtab(lst);
-        assertSame(lst, b.getInitialSymtab());
+        b.setInitialSymbolTable(lst);
+        assertSame(lst, b.getInitialSymbolTable());
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter writer = b.build(out);
@@ -242,10 +242,10 @@ public class IonBinaryWriterBuilderTest
     {
         _Private_IonBinaryWriterBuilder b =
             _Private_IonBinaryWriterBuilder.standard();
-        b.setInitialSymtab(null);
+        b.setInitialSymbolTable(null);
 
         _Private_IonBinaryWriterBuilder b2 = b.immutable();
-        b2.setInitialSymtab(null);
+        b2.setInitialSymbolTable(null);
     }
 
 
