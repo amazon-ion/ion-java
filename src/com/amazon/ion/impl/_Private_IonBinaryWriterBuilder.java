@@ -21,7 +21,6 @@ import java.io.OutputStream;
 public class _Private_IonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
-    private SymbolTable  myDefaultSystemSymtab;
     private ValueFactory mySymtabValueFactory;
 
     /** System or local */
@@ -38,9 +37,8 @@ public class _Private_IonBinaryWriterBuilder
     {
         super(that);
 
-        this.myDefaultSystemSymtab     = that.myDefaultSystemSymtab;
-        this.mySymtabValueFactory      = that.mySymtabValueFactory;
-        this.myInitialSymbolTable      = that.myInitialSymbolTable;
+        this.mySymtabValueFactory = that.mySymtabValueFactory;
+        this.myInitialSymbolTable = that.myInitialSymbolTable;
     }
 
 
