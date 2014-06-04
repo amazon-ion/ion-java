@@ -51,6 +51,7 @@ public interface IonFloat
 
     /**
      * Gets the value of this Ion {@code float} as a Java {@link BigDecimal}.
+     * This follows the behavior of {@link BigDecimal#valueOf(double)}.
      *
      * @return the {@link BigDecimal} value, or {@code null} if
      * {@code this.isNullValue()}.

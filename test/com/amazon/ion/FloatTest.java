@@ -61,6 +61,15 @@ public class FloatTest
     // Test cases
 
     @Test
+    public void testJavaDouble()
+    {
+        assertTrue(-1200.d == -1200.0d);
+        assertTrue(-1200d == -1200.0d);
+        assertTrue(-1200d == -1200.000d);
+    }
+
+
+    @Test
     public void testFactoryFloat()
     {
         IonFloat value = system().newNullFloat();
