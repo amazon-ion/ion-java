@@ -382,8 +382,8 @@ public interface IonValue
      * Compares two Ion values for structural equality, which means that they
      * represent the exact same semantics, including annotations, numeric
      * precision, and so on.  This is a "deep" comparison that recursively
-     * traverse the hierarchy, and as such it should be considered an expensive
-     * operation.
+     * traverses the hierarchy, and as such it should be considered an
+     * expensive operation.
      *
      * @see com.amazon.ion.util.Equivalence
      *
