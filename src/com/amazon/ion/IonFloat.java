@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 import java.math.BigDecimal;
@@ -50,11 +50,11 @@ public interface IonFloat
     // would be useful before calling bigDecimalValue
 
     /**
-     * Gets the value of this Ion <code>float</code> as a Java
-     * {@link BigDecimal} value.
+     * Gets the value of this Ion {@code float} as a Java {@link BigDecimal}.
+     * This follows the behavior of {@link BigDecimal#valueOf(double)}.
      *
-     * @return the <code>BigDecimal</code> value,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
+     * @return the {@link BigDecimal} value, or {@code null} if
+     * {@code this.isNullValue()}.
      *
      * @throws NumberFormatException if this value is {@code nan},
      * {@code +inf}, or {@code -inf}, because {@link BigDecimal} cannot

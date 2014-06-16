@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -38,7 +38,6 @@ import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
 
@@ -957,44 +956,7 @@ public class Printer
             else
             {
                 double real = value.doubleValue();
-
-                // shortcut zero cases
-                if (real == 0.0)
-                {
-                    // XXX use the raw bits to avoid boxing and distinguish +/-0e0
-                    long bits = Double.doubleToLongBits(real);
-                    if (bits == 0L)
-                    {
-                        // positive zero
-                        myOut.append("0e0");
-                    }
-                    else
-                    {
-                        // negative zero
-                        myOut.append("-0e0");
-                    }
-                }
-                else if (Double.isNaN(real))
-                {
-                    myOut.append("nan");
-                }
-                else if (real == Double.POSITIVE_INFINITY)
-                {
-                    myOut.append("+inf");
-                }
-                else if (real == Double.NEGATIVE_INFINITY)
-                {
-                    myOut.append("-inf");
-                }
-                else
-                {
-                    BigDecimal decimal = value.bigDecimalValue();
-                    BigInteger unscaled = decimal.unscaledValue();
-
-                    myOut.append(unscaled.toString());
-                    myOut.append('e');
-                    myOut.append(Integer.toString(-decimal.scale()));
-                }
+                IonTextUtils.printFloat(myOut, real);
             }
         }
 

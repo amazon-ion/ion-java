@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -66,7 +66,7 @@ public class SharedSymbolTableTest
     @Test
     public void testDomSharedSymbolTable()
     {
-        // JIRA ION-72
+        // ION-72
         String[] symbols = { "hello" };
         IonStruct struct = sharedSymtabStruct(system(), "foobar", 1, symbols);
         final SymbolTable table =  myMaker.newSharedSymtab(system(), struct);

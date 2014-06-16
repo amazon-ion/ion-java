@@ -1,15 +1,26 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl._Private_IonConstants.MAX_LONG_TEXT_SIZE;
 import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.impl.Base64Encoder.TextStream;
+import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.util._Private_FastAppendable;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 
 
 /**
@@ -17,7 +28,7 @@ import java.io.IOException;
  * <p>
  * Generic text sink that enables optimized output of both ASCII and UTF-16.
  */
-public abstract class _Private_IonTextAppender
+public final class _Private_IonTextAppender
     implements Closeable, Flushable
 {
     private static boolean is8bitValue(int v)
@@ -98,7 +109,10 @@ public abstract class _Private_IonTextAppender
     };
 
 
-    // escape sequences for character below ascii 32 (space)
+    /**
+     * Escapes for U+00 through U+FF, for use in double-quoted Ion strings.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     private static final String[] STRING_ESCAPE_CODES;
     static
     {
@@ -125,6 +139,10 @@ public abstract class _Private_IonTextAppender
         }
     }
 
+    /**
+     * Escapes for U+00 through U+FF, for use in triple-quoted Ion strings.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     static final String[] LONG_STRING_ESCAPE_CODES;
     static
     {
@@ -137,6 +155,10 @@ public abstract class _Private_IonTextAppender
         LONG_STRING_ESCAPE_CODES['\"'] = null; // Treat as normal code point for long string
     }
 
+    /**
+     * Escapes for U+00 through U+FF, for use in single-quoted Ion symbols.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     static final String[] SYMBOL_ESCAPE_CODES;
     static
     {
@@ -148,6 +170,10 @@ public abstract class _Private_IonTextAppender
         SYMBOL_ESCAPE_CODES['\"'] = null; // Treat as normal code point for symbol.
     }
 
+    /**
+     * Escapes for U+00 through U+FF, for use in double-quoted JSON strings.
+     * This includes escapes for all LATIN-1 code points U+80 through U+FF.
+     */
     static final String[] JSON_ESCAPE_CODES;
     static
     {
@@ -179,62 +205,122 @@ public abstract class _Private_IonTextAppender
     private static final String TRIPLE_QUOTES = "'''";
 
 
-    private final boolean escapeUnicode;
-
-    /**
-     * Append an ASCII character.
-     * NB! METHOD DOESN'T VERIFY IF CHARACTER IS ACTUALLY ASCII!!!
-     * @param c
-     * @throws IOException
-     */
-    public abstract void appendAscii(char c)
-        throws IOException;
-
-    /**
-     * Append a sequence of ASCII characters
-     * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
-     * @param csq
-     * @throws IOException
-     */
-    public abstract void appendAscii(CharSequence csq)
-        throws IOException;
-
-    /**
-     * Append a range in sequence of ASCII characters
-     * NB! METHOD DOESN'T VERIFY IF CHARACTERS ARE ACTUALLY ASCII!!!
-     * @param csq
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public abstract void appendAscii(CharSequence csq, int start, int end)
-        throws IOException;
-
-    /**
-     * Append a UTF-16 non-surrogate character
-     * NB! METHOD DOESN'T VERIFY IF CHARACTER IS/IS-NOT SURROGATE!!!
-     * @param c
-     * @throws IOException
-     */
-    public abstract void appendUtf16(char c)
-        throws IOException;
-
-    /**
-     * Append a UTF-16 surrogate pair
-     * NB! METHOD DOESN'T VERIFY IF LEAD AND TRIAL SURROGATES ARE VALID!!!
-     * @param leadSurrogate
-     * @param trailSurrogate
-     * @throws IOException
-     */
-    public abstract void appendUtf16Surrogate(char leadSurrogate,
-                                              char trailSurrogate)
-        throws IOException;
+    //=========================================================================
 
 
-    public _Private_IonTextAppender(boolean escapeUnicodeCharacters)
+    private final _Private_FastAppendable myAppendable;
+    private final boolean escapeNonAscii;
+
+
+    _Private_IonTextAppender(_Private_FastAppendable out, boolean escapeNonAscii)
     {
-        this.escapeUnicode = escapeUnicodeCharacters;
+        this.myAppendable   = out;
+        this.escapeNonAscii = escapeNonAscii;
     }
+
+
+    public static _Private_IonTextAppender
+    forFastAppendable(_Private_FastAppendable out, Charset charset)
+    {
+        boolean escapeNonAscii = charset.equals(_Private_Utils.ASCII_CHARSET);
+        return new _Private_IonTextAppender(out, escapeNonAscii);
+    }
+
+
+    /**
+     * @param charset must be either {@link IonTextWriterBuilder#ASCII} or
+     * {@link IonTextWriterBuilder#UTF8}. When ASCII is used, all non-ASCII
+     * characters will be escaped. Otherwise, only select code points will be
+     * escaped.
+     */
+    public static _Private_IonTextAppender forAppendable(Appendable out,
+                                                         Charset charset)
+    {
+        _Private_FastAppendable fast = new AppendableFastAppendable(out);
+        return forFastAppendable(fast, charset);
+    }
+
+
+    /**
+     * Doesn't escape non-ASCII characters.
+     */
+    public static _Private_IonTextAppender forAppendable(Appendable out)
+    {
+        _Private_FastAppendable fast = new AppendableFastAppendable(out);
+        boolean escapeNonAscii = false;
+        return new _Private_IonTextAppender(fast, escapeNonAscii);
+    }
+
+
+    /**
+     * @param charset must be either {@link IonTextWriterBuilder#ASCII} or
+     * {@link IonTextWriterBuilder#UTF8}. When ASCII is used, all non-ASCII
+     * characters will be escaped. Otherwise, only select code points will be
+     * escaped.
+     */
+    public static _Private_IonTextAppender forOutputStream(OutputStream out,
+                                                           Charset charset)
+    {
+        _Private_FastAppendable fast = new OutputStreamFastAppendable(out);
+        return forFastAppendable(fast, charset);
+    }
+
+
+    //=========================================================================
+
+
+    public void flush()
+        throws IOException
+    {
+        if (myAppendable instanceof Flushable)
+        {
+            ((Flushable) myAppendable).flush();
+        }
+    }
+
+    public void close()
+        throws IOException
+    {
+        if (myAppendable instanceof Closeable)
+        {
+            ((Closeable) myAppendable).close();
+        }
+    }
+
+
+    public void appendAscii(char c)
+        throws IOException
+    {
+        myAppendable.appendAscii(c);
+    }
+
+    public void appendAscii(CharSequence csq)
+        throws IOException
+    {
+        myAppendable.appendAscii(csq);
+    }
+
+    public void appendAscii(CharSequence csq, int start, int end)
+        throws IOException
+    {
+        myAppendable.appendAscii(csq, start, end);
+    }
+
+    public void appendUtf16(char c)
+        throws IOException
+    {
+        myAppendable.appendUtf16(c);
+    }
+
+    public void appendUtf16Surrogate(char leadSurrogate, char trailSurrogate)
+        throws IOException
+    {
+        myAppendable.appendUtf16Surrogate(leadSurrogate, trailSurrogate);
+    }
+
+
+    //=========================================================================
+
 
     /**
      * Print an Ion String type
@@ -292,75 +378,6 @@ public abstract class _Private_IonTextAppender
         {
             appendAscii('"');
             printCodePoints(text, JSON_ESCAPE_CODES);
-            appendAscii('"');
-        }
-    }
-
-    /**
-     * Print Ion Clob type
-     * @param value
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public final void printClob(byte[] value, int start, int end)
-        throws IOException
-    {
-        if (value == null)
-        {
-            appendAscii("null.clob");
-        }
-        else
-        {
-            appendAscii('"');
-            printBytes(value, start, end, STRING_ESCAPE_CODES);
-            appendAscii('"');
-        }
-    }
-
-    /**
-     * Print triple-quoted Ion Clob type
-     * @param value
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public final void printLongClob(byte[] value, int start, int end)
-        throws IOException
-    {
-        if (value == null) {
-            appendAscii("null.clob");
-        }
-        else
-        {
-            // TODO Some points on printing long clobs:
-
-            // This may escape more often than is necessary, but doing it
-            // minimally is very tricky. Must be sure to account for
-            // quotes at the end of the content.
-
-            // TODO Account for NL versus CR+NL streams
-            appendAscii(TRIPLE_QUOTES);
-            printBytes(value, start, end, LONG_STRING_ESCAPE_CODES);
-            appendAscii(TRIPLE_QUOTES);
-        }
-    }
-
-    /**
-     * Print an Ion Clob in JSON format (eg as JSON text)
-     * @param value
-     * @param start
-     * @param end
-     * @throws IOException
-     */
-    public final void printJsonClob(byte[] value, int start, int end)
-        throws IOException
-    {
-        if (value == null) {
-            appendAscii("null");
-        } else {
-            appendAscii('"');
-            printBytes(value, start, end, JSON_ESCAPE_CODES);
             appendAscii('"');
         }
     }
@@ -543,33 +560,22 @@ public abstract class _Private_IonTextAppender
         }
     }
 
-    private final void printBytes(byte[] value, int start, int end,
-                                  String[] escapes)
-        throws IOException
-    {
-        for (int i = start; i < end; i++) {
-            char c = (char)(value[i] & 0xff);
-            if (escapes[c] != null) {
-                appendAscii(escapes[c]);
-            } else {
-                appendAscii(c);
-            }
-        }
-    }
-
     private final void printCodePoints(CharSequence text, String[] escapes)
         throws IOException
     {
         int len = text.length();
         for (int i = 0; i < len; ++i)
         {
-            // write as many bytes in a sequence as possible
+            // Find a span of non-escaped ASCII code points so we can write
+            // them as quickly as possible.
             char c = 0;
             int j;
             for (j = i; j < len; ++j) {
                 c = text.charAt(j);
-                if (c >= 0x100 || escapes[c] != null) {
-                    // append sequence then continue the normal loop
+                // The escapes array always includes U+80 through U+FF.
+                if (c >= 0x100 || escapes[c] != null)
+                {
+                    // c is escaped and/or outside ASCII range.
                     if (j > i) {
                         appendAscii(text, i, j);
                         i = j;
@@ -582,37 +588,52 @@ public abstract class _Private_IonTextAppender
                 appendAscii(text, i, j);
                 break;
             }
-            // write the non Latin-1 character
-            if (c < 0x80) {
+
+            // We've found a code point that's escaped and/or non-ASCII.
+
+            if (c < 0x80)
+            {
+                // An escaped ASCII character.
                 assert escapes[c] != null;
                 appendAscii(escapes[c]);
-            } else if (c < 0x100) {
+            }
+            else if (c < 0x100)
+            {
+                // Non-ASCII LATIN-1; we will have an escape sequence but may
+                // not use it.
                 assert escapes[c] != null;
-                if (escapeUnicode) {
+
+                // Always escape the C1 control codes U+80 through U+9F.
+                if (escapeNonAscii || c <= 0x9F) {
                     appendAscii(escapes[c]);
                 } else {
                     appendUtf16(c);
                 }
-            } else if (c < 0xD800 || c >= 0xE000) {
+            }
+            else if (c < 0xD800 || c >= 0xE000)
+            {
+                // Not LATIN-1, but still in the BMP.
                 String s = Integer.toHexString(c);
-                if (escapeUnicode) {
+                if (escapeNonAscii) {
                     appendAscii(HEX_4_PREFIX);
                     appendAscii(ZERO_PADDING[4 - s.length()]);
                     appendAscii(s);
                 } else {
                     appendUtf16(c);
                 }
-            } else if (isHighSurrogate(c)) {
-                // high surrogate
+            }
+            else if (isHighSurrogate(c))
+            {
+                // Outside the BMP! High surrogate must be followed by low.
                 char c2;
                 if (++i == len || !isLowSurrogate(c2 = text.charAt(i))) {
                     String message =
                         "text is invalid UTF-16. It contains an unmatched " +
-                        "high surrogate 0x" + Integer.toHexString(c) +
+                        "leading surrogate 0x" + Integer.toHexString(c) +
                         " at index " + (i-1);
                     throw new IllegalArgumentException(message);
                 }
-                if (escapeUnicode) {
+                if (escapeNonAscii) {
                     int cp = makeUnicodeScalar(c, c2);
                     String s = Integer.toHexString(cp);
                     appendAscii(HEX_8_PREFIX);
@@ -621,14 +642,346 @@ public abstract class _Private_IonTextAppender
                 } else {
                     appendUtf16Surrogate(c, c2);
                 }
-            } else {
+            }
+            else
+            {
                 // unmatched low surrogate
+                assert isLowSurrogate(c);
+
                 String message =
                     "text is invalid UTF-16. It contains an unmatched " +
-                    "low surrogate 0x" + Integer.toHexString(c) +
+                    "trailing surrogate 0x" + Integer.toHexString(c) +
                     " at index " + i;
                 throw new IllegalArgumentException(message);
             }
+        }
+    }
+
+
+    //=========================================================================
+    // Numeric scalars
+
+
+    /** ONLY FOR USE BY {@link #printInt(long)}. */
+    private final char[] _fixedIntBuffer = new char[MAX_LONG_TEXT_SIZE];
+
+    public void printInt(long value)
+        throws IOException
+    {
+        int j = _fixedIntBuffer.length;
+        if (value == 0) {
+            _fixedIntBuffer[--j] = '0';
+        } else {
+            if (value < 0) {
+                while (value != 0) {
+                    _fixedIntBuffer[--j] = (char)(0x30 - value % 10);
+                    value /= 10;
+                }
+                _fixedIntBuffer[--j] = '-';
+            } else {
+                while (value != 0) {
+                    _fixedIntBuffer[--j] = (char)(0x30 + value % 10);
+                    value /= 10;
+                }
+            }
+        }
+
+        // Using CharBuffer avoids copying the _fixedIntBuffer into a String
+        appendAscii(CharBuffer.wrap(_fixedIntBuffer),
+                    j,
+                    _fixedIntBuffer.length);
+    }
+
+
+    public void printInt(BigInteger value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.int");
+            return;
+        }
+
+        appendAscii(value.toString());
+    }
+
+
+    public void printDecimal(_Private_IonTextWriterBuilder _options,
+                             BigDecimal                    value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.decimal");
+            return;
+        }
+
+        BigInteger unscaled = value.unscaledValue();
+
+        int signum = value.signum();
+        if (signum < 0)
+        {
+            appendAscii('-');
+            unscaled = unscaled.negate();
+        }
+        else if (value instanceof Decimal
+             && ((Decimal)value).isNegativeZero())
+        {
+            // for the various forms of negative zero we have to
+            // write the sign ourselves, since neither BigInteger
+            // nor BigDecimal recognize negative zero, but Ion does.
+            appendAscii('-');
+        }
+
+        final String unscaledText = unscaled.toString();
+        final int significantDigits = unscaledText.length();
+
+        final int scale = value.scale();
+        final int exponent = -scale;
+
+        if (_options._decimal_as_float)
+        {
+            appendAscii(unscaledText);
+            appendAscii('e');
+            appendAscii(Integer.toString(exponent));
+        }
+        else if (exponent == 0)
+        {
+            appendAscii(unscaledText);
+            appendAscii('.');
+        }
+        else if (exponent < 0)
+        {
+            // Avoid printing small negative exponents using a heuristic
+            // adapted from http://speleotrove.com/decimal/daconvs.html
+
+            final int adjustedExponent = significantDigits - 1 - scale;
+            if (adjustedExponent >= 0)
+            {
+                int wholeDigits = significantDigits - scale;
+                appendAscii(unscaledText, 0, wholeDigits);
+                appendAscii('.');
+                appendAscii(unscaledText, wholeDigits,
+                                    significantDigits);
+            }
+            else if (adjustedExponent >= -6)
+            {
+                appendAscii("0.");
+                appendAscii("00000", 0, scale - significantDigits);
+                appendAscii(unscaledText);
+            }
+            else
+            {
+                appendAscii(unscaledText);
+                appendAscii("d-");
+                appendAscii(Integer.toString(scale));
+            }
+        }
+        else // (exponent > 0)
+        {
+            // We cannot move the decimal point to the right, adding
+            // rightmost zeros, because that would alter the precision.
+            appendAscii(unscaledText);
+            appendAscii('d');
+            appendAscii(Integer.toString(exponent));
+        }
+    }
+
+
+    public void printFloat(double value)
+        throws IOException
+    {
+        // shortcut zero cases
+        if (value == 0.0)
+        {
+            if (Double.compare(value, 0d) == 0)  // Only matches positive zero
+            {
+                appendAscii("0e0");
+            }
+            else
+            {
+                appendAscii("-0e0");
+            }
+        }
+        else if (Double.isNaN(value))
+        {
+            appendAscii("nan");
+        }
+        else if (value == Double.POSITIVE_INFINITY)
+        {
+            appendAscii("+inf");
+        }
+        else if (value == Double.NEGATIVE_INFINITY)
+        {
+            appendAscii("-inf");
+        }
+        else
+        {
+            // Double.toString() forces a digit after the decimal point.
+            // Remove it when it's not meaningful.
+            String str = Double.toString(value);
+            if (str.endsWith(".0"))
+            {
+                appendAscii(str, 0, str.length() - 2);
+                appendAscii("e0");
+            }
+            else
+            {
+                appendAscii(str);
+                if (str.indexOf('E') == -1)
+                {
+                    appendAscii("e0");
+                }
+            }
+        }
+    }
+
+    public void printFloat(Double value)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.float");
+        }
+        else
+        {
+            printFloat(value.doubleValue());
+        }
+    }
+
+
+    //=========================================================================
+    // LOBs
+
+
+    public void printBlob(_Private_IonTextWriterBuilder _options,
+                          byte[] value, int start, int len)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.blob");
+            return;
+        }
+
+        @SuppressWarnings("resource")
+        TextStream ts =
+            new TextStream(new ByteArrayInputStream(value, start, len));
+
+        // base64 encoding is 6 bits per char so
+        // it evens out at 3 bytes in 4 characters
+        char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
+        CharBuffer cb = CharBuffer.wrap(buf);
+
+        if (_options._blob_as_string)
+        {
+            appendAscii('"');
+        }
+        else
+        {
+            appendAscii("{{");
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+        }
+
+        for (;;)
+        {
+            // TODO is it better to fill up the CharBuffer before outputting?
+            int clen = ts.read(buf, 0, buf.length);
+            if (clen < 1) break;
+            appendAscii(cb, 0, clen);
+        }
+
+        if (_options._blob_as_string)
+        {
+            appendAscii('"');
+        }
+        else
+        {
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+            appendAscii("}}");
+        }
+    }
+
+
+    private void printClobBytes(byte[] value, int start, int end,
+                                String[] escapes)
+        throws IOException
+    {
+        for (int i = start; i < end; i++) {
+            char c = (char)(value[i] & 0xff);
+            String escapedByte = escapes[c];
+            if (escapedByte != null) {
+                appendAscii(escapedByte);
+            } else {
+                appendAscii(c);
+            }
+        }
+    }
+
+
+    public void printClob(_Private_IonTextWriterBuilder _options,
+                          byte[] value, int start, int len)
+        throws IOException
+    {
+        if (value == null)
+        {
+            appendAscii("null.clob");
+            return;
+        }
+
+
+        final boolean json =
+            _options._clob_as_string && _options._string_as_json;
+
+        final int threshold = _options.getLongStringThreshold();
+        final boolean longString = (0 < threshold && threshold < value.length);
+
+        if (!_options._clob_as_string)
+        {
+            appendAscii("{{");
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+        }
+
+        if (json)
+        {
+            appendAscii('"');
+            printClobBytes(value, start, start + len, JSON_ESCAPE_CODES);
+            appendAscii('"');
+        }
+        else if (longString)
+        {
+            // This may escape more often than is necessary, but doing it
+            // minimally is very tricky. Must be sure to account for
+            // quotes at the end of the content.
+
+            // TODO Account for NL versus CR+NL streams
+            appendAscii(TRIPLE_QUOTES);
+            printClobBytes(value, start, start + len, LONG_STRING_ESCAPE_CODES);
+            appendAscii(TRIPLE_QUOTES);
+        }
+        else
+        {
+            appendAscii('"');
+            printClobBytes(value, start, start + len, STRING_ESCAPE_CODES);
+            appendAscii('"');
+        }
+
+        if (! _options._clob_as_string)
+        {
+            if (_options.isPrettyPrintOn())
+            {
+                appendAscii(' ');
+            }
+            appendAscii("}}");
         }
     }
 }

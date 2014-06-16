@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -399,7 +399,7 @@ public class DatagramTest
         }
         catch (IllegalArgumentException e) { }
 
-        // Cannot insert a datagram  // TODO JIRA ION-84
+        // Cannot insert a datagram  // TODO ION-84
 //        try
 //        {
 //            dg1.add(1, dg2);
@@ -482,7 +482,7 @@ public class DatagramTest
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
-//        testEmptySequence(dg); // TODO JIRA ION-84 implement add(int,v)
+//        testEmptySequence(dg); // TODO ION-84 implement add(int,v)
         dg.add().newInt(1);
         testClearContainer(dg);
     }
@@ -492,7 +492,7 @@ public class DatagramTest
     @Test
     public void testRemoveViaIteratorThenDirect()
     {
-        // TODO JIRA ION-91 implement remove on datagram iterator
+        // TODO ION-91 implement remove on datagram iterator
     }
 
 

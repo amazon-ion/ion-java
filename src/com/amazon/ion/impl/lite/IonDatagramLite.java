@@ -1,10 +1,9 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
@@ -23,6 +22,7 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonDatagram;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -419,8 +419,8 @@ final class IonDatagramLite
     {
         if (true)
         {
-            // TODO JIRA ION-90
-            throw new UnsupportedOperationException("JIRA issue ION-90");
+            // TODO ION-90
+            throw new UnsupportedOperationException("issue ION-90");
         }
 
         IonValue previous = super.set(index, element);
@@ -510,12 +510,13 @@ final class IonDatagramLite
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
-        boolean streamCopyOptimized = false;
+        _Private_IonBinaryWriterBuilder b =
+            _Private_IonBinaryWriterBuilder.standard();
+        b.setCatalog(_catalog);
+        b.setSymtabValueFactory(_system);
+        b.setInitialSymbolTable(_system.getSystemSymbolTable());
 
-        IonBinaryWriter writer =
-            newIonBinaryWriterWithImports(_system,
-                                          _catalog,
-                                          streamCopyOptimized);
+        IonBinaryWriter writer = b.buildLegacy();
 
         IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);

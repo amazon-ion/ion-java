@@ -1,7 +1,8 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -81,7 +82,7 @@ final class IonFloatLite
         if (isNullValue()) {
             return null;
         }
-        return new BigDecimal(_float_value.doubleValue());
+        return Decimal.valueOf(_float_value.doubleValue());
     }
 
     public void setValue(float value)

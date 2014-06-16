@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.streaming;
 
@@ -6,13 +6,17 @@ import static com.amazon.ion.Symtabs.printLocalSymtab;
 import static com.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import com.amazon.ion.BinaryTest;
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -161,6 +165,99 @@ public class ReaderTest
             catch (IllegalStateException e) { }
         }
     }
+
+
+    @Test
+    public void testReadingDecimalAsBigInteger() // IONJAVA-114
+    {
+        //    decimal value         int conversion
+        read("null.decimal          null.int                  " +
+             "0.                                            0 " +
+             "9223372036854775807.        9223372036854775807 " + // Max long
+             "2d24                  2000000000000000000000000 "
+             );
+
+        while (in.next() != null)
+        {
+            BigInteger actual = in.bigIntegerValue();
+            assertEquals(in.isNullValue(), actual == null);
+
+            in.next();
+            BigInteger expected = in.bigIntegerValue();
+
+            assertEquals(expected, actual);
+        }
+    }
+
+
+    @Test
+    public void testReadingFloatAsBigInteger() // IONJAVA-114
+    {
+        // Note that one can't represent Long.MAX_VALUE as a double, there's
+        // not enough bits in the mantissa!
+
+        //    float value            int conversion
+        read("null.float             null.int                  " +
+             "-0e0                                           0 " +
+             " 0e0                                           0 " +
+             "9223372036854776000e0        9223372036854776000 " +
+             "2e24                   2000000000000000000000000 " +
+             ""
+             );
+
+        while (in.next() != null)
+        {
+            BigInteger actual = in.bigIntegerValue();
+            assertEquals(in.isNullValue(), actual == null);
+
+            in.next();
+            BigInteger expected = in.bigIntegerValue();
+
+            assertEquals(expected, actual);
+        }
+    }
+
+
+    /**
+     * This isn't allowed by the documentation, but it's allowed by the text
+     * and binary readers.  Not allowed by the tree reader.
+     *
+     * We need to specify the conversion too, its non-trivial: does 0e0
+     * convert to 0d0 or 0.0?  The latter is happening at this writing, but
+     * it's not what one would expect.
+     */
+    @Test @Ignore
+    public void testReadingFloatAsBigDecimal() // TODO IONJAVA-403
+    {
+        // Note that one can't represent Long.MAX_VALUE as a double, there's
+        // not enough bits in the mantissa!
+
+        //    float value             decimal conversion
+        read("null.float              null.decimal                " +
+             "-0e0                                          -0.   " +
+             " 0e0                                           0.   " +
+             "9223372036854776000e0        9223372036854776000.   " +
+             "9223372036854776000e12       9223372036854776000d12 " +
+             "2e24                    2000000000000000000000000.  " +
+             ""
+             );
+
+        while (in.next() != null)
+        {
+            BigDecimal actualBd  = in.bigDecimalValue();
+            Decimal    actualDec = in.decimalValue();
+            assertEquals(in.isNullValue(), actualBd  == null);
+            assertEquals(in.isNullValue(), actualDec == null);
+
+            in.next();
+            BigDecimal expectedBd  = in.bigDecimalValue();
+            Decimal    expectedDec = in.decimalValue();
+
+            assertEquals(expectedBd,  actualBd);
+            assertEquals(expectedDec, actualDec);
+        }
+    }
+
 
     @Test
     public void testIntValueOnNonNumber()

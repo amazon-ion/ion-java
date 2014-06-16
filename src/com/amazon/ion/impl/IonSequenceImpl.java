@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc. All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -330,8 +330,8 @@ abstract class IonSequenceImpl
 
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
-        // TODO JIRA ION-92
-        throw new UnsupportedOperationException("JIRA issue ION-92");
+        // TODO ION-92
+        throw new UnsupportedOperationException("issue ION-92");
     }
 
     public IonValue[] toArray()

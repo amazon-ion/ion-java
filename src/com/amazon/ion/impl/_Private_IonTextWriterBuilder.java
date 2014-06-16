@@ -1,8 +1,8 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_IonWriterFactory.newTextWriterWithImports;
+import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -11,8 +11,8 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -22,13 +22,17 @@ public class _Private_IonTextWriterBuilder
 {
     private final static CharSequence SPACE_CHARACTER = " ";
     /** TODO shouldn't be platform-specific */
-    private final static CharSequence LINE_SEPARATOR = System.getProperty("line.separator");
+    private final static CharSequence LINE_SEPARATOR =
+        System.getProperty("line.separator");
 
 
     public static _Private_IonTextWriterBuilder standard()
     {
-        return new _Private_IonTextWriterBuilder();
+        return new _Private_IonTextWriterBuilder.Mutable();
     }
+
+    public static _Private_IonTextWriterBuilder STANDARD =
+        standard().immutable();
 
 
     //=========================================================================
@@ -73,22 +77,23 @@ public class _Private_IonTextWriterBuilder
 
 
     @Override
-    public final IonTextWriterBuilder copy()
+    public final _Private_IonTextWriterBuilder copy()
     {
-        return new _Private_IonTextWriterBuilder(this);
+        return new Mutable(this);
     }
 
     @Override
-    public IonTextWriterBuilder immutable()
+    public _Private_IonTextWriterBuilder immutable()
     {
-        return new Immutable(this);
+        return this;
     }
 
     @Override
     public _Private_IonTextWriterBuilder mutable()
     {
-        return this;
+        return copy();
     }
+
 
     //=========================================================================
 
@@ -144,15 +149,17 @@ public class _Private_IonTextWriterBuilder
 
     private _Private_IonTextWriterBuilder fillDefaults()
     {
-        IonTextWriterBuilder b = this;
+        // Ensure that we don't modify the user's builder.
+        IonTextWriterBuilder b = copy();
+
         if (b.getCatalog() == null)
         {
-            b = b.withCatalog(new SimpleCatalog());
+            b.setCatalog(new SimpleCatalog());
         }
 
         if (b.getCharset() == null)
         {
-            b = b.withCharset(UTF8);
+            b.setCharset(UTF8);
         }
 
         return (_Private_IonTextWriterBuilder) b.immutable();
@@ -160,7 +167,7 @@ public class _Private_IonTextWriterBuilder
 
 
     /** Assumes that {@link #fillDefaults()} has been called. */
-    private IonWriter build(_Private_IonTextAppender appender)
+    private IonWriter build(_Private_FastAppendable appender)
     {
         IonCatalog catalog = getCatalog();
         SymbolTable[] imports = getImports();
@@ -169,11 +176,15 @@ public class _Private_IonTextWriterBuilder
         IonSystem system =
             IonSystemBuilder.standard().withCatalog(catalog).build();
 
-        return newTextWriterWithImports(system,
-                                        catalog,
-                                        this,
-                                        appender,
-                                        imports);
+        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
+
+        IonWriterSystemText systemWriter =
+            new IonWriterSystemText(defaultSystemSymtab, this, appender);
+
+        SymbolTable initialSymtab =
+            initialSymtab(system, defaultSystemSymtab, imports);
+
+        return new IonWriterUser(catalog, system, systemWriter, initialSymtab);
     }
 
 
@@ -182,91 +193,49 @@ public class _Private_IonTextWriterBuilder
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        _Private_IonTextAppender appender =
-            new AppendableIonTextAppender(out, b.getCharset());
+        _Private_FastAppendable fast = new AppendableFastAppendable(out);
 
-        return b.build(appender);
+        return b.build(fast);
     }
+
 
     @Override
     public final IonWriter build(OutputStream out)
     {
         _Private_IonTextWriterBuilder b = fillDefaults();
 
-        _Private_IonTextAppender appender =
-            new OutputStreamIonTextAppender(out, b.getCharset());
+        _Private_FastAppendable fast = new OutputStreamFastAppendable(out);
 
-        return b.build(appender);
+        return b.build(fast);
     }
 
     //=========================================================================
 
-    private static final class Immutable
+    private static final class Mutable
         extends _Private_IonTextWriterBuilder
     {
-        private Immutable(_Private_IonTextWriterBuilder that)
+        private Mutable() { }
+
+        private Mutable(_Private_IonTextWriterBuilder that)
         {
             super(that);
         }
 
         @Override
-        public IonTextWriterBuilder immutable()
+        public _Private_IonTextWriterBuilder immutable()
         {
-            return this;
+            return new _Private_IonTextWriterBuilder(this);
         }
 
         @Override
         public _Private_IonTextWriterBuilder mutable()
         {
-            return new _Private_IonTextWriterBuilder(this);
-        }
-
-
-        private void mutationFailure()
-        {
-            throw new UnsupportedOperationException("This builder is immutable");
+            return this;
         }
 
         @Override
-        public void setCatalog(IonCatalog catalog)
+        protected void mutationCheck()
         {
-            mutationFailure();
-        }
-
-        @Override
-        public void setCharset(Charset charset)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setInitialIvmHandling(InitialIvmHandling handling)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setIvmMinimizing(IvmMinimizing minimizing)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setLstMinimizing(LstMinimizing minimizing)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setImports(SymbolTable... imports)
-        {
-            mutationFailure();
-        }
-
-        @Override
-        public void setLongStringThreshold(int threshold)
-        {
-            mutationFailure();
         }
     }
 }

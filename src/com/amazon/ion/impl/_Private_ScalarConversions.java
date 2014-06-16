@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -796,7 +796,10 @@ public class _Private_ScalarConversions
             add_value_type(AS_TYPE.bigInteger_value);
         }
         private final void fn_from_double_to_biginteger() {
-            _bigInteger_value = BigInteger.valueOf((long)_double_value);
+            // To avoid decapitating values that are > Long.MAX_VALUE, we must
+            // convert to BigDecimal first.  IONJAVA-114 ION-263
+            _bigInteger_value =
+                Decimal.valueOf(_double_value).toBigInteger();
             add_value_type(AS_TYPE.bigInteger_value);
         }
         private final void fn_from_int_to_decimal() {

@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -863,16 +863,18 @@ class ReverseBinaryEncoder
             {
                 // Fall through each case - by design
                 case FRACTION:
+                case SECOND:
                 {
                     BigDecimal fraction = t.getZFractionalSecond();
-                    assert (fraction.signum() >= 0
-                            && ! fraction.equals(BigDecimal.ZERO))
-                        : "Bad timestamp fraction: " + fraction;
-
-                    writeIonDecimalContent(fraction);
-                }
-                case SECOND:
+                    if (fraction != null)
+                    {
+                        assert (fraction.signum() >= 0
+                                && ! fraction.equals(BigDecimal.ZERO))
+                            : "Bad timestamp fraction: " + fraction;
+                        writeIonDecimalContent(fraction);
+                    }
                     writeVarUInt(t.getZSecond());
+                }
                 case MINUTE:
                     writeVarUInt(t.getZMinute());
                     writeVarUInt(t.getZHour());

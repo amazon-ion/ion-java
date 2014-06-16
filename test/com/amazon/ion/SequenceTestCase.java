@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -557,7 +557,7 @@ public abstract class SequenceTestCase
                                                     (Object)nullValue2);
 
         IonSequence seq = makeEmpty();
-        // FIXME JIRA ION-85 implement IonDatagram.retainAll
+        // TODO ION-85 implement IonDatagram.retainAll
         if (seq.getType() == IonType.DATAGRAM) return;
 
         assertFalse(seq.retainAll(empty));

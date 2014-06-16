@@ -1,15 +1,13 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
 import static com.amazon.ion.impl._Private_Utils.symtabExtends;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.IOException;
 
@@ -77,16 +75,17 @@ class IonWriterUserBinary
     // methods.  However those are sufficiently expensive that
     // the cost of the cast should be lost in the noise.
 
-    IonWriterUserBinary(IonCatalog catalog,
-                        ValueFactory symtabValueFactory,
-                        IonWriterSystemBinary systemWriter,
-                        boolean streamCopyOptimized,
-                        SymbolTable symtab)
+    IonWriterUserBinary(_Private_IonBinaryWriterBuilder options,
+                        IonWriterSystemBinary           systemWriter)
     {
-        super(catalog, symtabValueFactory, systemWriter, symtab);
+        super(options.getCatalog(),
+              options.getSymtabValueFactory(),
+              systemWriter,
+              options.buildContextSymbolTable());
 
-        mySymtabExtendsCache =
-            streamCopyOptimized ? new SymtabExtendsCache() : null;
+        mySymtabExtendsCache = (options.isStreamCopyOptimized()
+                                    ? new SymtabExtendsCache()
+                                    : null);
     }
 
 

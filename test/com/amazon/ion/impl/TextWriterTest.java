@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -173,6 +173,20 @@ public class TextWriterTest
         ionText = outputString();
         assertEquals("fred_1 ginger",
                      ionText);
+    }
+
+
+    @Test
+    public void testC1ControlCodes()  // Tests IONJAVA-393
+        throws Exception
+    {
+        options = IonTextWriterBuilder.standard();
+        options.setInitialIvmHandling(SUPPRESS);
+
+        iw = makeWriter();
+        iw.writeString("\u0080 through \u009f"); // Note Java Unicode escapes!
+
+        assertEquals("\"\\x80 through \\x9f\"", outputString());
     }
 
 

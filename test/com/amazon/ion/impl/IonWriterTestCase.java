@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,7 +8,6 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
 import static com.amazon.ion.impl._Private_IonWriterBase.ERROR_MISSING_FIELD_NAME;
-import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
@@ -37,6 +36,8 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.BuilderHack;
+import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -265,7 +266,7 @@ public abstract class IonWriterTestCase
 
 
     /**
-     * Trap for JIRA ION-52
+     * Trap for ION-52
      */
     @Test
     public void testWritingNonAscii()
@@ -367,8 +368,7 @@ public abstract class IonWriterTestCase
     }
 
     /**
-     * Trap for JIRA ION-53
-     * @throws Exception
+     * Trap for ION-53
      */
     @Test
     public void testWritingClob()
@@ -425,7 +425,7 @@ public abstract class IonWriterTestCase
 
     @Test
     public void testWritingDeepNestedList() throws Exception {
-        // JIRA ION-60
+        // ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         iw = makeWriter();
         dg.writeTo(iw);
@@ -773,7 +773,11 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         // TODO ION-165 Hack to work around the lite DOM munging system values
-        _Private_IonSystem lazySystem = newLazySystem(catalog(), false);
+        IonSystemBuilder isb =
+            IonSystemBuilder.standard().withCatalog(catalog());
+        BuilderHack.setBinaryBacked(isb, true);
+
+        _Private_IonSystem lazySystem = (_Private_IonSystem) isb.build();
 
         byte[] data = outputByteArray();
         Iterator<IonValue> it =

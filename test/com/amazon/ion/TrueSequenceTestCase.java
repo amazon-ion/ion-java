@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -69,7 +69,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-83  Implement indexed addAll for datagram
+     *  TODO ION-83  Implement indexed addAll for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -142,7 +142,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -195,7 +195,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -207,7 +207,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -221,7 +221,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -234,7 +234,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -248,7 +248,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -262,7 +262,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO JIRA ION-90 Implement set for datagram
+     *  TODO ION-90 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test

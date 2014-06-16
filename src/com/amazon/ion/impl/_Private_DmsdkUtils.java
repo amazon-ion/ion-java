@@ -1,8 +1,6 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
-
-import static com.amazon.ion.impl._Private_IonWriterFactory.newBinaryWriterWithInitialSymtab;
 
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
@@ -105,11 +103,13 @@ public class _Private_DmsdkUtils
 
         _Private_IonSystem sys = (_Private_IonSystem) system;
 
-        return newBinaryWriterWithInitialSymtab(sys,
-                                                sys.getCatalog(),
-                                                sys.isStreamCopyOptimized(),
-                                                out,
-                                                sys.getSystemSymbolTable(),
-                                                localSymtab);
+        _Private_IonBinaryWriterBuilder b =
+            _Private_IonBinaryWriterBuilder.standard();
+        b.setCatalog(system.getCatalog());
+        b.setStreamCopyOptimized(sys.isStreamCopyOptimized());
+        b.setSymtabValueFactory(system);
+        b.setInitialSymbolTable(localSymtab);
+
+        return b.build(out);
     }
 }

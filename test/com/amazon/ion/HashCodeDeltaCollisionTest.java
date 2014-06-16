@@ -1,6 +1,8 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
+
+import static com.amazon.ion.Timestamp.UTC_OFFSET;
 
 import com.amazon.ion.IonValueDeltaGenerator.IonDecimalDeltaType;
 import com.amazon.ion.IonValueDeltaGenerator.IonFloatDeltaType;
@@ -22,13 +24,14 @@ public class HashCodeDeltaCollisionTest
     private static final int DELTA_LIMIT = 1 << 4;
 
     /**
-     * Generated non-deterministically by {@link #beforeClass()}.
+     * A point in time within +-100 years from now.
+     * Generated non-deterministically by {@link #initTimestampBaseMillis()}.
      * Used by Timestamp delta collision test methods as a base millis value.
      */
     private static long TIMESTAMP_BASE_MILLIS;
 
     @BeforeClass
-    public static void beforeClass()
+    public static void initTimestampBaseMillis()
     {
         long currentMillis = System.currentTimeMillis();
         long yearMillis = 60 * 60 * 24 * 365 * 1000L; // milliseconds in a year
@@ -36,16 +39,11 @@ public class HashCodeDeltaCollisionTest
         Random random = new Random(currentMillis);
         long randomRange = random.nextInt(100) * yearMillis; // 100 years range
 
-
-        // TODO ION-324 Negative Epoch (with fractional precision) is failing
         // Timestamp internal validation.
-        // range of TIMESTAMP_BASE_MILLIS is [-100, 100] from currentMillis
-//        TIMESTAMP_BASE_MILLIS = random.nextBoolean()
-//            ? currentMillis + randomRange
-//            : currentMillis - randomRange;
-
-        // range of TIMESTAMP_BASE_MILLIS is [0, 100] from currentMillis
-        TIMESTAMP_BASE_MILLIS = currentMillis + randomRange;
+        // Range of TIMESTAMP_BASE_MILLIS is [-100, 100] from currentMillis.
+        TIMESTAMP_BASE_MILLIS = (random.nextBoolean()
+                                     ? currentMillis + randomRange
+                                     : currentMillis - randomRange);
 
         System.out.println(HashCodeDeltaCollisionTest.class.getSimpleName() +
                            ".TIMESTAMP_BASE_MILLIS=" +
@@ -189,7 +187,7 @@ public class HashCodeDeltaCollisionTest
     {
         IonSystem ionSystem = system();
         IonTimestamp baseTimestamp = ionSystem
-            .newTimestamp(new Timestamp(TIMESTAMP_BASE_MILLIS, Timestamp.UTC_OFFSET));
+            .newTimestamp(Timestamp.forMillis(TIMESTAMP_BASE_MILLIS, UTC_OFFSET));
 
         for (IonTimestampDeltaType deltaType : IonTimestampDeltaType.values())
         {
@@ -233,4 +231,46 @@ public class HashCodeDeltaCollisionTest
         }
     }
 
+
+    /**
+     * Trap for ION-310 / IONJAVA-194.  Sometimes there are sets of
+     * timestamps within a brief period, and they shouldn't collide.
+     */
+    @Test
+    public void testTimestampDeltaCollisions()
+        throws Exception
+    {
+        final long limit = NO_COLLISION;
+
+        // Walk through this many adjacent windows of time.
+        final int windowCount = 100;
+
+        // Each window is this long.
+        final int windowMillis = 10031;
+
+        for (int i = 0; i < windowCount; ++i)
+        {
+            // Look for collisions across each millisecond within the window.
+            final long base = TIMESTAMP_BASE_MILLIS + i*windowMillis;
+
+            Set<Integer> hashCodeSet = new HashSet<Integer>();
+            int collisions = 0;
+
+            for (int j = 0; j < windowMillis; ++j)
+            {
+                Timestamp value = Timestamp.forMillis(base+j, UTC_OFFSET);
+                boolean collision = !hashCodeSet.add(value.hashCode());
+                if (collision)
+                {
+                    collisions++;
+                }
+            }
+
+            if (collisions > limit)
+            {
+                fail("Timestamp collisions: " + collisions +
+                         " limit: " + limit);
+            }
+        }
+    }
 }

@@ -1,14 +1,16 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.util;
 
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.util.GzipOrRawInputStream.GZIP_HEADER;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl._Private_ListWriter;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Utility methods for working with the Ion streaming interfaces,
@@ -16,9 +18,6 @@ import java.io.IOException;
  */
 public class IonStreamUtils
 {
-    private static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
-
-
     /**
      * Determines whether a buffer contains Ion binary data by looking for the
      * presence of the Ion Version Marker at its start.
@@ -99,6 +98,23 @@ public class IonStreamUtils
         }
         return true;
     }
+
+
+    /**
+     * Returns a stream that decompresses a stream if it contains GZIPped data,
+     * otherwise has no effect on the stream (but may wrap it).
+     *
+     * @since IonJava R21
+     */
+    public static InputStream unGzip(InputStream in)
+        throws IOException
+    {
+        return new GzipOrRawInputStream(in);
+    }
+
+
+    //=========================================================================
+
 
     /**
      * writes an IonList with a series of IonBool values. This
