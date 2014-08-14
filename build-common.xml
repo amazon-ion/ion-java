@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
-<!-- Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved. -->
 
 <project name="IonJava-common">
 
   <!-- ==================================================================== -->
   <!-- Preparing properties for IonTests static test files -->
-  
+
   <target name="build.properties">
     <tstamp>
       <format property="build_time"
@@ -26,7 +26,7 @@
 
   <!-- ==================================================================== -->
   <!-- Building the JarInfo properties file -->
-  
+
   <macrodef name="copy-jar-info"
       description="Update JarInfo utility with current Brazil info">
     <attribute name="classes-dir" />

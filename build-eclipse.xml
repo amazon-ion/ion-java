@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
-<!-- Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved. -->
 
 <project name="IonJava-eclipse" basedir="." default="eclipse-build"
          xmlns:ht="happytrails">
 
   <import file="${happytrails.root}/happytrails.xml"/>
   <import file="build-common.xml" />
-  
+
   <!-- Where does Eclipse build our test code? -->
   <property name="eclipse.classes.tst" value="${basedir}/.eclipseout"/>
 
