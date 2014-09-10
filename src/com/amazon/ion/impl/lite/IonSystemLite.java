@@ -307,14 +307,14 @@ final class IonSystemLite
 
     public IonValueLite newValue(IonReader reader)
     {
-        IonValueLite value = load_value_helper(reader);
+        IonValueLite value = load_value_helper(reader, /*isTopLevel*/ true);
         if (value == null) {
             throw new IonException("No value available");
         }
         return value;
     }
 
-    private IonValueLite load_value_helper(IonReader reader)
+    private IonValueLite load_value_helper(IonReader reader, boolean isTopLevel)
     {
         boolean symbol_is_present = false;
 
@@ -383,7 +383,7 @@ final class IonSystemLite
         }
 
         // Forget any incoming SIDs on field names.
-        if (reader.isInStruct()) {
+        if (!isTopLevel && reader.isInStruct()) {
             SymbolToken token = reader.getFieldNameSymbol();
             String text = token.getText();
             if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
@@ -457,7 +457,7 @@ final class IonSystemLite
             if (t == null) {
                 break;
             }
-            IonValueLite child = load_value_helper(reader);
+            IonValueLite child = load_value_helper(reader, /*isTopLevel*/ false);
 
             container.add(child);
 
