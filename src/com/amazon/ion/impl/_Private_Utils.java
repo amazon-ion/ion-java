@@ -24,15 +24,12 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
-import com.amazon.ion.system.IonTextWriterBuilder;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -684,32 +681,6 @@ public final class _Private_Utils
         return isBinary;
     }
 
-
-    /**
-     * Returns the current value as a String using the Ion toString() serialization
-     * format.  This is only valid if there is an underlying value.  This is
-     * logically equivalent to getIonValue().toString() but may be more efficient
-     * and does not require an IonSystem context to operate.
-     */
-    public static String valueToString(IonReader reader)
-    {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
-        b.setCharset(IonTextWriterBuilder.ASCII);
-        IonWriter writer = b.build(out);
-
-        try
-        {
-            writer.writeValue(reader);
-        }
-        catch (IOException e)
-        {
-            throw new IllegalStateException(e);
-        }
-        String s = out.toString();
-        return s;
-    }
 
     /**
      * Create a value iterator from a reader.
