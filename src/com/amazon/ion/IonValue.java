@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonTextWriterBuilder;
 import java.util.Collections;
 
 /**
@@ -395,6 +396,36 @@ public interface IonValue
      * @return Ion text data equivalent to this value.
      */
     public String toString();
+
+
+    /**
+     * Returns a pretty-printed Ion text representation of this value, using
+     * the settings of {@link IonTextWriterBuilder#pretty()}.
+     * <p>
+     * The specific configuration may change between releases of this
+     * library, so automated processes should not depend on the exact output
+     * formatting. In particular, there's currently no promise regarding
+     * handling of system data.
+     *
+     * @return Ion text data equivalent to this value.
+     *
+     * @since IonJava R22
+     */
+    public String toPrettyString();
+
+
+    /**
+     * Returns an Ion text representation of this value, using the settings
+     * from the given builder.
+     *
+     * @param writerBuilder the configuration that will be used for writing
+     * data to a string.
+     *
+     * @return Ion text data equivalent to this value.
+     *
+     * @since IonJava R22
+     */
+    public String toString(IonTextWriterBuilder writerBuilder);
 
 
     /**
