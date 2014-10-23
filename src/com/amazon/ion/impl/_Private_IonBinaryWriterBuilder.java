@@ -125,23 +125,27 @@ public class _Private_IonBinaryWriterBuilder
     {
         mutationCheck();
 
-        assert (symtab == null
-                || symtab.isSystemTable()
-                || symtab.isLocalTable());
-
-        if (symtab != null && symtab.isLocalTable())
+        if (symtab != null)
         {
-            SymbolTable[] imports =
-                ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
-            for (SymbolTable imported : imports)
+            if (symtab.isLocalTable())
             {
-                if (imported.isSubstitute())
+                SymbolTable[] imports =
+                    ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
+                for (SymbolTable imported : imports)
                 {
-                    String message =
-                        "Cannot encode with substitute symbol table: " +
-                        imported.getName();
-                    throw new SubstituteSymbolTableException(message);
+                    if (imported.isSubstitute())
+                    {
+                        String message =
+                            "Cannot encode with substitute symbol table: " +
+                            imported.getName();
+                        throw new SubstituteSymbolTableException(message);
+                    }
                 }
+            }
+            else if (! symtab.isSystemTable())
+            {
+                String message = "symtab must be local or system table";
+                throw new IllegalArgumentException(message);
             }
         }
 
