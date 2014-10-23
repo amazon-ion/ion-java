@@ -1,7 +1,8 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import java.util.Collections;
 
 /**
  * Base type for all Ion data nodes.
@@ -84,7 +85,25 @@ package com.amazon.ion;
  * </ul>
  * Use the most appropriate mechanism for your algorithm, depending upon how
  * much validation you've done on the data.
+ *
+ * <h2>Single-Parent Restriction</h2>
+ *
+ * {@code IonValue} trees are strictly hierarchical: every node has at most one
+ * parent, as exposed through {@link #getContainer()} (and, implicitly,
+ * {@link #getFieldName()}).  You cannot add an {@code IonValue} instance into
+ * two {@link IonContainer}s; any attempt to do so will result in a
+ * {@link ContainedValueException}.  You can of course add the same instance to
+ * multiple "normal" {@link Collections}, since that's stepping outside of the
+ * DOM.
  * <p>
+ * The implication of this design is that you need to be careful when
+ * performing DOM transformations.  You must remove a node from its parent
+ * before adding it to another one; {@link #removeFromContainer()} is handy.
+ * Alternatively you can {@link #clone()} a value, but be aware that cloning is
+ * a deep-copy operation (for the very same single-parent reason).
+ *
+ * <h2>Thread Safety</h2>
+ *
  * <b>Mutable {@code IonValues} are not safe for use by multiple threads!</b>
  * Your application must perform its own synchronization if you need to access
  * {@code IonValues} from multiple threads. This is true even for read-only use
