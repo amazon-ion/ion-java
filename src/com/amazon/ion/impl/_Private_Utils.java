@@ -24,6 +24,7 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
@@ -840,6 +841,58 @@ public final class _Private_Utils
                                                         catalog,
                                                         reader,
                                                         alreadyInStruct);
+    }
+
+
+    /**
+     * Creates a mutable copy of this local symbol table. The cloned table
+     * will be created in the context of the same {@link ValueFactory}.
+     * <p>
+     * Note that the resulting symbol table holds a distinct, deep copy of the
+     * given table, adding symbols on either instances will not modify the
+     * other.
+     *
+     * @param symtab
+     *
+     * @return a new mutable {@link SymbolTable} instance; not null
+     *
+     * @throws IllegalArgumentException
+     *          if the given table is not a local symbol table
+     * @throws SubstituteSymbolTableException
+     *          if any imported table by the given local symbol table is a
+     *          substituted table (whereby no exact match was found in its
+     *          catalog)
+     */
+    // TODO ION-395 We need to think about providing a suitable recovery process
+    //      or configuration for users to properly handle the case when the
+    //      local symtab has substituted symtabs for imports.
+    public static SymbolTable copyLocalSymbolTable(SymbolTable symtab)
+        throws SubstituteSymbolTableException
+    {
+        if (! symtab.isLocalTable())
+        {
+            String message = "symtab should be a local symtab";
+            throw new IllegalArgumentException(message);
+        }
+
+        SymbolTable[] imports =
+            ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
+
+        // Iterate over each import, we assume that the list of imports
+        // rarely exceeds 5.
+        for (int i = 0; i < imports.length; i++)
+        {
+            if (imports[i].isSubstitute())
+            {
+                String message =
+                    "local symtabs with substituted symtabs for imports " +
+                    "(indicating no exact match within the catalog) cannot " +
+                    "be copied";
+                throw new SubstituteSymbolTableException(message);
+            }
+        }
+
+        return ((LocalSymbolTable) symtab).makeCopy();
     }
 
 
