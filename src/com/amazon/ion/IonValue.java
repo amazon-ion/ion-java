@@ -384,7 +384,8 @@ public interface IonValue
 
 
     /**
-     * Returns a <em>non-canonical</em> ASCII representation of this value.
+     * Returns a <em>non-canonical</em> Ion-formatted ASCII representation of
+     * this value.
      * All data will be on a single line, with minimal whitespace.
      * There is no guarantee that multiple invocations of this method will
      * return identical results, only that they will be equivalent per
@@ -392,8 +393,20 @@ public interface IonValue
      * <p>
      * For more configurable rendering, see
      * {@link com.amazon.ion.system.IonTextWriterBuilder}.
+     * <p>
+     * This is <em>not</em> the correct way to retrieve the content of an
+     * {@link IonString} or {@link IonSymbol}!
+     * Use {@link IonText#stringValue()} for that purpose.
+     * <pre>
+     *    ionSystem.newString("Levi's").toString()     =>  "\"Levi's\""
+     *    ionSystem.newString("Levi's").stringValue()  =>  "Levi's"
+     *    ionSystem.newSymbol("Levi's").toString()     =>  "'Levi\\'s'"
+     *    ionSystem.newSymbol("Levi's").stringValue()  =>  "Levi's"
+     * </pre>
      *
      * @return Ion text data equivalent to this value.
+     *
+     * @see IonText#stringValue()
      */
     public String toString();
 
