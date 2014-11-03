@@ -386,10 +386,11 @@ public interface IonValue
     /**
      * Returns a <em>non-canonical</em> Ion-formatted ASCII representation of
      * this value.
-     * All data will be on a single line, with minimal whitespace.
+     * All data will be on a single line, with (relatively) minimal whitespace.
      * There is no guarantee that multiple invocations of this method will
      * return identical results, only that they will be equivalent per
-     * the Ion data model.
+     * the Ion data model.  For this reason it is erroneous for code to compare
+     * two strings returned by this method.
      * <p>
      * For more configurable rendering, see
      * {@link com.amazon.ion.system.IonTextWriterBuilder}.
@@ -407,6 +408,8 @@ public interface IonValue
      * @return Ion text data equivalent to this value.
      *
      * @see IonText#stringValue()
+     * @see #toString(IonTextWriterBuilder)
+     * @see #toPrettyString()
      */
     public String toString();
 

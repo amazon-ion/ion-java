@@ -122,8 +122,8 @@ There's also several mechanisms for generating Ion data:
     theory the actual output could be some other format entirely.
   <li>{@link com.amazon.ion.IonValue#toString() IonValue.toString()} will also
     generate Ion text, but it's primarily intended for debugging purposes and
-    cannot be customized.  It's format is not guaranteed so don't assume that
-    it will always output the same thing!
+    cannot be customized.  The particular layout is not specified by contract,
+    so don't assume that it will always output the same thing!
   <li>{@link com.amazon.ion.IonValue#writeTo(IonWriter)} outputs Ion data in
     the writer's format. This is the best way to output the data model.
   <li>From an {@link com.amazon.ion.IonDatagram IonDatagram} you can call
