@@ -20,6 +20,7 @@ import com.amazon.ion.HashCodeDeltaCollisionTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonExceptionTest;
+import com.amazon.ion.IonReaderToIonValueTest;
 import com.amazon.ion.IonSystemTest;
 import com.amazon.ion.IonValueTest;
 import com.amazon.ion.JavaNumericsTest;
@@ -165,6 +166,7 @@ import org.junit.runners.Suite;
     IonSystemBuilderTest.class,
     IonTextWriterBuilderTest.class,
     IonBinaryWriterBuilderTest.class,
+    IonReaderToIonValueTest.class,
 
     // Hash code tests
     HashCodeCorrectnessTest.class,

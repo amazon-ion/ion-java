@@ -120,9 +120,10 @@ public class TestUtils
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
-                       "bad/annotationNested.10n"                // ION-178
-                      ,"bad/emptyAnnotatedInt.10n"               // ION-178
-                      ,"equivs/paddedInts.10n"                   // ION-179
+                       "bad/annotationNested.10n"          // TODO IONJAVA-154
+                      ,"bad/emptyAnnotatedInt.10n"         // TODO IONJAVA-154
+                      ,"bad/invalidVersionMarkers.ion"     // TODO IONJAVA-21
+                      ,"equivs/paddedInts.10n"             // TODO IONJAVA-153
                       );
 
 

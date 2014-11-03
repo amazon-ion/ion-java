@@ -983,12 +983,8 @@ final class IonDatagramLite
             int concrete_idx = concrete._elementid();
             assert(concrete_idx == idx);
 
-            // here we remove the member from the containers list of elements
+            // here we remove the member from the container's list of elements
             remove_child(idx);
-
-            // and here we patch up the member
-            // and then the remaining members index values
-            concrete.detachFromContainer();
             patch_elements_helper(concrete_idx);
 
             // when we remove the current value we remove

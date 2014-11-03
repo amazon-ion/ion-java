@@ -116,26 +116,25 @@ final class IonSystemLite
             return (T) value.clone();
         }
 
-        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
-        IonDatagram datagram = newDatagram();
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
-        IonReader reader = makeSystemReader(value.getSystem(), value);
-
-        try {
-            writer.writeValues(reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
         if (value instanceof IonDatagram)
         {
+            IonDatagram datagram = newDatagram();
+            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+            IonReader reader = makeSystemReader(value.getSystem(), value);
+
+            try {
+                writer.writeValues(reader);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+
             return (T) datagram;
         }
 
-        IonValue copy = datagram.get(0);
-        copy.removeFromContainer();
-        return (T) copy;
+        IonReader reader = newReader(value);
+        reader.next();
+        return (T) newValue(reader);
     }
 
     public IonCatalog getCatalog()
@@ -307,14 +306,14 @@ final class IonSystemLite
 
     public IonValueLite newValue(IonReader reader)
     {
-        IonValueLite value = load_value_helper(reader);
+        IonValueLite value = load_value_helper(reader, /*isTopLevel*/ true);
         if (value == null) {
             throw new IonException("No value available");
         }
         return value;
     }
 
-    private IonValueLite load_value_helper(IonReader reader)
+    private IonValueLite load_value_helper(IonReader reader, boolean isTopLevel)
     {
         boolean symbol_is_present = false;
 
@@ -383,7 +382,7 @@ final class IonSystemLite
         }
 
         // Forget any incoming SIDs on field names.
-        if (reader.isInStruct()) {
+        if (!isTopLevel && reader.isInStruct()) {
             SymbolToken token = reader.getFieldNameSymbol();
             String text = token.getText();
             if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
@@ -457,7 +456,7 @@ final class IonSystemLite
             if (t == null) {
                 break;
             }
-            IonValueLite child = load_value_helper(reader);
+            IonValueLite child = load_value_helper(reader, /*isTopLevel*/ false);
 
             container.add(child);
 

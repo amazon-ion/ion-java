@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -23,6 +23,7 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_IonWriterBase;
 import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -837,16 +838,40 @@ abstract class IonValueLite
     }
 
     @Override
-    public String toString() {
-        Printer p = new Printer();
-        StringBuilder builder = new StringBuilder();
-        try {
-            p.print(this, builder);
+    public String toString()
+    {
+        StringBuilder buf = new StringBuilder(1024);
+        try
+        {
+            Printer p = new Printer();
+            p.print(this, buf);
         }
-        catch (IOException e) {
+        catch (IOException e)
+        {
             throw new IonException(e);
         }
-        return builder.toString();
+        return buf.toString();
+    }
+
+    public String toString(IonTextWriterBuilder writerBuilder)
+    {
+        StringBuilder buf = new StringBuilder(1024);
+        try
+        {
+            IonWriter writer = writerBuilder.build(buf);
+            writeTo(writer);
+            writer.finish();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+        return buf.toString();
+    }
+
+    public String toPrettyString()
+    {
+        return toString(IonTextWriterBuilder.pretty());
     }
 
     public final void writeTo(IonWriter writer)

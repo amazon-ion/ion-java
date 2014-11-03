@@ -157,10 +157,7 @@ abstract class IonContainerLite
             if (__readOnly) {
                 throw new IonException("read only sequence was changed");
             }
-            int idx = __pos - 1;
-            if (__lastMoveWasPrevious) {
-                idx++;
-            }
+
             // look forward, which happens on insert
             // notably insert of a local symbol table
             // or a IVM if this is in a datagram
@@ -278,12 +275,8 @@ abstract class IonContainerLite
             int concrete_idx = concrete._elementid();
             assert(concrete_idx == idx);
 
-            // here we remove the member from the containers list of elements
+            // here we remove the member from the container's list of elements
             remove_child(idx);
-
-            // and here we patch up the member
-            // and then the remaining members index values
-            concrete.detachFromContainer();
             patch_elements_helper(concrete_idx);
 
             if (!__lastMoveWasPrevious) {
@@ -309,11 +302,6 @@ abstract class IonContainerLite
 
     public boolean remove(IonValue element)
     {
-        if (element == null) {
-            throw new NullPointerException();
-        }
-        assert (element instanceof IonValueLite);
-
         checkForLock();
 
         if (element.getContainer() != this) {

@@ -1,11 +1,10 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
 import static com.amazon.ion.Symtabs.makeLocalSymtab;
-import static com.amazon.ion.impl._Private_DmsdkUtils.newBinaryWriterWithLocalSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 
 import com.amazon.ion.IonDatagram;
@@ -14,6 +13,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
+import com.amazon.ion.system.IonBinaryWriterBuilder;
 import java.io.ByteArrayOutputStream;
 import org.junit.After;
 import org.junit.Test;
@@ -46,9 +46,10 @@ public class BinaryWriterWithLocalSymtabsTest
     makeBinaryWriterWithLocalSymbols(SymbolTable localSymtab)
     {
         myOutputStream = new ByteArrayOutputStream();
-        myWriter = newBinaryWriterWithLocalSymbolTable(system(),
-                                                       myOutputStream,
-                                                       localSymtab);
+        myWriter = IonBinaryWriterBuilder.standard()
+                        .withInitialSymbolTable(localSymtab)
+                        .withStreamCopyOptimized(isStreamCopyOptimized())
+                        .build(myOutputStream);
     }
 
     protected byte[] outputByteArray() throws Exception
@@ -84,13 +85,13 @@ public class BinaryWriterWithLocalSymtabsTest
 
     //==========================================================================
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testConstructionWithSystemSymtab()
         throws Exception
     {
         SymbolTable systemSymtab = system().getSystemSymbolTable();
 
-        makeBinaryWriterWithLocalSymbols(systemSymtab);
+        makeBinaryWriterWithLocalSymbols(systemSymtab);  // This is okay!
     }
 
     @Test(expected=IllegalArgumentException.class)

@@ -1,10 +1,12 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.junit.IonAssert.assertAnnotations;
 
 import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -261,4 +263,45 @@ public class IonValueTest
         IonAssert.assertIonEquals(system().singleValue("$99::null"), child);
     }
 
+
+    @Test
+    public void testCustomToString()
+        throws Exception
+    {
+        IonValue v = system().singleValue("[hello,a::12]");
+
+        assertEquals("[hello,a::12]",
+                     v.toString(IonTextWriterBuilder.standard()));
+        assertEquals("[\"hello\",12]",
+                     v.toString(IonTextWriterBuilder.json()));
+        assertEquals("$ion_1_0 [hello,a::12]",
+                     v.toString(IonTextWriterBuilder.standard()
+                                    .withInitialIvmHandling(InitialIvmHandling.ENSURE)));
+
+        final String pretty = "\n[\n  hello,\n  a::12\n]";
+        assertEquals(pretty,
+                     v.toString(IonTextWriterBuilder.pretty()));
+        assertEquals(pretty,
+                     v.toPrettyString());
+    }
+
+
+    @Test
+    public void testCloningSystemLookingValue()
+    {
+        IonList list = (IonList) oneValue("[$ion_1_0]");
+        IonValue v = list.get(0);
+
+        // Try using the same system.
+        IonValue v2 = system().clone(v);
+        IonAssert.assertIonEquals(v, v2);
+
+        // Try cross-product of system implementations.
+        for (DomType dom : DomType.values())
+        {
+            IonSystem system2 = newSystem(null, dom);
+            v2 = system2.clone(v);
+            IonAssert.assertIonEquals(v, v2);
+        }
+    }
 }

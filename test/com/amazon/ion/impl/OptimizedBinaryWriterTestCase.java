@@ -1,10 +1,9 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.makeLocalSymtab;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_DmsdkUtils.newBinaryWriterWithLocalSymbolTable;
 import static java.lang.reflect.Proxy.newProxyInstance;
 
 import com.amazon.ion.IonReader;
@@ -12,6 +11,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.junit.Injected.Inject;
+import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -76,9 +76,10 @@ public class OptimizedBinaryWriterTestCase
 
         SymbolTable localSymtab = makeLocalSymtab(system(), localSymbols);
 
-        iw = newBinaryWriterWithLocalSymbolTable(system(),
-                                                 myOutputStream,
-                                                 localSymtab);
+        iw = IonBinaryWriterBuilder.standard()
+                .withInitialSymbolTable(localSymtab)
+                .withStreamCopyOptimized(isStreamCopyOptimized())
+                .build(myOutputStream);
         checkWriterStreamCopyOptimized(iw);
 
         return iw;

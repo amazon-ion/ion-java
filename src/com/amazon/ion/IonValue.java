@@ -1,7 +1,9 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import com.amazon.ion.system.IonTextWriterBuilder;
+import java.util.Collections;
 
 /**
  * Base type for all Ion data nodes.
@@ -84,7 +86,25 @@ package com.amazon.ion;
  * </ul>
  * Use the most appropriate mechanism for your algorithm, depending upon how
  * much validation you've done on the data.
+ *
+ * <h2>Single-Parent Restriction</h2>
+ *
+ * {@code IonValue} trees are strictly hierarchical: every node has at most one
+ * parent, as exposed through {@link #getContainer()} (and, implicitly,
+ * {@link #getFieldName()}).  You cannot add an {@code IonValue} instance into
+ * two {@link IonContainer}s; any attempt to do so will result in a
+ * {@link ContainedValueException}.  You can of course add the same instance to
+ * multiple "normal" {@link Collections}, since that's stepping outside of the
+ * DOM.
  * <p>
+ * The implication of this design is that you need to be careful when
+ * performing DOM transformations.  You must remove a node from its parent
+ * before adding it to another one; {@link #removeFromContainer()} is handy.
+ * Alternatively you can {@link #clone()} a value, but be aware that cloning is
+ * a deep-copy operation (for the very same single-parent reason).
+ *
+ * <h2>Thread Safety</h2>
+ *
  * <b>Mutable {@code IonValues} are not safe for use by multiple threads!</b>
  * Your application must perform its own synchronization if you need to access
  * {@code IonValues} from multiple threads. This is true even for read-only use
@@ -364,18 +384,64 @@ public interface IonValue
 
 
     /**
-     * Returns a <em>non-canonical</em> ASCII representation of this value.
-     * All data will be on a single line, with minimal whitespace.
+     * Returns a <em>non-canonical</em> Ion-formatted ASCII representation of
+     * this value.
+     * All data will be on a single line, with (relatively) minimal whitespace.
      * There is no guarantee that multiple invocations of this method will
      * return identical results, only that they will be equivalent per
-     * the Ion data model.
+     * the Ion data model.  For this reason it is erroneous for code to compare
+     * two strings returned by this method.
      * <p>
      * For more configurable rendering, see
      * {@link com.amazon.ion.system.IonTextWriterBuilder}.
+     * <p>
+     * This is <em>not</em> the correct way to retrieve the content of an
+     * {@link IonString} or {@link IonSymbol}!
+     * Use {@link IonText#stringValue()} for that purpose.
+     * <pre>
+     *    ionSystem.newString("Levi's").toString()     =>  "\"Levi's\""
+     *    ionSystem.newString("Levi's").stringValue()  =>  "Levi's"
+     *    ionSystem.newSymbol("Levi's").toString()     =>  "'Levi\\'s'"
+     *    ionSystem.newSymbol("Levi's").stringValue()  =>  "Levi's"
+     * </pre>
      *
      * @return Ion text data equivalent to this value.
+     *
+     * @see IonText#stringValue()
+     * @see #toString(IonTextWriterBuilder)
+     * @see #toPrettyString()
      */
     public String toString();
+
+
+    /**
+     * Returns a pretty-printed Ion text representation of this value, using
+     * the settings of {@link IonTextWriterBuilder#pretty()}.
+     * <p>
+     * The specific configuration may change between releases of this
+     * library, so automated processes should not depend on the exact output
+     * formatting. In particular, there's currently no promise regarding
+     * handling of system data.
+     *
+     * @return Ion text data equivalent to this value.
+     *
+     * @since IonJava R22
+     */
+    public String toPrettyString();
+
+
+    /**
+     * Returns an Ion text representation of this value, using the settings
+     * from the given builder.
+     *
+     * @param writerBuilder the configuration that will be used for writing
+     * data to a string.
+     *
+     * @return Ion text data equivalent to this value.
+     *
+     * @since IonJava R22
+     */
+    public String toString(IonTextWriterBuilder writerBuilder);
 
 
     /**
