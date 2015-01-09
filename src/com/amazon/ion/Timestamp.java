@@ -19,10 +19,10 @@ import java.util.GregorianCalendar;
  * representation of time based on Coordinated Universal Time (UTC).
  * In practice the use of time could be more accurately described as
  * UTC-SLS (UTC Smoothed Leap Seconds) as there is no representation for the
- * 24 (as of February 2009) leap second discontinuities that UTC has added.
+ * leap second discontinuities that UTC has added.
  * <p>
  * Timestamps preserve precision, meaning the fields that are included, and the
- * signficant digits of any fractional second.  Only common break
+ * significant digits of any fractional second.  Only common break
  * points in the values are supported.  Any unspecified fields are handled
  * as the start of the new year/month/day.
  *
