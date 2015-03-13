@@ -2,8 +2,6 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
-
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonDecimal;
@@ -19,12 +17,15 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 
 /**
  * Provides equivalence comparisons between two {@link IonValue}s, following
@@ -312,7 +313,7 @@ public final class Equivalence {
      * NOTE: This class should only be instantiated for the sole purpose of
      * using it as either a <em>key</em> or <em>value</em> in a {@link Map}.
      */
-    private static class Field implements Comparable<Field> {
+    static class Field implements Comparable<Field> {
         private final String    name; // aka field name
         private final IonValue  value;
         private final boolean   strict;
@@ -323,7 +324,7 @@ public final class Equivalence {
          */
         private int occurrences;
 
-        public Field(final IonValue value, final boolean strict)
+        Field(final IonValue value, final boolean strict)
         {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
@@ -367,7 +368,15 @@ public final class Equivalence {
             if (answer == 0) {
                 answer = ionCompareToImpl(value, other.value, strict);
                 if (answer == 0) {
-                    answer = occurrences - other.occurrences;
+                    if (occurrences < other.occurrences)
+                    {
+                        return -1;
+                    }
+                    if (occurrences > other.occurrences)
+                    {
+                        return 1;
+                    }
+                    return 0;
                 }
             }
 
@@ -375,7 +384,7 @@ public final class Equivalence {
         }
     }
 
-    private static final boolean ionEqualsImpl(final IonValue v1,
+    private static boolean ionEqualsImpl(final IonValue v1,
                                                final IonValue v2,
                                                final boolean strict)
     {
@@ -508,8 +517,8 @@ public final class Equivalence {
      *
      * @return true if two Ion Values represent the same data.
      */
-    public static final boolean ionEquals(final IonValue v1,
-                                          final IonValue v2)
+    public static boolean ionEquals(final IonValue v1,
+                                    final IonValue v2)
     {
         return ionEqualsImpl(v1, v2, true);
     }
@@ -526,8 +535,8 @@ public final class Equivalence {
      * @return true if two Ion Values represent the same data without regard to
      *         annotations.
      */
-    public static final boolean ionEqualsByContent(final IonValue v1,
-                                                   final IonValue v2)
+    public static boolean ionEqualsByContent(final IonValue v1,
+                                             final IonValue v2)
     {
         return ionEqualsImpl(v1, v2, false);
     }

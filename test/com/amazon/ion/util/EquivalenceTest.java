@@ -6,7 +6,7 @@ import com.amazon.ion.IonValue;
 import org.junit.Test;
 
 public class EquivalenceTest
-extends IonTestCase
+    extends IonTestCase
 {
     private static void assertIonEq(final IonValue left, final IonValue right) {
         assertTrue(Equivalence.ionEquals(left, right));
@@ -15,8 +15,8 @@ extends IonTestCase
         // Redundancy check included here, in the case that IonValue#equals()
         // doesn't use Equivalence's implementation anymore.
         if (left != null && right != null) {
-            assertTrue(left.equals(right));
-            assertTrue(right.equals(left));
+            assertEquals(left, right);
+            assertEquals(right, left);
         }
     }
 
