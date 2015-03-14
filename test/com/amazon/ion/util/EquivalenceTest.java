@@ -1,6 +1,7 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.IonFloat;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import org.junit.Test;
@@ -334,5 +335,62 @@ public class EquivalenceTest
     @Test
     public void testStringSymbol() {
         assertNotIonEq(ion("\"hi\""), ion("'hi'"));
+    }
+
+    @Test
+    public void testFieldEquals1() {
+        IonValue v1 = oneValue("1");
+        IonValue v2 = oneValue("2");
+        IonValue v3 = oneValue("3");
+
+        IonStruct struct = system().newEmptyStruct();
+        String fieldName = "a";
+        struct.add(fieldName, v1);
+        struct.add(fieldName, v2);
+        struct.add(fieldName, v3);
+
+        assertEquals(3, struct.size());
+
+        Equivalence.Field f1 = new Equivalence.Field(v1, true);
+        Equivalence.Field f2 = new Equivalence.Field(v2, true);
+        Equivalence.Field f3 = new Equivalence.Field(v3, true);
+
+        assertFalse(f1.equals(f2));
+        assertFalse(f1.equals(f3));
+        assertFalse(f2.equals(f3));
+
+        // Simple test that hashCode() is not badly implemented, so that fields with same
+        // field names but are not equals() do not result in same hash codes.
+        assertTrue(f1.hashCode() != f2.hashCode());
+        assertTrue(f1.hashCode() != f3.hashCode());
+    }
+
+    @Test
+    public void testFieldEquals2() {
+        String intOne = "1";
+        IonValue v1 = oneValue(intOne);
+        IonValue v2 = oneValue(intOne);
+        IonValue v3 = oneValue(intOne);
+
+        IonStruct struct = system().newEmptyStruct();
+        String fieldName = "a";
+        struct.add(fieldName, v1);
+        struct.add(fieldName, v2);
+        struct.add(fieldName, v3);
+
+        assertEquals(3, struct.size());
+
+        Equivalence.Field f1 = new Equivalence.Field(v1, true);
+        Equivalence.Field f2 = new Equivalence.Field(v2, true);
+        Equivalence.Field f3 = new Equivalence.Field(v3, true);
+
+        assertEquals(f1, f2);
+        assertEquals(f2, f1); // symmetric
+
+        assertEquals(f1, f3);
+        assertEquals(f3, f1); // symmetric
+
+        assertEquals(f2, f3); // transitive
+        assertEquals(f3, f2); // symmetric
     }
 }

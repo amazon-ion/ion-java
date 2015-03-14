@@ -483,8 +483,7 @@ public final class IonAssert
             {
                 if (! actualFieldValues.remove(expectedChild))
                 {
-                    fail("No match for field " + path + ":" + expectedChild
-                         + " in struct: " + actual);
+                    fail("No match for field " + path);
                 }
             }
 

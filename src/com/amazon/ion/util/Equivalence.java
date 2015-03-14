@@ -313,7 +313,7 @@ public final class Equivalence {
      * NOTE: This class should only be instantiated for the sole purpose of
      * using it as either a <em>key</em> or <em>value</em> in a {@link Map}.
      */
-    static class Field implements Comparable<Field> {
+    static class Field {
         private final String    name; // aka field name
         private final IonValue  value;
         private final boolean   strict;
@@ -342,7 +342,9 @@ public final class Equivalence {
 
         @Override
         public int hashCode() {
-            return name.hashCode();
+            int result = name.hashCode();
+            result = (31 * result) + value.hashCode();
+            return result;
         }
 
         /**
@@ -357,30 +359,6 @@ public final class Equivalence {
 
             return name.equals(sOther.name)
                 && ionEqualsImpl(value, ((Field) other).value, strict);
-        }
-
-        // TODO ION-319 Implement IonStruct comparison functionality.
-        // This method is currently not used by any code paths.
-        public int compareTo(Field other) {
-            // We can assume strict is the same - internal usage dictates it
-            int answer = name.compareTo(other.name);
-
-            if (answer == 0) {
-                answer = ionCompareToImpl(value, other.value, strict);
-                if (answer == 0) {
-                    if (occurrences < other.occurrences)
-                    {
-                        return -1;
-                    }
-                    if (occurrences > other.occurrences)
-                    {
-                        return 1;
-                    }
-                    return 0;
-                }
-            }
-
-            return answer;
         }
     }
 
