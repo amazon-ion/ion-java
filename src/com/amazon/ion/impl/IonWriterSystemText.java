@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -25,7 +25,7 @@ import java.math.BigInteger;
 /**
  *
  */
-final class IonWriterSystemText
+class IonWriterSystemText
     extends IonWriterSystem
 {
     /** Not null. */
@@ -287,14 +287,44 @@ final class IonWriterSystemText
         }
     }
 
-
-    @Override
-    void startValue() throws IOException
+    void writeFieldNameToken(SymbolToken sym)
+        throws IOException
     {
-        super.startValue();
+        String name = sym.getText();
+        if (name == null) {
+            int sid = sym.getSid();
+            writeSidLiteral(sid);
+        }
+        else {
+            writeSymbolToken(name);
+        }
+    }
 
-        boolean followingLongString = _following_long_string;
+    void writeAnnotations(SymbolToken[] annotations)
+        throws IOException
+    {
+        for (SymbolToken ann : annotations) {
+            writeAnnotationToken(ann);
+            _output.appendAscii("::");
+        }
+    }
 
+    void writeAnnotationToken(SymbolToken ann)
+        throws IOException
+    {
+        String name = ann.getText();
+        if (name == null) {
+            _output.appendAscii('$');
+            _output.appendAscii(Integer.toString(ann.getSid()));
+        }
+        else {
+            _output.printSymbol(name);
+        }
+    }
+
+    boolean writeSeparator(boolean followingLongString)
+        throws IOException
+    {
         if (_options.isPrettyPrintOn()) {
             if (_pending_separator && _separator_character > ' ') {
                 // Only bother if the separator is non-whitespace.
@@ -308,18 +338,22 @@ final class IonWriterSystemText
             _output.appendAscii((char)_separator_character);
             if (_separator_character > ' ') followingLongString = false;
         }
+        return followingLongString;
+    }
+
+    @Override
+    void startValue() throws IOException
+    {
+        super.startValue();
+
+        boolean followingLongString = _following_long_string;
+
+        followingLongString = writeSeparator(followingLongString);
 
         // write field name
         if (_in_struct) {
             SymbolToken sym = assumeFieldNameSymbol();
-            String name = sym.getText();
-            if (name == null) {
-                int sid = sym.getSid();
-                writeSidLiteral(sid);
-            }
-            else {
-                writeSymbolToken(name);
-            }
+            writeFieldNameToken(sym);
             _output.appendAscii(':');
             clearFieldName();
             followingLongString = false;
@@ -330,17 +364,7 @@ final class IonWriterSystemText
         if (hasAnnotations() && !_is_writing_ivm) {
             if (! _options._skip_annotations) {
                 SymbolToken[] annotations = getTypeAnnotationSymbols();
-                for (SymbolToken ann : annotations) {
-                    String name = ann.getText();
-                    if (name == null) {
-                        _output.appendAscii('$');
-                        _output.appendAscii(Integer.toString(ann.getSid()));
-                    }
-                    else {
-                        _output.printSymbol(name);
-                    }
-                    _output.appendAscii("::");
-                }
+                writeAnnotations(annotations);
                 followingLongString = false;
             }
             clearAnnotations();
@@ -349,7 +373,9 @@ final class IonWriterSystemText
         _following_long_string = followingLongString;
     }
 
-    void closeValue() {
+    void closeValue()
+        throws IOException
+    {
         super.endValue();
         _pending_separator = true;
         _following_long_string = false;  // Caller overwrites this as needed.
@@ -367,8 +393,6 @@ final class IonWriterSystemText
             }
         }
     }
-
-
 
     @Override
     void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
@@ -433,7 +457,6 @@ final class IonWriterSystemText
 
         super.writeLocalSymtab(symtab);
     }
-
 
     public void stepIn(IonType containerType) throws IOException
     {

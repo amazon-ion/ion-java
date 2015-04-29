@@ -45,11 +45,14 @@ import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
+import com.amazon.ion.impl.IonMarkupWriterFilesTest;
+import com.amazon.ion.impl.IonMarkupWriterTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
+import com.amazon.ion.impl.TestMarkupCallback;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.impl.lite.IonContextTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
@@ -118,6 +121,11 @@ import org.junit.runners.Suite;
     FieldNameEscapesTest.class,
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
+
+    // Markup tests
+    TestMarkupCallback.class,
+    IonMarkupWriterTest.class,
+    IonMarkupWriterFilesTest.class,
 
     // Binary format tests
     BinaryTest.class,

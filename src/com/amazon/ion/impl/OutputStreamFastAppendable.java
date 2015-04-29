@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -36,7 +36,7 @@ final class OutputStreamFastAppendable
         _byteBuffer = new byte[MAX_BYTES_LEN];
     }
 
-
+    // ------------------- FastAppendable Appendable Methods -------------------
     public Appendable append(char c)
         throws IOException
     {
