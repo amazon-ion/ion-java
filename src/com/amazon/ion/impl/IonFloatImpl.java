@@ -247,6 +247,12 @@ final class IonFloatImpl
         assert wlen == valueLen;
     }
 
+    public boolean isNumericValue()
+    {
+        makeReady();
+        return !(_float_value == null || _float_value.isNaN() || _float_value.isInfinite());
+    }
+
 
     public void accept(ValueVisitor visitor) throws Exception
     {

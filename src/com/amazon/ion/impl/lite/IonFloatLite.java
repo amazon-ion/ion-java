@@ -132,6 +132,11 @@ final class IonFloatLite
         }
     }
 
+    public boolean isNumericValue()
+    {
+        return !(isNullValue() || _float_value.isNaN() || _float_value.isInfinite());
+    }
+
     @Override
     public void accept(ValueVisitor visitor) throws Exception
     {
