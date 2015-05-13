@@ -104,11 +104,11 @@ public class OptimizedBinaryWriterTestCase
             myDelegate = byteTransferReader;
         }
 
-        public void transferCurrentValue(IonWriterSystemBinary writer)
+        public void transferCurrentValue(_Private_ByteTransferSink sink)
             throws IOException
         {
             OptimizedBinaryWriterTestCase.this.isTransferCurrentValueInvoked = true;
-            myDelegate.transferCurrentValue(writer);
+            myDelegate.transferCurrentValue(sink);
         }
     }
 
