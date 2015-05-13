@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.ENSURE;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
+import static java.lang.String.format;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -261,25 +262,32 @@ public class TextWriterTest
         struct.add("c").newString("hello\nnurse");
         struct.add("d").newString("what's\nup\ndoc");
 
-        expectRendering("'''looong''' {a:'''looong''',b:\"hello\",c:'''hello\n" +
-                        "nurse''',d:'''what\\'s\n" +
-                        "up\n" +
-                        "doc'''}",
-                        dg);
+        expectRendering(
+            "'''looong''' {a:'''looong''',b:\"hello\",c:'''hello\n" +
+            "nurse''',d:'''what\\'s\n" +
+            "up\n" +
+            "doc'''}",
+            dg
+        );
 
         options.withPrettyPrinting();
-        expectRendering("\n" +
-                "'''looong'''\n" +
-                "{\n" +
-                        "  a:'''looong''',\n" +
-                "  b:\"hello\",\n" +
+        expectRendering(
+            // TODO IONJAVA-460 determine if these really should be platform independent newlines
+            format(
+                "%n" +
+                "'''looong'''%n" +
+                "{%n" +
+                        "  a:'''looong''',%n" +
+                "  b:\"hello\",%n" +
                 "  c:'''hello\n" +
-                        "nurse''',\n" +
+                        "nurse''',%n" +
                         "  d:'''what\\'s\n" +
                         "up\n" +
-                        "doc'''\n" +
-                        "}",
-            dg);
+                        "doc'''%n" +
+                        "}"
+            ),
+            dg
+        );
     }
 
     @Test

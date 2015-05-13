@@ -3,6 +3,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.junit.IonAssert.assertAnnotations;
+import static java.lang.String.format;
 
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -278,7 +279,8 @@ public class IonValueTest
                      v.toString(IonTextWriterBuilder.standard()
                                     .withInitialIvmHandling(InitialIvmHandling.ENSURE)));
 
-        final String pretty = "\n[\n  hello,\n  a::12\n]";
+        // TODO IONJAVA-460 determine if these really should be platform independent newlines
+        final String pretty = format("%n[%n  hello,%n  a::12%n]");
         assertEquals(pretty,
                      v.toString(IonTextWriterBuilder.pretty()));
         assertEquals(pretty,
