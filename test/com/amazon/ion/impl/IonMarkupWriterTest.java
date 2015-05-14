@@ -36,28 +36,30 @@ public class IonMarkupWriterTest extends IonTestCase {
             "<afterAnnotations BLOB><beforeData BLOB>" +
             "{{T25lIEJpZyBGYXQgVGVzdCBCbG9iIEZvciBZb3VyIFBsZWFzdXJl}}<afterData" +
             " BLOB><beforeStepOut STRUCT>}<afterData STRUCT>";
-    private String pExpected =
-            "\n<beforeAnnotations STRUCT><beforeEachAnnotation STRUCT>abcd" +
+    // TODO IONJAVA-460 determine if platform specific newlines are approprate for pretty printing
+    private String pExpected = String.format(
+            "%n<beforeAnnotations STRUCT><beforeEachAnnotation STRUCT>abcd" +
             "<afterEachAnnotation STRUCT>::<afterAnnotations STRUCT><beforeData" +
-            " STRUCT>{<afterStepIn STRUCT>\n  <beforeFieldName SEXP>hello" +
-            "<afterFieldName SEXP>:<beforeData SEXP>(<afterStepIn SEXP>\n    " +
+            " STRUCT>{<afterStepIn STRUCT>%n  <beforeFieldName SEXP>hello" +
+            "<afterFieldName SEXP>:<beforeData SEXP>(<afterStepIn SEXP>%n    " +
             "<beforeData SYMBOL>sexp<afterData SYMBOL><beforeSeparator SEXP>" +
-            "\n    <afterSeparator SEXP><beforeData INT>1<afterData INT>" +
-            "<beforeSeparator SEXP>\n    <afterSeparator SEXP><beforeData INT>2" +
-            "<afterData INT><beforeSeparator SEXP>\n    <afterSeparator SEXP>" +
-            "<beforeData STRING>\"str\"<afterData STRING><beforeStepOut SEXP>\n  " +
-            ")<afterData SEXP><beforeSeparator STRUCT>,\n  " +
+            "%n    <afterSeparator SEXP><beforeData INT>1<afterData INT>" +
+            "<beforeSeparator SEXP>%n    <afterSeparator SEXP><beforeData INT>2" +
+            "<afterData INT><beforeSeparator SEXP>%n    <afterSeparator SEXP>" +
+            "<beforeData STRING>\"str\"<afterData STRING><beforeStepOut SEXP>%n  " +
+            ")<afterData SEXP><beforeSeparator STRUCT>,%n  " +
             "<afterSeparator STRUCT><beforeFieldName LIST>list<afterFieldName " +
-            "LIST>:<beforeData LIST>[<afterStepIn LIST>\n    <beforeData " +
-            "DECIMAL>3.2<afterData DECIMAL><beforeSeparator LIST>,\n    " +
+            "LIST>:<beforeData LIST>[<afterStepIn LIST>%n    <beforeData " +
+            "DECIMAL>3.2<afterData DECIMAL><beforeSeparator LIST>,%n    " +
             "<afterSeparator LIST><beforeData FLOAT>3.2e0<afterData FLOAT>" +
-            "<beforeStepOut LIST>\n  ]<afterData LIST><beforeSeparator STRUCT>" +
-            ",\n  <afterSeparator STRUCT><beforeFieldName BLOB>blob" +
+            "<beforeStepOut LIST>%n  ]<afterData LIST><beforeSeparator STRUCT>" +
+            ",%n  <afterSeparator STRUCT><beforeFieldName BLOB>blob" +
             "<afterFieldName BLOB>:<beforeAnnotations BLOB>" +
             "<beforeEachAnnotation BLOB>annot<afterEachAnnotation BLOB>::" +
             "<afterAnnotations BLOB><beforeData BLOB>" +
             "{{ T25lIEJpZyBGYXQgVGVzdCBCbG9iIEZvciBZb3VyIFBsZWFzdXJl }}" +
-            "<afterData BLOB><beforeStepOut STRUCT>\n}<afterData STRUCT>";
+            "<afterData BLOB><beforeStepOut STRUCT>%n}<afterData STRUCT>"
+    );
 
     @Test
     public void testStandardCallback()

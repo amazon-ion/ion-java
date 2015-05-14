@@ -52,7 +52,6 @@ import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
-import com.amazon.ion.impl.TestMarkupCallback;
 import com.amazon.ion.impl.TreeReaderTest;
 import com.amazon.ion.impl.lite.IonContextTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
@@ -123,7 +122,6 @@ import org.junit.runners.Suite;
     SurrogateEscapeTest.class,
 
     // Markup tests
-    TestMarkupCallback.class,
     IonMarkupWriterTest.class,
     IonMarkupWriterFilesTest.class,
 
