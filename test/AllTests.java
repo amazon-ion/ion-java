@@ -1,5 +1,10 @@
 // Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
+import com.amazon.ion.impl.bin.IonRawBinaryWriterTest;
+import com.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
+import com.amazon.ion.impl.bin.WriteBufferTest;
+
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
 import com.amazon.ion.BadIonTest;
@@ -173,6 +178,12 @@ import org.junit.runners.Suite;
     IonTextWriterBuilderTest.class,
     IonBinaryWriterBuilderTest.class,
     IonReaderToIonValueTest.class,
+
+    // experimental binary writer tests
+    PooledBlockAllocatorProviderTest.class,
+    WriteBufferTest.class,
+    IonRawBinaryWriterTest.class,
+    IonManagedBinaryWriterTest.class,
 
     // Hash code tests
     HashCodeCorrectnessTest.class,

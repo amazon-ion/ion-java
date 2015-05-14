@@ -1,0 +1,166 @@
+// Copyright (c) 2015 Amazon.com, Inc.  All rights reserved.
+
+package com.amazon.ion.impl.bin;
+
+import static com.amazon.ion.impl.bin.IonManagedBinaryWriter.ONLY_SYSTEM_IMPORTS;
+
+import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
+import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.List;
+
+// TODO unify this with the IonWriter builder APIs
+
+/**
+ * Constructs instances of binary {@link IonWriter}.
+ * <p>
+ * This class is thread-safe.
+ */
+@SuppressWarnings("deprecation")
+public final class IonManagedBinaryWriterBuilder
+{
+    public enum AllocatorMode
+    {
+        POOLED
+        {
+            @Override
+            BlockAllocatorProvider createAllocatorProvider()
+            {
+                return new PooledBlockAllocatorProvider();
+            }
+        },
+        BASIC
+        {
+            @Override
+            BlockAllocatorProvider createAllocatorProvider()
+            {
+                return BlockAllocatorProviders.basicProvider();
+            }
+        };
+
+        /*package*/ abstract BlockAllocatorProvider createAllocatorProvider();
+    }
+
+    public static final int DEFAULT_BLOCK_SIZE = 32768;
+
+    /*package*/ final    BlockAllocatorProvider provider;
+    /*package*/ volatile int                    symbolsBlockSize;
+    /*package*/ volatile int                    userBlockSize;
+    /*package*/ volatile PreallocationMode      preallocationMode;
+    /*package*/ volatile ImportedSymbolContext  imports;
+
+    private IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
+    {
+        this.provider = provider;
+        this.symbolsBlockSize = DEFAULT_BLOCK_SIZE;
+        this.userBlockSize = DEFAULT_BLOCK_SIZE;
+        this.imports = ONLY_SYSTEM_IMPORTS;
+        this.preallocationMode = PreallocationMode.PREALLOCATE_2;
+    }
+
+    private IonManagedBinaryWriterBuilder(final IonManagedBinaryWriterBuilder other)
+    {
+        this.provider           = other.provider;
+        this.symbolsBlockSize   = other.symbolsBlockSize;
+        this.userBlockSize      = other.userBlockSize;
+        this.imports            = other.imports;
+        this.preallocationMode  = other.preallocationMode;
+    }
+
+    public IonManagedBinaryWriterBuilder copy()
+    {
+        return new IonManagedBinaryWriterBuilder(this);
+    }
+
+    // Parameter Setting Methods
+
+    public IonManagedBinaryWriterBuilder withSymbolsBlockSize(final int blockSize)
+    {
+        if (blockSize < 1)
+        {
+            throw new IllegalArgumentException("Block size cannot be less than 1: " + blockSize);
+        }
+        symbolsBlockSize = blockSize;
+        return this;
+    }
+
+    public IonManagedBinaryWriterBuilder withUserBlockSize(final int blockSize)
+    {
+        if (blockSize < 1)
+        {
+            throw new IllegalArgumentException("Block size cannot be less than 1: " + blockSize);
+        }
+        userBlockSize = blockSize;
+        return this;
+    }
+
+    public IonManagedBinaryWriterBuilder withImports(final SymbolTable... tables)
+    {
+        return withImports(Arrays.asList(tables));
+    }
+
+    public IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
+    {
+        imports = new ImportedSymbolContext(tables);
+        return this;
+    }
+
+    /*package*/ IonManagedBinaryWriterBuilder withPreallocationMode(final PreallocationMode preallocationMode)
+    {
+        this.preallocationMode = preallocationMode;
+        return this;
+    }
+
+    public IonManagedBinaryWriterBuilder withPaddedLengthPreallocation(final int pad)
+    {
+        this.preallocationMode = PreallocationMode.withPadSize(pad);
+        return this;
+    }
+
+    // Construction
+
+    public IonWriter newWriter(final OutputStream out) throws IOException
+    {
+        return new IonManagedBinaryWriter(this, out);
+    }
+
+    public IonBinaryWriter newLegacyWriter()
+    {
+        try
+        {
+            return new IonBinaryWriterAdapter(
+                new Factory()
+                {
+                    public IonWriter create(final OutputStream out) throws IOException
+                    {
+                        return newWriter(out);
+                    }
+                }
+            );
+        }
+        catch (final IOException e)
+        {
+            throw new IonException("I/O error", e);
+        }
+    }
+
+    // Static Factories
+
+    /**
+     * Constructs a new builder.
+     * <p>
+     * Builders generally bind to an allocation pool as defined by {@link AllocatorMode}, so applications should reuse
+     * them as much as possible.
+     */
+    public static IonManagedBinaryWriterBuilder create(final AllocatorMode allocatorMode)
+    {
+        return new IonManagedBinaryWriterBuilder(allocatorMode.createAllocatorProvider());
+    }
+}
