@@ -29,7 +29,8 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
-import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamMode;
+import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
+import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -102,7 +103,8 @@ public class IonRawBinaryWriterTest extends Assert
             BlockAllocatorProviders.basicProvider(),
             11,
             out,
-            StreamMode.NO_CLOSE,
+            StreamCloseMode.NO_CLOSE,
+            StreamFlushMode.NO_FLUSH,
             preallocationMode
         );
     }
@@ -112,7 +114,7 @@ public class IonRawBinaryWriterTest extends Assert
         final IonWriter delegate = writer.getDelegate();
         if (delegate instanceof IonRawBinaryWriter)
         {
-            ((IonRawBinaryWriter) delegate).writeIVM();
+            ((IonRawBinaryWriter) delegate).writeIonVersionMarker();
         }
     }
 

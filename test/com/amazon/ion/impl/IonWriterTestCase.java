@@ -1004,7 +1004,7 @@ public abstract class IonWriterTestCase
     {
         iw = makeWriter();
         iw.writeSymbol("foo");
-        ((_Private_IonWriterBase)iw).writeIonVersionMarker();
+        ((_Private_IonWriter)iw).writeIonVersionMarker();
         iw.writeInt(1);
 
         IonDatagram dg = reload();
@@ -1064,13 +1064,13 @@ public abstract class IonWriterTestCase
         iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
         iw.stepIn(IonType.STRUCT);
         {
-            assertEquals(1, ((IonWriterUser)iw).getDepth());
+            assertEquals(1, ((_Private_IonWriter)iw).getDepth());
 
             iw.setFieldName("open");
             iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
             iw.stepIn(IonType.STRUCT);
             {
-                assertEquals(2, ((IonWriterUser)iw).getDepth());
+                assertEquals(2, ((_Private_IonWriter)iw).getDepth());
             }
             iw.stepOut();
         }

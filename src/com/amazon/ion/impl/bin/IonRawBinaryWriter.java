@@ -26,6 +26,7 @@ import static java.lang.Double.doubleToRawLongBits;
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableMap;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -102,7 +103,7 @@ import java.util.TreeMap;
     private static final byte BLOB_TYPE         = (byte) 0xA0;
 
     private static final byte DECIMAL_POS_ZERO               = (byte) 0x50;
-    private static final byte DECIMAL_NEGATIVE_ZERO_MANTISSA = (byte) 0xC0;
+    private static final byte DECIMAL_NEGATIVE_ZERO_MANTISSA = (byte) 0x80;
 
     private static final BigInteger BIG_INT_LONG_MAX_VALUE = BigInteger.valueOf(Long.MAX_VALUE);
     private static final BigInteger BIG_INT_LONG_MIN_VALUE = BigInteger.valueOf(Long.MIN_VALUE);
@@ -257,42 +258,61 @@ import java.util.TreeMap;
         }
     }
 
-    /*package*/ enum StreamMode
+    /*package*/ enum StreamCloseMode
     {
         NO_CLOSE,
         CLOSE
     }
 
+    /*package*/ enum StreamFlushMode
+    {
+        NO_FLUSH,
+        FLUSH
+    }
+
     private final BlockAllocator                allocator;
     private final OutputStream                  out;
-    private final StreamMode                    streamMode;
+    private final StreamCloseMode               streamCloseMode;
+    private final StreamFlushMode               streamFlushMode;
     private final PreallocationMode             preallocationMode;
     private final WriteBuffer                   buffer;
     private final WriteBuffer                   patchBuffer;
     private final SortedMap<Long, PatchPoint>   patchPoints;
     private final List<ContainerInfo>           containers;
+    private int                                 depth;
+    private boolean                             hasWrittenValues;
 
     private SymbolToken                 currentFieldName;
     private final List<SymbolToken>     currentAnnotations;
 
+    private boolean                     closed;
+
     /*package*/ IonRawBinaryWriter(final BlockAllocatorProvider provider,
                                    final int blockSize,
                                    final OutputStream out,
-                                   final StreamMode streamMode,
+                                   final StreamCloseMode streamCloseMode,
+                                   final StreamFlushMode streamFlushMode,
                                    final PreallocationMode preallocationMode)
                                    throws IOException
     {
+        if (out == null) { throw new NullPointerException(); }
+
         this.allocator = provider.vendAllocator(blockSize);
         this.out = out;
-        this.streamMode = streamMode;
+        this.streamCloseMode = streamCloseMode;
+        this.streamFlushMode = streamFlushMode;
         this.preallocationMode = preallocationMode;
         this.buffer = new WriteBuffer(allocator);
         this.patchBuffer = new WriteBuffer(allocator);
         this.patchPoints = new TreeMap<Long, PatchPoint>();
         this.containers = new ArrayList<ContainerInfo>(16);
+        this.depth = 0;
+        this.hasWrittenValues = false;
 
         this.currentFieldName = null;
         this.currentAnnotations = new ArrayList<SymbolToken>();
+
+        this.closed = false;
     }
 
     /** Always returns {@link Symbols#systemSymbolTable()}. */
@@ -325,7 +345,10 @@ import java.util.TreeMap;
     public void setTypeAnnotationSymbols(final SymbolToken... annotations)
     {
         currentAnnotations.clear();
-        currentAnnotations.addAll(asList(annotations));
+        if (annotations != null)
+        {
+            currentAnnotations.addAll(asList(annotations));
+        }
     }
 
     public void addTypeAnnotation(final String annotation)
@@ -333,13 +356,46 @@ import java.util.TreeMap;
         throw new UnsupportedOperationException("Cannot add annotations on a low-level binary writer via string");
     }
 
-    // XXX this is not on IonWriter
-    public void addTypeAnnotation(final SymbolToken annotation)
+    // Additional Current State Meta
+
+    /*package*/ void addTypeAnnotationSymbol(final SymbolToken annotation)
     {
         currentAnnotations.add(annotation);
     }
 
-    // low-level writing
+    /*package*/ boolean hasAnnotations()
+    {
+        return !currentAnnotations.isEmpty();
+    }
+
+    /*package*/ boolean hasWrittenValues()
+    {
+        return hasWrittenValues;
+    }
+
+    // Compatibility with Implementation Writer Interface
+
+    public IonCatalog getCatalog()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    public boolean isFieldNameSet()
+    {
+        return currentFieldName != null;
+    }
+
+    public void writeIonVersionMarker() throws IOException
+    {
+        buffer.writeBytes(IVM);
+    }
+
+    public int getDepth()
+    {
+        return depth;
+    }
+
+    // Low-Level Writing
 
     private void updateLength(long length)
     {
@@ -432,7 +488,7 @@ import java.util.TreeMap;
         final int sid = symbol.getSid();
         if (sid < 1)
         {
-            throw new IonException("Invalid symbol: " + symbol.getText() + " SID: " + sid);
+            throw new IllegalArgumentException("Invalid symbol: " + symbol.getText() + " SID: " + sid);
         }
         return sid;
     }
@@ -442,7 +498,7 @@ import java.util.TreeMap;
     {
         if (isInStruct() && currentFieldName == null)
         {
-            throw new IonException("Cannot write value in struct without field name");
+            throw new IllegalStateException("IonWriter.setFieldName() must be called before writing a value into a struct.");
         }
         if (currentFieldName != null)
         {
@@ -492,6 +548,7 @@ import java.util.TreeMap;
             // close out and patch the length
             popContainer();
         }
+        hasWrittenValues = true;
     }
 
     // Container Manipulation
@@ -505,6 +562,7 @@ import java.util.TreeMap;
         prepareValue();
         updateLength(preallocationMode.typedLength);
         pushContainer(containerType == STRUCT ? ContainerType.STRUCT : ContainerType.SEQUENCE);
+        depth++;
         buffer.writeBytes(preallocationMode.containerTypedPreallocatedBytes.get(containerType));
     }
 
@@ -525,6 +583,7 @@ import java.util.TreeMap;
         }
         // close out the container
         popContainer();
+        depth--;
         // close out the annotations if any
         finishValue();
     }
@@ -535,11 +594,6 @@ import java.util.TreeMap;
     }
 
     // Write Value Methods
-
-    public void writeIVM()
-    {
-        buffer.writeBytes(IVM);
-    }
 
     public void writeNull() throws IOException
     {
@@ -1074,6 +1128,11 @@ import java.util.TreeMap;
 
     public void finish() throws IOException
     {
+        if (!containers.isEmpty())
+        {
+            throw new IllegalStateException("Cannot finish within container: " + containers);
+        }
+
         if (patchPoints.isEmpty())
         {
             // nothing to patch--write 'em out!
@@ -1103,27 +1162,45 @@ import java.util.TreeMap;
         patchPoints.clear();
         patchBuffer.reset();
         buffer.reset();
+
+        if (streamFlushMode == StreamFlushMode.FLUSH)
+        {
+            out.flush();
+        }
+
+        hasWrittenValues = false;
     }
 
     public void close() throws IOException
     {
-        finish();
-
-        // release all of our blocks -- these should never throw
-        buffer.close();
-        patchBuffer.close();
-        allocator.close();
-
-        if (streamMode == StreamMode.CLOSE)
+        if (closed)
         {
-            // release the stream
-            out.close();
+            return;
         }
-
-        if (!containers.isEmpty())
+        closed = true;
+        try
         {
-            throw new IonException("Closed a non-terminated writer: " + containers);
+            try
+            {
+                finish();
+            }
+            catch (final IllegalStateException e)
+            {
+                // callers don't expect this...
+            }
+
+            // release all of our blocks -- these should never throw
+            buffer.close();
+            patchBuffer.close();
+            allocator.close();
+        }
+        finally
+        {
+            if (streamCloseMode == StreamCloseMode.CLOSE)
+            {
+                // release the stream
+                out.close();
+            }
         }
     }
-
 }

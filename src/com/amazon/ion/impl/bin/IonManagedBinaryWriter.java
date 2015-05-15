@@ -6,6 +6,7 @@ import static com.amazon.ion.IonType.LIST;
 import static com.amazon.ion.IonType.STRUCT;
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_MAX_ID;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
@@ -18,12 +19,15 @@ import static com.amazon.ion.impl.bin.Symbols.systemSymbols;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 
+import com.amazon.ion.EmptySymbolException;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamMode;
+import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
+import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -101,7 +105,7 @@ import java.util.Map;
             public void closeTable(final IonRawBinaryWriter writer) throws IOException
             {
                 // never generated a table, so emit the IVM
-                writer.writeIVM();
+                writer.writeIonVersionMarker();
             }
         },
         GENERATED_NO_LOCALS {
@@ -126,37 +130,65 @@ import java.util.Map;
         public abstract void closeTable(IonRawBinaryWriter writer) throws IOException;
     }
 
-    private final ImportedSymbolContext imports;
-    private final Map<String, SymbolToken> locals;
+    private final IonCatalog                    catalog;
+    private final ImportedSymbolContext         imports;
+    private final Map<String, SymbolToken>      locals;
 
-    private final IonRawBinaryWriter symbols;
-    private final IonRawBinaryWriter user;
+    private final IonRawBinaryWriter            symbols;
+    private final IonRawBinaryWriter            user;
 
-    private LocalSymbolTableState localSymbolTableState;
+    private LocalSymbolTableState               localSymbolTableState;
+    private boolean                             closed;
 
     /*package*/ IonManagedBinaryWriter(final IonManagedBinaryWriterBuilder builder,
-                                final OutputStream out)
+                                       final OutputStream out)
                                 throws IOException
     {
-        // TODO expose preallocation mode
         this.symbols = new IonRawBinaryWriter(
             builder.provider,
             builder.symbolsBlockSize,
             out,
-            StreamMode.NO_CLOSE,
+            StreamCloseMode.NO_CLOSE,
+            StreamFlushMode.NO_FLUSH,
             builder.preallocationMode
         );
         this.user = new IonRawBinaryWriter(
             builder.provider,
             builder.userBlockSize,
             out,
-            StreamMode.CLOSE,
+            StreamCloseMode.CLOSE,
+            StreamFlushMode.FLUSH,
             builder.preallocationMode
         );
 
+        this.catalog = builder.catalog;
         this.imports = builder.imports;
         this.locals = new LinkedHashMap<String, SymbolToken>();
         this.localSymbolTableState = LocalSymbolTableState.NONE;
+        this.closed = false;
+    }
+
+    // Compatibility with Implementation Writer Interface
+
+    public IonCatalog getCatalog()
+    {
+        return catalog;
+    }
+
+    public boolean isFieldNameSet()
+    {
+        return user.isFieldNameSet();
+    }
+
+    public void writeIonVersionMarker() throws IOException
+    {
+        // this has to force a reset of symbol table context
+        finish();
+    }
+
+    public int getDepth()
+    {
+        return user.getDepth();
     }
 
     // Symbol Table Management
@@ -165,8 +197,8 @@ import java.util.Map;
     {
         if (localSymbolTableState == LocalSymbolTableState.NONE)
         {
-            symbols.writeIVM();
-            symbols.addTypeAnnotation(systemSymbol(ION_SYMBOL_TABLE_SID));
+            symbols.writeIonVersionMarker();
+            symbols.addTypeAnnotationSymbol(systemSymbol(ION_SYMBOL_TABLE_SID));
             symbols.stepIn(STRUCT);
             {
                 if (imports.parents.size() > 0)
@@ -219,6 +251,14 @@ import java.util.Map;
 
     private SymbolToken intern(final String text)
     {
+        if (text == null)
+        {
+            return null;
+        }
+        if ("".equals(text))
+        {
+            throw new EmptySymbolException();
+        }
         try
         {
             SymbolToken token = imports.importedSymbols.get(text);
@@ -252,6 +292,22 @@ import java.util.Map;
         }
     }
 
+    private SymbolToken intern(final SymbolToken token)
+    {
+        if (token == null)
+        {
+            return null;
+        }
+        final String text = token.getText();
+        if (text != null)
+        {
+            // string content always makes us intern
+            return intern(text);
+        }
+        // no text, we just return what we got
+        return token;
+    }
+
     private static final SymbolTable[] EMPTY_SYMBOL_TABLE_ARRAY = new SymbolTable[0];
 
     /**
@@ -279,7 +335,7 @@ import java.util.Map;
 
             public int getMaxId()
             {
-                return imports.localSidStart + localsCopy.size();
+                return getImportedMaxId() + localsCopy.size();
             }
 
             public SymbolTable[] getImportedTables()
@@ -308,7 +364,7 @@ import java.util.Map;
                 final SymbolToken token = find(text);
                 if (token == null)
                 {
-                    throw new IonException("Cannot inter into immutable local symbol table");
+                    throw new IonException("Cannot intern into immutable local symbol table");
                 }
                 return null;
             }
@@ -349,34 +405,61 @@ import java.util.Map;
 
     public void setFieldName(final String name)
     {
+        if (!isInStruct())
+        {
+            throw new IllegalStateException("IonWriter.setFieldName() must be called before writing a value into a struct.");
+        }
+        if (name == null)
+        {
+            throw new NullPointerException("Null field name is not allowed.");
+        }
         final SymbolToken token = intern(name);
         user.setFieldNameSymbol(token);
     }
 
     public void setFieldNameSymbol(SymbolToken token)
     {
+        token = intern(token);
         user.setFieldNameSymbol(token);
     }
 
     public void setTypeAnnotations(final String... annotations)
     {
-        final SymbolToken[] tokens = new SymbolToken[annotations.length];
-        for (int i = 0; i < tokens.length; i++)
+        if (annotations == null)
         {
-            tokens[i] = intern(annotations[i]);
+            user.setTypeAnnotationSymbols((SymbolToken[]) null);
         }
-        user.setTypeAnnotationSymbols(tokens);
+        else
+        {
+            final SymbolToken[] tokens = new SymbolToken[annotations.length];
+            for (int i = 0; i < tokens.length; i++)
+            {
+                tokens[i] = intern(annotations[i]);
+            }
+            user.setTypeAnnotationSymbols(tokens);
+        }
     }
 
     public void setTypeAnnotationSymbols(final SymbolToken... annotations)
     {
-        user.setTypeAnnotationSymbols(annotations);
+        if (annotations == null)
+        {
+            user.setTypeAnnotationSymbols((SymbolToken[]) null);
+        }
+        else
+        {
+            for (int i = 0; i < annotations.length; i++)
+            {
+                annotations[i] = intern(annotations[i]);
+            }
+            user.setTypeAnnotationSymbols(annotations);
+        }
     }
 
     public void addTypeAnnotation(final String annotation)
     {
         final SymbolToken token = intern(annotation);
-        user.addTypeAnnotation(token);
+        user.addTypeAnnotationSymbol(token);
     }
 
     // Container Manipulation
@@ -441,11 +524,27 @@ import java.util.Map;
     public void writeSymbol(String content) throws IOException
     {
         final SymbolToken token = intern(content);
-        user.writeSymbolToken(token);
+        writeSymbolToken(token);
     }
 
-    public void writeSymbolToken(final SymbolToken token) throws IOException
+    public void writeSymbolToken(SymbolToken token) throws IOException
     {
+        token = intern(token);
+        if (token != null && token.getSid() == ION_1_0_SID && user.getDepth() == 0 && !user.hasAnnotations())
+        {
+            if (user.hasWrittenValues())
+            {
+                // this explicitly translates SID 2 to an IVM and flushes out local symbol state
+                finish();
+            }
+            else
+            {
+                // no-op the write--we already wrote the IVM for the user
+                // TODO should this not no-op when called multiple times with IVMs?
+                // TODO integrate with all that IVM configuration-fu
+            }
+            return;
+        }
         user.writeSymbolToken(token);
     }
 
@@ -486,8 +585,29 @@ import java.util.Map;
 
     public void close() throws IOException
     {
-        finish();
-        symbols.close();
-        user.close();
+        if (closed)
+        {
+            return;
+        }
+        closed = true;
+        try
+        {
+            finish();
+        }
+        catch (IllegalStateException e)
+        {
+            // callers do not expect this...
+        }
+        finally
+        {
+            try
+            {
+                symbols.close();
+            }
+            finally
+            {
+                user.close();
+            }
+        }
     }
 }

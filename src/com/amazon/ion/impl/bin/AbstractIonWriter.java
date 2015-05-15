@@ -3,30 +3,31 @@
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_IonWriter;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Date;
 
 /** Common adapter for {@link IonWriter} implementations. */
-/*package*/ abstract class AbstractIonWriter implements IonWriter
+/*package*/ abstract class AbstractIonWriter implements _Private_IonWriter
 {
     public final void writeValue(final IonValue value) throws IOException
     {
-        final IonSystem ion = value.getSystem();
-        final IonReader reader = ion.newReader(value);
-        try
+        if (value != null)
         {
-            reader.next();
-            writeValue(reader);
-        } finally
-        {
-            reader.close();
+            if (value instanceof IonDatagram)
+            {
+                // XXX this is a hack to make the writer consistent with the backed DOM and flush out an IVM
+                finish();
+            }
+            value.writeTo(this);
         }
     }
 
@@ -34,15 +35,15 @@ import java.util.Date;
     {
         final IonType type = reader.getType();
 
-        final String fieldName = reader.getFieldName();
-        if (fieldName != null)
+        final SymbolToken fieldName = reader.getFieldNameSymbol();
+        if (fieldName != null && !isFieldNameSet() && isInStruct())
         {
-            setFieldName(fieldName);
+            setFieldNameSymbol(fieldName);
         }
-        final String[] annotations = reader.getTypeAnnotations();
+        final SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
         if (annotations.length > 0)
         {
-            setTypeAnnotations(annotations);
+            setTypeAnnotationSymbols(annotations);
         }
         if (reader.isNullValue())
         {

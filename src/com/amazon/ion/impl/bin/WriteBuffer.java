@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl.bin;
 
-import com.amazon.ion.IonException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -151,7 +150,7 @@ public final class WriteBuffer implements Closeable
             final char ch = chars.charAt(off);
             if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
             {
-                throw new IonException("Unpaired low surrogate: " + (int) ch);
+                throw new IllegalArgumentException("Unpaired low surrogate: " + (int) ch);
             }
             if ((ch >= HIGH_SURROGATE_START && ch <= HIGH_SURROGATE_END))
             {
@@ -160,17 +159,17 @@ public final class WriteBuffer implements Closeable
                 len--;
                 if (len == 0)
                 {
-                    throw new IonException("Unpaired low surrogate at end of character sequence: " + ch);
+                    throw new IllegalArgumentException("Unpaired low surrogate at end of character sequence: " + ch);
                 }
 
                 final int ch2 = chars.charAt(off);
                 if (ch2 < LOW_SURROGATE_START || ch2 > LOW_SURROGATE_END)
                 {
-                    throw new IonException("Unpaired high surrogate: " + ch2);
+                    throw new IllegalArgumentException("Unpaired high surrogate: " + ch2);
                 }
 
                 // at this point we have a high and low surrogate
-                final int codepoint = ((ch - HIGH_SURROGATE_START) << 10) | (ch2 - LOW_SURROGATE_START) | 0x10000;
+                final int codepoint = (((ch - HIGH_SURROGATE_START) << 10) | (ch2 - LOW_SURROGATE_START)) + 0x10000;
                 writeByte((byte) ((0xF0 | ( codepoint >> 18)        ) & 0xFF));
                 writeByte((byte) ((0x80 | ((codepoint >> 12) & 0x3F)) & 0xFF));
                 writeByte((byte) ((0x80 | ((codepoint >>  6) & 0x3F)) & 0xFF));
@@ -219,7 +218,7 @@ public final class WriteBuffer implements Closeable
             ch = chars.charAt(off);
             if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
             {
-                throw new IonException("Unpaired low surrogate: " + ch);
+                throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
             }
             if ((ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END))
             {
@@ -299,7 +298,7 @@ public final class WriteBuffer implements Closeable
         {
             if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
             {
-                throw new IonException("Unpaired low surrogate: " + ch);
+                throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
             }
             if (ch >= HIGH_SURROGATE_START && ch <= HIGH_SURROGATE_END)
             {
@@ -349,7 +348,7 @@ public final class WriteBuffer implements Closeable
             }
             if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
             {
-                throw new IonException("Unpaired low surrogate: " + ch);
+                throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
             }
             if (ch >= HIGH_SURROGATE_START && ch <= HIGH_SURROGATE_END)
             {

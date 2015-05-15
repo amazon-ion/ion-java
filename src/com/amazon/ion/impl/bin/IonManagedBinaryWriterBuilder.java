@@ -5,6 +5,7 @@ package com.amazon.ion.impl.bin;
 import static com.amazon.ion.impl.bin.IonManagedBinaryWriter.ONLY_SYSTEM_IMPORTS;
 
 import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
@@ -55,6 +56,7 @@ public final class IonManagedBinaryWriterBuilder
     /*package*/ volatile int                    userBlockSize;
     /*package*/ volatile PreallocationMode      preallocationMode;
     /*package*/ volatile ImportedSymbolContext  imports;
+    /*package*/ volatile IonCatalog             catalog;
 
     private IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
     {
@@ -103,7 +105,11 @@ public final class IonManagedBinaryWriterBuilder
 
     public IonManagedBinaryWriterBuilder withImports(final SymbolTable... tables)
     {
-        return withImports(Arrays.asList(tables));
+        if (tables != null)
+        {
+            return withImports(Arrays.asList(tables));
+        }
+        return this;
     }
 
     public IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
@@ -121,6 +127,12 @@ public final class IonManagedBinaryWriterBuilder
     public IonManagedBinaryWriterBuilder withPaddedLengthPreallocation(final int pad)
     {
         this.preallocationMode = PreallocationMode.withPadSize(pad);
+        return this;
+    }
+
+    public IonManagedBinaryWriterBuilder withCatalog(final IonCatalog catalog)
+    {
+        this.catalog = catalog;
         return this;
     }
 
