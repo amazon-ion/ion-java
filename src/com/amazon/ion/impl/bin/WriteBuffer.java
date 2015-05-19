@@ -57,6 +57,16 @@ public final class WriteBuffer implements Closeable
         index = 0;
     }
 
+    /** Resets the write buffer to a particular point. */
+    public void truncate(final long position)
+    {
+        final int index = index(position);
+        final int offset = offset(position);
+        final Block block = blocks.get(index);
+        this.index = index;
+        block.limit = offset;
+    }
+
     /** Returns the amount of capacity left in the current block. */
     public int remaining()
     {
@@ -107,7 +117,10 @@ public final class WriteBuffer implements Closeable
             len -= amount;
             if (block.remaining() == 0)
             {
-                allocateNewBlock();
+                if (index == blocks.size() - 1)
+                {
+                    allocateNewBlock();
+                }
                 index++;
             }
         }

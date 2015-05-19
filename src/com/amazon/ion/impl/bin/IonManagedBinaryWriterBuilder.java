@@ -72,8 +72,10 @@ public final class IonManagedBinaryWriterBuilder
         this.provider           = other.provider;
         this.symbolsBlockSize   = other.symbolsBlockSize;
         this.userBlockSize      = other.userBlockSize;
-        this.imports            = other.imports;
         this.preallocationMode  = other.preallocationMode;
+        this.imports            = other.imports;
+        this.catalog            = other.catalog;
+
     }
 
     public IonManagedBinaryWriterBuilder copy()

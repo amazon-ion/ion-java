@@ -280,7 +280,8 @@ import java.util.TreeMap;
     private final SortedMap<Long, PatchPoint>   patchPoints;
     private final List<ContainerInfo>           containers;
     private int                                 depth;
-    private boolean                             hasWrittenValues;
+    private boolean                             hasWrittenValuesSinceFinished;
+    private boolean                             hasWrittenValuesSinceConstructed;
 
     private SymbolToken                 currentFieldName;
     private final List<SymbolToken>     currentAnnotations;
@@ -306,8 +307,10 @@ import java.util.TreeMap;
         this.patchBuffer = new WriteBuffer(allocator);
         this.patchPoints = new TreeMap<Long, PatchPoint>();
         this.containers = new ArrayList<ContainerInfo>(16);
-        this.depth = 0;
-        this.hasWrittenValues = false;
+
+        this.depth                = 0;
+        this.hasWrittenValuesSinceFinished     = false;
+        this.hasWrittenValuesSinceConstructed = false;
 
         this.currentFieldName = null;
         this.currentAnnotations = new ArrayList<SymbolToken>();
@@ -368,9 +371,33 @@ import java.util.TreeMap;
         return !currentAnnotations.isEmpty();
     }
 
-    /*package*/ boolean hasWrittenValues()
+    /** Returns true if a value has been written since construction or {@link #finish()}. */
+    /*package*/ boolean hasWrittenValuesSinceFinished()
     {
-        return hasWrittenValues;
+        return hasWrittenValuesSinceFinished;
+    }
+
+    /** Returns true if a value has been written since the writer was constructed. */
+    /*package*/ boolean hasWrittenValuesSinceConstructed()
+    {
+        return hasWrittenValuesSinceConstructed;
+    }
+
+    /*package*/ boolean hasAnnotation(final int sid)
+    {
+        for (final SymbolToken token : currentAnnotations)
+        {
+            if (sid == token.getSid())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /*package*/ int getFieldId()
+    {
+        return currentFieldName.getSid();
     }
 
     // Compatibility with Implementation Writer Interface
@@ -548,7 +575,8 @@ import java.util.TreeMap;
             // close out and patch the length
             popContainer();
         }
-        hasWrittenValues = true;
+        hasWrittenValuesSinceFinished = true;
+        hasWrittenValuesSinceConstructed = true;
     }
 
     // Container Manipulation
@@ -1122,7 +1150,25 @@ import java.util.TreeMap;
         finishValue();
     }
 
-    // Stream Terminators
+    // Stream Manipulation/Terminators
+
+    /*package*/ long position()
+    {
+        return buffer.position();
+    }
+
+    /*package*/ void truncate(long position)
+    {
+        buffer.truncate(position);
+        final SortedMap<Long, PatchPoint> patches = patchPoints.tailMap(position);
+        if (!patches.isEmpty())
+        {
+            // truncate the patch buffer and patch points
+            final PatchPoint first = patches.values().iterator().next();
+            patchBuffer.truncate(first.position);
+            patches.clear();
+        }
+    }
 
     public void flush() throws IOException {}
 
@@ -1168,7 +1214,7 @@ import java.util.TreeMap;
             out.flush();
         }
 
-        hasWrittenValues = false;
+        hasWrittenValuesSinceFinished = false;
     }
 
     public void close() throws IOException
