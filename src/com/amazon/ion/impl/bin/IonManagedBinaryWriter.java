@@ -128,6 +128,13 @@ import java.util.Map;
                 // close out the local symtab struct
                 writer.stepOut();
             }
+        },
+        LOCAL_SYMBOLS_FLUSHED
+        {
+            @Override
+            public void closeTable(final IonRawBinaryWriter writer) throws IOException {
+                // we already emitted local symbols -- there is nothing to close
+            }
         };
 
         public abstract void closeTable(IonRawBinaryWriter writer) throws IOException;
@@ -395,11 +402,106 @@ import java.util.Map;
         }
     }
 
+    private static final SymbolTable[] EMPTY_SYMBOL_TABLE_ARRAY = new SymbolTable[0];
+
+    /** View over the internal local symbol table state as a symbol table. */
+    private class LocalSymbolTableView extends AbstractSymbolTable
+    {
+        public LocalSymbolTableView()
+        {
+            super(null, 0);
+        }
+
+        public Iterator<String> iterateDeclaredSymbolNames()
+        {
+            return locals.keySet().iterator();
+        }
+
+        public int getMaxId()
+        {
+            return getImportedMaxId() + locals.size();
+        }
+
+        public SymbolTable[] getImportedTables()
+        {
+            return imports.parents.toArray(EMPTY_SYMBOL_TABLE_ARRAY);
+        }
+
+        public int getImportedMaxId()
+        {
+            return imports.localSidStart - 1;
+        }
+
+        public boolean isSystemTable() { return false; }
+        public boolean isSubstitute()  { return false; }
+        public boolean isSharedTable() { return false; }
+        public boolean isLocalTable()  { return true; }
+        public boolean isReadOnly()    { return true; }
+
+        public SymbolTable getSystemSymbolTable()
+        {
+            return systemSymbolTable();
+        }
+
+        public SymbolToken intern(final String text)
+        {
+            SymbolToken token = find(text);
+            if (token == null)
+            {
+                if (localsLocked)
+                {
+                    throw new IonException("Cannot intern into locked (read-only) local symbol table");
+                }
+                token = IonManagedBinaryWriter.this.intern(text);
+            }
+            return token;
+        }
+
+        public String findKnownSymbol(final int id)
+        {
+            // TODO decide if it is worth making this better than O(N)
+            //      requires more state tracking (but for what use case?)
+            for (final SymbolToken token : imports.importedSymbols.values())
+            {
+                if (token.getSid() == id)
+                {
+                    return token.getText();
+                }
+            }
+            for (final SymbolToken token : locals.values())
+            {
+                if (token.getSid() == id)
+                {
+                    return token.getText();
+                }
+            }
+            return null;
+        }
+
+        public SymbolToken find(final String text)
+        {
+            final SymbolToken token = imports.importedSymbols.get(text);
+            if (token != null)
+            {
+                return token;
+            }
+            return locals.get(text);
+        }
+
+        @Override
+        public void makeReadOnly()
+        {
+            localsLocked = true;
+        }
+    }
+
     private final IonCatalog                    catalog;
     private final ImportedSymbolContext         bootstrapImports;
 
     private ImportedSymbolContext               imports;
     private final Map<String, SymbolToken>      locals;
+    private boolean                             localsLocked;
+    private SymbolTable                         localSymbolTableView;
 
     private final IonRawBinaryWriter            symbols;
     private final IonRawBinaryWriter            user;
@@ -441,6 +543,8 @@ import java.util.Map;
 
         this.imports = builder.imports;
         this.locals = new LinkedHashMap<String, SymbolToken>();
+        this.localsLocked = false;
+        this.localSymbolTableView = new LocalSymbolTableView();
         this.symbolState = SymbolState.SYSTEM_SYMBOLS;
         this.closed = false;
 
@@ -530,6 +634,7 @@ import java.util.Map;
         symbolState.closeTable(symbols);
         // TODO be more configurable with respect to local symbol table caching
         locals.clear();
+        localsLocked = false;
 
         // flush out to the stream.
         symbols.finish();
@@ -562,6 +667,11 @@ import java.util.Map;
             token = locals.get(text);
             if (token == null)
             {
+                if (localsLocked)
+                {
+                    throw new IonException("Local symbol table was locked (made read-only)");
+                }
+
                 // if we got here, this is a new symbol and we better start up the locals
                 startLocalSymbolTableIfNeeded(/*writeIVM*/ true);
                 startLocalSymbolTableSymbolListIfNeeded();
@@ -595,15 +705,6 @@ import java.util.Map;
         return token;
     }
 
-    private static final SymbolTable[] EMPTY_SYMBOL_TABLE_ARRAY = new SymbolTable[0];
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * This implementation returns a snapshot of the symbol table context and should be used sparingly.
-     * This is done because the underlying symbol state is volatile with respect to the writer and may
-     * be confusing if the underlying symbol data changes underneath the returned instance.
-     */
     public SymbolTable getSymbolTable()
     {
         if (symbolState == SymbolState.SYSTEM_SYMBOLS && imports.parents.isEmpty())
@@ -611,81 +712,10 @@ import java.util.Map;
             return Symbols.systemSymbolTable();
         }
 
-        final Map<String, SymbolToken> localsCopy = unmodifiableMap(new HashMap<String, SymbolToken>(locals));
-        final SymbolTable[] importsArray = imports.parents.toArray(EMPTY_SYMBOL_TABLE_ARRAY);
-        return new AbstractSymbolTable(null, 0)
-        {
-            public Iterator<String> iterateDeclaredSymbolNames()
-            {
-                return localsCopy.keySet().iterator();
-            }
+        // TODO this returns a symbol table view that gets truncated across reset boundaries (e.g. IVM/LST definitions)
+        //      we need to figure out, what the actual API contract is, because this *probably* violates the expectation of the caller.
 
-            public int getMaxId()
-            {
-                return getImportedMaxId() + localsCopy.size();
-            }
-
-            public SymbolTable[] getImportedTables()
-            {
-                return importsArray;
-            }
-
-            public int getImportedMaxId()
-            {
-                return imports.localSidStart - 1;
-            }
-
-            public boolean isSystemTable() { return false; }
-            public boolean isSubstitute()  { return false; }
-            public boolean isSharedTable() { return false; }
-            public boolean isLocalTable()  { return true; }
-            public boolean isReadOnly()    { return true; }
-
-            public SymbolTable getSystemSymbolTable()
-            {
-                return systemSymbolTable();
-            }
-
-            public SymbolToken intern(final String text)
-            {
-                final SymbolToken token = find(text);
-                if (token == null)
-                {
-                    throw new IonException("Cannot intern into immutable local symbol table");
-                }
-                return null;
-            }
-
-            public String findKnownSymbol(final int id)
-            {
-                // TODO decide if it is worth making this better than O(N) -- requires more state tracking (but for what use case?)
-                for (final SymbolToken token : imports.importedSymbols.values())
-                {
-                    if (token.getSid() == id)
-                    {
-                        return token.getText();
-                    }
-                }
-                for (final SymbolToken token : localsCopy.values())
-                {
-                    if (token.getSid() == id)
-                    {
-                        return token.getText();
-                    }
-                }
-                return null;
-            }
-
-            public SymbolToken find(final String text)
-            {
-                final SymbolToken token = imports.importedSymbols.get(text);
-                if (token != null)
-                {
-                    return token;
-                }
-                return localsCopy.get(text);
-            }
-        };
+        return localSymbolTableView;
     }
 
     // Current Value Meta
@@ -867,7 +897,20 @@ import java.util.Map;
 
     // Stream Terminators
 
-    public void flush() throws IOException {}
+    public void flush() throws IOException
+    {
+        if (getDepth() == 0 && localsLocked)
+        {
+            // this implies that we have a local symbol table of some sort and the user locked it
+            symbolState.closeTable(symbols);
+            // make sure that until the local symbol state changes we no-op the table closing routine
+            symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
+
+            // push the data out
+            symbols.finish();
+            user.finish();
+        }
+    }
 
     public void finish() throws IOException
     {
