@@ -27,6 +27,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
@@ -103,6 +104,7 @@ public class IonRawBinaryWriterTest extends Assert
             BlockAllocatorProviders.basicProvider(),
             11,
             out,
+            WriteValueOptimization.NONE,
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             preallocationMode

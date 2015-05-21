@@ -10,14 +10,33 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_ByteTransferReader;
+import com.amazon.ion.impl._Private_ByteTransferSink;
 import com.amazon.ion.impl._Private_IonWriter;
+import com.amazon.ion.impl._Private_SymtabExtendsCache;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Date;
 
-/** Common adapter for {@link IonWriter} implementations. */
-/*package*/ abstract class AbstractIonWriter implements _Private_IonWriter
+/** Common adapter for binary {@link IonWriter} implementations. */
+/*package*/ abstract class AbstractIonWriter implements _Private_IonWriter, _Private_ByteTransferSink
 {
+    /*package*/ enum WriteValueOptimization
+    {
+        NONE,
+        COPY_OPTIMIZED,
+    }
+
+    /** The cache for copy optimization checks--null if not copy optimized. */
+    private final _Private_SymtabExtendsCache symtabExtendsCache;
+
+    public AbstractIonWriter(final WriteValueOptimization optimization)
+    {
+        this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
+            ? new _Private_SymtabExtendsCache() : null;
+    }
+
     public final void writeValue(final IonValue value) throws IOException
     {
         if (value != null)
@@ -32,6 +51,28 @@ import java.util.Date;
     }
 
     public final void writeValue(final IonReader reader) throws IOException
+    {
+        final IonType type = reader.getType();
+
+        if (isStreamCopyOptimized())
+        {
+            final _Private_ByteTransferReader transferReader =
+                reader.asFacet(_Private_ByteTransferReader.class);
+
+            if (transferReader != null
+                && (_Private_Utils.isNonSymbolScalar(type)
+                 || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable())))
+            {
+                // we have something we can pipe over
+                transferReader.transferCurrentValue(this);
+                return;
+            }
+        }
+
+        writeValueRecursive(reader);
+    }
+
+    public final void writeValueRecursive(final IonReader reader) throws IOException
     {
         final IonType type = reader.getType();
 
@@ -120,5 +161,10 @@ import java.util.Date;
     public final void writeTimestampUTC(final Date value) throws IOException
     {
         writeTimestamp(Timestamp.forDateZ(value));
+    }
+
+    public final boolean isStreamCopyOptimized()
+    {
+        return symtabExtendsCache != null;
     }
 }

@@ -291,11 +291,14 @@ import java.util.TreeMap;
     /*package*/ IonRawBinaryWriter(final BlockAllocatorProvider provider,
                                    final int blockSize,
                                    final OutputStream out,
+                                   final WriteValueOptimization optimization,
                                    final StreamCloseMode streamCloseMode,
                                    final StreamFlushMode streamFlushMode,
                                    final PreallocationMode preallocationMode)
                                    throws IOException
     {
+        super(optimization);
+
         if (out == null) { throw new NullPointerException(); }
 
         this.allocator = provider.vendAllocator(blockSize);
@@ -1147,6 +1150,19 @@ import java.util.TreeMap;
         }
         prepareValue();
         writeTypedBytes(BLOB_TYPE, data, offset, length);
+        finishValue();
+    }
+
+    /**
+     * Writes a raw value into the buffer, updating lengths appropriately.
+     * <p>
+     * The implication here is that the caller is dumping some valid Ion payload with the correct context.
+     */
+    public void writeBytes(byte[] data, int offset, int length) throws IOException
+    {
+        prepareValue();
+        updateLength(length);
+        buffer.writeBytes(data, offset, length);
         finishValue();
     }
 

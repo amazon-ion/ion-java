@@ -521,10 +521,12 @@ import java.util.Map;
                                        final OutputStream out)
                                        throws IOException
     {
+        super(builder.optimization);
         this.symbols = new IonRawBinaryWriter(
             builder.provider,
             builder.symbolsBlockSize,
             out,
+            WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             builder.preallocationMode
@@ -533,6 +535,7 @@ import java.util.Map;
             builder.provider,
             builder.userBlockSize,
             out,
+            WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
             StreamCloseMode.CLOSE,
             StreamFlushMode.FLUSH,
             builder.preallocationMode
@@ -893,6 +896,11 @@ import java.util.Map;
     public void writeBlob(final byte[] data, final int offset, final int length) throws IOException
     {
         user.writeBlob(data, offset, length);
+    }
+
+    public void writeBytes(byte[] data, int off, int len) throws IOException
+    {
+        user.writeBytes(data, off, len);
     }
 
     // Stream Terminators

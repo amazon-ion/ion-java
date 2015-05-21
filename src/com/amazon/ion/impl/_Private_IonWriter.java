@@ -46,4 +46,7 @@ public interface _Private_IonWriter
      *  to be the system symbol table.
      */
     void writeIonVersionMarker() throws IOException;
+
+    /** Indicates whether the writer is stream copy optimized through {@link #writeValue(com.amazon.ion.IonReader)}. */
+    public boolean isStreamCopyOptimized();
 }

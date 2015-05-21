@@ -9,9 +9,11 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
+import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -57,6 +59,7 @@ public final class IonManagedBinaryWriterBuilder
     /*package*/ volatile PreallocationMode      preallocationMode;
     /*package*/ volatile ImportedSymbolContext  imports;
     /*package*/ volatile IonCatalog             catalog;
+    /*package*/ volatile WriteValueOptimization optimization;
 
     private IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
     {
@@ -65,6 +68,8 @@ public final class IonManagedBinaryWriterBuilder
         this.userBlockSize = DEFAULT_BLOCK_SIZE;
         this.imports = ONLY_SYSTEM_IMPORTS;
         this.preallocationMode = PreallocationMode.PREALLOCATE_2;
+        this.catalog = new SimpleCatalog();
+        this.optimization = WriteValueOptimization.NONE;
     }
 
     private IonManagedBinaryWriterBuilder(final IonManagedBinaryWriterBuilder other)
@@ -75,6 +80,7 @@ public final class IonManagedBinaryWriterBuilder
         this.preallocationMode  = other.preallocationMode;
         this.imports            = other.imports;
         this.catalog            = other.catalog;
+        this.optimization       = other.optimization;
 
     }
 
@@ -135,6 +141,12 @@ public final class IonManagedBinaryWriterBuilder
     public IonManagedBinaryWriterBuilder withCatalog(final IonCatalog catalog)
     {
         this.catalog = catalog;
+        return this;
+    }
+
+    public IonManagedBinaryWriterBuilder withStreamCopyOptimization(boolean optimized)
+    {
+        this.optimization = optimized ? WriteValueOptimization.COPY_OPTIMIZED : WriteValueOptimization.NONE;
         return this;
     }
 
