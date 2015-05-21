@@ -1,17 +1,23 @@
-// Copyright (c) 2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2014-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
 import com.amazon.ion.IonBinaryWriter;
+import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterBuilder;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterBuilder.AllocatorMode;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
+import java.io.IOException;
 import java.io.OutputStream;
 
 /**
@@ -21,6 +27,8 @@ import java.io.OutputStream;
 public class _Private_IonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
+    // IONJAVA-467 expose configuration points properly and figure out deprecation path for the old writer.
+    private final IonManagedBinaryWriterBuilder myBinaryWriterBuilder;
     private ValueFactory mySymtabValueFactory;
 
     /** System or local */
@@ -29,6 +37,11 @@ public class _Private_IonBinaryWriterBuilder
 
     private _Private_IonBinaryWriterBuilder()
     {
+        myBinaryWriterBuilder =
+            IonManagedBinaryWriterBuilder
+                .create(AllocatorMode.POOLED)
+                .withPaddedLengthPreallocation(0)
+                ;
     }
 
 
@@ -39,6 +52,7 @@ public class _Private_IonBinaryWriterBuilder
 
         this.mySymtabValueFactory = that.mySymtabValueFactory;
         this.myInitialSymbolTable = that.myInitialSymbolTable;
+        this.myBinaryWriterBuilder = that.myBinaryWriterBuilder.copy();
     }
 
 
@@ -150,6 +164,7 @@ public class _Private_IonBinaryWriterBuilder
         }
 
         myInitialSymbolTable = symtab;
+        myBinaryWriterBuilder.withInitialSymbolTable(symtab);
     }
 
     /**
@@ -165,6 +180,26 @@ public class _Private_IonBinaryWriterBuilder
         return b;
     }
 
+    @Override
+    public void setImports(final SymbolTable... imports)
+    {
+        super.setImports(imports);
+        myBinaryWriterBuilder.withImports(imports);
+    }
+
+    @Override
+    public void setCatalog(final IonCatalog catalog)
+    {
+        super.setCatalog(catalog);
+        myBinaryWriterBuilder.withCatalog(catalog);
+    }
+
+    @Override
+    public void setStreamCopyOptimized(final boolean optimized)
+    {
+        super.setStreamCopyOptimized(optimized);
+        myBinaryWriterBuilder.withStreamCopyOptimization(optimized);
+    }
 
     //=========================================================================
 
@@ -232,19 +267,24 @@ public class _Private_IonBinaryWriterBuilder
 
 
     @Override
-    public final IonWriterUserBinary build(OutputStream out)
+    public final IonWriter build(OutputStream out)
     {
         _Private_IonBinaryWriterBuilder b = fillDefaults();
-
-        IonWriterSystemBinary systemWriter = b.buildSystemWriter(out);
-
-        return new IonWriterUserBinary(b, systemWriter);
+        try
+        {
+            return b.myBinaryWriterBuilder.newWriter(out);
+        }
+        catch (final IOException e)
+        {
+            throw new IonException("I/O Error", e);
+        }
     }
 
 
     @Deprecated
     public final IonBinaryWriter buildLegacy()
     {
+        // IONJAVA-468 Fix this to use the new writer or eliminate it
         _Private_IonBinaryWriterBuilder b = fillDefaults();
 
         IonWriterSystemBinary systemWriter =

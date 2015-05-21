@@ -98,7 +98,7 @@ abstract class IonWriterBuilderBase<T extends IonWriterBuilderBase>
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
-    public final void setCatalog(IonCatalog catalog)
+    public void setCatalog(IonCatalog catalog)
     {
         mutationCheck();
         myCatalog = catalog;
