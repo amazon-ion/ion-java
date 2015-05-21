@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -544,7 +545,6 @@ import java.util.Map;
         this.catalog = builder.catalog;
         this.bootstrapImports = builder.imports;
 
-        this.imports = builder.imports;
         this.locals = new LinkedHashMap<String, SymbolToken>();
         this.localsLocked = false;
         this.localSymbolTableView = new LocalSymbolTableView();
@@ -557,6 +557,31 @@ import java.util.Map;
         this.userImports = new ArrayList<SymbolTable>();
         this.userSymbols = new ArrayList<String>();
         this.userCurrentImport = new ImportDescriptor();
+
+        // TODO decide if initial LST should survive finish() and seed the next LST
+        final SymbolTable lst = builder.initialSymbolTable;
+        if (lst != null)
+        {
+            // build import context from seeded LST
+            final List<SymbolTable> lstImportList = Arrays.asList(lst.getImportedTables());
+            final ImportedSymbolContext lstImports = new ImportedSymbolContext(lstImportList);
+            this.imports = lstImports;
+
+            // intern all of the local symbols provided from LST
+            final Iterator<String> symbolIter = lst.iterateDeclaredSymbolNames();
+            while (symbolIter.hasNext())
+            {
+                final String text = symbolIter.next();
+                intern(text);
+            }
+
+            // TODO determine if we really need to force emitting LST if there are no imports/locals
+            startLocalSymbolTableIfNeeded(/*writeIVM*/ true);
+        }
+        else
+        {
+            this.imports = builder.imports;
+        }
     }
 
     // Compatibility with Implementation Writer Interface

@@ -209,33 +209,6 @@ public class IonBinaryWriterBuilderTest
         assertSame(lst0, b.getInitialSymbolTable());
     }
 
-
-    @Test
-    public void testImmutableInitialSymtab()
-    {
-        IonSystem system = IonSystemBuilder.standard().build();
-        SymbolTable sst = _Private_Utils.systemSymtab(1);
-
-        // Immutable local symtabs shouldn't get copied.
-        SymbolTable lst = newLocalSymtab(system, sst,
-                                         Collections.<String>emptyList());
-        lst.intern("hello");
-        lst.makeReadOnly();
-
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
-        b.setInitialSymbolTable(lst);
-        assertSame(lst, b.getInitialSymbolTable());
-
-        OutputStream out = new ByteArrayOutputStream();
-        IonWriter writer = b.build(out);
-        assertSame(lst, writer.getSymbolTable());
-
-        writer = b.build(out);
-        assertSame(lst, writer.getSymbolTable());
-    }
-
-
     @Test(expected = UnsupportedOperationException.class)
     public void testInitialSymtabImmutability()
     {

@@ -8,7 +8,9 @@ import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
@@ -60,6 +62,7 @@ public final class IonManagedBinaryWriterBuilder
     /*package*/ volatile ImportedSymbolContext  imports;
     /*package*/ volatile IonCatalog             catalog;
     /*package*/ volatile WriteValueOptimization optimization;
+    /*package*/ volatile SymbolTable            initialSymbolTable;
 
     private IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
     {
@@ -81,7 +84,7 @@ public final class IonManagedBinaryWriterBuilder
         this.imports            = other.imports;
         this.catalog            = other.catalog;
         this.optimization       = other.optimization;
-
+        this.initialSymbolTable = other.initialSymbolTable;
     }
 
     public IonManagedBinaryWriterBuilder copy()
@@ -147,6 +150,41 @@ public final class IonManagedBinaryWriterBuilder
     public IonManagedBinaryWriterBuilder withStreamCopyOptimization(boolean optimized)
     {
         this.optimization = optimized ? WriteValueOptimization.COPY_OPTIMIZED : WriteValueOptimization.NONE;
+        return this;
+    }
+
+    public IonManagedBinaryWriterBuilder withInitialSymbolTable(SymbolTable symbolTable)
+    {
+        if (symbolTable != null)
+        {
+            if (!symbolTable.isLocalTable() && !symbolTable.isSystemTable())
+            {
+                throw new IllegalArgumentException("Initial symbol table must be local or system");
+            }
+            if (symbolTable.isSystemTable())
+            {
+                if (symbolTable.getMaxId() != SystemSymbols.ION_1_0_MAX_ID)
+                {
+                    throw new IllegalArgumentException("Unsupported system symbol table");
+                }
+                // don't need to set an explicit symbol table for system 1.0
+                symbolTable = null;
+            }
+            else
+            {
+                // initial symbol table is local
+                for (final SymbolTable st : symbolTable.getImportedTables())
+                {
+                    if (st.isSubstitute())
+                    {
+                        throw new SubstituteSymbolTableException(
+                            "Cannot use initial symbol table with imported substitutes");
+                    }
+                }
+            }
+        }
+
+        this.initialSymbolTable = symbolTable;
         return this;
     }
 

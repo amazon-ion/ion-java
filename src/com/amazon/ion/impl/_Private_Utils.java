@@ -950,7 +950,7 @@ public final class _Private_Utils
      */
     private static boolean localSymtabExtends(SymbolTable superset, SymbolTable subset)
     {
-        if (subset.getMaxId() < superset.getMaxId())
+        if (subset.getMaxId() > superset.getMaxId())
         {
             // the subset has more symbols
             return false;

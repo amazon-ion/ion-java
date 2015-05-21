@@ -31,7 +31,7 @@ import java.util.Date;
     /** The cache for copy optimization checks--null if not copy optimized. */
     private final _Private_SymtabExtendsCache symtabExtendsCache;
 
-    public AbstractIonWriter(final WriteValueOptimization optimization)
+    /*package*/ AbstractIonWriter(final WriteValueOptimization optimization)
     {
         this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
             ? new _Private_SymtabExtendsCache() : null;
