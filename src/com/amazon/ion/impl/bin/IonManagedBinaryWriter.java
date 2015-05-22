@@ -190,7 +190,7 @@ import java.util.Map;
             @Override
             public void beforeStepIn(final IonManagedBinaryWriter self, final IonType type)
             {
-                if (self.user.getDepth() == 0 && type == STRUCT && self.user.hasAnnotation(ION_SYMBOL_TABLE_SID))
+                if (self.user.hasTopLevelSymbolTableAnnotation() && type == STRUCT)
                 {
                     self.userState = LOCALS_AT_TOP;
 

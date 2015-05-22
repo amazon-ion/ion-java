@@ -17,14 +17,13 @@ import static com.amazon.ion.IonType.STRUCT;
 import static com.amazon.ion.IonType.SYMBOL;
 import static com.amazon.ion.IonType.TIMESTAMP;
 import static com.amazon.ion.IonType.isContainer;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.Timestamp.Precision.DAY;
 import static com.amazon.ion.Timestamp.Precision.FRACTION;
 import static com.amazon.ion.Timestamp.Precision.MINUTE;
 import static com.amazon.ion.Timestamp.Precision.MONTH;
 import static com.amazon.ion.Timestamp.Precision.SECOND;
 import static java.lang.Double.doubleToRawLongBits;
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableMap;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -38,12 +37,10 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.NoSuchElementException;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -63,27 +60,26 @@ import java.util.TreeMap;
 
     private static final byte[] IVM = bytes(0xE0, 0x01, 0x00, 0xEA);
 
-    private static Map<IonType, Byte> generateTypedNullMap() {
-        final Map<IonType, Byte> nulls = new EnumMap<IonType, Byte>(IonType.class);
+    private static final byte[] NULLS;
+    static {
+        final IonType[] types = IonType.values();
+        NULLS = new byte[types.length];
 
-        nulls.put(NULL,      (byte) 0x0F);
-        nulls.put(BOOL,      (byte) 0x1F);
-        nulls.put(INT,       (byte) 0x2F);
-        nulls.put(FLOAT,     (byte) 0x4F);
-        nulls.put(DECIMAL,   (byte) 0x5F);
-        nulls.put(TIMESTAMP, (byte) 0x6F);
-        nulls.put(SYMBOL,    (byte) 0x7F);
-        nulls.put(STRING,    (byte) 0x8F);
-        nulls.put(CLOB,      (byte) 0x9F);
-        nulls.put(BLOB,      (byte) 0xAF);
-        nulls.put(LIST,      (byte) 0xBF);
-        nulls.put(SEXP,      (byte) 0xCF);
-        nulls.put(STRUCT,    (byte) 0xDF);
-
-        return unmodifiableMap(nulls);
+        NULLS[NULL.ordinal()]           = (byte) 0x0F;
+        NULLS[BOOL.ordinal()]           = (byte) 0x1F;
+        NULLS[INT.ordinal()]            = (byte) 0x2F;
+        NULLS[FLOAT.ordinal()]          = (byte) 0x4F;
+        NULLS[DECIMAL.ordinal()]        = (byte) 0x5F;
+        NULLS[TIMESTAMP.ordinal()]      = (byte) 0x6F;
+        NULLS[SYMBOL.ordinal()]         = (byte) 0x7F;
+        NULLS[STRING.ordinal()]         = (byte) 0x8F;
+        NULLS[CLOB.ordinal()]           = (byte) 0x9F;
+        NULLS[BLOB.ordinal()]           = (byte) 0xAF;
+        NULLS[LIST.ordinal()]           = (byte) 0xBF;
+        NULLS[SEXP.ordinal()]           = (byte) 0xCF;
+        NULLS[STRUCT.ordinal()]         = (byte) 0xDF;
     }
-    private static final Map<IonType, Byte> NULLS = generateTypedNullMap();
-    private static final byte NULL_NULL = NULLS.get(NULL);
+    private static final byte NULL_NULL = NULLS[NULL.ordinal()];
 
     private static final byte BOOL_FALSE        = (byte) 0x10;
     private static final byte BOOL_TRUE         = (byte) 0x11;
@@ -121,14 +117,16 @@ import java.util.TreeMap;
         return bytes;
     }
 
-    private static Map<IonType, byte[]> makeContainerTypedPreallocatedMap(final int length) {
-        final Map<IonType, byte[]> extendedSizes = new EnumMap<IonType, byte[]>(IonType.class);
+    private static byte[][] makeContainerTypedPreallocatedTable(final int length) {
+        final IonType[] types = IonType.values();
+        byte[][] extendedSizes = new byte[types.length][];
 
-        extendedSizes.put(LIST,      makeTypedPreallocatedBytes(0xBE, length));
-        extendedSizes.put(SEXP,      makeTypedPreallocatedBytes(0xCE, length));
-        extendedSizes.put(STRUCT,    makeTypedPreallocatedBytes(0xDE, length));
 
-        return unmodifiableMap(extendedSizes);
+        extendedSizes[LIST.ordinal()]   = makeTypedPreallocatedBytes(0xBE, length);
+        extendedSizes[SEXP.ordinal()]   = makeTypedPreallocatedBytes(0xCE, length);
+        extendedSizes[STRUCT.ordinal()] = makeTypedPreallocatedBytes(0xDE, length);
+
+        return extendedSizes;
     }
 
     /**
@@ -167,16 +165,16 @@ import java.util.TreeMap;
         }
         ;
 
-        private final int                       contentMaxLength;
-        private final int                       typedLength;
-        private final Map<IonType, byte[]>      containerTypedPreallocatedBytes;
-        private final byte[]                    annotationsTypedPreallocatedBytes;
+        private final int       contentMaxLength;
+        private final int       typedLength;
+        private final byte[][]  containerTypedPreallocatedBytes;
+        private final byte[]    annotationsTypedPreallocatedBytes;
 
         private PreallocationMode(final int contentMaxLength, final int typedLength)
         {
             this.contentMaxLength = contentMaxLength;
             this.typedLength = typedLength;
-            this.containerTypedPreallocatedBytes   = makeContainerTypedPreallocatedMap(typedLength);
+            this.containerTypedPreallocatedBytes   = makeContainerTypedPreallocatedTable(typedLength);
             this.annotationsTypedPreallocatedBytes = makeTypedPreallocatedBytes(0xEE, typedLength);
         }
 
@@ -227,11 +225,35 @@ import java.util.TreeMap;
         public final long position;
         /** The size of the current value. */
         public long length;
+        /** The patchlist for this container. */
+        public PatchList patches;
 
         public ContainerInfo(final ContainerType type, final long offset)
         {
             this.type = type;
             this.position = offset;
+            this.patches = null;
+        }
+
+        public void appendPatch(final PatchPoint patch)
+        {
+            if (patches == null)
+            {
+                patches = new PatchList();
+            }
+            patches.append(patch);
+        }
+
+        public void extendPatches(final PatchList newPatches)
+        {
+            if (patches == null)
+            {
+                patches = newPatches;
+            }
+            else
+            {
+                patches.extend(newPatches);
+            }
         }
 
         @Override
@@ -243,18 +265,168 @@ import java.util.TreeMap;
 
     private static class PatchPoint
     {
-        /** position of the patch buffer where the length data is stored. */
-        public final long position;
-        /** length of the data to be patched in.*/
-        public final int newLength;
+        /** position of the data being patched out. */
+        public final long oldPosition;
         /** length of the data being patched out.*/
         public final int oldLength;
+        /** position of the patch buffer where the length data is stored. */
+        public final long patchPosition;
+        /** length of the data to be patched in.*/
+        public final int patchLength;
 
-        public PatchPoint(final long position, final int newLength, final int oldLength)
+        public PatchPoint(final long oldPosition, final int oldLength, final long patchPosition, final int patchLength)
         {
-            this.position = position;
-            this.newLength = newLength;
+            this.oldPosition = oldPosition;
             this.oldLength = oldLength;
+            this.patchPosition = patchPosition;
+            this.patchLength = patchLength;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "(PP old::(" + oldPosition + " " + oldLength + ") patch::(" + patchPosition + " " + patchLength + ")";
+        }
+    }
+
+    /**
+     * Simple singly linked list node that we can use to construct the patch list in the
+     * right order incrementally in recursive segments.
+     */
+    private static class PatchList implements Iterable<PatchPoint>
+    {
+        private static class Node {
+            public final PatchPoint value;
+            public Node next;
+
+            public Node(final PatchPoint value)
+            {
+                this.value = value;
+            }
+        }
+        private Node head;
+        private Node tail;
+
+        public PatchList()
+        {
+            head = null;
+            tail = null;
+        }
+
+        public boolean isEmpty()
+        {
+            return head == null && tail == null;
+        }
+
+        public void clear()
+        {
+            head = null;
+            tail = null;
+        }
+
+        public void append(final PatchPoint patch)
+        {
+            final Node node = new Node(patch);
+            if (head == null)
+            {
+                head = node;
+                tail = node;
+            }
+            else
+            {
+                tail.next = node;
+                tail = node;
+            }
+        }
+
+        public void extend(final PatchList end)
+        {
+            if (end != null)
+            {
+                if (head == null)
+                {
+                    if (end.head != null)
+                    {
+                        head = end.head;
+                        tail = end.tail;
+                    }
+                }
+                else
+                {
+                    tail.next = end.head;
+                    tail = end.tail;
+                }
+            }
+        }
+
+        public PatchPoint truncate(final long oldPosition)
+        {
+            Node prev = null;
+            Node curr = head;
+            while (curr != null)
+            {
+                final PatchPoint patch = curr.value;
+                if (patch.oldPosition >= oldPosition)
+                {
+                    tail = prev;
+                    if (tail == null)
+                    {
+                        head = null;
+                    }
+                    else
+                    {
+                        tail.next = null;
+                    }
+                    return patch;
+                }
+
+                prev = curr;
+                curr = curr.next;
+            }
+            return null;
+        }
+
+        public Iterator<PatchPoint> iterator()
+        {
+            return new Iterator<PatchPoint>()
+            {
+                Node curr = head;
+
+                public boolean hasNext()
+                {
+                    return curr != null;
+                }
+
+                public PatchPoint next()
+                {
+                    if (!hasNext())
+                    {
+                        throw new NoSuchElementException();
+                    }
+                    final PatchPoint value = curr.value;
+                    curr = curr.next;
+                    return value;
+                }
+
+                public void remove()
+                {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
+
+        @Override
+        public String toString()
+        {
+            final StringBuilder buf = new StringBuilder();
+            buf.append("(PATCHES");
+            for (final PatchPoint patch : this)
+            {
+                buf.append(" ");
+                buf.append(patch);
+            }
+            buf.append(")");
+            return buf.toString();
         }
     }
 
@@ -277,14 +449,16 @@ import java.util.TreeMap;
     private final PreallocationMode             preallocationMode;
     private final WriteBuffer                   buffer;
     private final WriteBuffer                   patchBuffer;
-    private final SortedMap<Long, PatchPoint>   patchPoints;
-    private final List<ContainerInfo>           containers;
+    private final PatchList                     patchPoints;
+    private final LinkedList<ContainerInfo>     containers;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
     private boolean                             hasWrittenValuesSinceConstructed;
 
     private SymbolToken                 currentFieldName;
     private final List<SymbolToken>     currentAnnotations;
+    // XXX this is for managed detection of TLV that is a LST--this is easier to track here than at the managed level
+    private boolean                     hasTopLevelSymbolTableAnnotation;
 
     private boolean                     closed;
 
@@ -301,22 +475,23 @@ import java.util.TreeMap;
 
         if (out == null) { throw new NullPointerException(); }
 
-        this.allocator = provider.vendAllocator(blockSize);
-        this.out = out;
-        this.streamCloseMode = streamCloseMode;
-        this.streamFlushMode = streamFlushMode;
+        this.allocator         = provider.vendAllocator(blockSize);
+        this.out               = out;
+        this.streamCloseMode   = streamCloseMode;
+        this.streamFlushMode   = streamFlushMode;
         this.preallocationMode = preallocationMode;
-        this.buffer = new WriteBuffer(allocator);
-        this.patchBuffer = new WriteBuffer(allocator);
-        this.patchPoints = new TreeMap<Long, PatchPoint>();
-        this.containers = new ArrayList<ContainerInfo>(16);
+        this.buffer            = new WriteBuffer(allocator);
+        this.patchBuffer       = new WriteBuffer(allocator);
+        this.patchPoints       = new PatchList();
+        this.containers        = new LinkedList<ContainerInfo>();
 
-        this.depth                = 0;
-        this.hasWrittenValuesSinceFinished     = false;
+        this.depth                            = 0;
+        this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
 
-        this.currentFieldName = null;
-        this.currentAnnotations = new ArrayList<SymbolToken>();
+        this.currentFieldName                 = null;
+        this.currentAnnotations               = new ArrayList<SymbolToken>();
+        this.hasTopLevelSymbolTableAnnotation = false;
 
         this.closed = false;
     }
@@ -351,9 +526,13 @@ import java.util.TreeMap;
     public void setTypeAnnotationSymbols(final SymbolToken... annotations)
     {
         currentAnnotations.clear();
+        hasTopLevelSymbolTableAnnotation = false;
         if (annotations != null)
         {
-            currentAnnotations.addAll(asList(annotations));
+            for (final SymbolToken annotation : annotations)
+            {
+                addTypeAnnotationSymbol(annotation);
+            }
         }
     }
 
@@ -366,6 +545,10 @@ import java.util.TreeMap;
 
     /*package*/ void addTypeAnnotationSymbol(final SymbolToken annotation)
     {
+        if (depth == 0 && annotation.getSid() == ION_SYMBOL_TABLE_SID)
+        {
+            hasTopLevelSymbolTableAnnotation = true;
+        }
         currentAnnotations.add(annotation);
     }
 
@@ -386,16 +569,9 @@ import java.util.TreeMap;
         return hasWrittenValuesSinceConstructed;
     }
 
-    /*package*/ boolean hasAnnotation(final int sid)
+    /*package*/ boolean hasTopLevelSymbolTableAnnotation()
     {
-        for (final SymbolToken token : currentAnnotations)
-        {
-            if (sid == token.getSid())
-            {
-                return true;
-            }
-        }
-        return false;
+        return hasTopLevelSymbolTableAnnotation;
     }
 
     /*package*/ int getFieldId()
@@ -434,7 +610,7 @@ import java.util.TreeMap;
             return;
         }
 
-        containers.get(containers.size() - 1).length += length;
+        containers.getLast().length += length;
     }
 
     private void pushContainer(final ContainerType type)
@@ -445,7 +621,7 @@ import java.util.TreeMap;
 
     private ContainerInfo currentContainer()
     {
-        return containers.isEmpty() ? null : containers.get(containers.size() - 1);
+        return containers.isEmpty() ? null : containers.getLast();
     }
 
     private void addPatchPoint(final long position, final int oldLength, final long value)
@@ -453,8 +629,34 @@ import java.util.TreeMap;
         // record the size in a patch buffer
         final long patchPosition = patchBuffer.position();
         final int patchLength = patchBuffer.writeVarUInt(value);
-        patchPoints.put(position, new PatchPoint(patchPosition, patchLength, oldLength));
+        final PatchPoint patch = new PatchPoint(position, oldLength, patchPosition, patchLength);
+        final ContainerInfo container = currentContainer();
+        if (container == null)
+        {
+            // not nested, just append to the root list
+            patchPoints.append(patch);
+        }
+        else
+        {
+            // nested, apply it to the current container
+            container.appendPatch(patch);
+        }
         updateLength(patchLength - oldLength);
+    }
+
+    private void extendPatchPoints(final PatchList patches)
+    {
+        final ContainerInfo container = currentContainer();
+        if (container == null)
+        {
+            // not nested, extend root list
+            patchPoints.extend(patches);
+        }
+        else
+        {
+            // nested, apply it to the current container
+            container.extendPatches(patches);
+        }
     }
 
     private ContainerInfo popContainer()
@@ -464,7 +666,7 @@ import java.util.TreeMap;
         {
             throw new IllegalStateException("Tried to pop container state without said container");
         }
-        containers.remove(containers.size() - 1);
+        containers.removeLast();
 
         // only patch for real containers and annotations -- we use VALUE for tracking only
         final long length = current.length;
@@ -492,6 +694,13 @@ import java.util.TreeMap;
                 }
             }
         }
+        if (current.patches != null)
+        {
+            // at this point, we've appended our patch points upward, lets make sure we get
+            // our child patch points in
+            extendPatchPoints(current.patches);
+        }
+
         // make sure to record length upward
         updateLength(length);
         return current;
@@ -566,6 +775,7 @@ import java.util.TreeMap;
 
             // clear out annotations
             currentAnnotations.clear();
+            hasTopLevelSymbolTableAnnotation = false;
         }
     }
 
@@ -594,7 +804,7 @@ import java.util.TreeMap;
         updateLength(preallocationMode.typedLength);
         pushContainer(containerType == STRUCT ? ContainerType.STRUCT : ContainerType.SEQUENCE);
         depth++;
-        buffer.writeBytes(preallocationMode.containerTypedPreallocatedBytes.get(containerType));
+        buffer.writeBytes(preallocationMode.containerTypedPreallocatedBytes[containerType.ordinal()]);
     }
 
     public void stepOut() throws IOException
@@ -636,9 +846,19 @@ import java.util.TreeMap;
 
     public void writeNull(final IonType type) throws IOException
     {
+        byte data = NULL_NULL;
+        if (type != null)
+        {
+            data = NULLS[type.ordinal()];
+            if (data == 0)
+            {
+                throw new IllegalArgumentException("Cannot write a null for: " + type);
+            }
+        }
+
         prepareValue();
         updateLength(1);
-        buffer.writeByte(NULLS.get(type));
+        buffer.writeByte(data);
         finishValue();
     }
 
@@ -1176,13 +1396,11 @@ import java.util.TreeMap;
     /*package*/ void truncate(long position)
     {
         buffer.truncate(position);
-        final SortedMap<Long, PatchPoint> patches = patchPoints.tailMap(position);
-        if (!patches.isEmpty())
+        // TODO decide if it is worth making this faster than O(N)
+        final PatchPoint patch = patchPoints.truncate(position);
+        if (patch != null)
         {
-            // truncate the patch buffer and patch points
-            final PatchPoint first = patches.values().iterator().next();
-            patchBuffer.truncate(first.position);
-            patches.clear();
+            patchBuffer.truncate(patch.patchPosition);
         }
     }
 
@@ -1203,20 +1421,17 @@ import java.util.TreeMap;
         else
         {
             long bufferPosition = 0;
-            for (final Entry<Long, PatchPoint> patchEntry : patchPoints.entrySet())
+            for (final PatchPoint patch : patchPoints)
             {
-                final long bufferPatchPosition = patchEntry.getKey();
-                final PatchPoint patch = patchEntry.getValue();
-
                 // write up to the thing to be patched
-                final long bufferLength = bufferPatchPosition - bufferPosition;
+                final long bufferLength = patch.oldPosition - bufferPosition;
                 buffer.writeTo(out, bufferPosition, bufferLength);
 
                 // write out the patch
-                patchBuffer.writeTo(out, patch.position, patch.newLength);
+                patchBuffer.writeTo(out, patch.patchPosition, patch.patchLength);
 
                 // skip over the preallocated varuint field
-                bufferPosition = bufferPatchPosition;
+                bufferPosition = patch.oldPosition;
                 bufferPosition += patch.oldLength;
             }
             buffer.writeTo(out, bufferPosition, buffer.position() - bufferPosition);
