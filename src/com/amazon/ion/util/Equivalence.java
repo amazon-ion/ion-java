@@ -2,6 +2,8 @@
 
 package com.amazon.ion.util;
 
+import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
 import com.amazon.ion.IonDecimal;
@@ -17,15 +19,12 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 
 /**
  * Provides equivalence comparisons between two {@link IonValue}s, following
@@ -342,9 +341,14 @@ public final class Equivalence {
 
         @Override
         public int hashCode() {
-            int result = name.hashCode();
-            result = (31 * result) + value.hashCode();
-            return result;
+            return name.hashCode();
+            // TODO IONJAVA-463 : implement hash code such that it respects
+            // 'strict'. The prevously attempted fix is commented out below but
+            // is not sufficient because value.hasCode will always include
+            // type annotations in the hash computation. Type annotations
+            // should not be part of the hash computation if strict=true.
+//            result = (31 * result) + value.hashCode();
+//            return result;
         }
 
         /**
