@@ -144,7 +144,7 @@ import java.util.NoSuchElementException;
             }
         },
 
-        /** Preallocate 2 bytes of length. */
+        /** Preallocate 1 byte of length. */
         PREALLOCATE_1(0x007F,   2)
         {
             @Override
