@@ -6,10 +6,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 
-import com.amazon.ion.impl.bin.Block;
-import com.amazon.ion.impl.bin.BlockAllocator;
-import com.amazon.ion.impl.bin.PooledBlockAllocatorProvider;
-
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,6 +18,13 @@ public class PooledBlockAllocatorProviderTest
     public void setup()
     {
         provider = new PooledBlockAllocatorProvider();
+    }
+
+    @After
+    public void teardown()
+    {
+        // make sure the provider is not retained
+        provider = null;
     }
 
     @Test
@@ -40,18 +44,21 @@ public class PooledBlockAllocatorProviderTest
     }
 
     @Test
-    public void testReuseAllocatorBlocksAfterClose()
+    public void testReuseAllocatorBlocksAcrossAllocators()
     {
         final BlockAllocator allocator1 = provider.vendAllocator(8);
         final Block block1 = allocator1.allocateBlock();
         final Block block2 = allocator1.allocateBlock();
+        block1.limit = 4;
         block1.close();
+        block2.limit = 5;
         block2.close();
 
         final BlockAllocator allocator2 = provider.vendAllocator(8);
         {
             final Block block = allocator2.allocateBlock();
-            assertNotSame(block, block1);
+            assertSame(block, block1);
+            assertEquals(0, block.limit);
             block.close();
         }
 
@@ -60,19 +67,12 @@ public class PooledBlockAllocatorProviderTest
         final BlockAllocator allocator3 = provider.vendAllocator(8);
         final Block block1Again = allocator3.allocateBlock();
         final Block block2Again = allocator3.allocateBlock();
-        assertSame(block1.data, block1Again.data);
-        assertSame(block2.data, block2Again.data);
+        assertSame(block2, block1Again);
+        assertEquals(0, block1Again.limit);
+        assertSame(block1, block2Again);
+        assertEquals(0, block2Again.limit);
 
         block1Again.close();
         block2Again.close();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testCloseBlockAfterClosingAllocator()
-    {
-        final BlockAllocator allocator = provider.vendAllocator(8);
-        final Block block = allocator.allocateBlock();
-        allocator.close();
-        block.close();
     }
 }

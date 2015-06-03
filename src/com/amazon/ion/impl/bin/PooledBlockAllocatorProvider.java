@@ -2,121 +2,88 @@
 
 package com.amazon.ion.impl.bin;
 
-import java.util.AbstractQueue;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
-/** A simple pooling implementation of {@link BlockAllocatorProvider}. */
-/*package*/ class PooledBlockAllocatorProvider extends BlockAllocatorProvider
+/**
+ * A simple pooling implementation of {@link BlockAllocatorProvider} with a global thread-safe free block list
+ * for each block size.
+ * <p>
+ * This implementation is thread-safe.
+ */
+/*package*/ final class PooledBlockAllocatorProvider extends BlockAllocatorProvider
 {
-    private final ConcurrentMap<Integer, ConcurrentLinkedQueue<Queue<byte[]>>> freeBlockLists;
-
-    public PooledBlockAllocatorProvider()
+    /**
+     * A {@link BlockAllocator} of for a particular size that has a single thread-safe free list.
+     * <p>
+     * This implementation is thread-safe.
+     */
+    private final class PooledBlockAllocator extends BlockAllocator
     {
-        freeBlockLists = new ConcurrentHashMap<Integer, ConcurrentLinkedQueue<Queue<byte[]>>>();
-    }
+        private final int blockSize;
+        private final ConcurrentLinkedQueue<Block> freeBlocks;
 
-    private ConcurrentLinkedQueue<Queue<byte[]>> allocatorFreeList(final int blockSize) {
-        ConcurrentLinkedQueue<Queue<byte[]>> free = freeBlockLists.get(blockSize);
-        if (free == null)
+        public PooledBlockAllocator(final int blockSize)
         {
-            free = new ConcurrentLinkedQueue<Queue<byte[]>>();
-            ConcurrentLinkedQueue<Queue<byte[]>> prev = freeBlockLists.putIfAbsent(blockSize, free);
-            if (prev != null)
-            {
-                free = prev;
-            }
-        }
-        return free;
-    }
-
-    private static Queue<byte[]> CLOSED_QUEUE = new AbstractQueue<byte[]>()
-    {
-        public boolean offer(byte[] e)
-        {
-            throw new IllegalStateException("Allocator is closed");
-        }
-
-        public byte[] poll()
-        {
-            throw new IllegalStateException("Allocator is closed");
-        }
-
-        public byte[] peek()
-        {
-            throw new IllegalStateException("Allocator is closed");
+            this.blockSize = blockSize;
+            this.freeBlocks = new ConcurrentLinkedQueue<Block>();
         }
 
         @Override
-        public Iterator<byte[]> iterator()
+        public Block allocateBlock()
         {
-            throw new IllegalStateException("Allocator is closed");
-        }
-
-        @Override
-        public int size()
-        {
-            throw new IllegalStateException("Allocator is closed");
-        }
-
-
-    };
-
-    @Override
-    public BlockAllocator vendAllocator(final int blockSize)
-    {
-        final ConcurrentLinkedQueue<Queue<byte[]>> freeBlockList = allocatorFreeList(blockSize);
-        final Queue<byte[]> blockList = freeBlockList.poll();
-
-        return new BlockAllocator()
-        {
-            // XXX this does not have to be thread-safe
-            private Queue<byte[]> freeBlocks = blockList != null ? blockList : new LinkedList<byte[]>();
-
-            @Override
-            public Block allocateBlock()
+            Block block = freeBlocks.poll();
+            if (block == null)
             {
-                final byte[] data;
-                if (!freeBlocks.isEmpty())
-                {
-                    data = freeBlocks.poll();
-                }
-                else
-                {
-                    data = new byte[blockSize];
-                }
-
-
-                return new Block(data)
+                block = new Block(new byte[blockSize])
                 {
                     @Override
                     public void close()
                     {
-                        // return ourselves to the free list
-                        freeBlocks.add(this.data);
+                        reset();
+                        freeBlocks.add(this);
                     }
                 };
             }
+            return block;
+        }
 
-            @Override
-            public int getBlockSize()
+        @Override
+        public int getBlockSize()
+        {
+            return blockSize;
+        }
+
+        @Override
+        public void close() {}
+    }
+
+    private final ConcurrentMap<Integer, BlockAllocator> allocators;
+
+    public PooledBlockAllocatorProvider()
+    {
+        allocators = new ConcurrentHashMap<Integer, BlockAllocator>();
+    }
+
+    @Override
+    public BlockAllocator vendAllocator(final int blockSize)
+    {
+        if (blockSize <= 0)
+        {
+            throw new IllegalArgumentException("Invalid block size: " + blockSize);
+        }
+
+        BlockAllocator allocator = allocators.get(blockSize);
+        if (allocator == null)
+        {
+            allocator = new PooledBlockAllocator(blockSize);
+            final BlockAllocator existingAllocator = allocators.putIfAbsent(blockSize, allocator);
+            if (existingAllocator != null)
             {
-                return blockSize;
+                allocator = existingAllocator;
             }
-
-            @Override
-            public void close()
-            {
-                // return ourselves to the free list
-                freeBlockList.add(freeBlocks);
-
-                // make sure other blocks allocated don't get put back into this returned list
-                freeBlocks = CLOSED_QUEUE;
-            }
-        };
+        }
+        return allocator;
     }
 }
