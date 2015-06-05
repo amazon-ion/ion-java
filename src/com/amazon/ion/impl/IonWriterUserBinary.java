@@ -69,6 +69,11 @@ class IonWriterUserBinary
      */
     private final SymtabExtendsCache mySymtabExtendsCache;
 
+    /**
+     * This is null if the writer is not stream copy optimized.
+     */
+    private final _Private_ByteTransferSink myCopySink;
+
     // If we wanted to we could keep an extra reference to the
     // system writer which was correctly typed as an
     // IonBinaryWriter and avoid the casting in the 3 "overridden"
@@ -83,9 +88,22 @@ class IonWriterUserBinary
               systemWriter,
               options.buildContextSymbolTable());
 
-        mySymtabExtendsCache = (options.isStreamCopyOptimized()
-                                    ? new SymtabExtendsCache()
-                                    : null);
+        if (options.isStreamCopyOptimized())
+        {
+            mySymtabExtendsCache = new SymtabExtendsCache();
+            myCopySink = new _Private_ByteTransferSink()
+            {
+                public void writeBytes(byte[] data, int off, int len) throws IOException
+                {
+                    ((IonWriterSystemBinary) _current_writer).writeRaw(data, off, len);
+                }
+            };
+        }
+        else
+        {
+            mySymtabExtendsCache = null;
+            myCopySink = null;
+        }
     }
 
 
@@ -94,7 +112,6 @@ class IonWriterUserBinary
     {
         return mySymtabExtendsCache != null;
     }
-
 
     @Override
     public void writeValue(IonReader reader)
@@ -119,9 +136,7 @@ class IonWriterUserBinary
                                                     reader.getSymbolTable())))
             {
                 // TODO ION-241 Doesn't copy annotations or field names.
-                transfer
-                    .transferCurrentValue((IonWriterSystemBinary) _current_writer);
-
+                transfer.transferCurrentValue(myCopySink);
                 return;
             }
         }

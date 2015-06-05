@@ -1,12 +1,14 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.IonFloat;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class EquivalenceTest
-extends IonTestCase
+    extends IonTestCase
 {
     private static void assertIonEq(final IonValue left, final IonValue right) {
         assertTrue(Equivalence.ionEquals(left, right));
@@ -15,8 +17,8 @@ extends IonTestCase
         // Redundancy check included here, in the case that IonValue#equals()
         // doesn't use Equivalence's implementation anymore.
         if (left != null && right != null) {
-            assertTrue(left.equals(right));
-            assertTrue(right.equals(left));
+            assertEquals(left, right);
+            assertEquals(right, left);
         }
     }
 
@@ -158,6 +160,11 @@ extends IonTestCase
     @Test
     public void testEqualsStruct4() {
         assertNotIonEq(ion("{ a : 1, b : 2 }"), ion("{ a : 1, c : 2 }"));
+    }
+
+    @Test
+    public void testEqualsStruct5() {
+        assertIonEqForm(ion("{ a : a::1, b : 2 }"), ion("{ a : 1, b : 2 }"));
     }
 
     @Test
@@ -334,5 +341,68 @@ extends IonTestCase
     @Test
     public void testStringSymbol() {
         assertNotIonEq(ion("\"hi\""), ion("'hi'"));
+    }
+
+    // TODO IONJAVA-463 : Remove the ignore annotation from this test after
+    // making the required changes to Equivalence.Field.hashCode.
+    @Ignore
+    @Test
+    public void testFieldEquals1() {
+        IonValue v1 = oneValue("1");
+        IonValue v2 = oneValue("2");
+        IonValue v3 = oneValue("3");
+
+        IonStruct struct = system().newEmptyStruct();
+        String fieldName = "a";
+        struct.add(fieldName, v1);
+        struct.add(fieldName, v2);
+        struct.add(fieldName, v3);
+
+        assertEquals(3, struct.size());
+
+        Equivalence.Field f1 = new Equivalence.Field(v1, true);
+        Equivalence.Field f2 = new Equivalence.Field(v2, true);
+        Equivalence.Field f3 = new Equivalence.Field(v3, true);
+
+        assertFalse(f1.equals(f2));
+        assertFalse(f1.equals(f3));
+        assertFalse(f2.equals(f3));
+
+        // Simple test that hashCode() is not badly implemented, so that fields with same
+        // field names but are not equals() do not result in same hash codes.
+        assertTrue(f1.hashCode() != f2.hashCode());
+        assertTrue(f1.hashCode() != f3.hashCode());
+    }
+
+    // TODO IONJAVA-463 : Remove the ignore annotation from this test after
+    // making the required changes to Equivalence.Field.hashCode.
+    @Ignore
+    @Test
+    public void testFieldEquals2() {
+        String intOne = "1";
+        IonValue v1 = oneValue(intOne);
+        IonValue v2 = oneValue(intOne);
+        IonValue v3 = oneValue(intOne);
+
+        IonStruct struct = system().newEmptyStruct();
+        String fieldName = "a";
+        struct.add(fieldName, v1);
+        struct.add(fieldName, v2);
+        struct.add(fieldName, v3);
+
+        assertEquals(3, struct.size());
+
+        Equivalence.Field f1 = new Equivalence.Field(v1, true);
+        Equivalence.Field f2 = new Equivalence.Field(v2, true);
+        Equivalence.Field f3 = new Equivalence.Field(v3, true);
+
+        assertEquals(f1, f2);
+        assertEquals(f2, f1); // symmetric
+
+        assertEquals(f1, f3);
+        assertEquals(f3, f1); // symmetric
+
+        assertEquals(f2, f3); // transitive
+        assertEquals(f3, f2); // symmetric
     }
 }

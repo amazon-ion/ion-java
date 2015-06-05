@@ -20,6 +20,7 @@ public class FloatTest
     {
         assertSame(IonType.FLOAT, value.getType());
         assertTrue("isNullValue is false", value.isNullValue());
+        assertFalse(value.isNumericValue());
 
         try
         {
@@ -47,10 +48,12 @@ public class FloatTest
         assertEquals(fVal, value.floatValue());
         assertEquals((double) fVal, value.doubleValue());
         assertEquals(fVal, value.bigDecimalValue().floatValue());
+        assertTrue(value.isNumericValue());
 
         value.setValue(A_DOUBLE);
         assertEquals(A_DOUBLE, value.doubleValue());
         assertEquals(A_DOUBLE, value.bigDecimalValue().doubleValue());
+        assertTrue(value.isNumericValue());
 
         value.setValue(null);
         checkNullFloat(value);
@@ -181,6 +184,7 @@ public class FloatTest
         assertEquals(expectedFloat, actual.floatValue());
         assertEquals(expectedDouble, actual.doubleValue());
         assertEquals(expectedText, actual.toString());
+        assertFalse(actual.isNumericValue());
 
         try
         {

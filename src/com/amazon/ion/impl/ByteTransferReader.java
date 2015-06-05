@@ -11,6 +11,6 @@ import java.io.IOException;
  */
 interface ByteTransferReader
 {
-    public void transferCurrentValue(IonWriterSystemBinary writer)
+    public void transferCurrentValue(_Private_ByteTransferSink writer)
         throws IOException;
 }
