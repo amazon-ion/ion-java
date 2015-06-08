@@ -9,32 +9,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Simple buffer interface for writing bytes to a set of {@link Block} instances from a {@link BlockAllocator}.
+ * A facade over {@link Block} management and low-level Ion encoding concerns for the {@link IonRawBinaryWriter}.
  */
 public final class WriteBuffer implements Closeable
 {
     private final BlockAllocator allocator;
     private final List<Block> blocks;
+    private Block current;
     private int index;
 
     public WriteBuffer(final BlockAllocator allocator)
     {
         this.allocator = allocator;
         this.blocks = new ArrayList<Block>();
-        this.index = 0;
 
         // initial seed of the first block
         allocateNewBlock();
+
+        this.index = 0;
+        this.current = blocks.get(0);
     }
 
     private void allocateNewBlock()
     {
         blocks.add(allocator.allocateBlock());
-    }
-
-    private Block current()
-    {
-        return blocks.get(index);
     }
 
     /** Returns the block index for the given position. */
@@ -55,6 +53,19 @@ public final class WriteBuffer implements Closeable
         close();
         allocateNewBlock();
         index = 0;
+        current = blocks.get(index);
+    }
+
+    public void close()
+    {
+        // free all the blocks
+        for (final Block block : blocks)
+        {
+            block.close();
+        }
+        blocks.clear();
+
+        // note--we don't explicitly flag that we're closed for efficiency
     }
 
     /** Resets the write buffer to a particular point. */
@@ -65,19 +76,22 @@ public final class WriteBuffer implements Closeable
         final Block block = blocks.get(index);
         this.index = index;
         block.limit = offset;
+        current = block;
     }
 
     /** Returns the amount of capacity left in the current block. */
     public int remaining()
     {
-        return current().remaining();
+        return current.remaining();
     }
 
     /** Returns the logical position in the current block. */
     public long position()
     {
-        return (((long) index) * allocator.getBlockSize()) + current().limit;
+        return (((long) index) * allocator.getBlockSize()) + current.limit;
     }
+
+    private static final int OCTET_MASK = 0xFF;
 
     /** Returns the octet at the logical position given. */
     public int getUInt8At(final long position)
@@ -85,7 +99,7 @@ public final class WriteBuffer implements Closeable
         final int index = index(position);
         final int offset = offset(position);
         final Block block = blocks.get(index);
-        return block.data[offset] & 0xFF;
+        return block.data[offset] & OCTET_MASK;
     }
 
     /** Writes a single octet to the buffer, expanding if necessary. */
@@ -98,8 +112,9 @@ public final class WriteBuffer implements Closeable
                 allocateNewBlock();
             }
             index++;
+            current = blocks.get(index);
         }
-        final Block block = current();
+        final Block block = current;
         block.data[block.limit] = octet;
         block.limit++;
     }
@@ -109,7 +124,7 @@ public final class WriteBuffer implements Closeable
     {
         while (len > 0)
         {
-            final Block block = current();
+            final Block block = current;
             final int amount = Math.min(len, block.remaining());
             System.arraycopy(bytes, off, block.data, block.limit, amount);
             block.limit += amount;
@@ -122,6 +137,7 @@ public final class WriteBuffer implements Closeable
                     allocateNewBlock();
                 }
                 index++;
+                current = blocks.get(index);
             }
         }
 
@@ -136,7 +152,7 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         System.arraycopy(bytes, off, block.data, block.limit, len);
         block.limit += len;
     }
@@ -149,10 +165,28 @@ public final class WriteBuffer implements Closeable
 
     // UTF-8 character writing
 
-    private static final char HIGH_SURROGATE_START      = 0xD800;
-    private static final char HIGH_SURROGATE_END        = 0xDBFF;
-    private static final char LOW_SURROGATE_START       = 0xDC00;
-    private static final char LOW_SURROGATE_END         = 0xDFFF;
+    private static final char HIGH_SURROGATE_FIRST      = 0xD800;
+    private static final char HIGH_SURROGATE_LAST       = 0xDBFF;
+    private static final char LOW_SURROGATE_FIRST       = 0xDC00;
+    private static final char LOW_SURROGATE_LAST        = 0xDFFF;
+    private static final int  SURROGATE_BASE            = 0x10000;
+    private static final int  BITS_PER_SURROGATE        = 10;
+
+    private static final int  UTF8_FOLLOW_MASK          = 0x3F;
+
+    private static final int  UTF8_FOLLOW_PREFIX_MASK   = 0x80;
+    private static final int  UTF8_2_OCTET_PREFIX_MASK  = 0xC0;
+    private static final int  UTF8_3_OCTET_PREFIX_MASK  = 0xE0;
+    private static final int  UTF8_4_OCTET_PREFIX_MASK  = 0xF0;
+
+    private static final int  UTF8_BITS_PER_FOLLOW_OCTET = 6;
+    private static final int  UTF8_2_OCTET_SHIFT         = 1 * UTF8_BITS_PER_FOLLOW_OCTET;
+    private static final int  UTF8_3_OCTET_SHIFT         = 2 * UTF8_BITS_PER_FOLLOW_OCTET;
+    private static final int  UTF8_4_OCTET_SHIFT         = 3 * UTF8_BITS_PER_FOLLOW_OCTET;
+
+    private static final int UTF8_2_OCTET_MIN_VALUE = 1 << 7;
+    private static final int UTF8_3_OCTET_MIN_VALUE = 1 << (5 + (1 * UTF8_BITS_PER_FOLLOW_OCTET));
+
 
     // slow in the sense that we deal with any kind of UTF-8 sequence and block boundaries
     private int writeUTF8Slow(final CharSequence chars, int off, int len)
@@ -161,11 +195,11 @@ public final class WriteBuffer implements Closeable
         while (len > 0)
         {
             final char ch = chars.charAt(off);
-            if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
+            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
             {
                 throw new IllegalArgumentException("Unpaired low surrogate: " + (int) ch);
             }
-            if ((ch >= HIGH_SURROGATE_START && ch <= HIGH_SURROGATE_END))
+            if ((ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST))
             {
                 // we need to look ahead in this case
                 off++;
@@ -176,36 +210,36 @@ public final class WriteBuffer implements Closeable
                 }
 
                 final int ch2 = chars.charAt(off);
-                if (ch2 < LOW_SURROGATE_START || ch2 > LOW_SURROGATE_END)
+                if (ch2 < LOW_SURROGATE_FIRST || ch2 > LOW_SURROGATE_LAST)
                 {
-                    throw new IllegalArgumentException("Unpaired high surrogate: " + ch2);
+                    throw new IllegalArgumentException("Low surrogate with unpaired high surrogate: " + ch + " + " + ch2);
                 }
 
                 // at this point we have a high and low surrogate
-                final int codepoint = (((ch - HIGH_SURROGATE_START) << 10) | (ch2 - LOW_SURROGATE_START)) + 0x10000;
-                writeByte((byte) ((0xF0 | ( codepoint >> 18)        ) & 0xFF));
-                writeByte((byte) ((0x80 | ((codepoint >> 12) & 0x3F)) & 0xFF));
-                writeByte((byte) ((0x80 | ((codepoint >>  6) & 0x3F)) & 0xFF));
-                writeByte((byte) ((0x80 | ( codepoint        & 0x3F)) & 0xFF));
+                final int codepoint = (((ch - HIGH_SURROGATE_FIRST) << BITS_PER_SURROGATE) | (ch2 - LOW_SURROGATE_FIRST)) + SURROGATE_BASE;
+                writeByte((byte) (UTF8_4_OCTET_PREFIX_MASK | ( codepoint >> UTF8_4_OCTET_SHIFT)                    ));
+                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ((codepoint >> UTF8_3_OCTET_SHIFT) & UTF8_FOLLOW_MASK)));
+                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ((codepoint >> UTF8_2_OCTET_SHIFT) & UTF8_FOLLOW_MASK)));
+                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ( codepoint                        & UTF8_FOLLOW_MASK)));
 
                 octets += 4;
             }
-            else if (ch < 0x80)
+            else if (ch < UTF8_2_OCTET_MIN_VALUE)
             {
-                writeByte((byte) (ch & 0xFF));
+                writeByte((byte) ch);
                 octets++;
             }
-            else if (ch < 0x800)
+            else if (ch < UTF8_3_OCTET_MIN_VALUE)
             {
-                writeByte((byte) ((0xC0 | (ch >> 6)        ) & 0xFF));
-                writeByte((byte) ((0x80 | (ch       & 0x3F)) & 0xFF));
+                writeByte((byte) (UTF8_2_OCTET_PREFIX_MASK | (ch >> UTF8_2_OCTET_SHIFT)                    ));
+                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | (ch                        & UTF8_FOLLOW_MASK)));
                 octets += 2;
             }
             else
             {
-                writeByte((byte) ((0xE0 | ( ch >> 12)        ) & 0xFF));
-                writeByte((byte) ((0x80 | ((ch >>  6) & 0x3F)) & 0xFF));
-                writeByte((byte) ((0x80 | ( ch        & 0x3F)) & 0xFF));
+                writeByte((byte) (UTF8_3_OCTET_PREFIX_MASK | ( ch >> UTF8_3_OCTET_SHIFT)                    ));
+                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ((ch >> UTF8_2_OCTET_SHIFT) & UTF8_FOLLOW_MASK)));
+                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ( ch                        & UTF8_FOLLOW_MASK)));
                 octets += 3;
             }
             off++;
@@ -214,7 +248,7 @@ public final class WriteBuffer implements Closeable
         return octets;
     }
 
-    private int writeUTF8As3Byte(final CharSequence chars, int off, int len)
+    private int writeUTF8UpTo3Byte(final CharSequence chars, int off, int len)
     {
         // fast path if we fit in the block assuming optimistically for all three-byte
         if ((len * 3) > remaining())
@@ -222,39 +256,38 @@ public final class WriteBuffer implements Closeable
             return writeUTF8Slow(chars, off, len);
         }
 
-        final Block block = current();
+        final Block block = current;
         int limit = block.limit;
-        char ch = '\0';
         int octets = 0;
         while (len > 0)
         {
-            ch = chars.charAt(off);
-            if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
+            final char ch = chars.charAt(off);
+            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
             {
                 throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
             }
-            if ((ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END))
+            if ((ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST))
             {
                 // we lost the 3-byte bet
                 break;
             }
 
-            if (ch < 0x80)
+            if (ch < UTF8_2_OCTET_MIN_VALUE)
             {
-                block.data[limit++] = (byte) (ch & 0xFF);
+                block.data[limit++] = (byte) ch;
                 octets++;
             }
-            else if (ch < 0x800)
+            else if (ch < UTF8_3_OCTET_MIN_VALUE)
             {
-                block.data[limit++] = (byte) ((0xC0 | (ch >> 6)        ) & 0xFF);
-                block.data[limit++] = (byte) ((0x80 | (ch       & 0x3F)) & 0xFF);
+                block.data[limit++] = (byte) (UTF8_2_OCTET_PREFIX_MASK | (ch >> UTF8_2_OCTET_SHIFT)                    );
+                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | (ch                        & UTF8_FOLLOW_MASK));
                 octets += 2;
             }
             else
             {
-                block.data[limit++] = (byte) ((0xE0 | ( ch >> 12)        ) & 0xFF);
-                block.data[limit++] = (byte) ((0x80 | ((ch >>  6) & 0x3F)) & 0xFF);
-                block.data[limit++] = (byte) ((0x80 | ( ch        & 0x3F)) & 0xFF);
+                block.data[limit++] = (byte) (UTF8_3_OCTET_PREFIX_MASK | ( ch >> UTF8_3_OCTET_SHIFT)                    );
+                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | ((ch >> UTF8_2_OCTET_SHIFT) & UTF8_FOLLOW_MASK));
+                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | ( ch                        & UTF8_FOLLOW_MASK));
                 octets += 3;
             }
             off++;
@@ -270,7 +303,7 @@ public final class WriteBuffer implements Closeable
         return octets;
     }
 
-    private int writeUTF8As2Byte(final CharSequence chars, int off, int len)
+    private int writeUTF8UpTo2Byte(final CharSequence chars, int off, int len)
     {
         // fast path if we fit in the block assuming optimistically for all two-byte
         if ((len * 2) > remaining())
@@ -278,28 +311,28 @@ public final class WriteBuffer implements Closeable
             return writeUTF8Slow(chars, off, len);
         }
 
-        final Block block = current();
+        final Block block = current;
         int limit = block.limit;
         char ch = '\0';
         int octets = 0;
         while (len > 0)
         {
             ch = chars.charAt(off);
-            if (ch >= 0x800)
+            if (ch >= UTF8_3_OCTET_MIN_VALUE)
             {
                 // we lost the 2-byte bet
                 break;
             }
 
-            if (ch < 0x80)
+            if (ch < UTF8_2_OCTET_MIN_VALUE)
             {
-                block.data[limit++] = (byte) (ch & 0xFF);
+                block.data[limit++] = (byte) ch;
                 octets++;
             }
             else
             {
-                block.data[limit++] = (byte) ((0xC0 | (ch >> 6)        ) & 0xFF);
-                block.data[limit++] = (byte) ((0x80 | (ch       & 0x3F)) & 0xFF);
+                block.data[limit++] = (byte) (UTF8_2_OCTET_PREFIX_MASK | (ch >> UTF8_2_OCTET_SHIFT)                    );
+                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | (ch                        & UTF8_FOLLOW_MASK));
                 octets += 2;
             }
             off++;
@@ -309,18 +342,18 @@ public final class WriteBuffer implements Closeable
 
         if (len > 0)
         {
-            if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
+            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
             {
                 throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
             }
-            if (ch >= HIGH_SURROGATE_START && ch <= HIGH_SURROGATE_END)
+            if (ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST)
             {
                 // just defer to 'slow' writing for non-BMP characters
                 return octets + writeUTF8Slow(chars, off, len);
             }
 
             // we must be a three byte BMP character
-            return octets + writeUTF8As3Byte(chars, off, len);
+            return octets + writeUTF8UpTo3Byte(chars, off, len);
         }
         return octets;
     }
@@ -333,20 +366,20 @@ public final class WriteBuffer implements Closeable
         {
             return writeUTF8Slow(chars, off, len);
         }
-        final Block block = current();
+        final Block block = current;
         int limit = block.limit;
         char ch = '\0';
         int octets = 0;
         while (len > 0)
         {
             ch = chars.charAt(off);
-            if (ch >= 0x80)
+            if (ch >= UTF8_2_OCTET_MIN_VALUE)
             {
                 // we lost the ASCII bet
                 break;
             }
 
-            block.data[limit++] = (byte) (ch & 0xFF);
+            block.data[limit++] = (byte) ch;
             octets++;
             off++;
             len--;
@@ -355,22 +388,22 @@ public final class WriteBuffer implements Closeable
 
         if (len > 0)
         {
-            if (ch < 0x800)
+            if (ch < UTF8_3_OCTET_MIN_VALUE)
             {
-                return octets + writeUTF8As2Byte(chars, off, len);
+                return octets + writeUTF8UpTo2Byte(chars, off, len);
             }
-            if (ch >= LOW_SURROGATE_START && ch <= LOW_SURROGATE_END)
+            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
             {
                 throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
             }
-            if (ch >= HIGH_SURROGATE_START && ch <= HIGH_SURROGATE_END)
+            if (ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST)
             {
                 // just defer to 'slow' writing for non-BMP characters
                 return octets + writeUTF8Slow(chars, off, len);
             }
 
             // we must be a three byte BMP character
-            return octets + writeUTF8As3Byte(chars, off, len);
+            return octets + writeUTF8UpTo3Byte(chars, off, len);
         }
         return octets;
     }
@@ -383,15 +416,24 @@ public final class WriteBuffer implements Closeable
 
     // unsigned fixed integer writes -- does not check sign/bounds
 
+    private static final int UINT_2_OCTET_SHIFT = 8 * 1;
+    private static final int UINT_3_OCTET_SHIFT = 8 * 2;
+    private static final int UINT_4_OCTET_SHIFT = 8 * 3;
+    private static final int UINT_5_OCTET_SHIFT = 8 * 4;
+    private static final int UINT_6_OCTET_SHIFT = 8 * 5;
+    private static final int UINT_7_OCTET_SHIFT = 8 * 6;
+    private static final int UINT_8_OCTET_SHIFT = 8 * 7;
+
+
     public void writeUInt8(long value)
     {
-        writeByte((byte) (value & 0xFF));
+        writeByte((byte) value);
     }
 
     private void writeUInt16Slow(long value)
     {
-        writeByte((byte) ((value >> 8) & 0xFF));
-        writeByte((byte) ( value       & 0xFF));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) (value                      ));
     }
 
     public void writeUInt16(long value)
@@ -402,19 +444,19 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 8) & 0xFF);
-        data[limit++] = (byte) ( value       & 0xFF);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) (value                      );
         block.limit = limit;
     }
 
     private void writeUInt24Slow(long value)
     {
-        writeByte((byte) ((value >> 16) & 0xFF));
-        writeByte((byte) ((value >> 8)  & 0xFF));
-        writeByte((byte) ( value        & 0xFF));
+        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) (value                      ));
     }
 
     public void writeUInt24(long value)
@@ -425,21 +467,21 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 16) & 0xFF);
-        data[limit++] = (byte) ((value >>  8) & 0xFF);
-        data[limit++] = (byte) ( value        & 0xFF);
+        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) (value                      );
         block.limit = limit;
     }
 
     private void writeUInt32Slow(long value)
     {
-        writeByte((byte) ((value >> 24) & 0xFF));
-        writeByte((byte) ((value >> 16) & 0xFF));
-        writeByte((byte) ((value >> 8)  & 0xFF));
-        writeByte((byte) ( value        & 0xFF));
+        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) (value                      ));
     }
 
     public void writeUInt32(long value)
@@ -450,23 +492,23 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 24) & 0xFF);
-        data[limit++] = (byte) ((value >> 16) & 0xFF);
-        data[limit++] = (byte) ((value >> 8)  & 0xFF);
-        data[limit++] = (byte) ( value        & 0xFF);
+        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) (value                      );
         block.limit = limit;
     }
 
     private void writeUInt40Slow(long value)
     {
-        writeByte((byte) ((value >> 32) & 0xFF));
-        writeByte((byte) ((value >> 24) & 0xFF));
-        writeByte((byte) ((value >> 16) & 0xFF));
-        writeByte((byte) ((value >> 8)  & 0xFF));
-        writeByte((byte) ( value        & 0xFF));
+        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) (value                      ));
     }
 
     public void writeUInt40(long value)
@@ -477,25 +519,25 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 32) & 0xFF);
-        data[limit++] = (byte) ((value >> 24) & 0xFF);
-        data[limit++] = (byte) ((value >> 16) & 0xFF);
-        data[limit++] = (byte) ((value >> 8)  & 0xFF);
-        data[limit++] = (byte) ( value        & 0xFF);
+        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) (value                      );
         block.limit = limit;
     }
 
     private void writeUInt48Slow(long value)
     {
-        writeByte((byte) ((value >> 40) & 0xFF));
-        writeByte((byte) ((value >> 32) & 0xFF));
-        writeByte((byte) ((value >> 24) & 0xFF));
-        writeByte((byte) ((value >> 16) & 0xFF));
-        writeByte((byte) ((value >> 8)  & 0xFF));
-        writeByte((byte) ( value        & 0xFF));
+        writeByte((byte) (value >> UINT_6_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) (value                      ));
     }
 
     public void writeUInt48(long value)
@@ -506,27 +548,27 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 40) & 0xFF);
-        data[limit++] = (byte) ((value >> 32) & 0xFF);
-        data[limit++] = (byte) ((value >> 24) & 0xFF);
-        data[limit++] = (byte) ((value >> 16) & 0xFF);
-        data[limit++] = (byte) ((value >> 8)  & 0xFF);
-        data[limit++] = (byte) ( value        & 0xFF);
+        data[limit++] = (byte) (value >> UINT_6_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) ( value                     );
         block.limit = limit;
     }
 
     private void writeUInt56Slow(long value)
     {
-        writeByte((byte) ((value >> 48) & 0xFF));
-        writeByte((byte) ((value >> 40) & 0xFF));
-        writeByte((byte) ((value >> 32) & 0xFF));
-        writeByte((byte) ((value >> 24) & 0xFF));
-        writeByte((byte) ((value >> 16) & 0xFF));
-        writeByte((byte) ((value >> 8)  & 0xFF));
-        writeByte((byte) ( value        & 0xFF));
+        writeByte((byte) (value >> UINT_7_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_6_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) (value                      ));
     }
 
     public void writeUInt56(long value)
@@ -537,29 +579,29 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 48) & 0xFF);
-        data[limit++] = (byte) ((value >> 40) & 0xFF);
-        data[limit++] = (byte) ((value >> 32) & 0xFF);
-        data[limit++] = (byte) ((value >> 24) & 0xFF);
-        data[limit++] = (byte) ((value >> 16) & 0xFF);
-        data[limit++] = (byte) ((value >> 8)  & 0xFF);
-        data[limit++] = (byte) ( value        & 0xFF);
+        data[limit++] = (byte) (value >> UINT_7_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_6_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) (value                      );
         block.limit = limit;
     }
 
     private void writeUInt64Slow(long value)
     {
-        writeByte((byte) ((value >> 56) & 0xFF));
-        writeByte((byte) ((value >> 48) & 0xFF));
-        writeByte((byte) ((value >> 40) & 0xFF));
-        writeByte((byte) ((value >> 32) & 0xFF));
-        writeByte((byte) ((value >> 24) & 0xFF));
-        writeByte((byte) ((value >> 16) & 0xFF));
-        writeByte((byte) ((value >> 8)  & 0xFF));
-        writeByte((byte) ( value        & 0xFF));
+        writeByte((byte) (value >> UINT_8_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_7_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_6_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
+        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
+        writeByte((byte) ( value                     ));
     }
 
     public void writeUInt64(long value)
@@ -570,17 +612,17 @@ public final class WriteBuffer implements Closeable
             return;
         }
 
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte) ((value >> 56) & 0xFF);
-        data[limit++] = (byte) ((value >> 48) & 0xFF);
-        data[limit++] = (byte) ((value >> 40) & 0xFF);
-        data[limit++] = (byte) ((value >> 32) & 0xFF);
-        data[limit++] = (byte) ((value >> 24) & 0xFF);
-        data[limit++] = (byte) ((value >> 16) & 0xFF);
-        data[limit++] = (byte) ((value >> 8)  & 0xFF);
-        data[limit++] = (byte) ( value        & 0xFF);
+        data[limit++] = (byte) (value >> UINT_8_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_7_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_6_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
+        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
+        data[limit++] = (byte) ( value                      );
         block.limit = limit;
 
 
@@ -588,20 +630,30 @@ public final class WriteBuffer implements Closeable
 
     // signed fixed integer writes - does not check bounds (especially important for IntX.MIN_VALUE).
 
+    private static final long INT8_SIGN_MASK  = 1L << ((8 * 1) - 1);
+    private static final long INT16_SIGN_MASK = 1L << ((8 * 2) - 1);
+    private static final long INT24_SIGN_MASK = 1L << ((8 * 3) - 1);
+    private static final long INT32_SIGN_MASK = 1L << ((8 * 4) - 1);
+    private static final long INT40_SIGN_MASK = 1L << ((8 * 5) - 1);
+    private static final long INT48_SIGN_MASK = 1L << ((8 * 6) - 1);
+    private static final long INT56_SIGN_MASK = 1L << ((8 * 7) - 1);
+    private static final long INT64_SIGN_MASK = 1L << ((8 * 8) - 1);
+
     public void writeInt8(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x80L;
+            value = (-value) | INT8_SIGN_MASK;
         }
         writeUInt8(value);
     }
+
 
     public void writeInt16(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x8000L;
+            value = (-value) | INT16_SIGN_MASK;
         }
         writeUInt16(value);
     }
@@ -610,113 +662,146 @@ public final class WriteBuffer implements Closeable
     {
         if (value < 0)
         {
-            value = (-value) | 0x800000;
+            value = (-value) | INT24_SIGN_MASK;
         }
         writeUInt24(value);
     }
+
 
     public void writeInt32(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x80000000L;
+            value = (-value) | INT32_SIGN_MASK;
         }
         writeUInt32(value);
     }
+
 
     public void writeInt40(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x8000000000L;
+            value = (-value) | INT40_SIGN_MASK;
         }
         writeUInt40(value);
     }
+
 
     public void writeInt48(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x800000000000L;
+            value = (-value) | INT48_SIGN_MASK;
         }
         writeUInt48(value);
     }
+
 
     public void writeInt56(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x80000000000000L;
+            value = (-value) | INT56_SIGN_MASK;
         }
         writeUInt56(value);
     }
+
 
     public void writeInt64(long value)
     {
         if (value < 0)
         {
-            value = (-value) | 0x8000000000000000L;
+            value = (-value) | INT64_SIGN_MASK;
         }
         writeUInt64(value);
     }
 
     // variable length integer writing
 
-    // TODO deal with full 64-bit magnitude if we need it (this is 2**63 - 1)
+    private static final long VAR_INT_BITS_PER_OCTET = 7;
+    private static final long VAR_INT_MASK = 0x7F;
+
+    private static final long VAR_UINT_9_OCTET_SHIFT = (8 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_9_OCTET_MIN_VALUE = (1L << VAR_UINT_9_OCTET_SHIFT);
+
+    private static final long VAR_UINT_8_OCTET_SHIFT = (7 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_8_OCTET_MIN_VALUE = (1L << VAR_UINT_8_OCTET_SHIFT);
+
+    private static final long VAR_UINT_7_OCTET_SHIFT = (6 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_7_OCTET_MIN_VALUE = (1L << VAR_UINT_7_OCTET_SHIFT);
+
+    private static final long VAR_UINT_6_OCTET_SHIFT = (5 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_6_OCTET_MIN_VALUE = (1L << VAR_UINT_6_OCTET_SHIFT);
+
+    private static final long VAR_UINT_5_OCTET_SHIFT = (4 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_5_OCTET_MIN_VALUE = (1L << VAR_UINT_5_OCTET_SHIFT);
+
+    private static final long VAR_UINT_4_OCTET_SHIFT = (3 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_4_OCTET_MIN_VALUE = (1L << VAR_UINT_4_OCTET_SHIFT);
+
+    private static final long VAR_UINT_3_OCTET_SHIFT = (2 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_3_OCTET_MIN_VALUE = (1L << VAR_UINT_3_OCTET_SHIFT);
+
+    private static final long VAR_UINT_2_OCTET_SHIFT = (1 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_UINT_2_OCTET_MIN_VALUE = (1L << VAR_UINT_2_OCTET_SHIFT);
+
+    private static final long VAR_INT_FINAL_OCTET_SIGNAL_MASK = 0x80;
+
     private int writeVarUIntSlow(final long value)
     {
         int size = 1;
-        if (value >= 0x100000000000000L)
+        if (value >= VAR_UINT_9_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 56) & 0x7F);
+            writeUInt8((value >> VAR_UINT_9_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x2000000000000L)
+        if (value >= VAR_UINT_8_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 49) & 0x7F);
+            writeUInt8((value >> VAR_UINT_8_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x40000000000L)
+        if (value >= VAR_UINT_7_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 42) & 0x7F);
+            writeUInt8((value >> VAR_UINT_7_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x800000000L)
+        if (value >= VAR_UINT_6_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 35) & 0x7F);
+            writeUInt8((value >> VAR_UINT_6_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x10000000L)
+        if (value >= VAR_UINT_5_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 28) & 0x7F);
+            writeUInt8((value >> VAR_UINT_5_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x200000L)
+        if (value >= VAR_UINT_4_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 21) & 0x7F);
+            writeUInt8((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x4000L)
+        if (value >= VAR_UINT_3_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 14) & 0x7F);
+            writeUInt8((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        if (value >= 0x80L)
+        if (value >= VAR_UINT_2_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> 7) & 0x7F);
+            writeUInt8((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
             size++;
         }
-        writeUInt8((value & 0x7F) | 0x80);
+        writeUInt8((value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
         return size;
     }
 
     private int writeVarUIntDirect2(final long value)
     {
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte)  ((value >> 7) & 0x7F);
-        data[limit++] = (byte) (((value)      & 0x7F) | 0x80);
+        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
 
         block.limit = limit;
         return 2;
@@ -724,12 +809,12 @@ public final class WriteBuffer implements Closeable
 
     private int writeVarUIntDirect3(final long value)
     {
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte)  ((value >> 14) & 0x7F);
-        data[limit++] = (byte)  ((value >> 7)  & 0x7F);
-        data[limit++] = (byte) (((value)       & 0x7F) | 0x80);
+        data[limit++] = (byte)  ((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
 
         block.limit = limit;
         return 3;
@@ -737,13 +822,13 @@ public final class WriteBuffer implements Closeable
 
     private int writeVarUIntDirect4(final long value)
     {
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte)  ((value >> 21) & 0x7F);
-        data[limit++] = (byte)  ((value >> 14) & 0x7F);
-        data[limit++] = (byte)  ((value >> 7)  & 0x7F);
-        data[limit++] = (byte) (((value)       & 0x7F) | 0x80);
+        data[limit++] = (byte)  ((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte)  ((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
 
         block.limit = limit;
         return 4;
@@ -751,14 +836,14 @@ public final class WriteBuffer implements Closeable
 
     private int writeVarUIntDirect5(final long value)
     {
-        final Block block = current();
+        final Block block = current;
         final byte[] data = block.data;
         int limit = block.limit;
-        data[limit++] = (byte)  ((value >> 28) & 0x7F);
-        data[limit++] = (byte)  ((value >> 21) & 0x7F);
-        data[limit++] = (byte)  ((value >> 14) & 0x7F);
-        data[limit++] = (byte)  ((value >> 7)  & 0x7F);
-        data[limit++] = (byte) (((value)       & 0x7F) | 0x80);
+        data[limit++] = (byte)  ((value >> VAR_UINT_5_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte)  ((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte)  ((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
+        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
 
         block.limit = limit;
         return 5;
@@ -766,12 +851,12 @@ public final class WriteBuffer implements Closeable
 
     public int writeVarUInt(final long value)
     {
-        if (value < 0x80L)
+        if (value < VAR_UINT_2_OCTET_MIN_VALUE)
         {
             writeUInt8((value & 0x7F) | 0x80);
             return 1;
         }
-        if (value < 0x4000L)
+        if (value < VAR_UINT_3_OCTET_MIN_VALUE)
         {
             if (remaining() < 2)
             {
@@ -779,7 +864,7 @@ public final class WriteBuffer implements Closeable
             }
             return writeVarUIntDirect2(value);
         }
-        if (value < 0x200000L)
+        if (value < VAR_UINT_4_OCTET_MIN_VALUE)
         {
             if (remaining() < 3)
             {
@@ -787,7 +872,7 @@ public final class WriteBuffer implements Closeable
             }
             return writeVarUIntDirect3(value);
         }
-        if (value < 0x10000000L)
+        if (value < VAR_UINT_5_OCTET_MIN_VALUE)
         {
             if (remaining() < 4)
             {
@@ -795,7 +880,7 @@ public final class WriteBuffer implements Closeable
             }
             return writeVarUIntDirect4(value);
         }
-        if (value < 0x800000000L)
+        if (value < VAR_UINT_6_OCTET_MIN_VALUE)
         {
             if (remaining() < 5)
             {
@@ -810,93 +895,118 @@ public final class WriteBuffer implements Closeable
         return writeVarUIntSlow(value);
     }
 
+    private static final long VAR_INT_SIGNED_OCTET_MASK = 0x3F;
+    private static final long VAR_INT_SIGNBIT_ON_MASK   = 0x40L;
+    private static final long VAR_INT_SIGNBIT_OFF_MASK  = 0x00L;
+
+    // note that the highest order bit for signed 64-bit values cannot fit in 9 bytes with the sign
+    private static final long VAR_INT_10_OCTET_SHIFT = 62;
+
+    private static final long VAR_INT_10_OCTET_MIN_VALUE = (1L << VAR_INT_10_OCTET_SHIFT);
+    private static final long VAR_INT_9_OCTET_MIN_VALUE  = (VAR_UINT_9_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_8_OCTET_MIN_VALUE  = (VAR_UINT_8_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_7_OCTET_MIN_VALUE  = (VAR_UINT_7_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_6_OCTET_MIN_VALUE  = (VAR_UINT_6_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_5_OCTET_MIN_VALUE  = (VAR_UINT_5_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_4_OCTET_MIN_VALUE  = (VAR_UINT_4_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_3_OCTET_MIN_VALUE  = (VAR_UINT_3_OCTET_MIN_VALUE >> 1);
+    private static final long VAR_INT_2_OCTET_MIN_VALUE  = (VAR_UINT_2_OCTET_MIN_VALUE >> 1);
+
     private int writeVarIntSlow(final long magnitude, final long signMask)
     {
         int size = 1;
-        if (magnitude >= 0x4000000000000000L)
+        if (magnitude >= VAR_INT_10_OCTET_MIN_VALUE)
         {
-            writeUInt8(((magnitude >> 62) & 0x3F) | signMask);
+            writeUInt8(((magnitude >> VAR_INT_10_OCTET_SHIFT) & VAR_INT_SIGNED_OCTET_MASK) | signMask);
             size++;
         }
-        if (magnitude >= 0x80000000000000L)
+        if (magnitude >= VAR_INT_9_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 56);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_9_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x1000000000000L)
+        if (magnitude >= VAR_INT_8_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 49);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_8_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x20000000000L)
+        if (magnitude >= VAR_INT_7_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 42);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_7_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x400000000L)
+        if (magnitude >= VAR_INT_6_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 35);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_6_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x8000000L)
+        if (magnitude >= VAR_INT_5_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 28);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_5_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x100000L)
+        if (magnitude >= VAR_INT_4_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 21);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_4_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x2000L)
+        if (magnitude >= VAR_INT_3_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 14);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_3_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        if (magnitude >= 0x40L)
+        if (magnitude >= VAR_INT_2_OCTET_MIN_VALUE)
         {
-            final long bits = (magnitude >> 7);
-            writeUInt8(size == 1 ? ((bits & 0x3F) | signMask) : (bits & 0x7F));
+            final long bits = (magnitude >> VAR_UINT_2_OCTET_SHIFT);
+            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
             size++;
         }
-        writeUInt8((size == 1 ? ((magnitude & 0x3F) | signMask) : (magnitude & 0x7F)) | 0x80);
+        writeUInt8((size == 1 ? ((magnitude & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (magnitude & VAR_INT_MASK)) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
 
         return size;
     }
 
+    private static final long VAR_INT_BITS_PER_SIGNED_OCTET = 6;
+    private static final long VAR_SINT_2_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (1 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_SINT_3_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (2 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_SINT_4_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (3 * VAR_INT_BITS_PER_OCTET);
+    private static final long VAR_SINT_5_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (4 * VAR_INT_BITS_PER_OCTET);
+
     public int writeVarInt(long value)
     {
-        final long signMask = value < 0 ? 0x40 : 0x00;
+        assert value != Long.MIN_VALUE;
+
+        final long signMask = value < 0 ? VAR_INT_SIGNBIT_ON_MASK : VAR_INT_SIGNBIT_OFF_MASK;
         final long magnitude = value < 0 ? -value : value;
-        if (magnitude < 0x40L)
+        if (magnitude < VAR_INT_2_OCTET_MIN_VALUE)
         {
-            writeUInt8((magnitude & 0x3F) | 0x80 | signMask);
+            writeUInt8((magnitude & VAR_INT_SIGNED_OCTET_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK | signMask);
             return 1;
         }
-        final long signBit = value < 0 ? 0x1 : 0x0;
+        final long signBit = value < 0 ? 1 : 0;
         final int remaining = remaining();
-        if (magnitude < 0x2000L && remaining >= 2)
+        if (magnitude < VAR_INT_3_OCTET_MIN_VALUE && remaining >= 2)
         {
-            return writeVarUIntDirect2(magnitude | (signBit << 13));
+            return writeVarUIntDirect2(magnitude | (signBit << VAR_SINT_2_OCTET_SHIFT));
         }
-        else if (magnitude < 0x100000L && remaining >= 3)
+        else if (magnitude < VAR_INT_4_OCTET_MIN_VALUE && remaining >= 3)
         {
-            return writeVarUIntDirect3(magnitude | (signBit << 20));
+            return writeVarUIntDirect3(magnitude | (signBit << VAR_SINT_3_OCTET_SHIFT));
         }
-        else if (magnitude < 0x8000000L && remaining >= 4)
+        else if (magnitude < VAR_INT_5_OCTET_MIN_VALUE && remaining >= 4)
         {
-            return writeVarUIntDirect4(magnitude | (signBit << 27));
+            return writeVarUIntDirect4(magnitude | (signBit << VAR_SINT_4_OCTET_SHIFT));
         }
-        else if (magnitude < 0x400000000L && remaining >= 5)
+        else if (magnitude < VAR_INT_6_OCTET_MIN_VALUE && remaining >= 5)
         {
-            return writeVarUIntDirect5(magnitude | (signBit << 34));
+            return writeVarUIntDirect5(magnitude | (signBit << VAR_SINT_5_OCTET_SHIFT));
         }
         // TODO determine if it is worth doing the fast path beyond 2**34 - 1
 
@@ -908,16 +1018,16 @@ public final class WriteBuffer implements Closeable
 
     public void writeVarUIntDirect1At(final long position, final long value)
     {
-        writeUInt8At(position, (value & 0x7F) | 0x80);
+        writeUInt8At(position, (value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
     }
 
-    private void writeVarUIntDirect2SlowAt(final int index, final int offset, final long value)
+    private void writeVarUIntDirect2StraddlingAt(final int index, final int offset, final long value)
     {
         // XXX we're stradling a block
         final Block block1 = blocks.get(index);
-        block1.data[offset] = (byte) ((value >> 7) & 0x7F);
+        block1.data[offset] = (byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
         final Block block2 = blocks.get(index + 1);
-        block2.data[0]      = (byte) ((value       & 0x7F) | 0x80);
+        block2.data[0]      = (byte) ((value                            & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
     }
 
     public void writeVarUIntDirect2At(long position, long value)
@@ -927,13 +1037,13 @@ public final class WriteBuffer implements Closeable
 
         if (offset + 2 > allocator.getBlockSize())
         {
-            writeVarUIntDirect2SlowAt(index, offset, value);
+            writeVarUIntDirect2StraddlingAt(index, offset, value);
             return;
         }
 
         final Block block = blocks.get(index);
-        block.data[offset    ] = (byte) ((value >> 7) & 0x7F);
-        block.data[offset + 1] = (byte) ((value       & 0x7F) | 0x80);
+        block.data[offset    ] = (byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
+        block.data[offset + 1] = (byte) ((value                            & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
     }
 
     public void writeUInt8At(final long position, final long value)
@@ -969,17 +1079,5 @@ public final class WriteBuffer implements Closeable
             position += amount;
             length -= amount;
         }
-    }
-
-    public void close()
-    {
-        // free all the blocks
-        for (final Block block : blocks)
-        {
-            block.close();
-        }
-        blocks.clear();
-
-        // XXX we don't explicitly flag that we're closed for efficiency
     }
 }

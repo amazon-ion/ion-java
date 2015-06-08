@@ -2,10 +2,7 @@ package com.amazon.ion.impl.bin;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
-import com.amazon.ion.impl.bin.BlockAllocator;
-import com.amazon.ion.impl.bin.BlockAllocatorProviders;
-import com.amazon.ion.impl.bin.WriteBuffer;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -150,6 +147,22 @@ public class WriteBufferTest
     }
 
     @Test
+    public void testInt24Negative()
+    {
+        final byte[] bytes = new byte[129];
+        for (int i = 0; i < bytes.length; i += 3)
+        {
+            long pos = i + 1;
+            long neg = -pos;
+            buf.writeInt24(neg);
+            bytes[i    ] = (byte) ((pos >> 16) | 0x80);
+            bytes[i + 1] = (byte) ( pos >>  8);
+            bytes[i + 2] = (byte) ( pos >>  0);
+        }
+        assertBuffer(bytes);
+    }
+
+    @Test
     public void testInt32Negative()
     {
         final byte[] bytes = new byte[128];
@@ -162,6 +175,63 @@ public class WriteBufferTest
             bytes[i + 1] = (byte) (pos >> 16);
             bytes[i + 2] = (byte) (pos >>  8);
             bytes[i + 3] = (byte) (pos >>  0);
+        }
+        assertBuffer(bytes);
+    }
+
+    @Test
+    public void testInt40Negative()
+    {
+        final byte[] bytes = new byte[160];
+        for (int i = 0; i < bytes.length; i += 5)
+        {
+            long pos = i + 1;
+            long neg = -pos;
+            buf.writeInt40(neg);
+            bytes[i    ] = (byte) ((pos >> 32) | 0x80);
+            bytes[i + 1] = (byte) (pos >>  24);
+            bytes[i + 2] = (byte) (pos >>  16);
+            bytes[i + 3] = (byte) (pos >>   8);
+            bytes[i + 4] = (byte) (pos >>   0);
+        }
+        assertBuffer(bytes);
+    }
+
+    @Test
+    public void testInt48Negative()
+    {
+        final byte[] bytes = new byte[144];
+        for (int i = 0; i < bytes.length; i += 6)
+        {
+            long pos = i + 1;
+            long neg = -pos;
+            buf.writeInt48(neg);
+            bytes[i    ] = (byte) ((pos >> 40) | 0x80);
+            bytes[i + 1] = (byte) (pos >>  32);
+            bytes[i + 2] = (byte) (pos >>  24);
+            bytes[i + 3] = (byte) (pos >>  16);
+            bytes[i + 4] = (byte) (pos >>   8);
+            bytes[i + 5] = (byte) (pos >>   0);
+        }
+        assertBuffer(bytes);
+    }
+
+    @Test
+    public void testInt56Negative()
+    {
+        final byte[] bytes = new byte[168];
+        for (int i = 0; i < bytes.length; i += 7)
+        {
+            long pos = i + 1;
+            long neg = -pos;
+            buf.writeInt56(neg);
+            bytes[i    ] = (byte) ((pos >> 48) | 0x80);
+            bytes[i + 1] = (byte) (pos >>  40);
+            bytes[i + 2] = (byte) (pos >>  32);
+            bytes[i + 3] = (byte) (pos >>  24);
+            bytes[i + 4] = (byte) (pos >>  16);
+            bytes[i + 5] = (byte) (pos >>   8);
+            bytes[i + 6] = (byte) (pos >>   0);
         }
         assertBuffer(bytes);
     }
@@ -584,6 +654,47 @@ public class WriteBufferTest
     }
 
     @Test
+    public void testVarIntMaxValue() throws IOException
+    {
+        buf.writeVarInt(Long.MAX_VALUE);
+        buf.writeVarInt(Long.MAX_VALUE);
+
+        byte[] expected = new byte[20];
+        int i = 0;
+        for (int j = 0; j < 2; j++)
+        {
+            expected[i++] = (byte) 0x01;
+            for (int k = 0; k < 8; k++)
+            {
+                expected[i++] = (byte) 0x7F;
+            }
+            expected[i++] = (byte) 0xFF;
+        }
+        assertBuffer(expected);
+    }
+
+    @Test
+    public void testVarIntMinValuePlusOne() throws IOException
+    {
+        buf.writeVarInt(Long.MIN_VALUE + 1);
+        buf.writeVarInt(Long.MIN_VALUE + 1);
+
+        byte[] expected = new byte[20];
+        int i = 0;
+        for (int j = 0; j < 2; j++)
+        {
+            expected[i++] = (byte) 0x41;
+            for (int k = 0; k < 8; k++)
+            {
+                expected[i++] = (byte) 0x7F;
+            }
+            expected[i++] = (byte) 0xFF;
+        }
+        assertBuffer(expected);
+    }
+
+
+    @Test
     public void testVarUInt1At()
     {
         // pad some obvious bits 0b10101010
@@ -667,12 +778,14 @@ public class WriteBufferTest
     @Test
     public void testUTF8TwoByte() throws IOException
     {
-        final String text = "hello\u00F4";
+        final String text = "h\u00F4!";
         buf.writeUTF8(text);
         // XXX make sure we go over a block boundary on a separate call
         buf.writeUTF8(text);
         buf.writeUTF8(text);
-        final byte[] expected = "hello\u00F4hello\u00F4hello\u00F4".getBytes("UTF-8");
+        buf.writeUTF8(text);
+        buf.writeUTF8(text);
+        final byte[] expected = "h\u00F4!h\u00F4!h\u00F4!h\u00F4!h\u00F4!".getBytes("UTF-8");
         assertBuffer(expected);
     }
 
@@ -689,6 +802,16 @@ public class WriteBufferTest
     }
 
     @Test
+    public void testUTF8TwoToThreeByte() throws IOException
+    {
+        buf.writeUTF8("h\u00F4\u30CF");
+        // XXX make sure we go over a block boundary on a separate call
+        buf.writeUTF8("h\u00F4\u30CF\u30ED World!!!!!!!!");
+        final byte[] expected = "h\u00F4\u30CFh\u00F4\u30CF\u30ED World!!!!!!!!".getBytes("UTF-8");
+        assertBuffer(expected);
+    }
+
+    @Test
     public void testUTF8FourByte() throws IOException
     {
         // this is emoji character 'poo'
@@ -696,6 +819,74 @@ public class WriteBufferTest
         buf.writeUTF8(text);
         final byte[] expected = text.getBytes("UTF-8");
         assertBuffer(expected);
+    }
+
+    @Test
+    public void testUTF8BadSurrogate() throws IOException
+    {
+        try
+        {
+            // unpaired high surrogate
+            buf.writeUTF8("\uD83D ");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired high surrogate after 2-byte character
+            buf.writeUTF8("\u00F4\uD83D ");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired high surrogate after 3-byte character
+            buf.writeUTF8("\u30CF\uD83D ");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired high surrogate after 4-byte character
+            buf.writeUTF8("\uD83D\uDCA9\uD83D ");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired low surrogate
+            buf.writeUTF8("\uDCA9");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired high surrogate after 2-byte character
+            buf.writeUTF8("\u00F4\uDCA9");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired high surrogate after 3-byte character
+            buf.writeUTF8("\u30CF\uDCA9");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
+
+        try
+        {
+            // unpaired high surrogate after 4-byte character
+            buf.writeUTF8("\uD83D\uDCA9\uDCA9");
+            fail("Expected error!");
+        }
+        catch (final IllegalArgumentException e) {}
     }
 
     @Test
