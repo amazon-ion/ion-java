@@ -2,6 +2,7 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.TestUtils.symbolTableEquals;
 import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -207,6 +208,31 @@ public class IonBinaryWriterBuilderTest
         assertNotSame(lst1, lst3);
         assertNotSame(lst2, lst3);
         assertSame(lst0, b.getInitialSymbolTable());
+    }
+
+    @Test
+    public void testImmutableInitialSymtab()
+    {
+        IonSystem system = IonSystemBuilder.standard().build();
+        SymbolTable sst = _Private_Utils.systemSymtab(1);
+
+        // Immutable local symtabs shouldn't get copied.
+        SymbolTable lst = newLocalSymtab(system, sst,
+                                         Collections.<String>emptyList());
+        lst.intern("hello");
+        lst.makeReadOnly();
+
+        _Private_IonBinaryWriterBuilder b =
+            _Private_IonBinaryWriterBuilder.standard();
+        b.setInitialSymbolTable(lst);
+        assertSame(lst, b.getInitialSymbolTable());
+
+        OutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = b.build(out);
+        assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
+
+        writer = b.build(out);
+        assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
     }
 
     @Test(expected = UnsupportedOperationException.class)

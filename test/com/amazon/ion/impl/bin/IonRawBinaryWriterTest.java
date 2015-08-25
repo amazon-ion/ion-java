@@ -18,8 +18,8 @@ import static com.amazon.ion.IonType.TIMESTAMP;
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.TestUtils.hexDump;
 import static com.amazon.ion.impl.bin.Symbols.systemSymbol;
-import static com.amazon.ion.impl.bin.WriteBufferTest.hex;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
@@ -96,6 +96,7 @@ public class IonRawBinaryWriterTest extends Assert
     public final void teardown() throws Exception
     {
         writer.close();
+        writer = null;
     }
 
     protected IonWriter createWriter(final OutputStream out) throws IOException
@@ -128,7 +129,7 @@ public class IonRawBinaryWriterTest extends Assert
         try {
             actual = system().singleValue(data);
         } catch (final Exception e) {
-            throw new IonException("Bad generated data:\n" + hex(data), e);
+            throw new IonException("Bad generated data:\n" + hexDump(data), e);
         }
         final IonValue expected = system().singleValue(literal);
         assertEquals(expected, actual);
@@ -222,6 +223,8 @@ public class IonRawBinaryWriterTest extends Assert
         assertValue("+inf");
     }
 
+    private static final String DECIMAL_10_DIGIT  = "1.000000001";
+    private static final String DECIMAL_45_DIGIT = "1.00000000000000000000000000000000000000000001";
     @Test
     public void testDecimal() throws Exception
     {
@@ -231,11 +234,11 @@ public class IonRawBinaryWriterTest extends Assert
         writer.writeDecimal(BigDecimal.ZERO);
         assertValue("0d0");
 
-        writer.writeDecimal(new BigDecimal("1.000000001"));
-        assertValue("1.000000001");
+        writer.writeDecimal(new BigDecimal(DECIMAL_10_DIGIT));
+        assertValue(DECIMAL_10_DIGIT);
 
-        writer.writeDecimal(new BigDecimal("1.00000000000000000000000000000000000000000001"));
-        assertValue("1.00000000000000000000000000000000000000000001");
+        writer.writeDecimal(new BigDecimal(DECIMAL_45_DIGIT));
+        assertValue(DECIMAL_45_DIGIT);
     }
 
     @Test
@@ -257,6 +260,7 @@ public class IonRawBinaryWriterTest extends Assert
         }
     }
 
+    // note that we stick to system symbols for round trip assertions
     @Test
     public void testSymbol() throws Exception
     {
@@ -296,11 +300,13 @@ public class IonRawBinaryWriterTest extends Assert
         assertValue("'''" + STR_127 + " '''");
     }
 
+    // this is a length that cannot fit in up to a two byte pad length (2 ** 14)
+    private static final int LONG_STRING_LENGTH = 16384;
     @Test
     public void testStringSidePatch() throws Exception
     {
         final StringBuilder buf = new StringBuilder();
-        for (int i = 0; i < 0x4000; i++)
+        for (int i = 0; i < LONG_STRING_LENGTH; i++)
         {
             buf.append("Z");
         }

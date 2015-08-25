@@ -1,10 +1,5 @@
 // Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
-import com.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
-import com.amazon.ion.impl.bin.IonRawBinaryWriterTest;
-import com.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
-import com.amazon.ion.impl.bin.WriteBufferTest;
-
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
 import com.amazon.ion.BadIonTest;
@@ -58,6 +53,10 @@ import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
+import com.amazon.ion.impl.bin.IonRawBinaryWriterTest;
+import com.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
+import com.amazon.ion.impl.bin.WriteBufferTest;
 import com.amazon.ion.impl.lite.IonContextTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;

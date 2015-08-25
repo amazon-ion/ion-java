@@ -1,5 +1,6 @@
 package com.amazon.ion.impl.bin;
 
+import static com.amazon.ion.TestUtils.hexDump;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -7,6 +8,7 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -23,13 +25,10 @@ public class WriteBufferTest
         buf = new WriteBuffer(ALLOCATOR);
     }
 
-    /*package*/ static String hex(final byte[] octets)
+    @After
+    public void teardown()
     {
-        final StringBuilder builder = new StringBuilder();
-        for (byte octet : octets) {
-            builder.append(String.format("%02X ", octet));
-        }
-        return builder.toString();
+        buf = null;
     }
 
     private byte[] bytes()
@@ -51,7 +50,7 @@ public class WriteBufferTest
 
         final byte[] actual = bytes();
         assertArrayEquals(
-            "Bytes don't match!\nEXPECTED:\n" + hex(expected) + "\nACTUAL:\n" + hex(actual) + "\n",
+            "Bytes don't match!\nEXPECTED:\n" + hexDump(expected) + "\nACTUAL:\n" + hexDump(actual) + "\n",
             expected, actual
         );
     }

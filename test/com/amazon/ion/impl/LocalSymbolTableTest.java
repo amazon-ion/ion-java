@@ -281,4 +281,11 @@ public class LocalSymbolTableTest
         SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
         st.find(null);
     }
+
+    @Test
+    public void testVersion()
+    {
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
+        assertEquals(0, st.getVersion());
+    }
 }
