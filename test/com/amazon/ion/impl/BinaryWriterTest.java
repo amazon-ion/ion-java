@@ -1,14 +1,18 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.IonBinaryWriterBuilder;
+import com.amazon.ion.util.NullOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import org.junit.Assert;
 import org.junit.Test;
@@ -149,6 +153,34 @@ public class BinaryWriterTest
 
         IonAssert.assertIonEquals(dg1, dg3);
         Assert.assertArrayEquals(bytes2, bytes3);
+    }
+
+    /*
+     * Tests write of a stream larger than 2GB.
+     * See IONJAVA-451. When the size restriction is relaxed, this should pass.
+     */
+    @Test
+    public void testHugeWrite() throws IOException
+    {
+        IonSystem ion = system();
+        IonWriter ionWriter = IonBinaryWriterBuilder.standard().build(new NullOutputStream());
+        final int CHUNK_LENGTH = 1024;
+        byte[] bytes = new byte[CHUNK_LENGTH];
+        for (int i = 0; i < CHUNK_LENGTH; i++)
+        {
+            bytes[i] = (byte)(i % 128);
+        }
+        IonValue value = ion.newString(new String(bytes, "UTF-8"));
+        long twoGB = 2L * 1024 * 1024 * 1024;
+        long repeats = (twoGB / CHUNK_LENGTH) + 1; //go just past the limit
+        long bytesWritten = 0;
+        for (long i = 0; i < repeats; i++)
+        {
+            value.writeTo(ionWriter);
+            bytesWritten += CHUNK_LENGTH;
+        }
+        ionWriter.close();
+        assertTrue(bytesWritten >= twoGB);
     }
 
     @Override

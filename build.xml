@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved. -->
 
 <project name="IonJava" basedir="." default="test"
          xmlns:ht="happytrails">
@@ -92,7 +92,8 @@
     <property name="tests.additional.jvmargs"
       value="-ea 
              -D${sys.prop.iontests.iontestdata}=${dir.test.data}
-             -D${sys.prop.iontests.bulk}=${dir.test.data.bulk}" />
+             -D${sys.prop.iontests.bulk}=${dir.test.data.bulk}
+             -Xmx2560M" />
 
     <fileset id="unit.test.sources" dir="${tests.dir}">
       <include name="**/*Test.java" />
