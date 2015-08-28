@@ -2,6 +2,7 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.TestUtils.symbolTableEquals;
 import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -17,7 +18,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl._Private_IonWriterBase;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -116,7 +116,7 @@ public class IonBinaryWriterBuilderTest
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter w = b.build(out);
-        assertTrue(((_Private_IonWriterBase)w).isStreamCopyOptimized());
+        assertTrue(((_Private_IonWriter)w).isStreamCopyOptimized());
     }
 
 
@@ -210,7 +210,6 @@ public class IonBinaryWriterBuilderTest
         assertSame(lst0, b.getInitialSymbolTable());
     }
 
-
     @Test
     public void testImmutableInitialSymtab()
     {
@@ -230,12 +229,11 @@ public class IonBinaryWriterBuilderTest
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter writer = b.build(out);
-        assertSame(lst, writer.getSymbolTable());
+        assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
 
         writer = b.build(out);
-        assertSame(lst, writer.getSymbolTable());
+        assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
     }
-
 
     @Test(expected = UnsupportedOperationException.class)
     public void testInitialSymtabImmutability()

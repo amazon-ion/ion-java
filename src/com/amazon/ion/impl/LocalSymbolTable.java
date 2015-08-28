@@ -418,7 +418,7 @@ final class LocalSymbolTable
 
     public int getVersion()
     {
-        return 1;
+        return 0;
     }
 
     public String getName()

@@ -415,7 +415,7 @@ final class IonReaderBinaryUserX
             }
         }
 
-        if (facetType == ByteTransferReader.class)
+        if (facetType == _Private_ByteTransferReader.class)
         {
             // This is a rather sketchy use of Facets, since the availability
             // of the facet depends upon the current state of this subject,
@@ -462,7 +462,7 @@ final class IonReaderBinaryUserX
     }
 
 
-    private class ByteTransferReaderFacet implements ByteTransferReader
+    private class ByteTransferReaderFacet implements _Private_ByteTransferReader
     {
         public void transferCurrentValue(_Private_ByteTransferSink sink)
             throws IOException

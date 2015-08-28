@@ -21,7 +21,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonValue;
-import com.amazon.ion.impl._Private_IonWriterBase;
+import com.amazon.ion.impl._Private_IonWriter;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
@@ -877,7 +877,7 @@ abstract class IonValueLite
     public final void writeTo(IonWriter writer)
     {
         if (writer.isInStruct()
-            && ! ((_Private_IonWriterBase)writer).isFieldNameSet())
+            && ! ((_Private_IonWriter) writer).isFieldNameSet())
         {
             SymbolToken tok = getFieldNameSymbol();
             if (tok == null)

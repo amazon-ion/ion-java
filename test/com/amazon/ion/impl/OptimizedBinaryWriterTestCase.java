@@ -33,7 +33,7 @@ public class OptimizedBinaryWriterTestCase
 
     /**
      * Denotes whether the
-     * {@link ByteTransferReader#transferCurrentValue(IonWriterSystemBinary)}
+     * {@link _Private_ByteTransferReader#transferCurrentValue(IonWriterSystemBinary)}
      * has been called after an {@link IonWriter#writeValue(IonReader)}.
      */
     private boolean isTransferCurrentValueInvoked = false;
@@ -52,11 +52,11 @@ public class OptimizedBinaryWriterTestCase
     {
         if (isStreamCopyOptimized())
         {
-            assertTrue("IonWriter should be instance of IonWriterUserBinary",
-                       writer instanceof IonWriterUserBinary);
-            IonWriterUserBinary iwUserBinary = (IonWriterUserBinary) writer;
-            assertTrue("IonWriterUserBinary should be stream copy optimized",
-                       iwUserBinary.isStreamCopyOptimized());
+            assertTrue("IonWriter should be instance of _Private_IonWriter",
+                       writer instanceof _Private_IonWriter);
+            _Private_IonWriter privateWriter = (_Private_IonWriter) writer;
+            assertTrue("IonWriter should be stream copy optimized",
+                       privateWriter.isStreamCopyOptimized());
         }
     }
 
@@ -95,11 +95,11 @@ public class OptimizedBinaryWriterTestCase
     }
 
     private class TransferCurrentValueWatchingReader
-        implements ByteTransferReader
+        implements _Private_ByteTransferReader
     {
-        private final ByteTransferReader myDelegate;
+        private final _Private_ByteTransferReader myDelegate;
 
-        TransferCurrentValueWatchingReader(ByteTransferReader byteTransferReader)
+        TransferCurrentValueWatchingReader(_Private_ByteTransferReader byteTransferReader)
         {
             myDelegate = byteTransferReader;
         }
@@ -114,7 +114,7 @@ public class OptimizedBinaryWriterTestCase
 
     /**
      * Obtains a dynamic proxy of {@link IonReader} over the passed in byte[],
-     * with an invocation handler hook over {@link ByteTransferReader} facet,
+     * with an invocation handler hook over {@link _Private_ByteTransferReader} facet,
      * so as to verify whether the transferCurrentValue() method is actually
      * being called.
      *
@@ -131,10 +131,10 @@ public class OptimizedBinaryWriterTestCase
             {
                 if (method.getName().equals("asFacet") &&
                     args.length == 1 &&
-                    args[0] == ByteTransferReader.class)
+                    args[0] == _Private_ByteTransferReader.class)
                 {
-                    ByteTransferReader transferReader =
-                        (ByteTransferReader) method.invoke(reader, args);
+                    _Private_ByteTransferReader transferReader =
+                        (_Private_ByteTransferReader) method.invoke(reader, args);
 
                     if (transferReader == null)
                         return null;

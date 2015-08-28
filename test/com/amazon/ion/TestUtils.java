@@ -13,6 +13,7 @@ import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -375,6 +376,126 @@ public class TestUtils
             buf.append(' ');
         }
         return buf.toString();
+    }
+
+    public static String hexDump(final byte[] octets)
+    {
+        final StringBuilder builder = new StringBuilder();
+        for (byte octet : octets) {
+            builder.append(String.format("%02X ", octet));
+        }
+        return builder.toString();
+    }
+
+    /**
+     * Returns object equality, accepting null references as arguments.
+     * Will return true if both references are null or if both references are non-null and compares as true
+     * via {@link Object#equals(Object)}.
+     */
+    public static boolean equals(final Object first, final Object second)
+    {
+        if (first == second)
+        {
+            return true;
+        }
+        if ((first != null && second == null) || (first == null && second != null))
+        {
+            return false;
+        }
+
+        return first.equals(second);
+    }
+
+    /**
+     * Compares two symbol tables for equivalent content.
+     * Two symbol tables compare equally if they are both of the same type (i.e. <i>system</i>, <i>shared</i>, <i>local</i>),
+     * they have the same name and version, and they contain the same declared symbols and imported symbol tables
+     * (in the same import order, and equality by this definition).
+     */
+    public static boolean symbolTableEquals(final SymbolTable first, final SymbolTable second)
+    {
+        // reference checks
+        if (first == second)
+        {
+            return true;
+        }
+        if ((first != null && second == null) || (first == null && second != null))
+        {
+            return false;
+        }
+
+        // symbol table type checks
+        if (first.isSystemTable() != second.isSystemTable())
+        {
+            return false;
+        }
+        if (first.isSharedTable() != second.isSharedTable())
+        {
+            return false;
+        }
+        if (first.isLocalTable() != second.isLocalTable())
+        {
+            return false;
+        }
+
+        // check name/version
+        if (!equals(first.getName(), second.getName()))
+        {
+            return false;
+        }
+        if (first.getVersion() != second.getVersion())
+        {
+            return false;
+        }
+
+        if (first.getMaxId() != second.getMaxId()) {
+            return false;
+        }
+
+        // check imports
+        final SymbolTable[] firstImports = first.getImportedTables();
+        final SymbolTable[] secondImports = second.getImportedTables();
+        if (firstImports != null && secondImports == null)
+        {
+            return false;
+        }
+        if (firstImports == null && secondImports != null)
+        {
+            return false;
+        }
+        if (firstImports != null && secondImports != null)
+        {
+            if (firstImports.length != secondImports.length)
+            {
+                return false;
+            }
+            for (int i = 0; i < firstImports.length; i++)
+            {
+                if (!symbolTableEquals(firstImports[i], secondImports[i]))
+                {
+                    return false;
+                }
+            }
+        }
+
+        // check declared symbols
+        final Iterator<String> firstSymbols = first.iterateDeclaredSymbolNames();
+        final Iterator<String> secondSymbols = second.iterateDeclaredSymbolNames();
+        while (firstSymbols.hasNext() && secondSymbols.hasNext())
+        {
+            final String firstNextSymbol = firstSymbols.next();
+            final String secondNextSymbol = secondSymbols.next();
+            if (!equals(firstNextSymbol, secondNextSymbol))
+            {
+                return false;
+            }
+        }
+        if (firstSymbols.hasNext() != secondSymbols.hasNext())
+        {
+            return false;
+        }
+
+        return true;
     }
 
     /**

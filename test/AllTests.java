@@ -53,6 +53,10 @@ import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
+import com.amazon.ion.impl.bin.IonRawBinaryWriterTest;
+import com.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
+import com.amazon.ion.impl.bin.WriteBufferTest;
 import com.amazon.ion.impl.lite.IonContextTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
@@ -173,6 +177,12 @@ import org.junit.runners.Suite;
     IonTextWriterBuilderTest.class,
     IonBinaryWriterBuilderTest.class,
     IonReaderToIonValueTest.class,
+
+    // experimental binary writer tests
+    PooledBlockAllocatorProviderTest.class,
+    WriteBufferTest.class,
+    IonRawBinaryWriterTest.class,
+    IonManagedBinaryWriterTest.class,
 
     // Hash code tests
     HashCodeCorrectnessTest.class,

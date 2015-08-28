@@ -941,6 +941,61 @@ public final class _Private_Utils
         return ((LocalSymbolTable)symtab).getIonRepresentation(vf);
     }
 
+    /**
+     * Determines, for two local symbol tables, whether the passed-in {@code superset} symtab is an extension
+     * of {@code subset}.  This works independent of implementation details--particularly in cases
+     * where {@link LocalSymbolTable#symtabExtends(SymbolTable)} cannot be used.
+     *
+     * @see #symtabExtends(SymbolTable, SymbolTable)
+     */
+    private static boolean localSymtabExtends(SymbolTable superset, SymbolTable subset)
+    {
+        if (subset.getMaxId() > superset.getMaxId())
+        {
+            // the subset has more symbols
+            return false;
+        }
+
+        // NB this API almost certainly requires cloning--symbol table's API doesn't give us a way to polymorphically
+        //    get this without materializing an array
+        final SymbolTable[] supersetImports     = superset.getImportedTables();
+        final SymbolTable[] subsetImports       = subset.getImportedTables();
+
+        // TODO ION-256 this is over-strict, but not as strict as LocalSymbolTable.symtabExtends()
+        if (supersetImports.length != subsetImports.length)
+        {
+            return false;
+        }
+        // NB we cannot trust Arrays.equals--we don't know how an implementation will implement it...
+        for (int i = 0; i < supersetImports.length; i++)
+        {
+            final SymbolTable supersetImport = supersetImports[i];
+            final SymbolTable subsetImport = subsetImports[i];
+            if (!supersetImport.getName().equals(subsetImport.getName())
+                 || supersetImport.getVersion() != subsetImport.getVersion())
+            {
+                // bad match on import
+                return false;
+            }
+        }
+
+        // all the imports lined up, lets make sure the locals line up too
+        final Iterator<String> supersetIter     = superset.iterateDeclaredSymbolNames();
+        final Iterator<String> subsetIter       = subset.iterateDeclaredSymbolNames();
+        while (subsetIter.hasNext())
+        {
+            final String nextSubsetSymbol       = subsetIter.next();
+            final String nextSupersetSymbol     = supersetIter.next();
+            if (!nextSubsetSymbol.equals(nextSupersetSymbol))
+            {
+                // local symbol mismatch
+                return false;
+            }
+        }
+
+        // we made it this far--superset is really a superset of subset
+        return true;
+    }
 
     /**
      * Determines whether the passed-in {@code superset} symtab is an extension
@@ -977,7 +1032,13 @@ public final class _Private_Utils
 
         if (superset.isLocalTable())
         {
-            return ((LocalSymbolTable) superset).symtabExtends(subset);
+            if (superset instanceof LocalSymbolTable && subset instanceof LocalSymbolTable)
+            {
+                // use the internal comparison
+                return ((LocalSymbolTable) superset).symtabExtends(subset);
+            }
+            // TODO reason about symbol tables that don't extend LocalSymbolTable but are still local
+            return localSymtabExtends(superset, subset);
         }
 
         // From here on, superset is a system symtab.

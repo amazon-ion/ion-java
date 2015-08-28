@@ -3,11 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
-import static com.amazon.ion.impl._Private_Utils.symtabExtends;
-
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.IOException;
 
@@ -19,55 +16,9 @@ class IonWriterUserBinary
     implements _Private_ListWriter
 {
     /**
-     * Cache to reduce unnecessary calls to
-     * {@link _Private_Utils#symtabExtends(SymbolTable, SymbolTable)}. This is
-     * only used if the writer is stream copy optimized.
-     */
-    private static class SymtabExtendsCache
-    {
-        private SymbolTable myWriterSymtab;
-        private SymbolTable myReaderSymtab;
-        private int myWriterSymtabMaxId;
-        private int myReaderSymtabMaxId;
-        private boolean myResult;
-
-        private boolean symtabsCompat(SymbolTable writerSymtab,
-                                      SymbolTable readerSymtab)
-        {
-            // If the refs. of both writer's and reader's symtab match and are
-            // not modified, skip expensive symtab extends check and return
-            // cached result.
-
-            assert writerSymtab != null && readerSymtab != null:
-                "writer's and reader's current symtab cannot be null";
-
-            if (myWriterSymtab          == writerSymtab &&
-                myReaderSymtab          == readerSymtab &&
-                myWriterSymtabMaxId     == writerSymtab.getMaxId() &&
-                myReaderSymtabMaxId     == readerSymtab.getMaxId())
-            {
-                // Not modified, return cached result
-                return myResult;
-            }
-
-            myResult = symtabExtends(writerSymtab, readerSymtab);
-
-            // Track refs.
-            myWriterSymtab = writerSymtab;
-            myReaderSymtab = readerSymtab;
-
-            // Track modification
-            myWriterSymtabMaxId = writerSymtab.getMaxId();
-            myReaderSymtabMaxId = readerSymtab.getMaxId();
-
-            return myResult;
-        }
-    }
-
-    /**
      * This is null if the writer is not stream copy optimized.
      */
-    private final SymtabExtendsCache mySymtabExtendsCache;
+    private final _Private_SymtabExtendsCache mySymtabExtendsCache;
 
     /**
      * This is null if the writer is not stream copy optimized.
@@ -90,7 +41,7 @@ class IonWriterUserBinary
 
         if (options.isStreamCopyOptimized())
         {
-            mySymtabExtendsCache = new SymtabExtendsCache();
+            mySymtabExtendsCache = new _Private_SymtabExtendsCache();
             myCopySink = new _Private_ByteTransferSink()
             {
                 public void writeBytes(byte[] data, int off, int len) throws IOException
@@ -127,8 +78,8 @@ class IonWriterUserBinary
         if (isStreamCopyOptimized() &&
             _current_writer instanceof IonWriterSystemBinary)
         {
-            ByteTransferReader transfer =
-                reader.asFacet(ByteTransferReader.class);
+            _Private_ByteTransferReader transfer =
+                reader.asFacet(_Private_ByteTransferReader.class);
 
             if (transfer != null &&
                 (isNonSymbolScalar(type) ||
