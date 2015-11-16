@@ -7,6 +7,7 @@ import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -31,19 +32,27 @@ final class IonFloatLite
         super(system, isNull);
     }
 
-    @Override
-    public IonFloatLite clone()
+    IonFloatLite(IonFloatLite existing, IonContext context)
     {
-        IonFloatLite clone = new IonFloatLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        clone.setValue(this._float_value);
-
-        return clone;
+        super(existing, context);
+        // shallow copy as Double is immutable
+        this._float_value = existing._float_value;
     }
 
     @Override
-    public int hashCode()
+    IonFloatLite clone(IonContext context)
+    {
+        return new IonFloatLite(this, context);
+    }
+
+    @Override
+    public IonFloatLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable)
     {
         int result = HASH_SIGNATURE;
 
@@ -52,7 +61,7 @@ final class IonFloatLite
             result ^= (int) ((bits >>> 32) ^ bits);
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     @Override
@@ -119,7 +128,7 @@ final class IonFloatLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         if (isNullValue())

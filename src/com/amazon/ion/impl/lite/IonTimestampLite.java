@@ -6,6 +6,7 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
@@ -41,27 +42,34 @@ final class IonTimestampLite
         super(system, isNull);
     }
 
-    @Override
-    public IonTimestampLite clone()
+    IonTimestampLite(IonTimestampLite existing, IonContext context)
     {
-        IonTimestampLite clone =
-            new IonTimestampLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        clone._timestamp_value = this._timestamp_value;
-
-        return clone;
+        super(existing, context);
+        // Timestamp contract is immutable; so can simply pass the reference
+        this._timestamp_value = existing._timestamp_value;
     }
 
     @Override
-    public int hashCode() {
+    IonTimestampLite clone(IonContext context)
+    {
+        return new IonTimestampLite(this, context);
+    }
+
+    @Override
+    public IonTimestampLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable) {
         int result = HASH_SIGNATURE;
 
         if (!isNullValue())  {
             result ^= timestampValue().hashCode();
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     @Override
@@ -215,7 +223,7 @@ final class IonTimestampLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         writer.writeTimestamp(_timestamp_value);

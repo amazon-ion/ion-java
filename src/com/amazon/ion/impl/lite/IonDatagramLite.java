@@ -107,6 +107,26 @@ final class IonDatagramLite
         _pending_symbol_table_idx = -1;
     }
 
+    IonDatagramLite(IonDatagramLite existing)
+    {
+        super(existing, existing._system);
+        this._system  = existing._system;
+        this._catalog = existing._catalog;
+    }
+
+    @Override
+    IonDatagramLite clone(IonContext parentContext)
+    {
+        String message = "IonDatagram cannot have a parent context (be nested)";
+        throw new UnsupportedOperationException(message);
+    }
+
+    @Override
+    public IonDatagramLite clone()
+    {
+        return clearFieldName(new IonDatagramLite(this));
+    }
+
     // TODO ION-312 Reverse encoder is set as default, set original
     // encoder back to default before R17 is released
     private boolean isReverseEncoded()
@@ -135,6 +155,37 @@ final class IonDatagramLite
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols()
+    {
+        // An Ion Datagram cannot be annotated - however is sometimes interrogated as a generic
+        // IonValue - hence having the explicit fast-path override of a non-null, empty SymbolToken
+        // array
+        return SymbolToken.EMPTY_ARRAY;
+    }
+
+    @Override
+    public SymbolToken getFieldNameSymbol()
+    {
+        // TOP level IonDatagram cannot have a field name (fundamentally it isn't a Struct)
+        return null;
+    }
+
+    @Override
+    public void makeReadOnly()
+    {
+        if (_isLocked()) {
+            return;
+        }
+
+        if (_children != null) {
+            for (int ii=0; ii<_child_count; ii++) {
+                IonValueLite child = _children[ii];
+                child.makeReadOnly();
+            }
+        }
+        _isLocked(true);
+    }
 
     @Override
     public final SymbolTable ensureLocalSymbolTable(IonValueLite child)
@@ -315,23 +366,27 @@ final class IonDatagramLite
     }
 
     @Override
-    public IonDatagramLite clone()
-    {
-        IonDatagramLite clone = new IonDatagramLite(_system, _catalog);
+    public int hashCode() {
+        int prime  = 8191;
+        int result = HASH_SIGNATURE;
 
-        try {
-            clone.copyFrom(this);
-        } catch (IOException e) {
-            throw new IonException(e);
+        if (!isNullValue()) {
+            // As we are a datagram then the children need to resolve their own symbol tables -
+            // so we use the 'top level' #hashCode() which will force each child to resolve it's
+            // own symbol table.
+            for (IonValue v : this) {
+                result = prime * result + v.hashCode();
+                // mixing at each step to make the hash code order-dependent
+                result ^= (result << 29) ^ (result >> 3);
+            }
         }
-
-        return clone;
+        return result;
     }
 
-
     @Override
-    public int hashCode() {
-        return sequenceHashCode(HASH_SIGNATURE);
+    int hashCode(SymbolTable symbolTable) {
+        String message = "IonDatagrams do not need a resolved Symbol table use #hashCode()";
+        throw new UnsupportedOperationException(message);
     }
 
 
@@ -483,15 +538,31 @@ final class IonDatagramLite
         return IonType.DATAGRAM;
     }
 
+    /*
+     * NOTE: IonDatagramLite overrides the main writeTo mechanism prescribed in:
+     * IonValueLite#writeTo which works by eagerly resolving the SymbolTable as the IonDatagram does
+     * not have a symbol table (throws UnsupportedOperationException) and so needs to write each
+     * child out independently where the child will act as it's own top-level value (inc symbol table)
+     */
     @Override
-    final void writeBodyTo(IonWriter writer)
-        throws IOException
+    public final void writeTo(IonWriter writer)
     {
-        writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO ION-165 ???
-        for (IonValue iv : this)
+        try
         {
+            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO ION-165 ???
+        } catch (IOException ioe) {
+            throw new IonException(ioe);
+        }
+        for (IonValue iv : this) {
             iv.writeTo(writer);
         }
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+        throws IOException
+    {
+        throw new UnsupportedOperationException("IonDatagram does not operate with a Symbol Table");
     }
 
 

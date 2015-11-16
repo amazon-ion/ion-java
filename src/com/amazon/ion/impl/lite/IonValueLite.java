@@ -204,6 +204,45 @@ abstract class IonValueLite
         }
     }
 
+    /**
+     * Copy Constructor *purely* for cloning - NOTE; this means that the clone is not <i>perfect</i>
+     * as if the original entity was <b>read-only</b> the cloned value will now be <b>mutable</b>.
+     *
+     * @param existing the non-null existing IonValueLite entity to clone
+     * @param context the non-null parent context to use for the cloned entity.
+     */
+    IonValueLite(IonValueLite existing, IonContext context) {
+        // Symbols are *immutable* therefore a shallow copy is sufficient
+        if (null == existing._annotations) {
+            this._annotations = null;
+        } else {
+            int size = existing._annotations.length;
+            this._annotations = new SymbolToken[size];
+            for (int i = 0; i < size; i++) {
+                SymbolToken existingToken = existing._annotations[i];
+                if (existingToken != null) {
+                    String text = existingToken.getText();
+                    if (text != null) {
+                        this._annotations[i] = 
+                            _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+                    } else {
+                        // TODO - this is clearly wrong; however was the existing behavior as
+                        // existing under #getAnnotationTypeSymbols();
+                        this._annotations[i] = existing._annotations[i];
+                    }
+                }
+            }
+        }
+        // this._fieldId  = null; - we don't copy across the _fieldId
+        this._fieldName   = existing._fieldName;
+        this._flags       = existing._flags;
+        this._context     = context;
+
+        // as IonValue.clone() mandates that the returned value is mutable, regardless of the
+        // existing 'read only' flag - we force the deep-copy back to being mutable
+        clear_flag(IS_LOCKED);
+    }
+
     public abstract void accept(ValueVisitor visitor) throws Exception;
 
     public /* synchronized */ void addTypeAnnotation(String annotation)
@@ -257,59 +296,46 @@ abstract class IonValueLite
      * {@inheritDoc}
      * <p>
      * The user can only call this method on the concrete (not abstract)
-     * subclasses of IonValueLite (e.g. IonIntLite). The shared clone logic
-     * is handled in the method copyFrom(...) in any abstract subclasses that
-     * need to support this - including IonContainerLite, IonTextLite, and
-     * IonLobLite.
+     * subclasses of IonValueLite (e.g. IonIntLite). The explicit clone logic
+     * is contained in {@link #clone(IonContext)} which should in turn be implemented by
+     * using a copy-constructor.
      */
     @Override
     public abstract IonValue clone();
 
-    /**
-     * Copy the relevant member fields from the {@code original} instance to
-     * this instance during a {@link #clone()}.
-     * This includes the flags, annotations and context, but NOT the field name.
-     * <p>
-     * Note that <em>flags</em> that is copied consists of the states of the
-     * original value (e.g. isBool, isNull, isIvm, etc).
-     * <p>
-     * This instance will always be unlocked after calling this method.
-     *
-     * @param original the value to copy from
-     */
-    final void copyMemberFieldsFrom(IonValueLite original)
-    {
-        assert _context instanceof IonSystemLite; // Baby I was born this way
+    abstract IonValueLite clone(IonContext parentContext);
 
-        // values we copy
-        this._flags        = original._flags;
-        this._annotations  = original.getTypeAnnotationSymbols();
-        if (original._context instanceof TopLevelContext) {
-            // if the original value has a top-level value context, we need to
-            // copy the context too, so we attach the cloned value (this
-            // instance) to the original value's system through a new concrete
-            // TopLevelContext
-            TopLevelContext.wrap(getSystem(),
-                                 original.getAssignedSymbolTable(),
-                                 this);
-        }
-
-        // and now values we don't copy
-        assert _fieldName == null && _fieldId == UNKNOWN_SYMBOL_ID;
-
-        // IonValue.clone() is specified to return a modifiable copy, but the
-        // flag assignment above copies all the flags, including locked.
-        this._isLocked(false);
+    static <T extends IonValueLite> T clearFieldName(T value) {
+        value._fieldId = UNKNOWN_SYMBOL_ID;
+        value._fieldName = null;
+        return value;
     }
-
 
     /**
      * Since {@link #equals(Object)} is overridden, each concrete class must provide
-     * an implementation of {@link Object#hashCode()}
+     * an implementation of {@link Object#hashCode()}.
      * @return hash code for instance consistent with equals().
      */
+    /*
+     * internally ALL implementations will be delegated too with the SymbolTable
+     * which is to prevent the SymbolTable being continually re-located in complex structures.
+     *
+     * This is near universally true - however does not apply for IonDatagramLite - hence it
+     * explicitly overrides hashCode()
+     */
     @Override
-    public abstract int hashCode();
+    public int hashCode() {
+        // resolve the symbol table eagerly - this works for all child types with the exception of
+        // IonDatagramLite which has a different, explicit behavior for hashCode()
+        // (hence this method cannot be final).
+        return hashCode(getSymbolTable());
+    }
+
+    /*
+     * Internal HashCode implementation which utilizes the resolved SymbolTable
+     * in encoding the sub-graph.
+     */
+    abstract int hashCode(SymbolTable symbolTable);
 
     public IonContainerLite getContainer()
     {
@@ -351,7 +377,7 @@ abstract class IonValueLite
     }
 
 
-    public final SymbolToken getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         // TODO ION-320 We should memoize the results of symtab lookups.
         // BUT: that could cause thread-safety problems for read-only values.
@@ -360,13 +386,20 @@ abstract class IonValueLite
         // However, the current invariants on these fields are nonexistant so
         // I do not trust that its safe to alter them here.
 
+        // resolve the Symbol table as this is the top level call; otherwise callers should
+        // provide the already resolved context SymbolTable and call-with-param
+        return getFieldNameSymbol(getSymbolTable());
+    }
+
+    final SymbolToken getFieldNameSymbol(SymbolTable symbolTable)
+    {
         int sid = _fieldId;
         String text = _fieldName;
         if (text != null)
         {
             if (sid == UNKNOWN_SYMBOL_ID)
             {
-                SymbolToken tok = getSymbolTable().find(text);
+                SymbolToken tok = symbolTable.find(text);
                 if (tok != null)
                 {
                     return tok;
@@ -374,7 +407,7 @@ abstract class IonValueLite
             }
         }
         else if (sid > 0) {
-            text = getSymbolTable().findKnownSymbol(sid);
+            text = symbolTable.findKnownSymbol(sid);
         }
         else {
             // not a struct field
@@ -423,14 +456,16 @@ abstract class IonValueLite
         return symbols;
     }
 
+    void clearLocalSymbolTable() {
+        getContext().clearLocalSymbolTable();
+    }
+
     /**
      * Sets this value's symbol table to null, and erases any SIDs here and
      * recursively.
      */
     void clearSymbolIDValues()
     {
-        getContext().clearLocalSymbolTable();
-
         if (_fieldName != null)
         {
             _fieldId = UNKNOWN_SYMBOL_ID;
@@ -595,7 +630,12 @@ abstract class IonValueLite
         throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
     }
 
-    public final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
+    public /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
+    {
+        return getTypeAnnotationSymbols(getSymbolTable());
+    }
+
+    private final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols(SymbolTable symbolTable)
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
@@ -623,7 +663,7 @@ abstract class IonValueLite
                 // into _annotations.
                 // See getFieldNameSymbol() for challenges doing so.
 
-                SymbolToken interned = getSymbolTable().find(text);
+                SymbolToken interned = symbolTable.find(text);
                 if (interned != null)
                 {
                     token = interned;
@@ -709,9 +749,9 @@ abstract class IonValueLite
         return -1;
     }
 
-    protected int hashTypeAnnotations(final int original)
+    protected int hashTypeAnnotations(final int original, SymbolTable symbolTable)
     {
-        final SymbolToken[] tokens = getTypeAnnotationSymbols();
+        final SymbolToken[] tokens = getTypeAnnotationSymbols(symbolTable);
         if (tokens.length == 0)
         {
             return original;
@@ -782,7 +822,14 @@ abstract class IonValueLite
 
     public void makeReadOnly()
     {
-        // nope, we just want to clear them ... populateSymbolValues(null);
+        if (!_isLocked()) {
+            makeReadOnlyInternal();
+            clearLocalSymbolTable();
+        }
+    }
+
+    void makeReadOnlyInternal()
+    {
         clearSymbolIDValues();
         _isLocked(true);
     }
@@ -874,12 +921,35 @@ abstract class IonValueLite
         return toString(IonTextWriterBuilder.pretty());
     }
 
-    public final void writeTo(IonWriter writer)
+    public void writeTo(IonWriter writer)
+    {
+        // resolve the symbol table *once* prior to rendering the whole graph - we use a Lazy
+        // 1-time resolution of the SymbolTable in case there is no need to pull the symbol table
+        // including situations where no symbol table would logically be attached
+        writeTo(writer, getSymbolTable());
+    }
+
+    final void writeChildren(IonWriter writer, Iterable<IonValue> container,
+                             SymbolTable symbolTable)
+    {
+        // unfortunately JDK5 does not allow for generic co-variant returns; i.e. specifying
+        // IonContainerLite#iterator() return type as Iterator<IonValueLite> causes a compile-time
+        // error under JDK5 as it doesn't understand this is an acceptable co-variant for
+        // Iterator<IonValue> IonContainer#iterator(). This said we know the underlying data
+        // structure is IonValueLite[] - so we can conduct the cast within the loop. When IonJava is
+        // moved to allow JDK6+ compile time dependency we can remove these crufty casts.
+        for (IonValue iv : container) {
+            IonValueLite vlite = (IonValueLite) iv;
+            vlite.writeTo(writer, symbolTable);
+        }
+    }
+
+    final void writeTo(IonWriter writer, SymbolTable symbolTable)
     {
         if (writer.isInStruct()
             && ! ((_Private_IonWriter) writer).isFieldNameSet())
         {
-            SymbolToken tok = getFieldNameSymbol();
+            SymbolToken tok = getFieldNameSymbol(symbolTable);
             if (tok == null)
             {
                 throw new IllegalStateException("Field name not set");
@@ -888,12 +958,12 @@ abstract class IonValueLite
             writer.setFieldNameSymbol(tok);
         }
 
-        SymbolToken[] annotations = getTypeAnnotationSymbols();
+        SymbolToken[] annotations = getTypeAnnotationSymbols(symbolTable);
         writer.setTypeAnnotationSymbols(annotations);
 
         try
         {
-            writeBodyTo(writer);
+            writeBodyTo(writer, symbolTable);
         }
         catch (IOException e)
         {
@@ -901,7 +971,7 @@ abstract class IonValueLite
         }
     }
 
-    abstract void writeBodyTo(IonWriter writer)
+    abstract void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException;
 
 

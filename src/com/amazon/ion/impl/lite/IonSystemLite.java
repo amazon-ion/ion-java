@@ -572,7 +572,8 @@ final class IonSystemLite
     {
         assert child._context == this;
 //        assert container.getSystem() == this : "system mismatch";
-
+        // ensure the local symbol table is purged
+        child.clearLocalSymbolTable();
         // We must unset the sids within this child as they may not be
         // correct in the context of the container!
         child.clearSymbolIDValues();

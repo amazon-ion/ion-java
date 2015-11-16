@@ -7,6 +7,7 @@ import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonValue;
@@ -32,6 +33,10 @@ abstract class IonSequenceLite
     IonSequenceLite(IonContext context, boolean isNull)
     {
         super(context, isNull);
+    }
+
+    IonSequenceLite(IonSequenceLite existing, IonContext context) {
+        super(existing, context);
     }
 
     /**
@@ -70,20 +75,21 @@ abstract class IonSequenceLite
     @Override
     public abstract IonSequenceLite clone();
 
-    protected int sequenceHashCode(int seed)
+    protected int sequenceHashCode(int seed, SymbolTable symbolTable)
     {
         final int prime = 8191;
         int result = seed;
 
         if (!isNullValue()) {
             for (IonValue v : this) {
-                result = prime * result + v.hashCode();
+                IonValueLite vLite = (IonValueLite) v;
+                result = prime * result + vLite.hashCode(symbolTable);
                 // mixing at each step to make the hash code order-dependent
                 result ^= (result << 29) ^ (result >> 3);
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
 
@@ -370,7 +376,7 @@ abstract class IonSequenceLite
 
 
     @Override
-    void writeBodyTo(IonWriter writer)
+    void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         IonType type = getType();
@@ -381,10 +387,7 @@ abstract class IonSequenceLite
         else
         {
             writer.stepIn(type);
-            for (IonValue iv : this)
-            {
-                iv.writeTo(writer);
-            }
+            writeChildren(writer, this, symbolTable);
             writer.stepOut();
         }
     }

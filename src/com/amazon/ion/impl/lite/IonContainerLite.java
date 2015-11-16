@@ -6,7 +6,6 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
@@ -15,7 +14,6 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_IonContainer;
 import com.amazon.ion.impl._Private_Utils;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -34,6 +32,24 @@ abstract class IonContainerLite
         // we'll let IonValueLite handle this work as we always need to know
         // our context and if we should start out as a null value or not
         super(context, isNull);
+    }
+
+    IonContainerLite(IonContainerLite existing, IonContext context) {
+        super(existing, context);
+        this._child_count = existing._child_count;
+        // when cloning the children we establish 'this' the cloned outer container as the context
+        if (existing._children != null) {
+            boolean isDatagram = this instanceof IonDatagramLite; 
+            this._children = new IonValueLite[existing._child_count];
+            for (int i = 0, count = existing._child_count; i < count; i++) {
+                IonContext childContext = isDatagram
+                     ? TopLevelContext.wrap((IonSystemLite) context,
+                                       existing._children[i].getAssignedSymbolTable(),
+                                       this)
+                     : this;                          
+                this._children[i] = existing._children[i].clone(childContext);
+            }
+        }
     }
 
     @Override
@@ -101,7 +117,7 @@ abstract class IonContainerLite
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return _Private_Utils.<IonValue>emptyIterator();
+            return _Private_Utils.<IonValue> emptyIterator();
         }
 
         return new SequenceContentIterator(index, isReadOnly());
@@ -126,7 +142,7 @@ abstract class IonContainerLite
         protected final boolean  __readOnly;
         protected       boolean  __lastMoveWasPrevious;
         protected       int      __pos;
-        protected       IonValue __current;
+        protected       IonValueLite __current;
 
         public SequenceContentIterator(int index, boolean readOnly)
         {
@@ -271,7 +287,7 @@ abstract class IonContainerLite
                 throw new ArrayIndexOutOfBoundsException();
             }
 
-            IonValueLite concrete = (IonValueLite) __current;
+            IonValueLite concrete = __current;
             int concrete_idx = concrete._elementid();
             assert(concrete_idx == idx);
 
@@ -337,27 +353,27 @@ abstract class IonContainerLite
     }
 
     @Override
-    public void makeReadOnly()
+    void makeReadOnlyInternal()
     {
         if (_isLocked()) return;
 
-        synchronized (this) { // TODO why is this needed?
-            if (_children != null) {
-                for (int ii=0; ii<_child_count; ii++) {
-                    IonValueLite child = _children[ii];
-                    child.makeReadOnly();
-                }
+        if (_children != null) {
+            for (int ii=0; ii<_child_count; ii++) {
+                IonValueLite child = _children[ii];
+                child.makeReadOnlyInternal();
             }
-            // we don't need to call our copy of clear symbol ID's
-            // which recurses since the calls to child.makeReadOnly
-            // will have clear out the child symbol ID's already
-            // as the children were marked read only.  But we do need
-            // to call the base clear which will clear out the symbol
-            // table reference if one exists.
-            super.clearSymbolIDValues();
-            _isLocked(true);
         }
+        // we don't need to call our copy of clear symbol ID's
+        // which recurses since the calls to child.makeReadOnly
+        // will have clear out the child symbol ID's already
+        // as the children were marked read only.  But we do need
+        // to call the base clear which will clear out the symbol
+        // table reference if one exists.
+        super.clearSymbolIDValues();
+        _isLocked(true);
     }
+
+
 
 
     /**
@@ -454,6 +470,7 @@ abstract class IonContainerLite
         }
     }
 
+    @Override
     public void clearLocalSymbolTable()
     {
         _context.clearLocalSymbolTable();
@@ -535,77 +552,6 @@ abstract class IonContainerLite
                && (index < get_child_count())
                && (child == get_child(index))
                && (child._elementid() == index));
-    }
-
-
-    /**
-     * This copies the original container's member fields (flags, annotations,
-     * context) and overwrites the corresponding fields of this instance.
-     * It will also recursively copy each of the source container's children
-     * to this container.
-     * <p>
-     * The field name of the original container is NOT copied. Field names of
-     * the original container's children are copied only if it is a struct.
-     * <p>
-     * Since only string representations are copied, it is unnecessary to
-     * update the symbol table.. yet.
-     *
-     * @param original the original container value
-     */
-    final void copyFrom(IonContainerLite original)
-        throws ContainedValueException, NullPointerException,
-            IllegalArgumentException, IOException
-    {
-        checkForLock();
-
-        // first copy the annotations, flags (but not field name)
-        this.copyMemberFieldsFrom(original);
-        assert ! _isLocked();  // Prior call unlocks us
-
-        // now we can copy the contents
-
-        // first see if this value is null (in which
-        // case we're done here)
-        if (original.isNullValue()) {
-            makeNull();
-        }
-        else if (original.get_child_count() == 0){
-            // non-null, but empty source, we're clear
-            clear();
-        }
-        else {
-            // it's not null, and the source says there are children
-            // so we're non-null and need to copy the children over
-            assert(original._isNullValue() == false);
-            _isNullValue(false);
-
-            // we should have an empty content list at this point
-            assert _children == null && get_child_count() == 0;
-
-            final IonValueLite[] sourceContents = original._children;
-            final int size = original.get_child_count();
-
-            // Preallocate so add() doesn't reallocate repeatedly
-            _children = new IonValueLite[size];
-
-            // we want to clone field names if we're cloning a struct
-            final boolean isCloningFieldNames = (this instanceof IonStruct);
-
-            for (int i = 0; i < size; i++)
-            {
-                IonValueLite origChild = sourceContents[i];
-                IonValueLite clonedChild = (IonValueLite) origChild.clone();
-                if (isCloningFieldNames) {
-                    String fieldName = origChild.getFieldName();
-                    // THROWS if field name is unknown
-                    clonedChild.setFieldName(fieldName);
-                }
-                this.add(i, clonedChild);
-                // no need to patch the element id's since
-                // this is adding to the end
-            }
-            assert get_child_count() == size;
-        }
     }
 
     //////////////////////////////////////////////////////

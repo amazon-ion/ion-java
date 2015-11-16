@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonLob;
+import com.amazon.ion.SymbolTable;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.zip.CRC32;
@@ -22,6 +23,14 @@ abstract class IonLobLite
         super(system, isNull);
     }
 
+    IonLobLite(IonLobLite existing, IonContext context) {
+        super(existing, context);
+        if (null != existing._lob_value) {
+            int size = existing._lob_value.length;
+            this._lob_value = new byte[size];
+            System.arraycopy(existing._lob_value, 0, this._lob_value, 0, size);
+        }
+    }
 
     @Override
     public abstract IonLobLite clone();
@@ -33,7 +42,7 @@ abstract class IonLobLite
      * @param seed Seed value
      * @return hash code
      */
-    protected int lobHashCode(int seed)
+    protected int lobHashCode(int seed, SymbolTable symbolTable)
     {
         int result = seed;
 
@@ -43,26 +52,7 @@ abstract class IonLobLite
             result ^= (int) crc.getValue();
         }
 
-        return hashTypeAnnotations(result);
-    }
-
-    /**
-     * Makes a copy of the relevant member fields from the original to this
-     * instance. It also makes a copy of the LOB's bytes.
-     *
-     * @param original
-     */
-    protected final void copyFrom(IonLobLite original)
-    {
-        this.copyMemberFieldsFrom(original);
-        byte[] new_bytes;
-        if (original._isNullValue()) {
-            new_bytes = null;
-        }
-        else {
-            new_bytes = original._lob_value;
-        }
-        setBytes(new_bytes);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     /**

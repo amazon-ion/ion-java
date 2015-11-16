@@ -5,6 +5,7 @@ package com.amazon.ion.impl.lite;
 import com.amazon.ion.IonString;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -26,19 +27,26 @@ final class IonStringLite
         super(system, isNull);
     }
 
-    @Override
-    public IonStringLite clone()
+    IonStringLite(IonStringLite existing, IonContext context)
     {
-        IonStringLite clone = new IonStringLite(this._context.getSystem(), false);
-
-        // Copy relevant member fields and text value
-        clone.copyFrom(this);
-
-        return clone;
+        super(existing, context);
+        // no need to set values as these are set at the parent IonTextLite
     }
 
     @Override
-    public int hashCode()
+    IonStringLite clone(IonContext parentContext)
+    {
+        return new IonStringLite(this, parentContext);
+    }
+
+    @Override
+    public IonStringLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable)
     {
         int result = HASH_SIGNATURE;
 
@@ -46,7 +54,7 @@ final class IonStringLite
             result ^= stringValue().hashCode();
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     @Override
@@ -56,7 +64,7 @@ final class IonStringLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         writer.writeString(_get_value());

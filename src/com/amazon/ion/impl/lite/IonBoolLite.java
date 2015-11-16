@@ -6,6 +6,7 @@ import com.amazon.ion.IonBool;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -39,14 +40,21 @@ final class IonBoolLite
         super(context, isNull);
     }
 
+    IonBoolLite(IonBoolLite existing, IonContext context)
+    {
+        super(existing, context);
+    }
+
+    @Override
+    IonBoolLite clone(IonContext context)
+    {
+        return new IonBoolLite(this, context);
+    }
+
     @Override
     public IonBoolLite clone()
     {
-        IonBoolLite clone = new IonBoolLite(this._context.getSystem(), this.isNullValue());
-
-        clone.copyMemberFieldsFrom(this);
-
-        return clone;
+        return clearFieldName(this.clone(getSystem()));
     }
 
     @Override
@@ -56,7 +64,7 @@ final class IonBoolLite
     }
 
     @Override
-    public int hashCode()
+    int hashCode(SymbolTable symbolTable)
     {
         int result = HASH_SIGNATURE;
 
@@ -65,7 +73,7 @@ final class IonBoolLite
             result = booleanValue() ? TRUE_HASH : FALSE_HASH;
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     public boolean booleanValue()
@@ -95,7 +103,7 @@ final class IonBoolLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         if (isNullValue())

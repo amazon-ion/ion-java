@@ -6,6 +6,7 @@ import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -40,26 +41,27 @@ final class IonIntLite
         super(system, isNull);
     }
 
-    @Override
-    public IonIntLite clone()
+    IonIntLite(IonIntLite existing, IonContext context)
     {
-        IonIntLite clone = new IonIntLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        if (this._big_int_value != null)
-        {
-            clone.doSetValue(this._big_int_value);
-        }
-        else
-        {
-            clone.doSetValue(this._long_value, this._isNullValue());
-        }
-
-        return clone;
+        super(existing, context);
+        this._long_value    = existing._long_value;
+        this._big_int_value = existing._big_int_value;
     }
 
     @Override
-    public int hashCode()
+    IonIntLite clone(IonContext context)
+    {
+        return new IonIntLite(this, context);
+    }
+
+    @Override
+    public IonIntLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable)
     {
         int result = HASH_SIGNATURE;
 
@@ -81,7 +83,7 @@ final class IonIntLite
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     @Override
@@ -166,7 +168,7 @@ final class IonIntLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         if (isNullValue())

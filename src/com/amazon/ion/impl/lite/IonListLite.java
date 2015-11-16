@@ -3,12 +3,11 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -33,6 +32,11 @@ final class IonListLite
         super(context, makeNull);
     }
 
+    IonListLite(IonListLite existing, IonContext context)
+    {
+        super(existing, context);
+    }
+
     /**
      * Constructs a list value <em>not</em> backed by binary.
      *
@@ -51,22 +55,20 @@ final class IonListLite
     }
 
     @Override
-    public IonListLite clone()
+    IonListLite clone(IonContext parentContext)
     {
-        IonListLite clone = new IonListLite(this._context.getSystem(), false);
-
-        try {
-            clone.copyFrom(this);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        return clone;
+        return new IonListLite(this, parentContext);
     }
 
     @Override
-    public int hashCode() {
-        return sequenceHashCode(HASH_SIGNATURE);
+    public IonListLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable) {
+        return sequenceHashCode(HASH_SIGNATURE, symbolTable);
     }
 
     @Override

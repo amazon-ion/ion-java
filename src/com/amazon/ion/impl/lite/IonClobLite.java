@@ -5,6 +5,7 @@ package com.amazon.ion.impl.lite;
 import com.amazon.ion.IonClob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -31,19 +32,26 @@ final class IonClobLite
         super(system, isNull);
     }
 
-    @Override
-    public IonClobLite clone()
+    IonClobLite(IonClobLite existing, IonContext context)
     {
-        IonClobLite clone = new IonClobLite(this._context.getSystem(), false);
-
-        clone.copyFrom(this);
-
-        return clone;
+        super(existing, context);
     }
 
     @Override
-    public int hashCode() {
-        return lobHashCode(HASH_SIGNATURE);
+    IonClobLite clone(IonContext context)
+    {
+        return new IonClobLite(this, context);
+    }
+
+    @Override
+    public IonClobLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable) {
+        return lobHashCode(HASH_SIGNATURE, symbolTable);
     }
 
     @Override
@@ -72,7 +80,7 @@ final class IonClobLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         writer.writeClob(getBytesNoCopy());

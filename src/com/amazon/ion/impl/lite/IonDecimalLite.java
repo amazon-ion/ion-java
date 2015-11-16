@@ -7,6 +7,7 @@ import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -51,19 +52,27 @@ final class IonDecimalLite
         super(system, isNull);
     }
 
-    @Override
-    public IonDecimalLite clone()
+    IonDecimalLite(IonDecimalLite existing, IonContext context)
     {
-        IonDecimalLite clone = new IonDecimalLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        clone.setValue(this._decimal_value);
-
-        return clone;
+        super(existing, context);
+        // we can shallow copy as BigDecimal is immutable
+        this._decimal_value = existing._decimal_value;
     }
 
     @Override
-    public int hashCode()
+    IonDecimalLite clone(IonContext parentContext)
+    {
+        return new IonDecimalLite(this, parentContext);
+    }
+
+    @Override
+    public IonDecimalLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable)
     {
         int result = HASH_SIGNATURE;
 
@@ -79,7 +88,7 @@ final class IonDecimalLite
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     @Override
@@ -143,7 +152,7 @@ final class IonDecimalLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         writer.writeDecimal(_decimal_value);

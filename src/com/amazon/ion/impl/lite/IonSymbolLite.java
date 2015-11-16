@@ -38,6 +38,11 @@ final class IonSymbolLite
         super(system, isNull);
     }
 
+    IonSymbolLite(IonSymbolLite existing, IonContext context) throws UnknownSymbolException
+    {
+        super(existing, context);
+    }
+
     IonSymbolLite(IonSystemLite system, SymbolToken sym)
     {
         super(system, sym == null);
@@ -67,19 +72,14 @@ final class IonSymbolLite
         }
     }
 
-
-    /**
-     * Make a copy of this instance. This calls up to IonTextLite to copy the
-     * string itself and that in turn calls IonValueLite to copy the value's
-     * contents. The field name is not copied. The symbol table is also not
-     * copied as the value is fully materialized and the symbol table is
-     * unnecessary.
-     *
-     * @throws UnknownSymbolException
-     *          if this symbol has unknown text but known Sid
-     */
     @Override
-    public IonSymbolLite clone()
+    IonSymbolLite clone(IonContext context)
+    {
+        return new IonSymbolLite(this, context);
+    }
+
+    @Override
+    public IonSymbolLite clone() throws UnknownSymbolException
     {
         // If this symbol has unknown text but known Sid, this symbol has no
         // semantic meaning, as such cloning should throw an exception.
@@ -88,18 +88,11 @@ final class IonSymbolLite
             && _stringValue() == null) {
             throw new UnknownSymbolException(_sid);
         }
-
-        IonSymbolLite clone = new IonSymbolLite(_context.getSystem(), false);
-
-        // Copy relevant member fields and text value
-        clone.copyFrom(this);
-        clone._sid = UNKNOWN_SYMBOL_ID;
-
-        return clone;
+        return clearFieldName(this.clone(getSystem()));
     }
 
     @Override
-    public int hashCode()
+    int hashCode(SymbolTable symbolTable)
     {
         final int sidHashSalt   = 127;      // prime to salt sid
         final int textHashSalt  = 31;       // prime to salt text
@@ -120,7 +113,7 @@ final class IonSymbolLite
             result ^= tokenHashCode;
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTable);
     }
 
     @Override
@@ -272,7 +265,7 @@ final class IonSymbolLite
 
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         // TODO ION-320 Fix symbol handling

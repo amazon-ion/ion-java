@@ -5,6 +5,7 @@ package com.amazon.ion.impl.lite;
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_LazyDomTrampoline;
 import java.io.IOException;
@@ -28,19 +29,26 @@ final class IonBlobLite
         super(system, isNull);
     }
 
-    @Override
-    public IonBlobLite clone()
+    IonBlobLite(IonBlobLite existing, IonContext context)
     {
-        IonBlobLite clone = new IonBlobLite(this._context.getSystem(), false);
-
-        clone.copyFrom(this);
-
-        return clone;
+        super(existing, context);
     }
 
     @Override
-    public int hashCode() {
-        return lobHashCode(HASH_SIGNATURE);
+    IonBlobLite clone(IonContext context)
+    {
+        return new IonBlobLite(this, context);
+    }
+
+    @Override
+    public IonBlobLite clone()
+    {
+        return clearFieldName(this.clone(getSystem()));
+    }
+
+    @Override
+    int hashCode(SymbolTable symbolTable) {
+        return lobHashCode(HASH_SIGNATURE, symbolTable);
     }
 
     @Override
@@ -66,7 +74,7 @@ final class IonBlobLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         writer.writeBlob(getBytesNoCopy());

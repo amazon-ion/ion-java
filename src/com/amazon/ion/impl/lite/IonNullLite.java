@@ -5,6 +5,7 @@ package com.amazon.ion.impl.lite;
 import com.amazon.ion.IonNull;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -23,6 +24,11 @@ final class IonNullLite
         super(context, true);
     }
 
+    IonNullLite(IonNullLite existing, IonContext context)
+    {
+        super(existing, context);
+    }
+
     @Override
     public void accept(final ValueVisitor visitor) throws Exception
     {
@@ -30,14 +36,15 @@ final class IonNullLite
     }
 
     @Override
+    IonNullLite clone(IonContext context)
+    {
+        return new IonNullLite(this, context);
+    }
+
+    @Override
     public IonNullLite clone()
     {
-        IonNullLite clone = new IonNullLite(_context.getSystem());
-
-        // As IonNulls have no value, we only need to copy member fields
-        clone.copyMemberFieldsFrom(this);
-
-        return clone;
+        return clearFieldName(this.clone(getSystem()));
     }
 
     @Override
@@ -47,15 +54,15 @@ final class IonNullLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
         throws IOException
     {
         writer.writeNull();
     }
 
     @Override
-    public int hashCode() {
-        return hashTypeAnnotations(HASH_SIGNATURE);
+    public int hashCode(SymbolTable symbolTable) {
+        return hashTypeAnnotations(HASH_SIGNATURE, symbolTable);
     }
 
 }
