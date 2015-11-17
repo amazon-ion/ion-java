@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
@@ -7,6 +7,7 @@ import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
+import com.amazon.ion.CloneTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivTimelineTest;
@@ -105,6 +106,7 @@ import org.junit.runners.Suite;
     BlobTest.class,
     BoolTest.class,
     ClobTest.class,
+    CloneTest.class,
     DatagramTest.class,
     DecimalTest.class,
     FloatTest.class,

@@ -1,11 +1,10 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 
-import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Test;
 
 
@@ -198,44 +197,6 @@ public class SymbolTest
         assertFalse("original should not be null", original.isNullValue());
         testCloneVariants(original);
     }
-
-    @Test
-    public void testCloneSymbolWithUnknownTextKnownSid()
-    {
-        //===== IonSymbol.clone() =====
-        SymbolToken tok = newSymbolToken(99);
-        IonSymbol original = system().newSymbol(tok);
-        assertFalse("original should not be null", original.isNullValue());
-        try {
-            testSimpleClone(original);
-            fail("Expected UnknownSymbolException");
-        }
-        catch (UnknownSymbolException e) { }
-
-        //===== ValueFactory.clone() with the same ValueFactory =====
-        tok = newSymbolToken(99);
-        original = system().newSymbol(tok);
-        assertFalse("original should not be null", original.isNullValue());
-        try {
-            testValueFactoryClone(original, system());
-            fail("Expected UnknownSymbolException");
-        }
-        catch (UnknownSymbolException e) { }
-
-        //===== ValueFactory.clone() with a different ValueFactory (on each DOM impl) =====
-        for (DomType domType : DomType.values())
-        {
-            tok = newSymbolToken(99);
-            original = system().newSymbol(tok);
-            assertFalse("original should not be null", original.isNullValue());
-            // Different factory, this triggers a deep copy
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            testValueFactoryClone(original,
-                                  newSystem(new SimpleCatalog(), domType));
-        }
-    }
-
 
     @Test
     public void testSymbolWithEscapedNewline()

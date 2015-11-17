@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -543,12 +543,15 @@ abstract class IonValueImpl
         if (this._fieldName != null) return this._fieldName;
         if (this._fieldSid < 1) return null;
 
-        String text = getSymbolTable().findKnownSymbol(_fieldSid);
-        if (text == null) {
-            throw new UnknownSymbolException(_fieldSid);
+        SymbolTable symtab = getSymbolTable();
+        if (symtab != null) {
+            String text = symtab.findKnownSymbol(_fieldSid);
+            if (text != null) {
+                _fieldName = text;
+                return text;
+            }
         }
-        _fieldName = text;
-        return _fieldName;
+        throw new UnknownSymbolException(_fieldSid);
     }
 
     public int getFieldId()
