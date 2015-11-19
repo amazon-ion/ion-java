@@ -5,22 +5,27 @@ package com.amazon.ion;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 
 import com.amazon.ion.system.SimpleCatalog;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 
 public class CloneTest
     extends IonTestCase
 {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
+
     @Test
     public void testIonValueCloneWithUnknownSymbolText()
     {
         SymbolToken tok = newSymbolToken(99);
         IonSymbol original = system().newSymbol(tok);
-        try {
-            original.clone();
-            fail("Expected UnknownSymbolException");
-        }
-        catch (UnknownSymbolException e) { }
+
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        original.clone();
     }
 
     @Test
@@ -28,11 +33,10 @@ public class CloneTest
     {
         SymbolToken tok = newSymbolToken(99);
         IonSymbol original = system().newSymbol(tok);
-        try {
-            system().clone(original);
-            fail("Expected UnknownSymbolException");
-        }
-        catch (UnknownSymbolException e) { }
+
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        system().clone(original);
     }
 
     @Test
@@ -40,17 +44,21 @@ public class CloneTest
     {
         for (DomType domType : DomType.values())
         {
+            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+
             SymbolToken tok = newSymbolToken(99);
             IonSymbol original = system().newSymbol(tok);
+
             // TODO ION-339 An UnknownSymbolException is expected here, but
             // it isn't thrown.
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
             IonSymbol copy = otherSystem.clone(original);
+
             // If we don't fail we should at least retain the SID.
             assertEquals(99, copy.symbolValue().getSid());
         }
     }
 
+    static final boolean DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT = true;
 
     @Test
     public void testIonValueCloneWithUnknownAnnotationText()
@@ -58,13 +66,16 @@ public class CloneTest
         SymbolToken tok = newSymbolToken(99);
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
-        try {
-            IonInt copy = original.clone();
-//            fail("Expected UnknownSymbolException"); // TODO
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
+
+        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            thrown.expect(UnknownSymbolException.class);
+            thrown.expectMessage("$99");
         }
-        catch (UnknownSymbolException e) { }
+
+        IonInt actual = original.clone();
+        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            assertEquals(original, actual);
+        }
     }
 
     @Test
@@ -73,13 +84,16 @@ public class CloneTest
         SymbolToken tok = newSymbolToken(99);
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
-        try {
-            IonInt copy = system().clone(original);
-//            fail("Expected UnknownSymbolException"); // TODO
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
+
+        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            thrown.expect(UnknownSymbolException.class);
+            thrown.expectMessage("$99");
         }
-        catch (UnknownSymbolException e) { }
+
+        IonInt actual = system().clone(original);
+        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            assertEquals(original, actual);
+        }
     }
 
     @Test
@@ -87,13 +101,16 @@ public class CloneTest
     {
         for (DomType domType : DomType.values())
         {
+            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+
             SymbolToken tok = newSymbolToken(99);
             IonInt original = system().newInt(5);
             original.setTypeAnnotationSymbols(tok);
+
             // TODO ION-339 An UnknownSymbolException is expected here, but
             // it isn't thrown.
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
             IonInt copy = otherSystem.clone(original);
+
             // If we don't fail we should at least retain the SID.
             assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
         }
@@ -105,12 +122,15 @@ public class CloneTest
     {
         SymbolToken tok = newSymbolToken(99);
         IonStruct original = system().newEmptyStruct();
-        original.add(tok, system().newNull());
-        try {
-            original.clone();
-            fail("Expected UnknownSymbolException");
-        }
-        catch (UnknownSymbolException e) { }
+        IonValue child = system().newNull();
+        original.add(tok, child);
+
+        // This works since the cloned child doesn't retain its field name.
+        child.clone();
+
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        original.clone();
     }
 
     @Test
@@ -118,12 +138,15 @@ public class CloneTest
     {
         SymbolToken tok = newSymbolToken(99);
         IonStruct original = system().newEmptyStruct();
-        original.add(tok, system().newNull());
-        try {
-            system().clone(original);
-            fail("Expected UnknownSymbolException");
-        }
-        catch (UnknownSymbolException e) { }
+        IonValue child = system().newNull();
+        original.add(tok, child);
+
+        // This works since the cloned child doesn't retain its field name.
+        system().clone(child);
+
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        system().clone(original);
     }
 
     @Test
@@ -131,13 +154,20 @@ public class CloneTest
     {
         for (DomType domType : DomType.values())
         {
+            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+
             SymbolToken tok = newSymbolToken(99);
             IonStruct original = system().newEmptyStruct();
-            original.add(tok, system().newNull());
+            IonValue child = system().newNull();
+            original.add(tok, child);
+
+            // This works since the cloned child doesn't retain its field name.
+            otherSystem.clone(child);
+
             // TODO ION-339 An UnknownSymbolException is expected here, but
             // it isn't thrown.
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
             IonStruct copy = otherSystem.clone(original);
+
             // If we don't fail we should at least retain the SID.
             assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
         }

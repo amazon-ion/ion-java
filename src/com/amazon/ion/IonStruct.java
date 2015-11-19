@@ -290,16 +290,35 @@ public interface IonStruct
     /**
      * Clones this struct, excluding certain fields. This can be more
      * efficient than cloning the struct and removing fields later on.
+     *
+     * @param fieldNames the names of the fields to remove.
+     *   A null field name causes removal of fields with unknown names.
+     *
+     * @throws UnknownSymbolException
+     *   if any part of the cloned value would have unknown text but known SID
+     *   for its field name, annotation or symbol.
+     *
+     * @see IonValue#clone()
      */
-    public IonStruct cloneAndRemove(String... fieldNames);
+    public IonStruct cloneAndRemove(String... fieldNames)
+        throws UnknownSymbolException;
 
 
     /**
      * Clones this struct, including only certain fields. This can be more
      * efficient than cloning the struct and removing fields later on.
      *
+     * @param fieldNames the names of the fields to retain.
+     *   Nulls are not allowed.
+     *
      * @throws NullPointerException
      *   if {@code fieldNames}, or any element within it, is <code>null</code>.
+     * @throws UnknownSymbolException
+     *   if any part of the cloned value would have unknown text but known SID
+     *   for its field name, annotation or symbol.
+     *
+     * @see IonValue#clone()
      */
-    public IonStruct cloneAndRetain(String... fieldNames);
+    public IonStruct cloneAndRetain(String... fieldNames)
+        throws UnknownSymbolException;
 }

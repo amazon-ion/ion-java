@@ -1,7 +1,8 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
+import static com.amazon.ion.CloneTest.DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import com.amazon.ion.impl._Private_IonValue;
@@ -12,12 +13,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 
 public class StructTest
     extends ContainerTestCase
 {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
 
     @Override
     protected IonStruct makeNull()
@@ -1062,30 +1068,35 @@ public class StructTest
         assertEquals(null, n2.getContainer());
     }
 
+    //-------------------------------------------------------------------------
+
     @Test
     public void testCloneAndRemove()
     {
-        IonStruct s1 = struct("a::$99::{c:1,d:2,e:3,d:3}");
+        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3}");
         IonStruct actual = s1.cloneAndRemove("c", "e");
-        IonStruct expected = struct("a::$99::{d:2,d:3}");
+        IonStruct expected = struct("a::b::{d:2,d:3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("a::$99::{}"), actual.cloneAndRemove("d"));
+        assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
 
-        IonStruct n = struct("$55::y::null.struct");
+        IonStruct n = struct("x::y::null.struct");
         IonStruct n2 = n.cloneAndRemove("a");
-        assertEquals(struct("$55::y::null.struct"), n2);
+        assertEquals(struct("x::y::null.struct"), n2);
     }
 
     @Test
     public void testCloneAndRemoveWithSpecialFieldNames()
     {
         IonStruct s1 = struct("{c:1,$99:2,'$19':3,'$20':3}");
-        IonStruct actual = s1.cloneAndRemove("c", "$19");
-        IonStruct expected = struct("{$99:2,'$20':3}");
+
+        // Unlike cloneAndRetain(), cloneAndRemove() allows null args since it
+        // makes sense to request removal of unknown field names.
+        IonStruct actual = s1.cloneAndRemove("$19", null);
+        IonStruct expected = struct("{c:1,'$20':3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("{}"), actual.cloneAndRemove("$20", null));
+        assertEquals(struct("{}"), actual.cloneAndRemove("$20", "c"));
 
         IonStruct n = struct("x::y::null.struct");
         IonStruct n2 = n.cloneAndRemove("$20");
@@ -1093,34 +1104,217 @@ public class StructTest
     }
 
     @Test
-    public void testCloneAndRetain()
+    public void testCloneAndRemoveWithUnknownFieldNameOnRoot()
     {
-        IonStruct s1 = struct("a::$99::{c:1,d:2,e:3,d:3}");
-        IonStruct actual = s1.cloneAndRetain("c", "d");
-        IonStruct expected = struct("a::$99::{c:1,d:2,d:3}");
+        IonStruct s1 = struct("{$99:a::{c:1,d:2,d:3}}");
+
+        IonStruct root = (IonStruct) s1.iterator().next();
+
+        IonStruct actual = root.cloneAndRemove("c");
+        IonStruct expected = struct("a::{d:2,d:3}");
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testCloneAndRemoveWithUnknownFieldNameOnField()
+    {
+        IonStruct s1 = struct("a::{$99:1,d:2,e:3,d:3}");
+
+        // OK if the unknown symbol is on a removed node.
+        IonStruct actual = s1.cloneAndRemove(null, "e");
+        IonStruct expected = struct("a::{d:2,d:3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("a::$99::{}"), actual.cloneAndRetain("e"));
+        // Not OK if the unknown symbol is on a retained node.
+        s1 = struct("a::{c:1,$99:2,e:3,d:3}");
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        s1.cloneAndRemove("c", "e");
+    }
 
-        IonStruct n = struct("$55::y::null.struct");
+
+    @Test
+    public void testCloneAndRemoveWithUnknownSymbolTextOnField()
+    {
+        IonStruct s1 = struct("a::{c:$99,d:2,e:3,d:3}");
+
+        // OK if the unknown symbol is on a removed node.
+        IonStruct actual = s1.cloneAndRemove("c", "e");
+        IonStruct expected = struct("a::{d:2,d:3}");
+        assertEquals(expected, actual);
+
+        // Not OK if the unknown symbol is on a retained node.
+        s1 = struct("a::{c:1,d:$99,e:3,d:3}");
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        s1.cloneAndRemove("c", "e");
+    }
+
+    @Test
+    public void testCloneAndRemoveWithUnknownAnnotationTextOnRoot()
+    {
+        IonStruct s1 = struct("$99::{c:1,d:2,e:3,d:3}");
+        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            thrown.expect(UnknownSymbolException.class);
+            thrown.expectMessage("$99");
+        }
+        IonStruct actual = s1.cloneAndRemove("c", "e");
+        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            // If we don't fail we should at least retain the SID.
+            IonStruct expected = struct("$99::{d:2,d:3}");
+            assertEquals(expected, actual);
+        }
+    }
+
+    @Test
+    public void testCloneAndRemoveWithUnknownAnnotationTextOnField()
+    {
+        IonStruct s1 = struct("a::{c:$99::1,d:2,e:3,d:3}");
+
+        // OK if the unknown symbol is on a removed node.
+        IonStruct actual = s1.cloneAndRemove("c", "e");
+        IonStruct expected = struct("a::{d:2,d:3}");
+        assertEquals(expected, actual);
+
+        // Not OK if the unknown symbol is on a retained node.
+        s1 = struct("a::{c:1,d:$99::2,e:3}");
+        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            thrown.expect(UnknownSymbolException.class);
+            thrown.expectMessage("$99");
+        }
+        actual = s1.cloneAndRemove("c", "e");
+        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            // If we don't fail we should at least retain the SID.
+            expected = struct("a::{d:$99::2}");
+            assertEquals(expected, actual);
+        }
+    }
+
+    //-------------------------------------------------------------------------
+
+    @Test
+    public void testCloneAndRetain()
+    {
+        IonStruct s1 = struct("a::{c:1,d:2,e:3,d:3}");
+        IonStruct actual = s1.cloneAndRetain("c", "d");
+        IonStruct expected = struct("a::{c:1,d:2,d:3}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::{}"), actual.cloneAndRetain("e"));
+
+        IonStruct n = struct("y::null.struct");
         IonStruct n2 = n.cloneAndRetain("a");
-        assertEquals(struct("$55::y::null.struct"), n2);
+        assertEquals(struct("y::null.struct"), n2);
+
+        // Not cool to ask to retain an unknown field name.
+        thrown.expect(NullPointerException.class);
+        s1.cloneAndRetain("c", null);
     }
 
     @Test
     public void testCloneAndRetainWithSpecialFieldNames()
     {
         IonStruct s1 = struct("{c:1,$99:2,'$19':3,'$20':3}");
-        IonStruct actual = s1.cloneAndRetain("c", "$20", null);
-        IonStruct expected = struct("{c:1,$99:2,'$20':3}");
+        IonStruct actual = s1.cloneAndRetain("c", "$20");
+        IonStruct expected = struct("{c:1,'$20':3}");
         assertEquals(expected, actual);
 
-        assertEquals(struct("{}"), actual.cloneAndRetain("$99"));
+        assertEquals(struct("{}"), s1.cloneAndRetain("$99"));
 
         IonStruct n = struct("x::y::null.struct");
         IonStruct n2 = n.cloneAndRetain("$20");
         assertEquals(struct("x::y::null.struct"), n2);
     }
+
+
+    @Test
+    public void testCloneAndRetainWithUnknownFieldNameOnRoot()
+    {
+        IonStruct s1 = struct("{$99:a::{c:1,d:2,d:3}}");
+
+        IonStruct root = (IonStruct) s1.iterator().next();
+
+        IonStruct actual = root.cloneAndRetain("d");
+        IonStruct expected = struct("a::{d:2,d:3}");
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testCloneAndRetainWithUnknownFieldNameOnField()
+    {
+        IonStruct s1 = struct("a::{$99:1,d:2,e:3,d:3}");
+
+        // OK if the unknown symbol is on a removed node.
+        IonStruct actual = s1.cloneAndRetain("d", "e");
+        IonStruct expected = struct("a::{d:2,e:3,d:3}");
+        assertEquals(expected, actual);
+
+        // Not OK if the unknown symbol is on a retained node.
+        s1 = struct("a::{c:1,$99:2,e:3,d:3}");
+        thrown.expect(NullPointerException.class);
+        s1.cloneAndRetain(null, "e");
+    }
+
+
+    @Test
+    public void testCloneAndRetainWithUnknownSymbolTextOnField()
+    {
+        IonStruct s1 = struct("a::{c:$99,d:2,e:3,d:3}");
+
+        // OK if the unknown symbol is on a removed node.
+        IonStruct actual = s1.cloneAndRetain("d");
+        IonStruct expected = struct("a::{d:2,d:3}");
+        assertEquals(expected, actual);
+
+        // Not OK if the unknown symbol is on a retained node.
+        s1 = struct("a::{c:1,d:$99,e:3,d:3}");
+        thrown.expect(UnknownSymbolException.class);
+        thrown.expectMessage("$99");
+        s1.cloneAndRetain("c", "d");
+    }
+
+    @Test
+    public void testCloneAndRetainWithUnknownAnnotationTextOnRoot()
+    {
+        IonStruct s1 = struct("$99::{c:1,d:2,e:3,d:3}");
+        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            thrown.expect(UnknownSymbolException.class);
+            thrown.expectMessage("$99");
+        }
+        IonStruct actual = s1.cloneAndRetain("c", "e");
+        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            // If we don't fail we should at least retain the SID.
+            IonStruct expected = struct("$99::{c:1,e:3}");
+            assertEquals(expected, actual);
+        }
+    }
+
+    @Test
+    public void testCloneAndRetainWithUnknownAnnotationTextOnField()
+    {
+        IonStruct s1 = struct("a::{c:$99::1,d:2,e:3,d:3}");
+
+        // OK if the unknown symbol is on a removed node.
+        IonStruct actual = s1.cloneAndRetain("d");
+        IonStruct expected = struct("a::{d:2,d:3}");
+        assertEquals(expected, actual);
+
+        // Not OK if the unknown symbol is on a retained node.
+        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            thrown.expect(UnknownSymbolException.class);
+            thrown.expectMessage("$99");
+        }
+        actual = s1.cloneAndRetain("c", "e");
+        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
+            // If we don't fail we should at least retain the SID.
+            expected = struct("a::{c:$99::1,e:3}");
+            assertEquals(expected, actual);
+        }
+    }
+
+
+    //-------------------------------------------------------------------------
+
 
     private static class TestField
     {

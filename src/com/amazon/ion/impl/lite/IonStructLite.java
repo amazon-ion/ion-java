@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -346,16 +346,23 @@ final class IonStructLite
         }
         else
         {
-            clone = getSystem().newEmptyStruct();
             Set<String> fields =
                 new HashSet<String>(Arrays.asList(fieldNames));
+            if (keep && fields.contains(null))
+            {
+                throw new NullPointerException("Can't retain an unknown field name");
+            }
+
+            clone = getSystem().newEmptyStruct();
             for (IonValue value : this)
             {
                 SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
                 String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
-                    clone.add(fieldNameSymbol, value.clone());
+                    // This ensures that we don't copy an unknown field name.
+                    fieldName = value.getFieldName();
+                    clone.add(fieldName, value.clone());
                 }
             }
         }

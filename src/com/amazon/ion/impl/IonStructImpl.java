@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -217,15 +217,22 @@ final class IonStructImpl
         }
         else
         {
-            clone = _system.newEmptyStruct();
             Set<String> fields =
                 new HashSet<String>(Arrays.asList(fieldNames));
+            if (keep && fields.contains(null))
+            {
+                throw new NullPointerException("Can't retain an unknown field name");
+            }
+
+            clone = _system.newEmptyStruct();
             for (IonValue value : this)
             {
                 SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
                 String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
+                    // This ensures that we don't copy an unknown field name.
+                    fieldName = value.getFieldName();
                     clone.add(fieldNameSymbol, value.clone());
                 }
             }
