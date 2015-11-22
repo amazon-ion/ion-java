@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -36,7 +36,7 @@ abstract class IonSequenceLite
     }
 
     IonSequenceLite(IonSequenceLite existing, IonContext context) {
-        super(existing, context);
+        super(existing, context, false);
     }
 
     /**

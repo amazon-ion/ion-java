@@ -43,7 +43,7 @@ final class IonStructLite
 
     private IonStructLite(IonStructLite existing, IonContext context)
     {
-        super(existing, context);
+        super(existing, context, true);
         // field map can be shallow cloned due to it dealing with String and Integer
         // values - both of which are immutable constructs and so safe to retain as references
         this._field_map = null == _field_map
@@ -66,7 +66,7 @@ final class IonStructLite
     @Override
     public IonStructLite clone()
     {
-        return clearFieldName(this.clone(getSystem()));
+        return clone(getSystem());
     }
 
     @Override
@@ -496,12 +496,8 @@ final class IonStructLite
 
         IonValueLite concrete = (IonValueLite) value;
 
-        // set the fieldname first so that setFieldName
-        // doesn't complain that we're changing the name
-        // of a field that's already in a struct somewhere.
-        concrete.setFieldName(fieldName);
-
         _add(fieldName, concrete);
+        concrete.setFieldName(fieldName);
     }
 
     public void add(SymbolToken fieldName, IonValue child)

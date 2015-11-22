@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -34,20 +34,25 @@ abstract class IonContainerLite
         super(context, isNull);
     }
 
-    IonContainerLite(IonContainerLite existing, IonContext context) {
+    IonContainerLite(IonContainerLite existing, IonContext context, boolean isStruct) {
         super(existing, context);
-        this._child_count = existing._child_count;
+        int childCount = existing._child_count;
+        this._child_count = childCount;
         // when cloning the children we establish 'this' the cloned outer container as the context
         if (existing._children != null) {
-            boolean isDatagram = this instanceof IonDatagramLite; 
-            this._children = new IonValueLite[existing._child_count];
-            for (int i = 0, count = existing._child_count; i < count; i++) {
+            boolean isDatagram = this instanceof IonDatagramLite;
+            this._children = new IonValueLite[childCount];
+            for (int i = 0; i < childCount; i++) {
+                IonValueLite child = existing._children[i];
                 IonContext childContext = isDatagram
                      ? TopLevelContext.wrap((IonSystemLite) context,
-                                       existing._children[i].getAssignedSymbolTable(),
+                                       child.getAssignedSymbolTable(),
                                        this)
-                     : this;                          
-                this._children[i] = existing._children[i].clone(childContext);
+                     : this;
+
+                IonValueLite copy = child.clone(childContext);
+                if (isStruct) copy.setFieldName(child.getFieldName());
+                this._children[i] = copy;
             }
         }
     }

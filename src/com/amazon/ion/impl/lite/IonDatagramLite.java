@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -101,9 +101,6 @@ final class IonDatagramLite
         super(/* context */ system, false);
         _system = system;
         _catalog = catalog;
-        // these should be no-op's but just to be sure:
-        setFieldName(null);
-        clearTypeAnnotations();
         _pending_symbol_table_idx = -1;
     }
 
@@ -124,7 +121,7 @@ final class IonDatagramLite
     @Override
     public IonDatagramLite clone()
     {
-        return clearFieldName(new IonDatagramLite(this));
+        return new IonDatagramLite(this);
     }
 
     // TODO ION-312 Reverse encoder is set as default, set original

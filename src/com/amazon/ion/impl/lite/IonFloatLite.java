@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -48,7 +48,7 @@ final class IonFloatLite
     @Override
     public IonFloatLite clone()
     {
-        return clearFieldName(this.clone(getSystem()));
+        return clone(getSystem());
     }
 
     @Override

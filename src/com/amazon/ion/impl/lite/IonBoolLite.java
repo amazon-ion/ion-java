@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -54,7 +54,7 @@ final class IonBoolLite
     @Override
     public IonBoolLite clone()
     {
-        return clearFieldName(this.clone(getSystem()));
+        return clone(getSystem());
     }
 
     @Override

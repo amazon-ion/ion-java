@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -223,7 +223,7 @@ abstract class IonValueLite
                 if (existingToken != null) {
                     String text = existingToken.getText();
                     if (text != null) {
-                        this._annotations[i] = 
+                        this._annotations[i] =
                             _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     } else {
                         // TODO - this is clearly wrong; however was the existing behavior as
@@ -233,8 +233,7 @@ abstract class IonValueLite
                 }
             }
         }
-        // this._fieldId  = null; - we don't copy across the _fieldId
-        this._fieldName   = existing._fieldName;
+        // We don't copy the field name, that happens in IonStruct's clone
         this._flags       = existing._flags;
         this._context     = context;
 
@@ -305,11 +304,6 @@ abstract class IonValueLite
 
     abstract IonValueLite clone(IonContext parentContext);
 
-    static <T extends IonValueLite> T clearFieldName(T value) {
-        value._fieldId = UNKNOWN_SYMBOL_ID;
-        value._fieldName = null;
-        return value;
-    }
 
     /**
      * Since {@link #equals(Object)} is overridden, each concrete class must provide
@@ -508,7 +502,8 @@ abstract class IonValueLite
 
     final void setFieldName(String name)
     {
-        assert(this.getContainer() == null);
+        assert getContainer() instanceof IonStructLite;
+        // We can never change a field name once it's set.
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name;
     }
