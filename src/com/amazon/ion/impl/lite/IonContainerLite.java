@@ -543,10 +543,16 @@ abstract class IonContainerLite
      *        must not be null.
      * @throws NullPointerException
      *         if the element is <code>null</code>.
+     * @throws IndexOutOfBoundsException
+     *   if the index is out of range (index < 0 || index > size()).
      */
     void add(int index, IonValueLite child)
         throws ContainedValueException, NullPointerException
     {
+        if ((index < 0) || (index > get_child_count()))
+        {
+            throw new IndexOutOfBoundsException();
+        }
         checkForLock();
         validateNewChild(child);
 

@@ -839,6 +839,28 @@ public abstract class SequenceTestCase
         catch (IndexOutOfBoundsException e) { }
     }
 
+    @Test
+    public void testAddBeyondEnd(){
+        IonSequence s = makeEmpty();
+        s.add(0, system().newInt(1));
+        try {
+            s.add(2, system().newInt(1));
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+    }
+
+    @Test
+    public void testAddNegative(){
+        IonSequence s = makeEmpty();
+        s.add(0, system().newInt(1));
+        try {
+            s.add(-1, system().newInt(1));
+            fail("expected exception");
+        }
+        catch (IndexOutOfBoundsException e) { }
+    }
+
     private void checkEmptyIterator(IonSequence s)
     {
         try {
