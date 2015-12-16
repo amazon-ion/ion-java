@@ -45,9 +45,7 @@ abstract class IonContainerLite
             for (int i = 0; i < childCount; i++) {
                 IonValueLite child = existing._children[i];
                 IonContext childContext = isDatagram
-                     ? TopLevelContext.wrap((IonSystemLite) context,
-                                       child.getAssignedSymbolTable(),
-                                       this)
+                     ? new TopLevelContext(context.getSystem(), (IonDatagramLite)this)
                      : this;
 
                 IonValueLite copy = child.clone(childContext);

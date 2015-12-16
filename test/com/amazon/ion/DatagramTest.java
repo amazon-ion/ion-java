@@ -12,6 +12,7 @@ import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonValue;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import org.junit.Before;
@@ -508,6 +509,45 @@ public class DatagramTest
         assertArrayEquals(bytes1, bytes2);
     }
 
+    private IonDatagram getClone() throws IOException
+    {
+        IonDatagram dg = loadTestFile("good/structs.ion");
+        return dg.clone();
+    }
+
+    @Test
+    public void testRemoveAfterClone()
+        throws IOException
+    {
+        IonDatagram copy = getClone();
+        int beforeSize = copy.size();
+        IonStruct struct = (IonStruct)copy.get(0);
+        copy.remove(struct);
+        assertEquals(beforeSize - 1, copy.size());
+    }
+
+    @Test
+    public void testAddAfterClone()
+        throws IOException
+    {
+        IonDatagram copy = getClone();
+        int beforeSize = copy.size();
+        IonStruct newChild = system().newEmptyStruct();
+        newChild.add("foo", system().newString("bar"));
+        copy.add(newChild);
+        assertEquals(beforeSize + 1, copy.size());
+        assertTrue(copy.contains(newChild));
+    }
+
+    @Test
+    public void testClearAfterClone()
+        throws IOException
+    {
+        IonDatagram copy = getClone();
+        assertTrue(copy.size() > 0);
+        copy.clear();
+        assertEquals(0, copy.size());
+    }
 
     /**
      * Catches a simple case that failed for some time.

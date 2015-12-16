@@ -38,7 +38,7 @@ final class TopLevelContext
      */
     private SymbolTable _symbols;
 
-    private TopLevelContext(IonSystemLite system, IonDatagramLite datagram)
+    TopLevelContext(IonSystemLite system, IonDatagramLite datagram)
     {
         assert system != null;
         _system = system;
