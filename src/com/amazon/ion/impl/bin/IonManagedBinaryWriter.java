@@ -657,18 +657,6 @@ import java.util.Map;
         }
     }
 
-    private void endLocalSymbolTableIfNeeded() throws IOException
-    {
-        symbolState.closeTable(symbols);
-        // TODO be more configurable with respect to local symbol table caching
-        locals.clear();
-        localsLocked = false;
-
-        // flush out to the stream.
-        symbols.finish();
-        symbolState = SymbolState.SYSTEM_SYMBOLS;
-    }
-
     private SymbolToken intern(final String text)
     {
         if (text == null)
@@ -934,21 +922,37 @@ import java.util.Map;
     {
         if (getDepth() == 0 && localsLocked)
         {
+            unsafeFlush();
+        }
+    }
+
+    private void unsafeFlush() throws IOException
+    {
+        if (user.hasWrittenValuesSinceFinished())
+        {
             // this implies that we have a local symbol table of some sort and the user locked it
             symbolState.closeTable(symbols);
-            // make sure that until the local symbol state changes we no-op the table closing routine
-            symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
-
-            // push the data out
-            symbols.finish();
-            user.finish();
         }
+
+        // make sure that until the local symbol state changes we no-op the table closing routine
+        symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
+        // push the data out
+        symbols.finish();
+        user.finish();
     }
 
     public void finish() throws IOException
     {
-        endLocalSymbolTableIfNeeded();
-        user.finish();
+        if (getDepth() != 0)
+        {
+            throw new IllegalStateException("IonWriter.finish() can only be called at top-level.");
+        }
+        unsafeFlush();
+        // Reset local symbols
+        // TODO be more configurable with respect to local symbol table caching
+        locals.clear();
+        localsLocked = false;
+        symbolState = SymbolState.SYSTEM_SYMBOLS;
         imports = bootstrapImports;
     }
 

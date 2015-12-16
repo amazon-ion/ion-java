@@ -12,6 +12,7 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.util.NullOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import org.junit.Assert;
@@ -183,9 +184,27 @@ public class BinaryWriterTest
         assertTrue(bytesWritten >= twoGB);
     }
 
+    @Test
+    public void testNoIVMWrittenWhenNoValuesWritten() throws IOException
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = system().newBinaryWriter(out);
+        writer.close();
+        assertEquals(0, out.size()); //no IVM written
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testFinishNotAtTopLevel() throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.finish();
+    }
+
     @Override
     protected void checkFlushedAfterTopLevelValueWritten()
     {
         checkFlushed(false);
     }
+
 }
