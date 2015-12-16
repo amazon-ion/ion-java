@@ -74,6 +74,16 @@ public interface IonWriter
      * Note that the table may be replaced during processing.  For example,
      * the stream may start out with a system table that's later replaced by a
      * local table in order to store newly-encountered symbols.
+     * <p>
+     * When this method returns a local table, it may be
+     * {@linkplain SymbolTable#isReadOnly() mutable}, meaning that additional
+     * symbols may be interned until it is
+     * {@linkplain SymbolTable#makeReadOnly() made read-only}. Note that
+     * manually mutating local symbol tables is a deprecated feature;
+     * please instead use
+     * {@link IonSystem#newBinaryWriter(java.io.OutputStream, SymbolTable...)}
+     * or {@link IonSystem#newTextWriter(java.io.OutputStream, SymbolTable...)}
+     * to provide custom symbol table(s) to writers upon construction.
      *
      * @return current symbol table
      */

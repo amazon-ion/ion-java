@@ -8,6 +8,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
@@ -16,7 +17,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  *
@@ -24,6 +27,10 @@ import org.junit.Test;
 public class BinaryWriterTest
     extends OutputStreamWriterTestCase
 {
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Override
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
@@ -32,28 +39,29 @@ public class BinaryWriterTest
         return system().newBinaryWriter(out, imports);
     }
 
-    @Test(expected = IonException.class)
+    @Test
     public void testWriteSymbolWithLockedSymtab()
         throws Exception
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
         iw.getSymbolTable().makeReadOnly();
+        thrown.expect(IonException.class);
         iw.writeSymbol("s");
     }
 
-    @Test(expected = IonException.class)
+    @Test
     public void testAddTypeAnnotationWithLockedSymtab()
         throws Exception
     {
         iw = makeWriter();
         iw.writeSymbol("force a local symtab"); // TODO ION-165
         iw.getSymbolTable().makeReadOnly();
+        thrown.expect(IonException.class);
         iw.addTypeAnnotation("a");
-        iw.writeNull();
     }
 
-    @Test(expected = IonException.class)
+    @Test
     public void testSetFieldNameWithLockedSymtab()
         throws Exception
     {
@@ -61,10 +69,50 @@ public class BinaryWriterTest
         iw.writeSymbol("force a local symtab"); // TODO ION-165
         iw.getSymbolTable().makeReadOnly();
         iw.stepIn(IonType.STRUCT);
+        thrown.expect(IonException.class);
         iw.setFieldName("f");
-        iw.writeNull();
     }
 
+    @Test
+    public void testInternLockedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol("force a local symtab");
+        SymbolTable symtab = iw.getSymbolTable();
+        symtab.makeReadOnly();
+        assertTrue(symtab.isReadOnly());
+        thrown.expect(IonException.class);
+        symtab.intern("d");
+    }
+
+    @Test
+    public void testInternUnlockedSymtab()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol("force a local symtab");
+        SymbolTable symtab = iw.getSymbolTable();
+        assertTrue(!symtab.isReadOnly());
+        assertTrue(symtab.isLocalTable());
+        symtab.intern("d");
+        iw.stepIn(IonType.STRUCT);
+        {
+            iw.setFieldName("e"); //this causes e to be interned
+            iw.writeInt(1);
+            iw.setFieldName("d"); //d was already interned
+            iw.writeInt(2);
+        }
+        iw.stepOut();
+        symtab.makeReadOnly();
+        assertTrue(symtab.isReadOnly());
+        SymbolToken d = symtab.find("d");
+        SymbolToken e = symtab.find("e");
+        assertEquals("d", d.assumeText());
+        assertEquals("e", e.assumeText());
+        //verify that manually interning d first worked
+        assertTrue(d.getSid() < e.getSid());
+    }
 
     @Test
     public void testFlushingUnlockedSymtab()

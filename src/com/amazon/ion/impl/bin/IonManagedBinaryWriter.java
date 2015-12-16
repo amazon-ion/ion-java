@@ -437,7 +437,7 @@ import java.util.Map;
         public boolean isSubstitute()  { return false; }
         public boolean isSharedTable() { return false; }
         public boolean isLocalTable()  { return true; }
-        public boolean isReadOnly()    { return true; }
+        public boolean isReadOnly()    { return localsLocked; }
 
         public SymbolTable getSystemSymbolTable()
         {
