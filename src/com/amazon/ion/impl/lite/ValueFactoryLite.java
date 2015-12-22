@@ -26,10 +26,10 @@ import java.util.List;
 abstract class ValueFactoryLite
     implements ValueFactory
 {
-    private IonSystemLite _system;
+    private IonContext _context;
 
     protected void set_system(IonSystemLite system) {
-        _system = system;
+        _context = StubContext.wrap(system);
     }
 
     public IonBlobLite newBlob(byte[] value)
@@ -40,21 +40,21 @@ abstract class ValueFactoryLite
 
     public IonBlobLite newBlob(byte[] value, int offset, int length)
     {
-        IonBlobLite ionValue = new IonBlobLite(_system, (value == null));
+        IonBlobLite ionValue = new IonBlobLite(_context, (value == null));
         ionValue.setBytes(value, offset, length);
         return ionValue;
     }
 
     public IonBoolLite newBool(boolean value)
     {
-        IonBoolLite ionValue = new IonBoolLite(_system, false);
+        IonBoolLite ionValue = new IonBoolLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
 
     public IonBoolLite newBool(Boolean value)
     {
-        IonBoolLite ionValue = new IonBoolLite(_system, (value == null));
+        IonBoolLite ionValue = new IonBoolLite(_context, (value == null));
         ionValue.setValue(value);
         return ionValue;
     }
@@ -67,21 +67,21 @@ abstract class ValueFactoryLite
 
     public IonClobLite newClob(byte[] value, int offset, int length)
     {
-        IonClobLite ionValue = new IonClobLite(_system, (value == null));
+        IonClobLite ionValue = new IonClobLite(_context, (value == null));
         ionValue.setBytes(value, offset, length);
         return ionValue;
     }
 
     public IonDecimalLite newDecimal(long value)
     {
-        IonDecimalLite ionValue = new IonDecimalLite(_system, false);
+        IonDecimalLite ionValue = new IonDecimalLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
 
     public IonDecimalLite newDecimal(double value)
     {
-        IonDecimalLite ionValue = new IonDecimalLite(_system, false);
+        IonDecimalLite ionValue = new IonDecimalLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
@@ -89,7 +89,7 @@ abstract class ValueFactoryLite
     public IonDecimalLite newDecimal(BigInteger value)
     {
         boolean isNull = (value == null);
-        IonDecimalLite ionValue = new IonDecimalLite(_system, isNull);
+        IonDecimalLite ionValue = new IonDecimalLite(_context, isNull);
         if (value != null) {
             ionValue.setValue(Decimal.valueOf(value));
         }
@@ -99,7 +99,7 @@ abstract class ValueFactoryLite
     public IonDecimalLite newDecimal(BigDecimal value)
     {
         boolean isNull = (value == null);
-        IonDecimalLite ionValue = new IonDecimalLite(_system, isNull);
+        IonDecimalLite ionValue = new IonDecimalLite(_context, isNull);
         if (value != null) {
             ionValue.setValue(value);
         }
@@ -108,46 +108,46 @@ abstract class ValueFactoryLite
 
     public IonListLite newEmptyList()
     {
-        IonListLite ionValue = new IonListLite(_system, false);
+        IonListLite ionValue = new IonListLite(_context, false);
         return ionValue;
     }
 
     public IonSexpLite newEmptySexp()
     {
-        IonSexpLite ionValue = new IonSexpLite(_system, false);
+        IonSexpLite ionValue = new IonSexpLite(_context, false);
         return ionValue;
     }
 
     public IonStructLite newEmptyStruct()
     {
-        IonStructLite ionValue = new IonStructLite(_system, false);
+        IonStructLite ionValue = new IonStructLite(_context, false);
         return ionValue;
     }
 
     public IonFloatLite newFloat(long value)
     {
-        IonFloatLite ionValue = new IonFloatLite(_system, false);
+        IonFloatLite ionValue = new IonFloatLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
 
     public IonFloatLite newFloat(double value)
     {
-        IonFloatLite ionValue = new IonFloatLite(_system, false);
+        IonFloatLite ionValue = new IonFloatLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
 
     public IonIntLite newInt(int value)
     {
-        IonIntLite ionValue = new IonIntLite(_system, false);
+        IonIntLite ionValue = new IonIntLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
 
     public IonIntLite newInt(long value)
     {
-        IonIntLite ionValue = new IonIntLite(_system, false);
+        IonIntLite ionValue = new IonIntLite(_context, false);
         ionValue.setValue(value);
         return ionValue;
     }
@@ -155,7 +155,7 @@ abstract class ValueFactoryLite
     public IonIntLite newInt(Number value)
     {
         boolean isNull = (value == null);
-        IonIntLite ionValue = new IonIntLite(_system, isNull);
+        IonIntLite ionValue = new IonIntLite(_context, isNull);
         if (value != null) {
             ionValue.setValue(value);
         }
@@ -211,7 +211,7 @@ abstract class ValueFactoryLite
 
     public IonNullLite newNull()
     {
-        IonNullLite ionValue = new IonNullLite(_system);
+        IonNullLite ionValue = new IonNullLite(_context);
         return ionValue;
     }
 
@@ -239,73 +239,73 @@ abstract class ValueFactoryLite
 
     public IonBlobLite newNullBlob()
     {
-        IonBlobLite ionValue = new IonBlobLite(_system, true);
+        IonBlobLite ionValue = new IonBlobLite(_context, true);
         return ionValue;
     }
 
     public IonBoolLite newNullBool()
     {
-        IonBoolLite ionValue = new IonBoolLite(_system, true);
+        IonBoolLite ionValue = new IonBoolLite(_context, true);
         return ionValue;
     }
 
     public IonClobLite newNullClob()
     {
-        IonClobLite ionValue = new IonClobLite(_system, true);
+        IonClobLite ionValue = new IonClobLite(_context, true);
         return ionValue;
     }
 
     public IonDecimalLite newNullDecimal()
     {
-        IonDecimalLite ionValue = new IonDecimalLite(_system, true);
+        IonDecimalLite ionValue = new IonDecimalLite(_context, true);
         return ionValue;
     }
 
     public IonFloatLite newNullFloat()
     {
-        IonFloatLite ionValue = new IonFloatLite(_system, true);
+        IonFloatLite ionValue = new IonFloatLite(_context, true);
         return ionValue;
     }
 
     public IonIntLite newNullInt()
     {
-        IonIntLite ionValue = new IonIntLite(_system, true);
+        IonIntLite ionValue = new IonIntLite(_context, true);
         return ionValue;
     }
 
     public IonListLite newNullList()
     {
-        IonListLite ionValue = new IonListLite(_system, true);
+        IonListLite ionValue = new IonListLite(_context, true);
         return ionValue;
     }
 
     public IonSexpLite newNullSexp()
     {
-        IonSexpLite ionValue = new IonSexpLite(_system, true);
+        IonSexpLite ionValue = new IonSexpLite(_context, true);
         return ionValue;
     }
 
     public IonStringLite newNullString()
     {
-        IonStringLite ionValue = new IonStringLite(_system, true);
+        IonStringLite ionValue = new IonStringLite(_context, true);
         return ionValue;
     }
 
     public IonStructLite newNullStruct()
     {
-        IonStructLite ionValue = new IonStructLite(_system, true);
+        IonStructLite ionValue = new IonStructLite(_context, true);
         return ionValue;
     }
 
     public IonSymbolLite newNullSymbol()
     {
-        IonSymbolLite ionValue = new IonSymbolLite(_system, true);
+        IonSymbolLite ionValue = new IonSymbolLite(_context, true);
         return ionValue;
     }
 
     public IonTimestampLite newNullTimestamp()
     {
-        IonTimestampLite ionValue = new IonTimestampLite(_system, true);
+        IonTimestampLite ionValue = new IonTimestampLite(_context, true);
         return ionValue;
     }
 
@@ -359,7 +359,7 @@ abstract class ValueFactoryLite
     public IonStringLite newString(String value)
     {
         boolean isNull = (value == null);
-        IonStringLite ionValue = new IonStringLite(_system, isNull);
+        IonStringLite ionValue = new IonStringLite(_context, isNull);
         if (value != null) {
             ionValue.setValue(value);
         }
@@ -369,7 +369,7 @@ abstract class ValueFactoryLite
     public IonSymbolLite newSymbol(String value)
     {
         boolean isNull = (value == null);
-        IonSymbolLite ionValue = new IonSymbolLite(_system, isNull);
+        IonSymbolLite ionValue = new IonSymbolLite(_context, isNull);
         if (value != null) {
             ionValue.setValue(value);
         }
@@ -378,13 +378,13 @@ abstract class ValueFactoryLite
 
     public IonSymbolLite newSymbol(SymbolToken value)
     {
-        return new IonSymbolLite(_system, value);
+        return new IonSymbolLite(_context, value);
     }
 
     public IonTimestampLite newTimestamp(Timestamp value)
     {
         boolean isNull = (value == null);
-        IonTimestampLite ionValue = new IonTimestampLite(_system, isNull);
+        IonTimestampLite ionValue = new IonTimestampLite(_context, isNull);
         if (value != null) {
             ionValue.setValue(value);
         }

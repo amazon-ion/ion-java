@@ -26,9 +26,9 @@ final class IonFloatLite
     /**
      * Constructs a <code>null.float</code> element.
      */
-    public IonFloatLite(IonSystemLite system, boolean isNull)
+    public IonFloatLite(IonContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     IonFloatLite(IonFloatLite existing, IonContext context)
@@ -47,7 +47,7 @@ final class IonFloatLite
     @Override
     public IonFloatLite clone()
     {
-        return clone(getSystem());
+        return clone(StubContext.wrap(getSystem()));
     }
 
     @Override

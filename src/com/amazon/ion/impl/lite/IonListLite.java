@@ -62,7 +62,7 @@ final class IonListLite
     @Override
     public IonListLite clone()
     {
-        return clone(getSystem());
+        return clone(StubContext.wrap(getSystem()));
     }
 
     @Override

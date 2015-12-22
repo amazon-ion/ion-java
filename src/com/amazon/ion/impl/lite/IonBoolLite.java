@@ -53,7 +53,7 @@ final class IonBoolLite
     @Override
     public IonBoolLite clone()
     {
-        return clone(getSystem());
+        return clone(StubContext.wrap(getSystem()));
     }
 
     @Override

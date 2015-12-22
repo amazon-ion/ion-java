@@ -45,7 +45,7 @@ abstract class IonContainerLite
             for (int i = 0; i < childCount; i++) {
                 IonValueLite child = existing._children[i];
                 IonContext childContext = isDatagram
-                     ? new TopLevelContext(context.getSystem(), (IonDatagramLite)this)
+                     ? TopLevelContext.wrap(child.getAssignedSymbolTable(), (IonDatagramLite)this)
                      : this;
 
                 IonValueLite copy = child.clone(childContext);
@@ -426,7 +426,7 @@ abstract class IonContainerLite
 
     public SymbolTable ensureLocalSymbolTable(IonValueLite child)
     {
-        return _context.ensureLocalSymbolTable(this);
+        return _context.getContextContainer().ensureLocalSymbolTable(this);
     }
 
     /**
@@ -473,10 +473,9 @@ abstract class IonContainerLite
         }
     }
 
-    @Override
     public void clearLocalSymbolTable()
     {
-        _context.clearLocalSymbolTable();
+        _context.getContextContainer().clearLocalSymbolTable();
     }
 
     /**
@@ -679,6 +678,7 @@ abstract class IonContainerLite
     private int add_child(int idx, IonValueLite child)
     {
         _isNullValue(false); // if we add children we're not null anymore
+        child.setContext(this.getContextForIndex(child, idx));
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
             int new_len = this.nextSize(old_len, true);
@@ -695,13 +695,13 @@ abstract class IonContainerLite
         _child_count++;
         _children[idx] = child;
 
-        assert child._context instanceof TopLevelContext
-            || child._context instanceof IonSystemLite;
-        // Because the child must not have a container since we are adding it.
-        child._context.setContextContainer(this, child);
-
         child._elementid(idx);
         return idx;
+    }
+
+
+    IonContext getContextForIndex(IonValue element, int index){
+        return this;
     }
 
     /**
@@ -731,6 +731,18 @@ abstract class IonContainerLite
             child._elementid(ii);
         }
         return;
+    }
+
+    @Override
+    protected void detachFromSymbolTable()
+    {
+        super.detachFromSymbolTable();
+        if (_children != null)
+        {
+            for (int ii=0; ii<_child_count; ii++) {
+                _children[ii].detachFromSymbolTable();
+            }
+        }
     }
 
 }

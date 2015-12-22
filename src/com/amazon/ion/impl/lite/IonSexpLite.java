@@ -55,7 +55,7 @@ final class IonSexpLite
     @Override
     public IonSexpLite clone()
     {
-        return clone(getSystem());
+        return clone(StubContext.wrap(getSystem()));
     }
 
     @Override

@@ -194,10 +194,9 @@ abstract class IonSequenceLite
         validateNewChild(element);
 
         assert _children != null; // else index would be out of bounds above.
-
+        concrete._context = getContextForIndex(element, index);
         IonValueLite removed = set_child(index, concrete);
         concrete._elementid(index);
-        concrete._context = this;
 
         removed.detachFromContainer();
         // calls setDirty(), UNLESS it hits an IOException

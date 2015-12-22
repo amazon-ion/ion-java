@@ -43,7 +43,7 @@ final class IonNullLite
     @Override
     public IonNullLite clone()
     {
-        return clone(getSystem());
+        return clone(StubContext.wrap(getSystem()));
     }
 
     @Override
