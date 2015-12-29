@@ -185,24 +185,6 @@ final class IonDatagramLite
     }
 
     @Override
-    public final SymbolTable ensureLocalSymbolTable(IonValueLite child)
-    {
-        assert (child.getContext().getContextContainer() == this);
-        // see if there's a local table in front of us
-        SymbolTable symbols = child.getContext().getContextSymbolTable();
-        if (symbols.isLocalTable()) {
-            return symbols;
-        }
-
-        // if not we make one here on this value
-        // TODO ION-158 must use correct system symtab
-        symbols = _system.newLocalSymbolTable();
-        this.setSymbolTableAtIndex(child._elementid(), symbols);
-        return symbols;
-    }
-
-
-    @Override
     public SymbolTable getSymbolTable()
     {
         throw new UnsupportedOperationException();
@@ -212,21 +194,6 @@ final class IonDatagramLite
     public SymbolTable getAssignedSymbolTable()
     {
         throw new UnsupportedOperationException();
-    }
-
-
-    @Override
-    public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
-    {
-        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
-            String message =
-                "you can only set a symbol table to a system or local table";
-            throw new IllegalArgumentException(message);
-        }
-
-        assert(child.getContainer() == this);
-
-        this.setSymbolTableAtIndex(child.getElementId(), symbols);
     }
 
     @Override
@@ -392,31 +359,6 @@ final class IonDatagramLite
     {
         ListIterator<IonValue> iterator = new SequenceContentIterator(index, this.isReadOnly());
         return iterator;
-    }
-
-    @Override
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        assert(symbols == null || symbols.isSystemTable());
-
-        // we start with the system symbol table
-        symbols = _system.getSystemSymbolTable();
-
-        // thereafter each child may have it's own symbol table
-        for (int ii=0; ii<get_child_count(); ii++)
-        {
-            IonValueLite child = get_child(ii);
-            SymbolTable child_symbols = child.getAssignedSymbolTable();
-            if (child_symbols != null) {
-                symbols = child_symbols;
-            }
-            // the datagram is not marked readonly, although it's
-            // children may be read only
-            if (child.isReadOnly() == false) {
-                symbols = child.populateSymbolValues(symbols);
-            }
-        }
-        return symbols;
     }
 
     @Override
@@ -674,38 +616,10 @@ final class IonDatagramLite
         return value;
     }
 
-    // TODO: optimize this, if there's a real use case
-    //       deprecate this is there isn't (which I suspect is actually the case)
-    public IonValue systemRemove(int index) throws IndexOutOfBoundsException
-    {
-        IonValue value = systemGet(index);
-        assert(value instanceof IonValueLite);
-        if (((IonValueLite)value)._isSystemValue() == false) {
-            remove(value);
-        }
-        else {
-            assert(is_synthetic_value((IonValueLite)value));
-        }
-        return value;
-    }
-    // just used for a complicated assertion
-    private final boolean is_synthetic_value(IonValueLite value)
-    {
-        int idx = value._elementid();
-
-        if (idx < 0 || idx >= get_child_count()) return true;
-        if (get_child(idx) != value) return true;
-
-        // if this value is in the child collection where
-        // it says it is then it's a real value, and not synthetic
-        return false;
-    }
-
     public ListIterator<IonValue> systemIterator()
     {
         return new SystemContentIterator(isReadOnly());
     }
-
 
     // TODO: optimize this, if there's a real use case
     //       deprecate this is there isn't (which I suspect is actually the case)

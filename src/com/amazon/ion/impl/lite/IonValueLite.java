@@ -9,7 +9,6 @@ import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -436,45 +435,6 @@ abstract class IonValueLite
         return _Private_Utils.newSymbolToken(text, sid);
     }
 
-
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        if (_isLocked()) {
-            // we can't, and don't need to, update symbol id's
-            // for a locked value - there are none - so do nothing here
-        }
-        else {
-            // this is redundant now:  checkForLock();
-            if (symbols == null) {
-                symbols = getSymbolTable();
-                // TODO assertion contradicts the spec for getSymbolTable()
-                assert(symbols != null); // we should get a system symbol table if nothing else
-            }
-
-            if (_fieldName != null) {
-                symbols = resolve_symbol(symbols, _fieldName);
-            }
-
-            if (_annotations != null) {
-                for (int ii=0; ii<_annotations.length; ii++) {
-                    SymbolToken sym = _annotations[ii];
-                    if (sym == null) {
-                        break;
-                    }
-                    String text = sym.getText();
-                    if (text != null) {
-                        symbols = resolve_symbol(symbols, text);
-
-                        // TODO we've interned the symbol but forgotten the sid
-                        // We also haven't made sure we're using the same
-                        // String instance as the symtab.
-                    }
-                }
-            }
-        }
-        return symbols;
-    }
-
     /**
      * Sets this value's symbol table to null, and erases any SIDs here and
      * recursively.
@@ -505,21 +465,6 @@ abstract class IonValueLite
         }
     }
 
-    /** Attempts to intern the given symbol */
-    final SymbolTable resolve_symbol(SymbolTable symbols, String name)
-    {
-        assert(name != null && symbols != null);
-
-        int sid = symbols.findSymbol(name);
-
-        if (sid == UNKNOWN_SYMBOL_ID) {
-            if (!symbols.isLocalTable()) {
-                symbols = this._context.getContextContainer().ensureLocalSymbolTable(this);
-            }
-            symbols.intern(name);
-        }
-        return symbols;
-    }
 
     final void setFieldName(String name)
     {
@@ -578,51 +523,6 @@ abstract class IonValueLite
 
         SymbolTable symbols = _context.getContextSymbolTable();
         return symbols;
-    }
-
-    public SymbolTable getUpdatableSymbolTable()
-    {
-        SymbolTable symbols = getSymbolTable();
-        if (symbols == null || ! symbols.isLocalTable()) {
-            IonSystem system = getSystem();
-            symbols = system.getSystemSymbolTable();
-            symbols = _Private_Utils.newLocalSymtab(system, symbols);
-        }
-        return symbols;
-    }
-
-    public int resolveSymbol(String name)
-    {
-        SymbolTable symbols = getSymbolTable();
-        if (symbols == null) {
-            return UNKNOWN_SYMBOL_ID;
-        }
-        int sid = symbols.findSymbol(name);
-        return sid;
-    }
-
-    public String resolveSymbol(int sid)
-    {
-        SymbolTable symbols = getSymbolTable();
-        if (symbols == null) {
-            return null;
-        }
-        String name = symbols.findKnownSymbol(sid);
-        return name;
-    }
-
-    public int addSymbol(String name)
-    {
-        int sid = resolveSymbol(name);
-        if (sid != UNKNOWN_SYMBOL_ID) {
-            return sid;
-        }
-        checkForLock();
-
-        SymbolTable symbols = getUpdatableSymbolTable();
-        SymbolToken symToken = symbols.intern(name);
-        sid = symToken.getSid();
-        return sid;
     }
 
     public IonSystemLite getSystem()

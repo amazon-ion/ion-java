@@ -423,12 +423,6 @@ abstract class IonContainerLite
         throw new UnsupportedOperationException();
     }
 
-
-    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
-    {
-        return _context.getContextContainer().ensureLocalSymbolTable(this);
-    }
-
     /**
      * @return {@code null}, since symbol tables are only directly assigned
      *          to top-level values.
@@ -442,25 +436,6 @@ abstract class IonContainerLite
     public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
     {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        if (_isLocked()) {
-            // we can't, and don't need to, update symbol id's
-            // for a locked value - there are none - so do nothing here
-        }
-        else {
-            // for an unlocked value we populate the symbols for
-            // everyone and his brother
-            symbols = super.populateSymbolValues(symbols);
-            for (int ii=0; ii<get_child_count(); ii++) {
-                IonValueLite child = get_child(ii);
-                symbols = child.populateSymbolValues(symbols);
-            }
-        }
-        return symbols;
     }
 
     @Override

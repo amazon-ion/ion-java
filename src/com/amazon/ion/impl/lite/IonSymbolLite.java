@@ -213,34 +213,6 @@ final class IonSymbolLite
     }
 
     @Override
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        if (_isLocked()) {
-            // we can't, and don't need to, update symbol id's
-            // for a locked value - there are none - so do nothing here
-        }
-        else {
-            // this will check whether or not we're locked
-            // it also looks up the symbol table if it is
-            // null
-            symbols = super.populateSymbolValues(symbols);
-
-            if (!isNullValue()) {
-                String name = _get_value();
-                if (name != null) {
-                    symbols = resolve_symbol(symbols, name);
-                    // seems a bit lame, but we can't return two values
-                    // from resolve and there's no point looking it up
-                    // now since we'll look it up if anyone asks for it
-                    // and if no one asks we don't need it
-                    _sid = UNKNOWN_SYMBOL_ID;
-                }
-            }
-        }
-        return symbols;
-    }
-
-    @Override
     void clearSymbolIDValues()
     {
         super.clearSymbolIDValues();
