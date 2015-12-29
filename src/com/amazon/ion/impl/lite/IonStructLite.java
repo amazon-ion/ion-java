@@ -7,7 +7,6 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
@@ -284,7 +283,7 @@ final class IonStructLite
      *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
      */
     @Override
-    int hashCode(SymbolTable symbolTable)
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         final int nameHashSalt  = 16777619; // prime to salt name of each Field
         final int valueHashSalt = 8191;     // prime to salt value of each Field
@@ -297,7 +296,7 @@ final class IonStructLite
             for (IonValue v : this)  {
                 IonValueLite vlite = (IonValueLite) v;
                 // If fieldname's text is unknown, use its sid instead
-                SymbolToken token = vlite.getFieldNameSymbol(symbolTable);
+                SymbolToken token = vlite.getFieldNameSymbol(symbolTableProvider);
                 String text = token.getText();
 
                 int nameHashCode = text == null
@@ -308,7 +307,7 @@ final class IonStructLite
                 nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
 
                 int fieldHashCode = HASH_SIGNATURE;
-                fieldHashCode = valueHashSalt * fieldHashCode + vlite.hashCode(symbolTable);
+                fieldHashCode = valueHashSalt * fieldHashCode + vlite.hashCode(symbolTableProvider);
                 fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
 
                 // another mix step for each Field of the struct
@@ -321,7 +320,7 @@ final class IonStructLite
             }
         }
 
-        return hashTypeAnnotations(result, symbolTable);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     public IonStruct cloneAndRemove(String... fieldNames)
@@ -797,7 +796,7 @@ final class IonStructLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         if (isNullValue())
@@ -807,7 +806,7 @@ final class IonStructLite
         else
         {
             writer.stepIn(IonType.STRUCT);
-            writeChildren(writer, this, symbolTable);
+            writeChildren(writer, this, symbolTableProvider);
             writer.stepOut();
         }
     }

@@ -3,7 +3,6 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonLob;
-import com.amazon.ion.SymbolTable;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.zip.CRC32;
@@ -42,7 +41,7 @@ abstract class IonLobLite
      * @param seed Seed value
      * @return hash code
      */
-    protected int lobHashCode(int seed, SymbolTable symbolTable)
+    protected int lobHashCode(int seed, SymbolTableProvider symbolTableProvider)
     {
         int result = seed;
 
@@ -52,7 +51,7 @@ abstract class IonLobLite
             result ^= (int) crc.getValue();
         }
 
-        return hashTypeAnnotations(result, symbolTable);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     /**

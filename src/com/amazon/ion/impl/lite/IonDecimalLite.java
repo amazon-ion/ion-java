@@ -7,7 +7,6 @@ import com.amazon.ion.IonDecimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -72,7 +71,7 @@ final class IonDecimalLite
     }
 
     @Override
-    int hashCode(SymbolTable symbolTable)
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         int result = HASH_SIGNATURE;
 
@@ -88,7 +87,7 @@ final class IonDecimalLite
             }
         }
 
-        return hashTypeAnnotations(result, symbolTable);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     @Override
@@ -152,7 +151,7 @@ final class IonDecimalLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         writer.writeDecimal(_decimal_value);

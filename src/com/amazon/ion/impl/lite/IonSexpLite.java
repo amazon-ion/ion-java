@@ -6,7 +6,6 @@ import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.util.Collection;
 
@@ -60,8 +59,8 @@ final class IonSexpLite
     }
 
     @Override
-    public int hashCode(SymbolTable symbolTable) {
-        return sequenceHashCode(HASH_SIGNATURE, symbolTable);
+    public int hashCode(SymbolTableProvider symbolTableProvider) {
+        return sequenceHashCode(HASH_SIGNATURE, symbolTableProvider);
     }
 
     @Override

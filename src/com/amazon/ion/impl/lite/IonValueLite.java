@@ -158,6 +158,32 @@ abstract class IonValueLite
         return flag;
     }
 
+    /**
+     * Lazy memoized symtab provider. Should be used when a call path
+     * conditionally needs access to a value's symbol table. This provider
+     * can be "passed down" through the path, cutting down on
+     * potentially expensive IonValue#getSymbolTable calls.
+     */
+    static class SymbolTableProvider
+    {
+        private SymbolTable symtab = null;
+        private final IonValueLite value;
+
+        SymbolTableProvider(IonValueLite value) {
+            this.value = value;
+        }
+
+        public SymbolTable getSymbolTable()
+        {
+            if (symtab == null)
+            {
+                symtab = value.getSymbolTable();
+            }
+            return symtab;
+        }
+
+    }
+
     /*
      * KEEP ALL MEMBER FIELDS HERE!
      *
@@ -319,17 +345,19 @@ abstract class IonValueLite
      */
     @Override
     public int hashCode() {
-        // resolve the symbol table eagerly - this works for all child types with the exception of
+        // Supply a lazy symbol table provider, which will call getSymbolTable()
+        // only once it's actually necessary.
+        // This works for all child types with the exception of
         // IonDatagramLite which has a different, explicit behavior for hashCode()
         // (hence this method cannot be final).
-        return hashCode(getSymbolTable());
+        return hashCode(new SymbolTableProvider(this));
     }
 
     /*
-     * Internal HashCode implementation which utilizes the resolved SymbolTable
-     * in encoding the sub-graph.
+     * Internal HashCode implementation which utilizes a SymbolTableProvider
+     * to resolve the SymbolTable to use in encoding the sub-graph.
      */
-    abstract int hashCode(SymbolTable symbolTable);
+    abstract int hashCode(SymbolTableProvider symbolTableProvider);
 
     public IonContainerLite getContainer()
     {
@@ -380,12 +408,10 @@ abstract class IonValueLite
         // However, the current invariants on these fields are nonexistant so
         // I do not trust that its safe to alter them here.
 
-        // resolve the Symbol table as this is the top level call; otherwise callers should
-        // provide the already resolved context SymbolTable and call-with-param
-        return getFieldNameSymbol(getSymbolTable());
+        return getFieldNameSymbol(new SymbolTableProvider(this));
     }
 
-    final SymbolToken getFieldNameSymbol(SymbolTable symbolTable)
+    final SymbolToken getFieldNameSymbol(SymbolTableProvider symbolTableProvider)
     {
         int sid = _fieldId;
         String text = _fieldName;
@@ -393,7 +419,7 @@ abstract class IonValueLite
         {
             if (sid == UNKNOWN_SYMBOL_ID)
             {
-                SymbolToken tok = symbolTable.find(text);
+                SymbolToken tok = symbolTableProvider.getSymbolTable().find(text);
                 if (tok != null)
                 {
                     return tok;
@@ -401,7 +427,7 @@ abstract class IonValueLite
             }
         }
         else if (sid > 0) {
-            text = symbolTable.findKnownSymbol(sid);
+            text = symbolTableProvider.getSymbolTable().findKnownSymbol(sid);
         }
         else {
             // not a struct field
@@ -625,12 +651,12 @@ abstract class IonValueLite
         throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
     }
 
-    public /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols()
+    public SymbolToken[] getTypeAnnotationSymbols()
     {
-        return getTypeAnnotationSymbols(getSymbolTable());
+        return getTypeAnnotationSymbols(new SymbolTableProvider(this));
     }
 
-    private final /* synchronized ?? */ SymbolToken[] getTypeAnnotationSymbols(SymbolTable symbolTable)
+    private final SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider)
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
@@ -658,7 +684,7 @@ abstract class IonValueLite
                 // into _annotations.
                 // See getFieldNameSymbol() for challenges doing so.
 
-                SymbolToken interned = symbolTable.find(text);
+                SymbolToken interned = symbolTableProvider.getSymbolTable().find(text);
                 if (interned != null)
                 {
                     token = interned;
@@ -686,7 +712,7 @@ abstract class IonValueLite
         }
     }
 
-    public final /* synchronized ?? */ String[] getTypeAnnotations()
+    public final String[] getTypeAnnotations()
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
@@ -744,9 +770,9 @@ abstract class IonValueLite
         return -1;
     }
 
-    protected int hashTypeAnnotations(final int original, SymbolTable symbolTable)
+    protected int hashTypeAnnotations(final int original, SymbolTableProvider symbolTableProvider)
     {
-        final SymbolToken[] tokens = getTypeAnnotationSymbols(symbolTable);
+        final SymbolToken[] tokens = getTypeAnnotationSymbols(symbolTableProvider);
         if (tokens.length == 0)
         {
             return original;
@@ -918,15 +944,16 @@ abstract class IonValueLite
 
     public void writeTo(IonWriter writer)
     {
-        // resolve the symbol table *once* prior to rendering the whole graph - we use a Lazy
-        // 1-time resolution of the SymbolTable in case there is no need to pull the symbol table
-        // including situations where no symbol table would logically be attached
-        writeTo(writer, getSymbolTable());
+        // we use a Lazy 1-time resolution of the SymbolTable in case there is no need to
+        // pull the symbol table, including situations where no symbol table would logically
+        // be attached
+        writeTo(writer, new SymbolTableProvider(this));
     }
 
     final void writeChildren(IonWriter writer, Iterable<IonValue> container,
-                             SymbolTable symbolTable)
+                             SymbolTableProvider symbolTableProvider)
     {
+        boolean isDatagram = this instanceof IonDatagram;
         // unfortunately JDK5 does not allow for generic co-variant returns; i.e. specifying
         // IonContainerLite#iterator() return type as Iterator<IonValueLite> causes a compile-time
         // error under JDK5 as it doesn't understand this is an acceptable co-variant for
@@ -935,16 +962,23 @@ abstract class IonValueLite
         // moved to allow JDK6+ compile time dependency we can remove these crufty casts.
         for (IonValue iv : container) {
             IonValueLite vlite = (IonValueLite) iv;
-            vlite.writeTo(writer, symbolTable);
+            if(isDatagram)
+            {
+                vlite.writeTo(writer);
+            }
+            else
+            {
+                vlite.writeTo(writer, symbolTableProvider);
+            }
         }
     }
 
-    final void writeTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
     {
         if (writer.isInStruct()
             && ! ((_Private_IonWriter) writer).isFieldNameSet())
         {
-            SymbolToken tok = getFieldNameSymbol(symbolTable);
+            SymbolToken tok = getFieldNameSymbol(symbolTableProvider);
             if (tok == null)
             {
                 throw new IllegalStateException("Field name not set");
@@ -953,12 +987,12 @@ abstract class IonValueLite
             writer.setFieldNameSymbol(tok);
         }
 
-        SymbolToken[] annotations = getTypeAnnotationSymbols(symbolTable);
+        SymbolToken[] annotations = getTypeAnnotationSymbols(symbolTableProvider);
         writer.setTypeAnnotationSymbols(annotations);
 
         try
         {
-            writeBodyTo(writer, symbolTable);
+            writeBodyTo(writer, symbolTableProvider);
         }
         catch (IOException e)
         {
@@ -966,7 +1000,7 @@ abstract class IonValueLite
         }
     }
 
-    abstract void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    abstract void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException;
 
 

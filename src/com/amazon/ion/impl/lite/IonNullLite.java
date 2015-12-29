@@ -5,7 +5,6 @@ package com.amazon.ion.impl.lite;
 import com.amazon.ion.IonNull;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
@@ -54,15 +53,15 @@ final class IonNullLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         writer.writeNull();
     }
 
     @Override
-    public int hashCode(SymbolTable symbolTable) {
-        return hashTypeAnnotations(HASH_SIGNATURE, symbolTable);
+    public int hashCode(SymbolTableProvider symbolTableProvider) {
+        return hashTypeAnnotations(HASH_SIGNATURE, symbolTableProvider);
     }
 
 }

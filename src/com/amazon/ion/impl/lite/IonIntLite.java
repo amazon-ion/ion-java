@@ -6,7 +6,6 @@ import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
-import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -61,7 +60,7 @@ final class IonIntLite
     }
 
     @Override
-    int hashCode(SymbolTable symbolTable)
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         int result = HASH_SIGNATURE;
 
@@ -83,7 +82,7 @@ final class IonIntLite
             }
         }
 
-        return hashTypeAnnotations(result, symbolTable);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     @Override
@@ -168,7 +167,7 @@ final class IonIntLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         if (isNullValue())

@@ -92,7 +92,7 @@ final class IonSymbolLite
     }
 
     @Override
-    int hashCode(SymbolTable symbolTable)
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         final int sidHashSalt   = 127;      // prime to salt sid
         final int textHashSalt  = 31;       // prime to salt text
@@ -113,7 +113,7 @@ final class IonSymbolLite
             result ^= tokenHashCode;
         }
 
-        return hashTypeAnnotations(result, symbolTable);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     @Override
@@ -265,7 +265,7 @@ final class IonSymbolLite
 
 
     @Override
-    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         // TODO ION-320 Fix symbol handling

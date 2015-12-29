@@ -381,7 +381,7 @@ final class IonDatagramLite
     }
 
     @Override
-    int hashCode(SymbolTable symbolTable) {
+    int hashCode(SymbolTableProvider symbolTableProvider) {
         String message = "IonDatagrams do not need a resolved Symbol table use #hashCode()";
         throw new UnsupportedOperationException(message);
     }
@@ -556,7 +556,7 @@ final class IonDatagramLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer, SymbolTable symbolTable)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         throw new UnsupportedOperationException("IonDatagram does not operate with a Symbol Table");
