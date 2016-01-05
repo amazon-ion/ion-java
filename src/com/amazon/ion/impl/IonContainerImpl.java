@@ -658,6 +658,8 @@ abstract class IonContainerImpl
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
+     * @throws IndexOutOfBoundsException
+     *   if the index is out of range (index < 0 || index > size()).
      */
 
     protected void add(int index, IonValue child)
@@ -714,10 +716,16 @@ abstract class IonContainerImpl
      *        must not be null.
      * @throws NullPointerException
      *         if the element is <code>null</code>.
+     * @throws IndexOutOfBoundsException
+     *         if the index is out of range (index < 0 || index > size()).
      */
     protected void add(int index, IonValue element, boolean setDirty)
         throws ContainedValueException, NullPointerException
     {
+        if ((index < 0) || (index > get_child_count()))
+        {
+            throw new IndexOutOfBoundsException();
+        }
         final IonValueImpl concrete = ((IonValueImpl) element);
 
         // TODO: try to reuse the byte array if it is present

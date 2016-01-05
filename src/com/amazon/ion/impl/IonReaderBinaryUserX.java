@@ -415,7 +415,7 @@ final class IonReaderBinaryUserX
             }
         }
 
-        if (facetType == ByteTransferReader.class)
+        if (facetType == _Private_ByteTransferReader.class)
         {
             // This is a rather sketchy use of Facets, since the availability
             // of the facet depends upon the current state of this subject,
@@ -462,9 +462,9 @@ final class IonReaderBinaryUserX
     }
 
 
-    private class ByteTransferReaderFacet implements ByteTransferReader
+    private class ByteTransferReaderFacet implements _Private_ByteTransferReader
     {
-        public void transferCurrentValue(IonWriterSystemBinary writer)
+        public void transferCurrentValue(_Private_ByteTransferSink sink)
             throws IOException
         {
             // Ensure there's a contiguous buffer we can copy.
@@ -483,7 +483,7 @@ final class IonReaderBinaryUserX
             int inOffset = (int) _position_start;
             int inLen    = (int) _position_len;
 
-            writer.writeRaw(_input._bytes, inOffset, inLen);
+            sink.writeBytes(_input._bytes, inOffset, inLen);
         }
     }
 }

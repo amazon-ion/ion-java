@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -31,19 +31,26 @@ final class IonClobLite
         super(system, isNull);
     }
 
-    @Override
-    public IonClobLite clone()
+    IonClobLite(IonClobLite existing, IonContext context)
     {
-        IonClobLite clone = new IonClobLite(this._context.getSystem(), false);
-
-        clone.copyFrom(this);
-
-        return clone;
+        super(existing, context);
     }
 
     @Override
-    public int hashCode() {
-        return lobHashCode(HASH_SIGNATURE);
+    IonClobLite clone(IonContext context)
+    {
+        return new IonClobLite(this, context);
+    }
+
+    @Override
+    public IonClobLite clone()
+    {
+        return clone(getSystem());
+    }
+
+    @Override
+    int hashCode(SymbolTableProvider symbolTableProvider) {
+        return lobHashCode(HASH_SIGNATURE, symbolTableProvider);
     }
 
     @Override
@@ -72,7 +79,7 @@ final class IonClobLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         writer.writeClob(getBytesNoCopy());

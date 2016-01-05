@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -335,10 +335,14 @@ class IonReaderTreeSystem
             return ((IonInt)_curr).bigIntegerValue();
         }
         if (_curr instanceof IonFloat)  {
-            return BigInteger.valueOf(longValue());
+            // To avoid decapitating values that are > Long.MAX_VALUE, we must
+            // convert to BigDecimal first.  IONJAVA-114 ION-263
+            BigDecimal bd = ((IonFloat)_curr).bigDecimalValue();
+            return (bd == null ? null : bd.toBigInteger());
         }
         if (_curr instanceof IonDecimal)  {
-            return ((IonDecimal)_curr).bigDecimalValue().toBigInteger();
+            BigDecimal bd = ((IonDecimal)_curr).bigDecimalValue();
+            return (bd == null ? null : bd.toBigInteger());
         }
         throw new IllegalStateException("current value is not an ion int, float, or decimal");
     }

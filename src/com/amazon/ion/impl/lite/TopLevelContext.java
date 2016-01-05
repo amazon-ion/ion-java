@@ -38,7 +38,7 @@ final class TopLevelContext
      */
     private SymbolTable _symbols;
 
-    private TopLevelContext(IonSystemLite system, IonDatagramLite datagram)
+    TopLevelContext(IonSystemLite system, IonDatagramLite datagram)
     {
         assert system != null;
         _system = system;
@@ -148,7 +148,10 @@ final class TopLevelContext
         assert child._context == this;
         assert _datagram == null;
 
-        child.clearSymbolIDValues();  // This sets the child's symtab to null
+        // clear the childs Local Symbol Table
+        child.clearLocalSymbolTable();
+        // clear the symbols of the child (recursively as necessary)
+        child.clearSymbolIDValues();
 
         // HACK: we need to refactor this to make it simpler and take
         //       away the need to check the parent type

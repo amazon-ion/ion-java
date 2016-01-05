@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -21,7 +21,7 @@ import java.util.Date;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://jira2.amazon.com/browse/ION-182">JIRA issue ION-182</a>
+ * See <a href="https://issues.amazon.com/ION-182">issue ION-182</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
@@ -74,6 +74,16 @@ public interface IonWriter
      * Note that the table may be replaced during processing.  For example,
      * the stream may start out with a system table that's later replaced by a
      * local table in order to store newly-encountered symbols.
+     * <p>
+     * When this method returns a local table, it may be
+     * {@linkplain SymbolTable#isReadOnly() mutable}, meaning that additional
+     * symbols may be interned until it is
+     * {@linkplain SymbolTable#makeReadOnly() made read-only}. Note that
+     * manually mutating local symbol tables is a deprecated feature;
+     * please instead use
+     * {@link IonSystem#newBinaryWriter(java.io.OutputStream, SymbolTable...)}
+     * or {@link IonSystem#newTextWriter(java.io.OutputStream, SymbolTable...)}
+     * to provide custom symbol table(s) to writers upon construction.
      *
      * @return current symbol table
      */

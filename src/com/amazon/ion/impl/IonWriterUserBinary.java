@@ -1,15 +1,10 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
-import static com.amazon.ion.impl._Private_Utils.symtabExtends;
-
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.ValueFactory;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.IOException;
 
@@ -21,55 +16,14 @@ class IonWriterUserBinary
     implements _Private_ListWriter
 {
     /**
-     * Cache to reduce unnecessary calls to
-     * {@link _Private_Utils#symtabExtends(SymbolTable, SymbolTable)}. This is
-     * only used if the writer is stream copy optimized.
+     * This is null if the writer is not stream copy optimized.
      */
-    private static class SymtabExtendsCache
-    {
-        private SymbolTable myWriterSymtab;
-        private SymbolTable myReaderSymtab;
-        private int myWriterSymtabMaxId;
-        private int myReaderSymtabMaxId;
-        private boolean myResult;
-
-        private boolean symtabsCompat(SymbolTable writerSymtab,
-                                      SymbolTable readerSymtab)
-        {
-            // If the refs. of both writer's and reader's symtab match and are
-            // not modified, skip expensive symtab extends check and return
-            // cached result.
-
-            assert writerSymtab != null && readerSymtab != null:
-                "writer's and reader's current symtab cannot be null";
-
-            if (myWriterSymtab          == writerSymtab &&
-                myReaderSymtab          == readerSymtab &&
-                myWriterSymtabMaxId     == writerSymtab.getMaxId() &&
-                myReaderSymtabMaxId     == readerSymtab.getMaxId())
-            {
-                // Not modified, return cached result
-                return myResult;
-            }
-
-            myResult = symtabExtends(writerSymtab, readerSymtab);
-
-            // Track refs.
-            myWriterSymtab = writerSymtab;
-            myReaderSymtab = readerSymtab;
-
-            // Track modification
-            myWriterSymtabMaxId = writerSymtab.getMaxId();
-            myReaderSymtabMaxId = readerSymtab.getMaxId();
-
-            return myResult;
-        }
-    }
+    private final _Private_SymtabExtendsCache mySymtabExtendsCache;
 
     /**
      * This is null if the writer is not stream copy optimized.
      */
-    private final SymtabExtendsCache mySymtabExtendsCache;
+    private final _Private_ByteTransferSink myCopySink;
 
     // If we wanted to we could keep an extra reference to the
     // system writer which was correctly typed as an
@@ -77,16 +31,30 @@ class IonWriterUserBinary
     // methods.  However those are sufficiently expensive that
     // the cost of the cast should be lost in the noise.
 
-    IonWriterUserBinary(IonCatalog catalog,
-                        ValueFactory symtabValueFactory,
-                        IonWriterSystemBinary systemWriter,
-                        boolean streamCopyOptimized,
-                        SymbolTable symtab)
+    IonWriterUserBinary(_Private_IonBinaryWriterBuilder options,
+                        IonWriterSystemBinary           systemWriter)
     {
-        super(catalog, symtabValueFactory, systemWriter, symtab);
+        super(options.getCatalog(),
+              options.getSymtabValueFactory(),
+              systemWriter,
+              options.buildContextSymbolTable());
 
-        mySymtabExtendsCache =
-            streamCopyOptimized ? new SymtabExtendsCache() : null;
+        if (options.isStreamCopyOptimized())
+        {
+            mySymtabExtendsCache = new _Private_SymtabExtendsCache();
+            myCopySink = new _Private_ByteTransferSink()
+            {
+                public void writeBytes(byte[] data, int off, int len) throws IOException
+                {
+                    ((IonWriterSystemBinary) _current_writer).writeRaw(data, off, len);
+                }
+            };
+        }
+        else
+        {
+            mySymtabExtendsCache = null;
+            myCopySink = null;
+        }
     }
 
 
@@ -95,7 +63,6 @@ class IonWriterUserBinary
     {
         return mySymtabExtendsCache != null;
     }
-
 
     @Override
     public void writeValue(IonReader reader)
@@ -111,8 +78,8 @@ class IonWriterUserBinary
         if (isStreamCopyOptimized() &&
             _current_writer instanceof IonWriterSystemBinary)
         {
-            ByteTransferReader transfer =
-                reader.asFacet(ByteTransferReader.class);
+            _Private_ByteTransferReader transfer =
+                reader.asFacet(_Private_ByteTransferReader.class);
 
             if (transfer != null &&
                 (isNonSymbolScalar(type) ||
@@ -120,9 +87,7 @@ class IonWriterUserBinary
                                                     reader.getSymbolTable())))
             {
                 // TODO ION-241 Doesn't copy annotations or field names.
-                transfer
-                    .transferCurrentValue((IonWriterSystemBinary) _current_writer);
-
+                transfer.transferCurrentValue(myCopySink);
                 return;
             }
         }

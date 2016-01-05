@@ -1,9 +1,8 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -41,37 +40,33 @@ final class IonStructLite
         super(system, isNull);
     }
 
-    @Override
-    public IonStruct clone()
+    private IonStructLite(IonStructLite existing, IonContext context)
     {
-        IonStructLite clone = new IonStructLite(_context.getSystem(), false);
-
-        try {
-            clone.copyFrom(this);
-
-            // copyFrom() won't update the field map, so we call
-            // build_field_map() to build it, if and only if this instance's
-            // field map isn't null
-            if (this._field_map != null) {
-                clone.build_field_map();
-            }
-            else {
-                // this should already be true
-                clone._field_map = null;
-                clone._field_map_duplicate_count = 0;
-            }
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        return clone;
+        super(existing, context, true);
+        // field map can be shallow cloned due to it dealing with String and Integer
+        // values - both of which are immutable constructs and so safe to retain as references
+        this._field_map = null == _field_map
+                                ? null
+                                : new HashMap<String, Integer>(existing._field_map);
+        this._field_map_duplicate_count = existing._field_map_duplicate_count;
     }
 
-    private HashMap<String, Integer> _field_map;
+    private Map<String, Integer> _field_map;
 
 
     public int                      _field_map_duplicate_count;
 
+    @Override
+    IonStructLite clone(IonContext parentContext)
+    {
+        return new IonStructLite(this, parentContext);
+    }
+
+    @Override
+    public IonStructLite clone()
+    {
+        return clone(getSystem());
+    }
 
     @Override
     protected void transitionToLargeSize(int size)
@@ -288,7 +283,7 @@ final class IonStructLite
      *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
      */
     @Override
-    public int hashCode()
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         final int nameHashSalt  = 16777619; // prime to salt name of each Field
         final int valueHashSalt = 8191;     // prime to salt value of each Field
@@ -299,8 +294,9 @@ final class IonStructLite
 
         if (!isNullValue())  {
             for (IonValue v : this)  {
+                IonValueLite vlite = (IonValueLite) v;
                 // If fieldname's text is unknown, use its sid instead
-                SymbolToken token = v.getFieldNameSymbol();
+                SymbolToken token = vlite.getFieldNameSymbol(symbolTableProvider);
                 String text = token.getText();
 
                 int nameHashCode = text == null
@@ -311,7 +307,7 @@ final class IonStructLite
                 nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
 
                 int fieldHashCode = HASH_SIGNATURE;
-                fieldHashCode = valueHashSalt * fieldHashCode + v.hashCode();
+                fieldHashCode = valueHashSalt * fieldHashCode + vlite.hashCode(symbolTableProvider);
                 fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
 
                 // another mix step for each Field of the struct
@@ -324,7 +320,7 @@ final class IonStructLite
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     public IonStruct cloneAndRemove(String... fieldNames)
@@ -346,16 +342,23 @@ final class IonStructLite
         }
         else
         {
-            clone = getSystem().newEmptyStruct();
             Set<String> fields =
                 new HashSet<String>(Arrays.asList(fieldNames));
+            if (keep && fields.contains(null))
+            {
+                throw new NullPointerException("Can't retain an unknown field name");
+            }
+
+            clone = getSystem().newEmptyStruct();
             for (IonValue value : this)
             {
                 SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
                 String fieldName = fieldNameSymbol.getText();
                 if (fields.contains(fieldName) == keep)
                 {
-                    clone.add(fieldNameSymbol, value.clone());
+                    // This ensures that we don't copy an unknown field name.
+                    fieldName = value.getFieldName();
+                    clone.add(fieldName, value.clone());
                 }
             }
         }
@@ -492,12 +495,8 @@ final class IonStructLite
 
         IonValueLite concrete = (IonValueLite) value;
 
-        // set the fieldname first so that setFieldName
-        // doesn't complain that we're changing the name
-        // of a field that's already in a struct somewhere.
-        concrete.setFieldName(fieldName);
-
         _add(fieldName, concrete);
+        concrete.setFieldName(fieldName);
     }
 
     public void add(SymbolToken fieldName, IonValue child)
@@ -643,7 +642,7 @@ final class IonStructLite
                     throw new ArrayIndexOutOfBoundsException();
                 }
 
-                IonValueLite concrete = (IonValueLite) __current;
+                IonValueLite concrete = __current;
                 int concrete_idx = concrete._elementid();
                 assert(concrete_idx == idx);
 
@@ -797,7 +796,7 @@ final class IonStructLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         if (isNullValue())
@@ -807,10 +806,7 @@ final class IonStructLite
         else
         {
             writer.stepIn(IonType.STRUCT);
-            for (IonValue iv : this)
-            {
-                iv.writeTo(writer);
-            }
+            writeChildren(writer, this, symbolTableProvider);
             writer.stepOut();
         }
     }

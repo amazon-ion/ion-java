@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -24,15 +24,13 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
+import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
-import com.amazon.ion.system.IonTextWriterBuilder;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -127,7 +125,7 @@ public final class _Private_Utils
         return (ListIterator<T>) EMPTY_ITERATOR;
     }
 
-    public static boolean equalsWithNullCheck(Object a, Object b)
+    public static boolean safeEquals(Object a, Object b)
     {
         // Written for the common case where they are not the same instance
         return (a != null ? a.equals(b) : b == null);
@@ -686,32 +684,6 @@ public final class _Private_Utils
 
 
     /**
-     * Returns the current value as a String using the Ion toString() serialization
-     * format.  This is only valid if there is an underlying value.  This is
-     * logically equivalent to getIonValue().toString() but may be more efficient
-     * and does not require an IonSystem context to operate.
-     */
-    public static String valueToString(IonReader reader)
-    {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
-        b.setCharset(IonTextWriterBuilder.ASCII);
-        IonWriter writer = b.build(out);
-
-        try
-        {
-            writer.writeValue(reader);
-        }
-        catch (IOException e)
-        {
-            throw new IllegalStateException(e);
-        }
-        String s = out.toString();
-        return s;
-    }
-
-    /**
      * Create a value iterator from a reader.
      * Primarily a trampoline for access permission.
      */
@@ -873,6 +845,58 @@ public final class _Private_Utils
 
 
     /**
+     * Creates a mutable copy of this local symbol table. The cloned table
+     * will be created in the context of the same {@link ValueFactory}.
+     * <p>
+     * Note that the resulting symbol table holds a distinct, deep copy of the
+     * given table, adding symbols on either instances will not modify the
+     * other.
+     *
+     * @param symtab
+     *
+     * @return a new mutable {@link SymbolTable} instance; not null
+     *
+     * @throws IllegalArgumentException
+     *          if the given table is not a local symbol table
+     * @throws SubstituteSymbolTableException
+     *          if any imported table by the given local symbol table is a
+     *          substituted table (whereby no exact match was found in its
+     *          catalog)
+     */
+    // TODO ION-395 We need to think about providing a suitable recovery process
+    //      or configuration for users to properly handle the case when the
+    //      local symtab has substituted symtabs for imports.
+    public static SymbolTable copyLocalSymbolTable(SymbolTable symtab)
+        throws SubstituteSymbolTableException
+    {
+        if (! symtab.isLocalTable())
+        {
+            String message = "symtab should be a local symtab";
+            throw new IllegalArgumentException(message);
+        }
+
+        SymbolTable[] imports =
+            ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
+
+        // Iterate over each import, we assume that the list of imports
+        // rarely exceeds 5.
+        for (int i = 0; i < imports.length; i++)
+        {
+            if (imports[i].isSubstitute())
+            {
+                String message =
+                    "local symtabs with substituted symtabs for imports " +
+                    "(indicating no exact match within the catalog) cannot " +
+                    "be copied";
+                throw new SubstituteSymbolTableException(message);
+            }
+        }
+
+        return ((LocalSymbolTable) symtab).makeCopy();
+    }
+
+
+    /**
      * Returns a minimal symtab, either system or local depending on the
      * given values. If the imports are empty, the default system symtab is
      * returned.
@@ -883,9 +907,9 @@ public final class _Private_Utils
      *          the default system symtab, which will be used if the first
      *          import in {@code imports} isn't a system symtab, never null
      * @param imports
-     *          the set of shared symbol tables to import; the first (and only
-     *          the first) may be a system table, in which case the
-     *          {@code defaultSystemSymtab} is ignored
+     * the set of shared symbol tables to import; may be null or empty.
+     * The first (and only the first) may be a system table, in which case the
+     * {@code defaultSystemSymtab} is ignored.
      */
     public static SymbolTable initialSymtab(ValueFactory imageFactory,
                                             SymbolTable defaultSystemSymtab,
@@ -917,6 +941,61 @@ public final class _Private_Utils
         return ((LocalSymbolTable)symtab).getIonRepresentation(vf);
     }
 
+    /**
+     * Determines, for two local symbol tables, whether the passed-in {@code superset} symtab is an extension
+     * of {@code subset}.  This works independent of implementation details--particularly in cases
+     * where {@link LocalSymbolTable#symtabExtends(SymbolTable)} cannot be used.
+     *
+     * @see #symtabExtends(SymbolTable, SymbolTable)
+     */
+    private static boolean localSymtabExtends(SymbolTable superset, SymbolTable subset)
+    {
+        if (subset.getMaxId() > superset.getMaxId())
+        {
+            // the subset has more symbols
+            return false;
+        }
+
+        // NB this API almost certainly requires cloning--symbol table's API doesn't give us a way to polymorphically
+        //    get this without materializing an array
+        final SymbolTable[] supersetImports     = superset.getImportedTables();
+        final SymbolTable[] subsetImports       = subset.getImportedTables();
+
+        // TODO ION-256 this is over-strict, but not as strict as LocalSymbolTable.symtabExtends()
+        if (supersetImports.length != subsetImports.length)
+        {
+            return false;
+        }
+        // NB we cannot trust Arrays.equals--we don't know how an implementation will implement it...
+        for (int i = 0; i < supersetImports.length; i++)
+        {
+            final SymbolTable supersetImport = supersetImports[i];
+            final SymbolTable subsetImport = subsetImports[i];
+            if (!supersetImport.getName().equals(subsetImport.getName())
+                 || supersetImport.getVersion() != subsetImport.getVersion())
+            {
+                // bad match on import
+                return false;
+            }
+        }
+
+        // all the imports lined up, lets make sure the locals line up too
+        final Iterator<String> supersetIter     = superset.iterateDeclaredSymbolNames();
+        final Iterator<String> subsetIter       = subset.iterateDeclaredSymbolNames();
+        while (subsetIter.hasNext())
+        {
+            final String nextSubsetSymbol       = subsetIter.next();
+            final String nextSupersetSymbol     = supersetIter.next();
+            if (!nextSubsetSymbol.equals(nextSupersetSymbol))
+            {
+                // local symbol mismatch
+                return false;
+            }
+        }
+
+        // we made it this far--superset is really a superset of subset
+        return true;
+    }
 
     /**
      * Determines whether the passed-in {@code superset} symtab is an extension
@@ -953,7 +1032,13 @@ public final class _Private_Utils
 
         if (superset.isLocalTable())
         {
-            return ((LocalSymbolTable) superset).symtabExtends(subset);
+            if (superset instanceof LocalSymbolTable && subset instanceof LocalSymbolTable)
+            {
+                // use the internal comparison
+                return ((LocalSymbolTable) superset).symtabExtends(subset);
+            }
+            // TODO reason about symbol tables that don't extend LocalSymbolTable but are still local
+            return localSymtabExtends(superset, subset);
         }
 
         // From here on, superset is a system symtab.

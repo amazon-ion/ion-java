@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
@@ -7,6 +7,7 @@ import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
 import com.amazon.ion.ClobTest;
+import com.amazon.ion.CloneTest;
 import com.amazon.ion.DatagramTest;
 import com.amazon.ion.DecimalTest;
 import com.amazon.ion.EquivTimelineTest;
@@ -20,6 +21,7 @@ import com.amazon.ion.HashCodeDeltaCollisionTest;
 import com.amazon.ion.HashCodeDistributionTest;
 import com.amazon.ion.IntTest;
 import com.amazon.ion.IonExceptionTest;
+import com.amazon.ion.IonReaderToIonValueTest;
 import com.amazon.ion.IonSystemTest;
 import com.amazon.ion.IonValueTest;
 import com.amazon.ion.JavaNumericsTest;
@@ -44,12 +46,18 @@ import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.ByteBufferTest;
 import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
+import com.amazon.ion.impl.IonMarkupWriterFilesTest;
+import com.amazon.ion.impl.IonMarkupWriterTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
+import com.amazon.ion.impl.bin.IonRawBinaryWriterTest;
+import com.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
+import com.amazon.ion.impl.bin.WriteBufferTest;
 import com.amazon.ion.impl.lite.IonContextTest;
 import com.amazon.ion.streaming.BadIonStreamingTest;
 import com.amazon.ion.streaming.BinaryStreamingTest;
@@ -61,6 +69,7 @@ import com.amazon.ion.streaming.ReaderSkippingTest;
 import com.amazon.ion.streaming.ReaderTest;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.streaming.SpanTests;
+import com.amazon.ion.system.IonBinaryWriterBuilderTest;
 import com.amazon.ion.system.IonSystemBuilderTest;
 import com.amazon.ion.system.IonTextWriterBuilderTest;
 import com.amazon.ion.system.SimpleCatalogTest;
@@ -97,6 +106,7 @@ import org.junit.runners.Suite;
     BlobTest.class,
     BoolTest.class,
     ClobTest.class,
+    CloneTest.class,
     DatagramTest.class,
     DecimalTest.class,
     FloatTest.class,
@@ -116,6 +126,10 @@ import org.junit.runners.Suite;
     FieldNameEscapesTest.class,
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
+
+    // Markup tests
+    IonMarkupWriterTest.class,
+    IonMarkupWriterFilesTest.class,
 
     // Binary format tests
     BinaryTest.class,
@@ -163,6 +177,14 @@ import org.junit.runners.Suite;
     ValueFactorySequenceTest.class,
     IonSystemBuilderTest.class,
     IonTextWriterBuilderTest.class,
+    IonBinaryWriterBuilderTest.class,
+    IonReaderToIonValueTest.class,
+
+    // experimental binary writer tests
+    PooledBlockAllocatorProviderTest.class,
+    WriteBufferTest.class,
+    IonRawBinaryWriterTest.class,
+    IonManagedBinaryWriterTest.class,
 
     // Hash code tests
     HashCodeCorrectnessTest.class,

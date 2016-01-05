@@ -1,38 +1,31 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl._Private_IonConstants.MAX_LONG_TEXT_SIZE;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
 
-import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.Base64Encoder.TextStream;
-import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.Flushable;
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.CharBuffer;
 
 /**
  *
  */
-final class IonWriterSystemText
+class IonWriterSystemText
     extends IonWriterSystem
 {
     /** Not null. */
@@ -42,11 +35,12 @@ final class IonWriterSystemText
 
     private final _Private_IonTextAppender _output;
 
-    BufferManager _manager;
-
     /** Ensure we don't use a closed {@link #output} stream. */
     private boolean _closed;
-    /** Flags if current container to be written is struct enforcing writing of member names */
+
+    /**
+     * True when the current container is a struct, so we write field names.
+     */
     boolean     _in_struct;
     boolean     _pending_separator;
 
@@ -73,13 +67,15 @@ final class IonWriterSystemText
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
                                   _Private_IonTextWriterBuilder options,
-                                  _Private_IonTextAppender out)
+                                  _Private_FastAppendable out)
     {
         super(defaultSystemSymtab,
               options.getInitialIvmHandling(),
               options.getIvmMinimizing());
 
-        _output = out;
+        _output =
+            _Private_IonTextAppender.forFastAppendable(out,
+                                                       options.getCharset());
         _options = options;
 
         if (_options.isPrettyPrintOn()) {
@@ -241,7 +237,7 @@ final class IonWriterSystemText
         if (asString) _output.appendAscii('"');
 
         _output.appendAscii('$');
-        appendLong(sid);
+        _output.printInt(sid);
 
         if (asString) _output.appendAscii('"');
     }
@@ -291,14 +287,44 @@ final class IonWriterSystemText
         }
     }
 
-
-    @Override
-    void startValue() throws IOException
+    void writeFieldNameToken(SymbolToken sym)
+        throws IOException
     {
-        super.startValue();
+        String name = sym.getText();
+        if (name == null) {
+            int sid = sym.getSid();
+            writeSidLiteral(sid);
+        }
+        else {
+            writeSymbolToken(name);
+        }
+    }
 
-        boolean followingLongString = _following_long_string;
+    void writeAnnotations(SymbolToken[] annotations)
+        throws IOException
+    {
+        for (SymbolToken ann : annotations) {
+            writeAnnotationToken(ann);
+            _output.appendAscii("::");
+        }
+    }
 
+    void writeAnnotationToken(SymbolToken ann)
+        throws IOException
+    {
+        String name = ann.getText();
+        if (name == null) {
+            _output.appendAscii('$');
+            _output.appendAscii(Integer.toString(ann.getSid()));
+        }
+        else {
+            _output.printSymbol(name);
+        }
+    }
+
+    boolean writeSeparator(boolean followingLongString)
+        throws IOException
+    {
         if (_options.isPrettyPrintOn()) {
             if (_pending_separator && _separator_character > ' ') {
                 // Only bother if the separator is non-whitespace.
@@ -312,18 +338,22 @@ final class IonWriterSystemText
             _output.appendAscii((char)_separator_character);
             if (_separator_character > ' ') followingLongString = false;
         }
+        return followingLongString;
+    }
+
+    @Override
+    void startValue() throws IOException
+    {
+        super.startValue();
+
+        boolean followingLongString = _following_long_string;
+
+        followingLongString = writeSeparator(followingLongString);
 
         // write field name
         if (_in_struct) {
             SymbolToken sym = assumeFieldNameSymbol();
-            String name = sym.getText();
-            if (name == null) {
-                int sid = sym.getSid();
-                writeSidLiteral(sid);
-            }
-            else {
-                writeSymbolToken(name);
-            }
+            writeFieldNameToken(sym);
             _output.appendAscii(':');
             clearFieldName();
             followingLongString = false;
@@ -334,17 +364,7 @@ final class IonWriterSystemText
         if (hasAnnotations() && !_is_writing_ivm) {
             if (! _options._skip_annotations) {
                 SymbolToken[] annotations = getTypeAnnotationSymbols();
-                for (SymbolToken ann : annotations) {
-                    String name = ann.getText();
-                    if (name == null) {
-                        _output.appendAscii('$');
-                        _output.appendAscii(Integer.toString(ann.getSid()));
-                    }
-                    else {
-                        _output.printSymbol(name);
-                    }
-                    _output.appendAscii("::");
-                }
+                writeAnnotations(annotations);
                 followingLongString = false;
             }
             clearAnnotations();
@@ -353,7 +373,9 @@ final class IonWriterSystemText
         _following_long_string = followingLongString;
     }
 
-    void closeValue() {
+    void closeValue()
+        throws IOException
+    {
         super.endValue();
         _pending_separator = true;
         _following_long_string = false;  // Caller overwrites this as needed.
@@ -371,8 +393,6 @@ final class IonWriterSystemText
             }
         }
     }
-
-
 
     @Override
     void writeIonVersionMarkerAsIs(SymbolTable systemSymtab)
@@ -437,7 +457,6 @@ final class IonWriterSystemText
 
         super.writeLocalSymtab(symtab);
     }
-
 
     public void stepIn(IonType containerType) throws IOException
     {
@@ -551,41 +570,12 @@ final class IonWriterSystemText
         closeValue();
     }
 
-    /** ONLY FOR USE BY {@link #appendLong(long)}. */
-    private final char[] _fixedIntBuffer = new char[MAX_LONG_TEXT_SIZE];
-
-    private void appendLong(long value)
-        throws IOException
-    {
-        int j = _fixedIntBuffer.length;
-        if (value == 0) {
-            _fixedIntBuffer[--j] = '0';
-        } else {
-            if (value < 0) {
-                while (value != 0) {
-                    _fixedIntBuffer[--j] = (char)(0x30 - value % 10);
-                    value /= 10;
-                }
-                _fixedIntBuffer[--j] = '-';
-            } else {
-                while (value != 0) {
-                    _fixedIntBuffer[--j] = (char)(0x30 + value % 10);
-                    value /= 10;
-                }
-            }
-        }
-
-        // Using CharBuffer avoids copying the _fixedIntBuffer into a String
-        _output.appendAscii(CharBuffer.wrap(_fixedIntBuffer),
-                            j,
-                            _fixedIntBuffer.length);
-    }
 
     public void writeInt(long value)
         throws IOException
     {
         startValue();
-        appendLong(value);
+        _output.printInt(value);
         closeValue();
     }
 
@@ -597,7 +587,7 @@ final class IonWriterSystemText
         }
 
         startValue();
-        _output.appendAscii(value.toString());
+        _output.printInt(value);
         closeValue();
     }
 
@@ -605,43 +595,14 @@ final class IonWriterSystemText
         throws IOException
     {
         startValue();
-
-        // shortcut zero cases
-        if (value == 0.0) {
-            if (Double.compare(value, 0d) == 0) {
-                // positive zero
-                _output.appendAscii("0e0");
-            }
-            else {
-                // negative zero
-                _output.appendAscii("-0e0");
-            }
-        }
-        else if (Double.isNaN(value)) {
-            _output.appendAscii("nan");
-        }
-        else if (Double.isInfinite(value)) {
-            if (value > 0) {
-                _output.appendAscii("+inf");
-            }
-            else {
-                _output.appendAscii("-inf");
-            }
-        }
-        else {
-            String str = Double.toString(value);
-            if (str.indexOf('E') == -1) {
-                str += "e0";
-            }
-            _output.appendAscii(str);
-        }
-
+        _output.printFloat(value);
         closeValue();
     }
 
 
     @Override
-    public void writeDecimal(BigDecimal value) throws IOException
+    public void writeDecimal(BigDecimal value)
+        throws IOException
     {
         if (value == null) {
             writeNull(IonType.DECIMAL);
@@ -649,78 +610,7 @@ final class IonWriterSystemText
         }
 
         startValue();
-        BigDecimal decimal = value;
-        BigInteger unscaled = decimal.unscaledValue();
-
-        int signum = decimal.signum();
-        if (signum < 0)
-        {
-            _output.appendAscii('-');
-            unscaled = unscaled.negate();
-        }
-        else if (decimal instanceof Decimal
-             && ((Decimal)decimal).isNegativeZero())
-        {
-            // for the various forms of negative zero we have to
-            // write the sign ourselves, since neither BigInteger
-            // nor BigDecimal recognize negative zero, but Ion does.
-            _output.appendAscii('-');
-        }
-
-        final String unscaledText = unscaled.toString();
-        final int significantDigits = unscaledText.length();
-
-        final int scale = decimal.scale();
-        final int exponent = -scale;
-
-        if (_options._decimal_as_float)
-        {
-            _output.appendAscii(unscaledText);
-            _output.appendAscii('e');
-            _output.appendAscii(Integer.toString(exponent));
-        }
-        else if (exponent == 0)
-        {
-            _output.appendAscii(unscaledText);
-            _output.appendAscii('.');
-        }
-        else if (0 < scale)
-        {
-            int wholeDigits;
-            int remainingScale;
-            if (significantDigits > scale)
-            {
-                wholeDigits = significantDigits - scale;
-                remainingScale = 0;
-            }
-            else
-            {
-                wholeDigits = 1;
-                remainingScale = scale - significantDigits + 1;
-            }
-
-            _output.appendAscii(unscaledText, 0, wholeDigits);
-            if (wholeDigits < significantDigits)
-            {
-                _output.appendAscii('.');
-                _output.appendAscii(unscaledText, wholeDigits,
-                             significantDigits);
-            }
-
-            if (remainingScale != 0)
-            {
-                _output.appendAscii("d-");
-                _output.appendAscii(Integer.toString(remainingScale));
-            }
-        }
-        else // (exponent > 0)
-        {
-            // We cannot move the decimal point to the right, adding
-            // rightmost zeros, because that would alter the precision.
-            _output.appendAscii(unscaledText);
-            _output.appendAscii('d');
-            _output.appendAscii(Integer.toString(exponent));
-        }
+        _output.printDecimal(_options, value);
         closeValue();
     }
 
@@ -761,7 +651,7 @@ final class IonWriterSystemText
             && ! _following_long_string
             && _long_string_threshold < value.length())
         {
-            // TODO This can lead to mixed newlines in the output.
+            // TODO IONJAVA-460 This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
             _output.printLongString(value);
 
@@ -783,17 +673,6 @@ final class IonWriterSystemText
         }
     }
 
-    // escape sequences for character below ascii 32 (space)
-    static final String [] LOW_ESCAPE_SEQUENCES = {
-          "\\0",   "\\x01", "\\x02", "\\x03",
-          "\\x04", "\\x05", "\\x06", "\\a",
-          "\\b",   "\\t",   "\\n",   "\\v",
-          "\\f",   "\\r",   "\\x0e", "\\x0f",
-          "\\x10", "\\x11", "\\x12", "\\x13",
-          "\\x14", "\\x15", "\\x16", "\\x17",
-          "\\x18", "\\x19", "\\x1a", "\\x1b",
-          "\\x1c", "\\x1d", "\\x1e", "\\x1f",
-    };
 
     @Override
     void writeSymbolAsIs(int symbolId)
@@ -837,42 +716,8 @@ final class IonWriterSystemText
             return;
         }
 
-        TextStream ts = new TextStream(new ByteArrayInputStream(value, start, len));
-
-        // base64 encoding is 6 bits per char so
-        // it evens out at 3 bytes in 4 characters
-        char[] buf = new char[_options.isPrettyPrintOn() ? 80 : 400];
-        CharBuffer cb = CharBuffer.wrap(buf);
-
         startValue();
-
-        if (_options._blob_as_string) {
-            _output.appendAscii('"');
-        }
-        else {
-            _output.appendAscii("{{");
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(' ');
-            }
-        }
-
-        for (;;) {
-            // TODO is it better to fill up the CharBuffer before outputting?
-            int clen = ts.read(buf, 0, buf.length);
-            if (clen < 1) break;
-            _output.appendAscii(cb, 0, clen);
-        }
-
-
-        if (_options._blob_as_string) {
-            _output.appendAscii('"');
-        }
-        else {
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(' ');
-            }
-            _output.appendAscii("}}");
-        }
+        _output.printBlob(_options, value, start, len);
         closeValue();
     }
 
@@ -886,34 +731,7 @@ final class IonWriterSystemText
         }
 
         startValue();
-
-        final boolean json =
-            _options._clob_as_string && _options._string_as_json;
-
-        final boolean longString = (_long_string_threshold < value.length);
-
-        if (!_options._clob_as_string) {
-            _output.appendAscii("{{");
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(" ");
-            }
-        }
-
-        if (json) {
-            _output.printJsonClob(value, start, start + len);
-        } else if (longString) {
-            _output.printLongClob(value, start, start + len);
-        } else {
-            _output.printClob(value, start, start + len);
-        }
-
-        if (! _options._clob_as_string) {
-            if (_options.isPrettyPrintOn()) {
-                _output.appendAscii(" ");
-            }
-            _output.appendAscii("}}");
-        }
-
+        _output.printClob(_options, value, start, len);
         closeValue();
     }
 
@@ -927,7 +745,7 @@ final class IonWriterSystemText
     public void flush() throws IOException
     {
         if (! _closed) {
-            ((Flushable)_output).flush();
+            _output.flush();
         }
     }
 
@@ -945,7 +763,7 @@ final class IonWriterSystemText
                 // Do this first so we are closed even if the call below throws.
                 _closed = true;
 
-                ((Closeable)_output).close();
+                _output.close();
             }
         }
     }

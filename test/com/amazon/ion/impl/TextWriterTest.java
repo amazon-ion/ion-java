@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -6,6 +6,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.ENSURE;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
+import static java.lang.String.format;
 
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
@@ -176,6 +177,20 @@ public class TextWriterTest
     }
 
 
+    @Test
+    public void testC1ControlCodes()  // Tests IONJAVA-393
+        throws Exception
+    {
+        options = IonTextWriterBuilder.standard();
+        options.setInitialIvmHandling(SUPPRESS);
+
+        iw = makeWriter();
+        iw.writeString("\u0080 through \u009f"); // Note Java Unicode escapes!
+
+        assertEquals("\"\\x80 through \\x9f\"", outputString());
+    }
+
+
     private void expectRendering(String expected, IonDatagram original)
         throws Exception
     {
@@ -247,25 +262,32 @@ public class TextWriterTest
         struct.add("c").newString("hello\nnurse");
         struct.add("d").newString("what's\nup\ndoc");
 
-        expectRendering("'''looong''' {a:'''looong''',b:\"hello\",c:'''hello\n" +
-                        "nurse''',d:'''what\\'s\n" +
-                        "up\n" +
-                        "doc'''}",
-                        dg);
+        expectRendering(
+            "'''looong''' {a:'''looong''',b:\"hello\",c:'''hello\n" +
+            "nurse''',d:'''what\\'s\n" +
+            "up\n" +
+            "doc'''}",
+            dg
+        );
 
         options.withPrettyPrinting();
-        expectRendering("\n" +
-                "'''looong'''\n" +
-                "{\n" +
-                        "  a:'''looong''',\n" +
-                "  b:\"hello\",\n" +
+        expectRendering(
+            // TODO IONJAVA-460 determine if these really should be platform independent newlines
+            format(
+                "%n" +
+                "'''looong'''%n" +
+                "{%n" +
+                        "  a:'''looong''',%n" +
+                "  b:\"hello\",%n" +
                 "  c:'''hello\n" +
-                        "nurse''',\n" +
+                        "nurse''',%n" +
                         "  d:'''what\\'s\n" +
                         "up\n" +
-                        "doc'''\n" +
-                        "}",
-            dg);
+                        "doc'''%n" +
+                        "}"
+            ),
+            dg
+        );
     }
 
     @Test

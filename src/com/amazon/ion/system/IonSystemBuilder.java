@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -10,6 +10,9 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
+import com.amazon.ion.impl._Private_Utils;
 
 /*
  * IonValue DOM Implementations
@@ -156,7 +159,7 @@ public class IonSystemBuilder
      */
     public final IonSystemBuilder copy()
     {
-        return new IonSystemBuilder.Mutable(this);
+        return new Mutable(this);
     }
 
     /**
@@ -185,10 +188,11 @@ public class IonSystemBuilder
         return copy();
     }
 
-    private void mutationFailure()
+    void mutationCheck()
     {
         throw new UnsupportedOperationException("This builder is immutable");
     }
+
 
     //=========================================================================
     // Properties
@@ -201,7 +205,7 @@ public class IonSystemBuilder
      * @see #withCatalog(IonCatalog)
      * @see IonSystem#getCatalog()
      */
-    final public IonCatalog getCatalog()
+    public final IonCatalog getCatalog()
     {
         return myCatalog;
     }
@@ -218,9 +222,10 @@ public class IonSystemBuilder
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
-    public void setCatalog(IonCatalog catalog)
+    public final void setCatalog(IonCatalog catalog)
     {
-        mutationFailure();
+        mutationCheck();
+        myCatalog = catalog;
     }
 
     /**
@@ -242,6 +247,7 @@ public class IonSystemBuilder
     }
 
 
+    //=========================================================================
 
 
     /**
@@ -261,9 +267,10 @@ public class IonSystemBuilder
      *
      * @throws UnsupportedOperationException if this is immutable.
      */
-    void setBinaryBacked(boolean backed)
+    final void setBinaryBacked(boolean backed)
     {
-        mutationFailure();
+        mutationCheck();
+        myBinaryBacked = backed;
     }
 
     final IonSystemBuilder withBinaryBacked(boolean backed)
@@ -274,6 +281,7 @@ public class IonSystemBuilder
     }
 
 
+    //=========================================================================
 
 
     /**
@@ -306,9 +314,10 @@ public class IonSystemBuilder
      *
      * @since R13
      */
-    public void setStreamCopyOptimized(boolean optimized)
+    public final void setStreamCopyOptimized(boolean optimized)
     {
-        mutationFailure();
+        mutationCheck();
+        myStreamCopyOptimized = optimized;
     }
 
     /**
@@ -344,14 +353,31 @@ public class IonSystemBuilder
         IonCatalog catalog =
             (myCatalog != null ? myCatalog : new SimpleCatalog());
 
+        IonTextWriterBuilder twb =
+            IonTextWriterBuilder.standard().withCharsetAscii();
+        twb.setCatalog(catalog);
+
+        _Private_IonBinaryWriterBuilder bwb =
+            _Private_IonBinaryWriterBuilder.standard();
+        bwb.setCatalog(catalog);
+        bwb.setStreamCopyOptimized(myStreamCopyOptimized);
+
+        // TODO Would be nice to remove this since it's implied by the BWB.
+        //      However that currently causes problems in the IonSystem
+        //      constructors (which get a null initialSymtab).
+        SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);
+        bwb.setInitialSymbolTable(systemSymtab);
+        // This is what we need, more or less.
+//        bwb = bwb.fillDefaults();
+
         IonSystem sys;
         if (isBinaryBacked())
         {
-            sys = newLazySystem(catalog, myStreamCopyOptimized);
+            sys = newLazySystem(twb, bwb);
         }
         else
         {
-            sys = newLiteSystem(catalog, myStreamCopyOptimized);
+            sys = newLiteSystem(twb, bwb);
         }
         return sys;
     }
@@ -359,7 +385,7 @@ public class IonSystemBuilder
     //=========================================================================
 
     private static final class Mutable
-    extends IonSystemBuilder
+        extends IonSystemBuilder
     {
         private Mutable(IonSystemBuilder that)
         {
@@ -379,21 +405,8 @@ public class IonSystemBuilder
         }
 
         @Override
-        public void setCatalog(IonCatalog catalog)
+        void mutationCheck()
         {
-            myCatalog = catalog;
-        }
-
-        @Override
-        void setBinaryBacked(boolean backed)
-        {
-            myBinaryBacked = backed;
-        }
-
-        @Override
-        public void setStreamCopyOptimized(boolean optimized)
-        {
-            myStreamCopyOptimized = optimized;
         }
     }
 }

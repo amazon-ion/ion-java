@@ -118,7 +118,7 @@ public class GoodIonTest
      * Test files containing values with unknown text for symbols.
      */
     private static final String[] FILES_WITH_UNKNOWN_SYMBOL_TEXT =
-                                  { "good/item1.10n", "good/symbols.ion" };
+                                  { "good" + File.separator + "item1.10n", "good" + File.separator + "symbols.ion" };
 
     /**
      * Skipping test files with unknown text for symbols.

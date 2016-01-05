@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -39,14 +39,21 @@ final class IonBoolLite
         super(context, isNull);
     }
 
+    IonBoolLite(IonBoolLite existing, IonContext context)
+    {
+        super(existing, context);
+    }
+
+    @Override
+    IonBoolLite clone(IonContext context)
+    {
+        return new IonBoolLite(this, context);
+    }
+
     @Override
     public IonBoolLite clone()
     {
-        IonBoolLite clone = new IonBoolLite(this._context.getSystem(), this.isNullValue());
-
-        clone.copyMemberFieldsFrom(this);
-
-        return clone;
+        return clone(getSystem());
     }
 
     @Override
@@ -56,7 +63,7 @@ final class IonBoolLite
     }
 
     @Override
-    public int hashCode()
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         int result = HASH_SIGNATURE;
 
@@ -65,7 +72,7 @@ final class IonBoolLite
             result = booleanValue() ? TRUE_HASH : FALSE_HASH;
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     public boolean booleanValue()
@@ -95,7 +102,7 @@ final class IonBoolLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         if (isNullValue())

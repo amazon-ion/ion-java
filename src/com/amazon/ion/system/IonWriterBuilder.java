@@ -8,7 +8,7 @@ package com.amazon.ion.system;
  * <p>
  * <b>WARNING:</b> This class should not be extended by code outside of
  * this library.
- * </b>
+ * <p>
  *
  * @since IonJava R15
  */

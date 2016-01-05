@@ -1,16 +1,6 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.junit;
-
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
-import static com.amazon.ion.util.IonTextUtils.printSymbol;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
@@ -23,16 +13,26 @@ import com.amazon.ion.ReaderChecker;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.util.Equivalence;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
-/**
- *
- */
-public class IonAssert
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+import static com.amazon.ion.util.IonTextUtils.printSymbol;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public final class IonAssert
 {
 
     //========================================================================
@@ -49,9 +49,9 @@ public class IonAssert
         assertEquals("reader inStruct", inStruct, in.isInStruct());
 
         if (! inStruct) {
-            assertEquals("reader field name", null, in.getFieldName());
+            assertNull("reader field name", in.getFieldName());
             assertEquals("reader fieldId", UNKNOWN_SYMBOL_ID, in.getFieldId());
-            assertEquals("reader field symbol", null, in.getFieldNameSymbol());
+            assertNull("reader field symbol", in.getFieldNameSymbol());
         }
 
         try {
@@ -67,11 +67,11 @@ public class IonAssert
 
     public static void assertNoCurrentValue(IonReader in)
     {
-        assertEquals(null, in.getType());
+        assertNull(in.getType());
 
-        assertEquals(null, in.getFieldName());
+        assertNull(in.getFieldName());
         assertTrue(in.getFieldId() < 0);
-        assertEquals(null, in.getFieldNameSymbol());
+        assertNull(in.getFieldNameSymbol());
 
         // TODO ION-213 Text reader doesn't throw, but others do.
         try {
@@ -101,11 +101,11 @@ public class IonAssert
     {
         assertFalse(in.hasNext());
         assertFalse(in.hasNext());
-        assertEquals(null, in.next());
+        assertNull(in.next());
         assertNoCurrentValue(in);
-        assertEquals(null, in.next());
+        assertNull(in.next());
         assertFalse(in.hasNext());
-        assertEquals(null, in.next());
+        assertNull(in.next());
     }
 
 
@@ -242,12 +242,6 @@ public class IonAssert
         assertArrayEquals("Ion annotations", expectedAnns, actualAnns);
     }
 
-
-    public static void assertEqualAnnotations(IonValue expected,
-                                              IonValue actual)
-    {
-        assertEqualAnnotations("IonValue", expected, actual);
-    }
 
     private static void assertEqualAnnotations(String path,
                                                IonValue expected,
@@ -420,8 +414,8 @@ public class IonAssert
                  + " actual:" + actualSize);
         }
 
-        HashMap<String,List<IonValue>> expectedFields = sortFields(expected);
-        HashMap<String,List<IonValue>> actualFields   = sortFields(actual);
+        Map<String, List<IonValue>> expectedFields = sortFields(expected);
+        Map<String, List<IonValue>> actualFields   = sortFields(actual);
 
         for (Entry<String,List<IonValue>> expectedEntry
                 : expectedFields.entrySet())
@@ -438,8 +432,9 @@ public class IonAssert
             }
 
             assertFieldEquals(fieldPath,
-                              expected, expectedEntry.getValue(),
-                              actual, actualList);
+                              expectedEntry.getValue(),
+                              actual,
+                              actualList);
         }
     }
 
@@ -471,7 +466,6 @@ public class IonAssert
 
 
     private static void assertFieldEquals(String path,
-                                          IonStruct expected,
                                           List<IonValue> expectedFieldValues,
                                           IonStruct actual,
                                           List<IonValue> actualFieldValues)
@@ -489,12 +483,11 @@ public class IonAssert
             {
                 if (! actualFieldValues.remove(expectedChild))
                 {
-                    fail("No match for field " + path + ":" + expectedChild
-                         + " in struct: " + actual);
+                    fail("No match for field " + path);
                 }
             }
 
-            if (actualFieldValues.size() != 0)
+            if (!actualFieldValues.isEmpty())
             {
                 fail("Extra copies of field " + path
                      + " in struct: " + actual);

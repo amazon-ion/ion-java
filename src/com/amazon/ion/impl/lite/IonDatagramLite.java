@@ -1,10 +1,9 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonBinaryWriter;
@@ -23,6 +22,7 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonDatagram;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -101,10 +101,27 @@ final class IonDatagramLite
         super(/* context */ system, false);
         _system = system;
         _catalog = catalog;
-        // these should be no-op's but just to be sure:
-        setFieldName(null);
-        clearTypeAnnotations();
         _pending_symbol_table_idx = -1;
+    }
+
+    IonDatagramLite(IonDatagramLite existing)
+    {
+        super(existing, existing._system);
+        this._system  = existing._system;
+        this._catalog = existing._catalog;
+    }
+
+    @Override
+    IonDatagramLite clone(IonContext parentContext)
+    {
+        String message = "IonDatagram cannot have a parent context (be nested)";
+        throw new UnsupportedOperationException(message);
+    }
+
+    @Override
+    public IonDatagramLite clone()
+    {
+        return new IonDatagramLite(this);
     }
 
     // TODO ION-312 Reverse encoder is set as default, set original
@@ -135,6 +152,37 @@ final class IonDatagramLite
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols()
+    {
+        // An Ion Datagram cannot be annotated - however is sometimes interrogated as a generic
+        // IonValue - hence having the explicit fast-path override of a non-null, empty SymbolToken
+        // array
+        return SymbolToken.EMPTY_ARRAY;
+    }
+
+    @Override
+    public SymbolToken getFieldNameSymbol()
+    {
+        // TOP level IonDatagram cannot have a field name (fundamentally it isn't a Struct)
+        return null;
+    }
+
+    @Override
+    public void makeReadOnly()
+    {
+        if (_isLocked()) {
+            return;
+        }
+
+        if (_children != null) {
+            for (int ii=0; ii<_child_count; ii++) {
+                IonValueLite child = _children[ii];
+                child.makeReadOnly();
+            }
+        }
+        _isLocked(true);
+    }
 
     @Override
     public final SymbolTable ensureLocalSymbolTable(IonValueLite child)
@@ -315,23 +363,27 @@ final class IonDatagramLite
     }
 
     @Override
-    public IonDatagramLite clone()
-    {
-        IonDatagramLite clone = new IonDatagramLite(_system, _catalog);
+    public int hashCode() {
+        int prime  = 8191;
+        int result = HASH_SIGNATURE;
 
-        try {
-            clone.copyFrom(this);
-        } catch (IOException e) {
-            throw new IonException(e);
+        if (!isNullValue()) {
+            // As we are a datagram then the children need to resolve their own symbol tables -
+            // so we use the 'top level' #hashCode() which will force each child to resolve it's
+            // own symbol table.
+            for (IonValue v : this) {
+                result = prime * result + v.hashCode();
+                // mixing at each step to make the hash code order-dependent
+                result ^= (result << 29) ^ (result >> 3);
+            }
         }
-
-        return clone;
+        return result;
     }
 
-
     @Override
-    public int hashCode() {
-        return sequenceHashCode(HASH_SIGNATURE);
+    int hashCode(SymbolTableProvider symbolTableProvider) {
+        String message = "IonDatagrams do not need a resolved Symbol table use #hashCode()";
+        throw new UnsupportedOperationException(message);
     }
 
 
@@ -419,8 +471,8 @@ final class IonDatagramLite
     {
         if (true)
         {
-            // TODO JIRA ION-90
-            throw new UnsupportedOperationException("JIRA issue ION-90");
+            // TODO ION-90
+            throw new UnsupportedOperationException("issue ION-90");
         }
 
         IonValue previous = super.set(index, element);
@@ -483,15 +535,31 @@ final class IonDatagramLite
         return IonType.DATAGRAM;
     }
 
+    /*
+     * NOTE: IonDatagramLite overrides the main writeTo mechanism prescribed in:
+     * IonValueLite#writeTo which works by eagerly resolving the SymbolTable as the IonDatagram does
+     * not have a symbol table (throws UnsupportedOperationException) and so needs to write each
+     * child out independently where the child will act as it's own top-level value (inc symbol table)
+     */
     @Override
-    final void writeBodyTo(IonWriter writer)
-        throws IOException
+    public final void writeTo(IonWriter writer)
     {
-        writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO ION-165 ???
-        for (IonValue iv : this)
+        try
         {
+            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO ION-165 ???
+        } catch (IOException ioe) {
+            throw new IonException(ioe);
+        }
+        for (IonValue iv : this) {
             iv.writeTo(writer);
         }
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
+        throws IOException
+    {
+        throw new UnsupportedOperationException("IonDatagram does not operate with a Symbol Table");
     }
 
 
@@ -510,12 +578,13 @@ final class IonDatagramLite
     private IonBinaryWriter make_filled_binary_writer()
     throws IOException
     {
-        boolean streamCopyOptimized = false;
+        _Private_IonBinaryWriterBuilder b =
+            _Private_IonBinaryWriterBuilder.standard();
+        b.setCatalog(_catalog);
+        b.setSymtabValueFactory(_system);
+        b.setInitialSymbolTable(_system.getSystemSymbolTable());
 
-        IonBinaryWriter writer =
-            newIonBinaryWriterWithImports(_system,
-                                          _catalog,
-                                          streamCopyOptimized);
+        IonBinaryWriter writer = b.buildLegacy();
 
         IonReader reader = makeSystemReader(_system, this);
         writer.writeValues(reader);
@@ -982,12 +1051,8 @@ final class IonDatagramLite
             int concrete_idx = concrete._elementid();
             assert(concrete_idx == idx);
 
-            // here we remove the member from the containers list of elements
+            // here we remove the member from the container's list of elements
             remove_child(idx);
-
-            // and here we patch up the member
-            // and then the remaining members index values
-            concrete.detachFromContainer();
             patch_elements_helper(concrete_idx);
 
             // when we remove the current value we remove

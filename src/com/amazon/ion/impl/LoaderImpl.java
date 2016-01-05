@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -8,6 +8,7 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.util.IonStreamUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -159,7 +160,7 @@ final class LoaderImpl
             // TODO ION-233 this should always use a system IonReader
             // (avoiding the SystemValueIterator)
             // but that's broken until field names work properly on binary
-            GzipOrRawInputStream gzip = new GzipOrRawInputStream(ionData);
+            InputStream gzip = IonStreamUtils.unGzip(ionData);
             PushbackInputStream pushback = new PushbackInputStream(gzip, 8);
             if (_Private_Utils.streamIsIonBinary(pushback)) {
                 if (USE_NEW_READERS)

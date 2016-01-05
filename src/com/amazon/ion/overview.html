@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved. -->
 <html>
 <body>
 IonJava is the reference implementation of the
@@ -122,8 +122,8 @@ There's also several mechanisms for generating Ion data:
     theory the actual output could be some other format entirely.
   <li>{@link com.amazon.ion.IonValue#toString() IonValue.toString()} will also
     generate Ion text, but it's primarily intended for debugging purposes and
-    cannot be customized.  It's format is not guaranteed so don't assume that
-    it will always output the same thing!
+    cannot be customized.  The particular layout is not specified by contract,
+    so don't assume that it will always output the same thing!
   <li>{@link com.amazon.ion.IonValue#writeTo(IonWriter)} outputs Ion data in
     the writer's format. This is the best way to output the data model.
   <li>From an {@link com.amazon.ion.IonDatagram IonDatagram} you can call
@@ -134,6 +134,29 @@ There's also several mechanisms for generating Ion data:
 You can create {@code IonWriter}s using methods on {@code IonSystem}, but the
 {@link com.amazon.ion.system.IonTextWriterBuilder} provides more flexibility.
 
+<h2>No Canonical Serialization</h2>
+
+There is no specified canonical form of Ion serialized data, and none of the
+APIs in this library attempt to create one.  Further, no API in this library
+guarantees repeatable or stable output for any data type.  Different releases
+of this library, or even different invocations of the same API, may produce
+different encodings from the same input.
+This caveat applies to both Ion text and binary forms, although violations
+are far more common (and easier to make) using Ion text.
+<p>
+Therefore, applications and tests should never compare the serialized form of
+data to determine equality.  For example, the following JUnit idiom is
+<b>not supported</b>:
+<pre>
+    assertEquals(expectedIonValue.toString(), actualIonValue.toString());
+</pre>
+The same goes for output via any other API, including
+{@link com.amazon.ion.IonWriter IonWriter}s.
+<p>
+The correct approach to performing semantic equivalence checks over Ion data is
+to use documented equivalence APIs such as
+{@link com.amazon.ion.IonValue#equals(Object) IonValue.equals()}. 
+
 <h1>JSON Integration</h1>
 The Ion text format is a superset of JSON, so JSON data <em>is</em> Ion data.
 This means that you can read JSON data as-is using the Ion libraries, with two
@@ -141,7 +164,7 @@ caveats:
 <ul>
   <li>Empty field names (for example, <code>{ "": 12 }</code>) will cause an
       error.
-      See issue <a href="https://jira2.amazon.com/browse/ION-268">ION-268</a>.
+      See issue <a href="https://issues.amazon.com/ION-268">ION-268</a>.
   <li>JSON numbers with exponents are decoded as Ion float, while those with
       fractions (but not exponents) are decoded as Ion decimal.
 </ul>

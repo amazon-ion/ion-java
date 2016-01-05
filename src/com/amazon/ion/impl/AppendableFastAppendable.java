@@ -1,58 +1,72 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.util._Private_FastAppendable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
-import java.nio.charset.Charset;
 
 /**
- * Implementation of {@link _Private_IonTextAppender} that writes to an
- * {@link Appendable}.
+ * Adapts an {@link Appendable} to implement {@link _Private_FastAppendable}.
  */
-final class AppendableIonTextAppender
-    extends _Private_IonTextAppender
+final class AppendableFastAppendable
+    implements _Private_FastAppendable, Closeable, Flushable
 {
     private final Appendable _out;
 
-    AppendableIonTextAppender(Appendable out, Charset charset)
+    AppendableFastAppendable(Appendable out)
     {
-        super(charset.equals(_Private_Utils.ASCII_CHARSET));
         out.getClass(); // Efficient null check
 
         _out = out;
     }
 
-    @Override
+    public Appendable append(CharSequence csq)
+        throws IOException
+    {
+        _out.append(csq);
+        return this;
+    }
+
+    public Appendable append(char c)
+        throws IOException
+    {
+        _out.append(c);
+        return this;
+    }
+
+    public Appendable append(CharSequence csq, int start, int end)
+        throws IOException
+    {
+        _out.append(csq, start, end);
+        return this;
+    }
+
     public final void appendAscii(char c)
         throws IOException
     {
         _out.append(c);
     }
 
-    @Override
     public final void appendAscii(CharSequence csq)
         throws IOException
     {
         _out.append(csq);
     }
 
-    @Override
     public final void appendAscii(CharSequence csq, int start, int end)
         throws IOException
     {
         _out.append(csq, start, end);
     }
 
-    @Override
     public final void appendUtf16(char c)
         throws IOException
     {
         _out.append(c);
     }
 
-    @Override
     public final void appendUtf16Surrogate(char leadSurrogate,
                                            char trailSurrogate)
         throws IOException
@@ -60,7 +74,6 @@ final class AppendableIonTextAppender
         _out.append(leadSurrogate);
         _out.append(trailSurrogate);
     }
-
 
     public void flush()
         throws IOException

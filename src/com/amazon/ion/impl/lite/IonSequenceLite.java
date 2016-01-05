@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -32,6 +32,10 @@ abstract class IonSequenceLite
     IonSequenceLite(IonContext context, boolean isNull)
     {
         super(context, isNull);
+    }
+
+    IonSequenceLite(IonSequenceLite existing, IonContext context) {
+        super(existing, context, false);
     }
 
     /**
@@ -70,20 +74,21 @@ abstract class IonSequenceLite
     @Override
     public abstract IonSequenceLite clone();
 
-    protected int sequenceHashCode(int seed)
+    protected int sequenceHashCode(int seed, SymbolTableProvider symbolTableProvider)
     {
         final int prime = 8191;
         int result = seed;
 
         if (!isNullValue()) {
             for (IonValue v : this) {
-                result = prime * result + v.hashCode();
+                IonValueLite vLite = (IonValueLite) v;
+                result = prime * result + vLite.hashCode(symbolTableProvider);
                 // mixing at each step to make the hash code order-dependent
                 result ^= (result << 29) ^ (result >> 3);
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
 
@@ -321,8 +326,8 @@ abstract class IonSequenceLite
 
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
-        // TODO JIRA ION-92
-        throw new UnsupportedOperationException("JIRA issue ION-92");
+        // TODO ION-92
+        throw new UnsupportedOperationException("issue ION-92");
     }
 
     public IonValue[] toArray()
@@ -370,7 +375,7 @@ abstract class IonSequenceLite
 
 
     @Override
-    void writeBodyTo(IonWriter writer)
+    void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         IonType type = getType();
@@ -381,10 +386,7 @@ abstract class IonSequenceLite
         else
         {
             writer.stepIn(type);
-            for (IonValue iv : this)
-            {
-                iv.writeTo(writer);
-            }
+            writeChildren(writer, this, symbolTableProvider);
             writer.stepOut();
         }
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -51,19 +51,27 @@ final class IonDecimalLite
         super(system, isNull);
     }
 
-    @Override
-    public IonDecimalLite clone()
+    IonDecimalLite(IonDecimalLite existing, IonContext context)
     {
-        IonDecimalLite clone = new IonDecimalLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        clone.setValue(this._decimal_value);
-
-        return clone;
+        super(existing, context);
+        // we can shallow copy as BigDecimal is immutable
+        this._decimal_value = existing._decimal_value;
     }
 
     @Override
-    public int hashCode()
+    IonDecimalLite clone(IonContext parentContext)
+    {
+        return new IonDecimalLite(this, parentContext);
+    }
+
+    @Override
+    public IonDecimalLite clone()
+    {
+        return clone(getSystem());
+    }
+
+    @Override
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         int result = HASH_SIGNATURE;
 
@@ -79,7 +87,7 @@ final class IonDecimalLite
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     @Override
@@ -143,7 +151,7 @@ final class IonDecimalLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         writer.writeDecimal(_decimal_value);

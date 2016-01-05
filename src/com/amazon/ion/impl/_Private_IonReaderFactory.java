@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -280,7 +280,7 @@ public final class _Private_IonReaderFactory
         in.getClass(); // Force NPE
 
         // TODO avoid multiple wrapping streams, use the UIS for the pushback
-        in = new GzipOrRawInputStream(in);
+        in = IonStreamUtils.unGzip(in);
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(in);
         return uis;
     }

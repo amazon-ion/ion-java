@@ -18,28 +18,15 @@ abstract class IonTextLite
         super(system, isNull);
     }
 
+    IonTextLite(IonTextLite existing, IonContext context)
+    {
+        super(existing, context);
+        // String is immutable so can copy reference (including a null ref)
+        this._text_value = existing._text_value;
+    }
+    
     @Override
     public abstract IonTextLite clone();
-
-    /**
-     * This copies the original value's member fields (flags, annotations,
-     * context) from the passed in {@code original} instance and overwrites
-     * the corresponding fields of this instance. It also copies the text value.
-     * Since only string representations are copied, it is unnecessary to
-     * update the symbol table.. yet.
-     *
-     * @param original
-     */
-    protected final void copyFrom(IonTextLite original)
-    {
-        // first copy the annotations and such, which
-        // will materialize the value as needed
-        this.copyMemberFieldsFrom(original);
-
-        // now we can copy the text value as a string
-        String s = original._text_value;
-        _set_value(s);
-    }
 
     public void setValue(String value)
     {

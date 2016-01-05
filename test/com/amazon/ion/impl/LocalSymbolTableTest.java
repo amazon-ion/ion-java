@@ -1,12 +1,12 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
 import static com.amazon.ion.Symtabs.makeLocalSymtab;
-import static com.amazon.ion.impl._Private_DmsdkUtils.copyLocalSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl._Private_Utils.copyLocalSymbolTable;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;
@@ -280,5 +280,12 @@ public class LocalSymbolTableTest
     {
         SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
         st.find(null);
+    }
+
+    @Test
+    public void testVersion()
+    {
+        SymbolTable st = makeLocalSymtab(system(), LOCAL_SYMBOLS_ABC);
+        assertEquals(0, st.getVersion());
     }
 }

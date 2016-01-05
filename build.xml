@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved. -->
+<!-- Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved. -->
 
 <project name="IonJava" basedir="." default="test"
          xmlns:ht="happytrails">
@@ -8,36 +8,36 @@
   <import file="build-common.xml" />
 
   <!-- Define HappierTrails property overrides here -->
-  
+
   <!-- Override default of tst/ -->
   <property name="tests.dir" location="${basedir}/test" />
   <property name="findbugs.failOnError"   value="false" /> <!-- TODO ION-375 -->
   <property name="checkstyle.failOnError" value="false" />
-  
+
   <!-- Disable Cobertura checks, currently this takes a very long time 
        TODO ION-374 -->
-  <target name="reports" 
-          depends="checkstyle, findbugs, javadoc" 
+  <target name="reports"
+          depends="checkstyle, findbugs, javadoc"
           description="Overriding to exclude cobertura" />
-  <target name="review-reports" 
-          depends="checkstyle, findbugs, javadoc" 
+  <target name="review-reports"
+          depends="checkstyle, findbugs, javadoc"
           description="Overriding to exclude cobertura" />
 
-  
+
   <ht:import file="happier-trails.xml" />
-  
+
   <!-- For more information on how to fill in your build logic using
        HappierTrails, please read: https://w.amazon.com/?HappierTrails-3.0 -->
 
   <!-- ==================================================================== -->
   <!-- HappierTrails target overrides -->
-  
+
   <target name="compile" depends="standard-compile, build.properties"
           description="Default compile target which compiles source files">
-    
+
     <copy-jar-info classes-dir="${classes.dir}" />
   </target>
-  
+
   <!-- Override the MANIFEST.MF of the built Jar, to set a Main-Class 
        entry point -->
   <target name="compile-jar" depends="standard-compile-jar">
@@ -53,11 +53,11 @@
     <tstamp>
       <format property="javadoc.year" pattern="yyyy" />
     </tstamp>
-    
+
     <!-- Load release_label property -->
     <loadproperties srcfile="${basedir}/build.properties" />
 
-    <!-- This will create cross-referenced docs rewrites urls against 
+    <!-- This will create cross-referenced docs rewrites urls against
          package directory -->
     <!-- Arguments passed to this task are documented here:
          http://ant.apache.org/manual/Tasks/javadoc.html -->
@@ -66,13 +66,13 @@
         windowtitle="IonJava ${release_label}"
         doctitle="The IonJava ${release_label} API Reference"
         header="IonJava ${release_label} API Reference"
-        destDir="${doc.dir}" 
+        destDir="${doc.dir}"
         maxmemory="${javadoc.maxmemory}"
         docencoding="UTF-8"
         encoding="${javadoc.encoding}"
         failonerror="true"
         useexternalfile="true">
-      
+
       <fileset dir="${sources.dir}">
         <include name="**/*.java"/>
         <exclude name="com/amazon/ion/apps/**" />
@@ -80,20 +80,21 @@
         <exclude name="**/_Private_*" />
       </fileset>
       <classpath path="${bp:testrun.classpath}" />
-      
+
       <bottom>
-        <![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year} 
+        <![CDATA[<center>Copyright &#169; 2007&ndash;${javadoc.year}
         Amazon.com. All Rights Reserved.</center>]]>
       </bottom>
     </ht:javadoc>
   </target>
-  
+
   <target name="pre-test" extensionOf="ht-pre-test" depends="build.properties">
     <property name="tests.additional.jvmargs"
       value="-ea 
-             -D${sys.prop.iontests.iontestdata}=${dir.test.data} 
-             -D${sys.prop.iontests.bulk}=${dir.test.data.bulk}" />
-    
+             -D${sys.prop.iontests.iontestdata}=${dir.test.data}
+             -D${sys.prop.iontests.bulk}=${dir.test.data.bulk}
+             -Xmx2560M" />
+
     <fileset id="unit.test.sources" dir="${tests.dir}">
       <include name="**/*Test.java" />
       <exclude name="**/*Tests.java" /> <!-- Exclude "Tests" suffix -->

@@ -1,4 +1,6 @@
-package com.amazon.ion.impl;
+// Copyright (c) 2012-2014 Amazon.com, Inc.  All rights reserved.
+
+package com.amazon.ion.util;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -8,16 +10,18 @@ import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Represents unified{@link InputStream} that may be GZIP compressed or not.
+ * Represents an {@link InputStream} that may be GZIP compressed or not.
  * This stream assumes that the GZIP header is unique to the raw content.
  * That is, one should not use this on a stream that may have raw data
  * in the begining of the stream that collides with the GZIP header.
- * In the case of Ion binary, Ion text, and XML, a GZIP stream is unambiguous from them.
+ * In the case of Ion binary, Ion text, and XML, a GZIP stream is unambiguous
+ * from them.
  */
-class GzipOrRawInputStream extends FilterInputStream
+class GzipOrRawInputStream
+    extends FilterInputStream
 {
     /** GZIP magic cookie. */
-    private static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
+    static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
 
     /**
      * Wraps the given stream determining based on the GZIP header
@@ -29,7 +33,9 @@ class GzipOrRawInputStream extends FilterInputStream
      * @throws IOException
      *         Thrown if there is a problem reading from the underlying stream.
      */
-    public GzipOrRawInputStream(final InputStream raw) throws IOException {
+    GzipOrRawInputStream(final InputStream raw)
+        throws IOException
+    {
         this(raw, 512); // 512 is the default buffer size in GZIPInputStream
     }
 
@@ -44,7 +50,8 @@ class GzipOrRawInputStream extends FilterInputStream
      * @throws IOException
      *         Thrown if there is a problem reading from the underlying stream.
      */
-    public GzipOrRawInputStream(final InputStream raw, final int bufferSize) throws IOException
+    GzipOrRawInputStream(final InputStream raw, final int bufferSize)
+        throws IOException
     {
         super(null);
         final byte[] header = new byte[GZIP_HEADER.length];

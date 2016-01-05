@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -28,6 +28,7 @@ import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonBinary.BufferManager;
 import com.amazon.ion.impl.IonBinary.Reader;
 import com.amazon.ion.impl.IonBinary.Writer;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -542,12 +543,15 @@ abstract class IonValueImpl
         if (this._fieldName != null) return this._fieldName;
         if (this._fieldSid < 1) return null;
 
-        String text = getSymbolTable().findKnownSymbol(_fieldSid);
-        if (text == null) {
-            throw new UnknownSymbolException(_fieldSid);
+        SymbolTable symtab = getSymbolTable();
+        if (symtab != null) {
+            String text = symtab.findKnownSymbol(_fieldSid);
+            if (text != null) {
+                _fieldName = text;
+                return text;
+            }
         }
-        _fieldName = text;
-        return _fieldName;
+        throw new UnknownSymbolException(_fieldSid);
     }
 
     public int getFieldId()
@@ -1511,15 +1515,38 @@ abstract class IonValueImpl
     @Override
     public String toString()
     {
-        Printer p = new Printer();
-        StringBuilder builder = new StringBuilder();
-        try {
-            p.print(this, builder);
+        StringBuilder buf = new StringBuilder(1024);
+        try
+        {
+            Printer p = new Printer();
+            p.print(this, buf);
         }
-        catch (IOException e) {
+        catch (IOException e)
+        {
             throw new IonException(e);
         }
-        return builder.toString();
+        return buf.toString();
+    }
+
+    public String toString(IonTextWriterBuilder writerBuilder)
+    {
+        StringBuilder buf = new StringBuilder(1024);
+        try
+        {
+            IonWriter writer = writerBuilder.build(buf);
+            writeTo(writer);
+            writer.finish();
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+        return buf.toString();
+    }
+
+    public String toPrettyString()
+    {
+        return toString(IonTextWriterBuilder.pretty());
     }
 
 

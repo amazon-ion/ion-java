@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,12 +7,9 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newBinaryWriterWithImports;
-import static com.amazon.ion.impl._Private_IonWriterFactory.newIonBinaryWriterWithImports;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
-import static com.amazon.ion.impl._Private_Utils.systemSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
 import com.amazon.ion.IonBinaryWriter;
@@ -32,6 +29,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
+import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
@@ -57,48 +55,47 @@ final class IonSystemLite
 {
     private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 
-    private final SymbolTable _system_symbol_table = systemSymtab(1);
+    private final SymbolTable _system_symbol_table;
 
     /** Not null. */
     private final IonCatalog         _catalog;
     private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
-    private final boolean myStreamCopyOptimized;
     /** Immutable. */
     private final IonTextWriterBuilder myTextWriterBuilder;
+    /** Immutable. */
+    private final _Private_IonBinaryWriterBuilder myBinaryWriterBuilder;
 
 
-    /**
-     * @param catalog must not be null.
-     */
-    public IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized)
+    public IonSystemLite(IonTextWriterBuilder twb,
+                         _Private_IonBinaryWriterBuilder bwb)
     {
-        this(catalog, streamCopyOptimized, DEFAULT_CONTEXT_FREE_LIST_SIZE);
+        this(twb, bwb, DEFAULT_CONTEXT_FREE_LIST_SIZE);
     }
 
-    /**
-     * @param catalog must not be null.
-     * @param context_free_list_size
-     */
-    private IonSystemLite(IonCatalog catalog, boolean streamCopyOptimized,
+    private IonSystemLite(IonTextWriterBuilder twb,
+                          _Private_IonBinaryWriterBuilder bwb,
                           int context_free_list_size)
     {
+        IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
+        assert catalog == bwb.getCatalog();
 
         set_context_free_list_max(context_free_list_size);
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
-        myStreamCopyOptimized = streamCopyOptimized;
+        _system_symbol_table = bwb.getInitialSymbolTable();
+        assert _system_symbol_table.isSystemTable();
 
-        IonTextWriterBuilder twb =
-            IonTextWriterBuilder.standard().withCharsetAscii();
-        twb.setCatalog(catalog);
         myTextWriterBuilder = twb.immutable();
 
         // whacked but I'm not going to figure this out right now
         _value_factory = this;
         _value_factory.set_system(this);
+
+        bwb.setSymtabValueFactory(_value_factory);
+        myBinaryWriterBuilder = bwb.immutable();
     }
 
     //==========================================================================
@@ -107,7 +104,7 @@ final class IonSystemLite
 
     public boolean isStreamCopyOptimized()
     {
-        return myStreamCopyOptimized;
+        return myBinaryWriterBuilder.isStreamCopyOptimized();
     }
 
     @SuppressWarnings("unchecked")
@@ -119,26 +116,25 @@ final class IonSystemLite
             return (T) value.clone();
         }
 
-        // TODO ION-338 Materializing IonDatagram is an unnecessary overhead
-        IonDatagram datagram = newDatagram();
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
-        IonReader reader = makeSystemReader(value.getSystem(), value);
-
-        try {
-            writer.writeValues(reader);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
         if (value instanceof IonDatagram)
         {
+            IonDatagram datagram = newDatagram();
+            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+            IonReader reader = makeSystemReader(value.getSystem(), value);
+
+            try {
+                writer.writeValues(reader);
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+
             return (T) datagram;
         }
 
-        IonValue copy = datagram.get(0);
-        copy.removeFromContainer();
-        return (T) copy;
+        IonReader reader = newReader(value);
+        reader.next();
+        return (T) newValue(reader);
     }
 
     public IonCatalog getCatalog()
@@ -207,26 +203,22 @@ final class IonSystemLite
     @Deprecated
     public IonBinaryWriter newBinaryWriter()
     {
-        SymbolTable[] imports = null;
-        return newBinaryWriter(imports);
+        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;
+        return b.buildLegacy();
     }
 
     @Deprecated
     public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
     {
-        return newIonBinaryWriterWithImports(this,
-                                             getCatalog(),
-                                             myStreamCopyOptimized,
-                                             imports);
+        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)
+            myBinaryWriterBuilder.withImports(imports);
+        return b.buildLegacy();
     }
 
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
-        IonWriter writer = newBinaryWriterWithImports(this, getCatalog(),
-                                                      myStreamCopyOptimized,
-                                                      out, imports);
-        return writer;
+        return myBinaryWriterBuilder.withImports(imports).build(out);
     }
 
     public IonWriter newTextWriter(Appendable out)
@@ -314,14 +306,14 @@ final class IonSystemLite
 
     public IonValueLite newValue(IonReader reader)
     {
-        IonValueLite value = load_value_helper(reader);
+        IonValueLite value = load_value_helper(reader, /*isTopLevel*/ true);
         if (value == null) {
             throw new IonException("No value available");
         }
         return value;
     }
 
-    private IonValueLite load_value_helper(IonReader reader)
+    private IonValueLite load_value_helper(IonReader reader, boolean isTopLevel)
     {
         boolean symbol_is_present = false;
 
@@ -390,7 +382,7 @@ final class IonSystemLite
         }
 
         // Forget any incoming SIDs on field names.
-        if (reader.isInStruct()) {
+        if (!isTopLevel && reader.isInStruct()) {
             SymbolToken token = reader.getFieldNameSymbol();
             String text = token.getText();
             if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
@@ -464,7 +456,7 @@ final class IonSystemLite
             if (t == null) {
                 break;
             }
-            IonValueLite child = load_value_helper(reader);
+            IonValueLite child = load_value_helper(reader, /*isTopLevel*/ false);
 
             container.add(child);
 
@@ -580,7 +572,8 @@ final class IonSystemLite
     {
         assert child._context == this;
 //        assert container.getSystem() == this : "system mismatch";
-
+        // ensure the local symbol table is purged
+        child.clearLocalSymbolTable();
         // We must unset the sids within this child as they may not be
         // correct in the context of the container!
         child.clearSymbolIDValues();

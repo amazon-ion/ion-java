@@ -1,13 +1,10 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBinaryWriter;
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,18 +21,10 @@ public final class _Private_IonBinaryWriterImpl
     extends IonWriterUserBinary
     implements IonBinaryWriter
 {
-    public _Private_IonBinaryWriterImpl(IonCatalog catalog,
-                                        SymbolTable defaultSystemSymtab,
-                                        ValueFactory symtabValueFactory,
-                                        IonWriterSystemBinary systemWriter,
-                                        boolean streamCopyOptimized,
-                                        SymbolTable symtab)
+    _Private_IonBinaryWriterImpl(_Private_IonBinaryWriterBuilder options,
+                                 IonWriterSystemBinary           systemWriter)
     {
-        super(catalog,
-              symtabValueFactory,
-              systemWriter,
-              streamCopyOptimized,
-              symtab);
+        super(options, systemWriter);
     }
 
 

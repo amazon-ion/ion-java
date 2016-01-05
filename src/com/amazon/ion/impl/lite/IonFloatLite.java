@@ -1,7 +1,8 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -30,19 +31,27 @@ final class IonFloatLite
         super(system, isNull);
     }
 
-    @Override
-    public IonFloatLite clone()
+    IonFloatLite(IonFloatLite existing, IonContext context)
     {
-        IonFloatLite clone = new IonFloatLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        clone.setValue(this._float_value);
-
-        return clone;
+        super(existing, context);
+        // shallow copy as Double is immutable
+        this._float_value = existing._float_value;
     }
 
     @Override
-    public int hashCode()
+    IonFloatLite clone(IonContext context)
+    {
+        return new IonFloatLite(this, context);
+    }
+
+    @Override
+    public IonFloatLite clone()
+    {
+        return clone(getSystem());
+    }
+
+    @Override
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         int result = HASH_SIGNATURE;
 
@@ -51,7 +60,7 @@ final class IonFloatLite
             result ^= (int) ((bits >>> 32) ^ bits);
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     @Override
@@ -81,7 +90,7 @@ final class IonFloatLite
         if (isNullValue()) {
             return null;
         }
-        return new BigDecimal(_float_value.doubleValue());
+        return Decimal.valueOf(_float_value.doubleValue());
     }
 
     public void setValue(float value)
@@ -118,7 +127,7 @@ final class IonFloatLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         if (isNullValue())
@@ -129,6 +138,11 @@ final class IonFloatLite
         {
             writer.writeFloat(_float_value);
         }
+    }
+
+    public boolean isNumericValue()
+    {
+        return !(isNullValue() || _float_value.isNaN() || _float_value.isInfinite());
     }
 
     @Override

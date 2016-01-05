@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -115,7 +115,8 @@ public interface IonStruct
 
     /**
      * Provides a factory that when invoked constructs a new value and
-     * {@code put}s it into this struct using the given {@code fieldName}.
+     * {@link #put(String,IonValue) put}s it into this struct using the given
+     * {@code fieldName}.
      * <p>
      * These two lines are equivalent:
      *<pre>
@@ -127,6 +128,8 @@ public interface IonStruct
      *   if {@code fieldName} is <code>null</code>.
      * @throws IllegalArgumentException
      *   if {@code fieldName} is empty.
+     *
+     * @see #put(String, IonValue)
      */
     public ValueFactory put(String fieldName);
 
@@ -202,7 +205,8 @@ public interface IonStruct
 
     /**
      * Provides a factory that when invoked constructs a new value and
-     * {@code add}s it to this struct using the given {@code fieldName}.
+     * {@link #add(String,IonValue) add}s it to this struct using the given
+     * {@code fieldName}.
      * <p>
      * These two lines are equivalent:
      *<pre>
@@ -214,6 +218,8 @@ public interface IonStruct
      *   if {@code fieldName} is <code>null</code>.
      * @throws IllegalArgumentException
      *   if {@code fieldName} is empty.
+     *
+     * @see #add(String, IonValue)
      */
     public ValueFactory add(String fieldName);
 
@@ -284,16 +290,35 @@ public interface IonStruct
     /**
      * Clones this struct, excluding certain fields. This can be more
      * efficient than cloning the struct and removing fields later on.
+     *
+     * @param fieldNames the names of the fields to remove.
+     *   A null field name causes removal of fields with unknown names.
+     *
+     * @throws UnknownSymbolException
+     *   if any part of the cloned value would have unknown text but known SID
+     *   for its field name, annotation or symbol.
+     *
+     * @see IonValue#clone()
      */
-    public IonStruct cloneAndRemove(String... fieldNames);
+    public IonStruct cloneAndRemove(String... fieldNames)
+        throws UnknownSymbolException;
 
 
     /**
      * Clones this struct, including only certain fields. This can be more
      * efficient than cloning the struct and removing fields later on.
      *
+     * @param fieldNames the names of the fields to retain.
+     *   Nulls are not allowed.
+     *
      * @throws NullPointerException
      *   if {@code fieldNames}, or any element within it, is <code>null</code>.
+     * @throws UnknownSymbolException
+     *   if any part of the cloned value would have unknown text but known SID
+     *   for its field name, annotation or symbol.
+     *
+     * @see IonValue#clone()
      */
-    public IonStruct cloneAndRetain(String... fieldNames);
+    public IonStruct cloneAndRetain(String... fieldNames)
+        throws UnknownSymbolException;
 }

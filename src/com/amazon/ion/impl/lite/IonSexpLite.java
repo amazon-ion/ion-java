@@ -1,14 +1,12 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
-import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -24,6 +22,11 @@ final class IonSexpLite
     IonSexpLite(IonContext context, boolean isNull)
     {
         super(context, isNull);
+    }
+
+    IonSexpLite(IonSexpLite existing, IonContext context)
+    {
+        super(existing, context);
     }
 
     /**
@@ -44,22 +47,20 @@ final class IonSexpLite
     }
 
     @Override
-    public IonSexpLite clone()
+    IonSexpLite clone(IonContext parentContext)
     {
-        IonSexpLite clone = new IonSexpLite(_context.getSystem(), false);
-
-        try {
-            clone.copyFrom(this);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        return clone;
+        return new IonSexpLite(this, parentContext);
     }
 
     @Override
-    public int hashCode() {
-        return sequenceHashCode(HASH_SIGNATURE);
+    public IonSexpLite clone()
+    {
+        return clone(getSystem());
+    }
+
+    @Override
+    public int hashCode(SymbolTableProvider symbolTableProvider) {
+        return sequenceHashCode(HASH_SIGNATURE, symbolTableProvider);
     }
 
     @Override

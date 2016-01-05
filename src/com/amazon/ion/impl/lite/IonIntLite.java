@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -40,26 +40,27 @@ final class IonIntLite
         super(system, isNull);
     }
 
-    @Override
-    public IonIntLite clone()
+    IonIntLite(IonIntLite existing, IonContext context)
     {
-        IonIntLite clone = new IonIntLite(this._context.getSystem(), false);
-
-        clone.copyMemberFieldsFrom(this);
-        if (this._big_int_value != null)
-        {
-            clone.doSetValue(this._big_int_value);
-        }
-        else
-        {
-            clone.doSetValue(this._long_value, this._isNullValue());
-        }
-
-        return clone;
+        super(existing, context);
+        this._long_value    = existing._long_value;
+        this._big_int_value = existing._big_int_value;
     }
 
     @Override
-    public int hashCode()
+    IonIntLite clone(IonContext context)
+    {
+        return new IonIntLite(this, context);
+    }
+
+    @Override
+    public IonIntLite clone()
+    {
+        return clone(getSystem());
+    }
+
+    @Override
+    int hashCode(SymbolTableProvider symbolTableProvider)
     {
         int result = HASH_SIGNATURE;
 
@@ -81,7 +82,7 @@ final class IonIntLite
             }
         }
 
-        return hashTypeAnnotations(result);
+        return hashTypeAnnotations(result, symbolTableProvider);
     }
 
     @Override
@@ -166,7 +167,7 @@ final class IonIntLite
     }
 
     @Override
-    final void writeBodyTo(IonWriter writer)
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
         if (isNullValue())

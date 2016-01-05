@@ -1,19 +1,21 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2008-2015 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
+import com.amazon.ion.util._Private_FastAppendable;
+import java.io.Closeable;
+import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 
 /**
- * Implementation of {@link _Private_IonTextAppender} that writes to an
- * {@link OutputStream}.
+ * Adapts an {@link OutputStream} to implement {@link _Private_FastAppendable}.
+ * <b>This always outputs UTF-8!</b>
  */
-final class OutputStreamIonTextAppender
-    extends _Private_IonTextAppender
+final class OutputStreamFastAppendable
+    implements _Private_FastAppendable, Closeable, Flushable
 {
     private static final int MAX_BYTES_LEN = 4096;
 
@@ -25,10 +27,8 @@ final class OutputStreamIonTextAppender
     /** Position in {@link #_byteBuffer} where we'll write the next byte. */
     private int _pos;
 
-    public OutputStreamIonTextAppender(OutputStream out, Charset charset)
+    OutputStreamFastAppendable(OutputStream out)
     {
-        // escape unicode symbols if charset is ASCII
-        super(charset.equals(_Private_Utils.ASCII_CHARSET));
         out.getClass(); // Efficient null check
 
         _out = out;
@@ -36,8 +36,35 @@ final class OutputStreamIonTextAppender
         _byteBuffer = new byte[MAX_BYTES_LEN];
     }
 
+    // ------------------- FastAppendable Appendable Methods -------------------
+    public Appendable append(char c)
+        throws IOException
+    {
+        // Choose what method to use depending on type of character.
+        if (c < 0x80) {
+            appendAscii(c);
+        } else {
+            appendUtf16(c);
+        }
+        return this;
+    }
 
-    @Override
+    public Appendable append(CharSequence csq)
+        throws IOException
+    {
+        append(csq, 0, csq.length());
+        return this;
+    }
+
+    public Appendable append(CharSequence csq, int start, int end)
+        throws IOException
+    {
+        for (int ii = start; ii < end; ++ii) {
+            append(csq.charAt(ii));
+        }
+        return this;
+    }
+
     public final void appendAscii(char c)
         throws IOException
     {
@@ -49,14 +76,13 @@ final class OutputStreamIonTextAppender
         _byteBuffer[_pos++] = (byte)c;
     }
 
-    @Override
     public final void appendAscii(CharSequence csq)
         throws IOException
     {
         appendAscii(csq, 0, csq.length());
     }
 
-    @Override
+    @SuppressWarnings("deprecation")
     public final void appendAscii(CharSequence csq, int start, int end)
         throws IOException
     {
@@ -94,7 +120,6 @@ final class OutputStreamIonTextAppender
         }
     }
 
-    @Override
     public final void appendUtf16(char c)
         throws IOException
     {
@@ -115,7 +140,6 @@ final class OutputStreamIonTextAppender
         }
     }
 
-    @Override
     public final void appendUtf16Surrogate(char leadSurrogate,
                                            char trailSurrogate)
         throws IOException

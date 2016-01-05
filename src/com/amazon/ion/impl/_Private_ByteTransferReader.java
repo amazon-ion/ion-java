@@ -9,8 +9,8 @@ import java.io.IOException;
  * An {@link IonReader} {@linkplain com.amazon.ion.facet facet} that can rapidly bulk-copy
  * Ion binary data under certain circumstances.
  */
-interface ByteTransferReader
+public interface _Private_ByteTransferReader
 {
-    public void transferCurrentValue(IonWriterSystemBinary writer)
+    public void transferCurrentValue(_Private_ByteTransferSink writer)
         throws IOException;
 }

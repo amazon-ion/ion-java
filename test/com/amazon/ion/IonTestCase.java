@@ -681,6 +681,22 @@ public abstract class IonTestCase
     }
 
 
+    public static void checkTimestamp(String expected, Timestamp actual)
+    {
+        if (expected == null) {
+            assertNull(actual);
+        }
+        else
+        {
+            Timestamp expectedTs = Timestamp.valueOf(expected);
+
+            assertEquals("timestamp", expectedTs, actual);
+            assertEquals("timestamp content",
+                         expected, actual.toString());
+        }
+    }
+
+
     /**
      * Checks that the value is an IonTimestamp with the given value.
      * @param expected may be null to check for null.timestamp

@@ -12,7 +12,7 @@ import static org.junit.Assert.assertTrue;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl._Private_IonWriterBase;
+import com.amazon.ion.impl._Private_IonWriter;
 import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
@@ -123,6 +123,9 @@ public class IonSystemBuilderTest
         assertTrue(isLazySystem(ion));
     }
 
+
+    //-------------------------------------------------------------------------
+
     @Test
     public void testStreamCopyOptimized()
     {
@@ -132,8 +135,23 @@ public class IonSystemBuilderTest
         assertTrue(isLiteSystem(ion));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter w = ion.newBinaryWriter(out);
-        assertTrue(((_Private_IonWriterBase)w).isStreamCopyOptimized());
+        assertTrue(((_Private_IonWriter)w).isStreamCopyOptimized());
     }
+
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testStreamCopyOptimizedImmutability()
+    {
+        IonSystemBuilder b = IonSystemBuilder.standard().copy();
+        b.setStreamCopyOptimized(true);
+
+        IonSystemBuilder b2 = b.immutable();
+        assertTrue(b2.isStreamCopyOptimized());
+        b2.setStreamCopyOptimized(false);
+    }
+
+
+    //-------------------------------------------------------------------------
 
     @Test
     public void testFluidStyle()

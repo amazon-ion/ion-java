@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 import java.math.BigDecimal;
@@ -46,15 +46,15 @@ public interface IonFloat
     public double doubleValue()
         throws NullValueException;
 
-    // TODO ION-330 add isSpecial to detect nan/+inf/-inf
-    // would be useful before calling bigDecimalValue
 
     /**
-     * Gets the value of this Ion <code>float</code> as a Java
-     * {@link BigDecimal} value.
+     * Gets the value of this Ion {@code float} as a Java {@link BigDecimal}.
+     * This follows the behavior of {@link BigDecimal#valueOf(double)}. It's
+     * recommended to call {@link IonFloat#isNumericValue()} before calling
+     * this method.
      *
-     * @return the <code>BigDecimal</code> value,
-     * or <code>null</code> if <code>this.isNullValue()</code>.
+     * @return the {@link BigDecimal} value, or {@code null} if
+     * {@code this.isNullValue()}.
      *
      * @throws NumberFormatException if this value is {@code nan},
      * {@code +inf}, or {@code -inf}, because {@link BigDecimal} cannot
@@ -83,6 +83,15 @@ public interface IonFloat
      * may be <code>null</code> to make this <code>null.float</code>.
      */
     public void setValue(BigDecimal value);
+
+    /**
+     * Determines whether this value is numeric. Returns true if this value
+     * is none of {@code null}, {@code nan}, {@code +inf}, and {@code -inf},
+     * and false if it is any of them.
+     *
+     * @return a checked condition whether this value is numeric.
+     */
+    public boolean isNumericValue();
 
     public IonFloat clone()
         throws UnknownSymbolException;

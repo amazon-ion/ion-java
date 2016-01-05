@@ -312,7 +312,7 @@ public final class Equivalence {
      * NOTE: This class should only be instantiated for the sole purpose of
      * using it as either a <em>key</em> or <em>value</em> in a {@link Map}.
      */
-    private static class Field implements Comparable<Field> {
+    static class Field {
         private final String    name; // aka field name
         private final IonValue  value;
         private final boolean   strict;
@@ -323,7 +323,7 @@ public final class Equivalence {
          */
         private int occurrences;
 
-        public Field(final IonValue value, final boolean strict)
+        Field(final IonValue value, final boolean strict)
         {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
@@ -342,6 +342,13 @@ public final class Equivalence {
         @Override
         public int hashCode() {
             return name.hashCode();
+            // TODO IONJAVA-463 : implement hash code such that it respects
+            // 'strict'. The prevously attempted fix is commented out below but
+            // is not sufficient because value.hasCode will always include
+            // type annotations in the hash computation. Type annotations
+            // should not be part of the hash computation if strict=true.
+//            result = (31 * result) + value.hashCode();
+//            return result;
         }
 
         /**
@@ -357,25 +364,9 @@ public final class Equivalence {
             return name.equals(sOther.name)
                 && ionEqualsImpl(value, ((Field) other).value, strict);
         }
-
-        // TODO ION-319 Implement IonStruct comparison functionality.
-        // This method is currently not used by any code paths.
-        public int compareTo(Field other) {
-            // We can assume strict is the same - internal usage dictates it
-            int answer = name.compareTo(other.name);
-
-            if (answer == 0) {
-                answer = ionCompareToImpl(value, other.value, strict);
-                if (answer == 0) {
-                    answer = occurrences - other.occurrences;
-                }
-            }
-
-            return answer;
-        }
     }
 
-    private static final boolean ionEqualsImpl(final IonValue v1,
+    private static boolean ionEqualsImpl(final IonValue v1,
                                                final IonValue v2,
                                                final boolean strict)
     {
@@ -508,8 +499,8 @@ public final class Equivalence {
      *
      * @return true if two Ion Values represent the same data.
      */
-    public static final boolean ionEquals(final IonValue v1,
-                                          final IonValue v2)
+    public static boolean ionEquals(final IonValue v1,
+                                    final IonValue v2)
     {
         return ionEqualsImpl(v1, v2, true);
     }
@@ -526,8 +517,8 @@ public final class Equivalence {
      * @return true if two Ion Values represent the same data without regard to
      *         annotations.
      */
-    public static final boolean ionEqualsByContent(final IonValue v1,
-                                                   final IonValue v2)
+    public static boolean ionEqualsByContent(final IonValue v1,
+                                             final IonValue v2)
     {
         return ionEqualsImpl(v1, v2, false);
     }

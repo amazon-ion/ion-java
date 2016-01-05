@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.system;
 
@@ -15,8 +15,8 @@ import java.nio.charset.Charset;
 /**
  * The builder for creating {@link IonWriter}s emitting the Ion text syntax.
  * <p>
- * <b>WARNING:</b> This interface should not be implemented or extended by
- * code outside of this library.
+ * <b>WARNING:</b> This class should not be extended by code outside of
+ * this library.
  * <p>
  * Builders may be configured once and reused to construct multiple
  * objects.
@@ -53,13 +53,13 @@ import java.nio.charset.Charset;
  * <p>
  * Currently, there is no configuration point available to disable the
  * auto-flushing mechanism. Please vote on
- * <a href="https://jira2.amazon.com/browse/ION-361">JIRA issue ION-361</a>
+ * <a href="https://issues.amazon.com/ION-361">issue ION-361</a>
  * if you require it.
  *
  * @since IonJava R15
  */
 public abstract class IonTextWriterBuilder
-    extends IonWriterBuilder
+    extends IonWriterBuilderBase<IonTextWriterBuilder>
 {
     /**
      * A strategy for minimizing the output of local symbol tables.
@@ -103,7 +103,7 @@ public abstract class IonTextWriterBuilder
 
 
     /**
-     * The standard builder of {@link IonWriter}s, with all configuration
+     * The standard builder of text {@link IonWriter}s, with all configuration
      * properties having their default values. The resulting output is a
      * direct representation of what's written to the writer, including
      * version markers and local symbol tables.
@@ -170,12 +170,10 @@ public abstract class IonTextWriterBuilder
     //   * Re-use same imports after a finish
     //   * Indentation CharSeq
 
-    private IonCatalog myCatalog;
     private Charset myCharset;
     private InitialIvmHandling myInitialIvmHandling;
     private IvmMinimizing myIvmMinimizing;
     private LstMinimizing myLstMinimizing;
-    private SymbolTable[] myImports;
     private int myLongStringThreshold;
 
 
@@ -187,67 +185,42 @@ public abstract class IonTextWriterBuilder
     /** NOT FOR APPLICATION USE! */
     protected IonTextWriterBuilder(IonTextWriterBuilder that)
     {
-        this.myCatalog              = that.myCatalog;
+        super(that);
+
         this.myCharset              = that.myCharset;
         this.myInitialIvmHandling   = that.myInitialIvmHandling;
         this.myIvmMinimizing        = that.myIvmMinimizing;
         this.myLstMinimizing        = that.myLstMinimizing;
-        this.myImports              = that.myImports;
         this.myLongStringThreshold  = that.myLongStringThreshold;
     }
 
+
     //=========================================================================
+    // Overrides to fix the return type in JavaDocs
 
-    /**
-     * Gets the catalog to use when building an {@link IonWriter}.
-     * The catalog is needed to resolve manually-written imports (not common).
-     * By default, this property is null.
-     *
-     * @see #setCatalog(IonCatalog)
-     * @see #withCatalog(IonCatalog)
-     */
-    public final IonCatalog getCatalog()
-    {
-        return myCatalog;
-    }
 
-    /**
-     * Sets the catalog to use when building an {@link IonWriter}.
-     *
-     * @param catalog the catalog to use in built writers.
-     *  If null, the writer will be unable to resolve manually-written imports
-     *  and may throw an exception.
-     *
-     * @see #getCatalog()
-     * @see #withCatalog(IonCatalog)
-     *
-     * @throws UnsupportedOperationException if this is immutable.
-     */
-    public void setCatalog(IonCatalog catalog)
-    {
-        myCatalog = catalog;
-    }
+    @Override
+    public abstract IonTextWriterBuilder copy();
 
-    /**
-     * Declares the catalog to use when building an {@link IonWriter},
-     * returning a new mutable builder if this is immutable.
-     *
-     * @param catalog the catalog to use in built writers.
-     *  If null, the writer will be unable to resolve manually-written imports
-     *  and may throw an exception.
-     *
-     * @return this instance, if mutable;
-     * otherwise a mutable copy of this instance.
-     *
-     * @see #getCatalog()
-     * @see #setCatalog(IonCatalog)
-     */
+    @Override
+    public abstract IonTextWriterBuilder immutable();
+
+    @Override
+    public abstract IonTextWriterBuilder mutable();
+
+
+    @Override
     public final IonTextWriterBuilder withCatalog(IonCatalog catalog)
     {
-        IonTextWriterBuilder b = mutable();
-        b.setCatalog(catalog);
-        return b;
+        return super.withCatalog(catalog);
     }
+
+    @Override
+    public final IonTextWriterBuilder withImports(SymbolTable... imports)
+    {
+        return super.withImports(imports);
+    }
+
 
     //-------------------------------------------------------------------------
 
@@ -279,6 +252,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setCharset(Charset charset)
     {
+        mutationCheck();
         if (charset == null
             || charset.equals(ASCII)
             || charset.equals(UTF8))
@@ -428,6 +402,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setInitialIvmHandling(InitialIvmHandling handling)
     {
+        mutationCheck();
         myInitialIvmHandling = handling;
     }
 
@@ -490,6 +465,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setIvmMinimizing(IvmMinimizing minimizing)
     {
+        mutationCheck();
         myIvmMinimizing = minimizing;
     }
 
@@ -551,6 +527,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setLstMinimizing(LstMinimizing minimizing)
     {
+        mutationCheck();
         myLstMinimizing = minimizing;
     }
 
@@ -575,76 +552,6 @@ public abstract class IonTextWriterBuilder
     {
         IonTextWriterBuilder b = mutable();
         b.setLstMinimizing(minimizing);
-        return b;
-    }
-
-    //-------------------------------------------------------------------------
-
-    private static SymbolTable[] safeCopy(SymbolTable[] imports)
-    {
-        if (imports != null && imports.length != 0)
-        {
-            imports = imports.clone();
-        }
-        return imports;
-    }
-
-    /**
-     * Gets the imports that will be used to construct the initial local
-     * symbol table.
-     *
-     * @return may be null or empty.
-     *
-     * @see #setImports(SymbolTable...)
-     * @see #withImports(SymbolTable...)
-     */
-    public final SymbolTable[] getImports()
-    {
-        return safeCopy(myImports);
-    }
-
-    /**
-     * Sets the shared symbol tables that will be used to construct the
-     * initial local symbol table.
-     * <p>
-     * If the imports sequence is not null and not empty, the output stream
-     * will be bootstrapped with a local symbol table that uses the given
-     * {@code imports}.
-     *
-     * @param imports a sequence of shared symbol tables.
-     * The first (and only the first) may be a system table.
-     *
-     * @see #getImports()
-     * @see #withImports(SymbolTable...)
-     *
-     * @throws UnsupportedOperationException if this is immutable.
-     */
-    public void setImports(SymbolTable... imports)
-    {
-        myImports = safeCopy(imports);
-    }
-
-    /**
-     * Declares the imports to use when building an {@link IonWriter},
-     * returning a new mutable builder if this is immutable.
-     * <p>
-     * If the imports sequence is not null and not empty, the output stream
-     * will be bootstrapped with a local symbol table that uses the given
-     * {@code imports}.
-     *
-     * @param imports a sequence of shared symbol tables.
-     * The first (and only the first) may be a system table.
-     *
-     * @return this instance, if mutable;
-     * otherwise a mutable copy of this instance.
-     *
-     * @see #getImports()
-     * @see #setImports(SymbolTable...)
-     */
-    public final IonTextWriterBuilder withImports(SymbolTable... imports)
-    {
-        IonTextWriterBuilder b = mutable();
-        b.setImports(imports);
         return b;
     }
 
@@ -680,6 +587,7 @@ public abstract class IonTextWriterBuilder
      */
     public void setLongStringThreshold(int threshold)
     {
+        mutationCheck();
         myLongStringThreshold = threshold;
     }
 
@@ -703,31 +611,6 @@ public abstract class IonTextWriterBuilder
         return b;
     }
 
-    //=========================================================================
-
-    /**
-     * Creates a mutable copy of this builder.
-     *
-     * @return a new builder with the same configuration as {@code this}.
-     */
-    public abstract IonTextWriterBuilder copy();
-
-    /**
-     * Returns an immutable builder configured exactly like this one.
-     *
-     * @return this instance, if immutable;
-     * otherwise an immutable copy of this instance.
-     */
-    public abstract IonTextWriterBuilder immutable();
-
-    /**
-     * Returns a mutable builder configured exactly like this one.
-     *
-     * @return this instance, if mutable;
-     * otherwise a mutable copy of this instance.
-     */
-    public abstract IonTextWriterBuilder mutable();
-
 
     //=========================================================================
 
@@ -735,6 +618,10 @@ public abstract class IonTextWriterBuilder
     /**
      * Creates a new writer that will write text to the given output
      * stream.
+     * <p>
+     * If you have an {@link OutputStream}, you'll get better performance using
+     * {@link #build(OutputStream)} as opposed to wrapping your stream in an
+     * {@link Appendable} and calling this method.
      *
      * @param out the stream that will receive Ion text data.
      * Must not be null.
