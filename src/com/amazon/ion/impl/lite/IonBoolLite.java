@@ -34,7 +34,7 @@ final class IonBoolLite
     /**
      * Constructs a null bool value.
      */
-    public IonBoolLite(IonContext context, boolean isNull)
+    IonBoolLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -53,7 +53,7 @@ final class IonBoolLite
     @Override
     public IonBoolLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

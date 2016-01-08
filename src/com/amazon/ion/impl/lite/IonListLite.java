@@ -26,7 +26,7 @@ final class IonListLite
      * @param makeNull indicates whether this should be <code>null.list</code>
      * (if <code>true</code>) or an empty sequence (if <code>false</code>).
      */
-    IonListLite(IonContext context, boolean makeNull)
+    IonListLite(ContainerlessContext context, boolean makeNull)
     {
         super(context, makeNull);
     }
@@ -46,7 +46,7 @@ final class IonListLite
      * @throws ContainedValueException if any value in <code>elements</code>
      * has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    IonListLite(IonContext context,
+    IonListLite(ContainerlessContext context,
                 Collection<? extends IonValue> elements)
         throws ContainedValueException
     {
@@ -62,7 +62,7 @@ final class IonListLite
     @Override
     public IonListLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

@@ -17,7 +17,7 @@ abstract class IonLobLite
 
     private byte[] _lob_value;
 
-    protected IonLobLite(IonContext context, boolean isNull)
+    protected IonLobLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }

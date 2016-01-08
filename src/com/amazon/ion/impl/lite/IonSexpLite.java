@@ -19,7 +19,7 @@ final class IonSexpLite
     private static final int HASH_SIGNATURE =
         IonType.SEXP.toString().hashCode();
 
-    IonSexpLite(IonContext context, boolean isNull)
+    IonSexpLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -39,7 +39,7 @@ final class IonSexpLite
      * @throws ContainedValueException if any value in <code>elements</code>
      *  has <code>{@link IonValue#getContainer()} != null</code>.
      */
-    IonSexpLite(IonContext context,
+    IonSexpLite(ContainerlessContext context,
                 Collection<? extends IonValue> elements)
         throws ContainedValueException
     {
@@ -55,7 +55,7 @@ final class IonSexpLite
     @Override
     public IonSexpLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

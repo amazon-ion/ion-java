@@ -219,7 +219,7 @@ abstract class IonValueLite
      * @param context the context that this value is associated with
      * @param isNull if true, sets the null bit in the flags member field
      */
-    IonValueLite(IonContext context, boolean isNull)
+    IonValueLite(ContainerlessContext context, boolean isNull)
     {
         assert context != null;
         _context = context;
@@ -893,7 +893,7 @@ abstract class IonValueLite
             IonDatagramLite datagram = (IonDatagramLite) getContainer();
             datagram.setSymbolTableAtIndex(_elementid(), symbols);
         } else if (this.topLevelValue() == this) {
-            this.setContext(StubContext.wrap(this.getContext().getSystem(), symbols));
+            setContext(ContainerlessContext.wrap(getContext().getSystem(), symbols));
         } else {
             throw new UnsupportedOperationException("can't set the symboltable of a child value");
         }
@@ -901,8 +901,8 @@ abstract class IonValueLite
 
     /**
      * This method is used to re-set the context of an
-     * IonValue.  This may occur when the value is into
-     * or out of a container.  It may occur when the
+     * IonValue.  This may occur when the value is added into
+     * or removed from a container.  It may occur when the
      * symbol table state of a container changes.
      *
      * @param context must not be null.
@@ -911,7 +911,30 @@ abstract class IonValueLite
     {
         assert context != null;
         checkForLock();
+
+        //If the previous context had a non-null, non-empty SymbolTable, and the new SymbolTable is different, clear all known sIDs.
+        SymbolTable oldSymbolTable = getContext().getContextSymbolTable();
+        SymbolTable newSymbolTable = context.getContextSymbolTable();
+
+        if (oldSymbolTable != null && oldSymbolTable != newSymbolTable && tableIsNonTrivial(oldSymbolTable, newSymbolTable)){
+            this.detachFromSymbolTable();
+        }
         _context = context;
+    }
+
+    private boolean tableIsNonTrivial(SymbolTable oldSymbolTable, SymbolTable newSymbolTable){
+        if (newSymbolTable != null
+            && oldSymbolTable.getSystemSymbolTable() != newSymbolTable.getSystemSymbolTable()){
+            //new symbol table has different ion version
+            //TODO - I can't see how to test this but it needs to be here for safety in case of future changes
+            return true;
+        }
+
+        if (oldSymbolTable.getMaxId() > oldSymbolTable.getSystemSymbolTable().getMaxId()){
+            //old symbol table defines symbols or imports other symbol tables that define IDs
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -946,21 +969,8 @@ abstract class IonValueLite
     {
         checkForLock();
 
-        // we make the system the parent of this member
-        // when it's reattached to a container this will
-        // be reset
-
-        // this has the effect of erasing the symbol table
-        // or reverting it back to the system symbol table
-        // in the values all the symbol value should be
-        // represented by their string values so this should
-        // not be an issue.
-
-        // BUT IT *IS* AN ISSUE, unless we can guarantee that we have all
-        // symbol text already pulled from the symtab, and it's not clear that
-        // is invariant.
         detachFromSymbolTable();
-        _context = StubContext.wrap(getSystem());
+        _context = ContainerlessContext.wrap(getSystem());
 
         _fieldName = null;
         _fieldId = UNKNOWN_SYMBOL_ID;

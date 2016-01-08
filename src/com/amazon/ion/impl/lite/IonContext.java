@@ -25,12 +25,6 @@ import com.amazon.ion.SymbolTable;
  *  contained directly by a datagram may store a
  *  symbol table locally as there may be more than
  *  one symbol table in a datagram.
- * <p>
- *  The IonSystemLite is a context too.  It returns
- *  null for parent, this for system, and the system symbol
- *  table.  For a local symbol table it constructs
- *  a local symbol table and attaches it to the calling
- *  child object ... how?
  */
 interface IonContext
 {

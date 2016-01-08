@@ -212,19 +212,6 @@ public final class _Private_Utils
         }
     }
 
-
-
-    public SymbolToken detachFromSymbolTable(SymbolToken symbol, SymbolTable symbols)
-    {
-        String text = symbol.getText();
-        if (symbol.getText() == null)
-        {
-            text =  newSymbolToken(symbols, symbol.getSid()).getText();
-        }
-
-        return newSymbolToken(null, text);
-    }
-
     /**
      * @return not null
      */

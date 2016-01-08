@@ -35,7 +35,7 @@ final class IonStructLite
 
     // TODO ION-42: add support for _isOrdered
 
-    public IonStructLite(IonContext context, boolean isNull)
+    IonStructLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -65,7 +65,7 @@ final class IonStructLite
     @Override
     public IonStructLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

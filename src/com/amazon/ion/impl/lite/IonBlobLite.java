@@ -23,7 +23,7 @@ final class IonBlobLite
     /**
      * Constructs a <code>null.blob</code> element.
      */
-    public IonBlobLite(IonContext context, boolean isNull)
+    IonBlobLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -42,7 +42,7 @@ final class IonBlobLite
     @Override
     public IonBlobLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

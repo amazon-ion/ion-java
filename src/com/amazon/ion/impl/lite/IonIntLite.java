@@ -35,7 +35,7 @@ final class IonIntLite
     /**
      * Constructs a <code>null.int</code> element.
      */
-    public IonIntLite(IonContext context, boolean isNull)
+    IonIntLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -56,7 +56,7 @@ final class IonIntLite
     @Override
     public IonIntLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

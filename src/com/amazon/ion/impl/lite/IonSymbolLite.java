@@ -33,7 +33,7 @@ final class IonSymbolLite
     /**
      * @param isNull if {@code true}, constructs a {@code null.symbol} value.
      */
-    public IonSymbolLite(IonContext context, boolean isNull)
+    IonSymbolLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -43,7 +43,7 @@ final class IonSymbolLite
         super(existing, context);
     }
 
-    IonSymbolLite(IonContext context, SymbolToken sym)
+    IonSymbolLite(ContainerlessContext context, SymbolToken sym)
     {
         super(context, sym == null);
         if (sym != null)
@@ -88,7 +88,7 @@ final class IonSymbolLite
             && _stringValue() == null) {
             throw new UnknownSymbolException(_sid);
         }
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override
@@ -269,18 +269,4 @@ final class IonSymbolLite
         visitor.visit(this);
     }
 
-    @Override
-    protected void detachFromSymbolTable()
-    {
-        super.detachFromSymbolTable();
-        String text = _stringValue();
-        if (text != null)
-        {
-            _sid = UNKNOWN_SYMBOL_ID;
-        }
-        else
-        {
-            assert _sid > 0;
-        }
-    }
 }

@@ -79,7 +79,7 @@ public class IonContextTest
                 {
                     IonContext context = ((IonValueLite) val).getContext();
                     assertTrue("Expected StubContext but was " + context,
-                               context instanceof StubContext);
+                               context instanceof ContainerlessContext);
                 }
 
                 return val;
@@ -127,7 +127,7 @@ public class IonContextTest
                 {
                     IonContext context = ((IonValueLite) val).getContext();
                     assertTrue("Expected StubContext but was " + context,
-                               context instanceof StubContext);
+                               context instanceof ContainerlessContext);
                 }
 
                 return val;

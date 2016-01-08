@@ -13,7 +13,7 @@ abstract class IonTextLite
 {
     private String _text_value;
 
-    protected IonTextLite(IonContext context, boolean isNull)
+    protected IonTextLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }

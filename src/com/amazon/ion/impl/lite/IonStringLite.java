@@ -21,7 +21,7 @@ final class IonStringLite
     /**
      * Constructs a <code>null.string</code> value.
      */
-    public IonStringLite(IonContext context, boolean isNull)
+    IonStringLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -41,7 +41,7 @@ final class IonStringLite
     @Override
     public IonStringLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

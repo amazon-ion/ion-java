@@ -98,7 +98,7 @@ final class IonDatagramLite
     private static final int REVERSE_BINARY_ENCODER_INITIAL_SIZE = 4096 * 8;
 
     IonDatagramLite(IonSystemLite system, IonCatalog catalog) {
-        super(StubContext.wrap(system), false);
+        super(ContainerlessContext.wrap(system), false);
         _system = system;
         _catalog = catalog;
         _pending_symbol_table_idx = -1;
@@ -106,7 +106,7 @@ final class IonDatagramLite
 
     IonDatagramLite(IonDatagramLite existing)
     {
-        super(existing, StubContext.wrap(existing._system));
+        super(existing, ContainerlessContext.wrap(existing._system));
         this._system  = existing._system;
         this._catalog = existing._catalog;
     }
@@ -367,31 +367,32 @@ final class IonDatagramLite
     }
 
     @Override
+    protected int add_child(int idx, IonValueLite child){
+        SymbolTable originalSymbols = child.getSymbolTable();
+        int result = super.add_child(idx, child);
+        if (originalSymbols.isLocalTable()){ //restore old symbol table if it is local
+            child.setSymbolTable(originalSymbols);
+        }
+        return result;
+    }
+
+    @Override
     public IonContext getContextForIndex(IonValue element, int index)
     {
-
-        // if the new element didn't come with it's own
-        // local symbol table
-        if (element.getSymbolTable().isLocalTable() == false) {
-            // a pending symbol table is our first choice
-            if (index == this._pending_symbol_table_idx) {
-                SymbolTable symbols = _pending_symbol_table;
-                _pending_symbol_table = null;
-                _pending_symbol_table_idx = -1;
-                return TopLevelContext.wrap(symbols, this);
-            }
-            // the preceding elements symbol table is our next
-            IonValueLite preceding = (index > 0) ? get_child(index - 1) : null;
-            if (preceding != null && preceding._context != this) {
-                return preceding._context;
-            }
-            // otherwise element will just default to the system
-            // symbol table
-            return TopLevelContext.wrap(null, this);
+        if (index == this._pending_symbol_table_idx) {
+            SymbolTable symbols = _pending_symbol_table;
+            _pending_symbol_table = null;
+            _pending_symbol_table_idx = -1;
+            return TopLevelContext.wrap(symbols, this);
         }
-
-        return TopLevelContext.wrap(element.getSymbolTable(), this);
-
+        // the preceding elements symbol table is our next
+        IonValueLite preceding = (index > 0) ? get_child(index - 1) : null;
+        if (preceding != null && preceding._context != this) {
+            return preceding._context;
+        }
+        // otherwise element will just default to the system
+        // symbol table
+        return TopLevelContext.wrap(null, this);
     }
 
 
@@ -635,6 +636,23 @@ final class IonDatagramLite
         return count;
     }
 
+    /*
+     * Sets the context of all elements following elementid to context, until it encounters
+     * a context different to the original context at elementid.
+     */
+    void setSymbolTableAtIndex(int elementid, SymbolTable symbols)
+    {
+        assert(elementid < get_child_count());
+        TopLevelContext context = TopLevelContext.wrap(symbols, this);
+        TopLevelContext startContext = (TopLevelContext) _children[elementid].getContext();
+
+        while (elementid < get_child_count() && _children[elementid].getContext() == startContext){
+            _children[elementid++].setContext(context);
+        }
+    }
+
+
+
     @SuppressWarnings("deprecation")
     public byte[] toBytes() throws IonException
     {
@@ -647,21 +665,6 @@ final class IonDatagramLite
             throw new IonException(e);
         }
         return bytes;
-    }
-
-    /*
-     * Sets the context of all elements following elementid to context, until it encounters
-     * a context different to the original context at elementid.
-     */
-    void setSymbolTableAtIndex(int elementid, SymbolTable symbols)
-    {
-        assert(elementid < get_child_count());
-        TopLevelContext context = TopLevelContext.wrap(symbols, this);
-        TopLevelContext startContext = (TopLevelContext) _children[elementid].getContext();
-
-        while (_children[elementid] != null && _children[elementid].getContext() == startContext){
-            _children[elementid++].setContext(context);
-        }
     }
 
     //////////////////////////////////////////////////////////////////////////////

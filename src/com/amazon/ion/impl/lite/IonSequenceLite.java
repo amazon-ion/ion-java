@@ -29,7 +29,7 @@ abstract class IonSequenceLite
      */
     protected static final IonValueLite[] EMPTY_VALUE_ARRAY = new IonValueLite[0];
 
-    IonSequenceLite(IonContext context, boolean isNull)
+    IonSequenceLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -50,7 +50,7 @@ abstract class IonSequenceLite
      * @throws IllegalArgumentException
      * @throws NullPointerException
      */
-    IonSequenceLite(IonContext context,
+    IonSequenceLite(ContainerlessContext context,
                     Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException

@@ -27,7 +27,7 @@ abstract class IonContainerLite
     protected int            _child_count;
     protected IonValueLite[] _children;
 
-    protected IonContainerLite(IonContext context, boolean isNull)
+    protected IonContainerLite(ContainerlessContext context, boolean isNull)
     {
         // we'll let IonValueLite handle this work as we always need to know
         // our context and if we should start out as a null value or not
@@ -415,27 +415,12 @@ abstract class IonContainerLite
     }
 
     /**
-     * Always throws, since our children already have a container.
-     */
-    public final void setContextContainer(IonContainerLite context,
-                                          IonValueLite child)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
      * @return {@code null}, since symbol tables are only directly assigned
      *          to top-level values.
      */
     public final SymbolTable getContextSymbolTable()
     {
         return null;
-    }
-
-
-    public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
-    {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -446,11 +431,6 @@ abstract class IonContainerLite
             IonValueLite child = get_child(ii);
             child.clearSymbolIDValues();
         }
-    }
-
-    public void clearLocalSymbolTable()
-    {
-        _context.getContextContainer().clearLocalSymbolTable();
     }
 
     /**
@@ -650,7 +630,7 @@ abstract class IonContainerLite
     /**
      * Does not validate the child or check locks.
      */
-    private int add_child(int idx, IonValueLite child)
+    protected int add_child(int idx, IonValueLite child)
     {
         _isNullValue(false); // if we add children we're not null anymore
         child.setContext(this.getContextForIndex(child, idx));

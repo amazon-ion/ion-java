@@ -18,7 +18,7 @@ final class IonNullLite
     private static final int HASH_SIGNATURE =
         IonType.NULL.toString().hashCode();
 
-    protected IonNullLite(IonContext context)
+    protected IonNullLite(ContainerlessContext context)
     {
         super(context, true);
     }
@@ -43,7 +43,7 @@ final class IonNullLite
     @Override
     public IonNullLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

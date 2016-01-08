@@ -6,7 +6,9 @@ import com.amazon.ion.SymbolTable;
 
 
 /**
- *
+ * Context for child values of an IonDatagramLite. The
+ * datagram's child values that share the same local symbol table
+ * will share the same TopLevelContext.
  */
 final class TopLevelContext
     implements IonContext

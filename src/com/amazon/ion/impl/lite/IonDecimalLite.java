@@ -46,7 +46,7 @@ final class IonDecimalLite
     /**
      * Constructs a <code>null.decimal</code> element.
      */
-    public IonDecimalLite(IonContext context, boolean isNull)
+    IonDecimalLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -67,7 +67,7 @@ final class IonDecimalLite
     @Override
     public IonDecimalLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

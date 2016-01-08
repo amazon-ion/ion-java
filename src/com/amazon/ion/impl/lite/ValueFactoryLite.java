@@ -26,10 +26,10 @@ import java.util.List;
 abstract class ValueFactoryLite
     implements ValueFactory
 {
-    private IonContext _context;
+    private ContainerlessContext _context;
 
     protected void set_system(IonSystemLite system) {
-        _context = StubContext.wrap(system);
+        _context = ContainerlessContext.wrap(system);
     }
 
     public IonBlobLite newBlob(byte[] value)

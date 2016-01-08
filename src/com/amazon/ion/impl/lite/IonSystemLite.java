@@ -524,8 +524,7 @@ final class IonSystemLite
         if (!ION_1_0.equals(ionVersionMarker)) {
             throw new IllegalArgumentException("name isn't an ion version marker");
         }
-        IonSymbolLite ivm = this.newSymbol(ionVersionMarker);
-        ivm.setValue(ionVersionMarker);
+        IonSymbolLite ivm = newSymbol(ionVersionMarker);
         ivm.setIsIonVersionMarker(true);
 
         return ivm;

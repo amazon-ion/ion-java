@@ -36,7 +36,7 @@ final class IonTimestampLite
     /**
      * Constructs a <code>null.timestamp</code> value.
      */
-    public IonTimestampLite(IonContext context, boolean isNull)
+    IonTimestampLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -57,7 +57,7 @@ final class IonTimestampLite
     @Override
     public IonTimestampLite clone()
     {
-        return clone(StubContext.wrap(getSystem()));
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override
