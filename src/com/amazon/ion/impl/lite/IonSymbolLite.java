@@ -33,9 +33,9 @@ final class IonSymbolLite
     /**
      * @param isNull if {@code true}, constructs a {@code null.symbol} value.
      */
-    public IonSymbolLite(IonSystemLite system, boolean isNull)
+    IonSymbolLite(ContainerlessContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     IonSymbolLite(IonSymbolLite existing, IonContext context) throws UnknownSymbolException
@@ -43,9 +43,9 @@ final class IonSymbolLite
         super(existing, context);
     }
 
-    IonSymbolLite(IonSystemLite system, SymbolToken sym)
+    IonSymbolLite(ContainerlessContext context, SymbolToken sym)
     {
-        super(system, sym == null);
+        super(context, sym == null);
         if (sym != null)
         {
             String text = sym.getText();
@@ -88,7 +88,7 @@ final class IonSymbolLite
             && _stringValue() == null) {
             throw new UnknownSymbolException(_sid);
         }
-        return clone(getSystem());
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override
@@ -213,34 +213,6 @@ final class IonSymbolLite
     }
 
     @Override
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        if (_isLocked()) {
-            // we can't, and don't need to, update symbol id's
-            // for a locked value - there are none - so do nothing here
-        }
-        else {
-            // this will check whether or not we're locked
-            // it also looks up the symbol table if it is
-            // null
-            symbols = super.populateSymbolValues(symbols);
-
-            if (!isNullValue()) {
-                String name = _get_value();
-                if (name != null) {
-                    symbols = resolve_symbol(symbols, name);
-                    // seems a bit lame, but we can't return two values
-                    // from resolve and there's no point looking it up
-                    // now since we'll look it up if anyone asks for it
-                    // and if no one asks we don't need it
-                    _sid = UNKNOWN_SYMBOL_ID;
-                }
-            }
-        }
-        return symbols;
-    }
-
-    @Override
     void clearSymbolIDValues()
     {
         super.clearSymbolIDValues();
@@ -296,4 +268,5 @@ final class IonSymbolLite
     {
         visitor.visit(this);
     }
+
 }

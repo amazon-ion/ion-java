@@ -27,7 +27,7 @@ abstract class IonContainerLite
     protected int            _child_count;
     protected IonValueLite[] _children;
 
-    protected IonContainerLite(IonContext context, boolean isNull)
+    protected IonContainerLite(ContainerlessContext context, boolean isNull)
     {
         // we'll let IonValueLite handle this work as we always need to know
         // our context and if we should start out as a null value or not
@@ -45,7 +45,7 @@ abstract class IonContainerLite
             for (int i = 0; i < childCount; i++) {
                 IonValueLite child = existing._children[i];
                 IonContext childContext = isDatagram
-                     ? new TopLevelContext(context.getSystem(), (IonDatagramLite)this)
+                     ? TopLevelContext.wrap(child.getAssignedSymbolTable(), (IonDatagramLite)this)
                      : this;
 
                 IonValueLite copy = child.clone(childContext);
@@ -415,52 +415,12 @@ abstract class IonContainerLite
     }
 
     /**
-     * Always throws, since our children already have a container.
-     */
-    public final void setContextContainer(IonContainerLite context,
-                                          IonValueLite child)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-
-    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
-    {
-        return _context.ensureLocalSymbolTable(this);
-    }
-
-    /**
      * @return {@code null}, since symbol tables are only directly assigned
      *          to top-level values.
      */
     public final SymbolTable getContextSymbolTable()
     {
         return null;
-    }
-
-
-    public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        if (_isLocked()) {
-            // we can't, and don't need to, update symbol id's
-            // for a locked value - there are none - so do nothing here
-        }
-        else {
-            // for an unlocked value we populate the symbols for
-            // everyone and his brother
-            symbols = super.populateSymbolValues(symbols);
-            for (int ii=0; ii<get_child_count(); ii++) {
-                IonValueLite child = get_child(ii);
-                symbols = child.populateSymbolValues(symbols);
-            }
-        }
-        return symbols;
     }
 
     @Override
@@ -471,12 +431,6 @@ abstract class IonContainerLite
             IonValueLite child = get_child(ii);
             child.clearSymbolIDValues();
         }
-    }
-
-    @Override
-    public void clearLocalSymbolTable()
-    {
-        _context.clearLocalSymbolTable();
     }
 
     /**
@@ -676,9 +630,10 @@ abstract class IonContainerLite
     /**
      * Does not validate the child or check locks.
      */
-    private int add_child(int idx, IonValueLite child)
+    protected int add_child(int idx, IonValueLite child)
     {
         _isNullValue(false); // if we add children we're not null anymore
+        child.setContext(this.getContextForIndex(child, idx));
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
             int new_len = this.nextSize(old_len, true);
@@ -695,13 +650,13 @@ abstract class IonContainerLite
         _child_count++;
         _children[idx] = child;
 
-        assert child._context instanceof TopLevelContext
-            || child._context instanceof IonSystemLite;
-        // Because the child must not have a container since we are adding it.
-        child._context.setContextContainer(this, child);
-
         child._elementid(idx);
         return idx;
+    }
+
+
+    IonContext getContextForIndex(IonValue element, int index){
+        return this;
     }
 
     /**
@@ -731,6 +686,18 @@ abstract class IonContainerLite
             child._elementid(ii);
         }
         return;
+    }
+
+    @Override
+    protected void detachFromSymbolTable()
+    {
+        super.detachFromSymbolTable();
+        if (_children != null)
+        {
+            for (int ii=0; ii<_child_count; ii++) {
+                _children[ii].detachFromSymbolTable();
+            }
+        }
     }
 
 }

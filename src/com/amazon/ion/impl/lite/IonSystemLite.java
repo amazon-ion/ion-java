@@ -51,9 +51,8 @@ import java.util.NoSuchElementException;
 @SuppressWarnings("deprecation")
 final class IonSystemLite
     extends ValueFactoryLite
-    implements _Private_IonSystem, IonContext
+    implements _Private_IonSystem
 {
-    private static int DEFAULT_CONTEXT_FREE_LIST_SIZE = 120;
 
     private final SymbolTable _system_symbol_table;
 
@@ -66,22 +65,12 @@ final class IonSystemLite
     /** Immutable. */
     private final _Private_IonBinaryWriterBuilder myBinaryWriterBuilder;
 
-
     public IonSystemLite(IonTextWriterBuilder twb,
-                         _Private_IonBinaryWriterBuilder bwb)
-    {
-        this(twb, bwb, DEFAULT_CONTEXT_FREE_LIST_SIZE);
-    }
-
-    private IonSystemLite(IonTextWriterBuilder twb,
-                          _Private_IonBinaryWriterBuilder bwb,
-                          int context_free_list_size)
+                          _Private_IonBinaryWriterBuilder bwb)
     {
         IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
         assert catalog == bwb.getCatalog();
-
-        set_context_free_list_max(context_free_list_size);
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
@@ -530,148 +519,12 @@ final class IonSystemLite
         return singleValue(it);
     }
 
-    /*
-     * IonContext methods
-     */
-
-    public SymbolTable ensureLocalSymbolTable(IonValueLite child)
-    {
-        // if this request makes it up to the system
-        // it means there was no local symbol table
-        // defined on the top level of the value.
-        // So we'll make one there.
-        SymbolTable local = this.newLocalSymbolTable();
-        IonContext context = child.getContext();
-        if (context == this) {
-            context = TopLevelContext.wrap(this, local, child);
-        }
-        child.setContext(context);
-        return local;
-    }
-
-    public void clearLocalSymbolTable()
-    {
-        // the only symbol table system actually owns is
-        // a system symbol table.  Local symbol tables are
-        // all owned by the children of system. (and often
-        // shared with following siblings)
-    }
-
-
-    /**
-     * Always returns {@code null}, since all values in this context are
-     * top-level and stand-alone.
-     */
-    public IonContainerLite getContextContainer()
-    {
-        return null;
-    }
-
-    public void setContextContainer(IonContainerLite container,
-                                    IonValueLite child)
-    {
-        assert child._context == this;
-//        assert container.getSystem() == this : "system mismatch";
-        // ensure the local symbol table is purged
-        child.clearLocalSymbolTable();
-        // We must unset the sids within this child as they may not be
-        // correct in the context of the container!
-        child.clearSymbolIDValues();
-
-        // The new container becomes the context, we replace ourself.
-        child.setContext(container);
-    }
-
-    /**
-     * Always return {@code null}, since IonSystems do not own a symbol table
-     * directly (they create them through factories).
-     */
-    public SymbolTable getContextSymbolTable()
-    {
-        return null;
-    }
-
-    public IonSystemLite getSystem()
-    {
-        return this;
-    }
-
-    public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
-    {
-        assert child._context == this;
-        assert ! (child instanceof IonDatagram);
-
-        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
-            throw new IllegalArgumentException("shared symbol tables cannot be set as a current symbol table");
-        }
-
-        // Need a TLC to hold the symtab for the child.
-        TopLevelContext context = allocateConcreteContext(null, child);
-        context.setSymbolTableOfChild(symbols, child);
-    }
-
-    private static final TopLevelContext[] EMPTY_CONTEXT_ARRAY = new TopLevelContext[0];
-    private int               _free_count;
-    private TopLevelContext[] _free_contexts;
-
-    protected final void set_context_free_list_max(int size) {
-        if (size < 1) {
-            _free_contexts = EMPTY_CONTEXT_ARRAY;
-        }
-        else if (_free_contexts == null || size != _free_contexts.length) {
-            TopLevelContext[] temp = new TopLevelContext[size];
-            if (_free_count > 0) {
-                if (_free_count > size) {
-                    _free_count = size;
-                }
-                System.arraycopy(_free_contexts, 0, temp, 0, _free_count);
-            }
-            _free_contexts = temp;
-        }
-    }
-
-    protected final TopLevelContext
-    allocateConcreteContext(IonDatagramLite datagram, IonValueLite child)
-    {
-        TopLevelContext context = null;
-        if (_free_count > 0) {
-            synchronized (this._free_contexts) {
-                if (_free_count > 0) {
-                    _free_count--;
-                    context = _free_contexts[_free_count];
-                    _free_contexts[_free_count] = null;
-                }
-            }
-        }
-        if (context == null) {
-            context = TopLevelContext.wrap(this, datagram, child);
-        }
-        else {
-            context.rewrap(datagram, child);
-        }
-        return context;
-    }
-
-    protected final void releaseConcreteContext(TopLevelContext context)
-    {
-        if (_free_contexts.length > 0) {
-            synchronized (this._free_contexts) {
-                if (_free_count < _free_contexts.length) {
-                    _free_contexts[_free_count] = context;
-                    _free_count++;
-                }
-            }
-        }
-        context.clear();
-    }
-
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
     {
         if (!ION_1_0.equals(ionVersionMarker)) {
             throw new IllegalArgumentException("name isn't an ion version marker");
         }
-        IonSymbolLite ivm = new IonSymbolLite(this, false);
-        ivm.setValue(ionVersionMarker);
+        IonSymbolLite ivm = newSymbol(ionVersionMarker);
         ivm.setIsIonVersionMarker(true);
 
         return ivm;

@@ -29,7 +29,7 @@ abstract class IonSequenceLite
      */
     protected static final IonValueLite[] EMPTY_VALUE_ARRAY = new IonValueLite[0];
 
-    IonSequenceLite(IonContext context, boolean isNull)
+    IonSequenceLite(ContainerlessContext context, boolean isNull)
     {
         super(context, isNull);
     }
@@ -50,7 +50,7 @@ abstract class IonSequenceLite
      * @throws IllegalArgumentException
      * @throws NullPointerException
      */
-    IonSequenceLite(IonContext context,
+    IonSequenceLite(ContainerlessContext context,
                     Collection<? extends IonValue> elements)
         throws ContainedValueException, NullPointerException,
             IllegalArgumentException
@@ -194,10 +194,9 @@ abstract class IonSequenceLite
         validateNewChild(element);
 
         assert _children != null; // else index would be out of bounds above.
-
+        concrete._context = getContextForIndex(element, index);
         IonValueLite removed = set_child(index, concrete);
         concrete._elementid(index);
-        concrete._context = this;
 
         removed.detachFromContainer();
         // calls setDirty(), UNLESS it hits an IOException

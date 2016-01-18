@@ -13,9 +13,9 @@ abstract class IonTextLite
 {
     private String _text_value;
 
-    protected IonTextLite(IonSystemLite system, boolean isNull)
+    protected IonTextLite(ContainerlessContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     IonTextLite(IonTextLite existing, IonContext context)
@@ -24,7 +24,7 @@ abstract class IonTextLite
         // String is immutable so can copy reference (including a null ref)
         this._text_value = existing._text_value;
     }
-    
+
     @Override
     public abstract IonTextLite clone();
 

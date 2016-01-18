@@ -98,7 +98,7 @@ final class IonDatagramLite
     private static final int REVERSE_BINARY_ENCODER_INITIAL_SIZE = 4096 * 8;
 
     IonDatagramLite(IonSystemLite system, IonCatalog catalog) {
-        super(/* context */ system, false);
+        super(ContainerlessContext.wrap(system), false);
         _system = system;
         _catalog = catalog;
         _pending_symbol_table_idx = -1;
@@ -106,7 +106,7 @@ final class IonDatagramLite
 
     IonDatagramLite(IonDatagramLite existing)
     {
-        super(existing, existing._system);
+        super(existing, ContainerlessContext.wrap(existing._system));
         this._system  = existing._system;
         this._catalog = existing._catalog;
     }
@@ -185,30 +185,6 @@ final class IonDatagramLite
     }
 
     @Override
-    public final SymbolTable ensureLocalSymbolTable(IonValueLite child)
-    {
-        // otherwise the concrete context would have returned
-        // it's already present local symbol table, there's
-        // no other reason to have a concrete context with
-        // a child of datagram.
-        assert(child._context == this);
-
-        // see if there's a local table in front of us
-        SymbolTable symbols = getChildsSymbolTable(child);
-        if (symbols.isLocalTable()) {
-            return symbols;
-        }
-
-        // if not we make one here on this value
-        // TODO ION-158 must use correct system symtab
-        symbols = _system.newLocalSymbolTable();
-        TopLevelContext context = _system.allocateConcreteContext(this, child);
-        context.setSymbolTableOfChild(symbols, child);
-        return symbols;
-    }
-
-
-    @Override
     public SymbolTable getSymbolTable()
     {
         throw new UnsupportedOperationException();
@@ -218,20 +194,6 @@ final class IonDatagramLite
     public SymbolTable getAssignedSymbolTable()
     {
         throw new UnsupportedOperationException();
-    }
-
-
-    @Override
-    public void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child)
-    {
-        if (_Private_Utils.symtabIsSharedNotSystem(symbols)) {
-            String message =
-                "you can only set a symbol table to a system or local table";
-            throw new IllegalArgumentException(message);
-        }
-
-        TopLevelContext context = _system.allocateConcreteContext(this, child);
-        context.setSymbolTableOfChild(symbols, child);
     }
 
     @Override
@@ -300,16 +262,8 @@ final class IonDatagramLite
         super.add(index, concrete);
         // handled in super.add(): patch_elements_helper(index + 1);
 
-        SymbolTable symbols = concrete.getAssignedSymbolTable();
-        if (symbols == null
-            && _pending_symbol_table != null
-            && _pending_symbol_table_idx == concrete._elementid())
-        {
-            setSymbolTableOfChild(_pending_symbol_table, concrete);
-        }
-
         // the pending symbol table is only good for 1 use
-        // after that the previous element logic will fill
+        // after that the previous super.add will fill
         // in the symbol table if that is appropriate.
         _pending_symbol_table = null;
         _pending_symbol_table_idx = -1;
@@ -408,98 +362,37 @@ final class IonDatagramLite
     }
 
     @Override
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        assert(symbols == null || symbols.isSystemTable());
-
-        // we start with the system symbol table
-        symbols = _system.getSystemSymbolTable();
-
-        // thereafter each child may have it's own symbol table
-        for (int ii=0; ii<get_child_count(); ii++)
-        {
-            IonValueLite child = get_child(ii);
-            SymbolTable child_symbols = child.getAssignedSymbolTable();
-            if (child_symbols != null) {
-                symbols = child_symbols;
-            }
-            // the datagram is not marked readonly, although it's
-            // children may be read only
-            if (child.isReadOnly() == false) {
-                symbols = child.populateSymbolValues(symbols);
-            }
-        }
-        return symbols;
+    public IonValue set(int index, IonValue element){
+        throw new UnsupportedOperationException();
     }
-
-    /**
-     * Search backwards through previous children until we find one that
-     * is linked to a symbol table.
-     * <p>
-     * TODO I think it would be better if every child had an assigned symtab.
-     * Then we'd never have to search backwards.
-     * The downside might be additional work when symtabs change.
-     *
-     * @param child must not be null
-     * @return not null; defaults to the default system symtab.
-     */
-    final SymbolTable getChildsSymbolTable(IonValueLite child)
-    {
-        SymbolTable symbols = null;
-        int idx = child._elementid();
-
-        // the caller is supposed to check this and not waste our time
-        assert child.getAssignedSymbolTable() == null;
-
-        while (idx > 0 && symbols == null) {
-            idx--;
-            IonValueLite prev_child = get_child(idx);
-            symbols = prev_child.getAssignedSymbolTable();
-        }
-
-        if (symbols == null) {
-            // TODO ION-258 bad assumption about system symtab
-            symbols = _system.getSystemSymbolTable();
-        }
-
-        return symbols;
-    }
-
 
     @Override
-    public IonValue set(int index, IonValue element)
+    protected int add_child(int idx, IonValueLite child){
+        SymbolTable originalSymbols = child.getSymbolTable();
+        int result = super.add_child(idx, child);
+        if (originalSymbols.isLocalTable()){ //restore old symbol table if it is local
+            child.setSymbolTable(originalSymbols);
+        }
+        return result;
+    }
+
+    @Override
+    public IonContext getContextForIndex(IonValue element, int index)
     {
-        if (true)
-        {
-            // TODO ION-90
-            throw new UnsupportedOperationException("issue ION-90");
+        if (index == this._pending_symbol_table_idx) {
+            SymbolTable symbols = _pending_symbol_table;
+            _pending_symbol_table = null;
+            _pending_symbol_table_idx = -1;
+            return TopLevelContext.wrap(symbols, this);
         }
-
-        IonValue previous = super.set(index, element);
-        IonValueLite concrete = (IonValueLite)element;
-
-        // if the new element didn't come with it's own
-        // local symbol table
-        if (element.getSymbolTable().isLocalTable() == false) {
-            // a pending symbol table is our first choice
-            if (index == this._pending_symbol_table_idx) {
-                this.setSymbolTableOfChild(_pending_symbol_table, concrete);
-            }
-            else {
-                // the preceding elements symbol table is our next
-                IonValueLite preceding = (index > 0) ? get_child(index - 1) : null;
-                if (preceding != null && preceding._context != this) {
-                    concrete.setContext(preceding._context);
-                }
-                else {
-                    // otherwise element will just default to the system
-                    // symbol table when it's context is set to this datagram
-                    // should have been set by super.set()
-                    assert(concrete._context == this);
-                }
-            }
+        // the preceding elements symbol table is our next
+        IonValueLite preceding = (index > 0) ? get_child(index - 1) : null;
+        if (preceding != null && preceding._context != this) {
+            return preceding._context;
         }
-        return previous;
+        // otherwise element will just default to the system
+        // symbol table
+        return TopLevelContext.wrap(null, this);
     }
 
 
@@ -724,38 +617,10 @@ final class IonDatagramLite
         return value;
     }
 
-    // TODO: optimize this, if there's a real use case
-    //       deprecate this is there isn't (which I suspect is actually the case)
-    public IonValue systemRemove(int index) throws IndexOutOfBoundsException
-    {
-        IonValue value = systemGet(index);
-        assert(value instanceof IonValueLite);
-        if (((IonValueLite)value)._isSystemValue() == false) {
-            remove(value);
-        }
-        else {
-            assert(is_synthetic_value((IonValueLite)value));
-        }
-        return value;
-    }
-    // just used for a complicated assertion
-    private final boolean is_synthetic_value(IonValueLite value)
-    {
-        int idx = value._elementid();
-
-        if (idx < 0 || idx >= get_child_count()) return true;
-        if (get_child(idx) != value) return true;
-
-        // if this value is in the child collection where
-        // it says it is then it's a real value, and not synthetic
-        return false;
-    }
-
     public ListIterator<IonValue> systemIterator()
     {
         return new SystemContentIterator(isReadOnly());
     }
-
 
     // TODO: optimize this, if there's a real use case
     //       deprecate this is there isn't (which I suspect is actually the case)
@@ -770,6 +635,23 @@ final class IonDatagramLite
         }
         return count;
     }
+
+    /*
+     * Sets the context of all elements following elementid to context, until it encounters
+     * a context different to the original context at elementid.
+     */
+    void setSymbolTableAtIndex(int elementid, SymbolTable symbols)
+    {
+        assert(elementid < get_child_count());
+        TopLevelContext context = TopLevelContext.wrap(symbols, this);
+        TopLevelContext startContext = (TopLevelContext) _children[elementid].getContext();
+
+        while (elementid < get_child_count() && _children[elementid].getContext() == startContext){
+            _children[elementid++].setContext(context);
+        }
+    }
+
+
 
     @SuppressWarnings("deprecation")
     public byte[] toBytes() throws IonException

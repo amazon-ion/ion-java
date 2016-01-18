@@ -3,7 +3,6 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonContainer;
-import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 
 /**
@@ -26,12 +25,6 @@ import com.amazon.ion.SymbolTable;
  *  contained directly by a datagram may store a
  *  symbol table locally as there may be more than
  *  one symbol table in a datagram.
- * <p>
- *  The IonSystemLite is a context too.  It returns
- *  null for parent, this for system, and the system symbol
- *  table.  For a local symbol table it constructs
- *  a local symbol table and attaches it to the calling
- *  child object ... how?
  */
 interface IonContext
 {
@@ -43,20 +36,6 @@ interface IonContext
      *  null for stand-alone top level values.
      */
     abstract IonContainerLite getContextContainer();
-
-    /**
-     * Sets the container for the given child value, which must have this
-     * instance as its context.
-     *
-     * @param container the new container for the child; not null.
-     * @param child must not be null.
-     *
-     * @throws UnsupportedOperationException
-     *  if this is a container or a datagram.
-     */
-    abstract void setContextContainer(IonContainerLite container,
-                                      IonValueLite child);
-
 
     /**
      * Get the IonSystem concrete object that created
@@ -76,46 +55,4 @@ interface IonContext
      * @return the directly assigned symbol table, with no recursive lookup.
      */
     abstract SymbolTable getContextSymbolTable();
-
-    /**
-     * Ensure that a local symtab (not a system symtab) is associated with
-     * this context.
-     * <p>
-     * Generally this delegates to the parent who may need to create a new
-     * symtab.
-     *
-     * @param child the IonValue of the child requesting the local symtab,
-     * used to back patch.
-     *
-     * @return SymbolTable updatable symbol table
-     *
-     * @throws ReadOnlyValueException if the IonValue is read only
-     */
-    abstract SymbolTable ensureLocalSymbolTable(IonValueLite child);
-
-    /**
-     *  Set the SymbolTable of the associated IonValue.
-     *  Only a system symbol table or a local symbol
-     *  table is a valid parameter.
-     *
-     *  This may delegate to the parent container or
-     *  in the case of a concrete context it will
-     *  store the reference itself.
-     *
-     *  It is not valid to overwrite a current local
-     *  symbol table with another local symbol table.
-     *
-     * @param symbols the system or local symbol table for this IonValue
-     * @param child the child requesting its symbol table be set used to back patch the context if necessary
-     *
-     * @throws IllegalArgumentException if the symbol table is null, or a shared symbol table
-     * @throws IllegalStateException if a local symbol table is already the current symbol table
-     */
-    abstract void setSymbolTableOfChild(SymbolTable symbols, IonValueLite child);
-
-    /**
-     * Clears the reference to any local symbol table.  This is used while
-     * clearing symbol IDs from a tree.
-     */
-    abstract void clearLocalSymbolTable();
 }

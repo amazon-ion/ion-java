@@ -78,8 +78,8 @@ public class IonContextTest
                 if (val instanceof IonValueLite)
                 {
                     IonContext context = ((IonValueLite) val).getContext();
-                    assertTrue("Expected TopLevelContext but was " + context,
-                               context instanceof TopLevelContext);
+                    assertTrue("Expected StubContext but was " + context,
+                               context instanceof ContainerlessContext);
                 }
 
                 return val;
@@ -126,8 +126,8 @@ public class IonContextTest
                 if (val instanceof IonValueLite)
                 {
                     IonContext context = ((IonValueLite) val).getContext();
-                    assertTrue("Expected IonSystemLite but was " + context,
-                               context instanceof IonSystemLite);
+                    assertTrue("Expected StubContext but was " + context,
+                               context instanceof ContainerlessContext);
                 }
 
                 return val;

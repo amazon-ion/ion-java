@@ -7,10 +7,8 @@ import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -221,7 +219,7 @@ abstract class IonValueLite
      * @param context the context that this value is associated with
      * @param isNull if true, sets the null bit in the flags member field
      */
-    IonValueLite(IonContext context, boolean isNull)
+    IonValueLite(ContainerlessContext context, boolean isNull)
     {
         assert context != null;
         _context = context;
@@ -437,49 +435,6 @@ abstract class IonValueLite
         return _Private_Utils.newSymbolToken(text, sid);
     }
 
-
-    public SymbolTable populateSymbolValues(SymbolTable symbols)
-    {
-        if (_isLocked()) {
-            // we can't, and don't need to, update symbol id's
-            // for a locked value - there are none - so do nothing here
-        }
-        else {
-            // this is redundant now:  checkForLock();
-            if (symbols == null) {
-                symbols = getSymbolTable();
-                // TODO assertion contradicts the spec for getSymbolTable()
-                assert(symbols != null); // we should get a system symbol table if nothing else
-            }
-
-            if (_fieldName != null) {
-                symbols = resolve_symbol(symbols, _fieldName);
-            }
-
-            if (_annotations != null) {
-                for (int ii=0; ii<_annotations.length; ii++) {
-                    SymbolToken sym = _annotations[ii];
-                    if (sym == null) {
-                        break;
-                    }
-                    String text = sym.getText();
-                    if (text != null) {
-                        symbols = resolve_symbol(symbols, text);
-
-                        // TODO we've interned the symbol but forgotten the sid
-                        // We also haven't made sure we're using the same
-                        // String instance as the symtab.
-                    }
-                }
-            }
-        }
-        return symbols;
-    }
-
-    void clearLocalSymbolTable() {
-        getContext().clearLocalSymbolTable();
-    }
-
     /**
      * Sets this value's symbol table to null, and erases any SIDs here and
      * recursively.
@@ -510,21 +465,6 @@ abstract class IonValueLite
         }
     }
 
-    /** Attempts to intern the given symbol */
-    final SymbolTable resolve_symbol(SymbolTable symbols, String name)
-    {
-        assert(name != null && symbols != null);
-
-        int sid = symbols.findSymbol(name);
-
-        if (sid == UNKNOWN_SYMBOL_ID) {
-            if (!symbols.isLocalTable()) {
-                symbols = this._context.ensureLocalSymbolTable(this);
-            }
-            symbols.intern(name);
-        }
-        return symbols;
-    }
 
     final void setFieldName(String name)
     {
@@ -574,18 +514,7 @@ abstract class IonValueLite
         if (symbols != null) {
             return symbols;
         }
-
-        IonContainer container = top.getContainer();
-        if (container != null) {
-            // A symtab wasn't found above since the datagram doesn't force
-            // all children to have symtabs directly assigned.
-            symbols = ((IonDatagramLite)container).getChildsSymbolTable(top);
-        }
-        else {
-            // TODO ION-258 bad assumption about system symtab context
-            symbols = _context.getSystem().getSystemSymbolTable();
-        }
-        return symbols;
+        return _context.getSystem().getSystemSymbolTable();
     }
 
     public SymbolTable getAssignedSymbolTable()
@@ -594,51 +523,6 @@ abstract class IonValueLite
 
         SymbolTable symbols = _context.getContextSymbolTable();
         return symbols;
-    }
-
-    public SymbolTable getUpdatableSymbolTable()
-    {
-        SymbolTable symbols = getSymbolTable();
-        if (symbols == null || ! symbols.isLocalTable()) {
-            IonSystem system = getSystem();
-            symbols = system.getSystemSymbolTable();
-            symbols = _Private_Utils.newLocalSymtab(system, symbols);
-        }
-        return symbols;
-    }
-
-    public int resolveSymbol(String name)
-    {
-        SymbolTable symbols = getSymbolTable();
-        if (symbols == null) {
-            return UNKNOWN_SYMBOL_ID;
-        }
-        int sid = symbols.findSymbol(name);
-        return sid;
-    }
-
-    public String resolveSymbol(int sid)
-    {
-        SymbolTable symbols = getSymbolTable();
-        if (symbols == null) {
-            return null;
-        }
-        String name = symbols.findKnownSymbol(sid);
-        return name;
-    }
-
-    public int addSymbol(String name)
-    {
-        int sid = resolveSymbol(name);
-        if (sid != UNKNOWN_SYMBOL_ID) {
-            return sid;
-        }
-        checkForLock();
-
-        SymbolTable symbols = getUpdatableSymbolTable();
-        SymbolToken symToken = symbols.intern(name);
-        sid = symToken.getSid();
-        return sid;
     }
 
     public IonSystemLite getSystem()
@@ -845,7 +729,6 @@ abstract class IonValueLite
     {
         if (!_isLocked()) {
             makeReadOnlyInternal();
-            clearLocalSymbolTable();
         }
     }
 
@@ -875,7 +758,7 @@ abstract class IonValueLite
         checkForLock();
 
         boolean removed = false;
-        IonContainer parent = _context.getContextContainer();
+        IonContainerLite parent = _context.getContextContainer();
         if (parent != null) {
             removed = parent.remove(this);
         }
@@ -1006,13 +889,20 @@ abstract class IonValueLite
 
     public void setSymbolTable(SymbolTable symbols)
     {
-        _context.setSymbolTableOfChild(symbols, this);
+        if (getContext() instanceof TopLevelContext){
+            IonDatagramLite datagram = (IonDatagramLite) getContainer();
+            datagram.setSymbolTableAtIndex(_elementid(), symbols);
+        } else if (this.topLevelValue() == this) {
+            setContext(ContainerlessContext.wrap(getContext().getSystem(), symbols));
+        } else {
+            throw new UnsupportedOperationException("can't set the symboltable of a child value");
+        }
     }
 
     /**
      * This method is used to re-set the context of an
-     * IonValue.  This may occur when the value is into
-     * or out of a container.  It may occur when the
+     * IonValue.  This may occur when the value is added into
+     * or removed from a container.  It may occur when the
      * symbol table state of a container changes.
      *
      * @param context must not be null.
@@ -1021,7 +911,30 @@ abstract class IonValueLite
     {
         assert context != null;
         checkForLock();
+
+        //If the previous context had a non-null, non-empty SymbolTable, and the new SymbolTable is different, clear all known sIDs.
+        SymbolTable oldSymbolTable = getContext().getContextSymbolTable();
+        SymbolTable newSymbolTable = context.getContextSymbolTable();
+
+        if (oldSymbolTable != null && oldSymbolTable != newSymbolTable && tableIsNonTrivial(oldSymbolTable, newSymbolTable)){
+            this.detachFromSymbolTable();
+        }
         _context = context;
+    }
+
+    private boolean tableIsNonTrivial(SymbolTable oldSymbolTable, SymbolTable newSymbolTable){
+        if (newSymbolTable != null
+            && oldSymbolTable.getSystemSymbolTable() != newSymbolTable.getSystemSymbolTable()){
+            //new symbol table has different ion version
+            //TODO - I can't see how to test this but it needs to be here for safety in case of future changes
+            return true;
+        }
+
+        if (oldSymbolTable.getMaxId() > oldSymbolTable.getSystemSymbolTable().getMaxId()){
+            //old symbol table defines symbols or imports other symbol tables that define IDs
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1056,27 +969,17 @@ abstract class IonValueLite
     {
         checkForLock();
 
-        // we make the system the parent of this member
-        // when it's reattached to a container this will
-        // be reset
-
-        // this has the effect of erasing the symbol table
-        // or reverting it back to the system symbol table
-        // in the values all the symbol value should be
-        // represented by their string values so this should
-        // not be an issue.
-
-        // BUT IT *IS* AN ISSUE, unless we can guarantee that we have all
-        // symbol text already pulled from the symtab, and it's not clear that
-        // is invariant.
-
-        _context = this.getSystem();
+        detachFromSymbolTable();
+        _context = ContainerlessContext.wrap(getSystem());
 
         _fieldName = null;
         _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
     }
 
+    protected void detachFromSymbolTable(){
+        clearSymbolIDValues();
+    }
 
     public void dump(PrintWriter out)
     {

@@ -2,6 +2,7 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
@@ -680,5 +681,45 @@ public class DatagramTest
         IonDatagram dg = system().newDatagram();
         dg.add().newNull();
         dg.set(0, system().newBool(true));
+    }
+
+    @Test
+    public void testSetWithSymbolTable()
+    {
+        if (getDomType().equals(DomType.BACKED)){ //TODO add appears to be broken in the Backed DOM
+            return;
+        }
+        String serializedX = ION_1_0 + ' '
+            + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
+            + " x";
+        String serializedY = ION_1_0 + ' '
+            + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"y\"]}"
+            + " y y";
+
+        IonDatagram dg = system().newLoader().load(serializedY);
+        SymbolTable st0 = dg.get(0).getSymbolTable();
+        int yID = ((IonSymbol)dg.get(0)).getSymbolId();
+        IonSymbol x = (IonSymbol) system().iterate(serializedX).next();
+        SymbolTable st1 = x.getSymbolTable();
+        int xID = x.getSymbolId();
+
+        dg.add( 1, x);
+
+        IonSymbol v0 = (IonSymbol) dg.get(0);
+        IonSymbol v1 = (IonSymbol) dg.get(1);
+        IonSymbol v2 = (IonSymbol) dg.get(2);
+
+        assertEquals("y", v0.stringValue());
+        assertEquals(yID, v0.getSymbolId());
+        assertEquals(st0, v0.getSymbolTable());
+
+        assertEquals("x", v1.stringValue());
+        assertEquals(xID, v1.getSymbolId());
+        assertEquals(st1, v1.getSymbolTable());
+
+        assertEquals("y", v2.stringValue());
+        assertEquals(UNKNOWN_SYMBOL_ID, v2.getSymbolId());
+        assertEquals(st1, v2.getSymbolTable());
+
     }
 }

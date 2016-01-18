@@ -46,65 +46,6 @@ public interface _Private_IonValue
      */
     public SymbolTable getAssignedSymbolTable();
 
-    /**
-     * this returns the current values symbol table,
-     * which is typically
-     * owned by the top level value, if the current
-     * symbol table is a local symbol table.  Otherwise
-     * this replaces the current symbol table with a
-     * new local symbol table based on the current Ion system version.
-     * @return SymbolTable that is updatable (i.e. a local symbol table)
-     */
-    public SymbolTable getUpdatableSymbolTable();
-
-    /**
-     * checks in the current symbol table for this
-     * symbol (name) and returns the symbol id if
-     * this symbol is defined.
-     *
-     * @param name text for the symbol of interest
-     * @return int symbol id if found or
-     *          {@link SymbolTable#UNKNOWN_SYMBOL_ID} if
-     *          it is not already defined
-     */
-    public int resolveSymbol(String name);
-
-    /**
-     * checks in the current symbol table for this
-     * symbol id (sid) and returns the symbol text if
-     * this symbol is defined.
-     *
-     * @param sid symbol id of interest
-     * @return String symbol text if found or
-     *          null if it is not already defined
-     */
-    public String resolveSymbol(int sid);
-
-    /**
-     * adds a symbol name to the current symbol
-     * table.  This may change the current symbol
-     * table if the current symbol table is either
-     * null or not updatable.
-     * @param name symbol text to be added
-     * @return int symbol id of the existing, or
-     *             newly defined, symbol
-     */
-    public int addSymbol(String name);
-
-    /**
-     * Force any symbols contained in this value to be
-     * resolved in the local symbol table.  This causes
-     * symbol ids to be assigned to all symbol values.
-     * All field name and annotations to be present in
-     * the current symbol table.  And it causes any
-     * symbols with sids to have their symbol name
-     * filled in.
-     *
-     * @param symbols the current symbol table or null
-     * @return the symbol table after symbol resolution
-     */
-    public SymbolTable populateSymbolValues(SymbolTable symbols);
-
     public void dump(PrintWriter out);
 
     public String validate();

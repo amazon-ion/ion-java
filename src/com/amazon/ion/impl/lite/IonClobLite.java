@@ -26,9 +26,9 @@ final class IonClobLite
     /**
      * Constructs a <code>null.clob</code> element.
      */
-    public IonClobLite(IonSystemLite system, boolean isNull)
+    IonClobLite(ContainerlessContext context, boolean isNull)
     {
-        super(system, isNull);
+        super(context, isNull);
     }
 
     IonClobLite(IonClobLite existing, IonContext context)
@@ -45,7 +45,7 @@ final class IonClobLite
     @Override
     public IonClobLite clone()
     {
-        return clone(getSystem());
+        return clone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override
