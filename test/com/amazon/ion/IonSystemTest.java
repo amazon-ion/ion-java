@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -195,12 +195,6 @@ public class IonSystemTest
     @Test
     public void testNewDatagramImporting()
     {
-        // FIXME ION-75
-        if (getDomType() == DomType.LITE)
-        {
-            logSkippedTest();
-            return;
-        }
 
         IonSystem ion = system();
         SymbolTable st =
@@ -213,6 +207,17 @@ public class IonSystemTest
         dg.add().newSymbol("l1");
         byte[] bytes = dg.getBytes();
 
+        Iterator<IonValue> iterator = dg.iterator();
+
+        IonSymbol symbol1 = (IonSymbol)iterator.next();
+        SymbolToken token1 = symbol1.symbolValue();
+        assertEquals("s1", token1.getText());
+        assertEquals(10, token1.getSid());
+
+        SymbolTable local = symbol1.getSymbolTable();
+        Iterator<String> declaredSymbols = local.iterateDeclaredSymbolNames(); //doesn't include shared symbols
+        assertEquals("l1", declaredSymbols.next());
+        assertFalse(declaredSymbols.hasNext()); //s1 shouldn't be here because it's in a shared import
 
         IonDatagram dg2 = loader().load(bytes);
         IonSymbol s1 = (IonSymbol) dg2.get(0);

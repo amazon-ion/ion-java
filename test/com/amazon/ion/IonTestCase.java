@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
@@ -6,7 +6,6 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
 import com.amazon.ion.impl._Private_IonSystem;
-import com.amazon.ion.impl.lite._Private_LiteDomTrampoline;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
@@ -41,16 +40,7 @@ public abstract class IonTestCase
         "com.amazon.iontests.bulk.path";
 
     /** Test dimensions of the DOM implementations. */
-    protected enum DomType
-    {
-        LITE,
-        BACKED,
-        /**
-         * ReverseBinaryEncoder impl for IonDatagramLite
-         * @see com.amazon.ion.impl.lite.ReverseBinaryEncoder
-         */
-        LITE_REV_ENC
-    }
+    protected enum DomType { LITE, BACKED }
 
     protected enum StreamingMode { OLD_STREAMING, NEW_STREAMING }
 
@@ -324,8 +314,6 @@ public abstract class IonTestCase
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
 
         BuilderHack.setBinaryBacked(b, domType == DomType.BACKED);
-        _Private_LiteDomTrampoline.setReverseBinaryEncoder(
-            domType == DomType.LITE_REV_ENC);
         b.withStreamCopyOptimized(myStreamCopyOptimized);
 
         IonSystem system = b.build();
