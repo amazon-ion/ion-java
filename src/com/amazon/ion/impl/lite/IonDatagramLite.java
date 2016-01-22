@@ -338,16 +338,6 @@ final class IonDatagramLite
     }
 
     @Override
-    protected int add_child(int idx, IonValueLite child){
-        SymbolTable originalSymbols = child.getSymbolTable();
-        int result = super.add_child(idx, child);
-        if (originalSymbols.isLocalTable()){ //restore old symbol table if it is local
-            child.setSymbolTable(originalSymbols);
-        }
-        return result;
-    }
-
-    @Override
     public IonContext getContextForIndex(IonValue element, int index)
     {
         if (index == this._pending_symbol_table_idx) {

@@ -912,29 +912,9 @@ abstract class IonValueLite
         assert context != null;
         checkForLock();
 
-        //If the previous context had a non-null, non-empty SymbolTable, and the new SymbolTable is different, clear all known sIDs.
-        SymbolTable oldSymbolTable = getContext().getContextSymbolTable();
-        SymbolTable newSymbolTable = context.getContextSymbolTable();
-
-        if (oldSymbolTable != null && oldSymbolTable != newSymbolTable && tableIsNonTrivial(oldSymbolTable, newSymbolTable)){
-            this.detachFromSymbolTable();
-        }
+        //Clear all known sIDs.
+        this.detachFromSymbolTable();
         _context = context;
-    }
-
-    private boolean tableIsNonTrivial(SymbolTable oldSymbolTable, SymbolTable newSymbolTable){
-        if (newSymbolTable != null
-            && oldSymbolTable.getSystemSymbolTable() != newSymbolTable.getSystemSymbolTable()){
-            //new symbol table has different ion version
-            //TODO - I can't see how to test this but it needs to be here for safety in case of future changes
-            return true;
-        }
-
-        if (oldSymbolTable.getMaxId() > oldSymbolTable.getSystemSymbolTable().getMaxId()){
-            //old symbol table defines symbols or imports other symbol tables that define IDs
-            return true;
-        }
-        return false;
     }
 
     /**
