@@ -2,30 +2,27 @@
 
 package com.amazon.ion.util;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
+import com.amazon.ion.Timestamp;
+import java.io.ByteArrayInputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class JarInfoTest
 {
     @Test
-    public void testConstruction()
+    public void testConstruction() throws Exception
     {
-        JarInfo info = new JarInfo();
+        String expectedBuildTime = "1984T";
+        String expectedVersion = "42.0";
 
-        // When running on a laptop that can't run our Ant targets (due to
-        // unavailable Brazil CLI and HappyTrails stuff) this test will fail.
-        // Adding -DNOBRAZIL to the Eclipse Installed JRE will allow us to
-        // succeed in that case.
-        if (System.getProperty("NOBRAZIL") != null) return;
+        String manifest = "Manifest-Version: 1.0\n"
+                        + "Build-Time: " + expectedBuildTime + "\n"
+                        + "Project-Version: " + expectedVersion + "\n";
 
-        assertTrue(info.getReleaseLabel().startsWith("R2"));
-        assertTrue(info.getBrazilMajorVersion().startsWith("1."));
-        assertTrue(info.getBrazilPackageVersion().startsWith("IonJava-1."));
-        assertNotNull(info.getBuildTime());
+        JarInfo info = new JarInfo(new ByteArrayInputStream(manifest.getBytes("UTF-8")));
+
+        assertEquals(expectedVersion, info.getProjectVersion());
+        assertEquals(Timestamp.valueOf(expectedBuildTime), info.getBuildTime());
     }
 }

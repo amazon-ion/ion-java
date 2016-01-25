@@ -1,5 +1,6 @@
 .eclipseout
-.p4config
-/build
 junit*.properties
 tmp*
+/target
+/resources
+*~

@@ -15,12 +15,9 @@ import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -34,10 +31,17 @@ import org.junit.runner.RunWith;
 public abstract class IonTestCase
     extends Assert
 {
-    private static final String ION_TESTS_IONTESTDATA_PATH_PROPERTY =
-        "com.amazon.iontests.iontestdata.path";
-    private static final String ION_TESTS_BULK_PATH_PROPERTY =
-        "com.amazon.iontests.bulk.path";
+    private static final File ION_TESTS_PATH = new File("ion-tests");
+    private static final File ION_TESTS_IONTESTDATA_PATH = new File(ION_TESTS_PATH, "iontestdata");
+    private static final File ION_TESTS_BULK_PATH = new File(ION_TESTS_PATH, "bulk");
+
+    static
+    {
+        if (!ION_TESTS_IONTESTDATA_PATH.exists())
+        {
+            throw new RuntimeException("Cannot locate test data directory.");
+        }
+    }
 
     /** Test dimensions of the DOM implementations. */
     protected enum DomType { LITE, BACKED }
@@ -65,7 +69,6 @@ public abstract class IonTestCase
     private DomType                     myDomType;
     private StreamingMode               myStreamingMode;
 
-    private static boolean              ourSystemPropertiesLoaded = false;
     protected SimpleCatalog             myCatalog;
     protected _Private_IonSystem        mySystem;
     protected IonLoader                 myLoader;
@@ -115,71 +118,6 @@ public abstract class IonTestCase
         myStreamCopyOptimized = (speed == StreamCopySpeed.COPY_OPTIMIZED);
     }
 
-    //=========================================================================
-    // Access to test data
-
-    public static synchronized void loadSystemProperties()
-    {
-        if (! ourSystemPropertiesLoaded)
-        {
-            InputStream stream =
-                IonTestCase.class.getResourceAsStream("/system.properties");
-
-            if (stream != null)
-            {
-                Properties props = new Properties();
-
-                try
-                {
-                    props.load(stream);
-
-                    Iterator entries = props.entrySet().iterator();
-                    while (entries.hasNext())
-                    {
-                        Map.Entry entry = (Map.Entry) entries.next();
-
-                        String key = (String) entry.getKey();
-
-                        // Command-line values override system.properties
-                        if (System.getProperty(key) == null)
-                        {
-                            System.setProperty(key, (String) entry.getValue());
-                        }
-                    }
-                }
-                catch (IOException e)
-                {
-                    synchronized (System.out)
-                    {
-                        System.out.println("Caught exception while loading system.properties:");
-                        e.printStackTrace(System.out);
-                    }
-                }
-            }
-
-            ourSystemPropertiesLoaded = true;
-        }
-    }
-
-
-    public static String requireSystemProperty(String prop)
-    {
-        loadSystemProperties();
-
-        String value = System.getProperty(prop);
-        if (value == null)
-        {
-            value = System.getenv(prop);
-        }
-        if (value == null) {
-            String message = "Missing required system property: " + prop;
-            throw new IllegalStateException(message);
-        }
-        return value;
-    }
-
-
-
     public static File getProjectHome()
     {
         String basedir = System.getProperty("user.dir");
@@ -192,30 +130,24 @@ public abstract class IonTestCase
     }
 
     /**
-     * Gets a {@link File} contained in the IonTests "iontestdata" data
+     * Gets a {@link File} contained in the ion-tests "iontestdata" data
      * directory.
      *
      * @param path is relative to the "iontestdata" directory.
      */
     public static File getTestdataFile(String path)
     {
-        String testDataPath =
-            requireSystemProperty(ION_TESTS_IONTESTDATA_PATH_PROPERTY);
-        File testDataDir = new File(testDataPath);
-        return new File(testDataDir, path);
+        return new File(ION_TESTS_IONTESTDATA_PATH, path);
     }
 
     /**
-     * Gets a {@link File} contained in the IonTests "bulk" data directory.
+     * Gets a {@link File} contained in the ion-tests "bulk" data directory.
      *
      * @param path is relative to the "bulk" directory
      */
     public static File getBulkTestdataFile(String path)
     {
-        String testDataPath =
-            requireSystemProperty(ION_TESTS_BULK_PATH_PROPERTY);
-        File testDataDir = new File(testDataPath);
-        return new File(testDataDir, path);
+        return new File(ION_TESTS_BULK_PATH, path);
     }
 
     /**

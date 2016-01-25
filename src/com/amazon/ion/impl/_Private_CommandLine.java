@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -17,6 +17,7 @@ public final class _Private_CommandLine
     static final int argid_HELP    = 3;
     static final int argid_INVALID = -1;
 
+    static JarInfo info = null;
     static boolean printHelp    = false;
     static boolean printVersion = false;
     static String  errorMessage = null;
@@ -32,6 +33,7 @@ public final class _Private_CommandLine
     {
         process_command_line(args);
 
+        info = new JarInfo();
         if (printVersion) {
             doPrintVersion();
         }
@@ -64,23 +66,11 @@ public final class _Private_CommandLine
     }
     private static int getArgumentId(String arg)
     {
-        if (arg.startsWith("-") && arg.length() == 2) {
-            switch (arg.charAt(1)) {
-            case 'h': case '?':
-                return argid_HELP;
-            case 'v':
-                return argid_VERSION;
-            default:
-                return argid_INVALID;
-            }
+        if (arg.equals("help")) {
+            return argid_HELP;
         }
-        if (arg.startsWith("--") && arg.length() > 2) {
-            if (arg.equals("help")) {
-                return argid_HELP;
-            }
-            if (arg.equals("version")) {
-                return argid_VERSION;
-            }
+        if (arg.equals("version")) {
+            return argid_VERSION;
         }
         return argid_INVALID;
     }
@@ -91,11 +81,11 @@ public final class _Private_CommandLine
     }
 
     private static void doPrintHelp() {
-        System.out.println("IonJava -- Copyright (c) 2010-2011 Amazon.com");
-        System.out.println("usage: java -jar IonJava.jar <options>");
+        System.out.println("ion-java -- Copyright (c) 2007-" + info.getBuildTime().getYear() + " Amazon.com");
+        System.out.println("usage: java -jar <jar> <options>");
         System.out.println("options:");
-        System.out.println("-v (--version) prints current version entry");
-        System.out.println("-h (--help)    prints this helpful message");
+        System.out.println("version\t\tprints current version entry");
+        System.out.println("help\t\tprints this helpful message");
         if (errorMessage != null) {
             System.out.println();
             System.out.println(errorMessage);
@@ -108,25 +98,18 @@ public final class _Private_CommandLine
         IonTextWriterBuilder b = IonTextWriterBuilder.pretty();
         b.setCharset(IonTextWriterBuilder.ASCII);
 
-        JarInfo info = new JarInfo();
-
         IonWriter w = b.build((Appendable)System.out);
         w.stepIn(IonType.STRUCT);
         {
-            w.setFieldName("release_label");
-            w.writeString(info.getReleaseLabel());
-
-            w.setFieldName("brazil_major_version");
-            w.writeString(info.getBrazilMajorVersion());
-
-            w.setFieldName("brazil_package_version");
-            w.writeString(info.getBrazilPackageVersion());
+            w.setFieldName("version");
+            w.writeString(info.getProjectVersion());
 
             w.setFieldName("build_time");
             w.writeTimestamp(info.getBuildTime());
         }
         w.stepOut();
         w.finish();
+
         System.out.println();
     }
 }

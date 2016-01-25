@@ -1,4 +1,4 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2016 Amazon.com, Inc. All rights reserved.
 
 package com.amazon.ion.util;
 
@@ -6,132 +6,80 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Properties;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 /**
  * Provides information about this release of the IonJava library.
  *
  * @since IonJava R13
  */
-public final class JarInfo
-{
-    private String ourReleaseLabel;
-    private String ourMajorVersion;
-    private String ourPackageVersion;
-    private Timestamp ourBuildTime;
+public final class JarInfo {
 
+  private static final String MANIFEST_FILE = "/META-INF/MANIFEST.MF";
 
-    /**
-     * Constructs a new instance that can provide build information about this
-     * library.
-     *
-     * @throws IonException if there's a problem loading the build info.
-     */
-    public JarInfo()
-        throws IonException
-    {
-        loadBuildProperties();
-    }
+  private String ourProjectVersion;
+  private Timestamp ourBuildTime;
 
+  /**
+   * Constructs a new instance that can provide build information about this library.
+   *
+   * @throws IonException if there's a problem loading the build info.
+   */
+  public JarInfo() throws IonException {
+    loadBuildProperties(getClass().getResourceAsStream(MANIFEST_FILE));
+  }
 
-    /**
-     * Gets the public release label of this library.
-     * Don't attempt to parse this label; we reserve the right to change its
-     * format at any time.
-     *
-     * @return null if the label is unknown.
-     */
-    public String getReleaseLabel()
-    {
-        return ourReleaseLabel;
-    }
+  JarInfo(InputStream in) {
+    loadBuildProperties(in);
+  }
 
-    /**
-     * Gets the Brazil major version of this build, in the form {@code "1.0"}.
-     *
-     * @return null if the major version is unknown.
-     */
-    public String getBrazilMajorVersion()
-    {
-        return ourMajorVersion;
-    }
+  /**
+   * Gets the ion-java project version of this build.
+   *
+   * @return null if the package version is unknown.
+   */
+  public String getProjectVersion() {
+    return ourProjectVersion;
+  }
 
-    /**
-     * Gets the Brazil package version of this build,
-     * in the form {@code "IonJava-1.0.x.x"}.
-     *
-     * @return null if the package version is unknown.
-     */
-    public String getBrazilPackageVersion()
-    {
-        return ourPackageVersion;
-    }
+  /**
+   * Gets the time at which this package was built.
+   *
+   * @return null if the build time is unknown.
+   */
+  public Timestamp getBuildTime() {
+    return ourBuildTime;
+  }
 
-    /**
-     * Gets the time at which this package was built.
-     *
-     * @return null if the build time is unknown.
-     */
-    public Timestamp getBuildTime()
-    {
-        return ourBuildTime;
-    }
+  // TODO writeTo(IonWriter)
 
-    // TODO writeTo(IonWriter)
+  // ========================================================================
 
-    //========================================================================
-
-    /**
-     * Gets a property, ensuring a non-empty value.
-     * @return null but not empty string
-     */
-    private String nonEmptyProperty(Properties props, String name)
-    {
-        String value = props.getProperty(name, "");
-        if (value.length() == 0) value = null;
-        return value;
-    }
-
-    private void loadBuildProperties()
-        throws IonException
-    {
-        String file = getClass().getSimpleName() + ".properties";
-        try
-        {
-            Properties props = new Properties();
-
-            InputStream in = getClass().getResourceAsStream(file);
-            if (in != null)
-            {
-                try
-                {
-                    props.load(in);
-                }
-                finally
-                {
-                    in.close();
-                }
-            }
-
-            ourReleaseLabel   = nonEmptyProperty(props, "release_label");
-            ourPackageVersion = nonEmptyProperty(props, "brazil_package_version");
-            ourMajorVersion   = nonEmptyProperty(props, "brazil_major_version");
-
-            String time = nonEmptyProperty(props, "build_time");
-            if (time != null)
-            {
-                try {
-                    ourBuildTime = Timestamp.valueOf(time);
-                }
-                catch (IllegalArgumentException e)
-                {
-                    // Badly formatted timestamp. Ignore it.
-                }
-            }
+  private void loadBuildProperties(InputStream in) throws IonException {
+    try {
+      Manifest manifest = new Manifest();
+      if (in != null) {
+        try {
+          manifest.read(in);
+        } finally {
+          in.close();
         }
-        catch (IOException e)
-        {
-            throw new IonException("Unable to load " + file, e);
+      }
+      Attributes mainAttributes = manifest.getMainAttributes();
+
+      ourProjectVersion = mainAttributes.getValue("Project-Version");
+
+      String time = mainAttributes.getValue("Build-Time");
+      if (time != null) {
+        try {
+          ourBuildTime = Timestamp.valueOf(time);
+        } catch (IllegalArgumentException e) {
+          // Badly formatted timestamp. Ignore it.
         }
+      }
+    } catch (IOException e) {
+      throw new IonException("Unable to load manifest.", e);
     }
+  }
 }
