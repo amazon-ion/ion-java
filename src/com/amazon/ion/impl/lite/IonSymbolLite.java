@@ -7,7 +7,6 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
@@ -15,6 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl._Private_IonSymbol;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 
@@ -23,7 +23,7 @@ import java.io.IOException;
  */
 final class IonSymbolLite
     extends IonTextLite
-    implements IonSymbol
+    implements _Private_IonSymbol
 {
     private static final int HASH_SIGNATURE =
         IonType.SYMBOL.toString().hashCode();
@@ -100,7 +100,7 @@ final class IonSymbolLite
 
         if (!isNullValue())
         {
-            SymbolToken token = symbolValue();
+            SymbolToken token = symbolValue(symbolTableProvider);
             String text = token.getText();
 
             int tokenHashCode = text == null
@@ -166,12 +166,17 @@ final class IonSymbolLite
      */
     private String _stringValue()
     {
+        return _stringValue(new LazySymbolTableProvider(this));
+    }
+
+    private String _stringValue(SymbolTableProvider symbolTableProvider)
+    {
         String name = _get_value();
         if (name == null)
         {
             assert _sid > 0;
 
-            SymbolTable symbols = getSymbolTable();
+            SymbolTable symbols = symbolTableProvider.getSymbolTable();
             name = symbols.findKnownSymbol(_sid);
             if (name != null)
             {
@@ -189,10 +194,15 @@ final class IonSymbolLite
 
     public SymbolToken symbolValue()
     {
+        return symbolValue(new LazySymbolTableProvider(this));
+    }
+
+    public SymbolToken symbolValue(SymbolTableProvider symbolTableProvider)
+    {
         if (isNullValue()) return null;
 
         int sid = getSymbolId();
-        String text = _stringValue();
+        String text = _stringValue(symbolTableProvider);
         return _Private_Utils.newSymbolToken(text, sid);
     }
 
@@ -245,17 +255,23 @@ final class IonSymbolLite
         // we throw (cannot serialize) or do we pass the sid thru???
 
         // NB! This will throw if symbol is not set
-        writer.writeSymbol(stringValue());
+        writer.writeSymbol(stringValue(symbolTableProvider));
     }
 
     @Override
     public String stringValue()
         throws UnknownSymbolException
     {
+        return stringValue(new LazySymbolTableProvider(this));
+    }
+
+    private String stringValue(SymbolTableProvider symbolTableProvider)
+        throws UnknownSymbolException
+    {
         if (isNullValue()) {
             return null;
         }
-        String name = _stringValue();
+        String name = _stringValue(symbolTableProvider);
         if (name == null) {
             assert(_sid > 0);
             throw new UnknownSymbolException(_sid);

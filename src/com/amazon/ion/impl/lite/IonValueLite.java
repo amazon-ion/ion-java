@@ -162,12 +162,14 @@ abstract class IonValueLite
      * can be "passed down" through the path, cutting down on
      * potentially expensive IonValue#getSymbolTable calls.
      */
-    static class SymbolTableProvider
+    static class LazySymbolTableProvider
+        implements SymbolTableProvider
     {
-        private SymbolTable symtab = null;
-        private final IonValueLite value;
+        SymbolTable symtab = null;
+        final IonValueLite value;
 
-        SymbolTableProvider(IonValueLite value) {
+        LazySymbolTableProvider(IonValueLite value)
+        {
             this.value = value;
         }
 
@@ -348,7 +350,7 @@ abstract class IonValueLite
         // This works for all child types with the exception of
         // IonDatagramLite which has a different, explicit behavior for hashCode()
         // (hence this method cannot be final).
-        return hashCode(new SymbolTableProvider(this));
+        return hashCode(new LazySymbolTableProvider(this));
     }
 
     /*
@@ -406,10 +408,10 @@ abstract class IonValueLite
         // However, the current invariants on these fields are nonexistant so
         // I do not trust that its safe to alter them here.
 
-        return getFieldNameSymbol(new SymbolTableProvider(this));
+        return getFieldNameSymbol(new LazySymbolTableProvider(this));
     }
 
-    final SymbolToken getFieldNameSymbol(SymbolTableProvider symbolTableProvider)
+    public final SymbolToken getFieldNameSymbol(SymbolTableProvider symbolTableProvider)
     {
         int sid = _fieldId;
         String text = _fieldName;
@@ -509,8 +511,7 @@ abstract class IonValueLite
     {
         assert ! (this instanceof IonDatagram);
 
-        IonValueLite top = topLevelValue();
-        SymbolTable symbols = top._context.getContextSymbolTable();
+        SymbolTable symbols = topLevelValue()._context.getContextSymbolTable();
         if (symbols != null) {
             return symbols;
         }
@@ -537,10 +538,10 @@ abstract class IonValueLite
 
     public SymbolToken[] getTypeAnnotationSymbols()
     {
-        return getTypeAnnotationSymbols(new SymbolTableProvider(this));
+        return getTypeAnnotationSymbols(new LazySymbolTableProvider(this));
     }
 
-    private final SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider)
+    public final SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider)
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
@@ -830,7 +831,7 @@ abstract class IonValueLite
         // we use a Lazy 1-time resolution of the SymbolTable in case there is no need to
         // pull the symbol table, including situations where no symbol table would logically
         // be attached
-        writeTo(writer, new SymbolTableProvider(this));
+        writeTo(writer, new LazySymbolTableProvider(this));
     }
 
     final void writeChildren(IonWriter writer, Iterable<IonValue> container,

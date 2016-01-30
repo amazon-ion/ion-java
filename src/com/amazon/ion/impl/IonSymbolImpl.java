@@ -12,7 +12,6 @@ import static com.amazon.ion.impl._Private_IonConstants.tidSymbol;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
@@ -27,7 +26,7 @@ import java.io.IOException;
  */
 final class IonSymbolImpl
     extends IonTextImpl
-    implements IonSymbol
+    implements _Private_IonSymbol
 {
     static final int NULL_SYMBOL_TYPEDESC =
         makeTypeDescriptor(tidSymbol, lnIsNullAtom);
@@ -145,7 +144,6 @@ final class IonSymbolImpl
         return IonType.SYMBOL;
     }
 
-
     public String stringValue()
         throws UnknownSymbolException
     {
@@ -224,6 +222,11 @@ final class IonSymbolImpl
         return value;
     }
 
+    public SymbolToken symbolValue(SymbolTableProvider symbolTableProvider)
+    {
+        // Optimization not implemented here because *Impl is effectively deprecated. See *Lite implementations.
+        return symbolValue();
+    }
 
     public SymbolToken symbolValue()
     {
@@ -489,4 +492,5 @@ final class IonSymbolImpl
         makeReady();
         visitor.visit(this);
     }
+
 }

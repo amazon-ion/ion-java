@@ -585,6 +585,12 @@ abstract class IonValueImpl
         return symtab;
     }
 
+    public final SymbolToken getFieldNameSymbol(SymbolTableProvider symbolTableProvider)
+    {
+        // Optimization not implemented here because *Impl is effectively deprecated. See *Lite implementations.
+        return getFieldNameSymbol();
+    }
+
     public final SymbolToken getFieldNameSymbol()
     {
         int sid = _fieldSid;
@@ -905,6 +911,12 @@ abstract class IonValueImpl
         if (_annotations == null) return EMPTY_STRING_ARRAY;
 
         return _Private_Utils.toStrings(_annotations, _annotations.length);
+    }
+
+    public SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider)
+    {
+        // Optimization not implemented here because *Impl is effectively deprecated. See *Lite implementations.
+        return getTypeAnnotationSymbols();
     }
 
     public SymbolToken[] getTypeAnnotationSymbols()
