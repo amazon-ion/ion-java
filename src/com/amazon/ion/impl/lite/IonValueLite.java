@@ -913,7 +913,7 @@ abstract class IonValueLite
         checkForLock();
 
         //Clear all known sIDs.
-        this.detachFromSymbolTable();
+        this.clearSymbolIDValues();
         _context = context;
     }
 
@@ -949,16 +949,12 @@ abstract class IonValueLite
     {
         checkForLock();
 
-        detachFromSymbolTable();
+        clearSymbolIDValues();
         _context = ContainerlessContext.wrap(getSystem());
 
         _fieldName = null;
         _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
-    }
-
-    protected void detachFromSymbolTable(){
-        clearSymbolIDValues();
     }
 
     public void dump(PrintWriter out)

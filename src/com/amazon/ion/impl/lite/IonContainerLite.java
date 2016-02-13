@@ -687,17 +687,4 @@ abstract class IonContainerLite
         }
         return;
     }
-
-    @Override
-    protected void detachFromSymbolTable()
-    {
-        super.detachFromSymbolTable();
-        if (_children != null)
-        {
-            for (int ii=0; ii<_child_count; ii++) {
-                _children[ii].detachFromSymbolTable();
-            }
-        }
-    }
-
 }
