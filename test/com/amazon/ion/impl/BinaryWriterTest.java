@@ -1,8 +1,9 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -13,9 +14,6 @@ import java.io.OutputStream;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- *
- */
 public class BinaryWriterTest
     extends OutputStreamWriterTestCase
 {
@@ -99,6 +97,40 @@ public class BinaryWriterTest
 
         // 4 bytes for IVM, 1 byte for null
         assertEquals(5, bytes.length);
+    }
+
+    private static final int MANY_ANNOTATION_LENGTH = 14;
+    private static final String MANY_ANNOTATION_SYMBOL_TEXT = "x";
+    @Test
+    public void testManyAnnotations()
+        throws Exception
+    {
+        // TT72090065 - >= 14 bytes of annotation causes a length miscalculation
+        final IonWriter out = makeWriter();
+        out.stepIn(IonType.SEXP);
+        {
+            for (int i = 0; i < MANY_ANNOTATION_LENGTH; i++) {
+                out.addTypeAnnotation(MANY_ANNOTATION_SYMBOL_TEXT);
+            }
+            out.writeSymbol(MANY_ANNOTATION_SYMBOL_TEXT);
+        }
+        out.stepOut();
+        out.close();
+
+        final IonReader in = reread();
+        assertEquals(IonType.SEXP, in.next());
+        in.stepIn();
+        {
+            assertEquals(IonType.SYMBOL, in.next());
+            final String[] ann = in.getTypeAnnotations();
+            assertEquals(MANY_ANNOTATION_LENGTH, ann.length);
+            for (int i = 0; i < MANY_ANNOTATION_LENGTH; i++) {
+                assertEquals(MANY_ANNOTATION_SYMBOL_TEXT, ann[i]);
+            }
+            assertEquals(null, in.next());
+        }
+        in.stepOut();
+        assertEquals(null, in.next());
     }
 
     @Test
