@@ -17,7 +17,6 @@ import static com.amazon.ion.impl.bin.Symbols.systemSymbol;
 import static com.amazon.ion.impl.bin.Symbols.systemSymbolTable;
 import static com.amazon.ion.impl.bin.Symbols.systemSymbols;
 import static java.util.Collections.unmodifiableList;
-import static java.util.Collections.unmodifiableMap;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonCatalog;
@@ -44,6 +43,126 @@ import java.util.Map;
 /** Wraps {@link IonRawBinaryWriter} with symbol table management. */
 /*package*/ final class IonManagedBinaryWriter extends AbstractIonWriter
 {
+    private interface SymbolResolver
+    {
+        /** Resolves a {@link SymbolToken} or returns <code>null</code> if the mapping does not exist. */
+        SymbolToken get(String text);
+    }
+
+    private interface SymbolResolverBuilder
+    {
+        /**
+         * Adds the given table's mappings to the resolver to be constructed.
+         *
+         * @param  startSid     The starting local ID.
+         * @return the next available ID.
+         */
+        int addSymbolTable(SymbolTable table, int startSid);
+
+        /** Constructs the resolver from the symbols tables added prior to this call. */
+        SymbolResolver build();
+    }
+
+    private static final class ImportTablePosition
+    {
+        public final SymbolTable table;
+        public final int startId;
+
+        public ImportTablePosition(final SymbolTable table, final int startId)
+        {
+            this.table = table;
+            this.startId = startId;
+        }
+    }
+
+    /** Determines how imported symbols are resolved (including system symbols). */
+    /*package*/ enum ImportedSymbolResolverMode
+    {
+        /** Symbols are copied into a flat map, this is useful if the context can be reused across builders. */
+        FLAT
+        {
+            @Override
+            /*package*/ SymbolResolverBuilder createBuilder()
+            {
+                final Map<String, SymbolToken> symbols = new HashMap<String, SymbolToken>();
+
+                // add in system tokens
+                for (final SymbolToken token : systemSymbols())
+                {
+                    symbols.put(token.getText(), token);
+                }
+
+                return new SymbolResolverBuilder()
+                {
+                    public int addSymbolTable(final SymbolTable table, final int startSid)
+                    {
+                        int maxSid = startSid;
+                        final Iterator<String> iter = table.iterateDeclaredSymbolNames();
+                        while (iter.hasNext())
+                        {
+                            final String text = iter.next();
+                            if (text != null && !symbols.containsKey(text))
+                            {
+                                symbols.put(text, symbol(text, maxSid));
+                            }
+                            maxSid++;
+                        }
+                        return maxSid;
+                    }
+
+                    public SymbolResolver build()
+                    {
+                        return new SymbolResolver()
+                        {
+                            public SymbolToken get(final String text)
+                            {
+                                return symbols.get(text);
+                            }
+                        };
+                    }
+                };
+            }
+        },
+        /** Delegates to a set of symbol tables for symbol resolution, this is useful if the context is thrown away frequently. */
+        DELEGATE
+        {
+            @Override
+            /*package*/ SymbolResolverBuilder createBuilder()
+            {
+                final List<ImportTablePosition> imports = new ArrayList<ImportTablePosition>();
+                imports.add(new ImportTablePosition(systemSymbolTable(), 1));
+                return new SymbolResolverBuilder()
+                {
+                    public int addSymbolTable(final SymbolTable table, final int startId)
+                    {
+                        imports.add(new ImportTablePosition(table, startId));
+                        return startId + table.getMaxId();
+                    }
+                    public SymbolResolver build()
+                    {
+                        return new SymbolResolver()
+                        {
+                            public SymbolToken get(final String text)
+                            {
+                                for (final ImportTablePosition tableImport : imports)
+                                {
+                                    final SymbolToken token = tableImport.table.find(text);
+                                    if (token != null)
+                                    {
+                                        return symbol(text, token.getSid() + tableImport.startId - 1);
+                                    }
+                                }
+                                return null;
+                            }
+                        };
+                    }
+                };
+            }
+        };
+
+        /*package*/ abstract SymbolResolverBuilder createBuilder();
+    }
+
     /**
      * Provides the import context for the writer.
      * This class is immutable and shareable across instances.
@@ -51,20 +170,15 @@ import java.util.Map;
     /*package*/ static final class ImportedSymbolContext
     {
         public final List<SymbolTable>          parents;
-        public final Map<String, SymbolToken>   importedSymbols;
+        public final SymbolResolver             importedSymbols;
         public final int                        localSidStart;
 
-        /*package*/ ImportedSymbolContext(final List<SymbolTable> imports)
+        /*package*/ ImportedSymbolContext(final ImportedSymbolResolverMode mode, final List<SymbolTable> imports)
         {
 
             final List<SymbolTable> mutableParents = new ArrayList<SymbolTable>(imports.size());
-            final Map<String, SymbolToken> mutableImportedSymbols = new HashMap<String, SymbolToken>();
 
-            // add in system tokens
-            for (final SymbolToken token : systemSymbols())
-            {
-                mutableImportedSymbols.put(token.getText(), token);
-            }
+            final SymbolResolverBuilder builder = mode.createBuilder();
 
             // add in imports
             int maxSid = ION_1_0_MAX_ID + 1;
@@ -80,25 +194,16 @@ import java.util.Map;
                     continue;
                 }
                 mutableParents.add(st);
-                final Iterator<String> iter = st.iterateDeclaredSymbolNames();
-                while (iter.hasNext())
-                {
-                    final String text = iter.next();
-                    if (text != null && !mutableImportedSymbols.containsKey(text))
-                    {
-                        mutableImportedSymbols.put(text, symbol(text, maxSid));
-                    }
-                    maxSid++;
-                }
+                maxSid = builder.addSymbolTable(st, maxSid);
             }
 
             this.parents = unmodifiableList(mutableParents);
-            this.importedSymbols = unmodifiableMap(mutableImportedSymbols);
+            this.importedSymbols = builder.build();
             this.localSidStart = maxSid;
         }
     }
     /*package*/ static final ImportedSymbolContext ONLY_SYSTEM_IMPORTS =
-        new ImportedSymbolContext(Collections.<SymbolTable>emptyList());
+        new ImportedSymbolContext(ImportedSymbolResolverMode.FLAT, Collections.<SymbolTable>emptyList());
 
     private enum SymbolState {
         SYSTEM_SYMBOLS
@@ -253,7 +358,8 @@ import java.util.Map;
                     self.finish();
 
                     // replace the symbol table context with the user provided one
-                    self.imports = new ImportedSymbolContext(self.userImports);
+                    // TODO determine if the resolver mode should be configurable for this use case
+                    self.imports = new ImportedSymbolContext(ImportedSymbolResolverMode.DELEGATE, self.userImports);
 
                     // explicitly start the local symbol table with no version marker
                     // in case we need the previous symbols
@@ -460,15 +566,16 @@ import java.util.Map;
 
         public String findKnownSymbol(final int id)
         {
-            // TODO decide if it is worth making this better than O(N)
-            //      requires more state tracking (but for what use case?)
-            for (final SymbolToken token : imports.importedSymbols.values())
+            for (final SymbolTable table : imports.parents)
             {
-                if (token.getSid() == id)
+                final String text = table.findKnownSymbol(id);
+                if (text != null)
                 {
-                    return token.getText();
+                    return text;
                 }
             }
+            // TODO decide if it is worth making this better than O(N)
+            //      requires more state tracking (but for what use case?)
             for (final SymbolToken token : locals.values())
             {
                 if (token.getSid() == id)
@@ -564,7 +671,8 @@ import java.util.Map;
         {
             // build import context from seeded LST
             final List<SymbolTable> lstImportList = Arrays.asList(lst.getImportedTables());
-            final ImportedSymbolContext lstImports = new ImportedSymbolContext(lstImportList);
+            // TODO determine if the resolver mode should be configurable for this use case
+            final ImportedSymbolContext lstImports = new ImportedSymbolContext(ImportedSymbolResolverMode.DELEGATE, lstImportList);
             this.imports = lstImports;
 
             // intern all of the local symbols provided from LST

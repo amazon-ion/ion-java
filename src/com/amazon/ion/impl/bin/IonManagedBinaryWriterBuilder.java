@@ -14,6 +14,7 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolResolverMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
@@ -125,7 +126,12 @@ public final class IonManagedBinaryWriterBuilder
 
     public IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
     {
-        imports = new ImportedSymbolContext(tables);
+        // TODO make this configurable
+        return withImports(ImportedSymbolResolverMode.DELEGATE, tables);
+    }
+
+    /*package*/ IonManagedBinaryWriterBuilder withImports(final ImportedSymbolResolverMode mode, final List<SymbolTable> tables) {
+        imports = new ImportedSymbolContext(mode, tables);
         return this;
     }
 
