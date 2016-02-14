@@ -218,6 +218,25 @@ public class _Private_IonBinaryWriterBuilder
             b.setSymtabValueFactory(system);
         }
 
+        return b.immutable();
+    }
+
+    /**
+     * Fills all properties and returns an immutable builder.
+     */
+    private _Private_IonBinaryWriterBuilder fillLegacyDefaults()
+    {
+        // IONJAVA-468 Fix this to use the new writer or eliminate it
+
+        // Ensure that we don't modify the user's builder.
+        _Private_IonBinaryWriterBuilder b = copy();
+
+        if (b.getSymtabValueFactory() == null)
+        {
+            IonSystem system = IonSystemBuilder.standard().build();
+            b.setSymtabValueFactory(system);
+        }
+
         SymbolTable initialSymtab = b.getInitialSymbolTable();
         if (initialSymtab == null)
         {
@@ -285,7 +304,7 @@ public class _Private_IonBinaryWriterBuilder
     public final IonBinaryWriter buildLegacy()
     {
         // IONJAVA-468 Fix this to use the new writer or eliminate it
-        _Private_IonBinaryWriterBuilder b = fillDefaults();
+        _Private_IonBinaryWriterBuilder b = fillLegacyDefaults();
 
         IonWriterSystemBinary systemWriter =
             b.buildSystemWriter(new BufferedOutputStream());

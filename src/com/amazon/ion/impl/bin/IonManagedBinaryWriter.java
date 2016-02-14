@@ -913,6 +913,8 @@ import java.util.Map;
 
     public void writeBytes(byte[] data, int off, int len) throws IOException
     {
+        // this is a raw transfer--we basically have to dump the symbol table since we don't have much context
+        startLocalSymbolTableIfNeeded(/*writeIVM*/ true);
         user.writeBytes(data, off, len);
     }
 
