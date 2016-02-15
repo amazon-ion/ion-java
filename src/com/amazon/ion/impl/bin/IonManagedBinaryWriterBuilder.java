@@ -126,8 +126,26 @@ public final class IonManagedBinaryWriterBuilder
 
     public IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
     {
-        // TODO make this configurable
         return withImports(ImportedSymbolResolverMode.DELEGATE, tables);
+    }
+
+    /**
+     * Adds imports, flattening them to make lookup more efficient.  This is particularly useful
+     * when a builder instance is long lived.
+     */
+    public IonManagedBinaryWriterBuilder withFlatImports(final SymbolTable... tables)
+    {
+        if (tables != null)
+        {
+            return withFlatImports(Arrays.asList(tables));
+        }
+        return this;
+    }
+
+    /** @see #withFlatImports(SymbolTable...) */
+    public IonManagedBinaryWriterBuilder withFlatImports(final List<SymbolTable> tables)
+    {
+        return withImports(ImportedSymbolResolverMode.FLAT, tables);
     }
 
     /*package*/ IonManagedBinaryWriterBuilder withImports(final ImportedSymbolResolverMode mode, final List<SymbolTable> tables) {

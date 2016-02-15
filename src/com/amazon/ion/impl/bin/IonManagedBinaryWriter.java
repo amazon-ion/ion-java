@@ -138,6 +138,7 @@ import java.util.Map;
                         imports.add(new ImportTablePosition(table, startId));
                         return startId + table.getMaxId();
                     }
+
                     public SymbolResolver build()
                     {
                         return new SymbolResolver()

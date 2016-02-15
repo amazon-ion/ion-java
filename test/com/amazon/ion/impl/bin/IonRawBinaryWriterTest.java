@@ -77,7 +77,6 @@ public class IonRawBinaryWriterTest extends Assert
     }
 
     @Before
-    @SuppressWarnings("deprecation")
     public final void setup() throws Exception
     {
         writer = new IonBinaryWriterAdapter(
@@ -121,6 +120,9 @@ public class IonRawBinaryWriterTest extends Assert
         }
     }
 
+    /** sub-classes can provide additional checks on a value as part of {@link #assertValue(String)}. */
+    protected void additionalValueAssertions(final IonValue value) {}
+
     protected final void assertValue(final String literal) throws IOException
     {
         writer.finish();
@@ -133,6 +135,8 @@ public class IonRawBinaryWriterTest extends Assert
         }
         final IonValue expected = system().singleValue(literal);
         assertEquals(expected, actual);
+
+        additionalValueAssertions(actual);
 
         // prepare for next value
         writer.reset();
