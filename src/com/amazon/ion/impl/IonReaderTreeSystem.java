@@ -25,6 +25,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_IonValue.SymbolTableProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -42,8 +43,8 @@ class IonReaderTreeSystem
     protected SymbolTable         _symbols;
     protected Iterator<IonValue>  _iter;
     protected IonValue            _parent;
-    protected IonValue            _next;
-    protected IonValue            _curr;
+    protected _Private_IonValue   _next;
+    protected _Private_IonValue   _curr;
     protected boolean             _eof;
 
     /** Holds pairs: IonValue parent, Iterator<IonValue> cursor */
@@ -51,14 +52,26 @@ class IonReaderTreeSystem
     protected int                _top;
     private   boolean            _hoisted;
 
+    // Interface that allows access to the _symbols value (whatever that might be in terms of
+    // stream processing context)
+    private   final SymbolTableProvider _symbolTableAccessor;
+
     public IonReaderTreeSystem(IonValue value)
     {
         if (value == null) {
             // do nothing
+            _symbolTableAccessor = null;
         }
         else {
             _system = value.getSystem();
             re_init(value, /* hoisted */ false);
+            _symbolTableAccessor = new SymbolTableProvider() 
+            {
+                public SymbolTable getSymbolTable()
+                {
+                    return null == _symbols ? _system.getSystemSymbolTable() : _symbols;
+                }       
+            };
         }
     }
 
@@ -91,7 +104,7 @@ class IonReaderTreeSystem
         }
         else {
             _parent = (hoisted ? null : value.getContainer());
-            _next = value;
+            _next = (_Private_IonValue) value;
         }
     }
 
@@ -158,7 +171,7 @@ class IonReaderTreeSystem
         if (this._next != null) return this._next.getType();
 
         if (this._iter != null && this._iter.hasNext()) {
-            this._next = this._iter.next();
+            this._next = (_Private_IonValue) this._iter.next();
         }
 
         if ((this._eof =(this._next == null)) == true) {
@@ -249,7 +262,7 @@ class IonReaderTreeSystem
             throw new IllegalStateException();
         }
         // TODO should this localize the symbols?
-        return _curr.getTypeAnnotationSymbols();
+        return _curr.getTypeAnnotationSymbols(_symbolTableAccessor);
     }
 
     public final Iterator<String> iterateTypeAnnotations()
@@ -288,7 +301,7 @@ class IonReaderTreeSystem
     public final SymbolToken getFieldNameSymbol()
     {
         if (_curr == null || (_hoisted && _top == 0)) return null;
-        return _curr.getFieldNameSymbol();
+        return _curr.getFieldNameSymbol(_symbolTableAccessor);
     }
 
 
