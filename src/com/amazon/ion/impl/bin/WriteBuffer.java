@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2015-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.bin;
 
@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * A facade over {@link Block} management and low-level Ion encoding concerns for the {@link IonRawBinaryWriter}.
  */
-public final class WriteBuffer implements Closeable
+/*package*/ final class WriteBuffer implements Closeable
 {
     private final BlockAllocator allocator;
     private final List<Block> blocks;

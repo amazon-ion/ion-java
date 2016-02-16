@@ -24,6 +24,11 @@ abstract class IonContainerLite
     implements _Private_IonContainer, IonContext
 {
 
+    // constant for the maximum number of children a struct can hold
+    // before 'get()' style access will require map addressibility rather
+    // than iterative scan.
+    static final int STRUCT_CHILDREN_MAPIFY_THRESHOLD = 5;
+
     protected int            _child_count;
     protected IonValueLite[] _children;
 
@@ -535,7 +540,7 @@ abstract class IonContainerLite
         int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
         sizes[_Private_IonConstants.tidList]     = 1;
         sizes[_Private_IonConstants.tidSexp]     = 4;
-        sizes[_Private_IonConstants.tidStruct]   = 5;
+        sizes[_Private_IonConstants.tidStruct]   = STRUCT_CHILDREN_MAPIFY_THRESHOLD;
         sizes[_Private_IonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
@@ -553,12 +558,12 @@ abstract class IonContainerLite
         switch (this.getType()) {
         case LIST:     return 1;
         case SEXP:     return 4;
-        case STRUCT:   return 5;
+        case STRUCT:   return STRUCT_CHILDREN_MAPIFY_THRESHOLD;
         case DATAGRAM: return 3;
         default:       return 4;
         }
     }
-    final protected int nextSize(int current_size, boolean call_transition)
+    final protected int nextSize(int current_size)
     {
         if (current_size == 0) {
             int new_size = initialSize();
@@ -574,29 +579,11 @@ abstract class IonContainerLite
             default:       return current_size * 2;
         }
 
-        if (next_size > current_size) {
-            // note that unrecognized sizes, either due to unrecognized type id
-            // or some sort of custom size in the initial allocation, meh.
-            if (call_transition) {
-                transitionToLargeSize(next_size);
-            }
-        }
-        else {
+        if (next_size <= current_size) {
             next_size = current_size * 2;
         }
 
         return next_size;
-    }
-
-    /**
-     * This is overriden in {@link IonStructLite} to add the {@link HashMap} of
-     * field names when the struct becomes moderately large.
-     *
-     * @param size
-     */
-    void transitionToLargeSize(int size)
-    {
-        return;
     }
 
     public final int get_child_count() {
@@ -636,7 +623,7 @@ abstract class IonContainerLite
         child.setContext(this.getContextForIndex(child, idx));
         if (_children == null || _child_count >= _children.length) {
             int old_len = (_children == null) ? 0 : _children.length;
-            int new_len = this.nextSize(old_len, true);
+            int new_len = this.nextSize(old_len);
             assert(new_len > idx);
             IonValueLite[] temp = new IonValueLite[new_len];
             if (old_len > 0) {
@@ -687,17 +674,4 @@ abstract class IonContainerLite
         }
         return;
     }
-
-    @Override
-    protected void detachFromSymbolTable()
-    {
-        super.detachFromSymbolTable();
-        if (_children != null)
-        {
-            for (int ii=0; ii<_child_count; ii++) {
-                _children[ii].detachFromSymbolTable();
-            }
-        }
-    }
-
 }

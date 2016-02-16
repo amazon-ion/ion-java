@@ -1,8 +1,6 @@
-// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2011-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
-
-import static com.amazon.ion.impl.lite.IonDatagramLite.REVERSE_BINARY_ENCODER_PROPERTY;
 
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
@@ -26,12 +24,6 @@ public final class _Private_LiteDomTrampoline
     public static boolean isLiteSystem(IonSystem system)
     {
         return (system instanceof IonSystemLite);
-    }
-
-    public static void setReverseBinaryEncoder(boolean useReverseEncoder)
-    {
-        System.setProperty(REVERSE_BINARY_ENCODER_PROPERTY,
-                           Boolean.toString(useReverseEncoder));
     }
 
     public static byte[] reverseEncode(int initialSize, SymbolTable symtab)

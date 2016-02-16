@@ -1,4 +1,4 @@
-// Copyright (c) 2010-2012 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl;
 
@@ -190,7 +190,9 @@ final class IonWriterSystemBinary
                 case TID_SYMBOL_TABLE_PATCH:
                 case TID_RAW:
                     break;
-
+                case TID_ANNOTATION_PATCH:
+                    totalLen += IonBinary.lenVarUInt(valueLen);
+                    break;
                 default:
                     // add the type if it's specified
                     ++totalLen;

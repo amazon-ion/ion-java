@@ -162,12 +162,14 @@ abstract class IonValueLite
      * can be "passed down" through the path, cutting down on
      * potentially expensive IonValue#getSymbolTable calls.
      */
-    static class SymbolTableProvider
+    static class LazySymbolTableProvider
+        implements SymbolTableProvider
     {
-        private SymbolTable symtab = null;
-        private final IonValueLite value;
+        SymbolTable symtab = null;
+        final IonValueLite value;
 
-        SymbolTableProvider(IonValueLite value) {
+        LazySymbolTableProvider(IonValueLite value)
+        {
             this.value = value;
         }
 
@@ -348,7 +350,7 @@ abstract class IonValueLite
         // This works for all child types with the exception of
         // IonDatagramLite which has a different, explicit behavior for hashCode()
         // (hence this method cannot be final).
-        return hashCode(new SymbolTableProvider(this));
+        return hashCode(new LazySymbolTableProvider(this));
     }
 
     /*
@@ -406,10 +408,10 @@ abstract class IonValueLite
         // However, the current invariants on these fields are nonexistant so
         // I do not trust that its safe to alter them here.
 
-        return getFieldNameSymbol(new SymbolTableProvider(this));
+        return getFieldNameSymbol(new LazySymbolTableProvider(this));
     }
 
-    final SymbolToken getFieldNameSymbol(SymbolTableProvider symbolTableProvider)
+    public final SymbolToken getFieldNameSymbol(SymbolTableProvider symbolTableProvider)
     {
         int sid = _fieldId;
         String text = _fieldName;
@@ -509,8 +511,7 @@ abstract class IonValueLite
     {
         assert ! (this instanceof IonDatagram);
 
-        IonValueLite top = topLevelValue();
-        SymbolTable symbols = top._context.getContextSymbolTable();
+        SymbolTable symbols = topLevelValue()._context.getContextSymbolTable();
         if (symbols != null) {
             return symbols;
         }
@@ -537,10 +538,10 @@ abstract class IonValueLite
 
     public SymbolToken[] getTypeAnnotationSymbols()
     {
-        return getTypeAnnotationSymbols(new SymbolTableProvider(this));
+        return getTypeAnnotationSymbols(new LazySymbolTableProvider(this));
     }
 
-    private final SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider)
+    public final SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider)
     {
         // first we have to count the number of non-null
         // elements there are in the annotations array
@@ -830,7 +831,7 @@ abstract class IonValueLite
         // we use a Lazy 1-time resolution of the SymbolTable in case there is no need to
         // pull the symbol table, including situations where no symbol table would logically
         // be attached
-        writeTo(writer, new SymbolTableProvider(this));
+        writeTo(writer, new LazySymbolTableProvider(this));
     }
 
     final void writeChildren(IonWriter writer, Iterable<IonValue> container,
@@ -912,29 +913,9 @@ abstract class IonValueLite
         assert context != null;
         checkForLock();
 
-        //If the previous context had a non-null, non-empty SymbolTable, and the new SymbolTable is different, clear all known sIDs.
-        SymbolTable oldSymbolTable = getContext().getContextSymbolTable();
-        SymbolTable newSymbolTable = context.getContextSymbolTable();
-
-        if (oldSymbolTable != null && oldSymbolTable != newSymbolTable && tableIsNonTrivial(oldSymbolTable, newSymbolTable)){
-            this.detachFromSymbolTable();
-        }
+        //Clear all known sIDs.
+        this.clearSymbolIDValues();
         _context = context;
-    }
-
-    private boolean tableIsNonTrivial(SymbolTable oldSymbolTable, SymbolTable newSymbolTable){
-        if (newSymbolTable != null
-            && oldSymbolTable.getSystemSymbolTable() != newSymbolTable.getSystemSymbolTable()){
-            //new symbol table has different ion version
-            //TODO - I can't see how to test this but it needs to be here for safety in case of future changes
-            return true;
-        }
-
-        if (oldSymbolTable.getMaxId() > oldSymbolTable.getSystemSymbolTable().getMaxId()){
-            //old symbol table defines symbols or imports other symbol tables that define IDs
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -969,16 +950,12 @@ abstract class IonValueLite
     {
         checkForLock();
 
-        detachFromSymbolTable();
+        clearSymbolIDValues();
         _context = ContainerlessContext.wrap(getSystem());
 
         _fieldName = null;
         _fieldId = UNKNOWN_SYMBOL_ID;
         _elementid(0);
-    }
-
-    protected void detachFromSymbolTable(){
-        clearSymbolIDValues();
     }
 
     public void dump(PrintWriter out)

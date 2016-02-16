@@ -1,16 +1,13 @@
-// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2010-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 
 import com.amazon.ion.ContainedValueException;
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
@@ -22,7 +19,6 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonDatagram;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
@@ -71,18 +67,6 @@ final class IonDatagramLite
     extends IonSequenceLite
     implements IonDatagram, IonContext, _Private_IonDatagram
 {
-    /**
-     * This is a back-door for allowing a JVM-level override of the reverse
-     * binary encoder implementation. The only reliable way to use this
-     * property is to set via the command-line. The reverse encoder is turned
-     * on by default. Set this system property to false if you want to turn it
-     * off, that is, use the original encoder.
-     * <p>
-     * <b>DO NOT USE THIS WITHOUT APPROVAL FROM JONKER@AMAZON.COM!</b>
-     * This private feature is subject to change without notice.
-     */
-    static final String REVERSE_BINARY_ENCODER_PROPERTY =
-        "com.amazon.ion.IonDatagram.useReverseBinaryEncoder";
 
     private static final int HASH_SIGNATURE =
         IonType.DATAGRAM.toString().hashCode();
@@ -122,19 +106,6 @@ final class IonDatagramLite
     public IonDatagramLite clone()
     {
         return new IonDatagramLite(this);
-    }
-
-    // TODO ION-312 Reverse encoder is set as default, set original
-    // encoder back to default before R17 is released
-    private boolean isReverseEncoded()
-    {
-        try {
-            return !"false".equals(System.getProperty(REVERSE_BINARY_ENCODER_PROPERTY));
-        }
-        catch (SecurityException e) {
-            // NO-OP in the case where system properties are not accessible.
-        }
-        return true;
     }
 
 
@@ -367,16 +338,6 @@ final class IonDatagramLite
     }
 
     @Override
-    protected int add_child(int idx, IonValueLite child){
-        SymbolTable originalSymbols = child.getSymbolTable();
-        int result = super.add_child(idx, child);
-        if (originalSymbols.isLocalTable()){ //restore old symbol table if it is local
-            child.setSymbolTable(originalSymbols);
-        }
-        return result;
-    }
-
-    @Override
     public IonContext getContextForIndex(IonValue element, int index)
     {
         if (index == this._pending_symbol_table_idx) {
@@ -464,136 +425,45 @@ final class IonDatagramLite
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * This doesn't wrap IOException because some callers need to propagate it.
-     */
-    @SuppressWarnings("deprecation")
-    private IonBinaryWriter make_filled_binary_writer()
-    throws IOException
-    {
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
-        b.setCatalog(_catalog);
-        b.setSymtabValueFactory(_system);
-        b.setInitialSymbolTable(_system.getSystemSymbolTable());
-
-        IonBinaryWriter writer = b.buildLegacy();
-
-        IonReader reader = makeSystemReader(_system, this);
-        writer.writeValues(reader);
-        writer.finish();
-        return writer;
-    }
-
-    @SuppressWarnings("deprecation")
     public int byteSize() throws IonException
     {
         // TODO this is horrible, users will end up encoding multiple times!
-        int size;
-        if (isReverseEncoded()) {
-            ReverseBinaryEncoder encoder =
-                new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-            encoder.serialize(this);
-            size = encoder.byteSize();
-        }
-        else {
-            try {
-                IonBinaryWriter writer = make_filled_binary_writer();
-                size = writer.byteSize();
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
-
-        return size;
+        ReverseBinaryEncoder encoder =
+            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
+        encoder.serialize(this);
+        return encoder.byteSize();
     }
 
-    @SuppressWarnings("deprecation")
     public byte[] getBytes() throws IonException
     {
-        byte[] bytes;
-        if (isReverseEncoded()) {
-            ReverseBinaryEncoder encoder =
-                new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-            encoder.serialize(this);
-            bytes = encoder.toNewByteArray();
-        }
-        else {
-            try {
-                IonBinaryWriter writer = make_filled_binary_writer();
-                bytes = writer.getBytes();
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
-
-        return bytes;
+        ReverseBinaryEncoder encoder =
+            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
+        encoder.serialize(this);
+        return encoder.toNewByteArray();
     }
 
-    @SuppressWarnings("deprecation")
     public int getBytes(byte[] dst) throws IonException
     {
-        int size;
-        if (isReverseEncoded()) {
-            ReverseBinaryEncoder encoder =
-                new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-            encoder.serialize(this);
-            size = encoder.toNewByteArray(dst);
-        }
-        else {
-            try {
-                IonBinaryWriter writer = make_filled_binary_writer();
-                size = writer.getBytes(dst, 0, dst.length);
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
-
-        return size;
+        ReverseBinaryEncoder encoder =
+            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
+        encoder.serialize(this);
+        return encoder.toNewByteArray(dst);
     }
 
-    @SuppressWarnings("deprecation")
     public int getBytes(byte[] dst, int offset) throws IonException
     {
-        int size;
-        if (isReverseEncoded()) {
-            ReverseBinaryEncoder encoder =
-                new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-            encoder.serialize(this);
-            size = encoder.toNewByteArray(dst, offset);
-        }
-        else {
-            try {
-                IonBinaryWriter writer = make_filled_binary_writer();
-                size = writer.getBytes(dst, offset, dst.length - offset);
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
-
-        return size;
+        ReverseBinaryEncoder encoder =
+            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
+        encoder.serialize(this);
+        return encoder.toNewByteArray(dst, offset);
     }
 
-    @SuppressWarnings("deprecation")
     public int getBytes(OutputStream out) throws IOException, IonException
     {
-        int size;
-        if (isReverseEncoded()) {
-            ReverseBinaryEncoder encoder =
-                new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-            encoder.serialize(this);
-            size = encoder.writeBytes(out);
-        }
-        else {
-            IonBinaryWriter writer = make_filled_binary_writer();
-            size = writer.writeBytes(out);
-        }
-
-        return size;
+        ReverseBinaryEncoder encoder =
+            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
+        encoder.serialize(this);
+        return encoder.writeBytes(out);
     }
 
     // TODO: optimize this, if there's a real use case
@@ -651,20 +521,9 @@ final class IonDatagramLite
         }
     }
 
-
-
-    @SuppressWarnings("deprecation")
     public byte[] toBytes() throws IonException
     {
-        byte[] bytes;
-        try {
-            IonBinaryWriter writer = make_filled_binary_writer();
-            bytes = writer.getBytes();
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-        return bytes;
+        return getBytes();
     }
 
     //////////////////////////////////////////////////////////////////////////////

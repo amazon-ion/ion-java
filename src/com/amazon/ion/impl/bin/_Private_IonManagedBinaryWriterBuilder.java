@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2015-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.bin;
 
@@ -14,6 +14,7 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolResolverMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
@@ -29,7 +30,7 @@ import java.util.List;
  * This class is thread-safe.
  */
 @SuppressWarnings("deprecation")
-public final class IonManagedBinaryWriterBuilder
+public final class _Private_IonManagedBinaryWriterBuilder
 {
     public enum AllocatorMode
     {
@@ -64,7 +65,7 @@ public final class IonManagedBinaryWriterBuilder
     /*package*/ volatile WriteValueOptimization optimization;
     /*package*/ volatile SymbolTable            initialSymbolTable;
 
-    private IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
+    private _Private_IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
     {
         this.provider = provider;
         this.symbolsBlockSize = DEFAULT_BLOCK_SIZE;
@@ -75,7 +76,7 @@ public final class IonManagedBinaryWriterBuilder
         this.optimization = WriteValueOptimization.NONE;
     }
 
-    private IonManagedBinaryWriterBuilder(final IonManagedBinaryWriterBuilder other)
+    private _Private_IonManagedBinaryWriterBuilder(final _Private_IonManagedBinaryWriterBuilder other)
     {
         this.provider           = other.provider;
         this.symbolsBlockSize   = other.symbolsBlockSize;
@@ -87,14 +88,14 @@ public final class IonManagedBinaryWriterBuilder
         this.initialSymbolTable = other.initialSymbolTable;
     }
 
-    public IonManagedBinaryWriterBuilder copy()
+    public _Private_IonManagedBinaryWriterBuilder copy()
     {
-        return new IonManagedBinaryWriterBuilder(this);
+        return new _Private_IonManagedBinaryWriterBuilder(this);
     }
 
     // Parameter Setting Methods
 
-    public IonManagedBinaryWriterBuilder withSymbolsBlockSize(final int blockSize)
+    public _Private_IonManagedBinaryWriterBuilder withSymbolsBlockSize(final int blockSize)
     {
         if (blockSize < 1)
         {
@@ -104,7 +105,7 @@ public final class IonManagedBinaryWriterBuilder
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withUserBlockSize(final int blockSize)
+    public _Private_IonManagedBinaryWriterBuilder withUserBlockSize(final int blockSize)
     {
         if (blockSize < 1)
         {
@@ -114,7 +115,7 @@ public final class IonManagedBinaryWriterBuilder
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withImports(final SymbolTable... tables)
+    public _Private_IonManagedBinaryWriterBuilder withImports(final SymbolTable... tables)
     {
         if (tables != null)
         {
@@ -123,37 +124,60 @@ public final class IonManagedBinaryWriterBuilder
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
+    public _Private_IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
     {
-        imports = new ImportedSymbolContext(tables);
+        return withImports(ImportedSymbolResolverMode.DELEGATE, tables);
+    }
+
+    /**
+     * Adds imports, flattening them to make lookup more efficient.  This is particularly useful
+     * when a builder instance is long lived.
+     */
+    public _Private_IonManagedBinaryWriterBuilder withFlatImports(final SymbolTable... tables)
+    {
+        if (tables != null)
+        {
+            return withFlatImports(Arrays.asList(tables));
+        }
         return this;
     }
 
-    /*package*/ IonManagedBinaryWriterBuilder withPreallocationMode(final PreallocationMode preallocationMode)
+    /** @see #withFlatImports(SymbolTable...) */
+    public _Private_IonManagedBinaryWriterBuilder withFlatImports(final List<SymbolTable> tables)
+    {
+        return withImports(ImportedSymbolResolverMode.FLAT, tables);
+    }
+
+    /*package*/ _Private_IonManagedBinaryWriterBuilder withImports(final ImportedSymbolResolverMode mode, final List<SymbolTable> tables) {
+        imports = new ImportedSymbolContext(mode, tables);
+        return this;
+    }
+
+    /*package*/ _Private_IonManagedBinaryWriterBuilder withPreallocationMode(final PreallocationMode preallocationMode)
     {
         this.preallocationMode = preallocationMode;
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withPaddedLengthPreallocation(final int pad)
+    public _Private_IonManagedBinaryWriterBuilder withPaddedLengthPreallocation(final int pad)
     {
         this.preallocationMode = PreallocationMode.withPadSize(pad);
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withCatalog(final IonCatalog catalog)
+    public _Private_IonManagedBinaryWriterBuilder withCatalog(final IonCatalog catalog)
     {
         this.catalog = catalog;
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withStreamCopyOptimization(boolean optimized)
+    public _Private_IonManagedBinaryWriterBuilder withStreamCopyOptimization(boolean optimized)
     {
         this.optimization = optimized ? WriteValueOptimization.COPY_OPTIMIZED : WriteValueOptimization.NONE;
         return this;
     }
 
-    public IonManagedBinaryWriterBuilder withInitialSymbolTable(SymbolTable symbolTable)
+    public _Private_IonManagedBinaryWriterBuilder withInitialSymbolTable(SymbolTable symbolTable)
     {
         if (symbolTable != null)
         {
@@ -223,8 +247,8 @@ public final class IonManagedBinaryWriterBuilder
      * Builders generally bind to an allocation pool as defined by {@link AllocatorMode}, so applications should reuse
      * them as much as possible.
      */
-    public static IonManagedBinaryWriterBuilder create(final AllocatorMode allocatorMode)
+    public static _Private_IonManagedBinaryWriterBuilder create(final AllocatorMode allocatorMode)
     {
-        return new IonManagedBinaryWriterBuilder(allocatorMode.createAllocatorProvider());
+        return new _Private_IonManagedBinaryWriterBuilder(allocatorMode.createAllocatorProvider());
     }
 }

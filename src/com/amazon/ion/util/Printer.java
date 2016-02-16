@@ -30,8 +30,11 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_IonSymbol;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
+import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl._Private_IonValue.SymbolTableProvider;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
@@ -464,6 +467,10 @@ public class Printer
     {
         try
         {
+            if (! (value instanceof IonDatagram))
+            {
+                pv.setSymbolTableProvider(new BasicSymbolTableProvider(value.getSymbolTable()));
+            }
             value.accept(pv);
         }
         catch (IOException e)
@@ -497,12 +504,30 @@ public class Printer
     }
 
 
+    private static class BasicSymbolTableProvider
+        implements SymbolTableProvider
+    {
+        private final SymbolTable symbolTable;
+
+        public BasicSymbolTableProvider(SymbolTable symbolTable)
+        {
+            this.symbolTable = symbolTable;
+        }
+
+        public SymbolTable getSymbolTable()
+        {
+            return symbolTable;
+        }
+
+    }
+
     //=========================================================================
     // Print methods
 
     public static class PrinterVisitor
         extends AbstractValueVisitor
     {
+
         final protected Options    myOptions;
         final protected Appendable myOut;
 
@@ -513,6 +538,8 @@ public class Printer
          */
         private boolean    myQuoteOperators = true;
 
+        private SymbolTableProvider mySymbolTableProvider = null;
+
 
         //---------------------------------------------------------------------
 
@@ -522,6 +549,10 @@ public class Printer
             myOut = out;
         }
 
+        void setSymbolTableProvider(SymbolTableProvider symbolTableProvider)
+        {
+            mySymbolTableProvider = symbolTableProvider;
+        }
 
         /**
          * Recurse down into a container, we push the current value of
@@ -548,7 +579,7 @@ public class Printer
         {
             if (! myOptions.skipAnnotations)
             {
-                SymbolToken[] anns = value.getTypeAnnotationSymbols();
+                SymbolToken[] anns = ((_Private_IonValue)value).getTypeAnnotationSymbols(mySymbolTableProvider);
                 if (anns != null)
                 {
                     for (SymbolToken ann : anns) {
@@ -794,12 +825,12 @@ public class Printer
             while (i.hasNext())
             {
                 IonValue child = i.next();
-
+                SymbolTable childSymbolTable = child.getSymbolTable();
+                mySymbolTableProvider = new BasicSymbolTableProvider(childSymbolTable); //children of datagrams are top-level values
                 if (simplify_system_values)
                 {
-                    SymbolTable new_symbols = child.getSymbolTable();
                     child = simplify(child, previous_symbols);
-                    previous_symbols = new_symbols;
+                    previous_symbols = childSymbolTable;
                 }
 
                 if (child != null)
@@ -1056,7 +1087,7 @@ public class Printer
                     }
                     hitOne = true;
 
-                    SymbolToken sym = child.getFieldNameSymbol();
+                    SymbolToken sym = ((_Private_IonValue)child).getFieldNameSymbol(mySymbolTableProvider);
                     writeSymbolToken(sym);
                     myOut.append(':');
                     writeChild(child, true);
@@ -1071,7 +1102,7 @@ public class Printer
         {
             writeAnnotations(value);
 
-            SymbolToken is = value.symbolValue();
+            SymbolToken is = ((_Private_IonSymbol)value).symbolValue(mySymbolTableProvider);
             if (is == null)
             {
                 writeNull("symbol");

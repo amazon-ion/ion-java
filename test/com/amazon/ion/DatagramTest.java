@@ -686,9 +686,11 @@ public class DatagramTest
     @Test
     public void testSetWithSymbolTable()
     {
+
         if (getDomType().equals(DomType.BACKED)){ //TODO add appears to be broken in the Backed DOM
             return;
         }
+
         String serializedX = ION_1_0 + ' '
             + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
             + " x";
@@ -698,10 +700,8 @@ public class DatagramTest
 
         IonDatagram dg = system().newLoader().load(serializedY);
         SymbolTable st0 = dg.get(0).getSymbolTable();
-        int yID = ((IonSymbol)dg.get(0)).getSymbolId();
+        int yID = ((IonSymbol)dg.get(0)).symbolValue().getSid();
         IonSymbol x = (IonSymbol) system().iterate(serializedX).next();
-        SymbolTable st1 = x.getSymbolTable();
-        int xID = x.getSymbolId();
 
         dg.add( 1, x);
 
@@ -710,16 +710,21 @@ public class DatagramTest
         IonSymbol v2 = (IonSymbol) dg.get(2);
 
         assertEquals("y", v0.stringValue());
-        assertEquals(yID, v0.getSymbolId());
+        assertEquals(yID, v0.symbolValue().getSid());
         assertEquals(st0, v0.getSymbolTable());
 
         assertEquals("x", v1.stringValue());
-        assertEquals(xID, v1.getSymbolId());
-        assertEquals(st1, v1.getSymbolTable());
+        assertEquals(UNKNOWN_SYMBOL_ID, v1.symbolValue().getSid()); // symbol mappings removed when added to new container
+        assertEquals(st0, v1.getSymbolTable()); // it inherits the symbol table for the index at which it is inserted
 
         assertEquals("y", v2.stringValue());
-        assertEquals(UNKNOWN_SYMBOL_ID, v2.getSymbolId());
-        assertEquals(st1, v2.getSymbolTable());
+        assertEquals(yID, v2.symbolValue().getSid());
+        assertEquals(st0, v2.getSymbolTable());
+
+        dg.getBytes(); // This causes symbol mappings to be updated
+
+        assertEquals("x", v1.stringValue());
+        assertEquals(yID + 1, v1.symbolValue().getSid()); //now x has a mapping in the existing symbol table
 
     }
 }

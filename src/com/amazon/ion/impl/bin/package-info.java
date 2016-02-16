@@ -4,7 +4,7 @@
  *
  * <p>
  * This package limits most of its APIs to package-level access, the public API of note is contained within
- * the {@link com.amazon.ion.impl.bin.IonManagedBinaryWriterBuilder} which builds instances of
+ * the {@link com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder} which builds instances of
  * {@link com.amazon.ion.impl.bin.IonManagedBinaryWriter}.  See the below section for what <i>Managed</i> means
  * in this context.
  *
