@@ -14,7 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolResolverMode;
-import com.amazon.ion.impl.bin.IonManagedBinaryWriterBuilder.AllocatorMode;
+import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder.AllocatorMode;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -112,7 +112,7 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
             catalog.putTable(table);
         }
 
-        final IonWriter writer = IonManagedBinaryWriterBuilder
+        final IonWriter writer = _Private_IonManagedBinaryWriterBuilder
             .create(AllocatorMode.POOLED)
             .withImports(importedSymbolResolverMode, symbolTables)
             .withPreallocationMode(preallocationMode)

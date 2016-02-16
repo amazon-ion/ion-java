@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2015-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion.impl.lite;
 
@@ -7,7 +7,7 @@ import com.amazon.ion.SymbolTable;
 /**
  * Context for IonValues that are not contained in any Container or Datagram
  */
-public class ContainerlessContext
+/*package*/ class ContainerlessContext
     implements IonContext
 {
     private final IonSystemLite _system;

@@ -626,7 +626,7 @@ import java.util.Map;
 
     private boolean                             closed;
 
-    /*package*/ IonManagedBinaryWriter(final IonManagedBinaryWriterBuilder builder,
+    /*package*/ IonManagedBinaryWriter(final _Private_IonManagedBinaryWriterBuilder builder,
                                        final OutputStream out)
                                        throws IOException
     {
