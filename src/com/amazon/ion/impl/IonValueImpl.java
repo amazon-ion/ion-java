@@ -1162,11 +1162,11 @@ abstract class IonValueImpl
         // whether we have annotations or not
         int type = this.pos_getType();
 
-        // vlen might get reset later if this is a IonVersionMarker
-        int vlen = valueReader.readLength(type, this.pos_getLowNibble());
+        // value length might get reset later if this is a IonVersionMarker
+        int valueLength = valueReader.readLength(type, this.pos_getLowNibble());
 
         this._value_content_start = valueReader.position();
-        this._next_start = this._value_content_start + vlen;
+        this._next_start = this._value_content_start + valueLength;
 
         if (type == _Private_IonConstants.tidTypedecl) {
             // check for the special case of the typedecl that is a binary version marker
@@ -1180,8 +1180,8 @@ abstract class IonValueImpl
                 }
                 // fixup the "next start" position, since when we set this
                 // the value length was "wrong"
-                vlen = _Private_IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
-                this._next_start = this._value_content_start + vlen;
+                valueLength = _Private_IonConstants.BINARY_VERSION_MARKER_SIZE - 1;
+                this._next_start = this._value_content_start + valueLength;
                 this._isSystemValue(true);
             }
             else {
@@ -1194,13 +1194,15 @@ abstract class IonValueImpl
                 this._type_desc = valueReader.readToken();
                 // TODO check that td != annotation (illegal nested annotation)
 
-                int ln = pos_getLowNibble();
-                if ((ln == _Private_IonConstants.lnIsVarLen)
-                    || (this._type_desc == IonStructImpl.ORDERED_STRUCT_TYPEDESC))
+                int wrappedValueLength = valueReader.readLength(this.pos_getType(), this.pos_getLowNibble());
+
+                int wrapperFinish = this._value_content_start + valueLength;
+                int wrappedValueFinish = valueReader.position() + wrappedValueLength;
+                if (wrapperFinish != wrappedValueFinish)
                 {
-                    // Skip over the extended length to find the content start.
-                    valueReader.readVarUIntAsInt();
+                        throw new IonException(String.format("Wrapper length mismatch wrapper %s wrapped value %s at position %s", wrapperFinish, wrappedValueFinish, this._value_content_start));
                 }
+
                 this._value_content_start = valueReader.position();
             }
         }

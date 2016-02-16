@@ -3,6 +3,7 @@
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
 import com.amazon.ion.BadIonTest;
+import com.amazon.ion.BinaryReaderWrappedValueLengthTest;
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BoolTest;
@@ -179,6 +180,7 @@ import org.junit.runners.Suite;
     IonTextWriterBuilderTest.class,
     IonBinaryWriterBuilderTest.class,
     IonReaderToIonValueTest.class,
+    BinaryReaderWrappedValueLengthTest.class,
 
     // experimental binary writer tests
     PooledBlockAllocatorProviderTest.class,

@@ -265,8 +265,12 @@ abstract class IonReaderBinaryRawX
                         _value_type = load_annotation_start_with_value_type();
 
                         // Wrapper and wrapped value should finish together!
-                        assert ( wrapperStart + wrapperLen
-                                 == _position_start + _position_len);
+                        long wrapperFinish = wrapperStart + wrapperLen;
+                        long wrappedValueFinish = _position_start + _position_len;
+                        if (wrapperFinish != wrappedValueFinish) {
+                            throw newErrorAt(String.format("Wrapper length mismatch: wrapper %s wrapped value %s", wrapperFinish, wrappedValueFinish));
+                        }
+
                         _position_start = wrapperStart;
                         _position_len   = wrapperLen;
                     }
