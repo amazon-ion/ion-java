@@ -149,9 +149,12 @@ final class IonReaderTextRawTokensX
      * Absorbs backslash-NL pairs, returning
      * {@link #CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1} etc.
      */
-    protected final int read_string_char() throws IOException
+    protected final int read_string_char(ProhibitedCharacters prohibitedCharacters) throws IOException
     {
         int c = _stream.read();
+        if (prohibitedCharacters.includes(c)) {
+            error("invalid character [" + printCodePointAsString(c) + "]");
+        }
         // the c == '\\' clause will cause us to eat ALL slash-newlines
         if (c == '\r' || c == '\n' || c == '\\') {
             c = line_count(c);
@@ -1803,7 +1806,7 @@ final class IonReaderTextRawTokensX
         // quoted symbol
 
         for (;;) {
-            c = read_string_char();
+            c = read_string_char(ProhibitedCharacters.NONE);
             switch (c) {
             case -1: unexpected_eof();
             case '\'':
@@ -1824,7 +1827,7 @@ final class IonReaderTextRawTokensX
         int c;
 
         for (;;) {
-            c = read_string_char();
+            c = read_string_char(ProhibitedCharacters.NONE);
             switch (c) {
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
@@ -1875,7 +1878,7 @@ final class IonReaderTextRawTokensX
     {
         int c;
         for (;;) {
-            c = read_string_char();
+            c = read_string_char(ProhibitedCharacters.NONE);
             switch (c) {
             case -1:
                 unexpected_eof(); // throws
@@ -1899,7 +1902,7 @@ final class IonReaderTextRawTokensX
         int c;
 
         for (;;) {
-            c = read_string_char();
+            c = read_string_char(ProhibitedCharacters.SHORT_CHAR);
             switch (c) {
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
@@ -2037,7 +2040,7 @@ final class IonReaderTextRawTokensX
 
     protected int read_triple_quoted_char(boolean is_clob) throws IOException
     {
-        int c = read_string_char();
+        int c = read_string_char(ProhibitedCharacters.LONG_CHAR);
         switch (c) {
         case '\'':
             if (is_2_single_quotes_helper()) {
@@ -2125,7 +2128,7 @@ final class IonReaderTextRawTokensX
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
                 // loop again, we don't want empty escape chars
-                c = read_string_char();
+                c = read_string_char(ProhibitedCharacters.NONE);
                 continue;
             case '\\':
                 c = read_char();
@@ -2138,7 +2141,7 @@ final class IonReaderTextRawTokensX
                  || c == CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3
                 ) {
                     // loop again, we don't want empty escape chars
-                    c = read_string_char();
+                    c = read_string_char(ProhibitedCharacters.NONE);
                     continue;
                 }
                 if (c == IonTokenConstsX.ESCAPE_NOT_DEFINED) bad_escape_sequence();
@@ -2538,5 +2541,30 @@ final class IonReaderTextRawTokensX
         IonReaderTextTokenException(String msg) {
             super(msg);
         }
+    }
+
+    private enum ProhibitedCharacters {
+        SHORT_CHAR
+        {
+            boolean includes(int i) {
+                return (i <= 0x001F && 0x0000 <= i) || (i <= 0x009F && 0x007F <= i);
+            }
+        },
+
+        LONG_CHAR
+        {
+            boolean includes(int i) {
+                return i <= 0x000B && i != 0x000A && 0x0000 <= i;
+            }
+        },
+
+        NONE
+        {
+            boolean includes(int i) {
+                return false;
+            }
+        };
+
+        abstract boolean includes(int i);
     }
 }

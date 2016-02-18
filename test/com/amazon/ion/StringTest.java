@@ -187,10 +187,6 @@ public class StringTest
         expected = "\u0123 \u1234 \uceed"; // was \ufeed but that's an illegal unicode scalar
         value = (IonString) oneValue('"'+expected+'"');
         checkString(expected, value);
-
-        expected = "\u0000 \u0007 \u0012 \u0123 \u1234 \uceed"; // was \ufeed but that's an illegal unicode scalar
-        value = (IonString) oneValue('"'+expected+'"');
-        checkString(expected, value);
     }
 
     @Test
@@ -251,5 +247,90 @@ public class StringTest
         testSimpleClone("null.string");
         testSimpleClone("\"\"");
         testSimpleClone("\"root\"");
+    }
+
+    @Test
+    public void testLongStringIllegalUnicodeControlCharacters() {
+        badValue("'''\u0000'''");
+        badValue("'''\u0001'''");
+        badValue("'''\u0002'''");
+        badValue("'''\u0003'''");
+        badValue("'''\u0004'''");
+        badValue("'''\u0005'''");
+        badValue("'''\u0006'''");
+        badValue("'''\u0007'''");
+        badValue("'''\u0008'''");
+        badValue("'''\u0009'''");
+        // 000A is allowed
+        badValue("'''\u000B'''");
+    }
+
+    @Test
+    public void testShortStringIllegalUnicodeControlCharacters() {
+        badValue("\"\u0000\"");
+        badValue("\"\u0001\"");
+        badValue("\"\u0002\"");
+        badValue("\"\u0003\"");
+        badValue("\"\u0004\"");
+        badValue("\"\u0005\"");
+        badValue("\"\u0006\"");
+        badValue("\"\u0007\"");
+        badValue("\"\u0008\"");
+        badValue("\"\u0009\"");
+        badValue("\"\n\""); // 000A
+        badValue("\"\u000B\"");
+        badValue("\"\u000C\"");
+        badValue("\"\r\""); // 000D
+        badValue("\"\u000E\"");
+        badValue("\"\u000F\"");
+        badValue("\"\u0010\"");
+        badValue("\"\u0011\"");
+        badValue("\"\u0012\"");
+        badValue("\"\u0013\"");
+        badValue("\"\u0014\"");
+        badValue("\"\u0015\"");
+        badValue("\"\u0016\"");
+        badValue("\"\u0017\"");
+        badValue("\"\u0018\"");
+        badValue("\"\u0019\"");
+        badValue("\"\u001A\"");
+        badValue("\"\u001B\"");
+        badValue("\"\u001C\"");
+        badValue("\"\u001D\"");
+        badValue("\"\u001E\"");
+        badValue("\"\u001F\"");
+
+        badValue("\"\u007F\"");
+        badValue("\"\u0080\"");
+        badValue("\"\u0081\"");
+        badValue("\"\u0082\"");
+        badValue("\"\u0084\"");
+        badValue("\"\u0085\"");
+        badValue("\"\u0086\"");
+        badValue("\"\u0087\"");
+        badValue("\"\u0088\"");
+        badValue("\"\u0089\"");
+        badValue("\"\u008A\"");
+        badValue("\"\u008B\"");
+        badValue("\"\u008C\"");
+        badValue("\"\u008D\"");
+        badValue("\"\u008E\"");
+        badValue("\"\u008F\"");
+        badValue("\"\u0090\"");
+        badValue("\"\u0091\"");
+        badValue("\"\u0092\"");
+        badValue("\"\u0093\"");
+        badValue("\"\u0094\"");
+        badValue("\"\u0095\"");
+        badValue("\"\u0096\"");
+        badValue("\"\u0097\"");
+        badValue("\"\u0098\"");
+        badValue("\"\u0099\"");
+        badValue("\"\u009A\"");
+        badValue("\"\u009B\"");
+        badValue("\"\u009C\"");
+        badValue("\"\u009D\"");
+        badValue("\"\u009E\"");
+        badValue("\"\u009F\"");
     }
 }
