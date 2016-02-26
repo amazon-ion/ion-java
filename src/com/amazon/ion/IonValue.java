@@ -1,9 +1,10 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+// Copyright (c) 2007-2016 Amazon.com, Inc.  All rights reserved.
 
 package com.amazon.ion;
 
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Base type for all Ion data nodes.
@@ -109,10 +110,52 @@ import java.util.Collections;
  * Your application must perform its own synchronization if you need to access
  * {@code IonValues} from multiple threads. This is true even for read-only use
  * cases, since implementations may perform lazy materialization or other state
- * changes internally. Alternatively, you can invoke
- * {@link #makeReadOnly()} from a single thread, after which point the value
- * (and all recursively contained values) will be immutable and hence
- * thread-safe.
+ * changes internally.
+ * <p>
+ * Alternatively, you can invoke {@link #makeReadOnly()} from a single thread,
+ * <b>after</b> which point the value (and all recursively contained values) will
+ * be immutable and hence thread-safe.
+ * <p>
+ * It is important to note that {@link #makeReadOnly()} is not guaranteed to
+ * implicitly provide a synchronization point between threads.
+ * This means it is the responsibility of the application to make sure
+ * operations on a thread other than the one that invoked {@link #makeReadOnly()}
+ * causally happen <b>after</b> that invocation observing the rules of
+ * the Java Memory Model (JSR-133).
+ * <p>
+ * Here is an example of ensuring the correct ordering for multiple threads
+ * accessing an {@link IonValue} using a {@link CountDownLatch} to explicitly
+ * create a the temporal relationship:
+ * <p>
+ * <pre>
+ *      // ...
+ *      // Shared Between Threads
+ *      // ...
+ *
+ *      IonValue value = ...;
+ *      CountDownLatch latch = new CountDownLatch(1);
+ *
+ *      // ...
+ *      // Thread 1
+ *      // ...
+ *
+ *      value.makeReadOnly();
+ *      latch.countDown();
+ *
+ *      // ...
+ *      // Thread 2
+ *      // ...
+ *
+ *      // before this point operations on 'value' are not defined
+ *      latch.await();
+ *      // we can now operate (in a read-only way) on 'value'
+ *      value.isNullValue();
+ * </pre>
+ * <p>
+ * In the above, two threads have a reference to <code>value</code>.
+ * <code>latch</code> in this example provides a way to synchronize
+ * when {@link #makeReadOnly()} happens in the first thread relative
+ * to {@link #isNullValue()} being invoked on the second thread.
  */
 public interface IonValue
     extends Cloneable
