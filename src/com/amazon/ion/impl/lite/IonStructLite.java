@@ -68,6 +68,14 @@ final class IonStructLite
         return clone(ContainerlessContext.wrap(getSystem()));
     }
 
+    @Override
+    protected void transitionToLargeSize(int size)
+    {
+        if (_field_map != null) return;
+
+        build_field_map();
+        return;
+    }
     protected void build_field_map()
     {
         int size = (_children == null) ? 0 : _children.length;
@@ -398,18 +406,10 @@ final class IonStructLite
     {
         validateFieldName(fieldName);
 
-        if (isNullValue() || _children == null) {
+        if (isNullValue()) {
             // nothing to see here, move along
         }
-        // if the number of values is greater than the Mapify threshold - get() will be
-        // conducted against the _field_map rather than by iterating the children
-        else if (_children.length > IonContainerLite.STRUCT_CHILDREN_MAPIFY_THRESHOLD) {
-            // field map is *lazy initialized* to avoid building maps during deserialization
-            // which are then never accessed in the consuming logic in a 'map' style fashion
-            // i.e. are never visited or are iterated over as a container
-            if (_field_map == null) {
-                build_field_map();
-            }
+        else if (_field_map != null) {
             Integer idx = _field_map.get(fieldName);
             if (idx != null) {
                 return idx.intValue();
