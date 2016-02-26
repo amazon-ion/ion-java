@@ -151,19 +151,22 @@ extends Suite
     public Injected(Class<?> klass)
     throws Throwable
     {
-        super(klass, new ArrayList<Runner>());
-
-        Dimension[] dimensions = findDimensions();
-        assert dimensions.length != 0;
-
-        fanout(klass, dimensions, new int[dimensions.length], 0);
+        super(klass, fanout(klass));
     }
 
+    private static List<Runner> fanout(Class<?> klass) throws Throwable
+    {
+        Dimension[] dimensions = findDimensions(new TestClass(klass));
+        assert dimensions.length != 0;
 
-    private void fanout(Class<?> klass,
-                        Dimension[] dimensions,
-                        int[] valueIndices,
-                        int dimensionIndex)
+        return fanout(klass, new ArrayList<Runner>(), dimensions, new int[dimensions.length], 0);
+    }
+
+    private static List<Runner> fanout(Class<?> klass,
+                                       List<Runner> runners,
+                                       Dimension[] dimensions,
+                                       int[] valueIndices,
+                                       int dimensionIndex)
     throws InitializationError
     {
         assert dimensions.length == valueIndices.length;
@@ -172,7 +175,7 @@ extends Suite
         {
             InjectedRunner runner =
                 new InjectedRunner(klass, dimensions, valueIndices);
-            getChildren().add(runner);
+            runners.add(runner);
         }
         else
         {
@@ -182,17 +185,16 @@ extends Suite
             {
                 int[] childIndexes = valueIndices.clone();
                 childIndexes[dimensionIndex] = i;
-                fanout(klass, dimensions, childIndexes, dimensionIndex + 1);
+                fanout(klass, runners, dimensions, childIndexes, dimensionIndex + 1);
             }
         }
+        return runners;
     }
 
 
-    private Dimension[] findDimensions()
+    private static Dimension[] findDimensions(TestClass testClass)
     throws Throwable
     {
-        TestClass testClass = getTestClass();
-
         List<FrameworkField> fields =
             testClass.getAnnotatedFields(Inject.class);
         if (fields.isEmpty())
@@ -228,7 +230,7 @@ extends Suite
     }
 
 
-    private PropertyDescriptor findDescriptor(TestClass testClass,
+    private static PropertyDescriptor findDescriptor(TestClass testClass,
                                               PropertyDescriptor[] descriptors,
                                               FrameworkField field,
                                               String name)
