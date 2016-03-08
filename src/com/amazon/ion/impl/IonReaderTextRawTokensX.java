@@ -2548,7 +2548,7 @@ final class IonReaderTextRawTokensX
         {
             boolean includes(int c)
             {
-                return (c <= 0x001F && 0x0000 <= c) || (c <= 0x009F && 0x007F <= c);
+                return isControlCharacter(c);
             }
         },
 
@@ -2556,7 +2556,7 @@ final class IonReaderTextRawTokensX
         {
             boolean includes(int c)
             {
-                return c <= 0x000B && c != 0x000A && 0x0000 <= c;
+                return isControlCharacter(c) && !isNewline(c);
             }
         },
 
@@ -2569,5 +2569,15 @@ final class IonReaderTextRawTokensX
         };
 
         abstract boolean includes(int c);
+
+        private static boolean isControlCharacter(int c)
+        {
+            return c <= 0x1F && 0x00 <= c;
+        }
+
+        private static boolean isNewline(int c)
+        {
+            return c == 0x0A || c == 0x0D;
+        }
     }
 }

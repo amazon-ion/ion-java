@@ -263,6 +263,26 @@ public class StringTest
         badValue("'''\u0009'''");
         // 000A is allowed
         badValue("'''\u000B'''");
+        badValue("'''\u000C'''");
+        // 000D is allowed
+        badValue("'''\u000E'''");
+        badValue("'''\u000F'''");
+        badValue("'''\u0010'''");
+        badValue("'''\u0011'''");
+        badValue("'''\u0012'''");
+        badValue("'''\u0013'''");
+        badValue("'''\u0014'''");
+        badValue("'''\u0015'''");
+        badValue("'''\u0016'''");
+        badValue("'''\u0017'''");
+        badValue("'''\u0018'''");
+        badValue("'''\u0019'''");
+        badValue("'''\u001A'''");
+        badValue("'''\u001B'''");
+        badValue("'''\u001C'''");
+        badValue("'''\u001D'''");
+        badValue("'''\u001E'''");
+        badValue("'''\u001F'''");
     }
 
     @Test
@@ -299,38 +319,5 @@ public class StringTest
         badValue("\"\u001D\"");
         badValue("\"\u001E\"");
         badValue("\"\u001F\"");
-
-        badValue("\"\u007F\"");
-        badValue("\"\u0080\"");
-        badValue("\"\u0081\"");
-        badValue("\"\u0082\"");
-        badValue("\"\u0084\"");
-        badValue("\"\u0085\"");
-        badValue("\"\u0086\"");
-        badValue("\"\u0087\"");
-        badValue("\"\u0088\"");
-        badValue("\"\u0089\"");
-        badValue("\"\u008A\"");
-        badValue("\"\u008B\"");
-        badValue("\"\u008C\"");
-        badValue("\"\u008D\"");
-        badValue("\"\u008E\"");
-        badValue("\"\u008F\"");
-        badValue("\"\u0090\"");
-        badValue("\"\u0091\"");
-        badValue("\"\u0092\"");
-        badValue("\"\u0093\"");
-        badValue("\"\u0094\"");
-        badValue("\"\u0095\"");
-        badValue("\"\u0096\"");
-        badValue("\"\u0097\"");
-        badValue("\"\u0098\"");
-        badValue("\"\u0099\"");
-        badValue("\"\u009A\"");
-        badValue("\"\u009B\"");
-        badValue("\"\u009C\"");
-        badValue("\"\u009D\"");
-        badValue("\"\u009E\"");
-        badValue("\"\u009F\"");
     }
 }
