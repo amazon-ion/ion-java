@@ -2546,25 +2546,28 @@ final class IonReaderTextRawTokensX
     private enum ProhibitedCharacters {
         SHORT_CHAR
         {
-            boolean includes(int i) {
-                return (i <= 0x001F && 0x0000 <= i) || (i <= 0x009F && 0x007F <= i);
+            boolean includes(int c)
+            {
+                return (c <= 0x001F && 0x0000 <= c) || (c <= 0x009F && 0x007F <= c);
             }
         },
 
         LONG_CHAR
         {
-            boolean includes(int i) {
-                return i <= 0x000B && i != 0x000A && 0x0000 <= i;
+            boolean includes(int c)
+            {
+                return c <= 0x000B && c != 0x000A && 0x0000 <= c;
             }
         },
 
         NONE
         {
-            boolean includes(int i) {
+            boolean includes(int c)
+            {
                 return false;
             }
         };
 
-        abstract boolean includes(int i);
+        abstract boolean includes(int c);
     }
 }
