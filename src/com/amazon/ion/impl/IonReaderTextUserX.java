@@ -16,6 +16,8 @@ import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TextSpan;
+import com.amazon.ion.UnsupportedIonVersionException;
+import java.util.regex.Pattern;
 
 /**
  *    The text user reader add support for symbols and recognizes,
@@ -42,6 +44,8 @@ class IonReaderTextUserX
     extends IonReaderTextSystemX
     implements _Private_ReaderWriter
 {
+    private static final Pattern ION_VERSION_MARKER_REGEX = Pattern.compile("^\\$ion_[0-9]+_[0-9]+$");
+
     /**
      * This is the physical start-of-stream offset when this reader was created.
      * It must be subtracted from the logical offsets exposed by
@@ -151,14 +155,22 @@ class IonReaderTextUserX
                     }
                     break;
                 case SYMBOL:
-                    if (_annotation_count == 0) {
+                    if (_annotation_count == 0)
+                    {
                         // $ion_1_0 is read as an IVM only if it is not annotated
-                        SymbolToken is = symbolValue();
-                        String sym = is.getText();
-                        if (ION_1_0.equals(sym)) {
-                            symbol_table_reset();
-                            push_symbol_table(_system.getSystemSymbolTable());
-                            _has_next_called = false;
+                        String version = symbolValue().getText();
+                        if (isIonVersionMarker(version))
+                        {
+                            if (ION_1_0.equals(version))
+                            {
+                                symbol_table_reset();
+                                push_symbol_table(_system.getSystemSymbolTable());
+                                _has_next_called = false;
+                            }
+                            else
+                            {
+                                throw new UnsupportedIonVersionException(version);
+                            }
                         }
                     }
                     break;
@@ -169,6 +181,12 @@ class IonReaderTextUserX
         }
         return (_eof != true);
     }
+
+    private static boolean isIonVersionMarker(String text)
+    {
+        return text != null && ION_VERSION_MARKER_REGEX.matcher(text).matches();
+    }
+
     private final void symbol_table_reset()
     {
         IonType t = next();

@@ -123,7 +123,6 @@ public class TestUtils
         new FileIsNot(
                        "bad/annotationNested.10n"          // TODO IONJAVA-154
                       ,"bad/emptyAnnotatedInt.10n"         // TODO IONJAVA-154
-                      ,"bad/invalidVersionMarkers.ion"     // TODO IONJAVA-21
                       ,"bad/utf8/surrogate_5.ion"          // TODO IONJAVA-487
                       ,"equivs/paddedInts.10n"             // TODO IONJAVA-153
                       ,"good/utf16.ion"                    // TODO IONJAVA-488

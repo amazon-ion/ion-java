@@ -203,4 +203,28 @@ public class SymbolTest
     {
         badValue("'\\\n'");
     }
+
+    @Test(expected = UnsupportedIonVersionException.class)
+    public void rejectsUnsupportedVersion_0_0()
+    {
+        system().singleValue("$ion_0_0");
+    }
+
+    @Test(expected = UnsupportedIonVersionException.class)
+    public void rejectsUnsupportedVersion_1_1()
+    {
+        system().singleValue("$ion_1_1");
+    }
+
+    @Test(expected = UnsupportedIonVersionException.class)
+    public void rejectsUnsupportedVersion_2_0()
+    {
+        system().singleValue("$ion_2_0");
+    }
+
+    @Test(expected = UnsupportedIonVersionException.class)
+    public void rejectsUnsupportedVersion_1234_0()
+    {
+        system().singleValue("$ion_1234_0");
+    }
 }
