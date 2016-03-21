@@ -125,6 +125,7 @@ public class TestUtils
                       ,"bad/emptyAnnotatedInt.10n"         // TODO IONJAVA-154
                       ,"bad/utf8/surrogate_5.ion"          // TODO IONJAVA-487
                       ,"equivs/paddedInts.10n"             // TODO IONJAVA-153
+                      ,"good/subfieldVarUInt64bit.ion"     // TODO IONJAVA-78
                       ,"good/utf16.ion"                    // TODO IONJAVA-488
                       ,"good/utf32.ion"                    // TODO IONJAVA-488
                       );
