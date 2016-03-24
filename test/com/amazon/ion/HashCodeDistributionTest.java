@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Chi-square test for {@link IonValue#hashCode()} implementations.
@@ -30,6 +31,7 @@ import org.junit.Test;
  * <p>
  * See Knuth vol. 2 sec 3.3.1 for background.
  */
+@Ignore
 public class HashCodeDistributionTest
     extends IonTestCase
 {
