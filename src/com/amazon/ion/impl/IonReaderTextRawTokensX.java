@@ -437,8 +437,8 @@ final class IonReaderTextRawTokensX
     }
 
     /** Expects optional whitespace then }} */
-    protected final void skip_lob_close_punctuation() throws IOException {
-        int c = skip_over_whitespace();
+    protected final void skip_clob_close_punctuation() throws IOException {
+        int c = skip_over_clob_whitespace();
         if (c == '}') {
             c = read_char();
             if (c == '}') {
@@ -689,49 +689,160 @@ final class IonReaderTextRawTokensX
         return _token;
     }
 
-    private final int skip_over_whitespace() throws IOException
+    /**
+     * Defines strategies to apply when comments are encountered.
+     */
+    private enum CommentStrategy
     {
-        int c, c2;
+        /**
+         * Skip over all of the comment's text.
+         */
+        IGNORE
+        {
 
-        loop: for (;;) {
-            c = read_char();
-            switch (c) {
-            case -1:
-                break loop;
-            case ' ':
-            case '\t':
-            // new line normalization and counting is handled in read_char
-            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
-            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
-            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
-            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
-            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
-            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
-                break;
-            case '/':
-                switch(c2 = read_char()) {
+            @Override
+            boolean onComment(IonReaderTextRawTokensX tokenizer)
+                throws IOException
+            {
+                int next = tokenizer.read_char();
+                switch(next) {
                 case '/':
-                    skip_single_line_comment();
-                    break;
+                    tokenizer.skip_single_line_comment();
+                    return true; // valid comment
                 case '*':
-                    skip_block_comment();
-                    break;
+                    tokenizer.skip_block_comment();
+                    return true; // valid comment
                 default:
-                    unread_char(c2);
-                    break loop;
+                    tokenizer.unread_char(next);
+                    return false; // invalid comment
                 }
-                break;
-            default:
-                break loop;
             }
-        }
-        return c;
+
+        },
+        /**
+         * If it's a valid comment, throw an error.
+         */
+        ERROR
+        {
+
+            @Override
+            boolean onComment(IonReaderTextRawTokensX tokenizer)
+                throws IOException
+            {
+                int next = tokenizer.read_char();
+                if (next == '/' || next == '*')
+                {
+                    tokenizer.error("Illegal comment");
+                }
+                else
+                {
+                    tokenizer.unread_char(next);
+                }
+                return false; // invalid comment
+            }
+
+        },
+        /**
+         * A '/' character has been found, so break the loop as it may be a valid blob character.
+         */
+        BREAK
+        {
+
+            @Override
+            boolean onComment(IonReaderTextRawTokensX tokenizer)
+                throws IOException
+            {
+                return false;
+            }
+
+        };
+
+        /**
+         * Called when positioned after the first '/'.
+         * @return true if a valid comment was found, otherwise false
+         * @throws IonReaderTextTokenException when the ERROR strategy encounters a comment
+         */
+        abstract boolean onComment(IonReaderTextRawTokensX tokenizer) throws IOException;
     }
 
+    /**
+     * Skip over any whitespace, ignoring any comments.
+     * @return the next character in the stream
+     * @throws IOException
+     */
+    private final int skip_over_whitespace() throws IOException
+    {
+        return skip_over_whitespace(CommentStrategy.IGNORE);
+    }
+
+    /**
+     * Skip over any whitespace, applying the given CommentStrategy to
+     * any comments found.
+     * @param commentStrategy the strategy to use upon encountering comments.
+     * @return the next character in the stream
+     * @throws IOException
+     */
+    private final int skip_over_whitespace(CommentStrategy commentStrategy) throws IOException
+    {
+        skip_whitespace(commentStrategy);
+        return read_char();
+    }
+
+    /**
+     * The type of lob is not yet known. Break the loop on encountering
+     * a / character and defer to the blob validation.
+     * @return the next character in the stream
+     * @throws IOException
+     */
+    private final int skip_over_lob_whitespace() throws IOException
+    {
+        return skip_over_blob_whitespace();
+    }
+
+    /**
+     * Skip over whitespace, but not the / character, as it's a valid
+     * Base64 character.
+     * @return the next character in the stream
+     * @throws IOException
+     */
+    private final int skip_over_blob_whitespace() throws IOException
+    {
+        return skip_over_whitespace(CommentStrategy.BREAK);
+    }
+
+    /**
+     * Skip over the whitespace after the clob string and before the closing
+     * braces. Throw if a comment is encountered.
+     * @return the next character in the stream
+     * @throws IOException
+     */
+    private final int skip_over_clob_whitespace() throws IOException
+    {
+        return skip_over_whitespace(CommentStrategy.ERROR);
+    }
+
+    /**
+     * Skips whitespace and comments and finishes at the starting position
+     * of the next token.
+     * @return true if whitespace or comments were encountered
+     * @throws IOException
+     */
     protected final boolean skip_whitespace() throws IOException
     {
+        return skip_whitespace(CommentStrategy.IGNORE);
+    }
+
+    /**
+     * Skips whitespace and applies the given CommentStrategy to any comments
+     * found. Finishes at the starting position of the next token.
+     * @param commentStrategy
+     * @return true if whitespace was skipped and/or comments ignored
+     * @throws IOException
+     */
+    private final boolean skip_whitespace(CommentStrategy commentStrategy) throws IOException
+    {
         boolean any_whitespace = false;
-        int c, c2;
+        int c;
 
         loop: for (;;) {
             c = read_char();
@@ -750,15 +861,8 @@ final class IonReaderTextRawTokensX
                 any_whitespace = true;
                 break;
             case '/':
-                switch(c2 = read_char()) {
-                case '/':
-                    skip_single_line_comment();
-                    break;
-                case '*':
-                    skip_block_comment();
-                    break;
-                default:
-                    unread_char(c2);
+                if (!commentStrategy.onComment(this))
+                {
                     break loop;
                 }
                 any_whitespace = true;
@@ -769,32 +873,6 @@ final class IonReaderTextRawTokensX
         }
         unread_char(c);
         return any_whitespace;
-    }
-
-    private final int skip_over_lob_whitespace() throws IOException
-    {
-        int c;
-
-        for (;;) {
-            c = read_char();
-            switch (c) {
-            case -1:
-                unread_char(c);
-                return c;
-            case ' ':
-            case '\t':
-            // new line normalization and counting is handled in read_char
-            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
-            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
-            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
-            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
-            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
-            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
-                break;
-            default:
-                return c;
-            }
-        }
     }
 
     private final void skip_single_line_comment() throws IOException
@@ -1960,7 +2038,30 @@ final class IonReaderTextRawTokensX
         return c;
     }
 
+    /**
+     * Skip to the end of a triple quoted string sequence, ignoring any
+     * comments encountered between triple quoted string elements.
+     * @param sp
+     * @throws IOException
+     */
     private void skip_triple_quoted_string(SavePoint sp) throws IOException
+    {
+        skip_triple_quoted_string(sp, CommentStrategy.IGNORE);
+    }
+
+    /**
+     * Skip to the end of a triple quoted string sequence within a clob,
+     * erroring on any comments encountered between triple quoted string
+     * elements.
+     * @param sp
+     * @throws IOException
+     */
+    private void skip_triple_quoted_clob_string(SavePoint sp) throws IOException
+    {
+        skip_triple_quoted_string(sp, CommentStrategy.ERROR);
+    }
+
+    private void skip_triple_quoted_string(SavePoint sp, CommentStrategy commentStrategy) throws IOException
     {
         // starts AFTER the 3 quotes have been consumed
         int c;
@@ -1977,7 +2078,7 @@ final class IonReaderTextRawTokensX
                         sp.markEnd(-3);
                     }
                     if (c == '\'') { // it is the 3rd quote - end of this segment
-                        c = skip_over_whitespace();
+                        c = skip_over_whitespace(commentStrategy);
                         if (c == '\'' && is_2_single_quotes_helper()) {
                             // there's another segment so read the next segment as well
                             break;
@@ -2086,11 +2187,11 @@ final class IonReaderTextRawTokensX
         switch(lobToken) {
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
             skip_double_quoted_string(sp);
-            skip_lob_close_punctuation();
+            skip_clob_close_punctuation();
             break;
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
-            skip_triple_quoted_string(sp);
-            skip_lob_close_punctuation();
+            skip_triple_quoted_clob_string(sp);
+            skip_clob_close_punctuation();
             break;
         case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
             skip_over_blob(sp);
@@ -2212,11 +2313,11 @@ final class IonReaderTextRawTokensX
 
     private void skip_over_blob(SavePoint sp) throws IOException
     {
-        int c = skip_over_lob_whitespace();
+        int c = skip_over_blob_whitespace();
         for (;;) {
             if (c == UnifiedInputStreamX.EOF) break;
             if (c == '}') break;
-            c = skip_over_lob_whitespace();
+            c = skip_over_blob_whitespace();
         }
         if (sp != null) {
             // we don't care about these last 2 closing curly braces
@@ -2354,7 +2455,7 @@ final class IonReaderTextRawTokensX
         // will be 1 byte returned immediately and 0-2 bytes
         // put on the _binhex_stack to return later
 
-        int c = skip_over_lob_whitespace();
+        int c = skip_over_blob_whitespace();
         if (c == UnifiedInputStreamX.EOF || c == '}') {
             // we'll figure how which is which by check the stream for eof
             return UnifiedInputStreamX.EOF;
@@ -2400,7 +2501,7 @@ final class IonReaderTextRawTokensX
         return read_base64_getchar_helper2(c);
     }
     private final int read_base64_getchar_helper() throws IOException {
-        int c = skip_over_lob_whitespace();
+        int c = skip_over_blob_whitespace();
         if (c == UnifiedInputStreamX.EOF || c == '}') {
             error("invalid base64 image - too short");
         }
