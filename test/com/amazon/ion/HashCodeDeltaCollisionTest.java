@@ -197,7 +197,7 @@ public class HashCodeDeltaCollisionTest
                     new IonValueDeltaGenerator.Builder()
                         .ionSystem(ionSystem)
                         .delta(delta)
-                        .size(10000)
+                        .size(800)
                         .baseValue(baseTimestamp)
                         .deltaType(deltaType)
                         .build();

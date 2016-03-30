@@ -61,6 +61,16 @@ import java.util.GregorianCalendar;
 public final class Timestamp
     implements Comparable<Timestamp>, Cloneable
 {
+    private static final boolean APPLY_OFFSET_YES = true;
+    private static final boolean APPLY_OFFSET_NO = false;
+
+    private static final int NO_MONTH = 0;
+    private static final int NO_DAY = 0;
+    private static final int NO_HOURS = 0;
+    private static final int NO_MINUTES = 0;
+    private static final int NO_SECONDS = 0;
+    private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
+
     /**
      * Unknown local offset from UTC.
      */
@@ -70,10 +80,6 @@ public final class Timestamp
      * Local offset of zero hours from UTC.
      */
     public static final Integer UTC_OFFSET = Integer.valueOf(0);
-
-    /** Used to check limits of decimal seconds. */
-    private static final BigDecimal SIXTY = BigDecimal.valueOf(60);
-
 
     /**
      * The precision of the Timestamp.
@@ -240,12 +246,12 @@ public final class Timestamp
         Date date = new Date(millis);
 
         // These fields are in the system timezone!
-        this._year    = (short)(date.getYear() + 1900);
-        this._month   = (byte)(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
-        this._day     = (byte)date.getDate();
-        this._hour    = (byte)date.getHours();
-        this._minute  = (byte)date.getMinutes();
-        this._second  = (byte)date.getSeconds();
+        this._year    = checkAndCastYear(date.getYear() + 1900);
+        this._month   = checkAndCastMonth(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
+        this._day     = checkAndCastDay(date.getDate(), _year, _month);
+        this._hour    = checkAndCastHour(date.getHours());
+        this._minute  = checkAndCastMinute(date.getMinutes());
+        this._second  = checkAndCastSecond(date.getSeconds());
 
         // this is done because the y-m-d values are in the local timezone
         // so this adjusts the value back to zulu time (UTC)
@@ -269,17 +275,18 @@ public final class Timestamp
     {
         _precision = precision;
         _offset = UNKNOWN_OFFSET;
+        boolean dayPrecision = false;
 
         switch (this._precision) {
             case FRACTION:
                 BigDecimal millis = BigDecimal.valueOf(cal.get(Calendar.MILLISECOND));
                 this._fraction = millis.movePointLeft(3); // convert to fraction
             case SECOND:
-                this._second = (byte)cal.get(Calendar.SECOND);
+                this._second = checkAndCastSecond(cal.get(Calendar.SECOND));
             case MINUTE:
             {
-                this._hour   = (byte)cal.get(Calendar.HOUR_OF_DAY);
-                this._minute = (byte)cal.get(Calendar.MINUTE);
+                this._hour   = checkAndCastHour(cal.get(Calendar.HOUR_OF_DAY));
+                this._minute = checkAndCastMinute(cal.get(Calendar.MINUTE));
 
                 // If this test is made before calling get(), it will return
                 // false even when Calendar.setTimeZone() was called.
@@ -295,52 +302,23 @@ public final class Timestamp
                 }
             }
             case DAY:
-                this._day    = (byte)cal.get(Calendar.DAY_OF_MONTH);
+                dayPrecision = true;
             case MONTH:
                 // Calendar months are 0 based, Timestamp months are 1 based
-                this._month  = (byte)(cal.get(Calendar.MONTH) + 1);
+                this._month  = checkAndCastMonth((cal.get(Calendar.MONTH) + 1));
             case YEAR:
-                this._year   = (short)cal.get(Calendar.YEAR);
+                this._year   = checkAndCastYear(cal.get(Calendar.YEAR));
+        }
+
+        if (dayPrecision)
+        {
+            this._day = checkAndCastDay(cal.get(Calendar.DAY_OF_MONTH), _year, _month);
         }
 
         if (_offset != UNKNOWN_OFFSET) {
             // Transform our members from local time to Zulu
             this.apply_offset(_offset);
         }
-    }
-
-
-    private void validate_fields()
-    {
-        if (_year < 1  || _year > 9999) error_in_field("year must be between 1 and 9999 inclusive UTC, and local time");
-        if (_month < 1 || _month > 12) error_in_field("month is between 1 and 12 inclusive");
-        if (_day < 1   || _day > last_day_in_month(_year, _month)) {
-            error_in_field("Day in month " + _year + "-" + _month
-                           + " must between 1 and "
-                           + last_day_in_month(_year, _month) + " inclusive");
-        }
-
-        if (_hour < 0 || _hour > 23)     error_in_field("hour is between 0 and 23 inclusive");
-        if (_minute < 0 || _minute > 59) error_in_field("minute is between 0 and 59 inclusive");
-        if (_second < 0 || _second > 59) error_in_field("second is between 0 and 59 inclusive");
-
-        if (this._precision == Precision.FRACTION) {
-            if (_fraction == null) error_in_field("fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
-            if (_fraction.signum() == -1
-                || BigDecimal.ONE.compareTo(_fraction) != 1)
-            {
-                String message =
-                    "fractional seconds must be at least 0 and less than 1, " +
-                    "but was " + _fraction;
-                error_in_field(message);
-            }
-        }
-    }
-
-    private static void error_in_field(String message)
-    {
-        IllegalArgumentException e = new IllegalArgumentException(message);
-        throw e;
     }
 
     /**
@@ -350,11 +328,7 @@ public final class Timestamp
      */
     private Timestamp(int zyear)
     {
-        if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
-        this._precision = Precision.YEAR;
-        this._year   = (short)zyear;
-        validate_fields();
-        this._offset = UNKNOWN_OFFSET;
+        this(Precision.YEAR, zyear, NO_MONTH, NO_DAY, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
     }
 
     /**
@@ -364,13 +338,7 @@ public final class Timestamp
      */
     private Timestamp(int zyear, int zmonth)
     {
-        if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
-        if (zmonth < 1 || zmonth > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
-        this._precision = Precision.MONTH;
-        this._year   = (short)zyear;
-        this._month  = (byte)zmonth;
-        validate_fields();
-        this._offset = UNKNOWN_OFFSET;
+        this(Precision.MONTH, zyear, zmonth, NO_DAY, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
     }
 
     /**
@@ -384,16 +352,7 @@ public final class Timestamp
     @Deprecated
     public Timestamp(int zyear, int zmonth, int zday)
     {
-        if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
-        if (zmonth < 1 || zmonth > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
-        int end_of_month = last_day_in_month(zyear, zmonth);
-        if (zday < 1 || zday > end_of_month) throw new IllegalArgumentException("day is between 1 and "+end_of_month+" inclusive");
-        this._precision = Precision.DAY;
-        this._day       = (byte)zday;  // days are base 1 (as you'd expect)
-        this._month     = (byte)zmonth;
-        this._year      = (short)zyear;
-        validate_fields();
-        this._offset    = UNKNOWN_OFFSET;
+        this(Precision.DAY, zyear, zmonth, zday, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
     }
 
 
@@ -417,18 +376,7 @@ public final class Timestamp
                      int hour, int minute,
                      Integer offset)
     {
-        this._precision = Precision.MINUTE;
-        this._minute    = (byte)minute;
-        this._hour      = (byte)hour;
-        this._day       = (byte)day;  // days are base 1 (as you'd expect)
-        this._month     = (byte)month;
-        this._year      = (short)year;
-
-        validate_fields();
-        if (offset != null) {
-            this._offset = offset;
-            apply_offset(offset);
-        }
+        this(Precision.MINUTE, year, month, day, hour, minute, NO_SECONDS, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES);
     }
 
     /**
@@ -451,19 +399,7 @@ public final class Timestamp
                      int hour, int minute, int second,
                      Integer offset)
     {
-        this._precision = Precision.SECOND;
-        this._second    = (byte)second;
-        this._minute    = (byte)minute;
-        this._hour      = (byte)hour;
-        this._day       = (byte)day;  // days are base 1 (as you'd expect)
-        this._month     = (byte)month;
-        this._year      = (short)year;
-
-        validate_fields();
-        if (offset != null) {
-            this._offset = offset;
-            apply_offset(offset);
-        }
+        this(Precision.SECOND, year, month, day, hour, minute, second, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES);
     }
 
     /**
@@ -493,31 +429,7 @@ public final class Timestamp
                      int hour, int minute, int second, BigDecimal frac,
                      Integer offset)
     {
-        // When there's no fraction, use SECOND precision.  Otherwise, our
-        // comparisons will fail versus other constructors with equivalent
-        // data.
-        if (frac.equals(BigDecimal.ZERO))
-        {
-            _precision = Precision.SECOND;
-            _fraction = null;
-        }
-        else
-        {
-            _precision = Precision.FRACTION;
-            _fraction = frac.abs();
-        }
-        _second   = (byte)second;
-        _minute   = (byte)minute;
-        _hour     = (byte)hour;
-        _day      = (byte)day;  // days are base 1 (as you'd expect)
-        _month    = (byte)month;
-        _year     = (short)year;
-
-        validate_fields();
-        if (offset != null) {
-            this._offset = offset;
-            apply_offset(offset);
-        }
+        this(Precision.FRACTION, year, month, day, hour, minute, second, frac, offset, APPLY_OFFSET_YES);
     }
 
     /**
@@ -540,16 +452,18 @@ public final class Timestamp
      */
     private Timestamp(Precision p, int zyear, int zmonth, int zday,
                       int zhour, int zminute, int zsecond, BigDecimal frac,
-                      Integer offset)
+                      Integer offset, boolean shouldApplyOffset)
     {
-        _precision = p;
+        boolean dayPrecision = false;
+        boolean secondPrecision = false;
+
         switch (p) {
         default:
             throw new IllegalArgumentException("invalid Precision passed to constructor");
         case FRACTION:
             if (frac.equals(BigDecimal.ZERO))
             {
-                _precision = Precision.SECOND;
+                secondPrecision = true;
                 _fraction = null;
             }
             else
@@ -557,22 +471,29 @@ public final class Timestamp
                 _fraction = frac.abs();
             }
         case SECOND:
-            _second = (byte)zsecond;
+            _second = checkAndCastSecond(zsecond);
         case MINUTE:
-            _minute = (byte)zminute;
-            _hour   = (byte)zhour;
+            _minute = checkAndCastMinute(zminute);
+            _hour   = checkAndCastHour(zhour);
             _offset = offset;      // offset must be null for years/months/days
         case DAY:
-            _day    = (byte)zday;  // days are base 1 (as you'd expect)
+             dayPrecision = true;
         case MONTH:
-            _month  = (byte)zmonth;
+            _month  = checkAndCastMonth(zmonth);
         case YEAR:
-            _year   = (short)zyear;
+            _year   = checkAndCastYear(zyear);
         }
-        validate_fields();
-        // This doesn't call applyOffset() like the other constructors because
-        // we already expect the time parameters to be in UTC, and that's
-        // already what we're supposed to have.
+
+        if (dayPrecision)
+        {
+            _day    = checkAndCastDay(zday, zyear, zmonth);
+        }
+
+        _precision = checkPrecision(secondPrecision ? Precision.SECOND : p, _fraction);
+
+        if (shouldApplyOffset && offset != null) {
+            apply_offset(offset);
+        }
     }
 
     /**
@@ -633,7 +554,7 @@ public final class Timestamp
     {
         return new Timestamp(p, zyear, zmonth, zday,
                              zhour, zminute, zsecond, frac,
-                             offset);
+                             offset, APPLY_OFFSET_NO);
     }
 
     /**
@@ -708,8 +629,6 @@ public final class Timestamp
         long ms = millis.longValue();
         set_fields_from_millis(ms);
 
-        _precision = precision;
-
         switch (precision)
         {
             case YEAR:
@@ -731,8 +650,9 @@ public final class Timestamp
                 _fraction = secs.subtract(secsDown);
         }
 
+        _precision = checkPrecision(precision, _fraction);
+
         _offset = localOffset;
-        validate_fields();
     }
 
 
@@ -785,13 +705,12 @@ public final class Timestamp
             this._fraction = null;
         }
         else {
-            this._precision = Precision.FRACTION;
             BigDecimal secs = millis.movePointLeft(3);
             BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
             this._fraction = secs.subtract(secsDown);
+            this._precision = checkPrecision(Precision.FRACTION, _fraction);
         }
         this._offset = localOffset;
-        this.validate_fields();
     }
 
     /**
@@ -815,13 +734,12 @@ public final class Timestamp
         this.set_fields_from_millis(millis);
 
         // fractional seconds portion
-        this._precision = Precision.FRACTION;
         BigDecimal secs = BigDecimal.valueOf(millis).movePointLeft(3);
         BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
         this._fraction = secs.subtract(secsDown);
+        this._precision = checkPrecision(Precision.FRACTION, _fraction);
 
         this._offset = localOffset;
-        this.validate_fields();
     }
 
 
@@ -1047,11 +965,7 @@ public final class Timestamp
 
         Timestamp ts =
             new Timestamp(precision, year, month, day,
-                          hour, minute, seconds, fraction, offset);
-        if (offset != null) {
-            // if there is a local offset, we have to adjust the date/time value
-            ts.apply_offset(offset);
-        }
+                          hour, minute, seconds, fraction, offset, APPLY_OFFSET_YES);
         return ts;
     }
 
@@ -1137,7 +1051,8 @@ public final class Timestamp
                              _minute,
                              _second,
                              _fraction,
-                             _offset);
+                             _offset,
+                             APPLY_OFFSET_NO);
     }
 
     /**
@@ -1167,7 +1082,8 @@ public final class Timestamp
                                             _minute,
                                             _second,
                                             _fraction,
-                                            _offset);
+                                            _offset,
+                                            APPLY_OFFSET_NO);
         // explicitly apply the local offset to the time field values
         localtime.apply_offset(-offset);
 
@@ -1272,15 +1188,11 @@ public final class Timestamp
                                       int hour, int minute, BigDecimal second,
                                       Integer offset)
     {
-        if (second.signum() < 0 || second.compareTo(SIXTY) >= 0)
-        {
-            error_in_field("second must be at least 0 and less than 60");
-        }
         // Tease apart the whole and fractional seconds.
         // Storing them separately is silly.
         int s = second.intValue();
         BigDecimal frac = second.subtract(BigDecimal.valueOf(s));
-        return new Timestamp(year, month, day, hour, minute, s, frac, offset);
+        return new Timestamp(Precision.FRACTION, year, month, day, hour, minute, s, frac, offset, APPLY_OFFSET_YES);
     }
 
 
@@ -2477,5 +2389,82 @@ public final class Timestamp
             if (!this._fraction.equals(t._fraction)) return false;
         }
         return true;
+    }
+
+    private static short checkAndCastYear(int year)
+    {
+        if (year < 1 || year > 9999)
+        {
+            throw new IllegalArgumentException(String.format("Year %s must be between 1 and 9999 inclusive", year));
+        }
+
+        return (short) year;
+    }
+
+    private static byte checkAndCastMonth(int month)
+    {
+        if (month < 1 || month > 12)
+        {
+            throw new IllegalArgumentException(String.format("Month %s must be between 1 and 12 inclusive", month));
+        }
+
+        return (byte) month;
+    }
+
+    private static byte checkAndCastDay(int day, int year, int month)
+    {
+        int lastDayInMonth = last_day_in_month(year, month);
+        if (day < 1 || day > lastDayInMonth) {
+            throw new IllegalArgumentException(String.format("Day %s for year %s and month %s must be between 1 and %s inclusive", day, year, month, lastDayInMonth));
+        }
+
+        return (byte) day;
+    }
+
+    private static byte checkAndCastHour(int hour)
+    {
+        if (hour < 0 || hour > 23)
+        {
+            throw new IllegalArgumentException(String.format("Hour %s must be between 0 and 23 inclusive", hour));
+        }
+
+        return (byte) hour;
+    }
+
+    private static byte checkAndCastMinute(int minute)
+    {
+        if (minute < 0 || minute > 59)
+        {
+            throw new IllegalArgumentException(String.format("Minute %s must be between between 0 and 59 inclusive", minute));
+        }
+
+        return (byte) minute;
+    }
+
+    private static byte checkAndCastSecond(int second)
+    {
+        if (second < 0 || second > 59)
+        {
+            throw new IllegalArgumentException(String.format("Second %s must be between between 0 and 59 inclusive", second));
+        }
+
+        return (byte) second;
+    }
+
+    private static Precision checkPrecision(Precision precision, BigDecimal fraction)
+    {
+        if (precision == Precision.FRACTION) {
+            if (fraction == null)
+            {
+                throw new IllegalArgumentException("Fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
+            }
+            if (fraction.signum() == -1
+                || BigDecimal.ONE.compareTo(fraction) != 1)
+            {
+                throw new IllegalArgumentException(String.format("Fractional seconds %s must be greater than or equal to 0 and less than 1", fraction));
+            }
+        }
+
+        return precision;
     }
 }

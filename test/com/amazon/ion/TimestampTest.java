@@ -2062,15 +2062,171 @@ public class TimestampTest
         checkTimestamp("2016T", Timestamp.forYear(2016));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void forYearRejectsZeroYear()
+    {
+        Timestamp.forYear(0);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forYearRejectsNegativeYear()
+    {
+        Timestamp.forYear(-999);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forYearRejectsLargeYear()
+    {
+        Timestamp.forYear(10000);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forYearRejectsYearWithUpperBitsSet()
+    {
+        Timestamp.forYear(0x7FFFFF00 + 2016);
+    }
+
     @Test
     public void forMonth()
     {
         checkTimestamp("2016-03T", Timestamp.forMonth(2016, 3));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsZeroYear()
+    {
+        Timestamp.forMonth(0,  1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsNegativeYear()
+    {
+        Timestamp.forMonth(-123, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsLargeYear()
+    {
+        Timestamp.forMonth(12345, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsYearWithUpperBitsSet()
+    {
+        Timestamp.forMonth(0x7FFFFF00 + 2016, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsZeroMonth()
+    {
+        Timestamp.forMonth(2016, 0);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsNegativeMonth()
+    {
+        Timestamp.forMonth(2016, -12);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsLargeMonth()
+    {
+        Timestamp.forMonth(2016, 13);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forMonthRejectsMonthWithUpperBitsSet()
+    {
+        Timestamp.forMonth(2016, 0x7FFFFF00 + 3);
+    }
+
     @Test
     public void forDay()
     {
         checkTimestamp("2016-03-31", Timestamp.forDay(2016, 3, 31));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsZeroYear()
+    {
+        Timestamp.forDay(0, 3, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsNegativeYear()
+    {
+        Timestamp.forDay(-999, 3, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsLargeYear()
+    {
+        Timestamp.forDay(10000, 3, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsYearWithUpperBitsSet()
+    {
+        Timestamp.forDay(0x7FFFFF00 + 2016, 3, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsZeroMonth()
+    {
+        Timestamp.forDay(2016, 0, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsNegativeMonth()
+    {
+        Timestamp.forDay(2016, -12, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsLargeMonth()
+    {
+        Timestamp.forDay(2016, 13, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsMonthWithUpperBitsSet()
+    {
+        Timestamp.forDay(2016, 0x7FFFFF00 + 3, 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsZeroDay()
+    {
+        Timestamp.forDay(2016, 03, 0);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsNegativeDay()
+    {
+        Timestamp.forDay(2016, 03, -888);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsLargeDay()
+    {
+        Timestamp.forDay(2016, 03, 32);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forDayRejectsDayWithUpperBitsSet()
+    {
+        Timestamp.forDay(2016, 03, 0x7FFFFF00 + 31);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forCalendarRejectsLargeYear()
+    {
+        int year = 10000;
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(year, 1, 1);
+
+        Timestamp t = Timestamp.forCalendar(cal);
+        assertEquals(year, t.getYear());
     }
 }
