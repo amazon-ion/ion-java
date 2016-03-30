@@ -2055,4 +2055,22 @@ public class TimestampTest
         addSecondWithsFrac("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23");
         addSecondWithsFrac("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23");
     }
+
+    @Test
+    public void forYear()
+    {
+        checkTimestamp("2016T", Timestamp.forYear(2016));
+    }
+
+    @Test
+    public void forMonth()
+    {
+        checkTimestamp("2016-03T", Timestamp.forMonth(2016, 3));
+    }
+
+    @Test
+    public void forDay()
+    {
+        checkTimestamp("2016-03-31", Timestamp.forDay(2016, 3, 31));
+    }
 }

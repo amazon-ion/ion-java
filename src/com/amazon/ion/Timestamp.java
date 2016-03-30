@@ -82,6 +82,7 @@ public final class Timestamp
         YEAR,
         MONTH,
         DAY,
+        // HOUR is not a supported precision per https://www.w3.org/TR/NOTE-datetime
         MINUTE,
         SECOND,
 
@@ -340,6 +341,36 @@ public final class Timestamp
     {
         IllegalArgumentException e = new IllegalArgumentException(message);
         throw e;
+    }
+
+    /**
+     * Creates a new Timestamp, precise to the year, with unknown local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value {@code YYYYT}.
+     */
+    private Timestamp(int zyear)
+    {
+        if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
+        this._precision = Precision.YEAR;
+        this._year   = (short)zyear;
+        validate_fields();
+        this._offset = UNKNOWN_OFFSET;
+    }
+
+    /**
+     * Creates a new Timestamp, precise to the month, with unknown local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value {@code YYYY-MMT}.
+     */
+    private Timestamp(int zyear, int zmonth)
+    {
+        if (zyear < 1 || zyear > 9999) throw new IllegalArgumentException("year is between 1 and 9999 inclusive");
+        if (zmonth < 1 || zmonth > 12) throw new IllegalArgumentException("month is between 1 and 12 inclusive");
+        this._precision = Precision.MONTH;
+        this._year   = (short)zyear;
+        this._month  = (byte)zmonth;
+        validate_fields();
+        this._offset = UNKNOWN_OFFSET;
     }
 
     /**
@@ -1145,6 +1176,25 @@ public final class Timestamp
         return localtime;
     }
 
+    /**
+     * Returns a Timestamp, precise to the year, with unknown local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value {@code YYYYT}.
+     */
+    public static Timestamp forYear(int yearZ)
+    {
+        return new Timestamp(yearZ);
+    }
+
+    /**
+     * Returns a Timestamp, precise to the month, with unknown local offset.
+     * <p>
+     * This is equivalent to the corresponding Ion value {@code YYYY-MMT}.
+     */
+    public static Timestamp forMonth(int yearZ, int monthZ)
+    {
+        return new Timestamp(yearZ, monthZ);
+    }
 
     /**
      * Returns a Timestamp, precise to the day, with unknown local offset.
