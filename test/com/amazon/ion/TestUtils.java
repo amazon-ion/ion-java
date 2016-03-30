@@ -122,6 +122,11 @@ public class TestUtils
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
                        "bad/annotationNested.10n"          // TODO IONJAVA-154
+                      ,"bad/clobWithLongLiteralBlockCommentAtEnd.ion"   // TODO IONJAVA-492
+                      ,"bad/clobWithLongLiteralCommentsInMiddle.ion"    // TODO IONJAVA-492
+                      ,"bad/clobWithLongLiteralInlineCommentAtEnd.ion"  // TODO IONJAVA-492
+                      ,"bad/clobWithShortLiteralBlockCommentAtEnd.ion"  // TODO IONJAVA-492
+                      ,"bad/clobWithShortLiteralInlineCommentAtEnd.ion" // TODO IONJAVA-492
                       ,"bad/clobWithNullCharacter.ion"     // TODO ION-572
                       ,"bad/emptyAnnotatedInt.10n"         // TODO IONJAVA-154
                       ,"bad/utf8/surrogate_5.ion"          // TODO IONJAVA-487
