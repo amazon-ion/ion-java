@@ -699,8 +699,6 @@ public abstract class SequenceTestCase
         s.add(v2);
         v2.addTypeAnnotation("foo");
 
-        forceDeepMaterialization(v1);
-
         if (s.getType() != IonType.DATAGRAM)
         {
             IonDatagram dg = system().newDatagram(s);

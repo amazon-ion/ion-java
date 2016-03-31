@@ -592,23 +592,7 @@ public class DatagramTest
         dg.getBytes();  // Force encoding and symtab construction
 
         String result = dg.toString();
-
-        // TODO ION-165 There are differences in behavior between Lazy and Lite
-        // DOM regarding handling of symtab construction.
-        DomType domType = getDomType();
-        if (domType.equals(DomType.BACKED))
-        {
-            // Lazy DOM impls injects symtab after getBytes()
-            assertEquals(ION_1_0 + ' '
-                         + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
-                         + " x",
-                         result);
-        }
-        else
-        {
-            // Lite DOM impls doesn't inject symtab after getBytes()
-            assertEquals(ION_1_0 + " x", result);
-        }
+        assertEquals(ION_1_0 + " x", result);
     }
 
 
@@ -686,11 +670,6 @@ public class DatagramTest
     @Test
     public void testSetWithSymbolTable()
     {
-
-        if (getDomType().equals(DomType.BACKED)){ //TODO add appears to be broken in the Backed DOM
-            return;
-        }
-
         String serializedX = ION_1_0 + ' '
             + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
             + " x";

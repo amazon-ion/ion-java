@@ -9,7 +9,6 @@ import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
-import com.amazon.ion.system.BuilderHack;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.File;
@@ -39,16 +38,10 @@ public abstract class IonTestCase
     private static final String ION_TESTS_BULK_PATH_PROPERTY =
         "com.amazon.iontests.bulk.path";
 
-    /** Test dimensions of the DOM implementations. */
-    protected enum DomType { LITE, BACKED }
-
     protected enum StreamingMode { OLD_STREAMING, NEW_STREAMING }
 
     // Using an enum makes the test names more understandable than a boolean.
     protected enum StreamCopySpeed { COPY_OPTIMIZED, COPY_NON_OPTIMIZED }
-
-    @Inject("domType")
-    public static final DomType[] DOM_TYPES = DomType.values();
 
     @Inject("streamingMode")
     public static final StreamingMode[] STREAMING_DIMENSION =
@@ -62,7 +55,6 @@ public abstract class IonTestCase
      * This is false by default. Keep this in sync with {@link IonSystemBuilder}!
      */
     private boolean                     myStreamCopyOptimized = false;
-    private DomType                     myDomType;
     private StreamingMode               myStreamingMode;
 
     private static boolean              ourSystemPropertiesLoaded = false;
@@ -84,16 +76,6 @@ public abstract class IonTestCase
 
     //=========================================================================
     // Setters/Getters for injected values
-
-    public DomType getDomType()
-    {
-        return myDomType;
-    }
-
-    public void setDomType(DomType type)
-    {
-        myDomType = type;
-    }
 
     public StreamingMode getStreamingMode()
     {
@@ -239,30 +221,7 @@ public abstract class IonTestCase
         IonLoader loader = loader();
         IonDatagram dg = loader.load(ionFile);
 
-        // Flush out any encoding problems in the data.
-        forceDeepMaterialization(dg);
-
         return dg;
-    }
-
-    /**
-     * Force deep materialization of the IonValue, ensuring that this
-     * value, and all contained data, is fully materialized into
-     * {@link IonValue} instances from any underlying Ion binary buffer.
-     * <p>
-     * This is only applicable for the Lazy DOM, it is a no-op for the Lite DOM.
-     * <p>
-     * TODO ION-165 - There are differences in behavior between Lazy and Lite DOM.
-     */
-    public void forceDeepMaterialization(IonValue value)
-    {
-        // If Lazy DOM, deep Materialize using IonReader to flush out
-        // any problems in the binary backed buffer
-        if (getDomType().equals(DomType.BACKED))
-        {
-            IonReader ionReader = system().newReader(value);
-            TestUtils.deepRead(ionReader, true);
-        }
     }
 
     //=========================================================================
@@ -272,48 +231,26 @@ public abstract class IonTestCase
      * @return
      *          the singleton IonSystem, binary-backed and/or
      *          stream-copy optimized depending on the injected
-     *          {@link #myDomType} and {@link #myStreamCopyOptimized}.
+     *          {@link #myStreamCopyOptimized}.
      */
     protected _Private_IonSystem system()
     {
         if (mySystem == null)
         {
-            mySystem = newSystem(myCatalog, getDomType());
+            mySystem = newSystem(myCatalog);
         }
         return mySystem;
     }
 
     /**
      * @return
-     *          a new IonSystem instance, binary-backed and/or stream-copy
-     *          optimized depending on the injected {@link #myDomType} and
+     *          a new IonSystem instance, stream-copy optimized depending on
      *          {@link #myStreamCopyOptimized}.
      */
     protected _Private_IonSystem newSystem(IonCatalog catalog)
     {
-        return newSystem(catalog, getDomType());
-    }
-
-    /**
-     * Returns a new IonSystem for each call, using the passed in IonCatalog
-     * to build the IonSystem.
-     *
-     * @param catalog
-     *          the catalog to use when building the IonSystem
-     * @param domType
-     *          the {@link DomType} that the resulting IonSystem is set to
-     *
-     * @return
-     *          a new IonSystem instance, binary-backed and/or stream-copy
-     *          optimized depending on the passed in {@code domType} and
-     *          injected {@link #myStreamCopyOptimized}.
-     */
-    protected _Private_IonSystem newSystem(IonCatalog catalog,
-                                           DomType domType)
-    {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
 
-        BuilderHack.setBinaryBacked(b, domType == DomType.BACKED);
         b.withStreamCopyOptimized(myStreamCopyOptimized);
 
         IonSystem system = b.build();
@@ -1061,12 +998,8 @@ public abstract class IonTestCase
         // Test on ValueFactory.clone() with the same ValueFactory
         testValueFactoryClone(original, original.getSystem());
 
-        // Test on ValueFactory.clone() with different ValueFactory (and DOM impls)
-        for (DomType domType : DomType.values())
-        {
-            testValueFactoryClone(original,
-                                  newSystem(new SimpleCatalog(), domType));
-        }
+        // Test on ValueFactory.clone() with different ValueFactory
+        testValueFactoryClone(original, newSystem(new SimpleCatalog()));
     }
 
     /**

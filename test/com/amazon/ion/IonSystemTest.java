@@ -158,15 +158,11 @@ public class IonSystemTest
     {
         IonValue original = system().singleValue("some_symbol");
 
-        // Test on ValueFactory.clone() with different ValueFactory (and DOM impls)
-        for (DomType domType : DomType.values())
-        {
-            IonValue clone =
-                newSystem(new SimpleCatalog(), domType).clone(original);
+        IonValue clone =
+            newSystem(new SimpleCatalog()).clone(original);
 
-            assertNull("Cloned value should not have a container (parent)",
-                       clone.getContainer());
-        }
+        assertNull("Cloned value should not have a container (parent)",
+                   clone.getContainer());
     }
 
 

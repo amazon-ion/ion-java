@@ -42,20 +42,17 @@ public class CloneTest
     @Test
     public void testDifferentValueFactoryCloneWithUnknownSymbolText()
     {
-        for (DomType domType : DomType.values())
-        {
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+        IonSystem otherSystem = newSystem(new SimpleCatalog());
 
-            SymbolToken tok = newSymbolToken(99);
-            IonSymbol original = system().newSymbol(tok);
+        SymbolToken tok = newSymbolToken(99);
+        IonSymbol original = system().newSymbol(tok);
 
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            IonSymbol copy = otherSystem.clone(original);
+        // TODO ION-339 An UnknownSymbolException is expected here, but
+        // it isn't thrown.
+        IonSymbol copy = otherSystem.clone(original);
 
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.symbolValue().getSid());
-        }
+        // If we don't fail we should at least retain the SID.
+        assertEquals(99, copy.symbolValue().getSid());
     }
 
     static final boolean DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT = true;
@@ -99,21 +96,18 @@ public class CloneTest
     @Test
     public void testDifferentValueFactoryCloneWithUnknownAnnotationText()
     {
-        for (DomType domType : DomType.values())
-        {
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+        IonSystem otherSystem = newSystem(new SimpleCatalog());
 
-            SymbolToken tok = newSymbolToken(99);
-            IonInt original = system().newInt(5);
-            original.setTypeAnnotationSymbols(tok);
+        SymbolToken tok = newSymbolToken(99);
+        IonInt original = system().newInt(5);
+        original.setTypeAnnotationSymbols(tok);
 
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            IonInt copy = otherSystem.clone(original);
+        // TODO ION-339 An UnknownSymbolException is expected here, but
+        // it isn't thrown.
+        IonInt copy = otherSystem.clone(original);
 
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
-        }
+        // If we don't fail we should at least retain the SID.
+        assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
     }
 
 
@@ -152,24 +146,21 @@ public class CloneTest
     @Test
     public void testDifferentValueFactoryCloneWithUnknownFieldNameText()
     {
-        for (DomType domType : DomType.values())
-        {
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+        IonSystem otherSystem = newSystem(new SimpleCatalog());
 
-            SymbolToken tok = newSymbolToken(99);
-            IonStruct original = system().newEmptyStruct();
-            IonValue child = system().newNull();
-            original.add(tok, child);
+        SymbolToken tok = newSymbolToken(99);
+        IonStruct original = system().newEmptyStruct();
+        IonValue child = system().newNull();
+        original.add(tok, child);
 
-            // This works since the cloned child doesn't retain its field name.
-            otherSystem.clone(child);
+        // This works since the cloned child doesn't retain its field name.
+        otherSystem.clone(child);
 
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            IonStruct copy = otherSystem.clone(original);
+        // TODO ION-339 An UnknownSymbolException is expected here, but
+        // it isn't thrown.
+        IonStruct copy = otherSystem.clone(original);
 
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
-        }
+        // If we don't fail we should at least retain the SID.
+        assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
     }
 }

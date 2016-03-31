@@ -298,12 +298,8 @@ public class IonValueTest
         IonValue v2 = system().clone(v);
         IonAssert.assertIonEquals(v, v2);
 
-        // Try cross-product of system implementations.
-        for (DomType dom : DomType.values())
-        {
-            IonSystem system2 = newSystem(null, dom);
-            v2 = system2.clone(v);
-            IonAssert.assertIonEquals(v, v2);
-        }
+        IonSystem system2 = newSystem(null);
+        v2 = system2.clone(v);
+        IonAssert.assertIonEquals(v, v2);
     }
 }

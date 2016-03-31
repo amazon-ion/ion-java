@@ -71,19 +71,14 @@ public class OffsetSpanReaderTest
             buf.write(BinaryTest.hexToBytes("22 03 E8"));
         }
 
-        // Textification is wonky and inconsistent here, it looks like:
-        //  LITE:   $ion_1_0 1000 1000 1000 1000 ...
-        //  BACKED: $ion_1_0 1000 $ion_1_0 1000 ...
-
         read(buf.toByteArray());
         int binaryStart = 4;
         int textStart = 9;
-        DomType domType = getDomType();
         for (int i = 0; i < count; i++) {
             assertSame(IonType.INT, in.next());
             checkCurrentSpan(binaryStart, binaryStart+3, textStart);
             binaryStart += 7;
-            textStart += (domType == DomType.BACKED) ? 14 : 5;
+            textStart += 5;
         }
         assertNull(in.next());
     }

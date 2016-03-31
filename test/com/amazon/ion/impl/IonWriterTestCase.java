@@ -36,9 +36,6 @@ import com.amazon.ion.Symtabs;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.junit.IonAssert;
-import com.amazon.ion.system.BuilderHack;
-import com.amazon.ion.system.IonSystemBuilder;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -772,16 +769,8 @@ public abstract class IonWriterTestCase
     Iterator<IonValue> systemIterateOutput()
         throws Exception
     {
-        // TODO ION-165 Hack to work around the lite DOM munging system values
-        IonSystemBuilder isb =
-            IonSystemBuilder.standard().withCatalog(catalog());
-        BuilderHack.setBinaryBacked(isb, true);
-
-        _Private_IonSystem lazySystem = (_Private_IonSystem) isb.build();
-
         byte[] data = outputByteArray();
-        Iterator<IonValue> it =
-            lazySystem.systemIterate(new ByteArrayInputStream(data));
+        Iterator<IonValue> it = system().systemIterate(data);
         return it;
     }
 

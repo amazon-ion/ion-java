@@ -48,12 +48,9 @@ extends IonTestCase
     public void testSkippingScalars()
     throws Exception
     {
-        if (getDomType() != DomType.LITE)
-        {
-            // Newer readers don't validate while skipping scalars
-            // so we won't throw exceptions for all bad files.
-            readFile( false );
-        }
+        // Readers don't validate while skipping scalars
+        // so we won't throw exceptions for all bad files.
+        readFile( false );
     }
 
     private void readFile(boolean materializeScalars)
