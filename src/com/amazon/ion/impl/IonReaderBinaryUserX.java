@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
@@ -15,13 +14,10 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SymbolToken;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import java.io.IOException;
-import java.util.Iterator;
 
 final class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
@@ -34,7 +30,6 @@ final class IonReaderBinaryUserX
      */
     private final int _physical_start_offset;
 
-    SymbolTable _symbols;
     IonCatalog  _catalog;
 
     private static final class IonReaderBinarySpan
@@ -261,98 +256,6 @@ final class IonReaderBinaryUserX
         }
     }
 
-    @Override
-    public String getFieldName()
-    {
-        String name;
-        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) {
-            name = null;
-        }
-        else {
-            name = _symbols.findKnownSymbol(_value_field_id);
-            if (name == null) {
-                throw new UnknownSymbolException(_value_field_id);
-            }
-        }
-        return name;
-    }
-
-    @Override
-    public final SymbolToken getFieldNameSymbol()
-    {
-        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
-        int sid = _value_field_id;
-        String text = _symbols.findKnownSymbol(sid);
-        return new SymbolTokenImpl(text, sid);
-    }
-
-    @Override
-    public Iterator<String> iterateTypeAnnotations()
-    {
-        String[] annotations = getTypeAnnotations();
-        return _Private_Utils.stringIterator(annotations);
-    }
-
-    @Override
-    public String[] getTypeAnnotations()
-    {
-        load_annotations();
-        String[] anns;
-        if (_annotation_count < 1) {
-            anns = _Private_Utils.EMPTY_STRING_ARRAY;
-        }
-        else {
-            anns = new String[_annotation_count];
-            for (int ii=0; ii<_annotation_count; ii++) {
-                anns[ii] = _symbols.findKnownSymbol(_annotation_ids[ii]);
-                if (anns[ii] == null) {
-                    throw new UnknownSymbolException(_annotation_ids[ii]);
-                }
-            }
-        }
-        return anns;
-    }
-
-    @Override // TODO this override shouldn't be necessary
-    public String stringValue()
-    {
-        if (! IonType.isText(_value_type)) throw new IllegalStateException();
-        if (_value_is_null) return null;
-
-        if (_value_type == IonType.SYMBOL) {
-            if (!_v.hasValueOfType(AS_TYPE.string_value)) {
-                int sid = getSymbolId();
-                String name = _symbols.findKnownSymbol(sid);
-                if (name == null) {
-                    throw new UnknownSymbolException(sid);
-                }
-                _v.addValue(name);
-            }
-        }
-        else {
-            prepare_value(AS_TYPE.string_value);
-        }
-        return _v.getString();
-    }
-
-    @Override
-    public SymbolToken symbolValue()
-    {
-        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
-        if (_value_is_null) return null;
-
-        int sid = getSymbolId();
-        assert sid != UNKNOWN_SYMBOL_ID;
-        String text = _symbols.findKnownSymbol(sid);
-
-        return new SymbolTokenImpl(text, sid);
-    }
-
-    @Override
-    public SymbolTable getSymbolTable()
-    {
-        return _symbols;
-    }
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX,

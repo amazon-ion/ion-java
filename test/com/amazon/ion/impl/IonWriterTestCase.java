@@ -793,7 +793,15 @@ public abstract class IonWriterTestCase
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
         checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
-        checkSymbol("hey", it.next());
+        // TODO IONJAVA-97
+        if (myOutputForm != OutputForm.TEXT)
+        {
+            checkSymbol(null, 12, it.next());
+        }
+        else
+        {
+            checkSymbol("hey", it.next());
+        }
         checkSymbol(SystemSymbols.ION_1_0, it.next());
         checkNullNull(it.next());
         assertFalse("expected EOF", it.hasNext());
@@ -980,7 +988,15 @@ public abstract class IonWriterTestCase
         if (myOutputForm == OutputForm.BINARY) {
             checkAnnotation(ION_SYMBOL_TABLE, it.next());
         }
-        checkSymbol("foo", it.next());
+        // TODO IONJAVA-97
+        if (myOutputForm == OutputForm.BINARY)
+        {
+            checkSymbol(null, 10, it.next());
+        }
+        else
+        {
+            checkSymbol("foo", it.next());
+        }
         checkSymbol(SystemSymbols.ION_1_0, it.next());
         checkInt(1, it.next());
         checkSymbol(SystemSymbols.ION_1_0, it.next());
@@ -1017,7 +1033,16 @@ public abstract class IonWriterTestCase
         if (myOutputForm != OutputForm.TEXT) {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
-        checkSymbol("foo", it.next());
+        // TODO IONJAVA-97
+        if (myOutputForm != OutputForm.TEXT)
+        {
+            checkSymbol(null, 10, it.next());
+        }
+        else
+        {
+            checkSymbol("foo", it.next());
+        }
+
 
         if (myOutputForm != OutputForm.DOM) // TODO ION-165
         {
@@ -1027,7 +1052,15 @@ public abstract class IonWriterTestCase
         {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
-        checkSymbol("foo", it.next());
+        // TODO IONJAVA-97
+        if (myOutputForm != OutputForm.TEXT)
+        {
+            checkSymbol(null, 10, it.next());
+        }
+        else
+        {
+            checkSymbol("foo", it.next());
+        }
     }
 
     @Test
