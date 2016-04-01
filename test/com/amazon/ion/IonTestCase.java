@@ -229,9 +229,8 @@ public abstract class IonTestCase
 
     /**
      * @return
-     *          the singleton IonSystem, binary-backed and/or
-     *          stream-copy optimized depending on the injected
-     *          {@link #myStreamCopyOptimized}.
+     *          the singleton IonSystem, stream-copy optimized depending
+     *          on the injected {@link #myStreamCopyOptimized}.
      */
     protected _Private_IonSystem system()
     {

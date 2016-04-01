@@ -202,7 +202,7 @@ public interface IonValue
      * local or system symbol table (or null).
      *
      * @return the symbol table, or <code>null</code> if this value is not
-     * currently backed by binary-encoded data.
+     * currently backed by a symbol table.
      */
     public SymbolTable getSymbolTable();
 

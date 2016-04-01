@@ -43,7 +43,7 @@ import java.util.Date;
         {
             if (value instanceof IonDatagram)
             {
-                // XXX this is a hack to make the writer consistent with the backed DOM and flush out an IVM
+                // XXX this is a hack to make the writer consistent with the legacy implementations and flush out an IVM
                 finish();
             }
             value.writeTo(this);

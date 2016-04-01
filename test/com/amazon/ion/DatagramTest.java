@@ -656,8 +656,7 @@ public class DatagramTest
     }
 
     /**
-     * TODO ION-90 Datagram.set() should work, but it's documented to throw
-     * and doesn't work on lazy DOM.
+     * TODO ION-90 Datagram.set() should work, but it's documented to throw.
      */
     @Test(expected = UnsupportedOperationException.class)
     public void testSet()

@@ -99,7 +99,7 @@ public class IonValueDeltaGenerator
         }
 
         /**
-         * Configures the IonSystem that is the entry point for Lazy/Lite DOMs.
+         * Configures the IonSystem that is the entry point for the DOM.
          */
         public Builder ionSystem(IonSystem val) {
             this.ionSystem = val;
