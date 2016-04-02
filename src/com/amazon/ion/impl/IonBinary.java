@@ -2033,12 +2033,124 @@ done:       for (;;) {
         }
 
         /**
+         * Magic "character" to represent an escape sequence with an empty expansion.
+         * (or, in other words, a non-eof character that should be ignored)
+         */
+        private static final int EMPTY_ESCAPE_SEQUENCE = -2;
+
+        private static int readDigit(/*EscapedCharacterReader*/PushbackReader r, int radix, boolean isRequired) throws IOException {
+            int c = r.read();
+            if (c < 0) {
+                r.unread(c);
+                return -1;
+            }
+
+            int c2 =  Character.digit(c, radix);
+            if (c2 < 0) {
+                if (isRequired) {
+                    throw new IonException("bad digit in escaped character '"+((char)c)+"'");
+                }
+                // if it's not a required digit, we just throw it back
+                r.unread(c);
+                return -1;
+            }
+            return c2;
+        }
+
+        /**
+         * @return the translated escape sequence.  Will not return -1 since EOF is
+         * not legal in this context. May return {@link #EMPTY_ESCAPE_SEQUENCE} to
+         * indicate a zero-length sequence such as BS-NL.
+         * @throws UnexpectedEofException if the EOF is encountered in the middle
+         * of the escape sequence.
+         * */
+        private static int readEscapedCharacter(PushbackReader r, boolean inClob)
+            throws IOException, UnexpectedEofException
+        {
+            //    \\ The backslash character
+            //    \0 The character 0 (nul terminator char, for some)
+            //    \xhh The character with hexadecimal value 0xhh
+            //    \ u hhhh The character with hexadecimal value 0xhhhh
+            //    \t The tab character ('\u0009')
+            //    \n The newline (line feed) character ('\ u 000A')
+            //    \v The vertical tab character ('\u000B')
+            //    \r The carriage-return character ('\ u 000D')
+            //    \f The form-feed character ('\ u 000C')
+            //    \a The alert (bell) character ('\ u 0007')
+            //    \" The double quote character
+            //    \' The single quote character
+            //    \? The question mark character
+
+            int c2 = 0, c = r.read();
+            switch (c) {
+                case -1:
+                    throw new UnexpectedEofException();
+                case 't':  return '\t';
+                case 'n':  return '\n';
+                case 'v':  return '\u000B';
+                case 'r':  return '\r';
+                case 'f':  return '\f';
+                case 'b':  return '\u0008';
+                case 'a':  return '\u0007';
+                case '\\': return '\\';
+                case '\"': return '\"';
+                case '\'': return '\'';
+                case '/':  return '/';
+                case '?':  return '?';
+
+                case 'U':
+                    // Expecting 8 hex digits
+                    if (inClob) {
+                        throw new IonException("Unicode escapes \\U not allowed in clob");
+                    }
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;  // TODO throw UnexpectedEofException
+                    c2 = c << 28;
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    c2 += c << 24;
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    c2 += c << 20;
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    c2 += c << 16;
+                    // ... fall through...
+                case 'u':
+                    // Expecting 4 hex digits
+                    if (inClob) {
+                        throw new IonException("Unicode escapes \\u not allowed in clob");
+                    }
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    c2 += c << 12;
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    c2 += c << 8;
+                    // ... fall through...
+                case 'x':
+                    // Expecting 2 hex digits
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    c2 += c << 4;
+                    c = readDigit(r, 16, true);
+                    if (c < 0) break;
+                    return c2 + c;
+
+                case '0':
+                    return 0;
+                case '\n':
+                    return EMPTY_ESCAPE_SEQUENCE;
+                default:
+                    break;
+            }
+            throw new IonException("invalid escape sequence \"\\"
+                                   + (char) c + "\" [" + c + "]");
+        }
+
+        /**
         * Reads the remainder of a quoted string/symbol into this buffer.
         * The closing quotes are consumed from the reader.
-        * <p>
-        * XXX  WARNING  XXX
-        * Almost identical logic is found in
-        * {@link IonTokenReader#finishScanString(boolean)}
         *
         * @param terminator the closing quote character.
         * @param longstring
@@ -2085,8 +2197,8 @@ done:       for (;;) {
                     // if this is an escape sequence we need to process it now
                     // since we allow a surrogate to be encoded using \ u (or \ U)
                     // encoding
-                    c = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
-                    if (c == IonTokenReader.EMPTY_ESCAPE_SEQUENCE) {
+                    c = readEscapedCharacter(r, onlyByteSizedCharacters);
+                    if (c == EMPTY_ESCAPE_SEQUENCE) {
                         continue;
                     }
                 }
@@ -2137,8 +2249,8 @@ done:       for (;;) {
                         //here we convert escape sequences into characters and continue until
                         //we encounter a non-newline escape (typically immediately)
                         while (decodeEscapeSequences && c2 == '\\') {
-                            c2 = IonTokenReader.readEscapedCharacter(r, onlyByteSizedCharacters);
-                            if (c2 != IonTokenReader.EMPTY_ESCAPE_SEQUENCE) break;
+                            c2 = readEscapedCharacter(r, onlyByteSizedCharacters);
+                            if (c2 != EMPTY_ESCAPE_SEQUENCE) break;
                             c2 = r.read();
                             if (c2 == terminator) {
                                 if (longstring && isLongTerminator(terminator, r)) {
