@@ -12,6 +12,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.RunNotifier;
@@ -29,6 +30,12 @@ import org.junit.runners.model.TestClass;
  * the test fixture with a set of configured values.  This approach is similar
  * to {@link Parameterized} but utilizes setter injection instead of using
  * constructors, so its easier to reuse the injection via inheritance.
+ * <p>
+ * A test fixture may have no {@link Inject} parameters, in which case the
+ * fixture runs as it would without the {@link Injected} runner.
+ * This is useful for allowing a hierarchy of test fixtures to be declared
+ * as {@link Injected} when only some of the sub-classes actually {@link Inject}
+ * parameters.
  */
 public class Injected
 extends Suite
@@ -157,8 +164,12 @@ extends Suite
     private static List<Runner> fanout(Class<?> klass) throws Throwable
     {
         Dimension[] dimensions = findDimensions(new TestClass(klass));
-        assert dimensions.length != 0;
 
+        if (dimensions.length == 0)
+        {
+            // no dimensions in this test class--run with normal runner
+            return Collections.<Runner>singletonList(new BlockJUnit4ClassRunner(klass));
+        }
         return fanout(klass, new ArrayList<Runner>(), dimensions, new int[dimensions.length], 0);
     }
 
@@ -191,6 +202,7 @@ extends Suite
         return runners;
     }
 
+    private static final Dimension[] EMPTY_DIMENSION_ARRAY = new Dimension[0];
 
     private static Dimension[] findDimensions(TestClass testClass)
     throws Throwable
@@ -199,8 +211,7 @@ extends Suite
             testClass.getAnnotatedFields(Inject.class);
         if (fields.isEmpty())
         {
-            throw new Exception("No fields of " + testClass.getName()
-                                + " have the @Inject annotation");
+            return EMPTY_DIMENSION_ARRAY;
         }
 
         BeanInfo beanInfo = Introspector.getBeanInfo(testClass.getJavaClass());

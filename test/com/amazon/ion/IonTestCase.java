@@ -7,7 +7,6 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.junit.Injected;
-import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
@@ -38,15 +37,8 @@ public abstract class IonTestCase
     private static final String ION_TESTS_BULK_PATH_PROPERTY =
         "com.amazon.iontests.bulk.path";
 
-    protected enum StreamingMode { OLD_STREAMING, NEW_STREAMING }
-
     // Using an enum makes the test names more understandable than a boolean.
     protected enum StreamCopySpeed { COPY_OPTIMIZED, COPY_NON_OPTIMIZED }
-
-    @Inject("streamingMode")
-    public static final StreamingMode[] STREAMING_DIMENSION =
-        //StreamingMode.values();  // TODO ION-180 the old streaming fails numerous regressions.
-        { StreamingMode.NEW_STREAMING };
 
     /**
      * Flag on whether IonSystems generated is
@@ -55,7 +47,6 @@ public abstract class IonTestCase
      * This is false by default. Keep this in sync with {@link IonSystemBuilder}!
      */
     private boolean                     myStreamCopyOptimized = false;
-    private StreamingMode               myStreamingMode;
 
     private static boolean              ourSystemPropertiesLoaded = false;
     protected SimpleCatalog             myCatalog;
@@ -76,16 +67,6 @@ public abstract class IonTestCase
 
     //=========================================================================
     // Setters/Getters for injected values
-
-    public StreamingMode getStreamingMode()
-    {
-        return myStreamingMode;
-    }
-
-    public void setStreamingMode(StreamingMode mode)
-    {
-        myStreamingMode = mode;
-    }
 
     public boolean isStreamCopyOptimized()
     {
