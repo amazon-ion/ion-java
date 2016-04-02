@@ -12,7 +12,6 @@ import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -188,22 +187,6 @@ final class IonSystemLite
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
-
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter()
-    {
-        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;
-        return b.buildLegacy();
-    }
-
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
-    {
-        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)
-            myBinaryWriterBuilder.withImports(imports);
-        return b.buildLegacy();
-    }
-
 
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {

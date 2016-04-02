@@ -4,15 +4,12 @@ package com.amazon.ion.impl.bin;
 
 import static com.amazon.ion.impl.bin.IonManagedBinaryWriter.ONLY_SYSTEM_IMPORTS;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
-import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolResolverMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
@@ -217,26 +214,6 @@ public final class _Private_IonManagedBinaryWriterBuilder
     public IonWriter newWriter(final OutputStream out) throws IOException
     {
         return new IonManagedBinaryWriter(this, out);
-    }
-
-    public IonBinaryWriter newLegacyWriter()
-    {
-        try
-        {
-            return new IonBinaryWriterAdapter(
-                new Factory()
-                {
-                    public IonWriter create(final OutputStream out) throws IOException
-                    {
-                        return newWriter(out);
-                    }
-                }
-            );
-        }
-        catch (final IOException e)
-        {
-            throw new IonException("I/O error", e);
-        }
     }
 
     // Static Factories

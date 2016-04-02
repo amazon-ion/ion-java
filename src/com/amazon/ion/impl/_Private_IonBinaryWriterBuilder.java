@@ -2,9 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.initialSymtab;
-
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonSystem;
@@ -12,7 +9,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl.BlockedBuffer.BufferedOutputStream;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder.AllocatorMode;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
@@ -23,7 +19,6 @@ import java.io.OutputStream;
 /**
  * NOT FOR APPLICATION USE!
  */
-@SuppressWarnings("deprecation")
 public class _Private_IonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
@@ -222,54 +217,6 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     /**
-     * Fills all properties and returns an immutable builder.
-     */
-    private _Private_IonBinaryWriterBuilder fillLegacyDefaults()
-    {
-        // IONJAVA-468 Fix this to use the new writer or eliminate it
-
-        // Ensure that we don't modify the user's builder.
-        _Private_IonBinaryWriterBuilder b = copy();
-
-        if (b.getSymtabValueFactory() == null)
-        {
-            IonSystem system = IonSystemBuilder.standard().build();
-            b.setSymtabValueFactory(system);
-        }
-
-        SymbolTable initialSymtab = b.getInitialSymbolTable();
-        if (initialSymtab == null)
-        {
-            initialSymtab = initialSymtab(b.getSymtabValueFactory(),
-                                          _Private_Utils.systemSymtab(1),
-                                          b.getImports());
-            b.setInitialSymbolTable(initialSymtab);
-        }
-        else if (initialSymtab.isSystemTable())
-        {
-            initialSymtab = initialSymtab(b.getSymtabValueFactory(),
-                                          initialSymtab,
-                                          b.getImports());
-            b.setInitialSymbolTable(initialSymtab);
-        }
-
-        return b.immutable();
-    }
-
-
-    private IonWriterSystemBinary buildSystemWriter(OutputStream out)
-    {
-        SymbolTable defaultSystemSymtab =
-            myInitialSymbolTable.getSystemSymbolTable();
-
-        return new IonWriterSystemBinary(defaultSystemSymtab,
-                                         out,
-                                         false /* autoFlush */,
-                                         true /* ensureInitialIvm */);
-    }
-
-
-    /**
      * Returns a symtab usable in a local context.
      * This copies {@link #myInitialSymbolTable} if symbols have been added to
      * it since {@link #setInitialSymbolTable(SymbolTable)} was called.
@@ -298,20 +245,6 @@ public class _Private_IonBinaryWriterBuilder
             throw new IonException("I/O Error", e);
         }
     }
-
-
-    @Deprecated
-    public final IonBinaryWriter buildLegacy()
-    {
-        // IONJAVA-468 Fix this to use the new writer or eliminate it
-        _Private_IonBinaryWriterBuilder b = fillLegacyDefaults();
-
-        IonWriterSystemBinary systemWriter =
-            b.buildSystemWriter(new BufferedOutputStream());
-
-        return new _Private_IonBinaryWriterImpl(b, systemWriter);
-    }
-
 
     //=========================================================================
 

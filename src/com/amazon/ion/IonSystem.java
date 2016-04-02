@@ -525,35 +525,6 @@ public interface IonSystem
      */
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports);
 
-    /**
-     * Creates a new writer that will encode binary Ion data.
-     *
-     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
-     *
-     * @deprecated Since IonJava R10. Use
-     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
-     */
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter();
-
-    /**
-     * Creates a new writer that will encode binary Ion data,
-     * using the given shared symbol tables as imports.
-     * <p>
-     * The output stream will be start with an Ion Version Marker and a
-     * local symbol table that uses the given {@code imports}.
-     *
-     * @param imports a sequence of shared symbol tables
-     *
-     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
-     *
-     * @deprecated Since IonJava R10. Use
-     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
-     */
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
-
-
     //-------------------------------------------------------------------------
     // DOM creation
 
