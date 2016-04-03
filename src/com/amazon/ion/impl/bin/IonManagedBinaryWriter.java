@@ -428,7 +428,7 @@ import java.util.Map;
                             }
                             if (desc.maxId != -1 && desc.maxId != symbols.getMaxId())
                             {
-                                throw new IllegalArgumentException("Import doesn't match Max ID: " + desc);
+                                throw new IllegalArgumentException("Import doesn't match Max ID: " + desc + ", Max ID in symbol table: " + symbols.getMaxId());
                             }
                             self.userImports.add(symbols);
                         }
@@ -624,6 +624,7 @@ import java.util.Map;
     private final List<String>                  userSymbols;
     private final ImportDescriptor              userCurrentImport;
 
+    private boolean                             forceSystemOutput;
     private boolean                             closed;
 
     /*package*/ IonManagedBinaryWriter(final _Private_IonManagedBinaryWriterBuilder builder,
@@ -657,6 +658,8 @@ import java.util.Map;
         this.localsLocked = false;
         this.localSymbolTableView = new LocalSymbolTableView();
         this.symbolState = SymbolState.SYSTEM_SYMBOLS;
+
+        this.forceSystemOutput = false;
         this.closed = false;
 
         this.userState = UserState.NORMAL;
@@ -985,9 +988,9 @@ import java.util.Map;
             }
             else
             {
-                // no-op the write--we already wrote the IVM for the user
-                // TODO should this not no-op when called multiple times with IVMs?
-                // TODO integrate with all that IVM configuration-fu
+                // TODO determine if redundant IVM writes need to actually be surfaced
+                // we need to signal that we need to write out the IVM even if nothing else is written
+                forceSystemOutput = true;
             }
             return;
         }
@@ -1039,7 +1042,7 @@ import java.util.Map;
 
     private void unsafeFlush() throws IOException
     {
-        if (user.hasWrittenValuesSinceFinished())
+        if (user.hasWrittenValuesSinceFinished() || forceSystemOutput)
         {
             // this implies that we have a local symbol table of some sort and the user locked it
             symbolState.closeTable(symbols);
@@ -1047,6 +1050,7 @@ import java.util.Map;
 
         // make sure that until the local symbol state changes we no-op the table closing routine
         symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
+        forceSystemOutput = false;
         // push the data out
         symbols.finish();
         user.finish();
