@@ -76,6 +76,9 @@ import java.util.Date;
     {
         final IonType type = reader.getType();
 
+        // TODO ION-607 make sure the plumbing symbol tokens do the right thing for
+        //      different symbol contexts in the reader and this writer
+
         final SymbolToken fieldName = reader.getFieldNameSymbol();
         if (fieldName != null && !isFieldNameSet() && isInStruct())
         {
@@ -115,8 +118,8 @@ import java.util.Date;
                 writeTimestamp(timestampValue);
                 break;
             case SYMBOL:
-                final String symbolValue = reader.stringValue();
-                writeSymbol(symbolValue);
+                final SymbolToken symbolValue = reader.symbolValue();
+                writeSymbolToken(symbolValue);
                 break;
             case STRING:
                 final String stringValue = reader.stringValue();
