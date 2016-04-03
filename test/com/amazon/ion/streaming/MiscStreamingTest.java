@@ -5,7 +5,6 @@ package com.amazon.ion.streaming;
 import static com.amazon.ion.impl._Private_Utils.utf8;
 
 import com.amazon.ion.BinaryTest;
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
@@ -62,12 +61,7 @@ public class MiscStreamingTest
         //    value2 symbol 'str2' (2 bytes: 1 typedesc + 1 sid)
         IonReader ir = system().newReader(s);
 
-        IonSystem system = system();
-        IonBinaryWriter wr = system.newBinaryWriter();
-        wr = system.newBinaryWriter();
-        wr.writeValues(ir);
-
-        byte[] buffer = wr.getBytes();
+        byte[] buffer = writeBinaryBytes(ir);
         assertSame("this buffer length is known to be 22", buffer.length, 22);
 
         IonReader sir = system().newReader(s);

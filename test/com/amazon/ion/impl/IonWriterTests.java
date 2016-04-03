@@ -15,7 +15,6 @@ import org.junit.runners.Suite;
     OptimizedBinaryWriterSymbolTableTest.class,
     OptimizedBinaryWriterLengthPatchingTest.class,
     BinaryWriterWithLocalSymtabsTest.class,
-    OldBinaryWriterTest.class,
     ValueWriterTest.class
 })
 public class IonWriterTests

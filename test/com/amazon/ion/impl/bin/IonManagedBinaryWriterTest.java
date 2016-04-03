@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 
-@SuppressWarnings("deprecation")
 public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
 {
     @SuppressWarnings("unchecked")

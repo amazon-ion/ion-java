@@ -5,7 +5,6 @@ import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
@@ -18,6 +17,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.IonAssert;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -339,7 +339,8 @@ public class BinaryStreamingTest
     public void testAllValues()
     throws Exception
     {
-        IonBinaryWriter wr = system().newBinaryWriter();
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter wr = system().newBinaryWriter(buf);
         byte[] buffer = null;
 
         byte[] _testbytes1 = new byte[5];
@@ -510,7 +511,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             }
 
             wr.stepOut();
-            buffer = wr.getBytes();
+            wr.close();
+            buffer = buf.toByteArray();
         }
         catch (IOException e) {
             throw new Exception(e);
@@ -541,9 +543,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             +",index_suppressed:true,"
             +"offline_store_only:true,version:2,}";
         IonReader ir = system().newReader(s);
-        IonBinaryWriter wr = system().newBinaryWriter();
-        wr.writeValues(ir);
-        byte[] buffer = wr.getBytes();
+        byte[] buffer = writeBinaryBytes(ir);
         dumpBuffer(buffer, buffer.length);
     }
 
@@ -569,10 +569,7 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         Iterator<String> symbols = sym.iterateDeclaredSymbolNames();
         SymbolTable u = system().newSharedSymbolTable("items", 1, symbols);
-        IonBinaryWriter wr = system().newBinaryWriter(u);
-
-        wr.writeValues(ir);
-        byte[] buffer = wr.getBytes();
+        byte[] buffer = writeBinaryBytes(ir, u);
         dumpBuffer(buffer, buffer.length);
     }
     void dumpBuffer(byte[] buffer, int len)
@@ -611,7 +608,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     public void testBoolValue()
         throws Exception
     {
-        IonBinaryWriter wr = system().newBinaryWriter();
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter wr = system().newBinaryWriter(buf);
         byte[] buffer = null;
 
         try {
@@ -619,7 +617,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
             wr.setFieldName("Foo");
             wr.writeBool(true);
             wr.stepOut();
-            buffer = wr.getBytes();
+            wr.close();
+            buffer = buf.toByteArray();
         }
         catch (IOException e) {
             throw new Exception(e);
@@ -643,20 +642,18 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
 
     @Test
-    public void testTwoMagicCookies() {
-        IonBinaryWriter wr = system().newBinaryWriter();
+    public void testTwoMagicCookies() throws Exception {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter wr = system().newBinaryWriter(buf);
         byte[] buffer = null;
 
-        try {
-            wr.stepIn(IonType.STRUCT);
-            wr.setFieldName("Foo");
-            wr.addTypeAnnotation("boolean");
-            wr.writeBool(true);
-            wr.stepOut();
-            buffer = wr.getBytes();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        wr.stepIn(IonType.STRUCT);
+        wr.setFieldName("Foo");
+        wr.addTypeAnnotation("boolean");
+        wr.writeBool(true);
+        wr.stepOut();
+        wr.close();
+        buffer = buf.toByteArray();
 
         byte[] doublebuffer = new byte[buffer.length * 2];
         System.arraycopy(buffer, 0, doublebuffer, 0, buffer.length);
@@ -695,20 +692,18 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
 
     @Test
-    public void testBoolean() {
-        IonBinaryWriter wr = system().newBinaryWriter();
+    public void testBoolean() throws Exception {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter wr = system().newBinaryWriter(buf);
         byte[] buffer = null;
 
-        try {
-            wr.stepIn(IonType.STRUCT);
-            wr.setFieldName("Foo");
-            wr.addTypeAnnotation("boolean");
-            wr.writeBool(true);
-            wr.stepOut();
-            buffer = wr.getBytes();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        wr.stepIn(IonType.STRUCT);
+        wr.setFieldName("Foo");
+        wr.addTypeAnnotation("boolean");
+        wr.writeBool(true);
+        wr.stepOut();
+        wr.close();
+        buffer = buf.toByteArray();
 
         IonReader ir = system().newReader(buffer);
         if (ir.hasNext()) {
@@ -731,46 +726,43 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
     //Test Sample map.
     //{hello=true, Almost Done.=true, This is a test String.=true, 12242.124598129=12242.124598129, Something=null, false=false, true=true, long=9326, 12=-12}
     @Test
-    public void testSampleMap() {
-        IonBinaryWriter wr = system().newBinaryWriter();
+    public void testSampleMap() throws Exception {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter wr = system().newBinaryWriter(buf);
         byte[] buffer = null;
 
-        try {
-            wr.stepIn(IonType.STRUCT);
+        wr.stepIn(IonType.STRUCT);
 
-            wr.setFieldName("hello");
-            wr.writeBool(true);
+        wr.setFieldName("hello");
+        wr.writeBool(true);
 
-            wr.setFieldName("Almost Done.");
-            wr.writeBool(true);
+        wr.setFieldName("Almost Done.");
+        wr.writeBool(true);
 
-            wr.setFieldName("This is a test String.");
-            wr.writeBool(true);
+        wr.setFieldName("This is a test String.");
+        wr.writeBool(true);
 
-            wr.setFieldName("12242.124598129");
-            wr.writeFloat(12242.124598129);
+        wr.setFieldName("12242.124598129");
+        wr.writeFloat(12242.124598129);
 
-            wr.setFieldName("Something");
-            wr.writeNull();
+        wr.setFieldName("Something");
+        wr.writeNull();
 
-            wr.setFieldName("false");
-            wr.writeBool(false);
+        wr.setFieldName("false");
+        wr.writeBool(false);
 
-            wr.setFieldName("true");
-            wr.writeBool(true);
+        wr.setFieldName("true");
+        wr.writeBool(true);
 
-            wr.setFieldName("long");
-            wr.writeInt((long) 9326);
+        wr.setFieldName("long");
+        wr.writeInt((long) 9326);
 
-            wr.setFieldName("12");
-            wr.writeInt(-12);
+        wr.setFieldName("12");
+        wr.writeInt(-12);
 
-            wr.stepOut();
-            buffer = wr.getBytes();
-        } catch (IOException e) {
-
-            throw new RuntimeException(e);
-        }
+        wr.stepOut();
+        wr.close();
+        buffer = buf.toByteArray();
 
         IonReader ir = system().newReader(buffer);
         if (ir.next() != null) {
@@ -823,7 +815,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         byte[] bytes ;
 
-        IonBinaryWriter wr = system().newBinaryWriter();
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter wr = system().newBinaryWriter(buf);
         wr.stepIn(IonType.STRUCT);
 
         wr.setFieldName("12");
@@ -856,7 +849,8 @@ new TestValue("Null.timestamp",IonType.NULL, IonType.TIMESTAMP),
 
         wr.stepOut();
 
-        bytes = wr.getBytes();
+        wr.close();
+        bytes = buf.toByteArray();
 
         IonReader ir = system().newReader(bytes);
         assertEquals(IonType.STRUCT, ir.next());

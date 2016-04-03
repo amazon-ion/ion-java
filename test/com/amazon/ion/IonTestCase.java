@@ -10,6 +10,7 @@ import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -1040,6 +1041,20 @@ public abstract class IonTestCase
                    clone.getContainer());
 
         assertFalse("Cloned value should be modifiable", clone.isReadOnly());
+    }
+
+    public byte[] writeBinaryBytes(IonReader reader, SymbolTable... imports) throws IOException {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter writer = system().newBinaryWriter(buf, imports);
+        try
+        {
+            writer.writeValues(reader);
+        }
+        finally
+        {
+            writer.close();
+        }
+        return buf.toByteArray();
     }
 
     public void logSkippedTest()

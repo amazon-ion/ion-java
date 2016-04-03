@@ -8,7 +8,6 @@ import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.impl._Private_Utils.utf8;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
@@ -140,10 +139,7 @@ public class RoundTripStreamingTest
     throws IOException
     {
         IonReader in = makeIterator(buffer);
-        IonBinaryWriter bw = system().newBinaryWriter();
-
-        bw.writeValues(in);
-        byte[] buf = bw.getBytes(); // this is binary
+        byte[] buf = writeBinaryBytes(in);
 
         return buf;
     }

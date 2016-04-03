@@ -28,7 +28,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
-import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
@@ -36,6 +35,7 @@ import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -48,7 +48,6 @@ import org.junit.runner.RunWith;
 
 // TODO incorporate this into the main reader/writer tests
 
-@SuppressWarnings("deprecation")
 @RunWith(Injected.class)
 public class IonRawBinaryWriterTest extends Assert
 {
@@ -67,8 +66,8 @@ public class IonRawBinaryWriterTest extends Assert
     @Inject("preallocationMode")
     public static final PreallocationMode[] PREALLOCATION_DIMENSION = PreallocationMode.values();
 
-    // XXX use this API to indirectly test it
-    protected IonBinaryWriterAdapter    writer;
+    protected ByteArrayOutputStream     buffer;
+    protected IonWriter                 writer;
     protected PreallocationMode         preallocationMode;
 
     public void setPreallocationMode(final PreallocationMode preallocationMode)
@@ -79,15 +78,8 @@ public class IonRawBinaryWriterTest extends Assert
     @Before
     public final void setup() throws Exception
     {
-        writer = new IonBinaryWriterAdapter(
-            new Factory()
-            {
-                public IonWriter create(final OutputStream out) throws IOException
-                {
-                    return createWriter(out);
-                }
-            }
-        );
+        buffer = new ByteArrayOutputStream();
+        writer = createWriter(buffer);
         writeIVMIfPossible();
     }
 
@@ -95,6 +87,7 @@ public class IonRawBinaryWriterTest extends Assert
     public final void teardown() throws Exception
     {
         writer.close();
+        buffer = null;
         writer = null;
     }
 
@@ -113,10 +106,9 @@ public class IonRawBinaryWriterTest extends Assert
 
     private void writeIVMIfPossible() throws IOException
     {
-        final IonWriter delegate = writer.getDelegate();
-        if (delegate instanceof IonRawBinaryWriter)
+        if (writer instanceof IonRawBinaryWriter)
         {
-            ((IonRawBinaryWriter) delegate).writeIonVersionMarker();
+            ((IonRawBinaryWriter) writer).writeIonVersionMarker();
         }
     }
 
@@ -126,7 +118,7 @@ public class IonRawBinaryWriterTest extends Assert
     protected final void assertValue(final String literal) throws IOException
     {
         writer.finish();
-        final byte[] data = writer.getBytes();
+        final byte[] data = buffer.toByteArray();
         final IonValue actual;
         try {
             actual = system().singleValue(data);
@@ -139,7 +131,7 @@ public class IonRawBinaryWriterTest extends Assert
         additionalValueAssertions(actual);
 
         // prepare for next value
-        writer.reset();
+        buffer.reset();
         writeIVMIfPossible();
     }
 

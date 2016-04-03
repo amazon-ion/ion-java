@@ -8,7 +8,6 @@ import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 import static java.lang.String.format;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -20,12 +19,10 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class TextWriterTest
     extends OutputStreamWriterTestCase
 {
@@ -128,11 +125,12 @@ public class TextWriterTest
     {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
 
-        IonBinaryWriter binaryWriter = system().newBinaryWriter(fred1);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter binaryWriter = system().newBinaryWriter(buf, fred1);
         binaryWriter.writeSymbol("fred_1");
         binaryWriter.writeSymbol("ginger");
         binaryWriter.finish();
-        byte[] binaryData = binaryWriter.getBytes();
+        byte[] binaryData = buf.toByteArray();
 
         options = IonTextWriterBuilder.standard();
 
