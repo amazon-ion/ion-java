@@ -2,7 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.readFully;
@@ -41,6 +40,14 @@ final class IonBinary
     final static int _ib_FLOAT64_LEN         =    8;
 
     private static final Double DOUBLE_POS_ZERO = Double.valueOf(0.0);
+
+    static final int ZERO_DECIMAL_TYPEDESC =
+    _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidDecimal,
+                                    _Private_IonConstants.lnNumericZero);
+
+    static final int NULL_DECIMAL_TYPEDESC =
+    _Private_IonConstants.makeTypeDescriptor(_Private_IonConstants.tidDecimal,
+                                    _Private_IonConstants.lnIsNullAtom);
 
     private IonBinary() { }
 
@@ -2703,8 +2710,7 @@ done:       for (;;) {
         {
             if (di == null) return 0;
             int returnlen = 0;
-            int precision_flags =
-                IonTimestampImpl.getPrecisionAsBitFlags(di.getPrecision());
+            Precision precision = di.getPrecision();
 
             Integer offset = di.getLocalOffset();
             if (offset == null) {
@@ -2718,25 +2724,25 @@ done:       for (;;) {
 
             // now the date - year, month, day as VarUInts
             // if we have a non-null value we have at least the date
-            if (precisionIncludes(precision_flags, Precision.YEAR)) {
+            if (precision.includes(Precision.YEAR)) {
                 returnlen += this.writeVarUIntValue(di.getZYear(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.MONTH)) {
+            if (precision.includes(Precision.MONTH)) {
                 returnlen += this.writeVarUIntValue(di.getZMonth(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.DAY)) {
+            if (precision.includes(Precision.DAY)) {
                 returnlen += this.writeVarUIntValue(di.getZDay(), true);
             }
 
             // now the time portion
-            if (precisionIncludes(precision_flags, Precision.MINUTE)) {
+            if (precision.includes(Precision.MINUTE)) {
                 returnlen += this.writeVarUIntValue(di.getZHour(), true);
                 returnlen += this.writeVarUIntValue(di.getZMinute(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.SECOND)) {
+            if (precision.includes(Precision.SECOND)) {
                 returnlen += this.writeVarUIntValue(di.getZSecond(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.FRACTION)) {
+            if (precision.includes(Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
                 BigDecimal fraction = di.getZFractionalSecond();
                 assert ! fraction.equals(BigDecimal.ZERO);
@@ -2752,11 +2758,11 @@ done:       for (;;) {
             // we only write out the '0' value as the nibble 0
             if (bd == null) {
                 returnlen =
-                    this.writeByte(IonDecimalImpl.NULL_DECIMAL_TYPEDESC);
+                    this.writeByte(IonBinary.NULL_DECIMAL_TYPEDESC);
             }
             else if (isNibbleZero(bd)) {
                 returnlen =
-                    this.writeByte(IonDecimalImpl.ZERO_DECIMAL_TYPEDESC);
+                    this.writeByte(IonBinary.ZERO_DECIMAL_TYPEDESC);
             }
             else {
                 // otherwise we to it the hard way ....

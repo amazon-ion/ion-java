@@ -2,8 +2,6 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl.IonTimestampImpl.precisionIncludes;
-
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
 import com.amazon.ion.Timestamp;
@@ -1265,8 +1263,7 @@ done:       for (;;) {
             if (di == null) return 0;
 
             int returnlen = 0;
-            int precision_flags =
-                IonTimestampImpl.getPrecisionAsBitFlags(di.getPrecision());
+            Precision precision = di.getPrecision();
 
             Integer offset = di.getLocalOffset();
             if (offset == null) {
@@ -1281,25 +1278,25 @@ done:       for (;;) {
 
             // now the date - year, month, day as varUint7's
             // if we have a non-null value we have at least the date
-            if (precisionIncludes(precision_flags, Precision.YEAR)) {
+            if (precision.includes(Precision.YEAR)) {
                 returnlen += this.writeVarUInt(di.getZYear(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.MONTH)) {
+            if (precision.includes(Precision.MONTH)) {
                 returnlen += this.writeVarUInt(di.getZMonth(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.DAY)) {
+            if (precision.includes(Precision.DAY)) {
                 returnlen += this.writeVarUInt(di.getZDay(), true);
             }
 
             // now the time part
-            if (precisionIncludes(precision_flags, Precision.MINUTE)) {
+            if (precision.includes(Precision.MINUTE)) {
                 returnlen += this.writeVarUInt(di.getZHour(), true);
                 returnlen += this.writeVarUInt(di.getZMinute(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.SECOND)) {
+            if (precision.includes(Precision.SECOND)) {
                 returnlen += this.writeVarUInt(di.getZSecond(), true);
             }
-            if (precisionIncludes(precision_flags, Precision.FRACTION)) {
+            if (precision.includes(Precision.FRACTION)) {
                 // and, finally, any fractional component that is known
                 returnlen += this.writeDecimal(di.getZFractionalSecond());
             }

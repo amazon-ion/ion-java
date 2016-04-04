@@ -140,7 +140,7 @@ final class IonTokenReader
              */
             static Integer parseLocalOffset(String s) {
                 if (s.equals("Z")) {
-                    return IonTimestampImpl.UTC_OFFSET;
+                    return Timestamp.UTC_OFFSET;
                 }
 
                 int sign = 0;

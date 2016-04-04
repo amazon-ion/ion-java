@@ -81,16 +81,23 @@ public final class Timestamp
      */
     public static final Integer UTC_OFFSET = Integer.valueOf(0);
 
+    private static final int FLAG_YEAR      = 0x01;
+    private static final int FLAG_MONTH     = 0x02;
+    private static final int FLAG_DAY       = 0x04;
+    private static final int FLAG_MINUTE    = 0x08;
+    private static final int FLAG_SECOND    = 0x10;
+    private static final int FLAG_FRACTION  = 0x20;
+
     /**
      * The precision of the Timestamp.
      */
     public static enum Precision {
-        YEAR,
-        MONTH,
-        DAY,
+        YEAR    (FLAG_YEAR),
+        MONTH   (FLAG_YEAR | FLAG_MONTH),
+        DAY     (FLAG_YEAR | FLAG_MONTH | FLAG_DAY),
         // HOUR is not a supported precision per https://www.w3.org/TR/NOTE-datetime
-        MINUTE,
-        SECOND,
+        MINUTE  (FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE),
+        SECOND  (FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE | FLAG_SECOND),
 
         /**
          * DEPRECATED! Treating the fractional part of seconds separate from
@@ -100,11 +107,34 @@ public final class Timestamp
          * @deprecated As of IonJava R21.
          */
         @Deprecated
-        FRACTION;
+        FRACTION(FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE | FLAG_SECOND | FLAG_FRACTION);
+
+        /** Bit flags for the precision. */
+        private final int flags;
+
+        private Precision(int flags)
+        {
+            this.flags = flags;
+        }
 
         private boolean alwaysUnknownOffset()
         {
             return this.ordinal() <= DAY.ordinal();
+        }
+
+        public boolean includes(Precision isIncluded)
+        {
+            switch (isIncluded)
+            {
+                case FRACTION:  return (flags & FLAG_FRACTION) != 0;
+                case SECOND:    return (flags & FLAG_SECOND)   != 0;
+                case MINUTE:    return (flags & FLAG_MINUTE)   != 0;
+                case DAY:       return (flags & FLAG_DAY)      != 0;
+                case MONTH:     return (flags & FLAG_MONTH)    != 0;
+                case YEAR:      return (flags & FLAG_YEAR)     != 0;
+                default:        break;
+            }
+            throw new IllegalStateException("unrecognized precision" + isIncluded);
         }
     }
 
