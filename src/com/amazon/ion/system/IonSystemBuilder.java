@@ -2,43 +2,15 @@
 
 package com.amazon.ion.system;
 
-import static com.amazon.ion.impl._Private_LazyDomTrampoline.newLazySystem;
 import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.newLiteSystem;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_Utils;
-
-/*
- * IonValue DOM Implementations
- *
- * ============================== Lite ==============================
- *
- * Currently, systems built by this class construct {@link IonValue}s that use
- * a new, lightweight implementation (Lite) that fully materializes the input
- * into Java objects and does not retain a copy of the binary image of the
- * Ion data.
- *
- * This is suitable for the vast majority of applications and is the only
- * available DOM implementation for public use.
- *
- * ============================== Lazy ==============================
- *
- * In contrast, there is another DOM implementation that retains a copy
- * (essentially, a buffer) of the Ion binary encoding "underneath" the
- * materialized Ion value hierarchy, lazily materializing Java objects from
- * that buffer as needed. It incrementally updates the binary image on-demand,
- * without necessary re-encoding the entire Ion value hierarchy.
- *
- * This is more suitable for applications that take large binary data streams as
- * input, read or modify only selection portions, and then pass on the results.
- * Currently, this is not available for public use.
- */
 
 /**
  * The builder for creating {@link IonSystem}s.
@@ -98,18 +70,6 @@ import com.amazon.ion.impl._Private_Utils;
  */
 public class IonSystemBuilder
 {
-    /**
-     * This is a back-door for allowing a JVM-level override of the default
-     * DOM implementation.  The only reliable way to use this property is to
-     * set via the command-line.
-     * <p>
-     * <b>DO NOT USE THIS WITHOUT APPROVAL FROM JONKER@AMAZON.COM!</b>
-     * This private feature is subject to change without notice.
-     */
-    private static final String BINARY_BACKED_DOM_PROPERTY =
-        "com.amazon.ion.system.IonSystemBuilder.useBinaryBackedDom";
-
-
     private static final IonSystemBuilder STANDARD = new IonSystemBuilder();
 
     /**
@@ -127,27 +87,15 @@ public class IonSystemBuilder
     //=========================================================================
 
     IonCatalog myCatalog;
-    boolean myBinaryBacked = false;
     boolean myStreamCopyOptimized = false;
 
 
     /** You no touchy. */
-    private IonSystemBuilder()
-    {
-        try
-        {
-            myBinaryBacked = Boolean.getBoolean(BINARY_BACKED_DOM_PROPERTY);
-        }
-        catch (final SecurityException e)
-        {
-            // NO-OP in the case where system properties are not accessible.
-        }
-    }
+    private IonSystemBuilder() {}
 
     private IonSystemBuilder(IonSystemBuilder that)
     {
         this.myCatalog      = that.myCatalog;
-        this.myBinaryBacked = that.myBinaryBacked;
         this.myStreamCopyOptimized = that.myStreamCopyOptimized;
     }
 
@@ -251,40 +199,6 @@ public class IonSystemBuilder
 
 
     /**
-     * Indicates whether built systems will create binary-backed
-     * {@link IonValue}s.
-     * By default, this is false.
-     */
-    final boolean isBinaryBacked()
-    {
-        return myBinaryBacked;
-    }
-
-    /**
-     * Indicates whether built systems will create binary-backed
-     * {@link IonValue}s.
-     * By default, this is false.
-     *
-     * @throws UnsupportedOperationException if this is immutable.
-     */
-    final void setBinaryBacked(boolean backed)
-    {
-        mutationCheck();
-        myBinaryBacked = backed;
-    }
-
-    final IonSystemBuilder withBinaryBacked(boolean backed)
-    {
-        IonSystemBuilder b = mutable();
-        b.setBinaryBacked(backed);
-        return b;
-    }
-
-
-    //=========================================================================
-
-
-    /**
      * Indicates whether built systems may attempt to optimize
      * {@link IonWriter#writeValue(IonReader)} by copying raw source data.
      * By default, this property is false.
@@ -370,16 +284,7 @@ public class IonSystemBuilder
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
 
-        IonSystem sys;
-        if (isBinaryBacked())
-        {
-            sys = newLazySystem(twb, bwb);
-        }
-        else
-        {
-            sys = newLiteSystem(twb, bwb);
-        }
-        return sys;
+        return newLiteSystem(twb, bwb);
     }
 
     //=========================================================================

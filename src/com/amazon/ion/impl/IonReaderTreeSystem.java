@@ -65,12 +65,12 @@ class IonReaderTreeSystem
         else {
             _system = value.getSystem();
             re_init(value, /* hoisted */ false);
-            _symbolTableAccessor = new SymbolTableProvider() 
+            _symbolTableAccessor = new SymbolTableProvider()
             {
                 public SymbolTable getSymbolTable()
                 {
                     return null == _symbols ? _system.getSystemSymbolTable() : _symbols;
-                }       
+                }
             };
         }
     }
@@ -496,11 +496,6 @@ class IonReaderTreeSystem
         {
             if (parent instanceof _Private_IonContainer) {
                 _parent = (_Private_IonContainer)parent;
-
-if (_parent instanceof IonValueImpl) {
-((IonValueImpl)_parent).makeReady();
-}
-
                 _next_idx = 0;
                 _curr = null;
                 if (_parent.isNullValue()) {

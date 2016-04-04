@@ -1206,4 +1206,20 @@ public final class _Private_Utils
         }
         return new IntIterator(values, 0, len);
     }
+
+
+    //========================================================================
+
+
+    public static void writeAsBase64(InputStream byteStream, Appendable out)
+        throws IOException
+    {
+        Base64Encoder.TextStream ts = new Base64Encoder.TextStream(byteStream);
+
+        for (;;) {
+            int c = ts.read();
+            if (c == -1) break;
+            out.append((char) c);
+        }
+    }
 }

@@ -6,7 +6,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_LazyDomTrampoline;
+import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -64,7 +64,7 @@ final class IonBlobLite
         InputStream byteStream = newInputStream();
         try
         {
-            _Private_LazyDomTrampoline.writeAsBase64(byteStream, out);
+            _Private_Utils.writeAsBase64(byteStream, out);
         }
         finally
         {
