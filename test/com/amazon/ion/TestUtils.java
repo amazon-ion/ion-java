@@ -128,10 +128,8 @@ public class TestUtils
                       ,"bad/utf8/surrogate_5.ion"          // TODO IONJAVA-487
                       ,"equivs/paddedInts.10n"             // TODO IONJAVA-153
                       ,"good/decimalsWithUnderscores.ion"  // TODO ION-591
-                      ,"good/equivs/binaryInts.ion"        // TODO IONJAVA-598
                       ,"good/equivs/decimalsWithUnderscores.ion" // TODO ION-591
                       ,"good/equivs/intsWithUnderscores.ion" // TODO ION-591
-                      ,"good/intBinary.ion"                // TODO ION-592
                       ,"good/intsWithUnderscores.ion"      // TODO ION-591
                       ,"good/subfieldVarUInt32bit.ion"     // TODO IONJAVA-78
                       ,"good/symbolEmpty.ion"              // TODO ION-480

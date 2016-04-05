@@ -477,7 +477,10 @@ final class IonReaderTextRawTokensX
             c = skip_over_int(sp);
             break;
         case IonTokenConstsX.TOKEN_HEX:
-            c = skip_over_hex(sp);
+            c = skipOverRadix(sp, Radix.HEX);
+            break;
+        case IonTokenConstsX.TOKEN_BINARY:
+            c = skipOverRadix(sp, Radix.BINARY);
             break;
         case IonTokenConstsX.TOKEN_DECIMAL:
             c = skip_over_decimal(sp);
@@ -1023,6 +1026,10 @@ final class IonReaderTextRawTokensX
             case 'E':
                 t = IonTokenConstsX.TOKEN_FLOAT;
                 break;
+            case 'b':
+            case 'B':
+                t = IonTokenConstsX.TOKEN_BINARY;
+                break;
             case '.':
                 // the decimal might have an 'e' somewhere down the line so we
                 // don't really know the type here
@@ -1302,22 +1309,22 @@ final class IonReaderTextRawTokensX
         }
         return c;
     }
-    private int skip_over_hex(SavePoint sp) throws IOException
+
+    private int skipOverRadix(SavePoint sp, Radix radix) throws IOException
     {
         int c;
 
-        // we probably shouldn't bother to unread the 0x or -0x header
         c = read_char();
         if (c == '-') {
             c = read_char();
         }
         assert(c == '0');
         c = read_char();
-        assert(c == 'x' || c == 'X');
+        radix.assertPrefix(c);
 
         do {
             c = read_char();
-        } while (IonTokenConstsX.isHexDigit(c));
+        } while (radix.isValidDigit(c));
 
         if (!is_value_terminating_character(c)) {
             bad_token(c);
@@ -1328,6 +1335,7 @@ final class IonReaderTextRawTokensX
 
         return c;
     }
+
     private int skip_over_decimal(SavePoint sp) throws IOException
     {
         int c = skip_over_number(sp);
@@ -1528,10 +1536,14 @@ final class IonReaderTextRawTokensX
         if (starts_with_zero) {
             // if it's a leading 0 check for a hex value
             int c2 = read_char();
-            if (c2 == 'x' || c2 == 'X') {
+            if (Radix.HEX.isPrefix(c2)) {
                 sb.append((char)c);
-                c = load_hex_value(sb, has_sign, c2);
+                c = loadRadixValue(sb, has_sign, c2, Radix.HEX);
                 return load_finish_number(sb, c, IonTokenConstsX.TOKEN_HEX);
+            } else if (Radix.BINARY.isPrefix(c2)) {
+                sb.append((char) c);
+                c = loadRadixValue(sb, has_sign, c2, Radix.BINARY);
+                return load_finish_number(sb, c, IonTokenConstsX.TOKEN_BINARY);
             }
             // not a next value, back up and try again
             unread_char(c2);
@@ -1784,23 +1796,20 @@ final class IonReaderTextRawTokensX
         }
         return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
     }
-    private final int load_hex_value(StringBuilder sb, boolean has_sign, int c2)
+
+    private final int loadRadixValue(StringBuilder sb, boolean has_sign, int c2, Radix radix)
         throws IOException
     {
         int c = read_char();
 
-        assert(c2 == 'x' || c2 == 'X');
-        sb.append((char)c2);
+        radix.assertPrefix(c2);
+        sb.append((char) c2);
 
-        // read the hex digits
         do {
-            sb.append((char)c);
+            sb.append((char) c);
             c = read_char();
-        } while(IonTokenConstsX.isHexDigit(c));
+        } while(radix.isValidDigit(c));
 
-        // we have to do this later because of the optional
-        // sign _start += has_sign ? 1 : 2; //  skip over the
-        // "0x" (they're ASCII so 2 is correct)
         return c;
     }
 
@@ -2679,6 +2688,43 @@ final class IonReaderTextRawTokensX
         private static boolean isNewline(int c)
         {
             return c == 0x0A || c == 0x0D;
+        }
+    }
+
+    private enum Radix
+    {
+        BINARY
+        {
+            boolean isPrefix(int c)
+            {
+                return c == 'b' || c == 'B';
+            }
+
+            boolean isValidDigit(int c)
+            {
+                return IonTokenConstsX.isBinaryDigit(c);
+            }
+        },
+
+        HEX
+        {
+            boolean isPrefix(int c)
+            {
+                return c == 'x' || c == 'X';
+            }
+
+            boolean isValidDigit(int c)
+            {
+                return IonTokenConstsX.isHexDigit(c);
+            }
+        };
+
+        abstract boolean isPrefix(int c);
+        abstract boolean isValidDigit(int c);
+
+        void assertPrefix(int c)
+        {
+            assert isPrefix(c);
         }
     }
 }

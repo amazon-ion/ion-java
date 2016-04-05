@@ -144,6 +144,7 @@ abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_EOF]                = ACTION_FINISH_DATAGRAM;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_UNKNOWN_NUMERIC]    = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_INT]                = ACTION_LOAD_SCALAR;
+        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_BINARY]             = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_HEX]                = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_DECIMAL]            = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_FLOAT]              = ACTION_LOAD_SCALAR;
@@ -1109,6 +1110,7 @@ abstract class IonReaderTextRawX
             switch (token_type) {
             case IonTokenConstsX.TOKEN_UNKNOWN_NUMERIC:
             case IonTokenConstsX.TOKEN_INT:
+            case IonTokenConstsX.TOKEN_BINARY:
             case IonTokenConstsX.TOKEN_HEX:
             case IonTokenConstsX.TOKEN_FLOAT:
             case IonTokenConstsX.TOKEN_DECIMAL:
