@@ -45,7 +45,6 @@ import com.amazon.ion.TimestampTest;
 import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.ByteBufferTest;
-import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
 import com.amazon.ion.impl.IonMarkupWriterFilesTest;
 import com.amazon.ion.impl.IonMarkupWriterTest;
@@ -94,7 +93,6 @@ import org.junit.runners.Suite;
     FacetsTest.class,
     ByteBufferTest.class,
     TextTest.class,
-    CharacterReaderTest.class,
     JavaNumericsTest.class,
     ExtendedDecimalTest.class,
     IonImplUtilsTest.class,

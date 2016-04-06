@@ -60,7 +60,6 @@ public final class _Private_Utils
      */
     public static final boolean READER_HASNEXT_REMOVED = false;
 
-
     /** Just a zero-length byte array, used to avoid allocation. */
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
@@ -69,19 +68,6 @@ public final class _Private_Utils
 
     /** Just a zero-length int array, used to avoid allocation. */
     public final static int[] EMPTY_INT_ARRAY = new int[0];
-
-    /**
-     * TODO Jonker 2009-02-12: Actual lookahead limit is unclear to me!
-     *
-     * (null.timestamp) requires 11 ASCII chars to distinguish from
-     * (null.timestamps) aka (null '.' 'timestamps')
-     *
-     * @see IonCharacterReader#DEFAULT_BUFFER_SIZE
-     * @see IonCharacterReader#BUFFER_PADDING
-     */
-    public static final int MAX_LOOKAHEAD_UTF16 = 11;
-
-
 
     public static final String ASCII_CHARSET_NAME = "US-ASCII";
 
