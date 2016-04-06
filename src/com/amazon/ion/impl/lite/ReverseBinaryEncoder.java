@@ -681,10 +681,6 @@ class ReverseBinaryEncoder
         writeByte(encoded);
     }
 
-    /**
-     * @see IonBinary#writeUIntValue(BigInteger value, int len)
-     * @param val
-     */
     private void writeIonIntContent(IonInt val)
     {
         if (val.isNullValue())

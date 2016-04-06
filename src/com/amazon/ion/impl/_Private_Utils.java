@@ -29,8 +29,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl.IonBinary.BufferManager;
-import com.amazon.ion.impl.IonBinary.Reader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -621,17 +619,6 @@ public final class _Private_Utils
         byte[] utf8Bytes = _Private_Utils.loadFileBytes(file);
         String s = utf8(utf8Bytes);
         return s;
-    }
-
-    public static byte[] loadStreamBytes(InputStream in)
-        throws IOException
-    {
-        BufferManager buffer = new BufferManager(in);
-        Reader bufReader = buffer.reader();
-        bufReader.sync();
-        bufReader.setPosition(0);
-        byte[] bytes = bufReader.getBytes();
-        return bytes;
     }
 
 

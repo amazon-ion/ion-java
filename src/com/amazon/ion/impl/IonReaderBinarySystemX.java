@@ -129,6 +129,22 @@ class IonReaderBinarySystemX
         }
     }
 
+    /** Utility method to convert an unsigned magnitude stored as a long to a {@link BigInteger}. */
+    private static BigInteger unsignedLongToBigInteger(int signum, long val)
+    {
+        byte[] magnitude = {
+            (byte) ((val >> 56) & 0xFF),
+            (byte) ((val >> 48) & 0xFF),
+            (byte) ((val >> 40) & 0xFF),
+            (byte) ((val >> 32) & 0xFF),
+            (byte) ((val >> 24) & 0xFF),
+            (byte) ((val >> 16) & 0xFF),
+            (byte) ((val >>  8) & 0xFF),
+            (byte) (val & 0xFF),
+        };
+        return new BigInteger(signum, magnitude);
+    }
+
     static final int MAX_BINARY_LENGTH_INT = 4;
     static final int MAX_BINARY_LENGTH_LONG = 8;
 
@@ -176,7 +192,7 @@ class IonReaderBinarySystemX
                 if (v < 0) {
                     // we really can't fit this magnitude properly into a Java long
                     int signum = _value_tid == _Private_IonConstants.tidPosInt ? 1 : -1;
-                    BigInteger big = IonBinary.unsignedLongToBigInteger(signum, v);
+                    BigInteger big = unsignedLongToBigInteger(signum, v);
                     _v.setValue(big);
                     _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
                 } else {

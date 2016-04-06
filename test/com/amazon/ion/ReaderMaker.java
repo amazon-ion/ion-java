@@ -237,14 +237,6 @@ public enum ReaderMaker
     }
 
 
-    public IonReader newReader(IonSystem system, InputStream ionData)
-        throws IOException
-    {
-        byte[] bytes = _Private_Utils.loadStreamBytes(ionData);
-        return newReader(system, bytes);
-    }
-
-
     public static ReaderMaker[] valuesExcluding(ReaderMaker... exclusions)
     {
         ReaderMaker[] all = values();

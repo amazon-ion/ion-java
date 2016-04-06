@@ -1054,11 +1054,6 @@ done:   for (;;) {
         }
         return retvalue;
     }
-    /**
-     * Near clone of {@link SimpleByteBuffer.SimpleByteReader#readDecimal(int)}
-     * and {@link IonBinary.Reader#readDecimalValue(int)}
-     * so keep them in sync!
-     */
     protected final Decimal readDecimal(int len) throws IOException
     {
         MathContext mathContext = MathContext.UNLIMITED;
@@ -1107,9 +1102,6 @@ done:   for (;;) {
         return bd;
     }
 
-    /**
-     * @see IonBinary.Reader#readTimestampValue
-     */
     protected final Timestamp readTimestamp(int len) throws IOException
     {
         if (len < 1) {
