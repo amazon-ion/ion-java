@@ -10,7 +10,6 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayInputStream;
@@ -22,7 +21,6 @@ import java.util.zip.GZIPInputStream;
 /**
  * NOT FOR APPLICATION USE!
  */
-@SuppressWarnings("deprecation")
 public final class _Private_IonReaderFactory
 {
     public static final IonReader makeReader(IonSystem system,
@@ -72,7 +70,7 @@ public final class _Private_IonReaderFactory
     }
 
 
-    public static final IonTextReader makeReader(IonSystem system,
+    public static final IonReader makeReader(IonSystem system,
                                                  IonCatalog catalog,
                                                  char[] chars)
     {
@@ -87,27 +85,27 @@ public final class _Private_IonReaderFactory
     }
 
 
-    public static final IonTextReader makeReader(IonSystem system,
-                                                 IonCatalog catalog,
-                                                 char[] chars,
-                                                 int offset,
-                                                 int length)
+    public static final IonReader makeReader(IonSystem system,
+                                             IonCatalog catalog,
+                                             char[] chars,
+                                             int offset,
+                                             int length)
     {
         UnifiedInputStreamX in = makeStream(chars, offset, length);
         return new IonReaderTextUserX(system, catalog, in, offset);
     }
 
     public static final IonReader makeSystemReader(IonSystem system,
-                                                       char[] chars,
-                                                       int offset,
-                                                       int length)
+                                                   char[] chars,
+                                                   int offset,
+                                                   int length)
     {
         UnifiedInputStreamX in = makeStream(chars, offset, length);
         return new IonReaderTextSystemX(system, in);
     }
 
 
-    public static final IonTextReader makeReader(IonSystem system,
+    public static final IonReader makeReader(IonSystem system,
                                                  IonCatalog catalog,
                                                  CharSequence chars)
     {
@@ -123,11 +121,11 @@ public final class _Private_IonReaderFactory
     }
 
 
-    public static final IonTextReader makeReader(IonSystem system,
-                                                 IonCatalog catalog,
-                                                 CharSequence chars,
-                                                 int offset,
-                                                 int length)
+    public static final IonReader makeReader(IonSystem system,
+                                             IonCatalog catalog,
+                                             CharSequence chars,
+                                             int offset,
+                                             int length)
     {
         UnifiedInputStreamX in = makeStream(chars, offset, length);
         return new IonReaderTextUserX(system, catalog, in, offset);
@@ -169,9 +167,9 @@ public final class _Private_IonReaderFactory
     }
 
 
-    public static final IonTextReader makeReader(IonSystem system,
-                                                 IonCatalog catalog,
-                                                 Reader chars)
+    public static final IonReader makeReader(IonSystem system,
+                                             IonCatalog catalog,
+                                             Reader chars)
     {
         try {
             UnifiedInputStreamX in = makeStream(chars);

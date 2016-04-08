@@ -349,8 +349,7 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      */
-    @SuppressWarnings("deprecation")
-    public IonTextReader newReader(String ionText);
+    public IonReader newReader(String ionText);
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
