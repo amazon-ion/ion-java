@@ -43,13 +43,6 @@ services will probably want to use a non-default
 {@linkplain com.amazon.ion.IonCatalog catalog} by configuring the builder
 before calling {@link com.amazon.ion.system.IonSystemBuilder#build() build()}.
 
-<h2>SystemFactory is Deprecated</h2>
-
-As of early 2011, the {@link com.amazon.ion.system.SystemFactory SystemFactory}
-class has been deprecated in favor of {@code IonSystemBuilder}.
-This should be a straightforward application change and we strongly recommend
-that all applications update.
-
 <h2>An Important Caveat</h2>
 Objects returned by one {@code IonSystem} cannot by mixed with objects returned
 by another {@code IonSystem}!  For example, the following code is <b>not

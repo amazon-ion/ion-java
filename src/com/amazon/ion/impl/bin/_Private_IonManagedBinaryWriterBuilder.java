@@ -26,7 +26,6 @@ import java.util.List;
  * <p>
  * This class is thread-safe.
  */
-@SuppressWarnings("deprecation")
 public final class _Private_IonManagedBinaryWriterBuilder
 {
     public enum AllocatorMode

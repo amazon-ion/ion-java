@@ -43,10 +43,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/**
- *
- */
-@SuppressWarnings("deprecation")
 final class IonSystemLite
     extends ValueFactoryLite
     implements _Private_IonSystem
