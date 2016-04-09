@@ -816,6 +816,13 @@ public final class _Private_Utils
                                                         alreadyInStruct);
     }
 
+    public static SymbolTable newSubstituteSymtab(SymbolTable original,
+                                                  int version,
+                                                  int maxId)
+    {
+        return new SubstituteSymbolTable(original, version, maxId);
+    }
+
 
     /**
      * Creates a mutable copy of this local symbol table. The cloned table

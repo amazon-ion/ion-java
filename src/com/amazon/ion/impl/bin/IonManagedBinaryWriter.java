@@ -25,6 +25,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 import java.io.IOException;
@@ -426,9 +427,13 @@ import java.util.Map;
                                 // in case this is intentional
                                 symbols = Symbols.unknownSharedSymbolTable(desc.name, desc.version, desc.maxId);
                             }
-                            if (desc.maxId != -1 && desc.maxId != symbols.getMaxId())
+                            final boolean hasDeclaredMaxId = desc.maxId != -1;
+                            final boolean declaredMaxIdMatches = desc.maxId == symbols.getMaxId();
+                            final boolean declaredVersionMatches = desc.version == symbols.getVersion();
+                            if (hasDeclaredMaxId && (!declaredMaxIdMatches || !declaredVersionMatches))
                             {
-                                throw new IllegalArgumentException("Import doesn't match Max ID: " + desc + ", Max ID in symbol table: " + symbols.getMaxId());
+                                // the max ID doesn't match, so we need a substitute
+                                symbols = _Private_Utils.newSubstituteSymtab(symbols, desc.version, desc.maxId);
                             }
                             self.userImports.add(symbols);
                         }
