@@ -32,14 +32,6 @@ class IonReaderBinarySystemX
     SymbolTable _symbols;
     // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
 
-    @Deprecated
-    IonReaderBinarySystemX(IonSystem system, byte[] bytes, int offset, int length) {
-        super();
-        UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(bytes, offset, length);
-        init_raw(uis);
-        _system = system;
-    }
-
     IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX in)
     {
         super();

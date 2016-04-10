@@ -36,7 +36,6 @@ final class IonReaderBinaryUserX
         extends DowncastingFaceted
         implements Span, OffsetSpan
     {
-        State       _state;
         long        _offset;
         long        _limit;
         SymbolTable _symbol_table;
@@ -50,15 +49,6 @@ final class IonReaderBinaryUserX
         {
             return _limit;
         }
-    }
-
-    @Deprecated
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog,
-                                byte[] bytes, int offset, int length)
-    {
-        super(system, bytes, offset, length);
-        _physical_start_offset = offset;
-        init_user(catalog);
     }
 
     public IonReaderBinaryUserX(IonSystem system,
@@ -125,8 +115,6 @@ final class IonReaderBinaryUserX
             pos._symbol_table = _symbols;
         }
 
-        pos._state = _state;
-
         return pos;
     }
 
@@ -172,19 +160,6 @@ final class IonReaderBinaryUserX
 
         // now we need to set our symbol table
         _symbols = pos._symbol_table;
-
-        // and the other misc state variables we had
-        // read past before getPosition gets called
-        //   jonker: Don't do this, we'll re-read the data from the stream.
-        //           Otherwise, this reader will be in the wrong state.
-        //           For example, getType() will return non-null but that
-        //           shouldn't happen until the user calls next().
-//        _state         = pos._state;
-//        _value_type    = pos._value_type;
-//        _value_is_null = pos._value_is_null;
-//        _value_is_true = pos._value_is_true;
-
-//        _is_in_struct = false;
     }
 
 
