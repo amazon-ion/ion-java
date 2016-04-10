@@ -237,31 +237,6 @@ public interface ValueFactory
      */
     public IonList newEmptyList();
 
-    /**
-     * Constructs a new <code>list</code> with given children.
-     *
-     * @param values
-     *  the initial set of children.  If <code>null</code>, then the new
-     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
-     *
-     * @throws ContainedValueException
-     *  if any value in {@code values}
-     *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException
-     *   if any value in {@code values} is null.
-     * @throws IllegalArgumentException
-     *   if any value in {@code values} is an {@link IonDatagram}.
-     *
-     * @deprecated Since IonJava R10. This method can be invoked
-     *  (accidentally and incorrectly) with an {@link IonSequence}!
-     *  Use either {@link #newList(IonValue...)}
-     *  or {@link #newList(IonValue...) newList()}{@link
-     *  IonSequence#addAll(Collection) .addAll(Collection)}.
-     */
-    @Deprecated
-    public IonList newList(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException;
-
 
     /**
      * Constructs a new {@code list} with the given child.
@@ -369,32 +344,6 @@ public interface ValueFactory
      * Constructs a new empty (not null) <code>sexp</code> instance.
      */
     public IonSexp newEmptySexp();
-
-
-    /**
-     * Constructs a new <code>sexp</code> with given child elements.
-     *
-     * @param values
-     *  the initial set of children.  If <code>null</code>, then the new
-     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
-     *
-     * @throws ContainedValueException
-     *  if any value in {@code values}
-     *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException
-     *   if any value in {@code values} is null.
-     * @throws IllegalArgumentException
-     *   if any value in {@code values} is an {@link IonDatagram}.
-     *
-     * @deprecated Since IonJava R10. This method can be invoked
-     *  (accidentally and incorrectly) with an {@link IonSequence}!
-     *  Use either {@link #newSexp(IonValue...)}
-     *  or {@link #newSexp(IonValue...) newSexp()}{@link
-     *  IonSequence#addAll(Collection) .addAll(Collection)}.
-     */
-    @Deprecated
-    public IonSexp newSexp(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException;
 
     /**
      * Constructs a new {@code sexp} with the given child.

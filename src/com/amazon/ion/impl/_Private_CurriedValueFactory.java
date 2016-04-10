@@ -25,7 +25,6 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.ValueFactory;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collection;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -229,15 +228,6 @@ public abstract class _Private_CurriedValueFactory
         return v;
     }
 
-    @Deprecated
-    public IonList newList(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException
-    {
-        IonList v = myFactory.newList(values);
-        handle(v);
-        return v;
-    }
-
     public IonList newList(IonSequence firstChild)
     throws ContainedValueException, NullPointerException
     {
@@ -296,15 +286,6 @@ public abstract class _Private_CurriedValueFactory
     public IonSexp newEmptySexp()
     {
         IonSexp v = myFactory.newEmptySexp();
-        handle(v);
-        return v;
-    }
-
-    @Deprecated
-    public IonSexp newSexp(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException
-    {
-        IonSexp v = myFactory.newSexp(values);
         handle(v);
         return v;
     }

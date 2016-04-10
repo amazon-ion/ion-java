@@ -2,7 +2,6 @@
 package com.amazon.ion;
 
 import com.amazon.ion.junit.Injected.Inject;
-import java.util.Collection;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -12,7 +11,6 @@ public class ValueFactorySequenceTest
     private static abstract class SequenceMaker<S extends IonSequence>
     {
         ValueFactory factory;
-        abstract S newSeq(Collection<? extends IonValue> values);
         abstract S newSeq(IonSequence child);
         abstract S newSeq(IonValue... children);
     }
@@ -20,13 +18,6 @@ public class ValueFactorySequenceTest
     private static class ListMaker extends SequenceMaker<IonList>
     {
         @Override public String toString() { return "LIST"; }
-
-        @Override
-        @SuppressWarnings("deprecation")
-        IonList newSeq(Collection<? extends IonValue> values)
-        {
-            return factory.newList(values);
-        }
 
         @Override
         IonList newSeq(IonSequence child)
@@ -44,13 +35,6 @@ public class ValueFactorySequenceTest
     private static class SexpMaker extends SequenceMaker<IonSexp>
     {
         @Override public String toString() { return "SEXP"; }
-
-        @Override
-        @SuppressWarnings("deprecation")
-        IonSexp newSeq(Collection<? extends IonValue> values)
-        {
-            return factory.newSexp(values);
-        }
 
         @Override
         IonSexp newSeq(IonSequence child)
