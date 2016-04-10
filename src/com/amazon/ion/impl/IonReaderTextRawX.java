@@ -1291,7 +1291,7 @@ if (depth == debugging_depth) {
         return _field_name;
     }
 
-    public int getFieldId()
+    int getFieldId()
     {
         // For hoisting
         if (getDepth() == 0 && is_in_struct_internal()) return UNKNOWN_SYMBOL_ID;

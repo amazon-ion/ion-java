@@ -1101,50 +1101,6 @@ final class SymbolTableReader
         return _Private_Utils.stringIterator(annotations);
     }
 
-
-    public int getFieldId()
-    {
-
-        switch (_current_state)
-        {
-        case S_STRUCT:
-        case S_IN_STRUCT:
-        case S_IN_IMPORTS:
-        case S_IMPORT_STRUCT:
-        case S_IN_IMPORT_STRUCT:
-        case S_IMPORT_STRUCT_CLOSE:
-        case S_IMPORT_LIST_CLOSE:
-        case S_AFTER_IMPORT_LIST:
-        case S_IN_SYMBOLS:
-        case S_SYMBOL:
-        case S_SYMBOL_LIST_CLOSE:
-        case S_STRUCT_CLOSE:
-        case S_EOF:
-            return SymbolTable.UNKNOWN_SYMBOL_ID;
-
-        case S_NAME:
-        case S_IMPORT_NAME:
-            return NAME_SID;
-
-        case S_VERSION:
-        case S_IMPORT_VERSION:
-            return VERSION_SID;
-
-        case S_MAX_ID:
-        case S_IMPORT_MAX_ID:
-            return MAX_ID_SID;
-
-        case S_IMPORT_LIST:
-            return IMPORTS_SID;
-
-        case S_SYMBOL_LIST:
-            return SYMBOLS_SID;
-
-        default:
-            throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);
-        }
-    }
-
     public String getFieldName()
     {
         switch (_current_state)

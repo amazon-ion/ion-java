@@ -8,7 +8,6 @@ import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -393,40 +392,6 @@ abstract class IonWriterSystem
             _field_name_sid = sid;
             _field_name = null;
         }
-    }
-
-    /**
-     * Returns the symbol id of the current field name, if the field name
-     * has been set.  If the name has not been set, either as either a String
-     * or a symbol id value, this returns -1 (undefined symbol).
-     * @return symbol id of the name of the field about to be written or -1 if
-     * it is not set
-     */
-    final int getFieldId()
-    {
-        int id;
-
-        if (_field_name_type == null) {
-            throw new IllegalStateException("the field has not be set");
-        }
-        switch (_field_name_type) {
-        case STRING:
-                try {
-                    id = add_symbol(_field_name);
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
-                // TODO cache the sid?
-            break;
-        case INT:
-            id = _field_name_sid;
-            break;
-        default:
-            throw new IllegalStateException("the field has not be set");
-        }
-
-        return id;
     }
 
     final SymbolToken assumeFieldNameSymbol()

@@ -376,24 +376,6 @@ abstract class IonContainerLite
         _isLocked(true);
     }
 
-
-
-
-    /**
-     * methods from IonValue
-     *
-     *   public void deepMaterialize()
-     *   public IonContainer getContainer()
-     *   public int getFieldId()
-     *   public String getFieldName()
-     *   public String[] getTypeAnnotations()
-     *   public boolean hasTypeAnnotation(String annotation)
-     *   public boolean isNullValue()
-     *   public boolean isReadOnly()
-     *   public void removeTypeAnnotation(String annotation)
-     */
-
-
     /*
      * IonContext methods
      *

@@ -3,7 +3,6 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.IonTestCase.checkSymbol;
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.impl._Private_Utils.stringIterator;
 import static com.amazon.ion.junit.IonAssert.assertIteratorEquals;
 import static com.amazon.ion.junit.IonAssert.assertSymbolEquals;
@@ -42,9 +41,6 @@ public class ReaderChecker
         assertEquals("IonReader.getFieldName()",
                      null, myReader.getFieldName());
 
-        assertEquals("IonReader.getFieldId()",
-                     UNKNOWN_SYMBOL_ID, myReader.getFieldId());
-
         assertEquals("IonReader.getFieldNameSymbol()",
                      null, myReader.getFieldNameSymbol());
 
@@ -69,9 +65,6 @@ public class ReaderChecker
             assertEquals("IonReader.getFieldName()",
                          expectedText, myReader.getFieldName());
         }
-
-        assertEquals("IonReader.getFieldId()",
-                     expectedSid, myReader.getFieldId());
 
         SymbolToken sym = myReader.getFieldNameSymbol();
         checkSymbol(expectedText, expectedSid, sym);

@@ -47,11 +47,6 @@ class IonReaderBinarySystemX
     // or the user reader.  Here they just fail.
     //
 
-    public final int getFieldId()
-    {
-        return _value_field_id;
-    }
-
     public SymbolToken[] getTypeAnnotationSymbols()
     {
         load_annotations();

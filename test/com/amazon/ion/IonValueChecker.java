@@ -42,9 +42,6 @@ public class IonValueChecker
                          expectedText, myCurrentValue.getFieldName());
         }
 
-        assertEquals("IonValue.getFieldId",
-                     expectedSid, myCurrentValue.getFieldId());
-
         SymbolToken sym = myCurrentValue.getFieldNameSymbol();
         checkSymbol(expectedText, expectedSid, sym);
 

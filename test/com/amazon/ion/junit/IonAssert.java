@@ -2,6 +2,15 @@
 
 package com.amazon.ion.junit;
 
+import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+import static com.amazon.ion.util.IonTextUtils.printSymbol;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
+
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -13,24 +22,12 @@ import com.amazon.ion.ReaderChecker;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.util.Equivalence;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
-import static com.amazon.ion.util.IonTextUtils.printSymbol;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public final class IonAssert
 {
@@ -50,7 +47,6 @@ public final class IonAssert
 
         if (! inStruct) {
             assertNull("reader field name", in.getFieldName());
-            assertEquals("reader fieldId", UNKNOWN_SYMBOL_ID, in.getFieldId());
             assertNull("reader field symbol", in.getFieldNameSymbol());
         }
 
@@ -70,7 +66,6 @@ public final class IonAssert
         assertNull(in.getType());
 
         assertNull(in.getFieldName());
-        assertTrue(in.getFieldId() < 0);
         assertNull(in.getFieldNameSymbol());
 
         // TODO ION-213 Text reader doesn't throw, but others do.

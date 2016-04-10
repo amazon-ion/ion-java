@@ -497,7 +497,7 @@ class IonReaderTextSystemX
 
 
     @Override
-    public final int getFieldId()
+    final int getFieldId()
     {
         // Superclass handles hoisting logic
         int id = super.getFieldId();

@@ -33,9 +33,6 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
-/**
- *
- */
 class IonReaderTreeSystem
     implements IonReader, _Private_ReaderWriter
 {
@@ -285,12 +282,6 @@ class IonReaderTreeSystem
 
         }
         return _curr.isNullValue();
-    }
-
-    public int getFieldId()
-    {
-        // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null || (_hoisted && _top == 0)) ? SymbolTable.UNKNOWN_SYMBOL_ID : _curr.getFieldId();
     }
 
     public String getFieldName()

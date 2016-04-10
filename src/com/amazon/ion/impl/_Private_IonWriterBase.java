@@ -98,9 +98,9 @@ public abstract class _Private_IonWriterBase
 
 
     /**
-     * Returns true if the field name has been set either through setFieldName or
-     * setFieldId.  This is generally more efficient than calling getFieldName or
-     * getFieldId and checking the return type as it does not need to resolve the
+     * Returns true if the field name has been set either through setFieldName.
+     * This is generally more efficient than calling getFieldName and
+     * checking the return type as it does not need to resolve the
      * name through a symbol table.  This returns false if the field name has not
      * been set.
      * @return true if a field name has been set false otherwise

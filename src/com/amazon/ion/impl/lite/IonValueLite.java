@@ -385,20 +385,6 @@ abstract class IonValueLite
         return this._elementid();
     }
 
-
-    public final int getFieldId()
-    {
-        if (_fieldId != UNKNOWN_SYMBOL_ID || _fieldName == null)
-        {
-            return _fieldId;
-        }
-
-        SymbolToken tok = getSymbolTable().find(_fieldName);
-
-        return (tok != null ? tok.getSid() : UNKNOWN_SYMBOL_ID);
-    }
-
-
     public SymbolToken getFieldNameSymbol()
     {
         // TODO ION-320 We should memoize the results of symtab lookups.
@@ -497,11 +483,6 @@ abstract class IonValueLite
 
         // TODO ION-320 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
-    }
-
-    public final int getFieldNameId()
-    {
-        return getFieldId();
     }
 
     /**

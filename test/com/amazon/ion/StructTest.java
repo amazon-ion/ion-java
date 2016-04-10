@@ -776,7 +776,7 @@ public class StructTest
 
         f.removeFromContainer();
         assertEquals(null, f.getFieldName());
-        assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, f.getFieldId());
+        assertEquals(null, f.getFieldNameSymbol());
     }
 
     @Test
