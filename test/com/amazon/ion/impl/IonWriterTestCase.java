@@ -426,7 +426,6 @@ public abstract class IonWriterTestCase
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         iw = makeWriter();
         dg.writeTo(iw);
-        iw.writeValue(dg);
     }
 
     // TODO test failure of getBytes before stepping all the way out
@@ -896,21 +895,6 @@ public abstract class IonWriterTestCase
         Assert.assertArrayEquals(annotations, v.getTypeAnnotations());
     }
 
-    /**
-     * Discovered this old behavior during test builds, some user code relies
-     * on it.
-     */
-    @Test
-    public void testWriteValueNull()
-        throws Exception
-    {
-        iw = makeWriter();
-        iw.writeValue((IonValue)null);
-
-        IonDatagram dg = reload();
-        assertEquals(0, dg.size());
-    }
-
     @Test
     public void testWriteSymbolTokenWithGoodSid()
         throws Exception
@@ -1023,7 +1007,6 @@ public abstract class IonWriterTestCase
         IonDatagram dg = loader().load("foo");
         iw = makeWriter();
         dg.writeTo(iw);
-        iw.writeValue(dg);
 
         Iterator<IonValue> it = systemIterateOutput();
         //if (myOutputIsBinary)
@@ -1031,25 +1014,6 @@ public abstract class IonWriterTestCase
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
         if (myOutputForm != OutputForm.TEXT) {
-            checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
-        }
-        // TODO IONJAVA-97
-        if (myOutputForm != OutputForm.TEXT)
-        {
-            checkSymbol(null, 10, it.next());
-        }
-        else
-        {
-            checkSymbol("foo", it.next());
-        }
-
-
-        if (myOutputForm != OutputForm.DOM) // TODO ION-165
-        {
-            checkSymbol(SystemSymbols.ION_1_0, it.next());
-        }
-        if (myOutputForm == OutputForm.BINARY) // TODO ION-165
-        {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
         // TODO IONJAVA-97

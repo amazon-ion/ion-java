@@ -17,7 +17,6 @@ import com.amazon.ion.impl._Private_SymtabExtendsCache;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Date;
 
 /** Common adapter for binary {@link IonWriter} implementations. */
 /*package*/ abstract class AbstractIonWriter implements _Private_IonWriter, _Private_ByteTransferSink
@@ -159,11 +158,6 @@ import java.util.Date;
         {
             writeValue(reader);
         }
-    }
-
-    public final void writeTimestampUTC(final Date value) throws IOException
-    {
-        writeTimestamp(Timestamp.forDateZ(value));
     }
 
     public final boolean isStreamCopyOptimized()

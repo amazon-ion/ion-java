@@ -10,7 +10,6 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
 
 /**
  * Writes Ion data to an output source.
@@ -289,20 +288,7 @@ public interface IonWriter
     //=========================================================================
     // Value writing
 
-    /**
-     * writes the contents of the passed in Ion value to the output.
-     * <p>
-     * This method also writes annotations and field names (if in a struct),
-     * and performs a deep write, including the contents of
-     * any containers encountered.
-     *
-     * @param value may be null, in which case this method does nothing.
-     *
-     * @deprecated Since IonJava R13. Use
-     * {@link IonValue#writeTo(IonWriter)} instead.
-     */
-    @Deprecated // TODO ION-247 remove this
-    public void writeValue(IonValue value) throws IOException;
+
 
     /**
      * Writes the current value from a reader.
@@ -398,20 +384,6 @@ public interface IonWriter
     public void writeTimestamp(Timestamp value) throws IOException;
 
     /**
-     * writes the passed in Date (in milliseconds since the epoch) as an
-     * IonTimestamp.  The Date value is treated as a UTC value with an
-     * unknown timezone offset (a z value).
-     * @param value java.util Date holding the UTC timestamp;
-     * may be null to represent {@code null.timestamp}.
-     *
-     * @deprecated Since IonJava RC2 (2009). Use
-     * {@link #writeTimestamp(Timestamp) IonWriter.writeTimestamp(}{@link
-     * Timestamp#forDateZ(Date) Timestamp.forDateZ(Date))} instead.
-     */
-    @Deprecated
-    public void writeTimestampUTC(Date value) throws IOException;
-
-    /**
      * Writes the text of an Ion symbol value.
      *
      * @param content may be null to represent {@code null.symbol}.
@@ -434,22 +406,6 @@ public interface IonWriter
      * @since IonJava R15
      */
     public void writeSymbolToken(SymbolToken content) throws IOException;
-
-    /**
-     * Write an Ion version marker symbol to the output.  This
-     * is the $ion_1_0 value currently (in later versions the
-     * number may change).  In text output this appears as the
-     * text symbol.  In binary this will be the symbol id if
-     * the writer is in a list, sexp or struct.  If the writer
-     * is currently at the top level this will write the
-     * "magic cookie" value.
-     *
-     *  Writing a version marker will reset the symbol table
-     *  to be the system symbol table.
-     *
-     * @throws IOException
-     */
-//    public void writeIonVersionMarker() throws IOException;
 
     /**
      * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are

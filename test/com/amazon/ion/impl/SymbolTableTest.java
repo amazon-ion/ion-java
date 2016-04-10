@@ -1127,7 +1127,7 @@ public class SymbolTableTest
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = system().newTextWriter(out);
-        writer.writeValue(data);
+        data.writeTo(writer);
         writer.close();
 
         // dataMap.put("value", out.toByteArray());

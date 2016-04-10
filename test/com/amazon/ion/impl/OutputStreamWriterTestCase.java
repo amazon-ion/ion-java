@@ -331,7 +331,6 @@ public abstract class OutputStreamWriterTestCase
      *
      * @see #testAutoFlushTopLevelValuesForTypedWritesContainers()
      */
-    @SuppressWarnings("deprecation")
     @Test
     public void testAutoFlushTopLevelValuesForOtherWrites()
         throws Exception
@@ -341,11 +340,6 @@ public abstract class OutputStreamWriterTestCase
         //================== IonValue.writeTo(IonWriter) =======================
         iw = makeWriter();
         val.writeTo(iw);
-        checkFlushedAfterTopLevelValueWritten();
-
-        //================== IonWriter.writeValue(IonValue) ====================
-        iw = makeWriter();
-        iw.writeValue(val);
         checkFlushedAfterTopLevelValueWritten();
 
         //================== IonWriter.writeValues(IonReader) ==================

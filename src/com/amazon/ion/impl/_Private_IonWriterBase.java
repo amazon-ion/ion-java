@@ -4,15 +4,12 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -225,29 +222,12 @@ public abstract class _Private_IonWriterBase
     }
 
 
-    public void writeTimestampUTC(Date value) throws IOException
-    {
-        Timestamp time = Timestamp.forDateZ(value);
-        writeTimestamp(time);
-    }
-
-
-
     //
     //  default value and reader implementations.
     //  note that these could be optimized, especially
     //  the reader versions, when the reader is of the
     //  same format as the writer.
     //
-    @Deprecated
-    public void writeValue(IonValue value) throws IOException
-    {
-        if (value != null)
-        {
-            value.writeTo(this);
-        }
-    }
-
     public void writeValues(IonReader reader) throws IOException
     {
         if (reader.getDepth() == 0) {
