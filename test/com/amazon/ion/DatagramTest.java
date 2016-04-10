@@ -252,34 +252,6 @@ public class DatagramTest
         // check strict data equivalence
         IonDatagram dg2 = myLoader.load(bytes2);
         assertIonEquals(dg, dg2);
-
-        // now check extraction into sub-array
-        final int OFFSET = 5;
-        assertTrue(bytes1.length > OFFSET);
-        bytes2 = new byte[size + OFFSET];
-
-        outLen = dg.getBytes(bytes2, OFFSET);
-        assertEquals(size, outLen);
-
-        for (int i = 0; i < bytes1.length; i++)
-        {
-            if (bytes1[i] != bytes2[i + OFFSET])
-            {
-                fail("Binary data differs at index " + i);
-            }
-        }
-
-        try {
-            dg.getBytes(new byte[3]);
-            fail("Expected IndexOutOfBoundsException");
-        }
-        catch (IndexOutOfBoundsException e) { /* good */ }
-
-        try {
-            dg.getBytes(new byte[size + OFFSET - 1], OFFSET);
-            fail("Expected IndexOutOfBoundsException");
-        }
-        catch (IndexOutOfBoundsException e) { /* good */ }
     }
 
 
@@ -568,7 +540,7 @@ public class DatagramTest
                    text.endsWith(" {a:b}"));
 
         // Just force symtab analysis and make sure output is still okay
-        dg.getBytes(new byte[dg.byteSize()]);
+        dg.getBytes();
         text = dg.toString();
         assertTrue("missing version marker",
                    text.startsWith(ION_1_0 + ' '));

@@ -442,22 +442,6 @@ final class IonDatagramLite
         return encoder.toNewByteArray();
     }
 
-    public int getBytes(byte[] dst) throws IonException
-    {
-        ReverseBinaryEncoder encoder =
-            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-        encoder.serialize(this);
-        return encoder.toNewByteArray(dst);
-    }
-
-    public int getBytes(byte[] dst, int offset) throws IonException
-    {
-        ReverseBinaryEncoder encoder =
-            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-        encoder.serialize(this);
-        return encoder.toNewByteArray(dst, offset);
-    }
-
     public int getBytes(OutputStream out) throws IOException, IonException
     {
         ReverseBinaryEncoder encoder =
@@ -519,11 +503,6 @@ final class IonDatagramLite
         while (elementid < get_child_count() && _children[elementid].getContext() == startContext){
             _children[elementid++].setContext(context);
         }
-    }
-
-    public byte[] toBytes() throws IonException
-    {
-        return getBytes();
     }
 
     //////////////////////////////////////////////////////////////////////////////

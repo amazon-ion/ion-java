@@ -223,7 +223,7 @@ public class PrinterTest
                    text.endsWith(" a b c"));
 
         // Just force symtab analysis and make sure output is still okay
-        dg.getBytes(new byte[dg.byteSize()]);
+        dg.getBytes();
         text = w.toString();
         assertTrue("missing version marker",
                    text.startsWith(ION_1_0 + ' '));

@@ -175,21 +175,6 @@ public interface IonDatagram
     public int byteSize()
         throws IonException;
 
-
-    /**
-     * Copies the binary-encoded form of this datagram into a new byte array.
-     *
-     * @return a new, non-empty byte array containing the encoded datagram.
-     *
-     * @throws IonException if there's an error encoding the data.
-     *
-     * @deprecated Since IonJava RC1 (2009). Use {@link #getBytes()} instead,
-     * which is renamed for consistency with other interfaces.
-     */
-    @Deprecated
-    public byte[] toBytes()
-        throws IonException;
-
     /**
      * Copies the binary-encoded form of this datagram into a new byte array.
      *
@@ -199,59 +184,6 @@ public interface IonDatagram
      */
     public byte[] getBytes()
         throws IonException;
-
-
-    /**
-     * Copies the binary-encoded form of this datagram into a given array.
-     * <p>
-     * The given array must be large enough to contain all the bytes of this
-     * datagram.
-     * <p>
-     * An invocation of this method of the form {@code dg.get(a)} behaves in
-     * exactly the same way as the invocation:
-     *<pre>
-     *    dg.get(a, 0)
-     *</pre>
-     *
-     * @param dst the array into which bytes are to be written.
-     *
-     * @return the number of bytes copied into {@code dst}.
-     *
-     * @throws IonException if there's an error encoding the data.
-     * @throws IndexOutOfBoundsException if {@code dst.length} is
-     * smaller than the result of {@link #byteSize()}.
-     *
-     * @see #getBytes(byte[],int)
-     *
-     * @deprecated Since IonJava R17, with no direct replacement.
-     */
-    @Deprecated
-    public int getBytes(byte[] dst) // TODO ION-365 Remove
-        throws IonException;
-
-
-    /**
-     * Copies the binary-encoded form of this datagram into a given sub-array.
-     * <p>
-     * The given subarray must be large enough to contain all the bytes of this
-     * datagram.
-     *
-     * @param dst the array into which bytes are to be written.
-     * @param offset the offset within the array of the first byte to be
-     *   written; must be non-negative and no larger than {@code dst.length}
-     *
-     * @return the number of bytes copied into {@code dst}.
-     *
-     * @throws IonException if there's an error encoding the data.
-     * @throws IndexOutOfBoundsException if {@code (dst.length - offset)} is
-     * smaller than the result of {@link #byteSize()}.
-     *
-     * @deprecated Since IonJava R17, with no direct replacement.
-     */
-    @Deprecated
-    public int getBytes(byte[] dst, int offset) // TODO ION-365 Remove
-        throws IonException;
-
 
     /**
      * Copies the binary-encoded form of this datagram to a specified stream.

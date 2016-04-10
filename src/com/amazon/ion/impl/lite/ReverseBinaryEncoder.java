@@ -156,55 +156,6 @@ class ReverseBinaryEncoder
     }
 
     /**
-     * Copies the current contents of the Ion binary-encoded byte array into a
-     * a given byte array.
-     * <p>
-     * The given array must be large enough to contain all the bytes of the
-     * Ion binary-encoded byte array.
-     * <p>
-     * This makes an unchecked assumption that {{@link #serialize(IonDatagram)}
-     * is already called.
-     * <p>
-     * TODO To be deprecated along with {@link IonDatagram#getBytes(byte[])}
-     *
-     * @param dst the byte array into which bytes are to be written
-     *
-     * @return the number of bytes copied into {@code dst}
-     */
-    int toNewByteArray(byte[] dst)
-    {
-        int length = myBuffer.length - myOffset;
-        System.arraycopy(myBuffer, myOffset, dst, 0, length);
-        return length;
-    }
-
-    /**
-     * Copies the current contents of the Ion binary-encoded byte array into a
-     * a given byte sub-array.
-     * <p>
-     * The given sub-array must be large enough to contain all the bytes of the
-     * Ion binary-encoded byte array.
-     * <p>
-     * This makes an unchecked assumption that {{@link #serialize(IonDatagram)}
-     * is already called.
-     * <p>
-     * TODO To be deprecated along with {@link IonDatagram#getBytes(byte[], int)}
-     *
-     * @param dst the byte sub-array into which bytes are to be written
-     * @param offset the offset within the sub-array of the first byte to be
-     *          written; must be non-negative and no larger
-     *          than {@code dst.length}
-     *
-     * @return the number of bytes copied into {@code dst}
-     */
-    int toNewByteArray(byte[] dst, int offset)
-    {
-        int length = myBuffer.length - myOffset;
-        System.arraycopy(myBuffer, myOffset, dst, offset, length);
-        return length;
-    }
-
-    /**
      * Copies the current contents of the Ion binary-encoded byte array to a
      * specified stream.
      * <p>
