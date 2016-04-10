@@ -197,7 +197,7 @@ public class DatagramTest
         assertSame(symbol, datagram1.get(0));
 
         SymbolTable symtab = symbol.getSymbolTable();
-        assertEquals(symbol.getSymbolId(), symtab.getMaxId());
+        assertEquals(symbol.symbolValue().getSid(), symtab.getMaxId());
 
         // TODO if we keep max_id in the struct, should validate it here.
     }

@@ -9,7 +9,6 @@ import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
@@ -122,40 +121,6 @@ final class IonSymbolLite
         return IonType.SYMBOL;
     }
 
-    @Deprecated
-    public int getSymbolId()
-        throws NullValueException
-    {
-        validateThisNotNull();
-
-        if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
-            return _sid;
-        }
-
-        SymbolTable symtab = getSymbolTable();
-        if (symtab == null) {
-            symtab = getSystem().getSystemSymbolTable();
-        }
-        assert(symtab != null);
-
-        String name = _get_value();
-        if (!symtab.isLocalTable())
-        {
-            _sid = symtab.findSymbol(name);
-            if (_sid > 0 || isReadOnly()) {
-                return _sid;
-            }
-        }
-        SymbolToken tok = symtab.find(name);
-        if (tok != null)
-        {
-            _sid = tok.getSid();
-            _set_value(tok.getText()); // Use the interned instance of the text
-        }
-        return _sid;
-    }
-
-
     /**
      * Get's the text of this NON-NULL symbol, finding it from our symbol
      * table if it's not yet known (and caching the result if possible).
@@ -197,11 +162,42 @@ final class IonSymbolLite
         return symbolValue(new LazySymbolTableProvider(this));
     }
 
+    private int resolveSymbolId()
+    {
+        validateThisNotNull();
+
+        if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
+            return _sid;
+        }
+
+        SymbolTable symtab = getSymbolTable();
+        if (symtab == null) {
+            symtab = getSystem().getSystemSymbolTable();
+        }
+        assert(symtab != null);
+
+        String name = _get_value();
+        if (!symtab.isLocalTable())
+        {
+            _sid = symtab.findSymbol(name);
+            if (_sid > 0 || isReadOnly()) {
+                return _sid;
+            }
+        }
+        SymbolToken tok = symtab.find(name);
+        if (tok != null)
+        {
+            _sid = tok.getSid();
+            _set_value(tok.getText()); // Use the interned instance of the text
+        }
+        return _sid;
+    }
+
     public SymbolToken symbolValue(SymbolTableProvider symbolTableProvider)
     {
         if (isNullValue()) return null;
 
-        int sid = getSymbolId();
+        int sid = resolveSymbolId();
         String text = _stringValue(symbolTableProvider);
         return _Private_Utils.newSymbolToken(text, sid);
     }

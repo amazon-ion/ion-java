@@ -19,12 +19,6 @@ public class SymbolTest
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
         assertNull("symbolValue() isn't null", value.symbolValue());
-
-        try {
-            value.getSymbolId();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
     }
 
     public void modifySymbol(IonSymbol value)
@@ -41,7 +35,7 @@ public class SymbolTest
         String modValue1 = "dude!";
         value.setValue(modValue1);
         checkSymbol(modValue1, value);
-        int sid = value.getSymbolId();
+        int sid = value.symbolValue().getSid();
 
         try {
             value.setValue("");

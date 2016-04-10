@@ -79,7 +79,7 @@ final class IonReaderTreeUserX
                         // there are no null values we will consume here
                         break;
                     }
-                    int sid = sym.getSymbolId();
+                    int sid = sym.symbolValue().getSid();
                     if (sid == UNKNOWN_SYMBOL_ID) {
                         String name = sym.stringValue();
                         if (name != null) {

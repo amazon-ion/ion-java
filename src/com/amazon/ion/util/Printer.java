@@ -866,7 +866,7 @@ public class Printer
                 // fall through to default (print the value)
                 break;
             case SYMBOL:
-                if (((IonSymbol)child).getSymbolId() == ION_1_0_SID) {
+                if (((IonSymbol)child).symbolValue().getSid() == ION_1_0_SID) {
                     if (previous_symbols != null && previous_symbols.isSystemTable()) {
                         return null;
                     }

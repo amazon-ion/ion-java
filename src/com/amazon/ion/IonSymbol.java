@@ -22,22 +22,6 @@ public interface IonSymbol
     public String stringValue()
         throws UnknownSymbolException;
 
-
-    /**
-     * Gets the integer symbol id used in the binary encoding of this symbol.
-     *
-     * @return an integer greater than zero, if this value has an associated
-     * symbol table.  Otherwise, return {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
-     *
-     * @throws NullValueException if this is <code>null.symbol</code>.
-     *
-     * @deprecated Since IonJava R15. Use {@link #symbolValue()} instead.
-     */
-    @Deprecated
-    public int getSymbolId()
-        throws NullValueException;
-
-
     /**
      * Returns this value as a symbol token (text + ID).
      *

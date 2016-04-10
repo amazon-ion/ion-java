@@ -759,9 +759,9 @@ public abstract class IonTestCase
         }
 
         // just so we can set a break point on this before we lose all context
-        int sid = sym.getSymbolId();
+        int sid = sym.symbolValue().getSid();
         if (sid != id) {
-            assertEquals("symbol id", id, sym.getSymbolId());
+            assertEquals("symbol id", id, sym.symbolValue().getSid());
         }
 
         checkSymbol(name, id, sym.symbolValue());
