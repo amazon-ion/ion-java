@@ -73,7 +73,6 @@ import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.IonStreamUtilsTest;
 import com.amazon.ion.util.JarInfoTest;
-import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -129,7 +128,6 @@ import org.junit.runners.Suite;
     JarInfoTest.class,
     LoaderTest.class,
     IterationTest.class,
-    PrinterTest.class,
     SymbolTableTest.class,
     SharedSymbolTableTest.class,
     LocalSymbolTableTest.class,

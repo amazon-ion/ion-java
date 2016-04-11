@@ -250,8 +250,8 @@ final class IonSymbolLite
         // A million-dollar question is - if text is missing, do
         // we throw (cannot serialize) or do we pass the sid thru???
 
-        // NB! This will throw if symbol is not set
-        writer.writeSymbol(stringValue(symbolTableProvider));
+        SymbolToken symbol = symbolValue(symbolTableProvider);
+        writer.writeSymbolToken(symbol);
     }
 
     @Override

@@ -20,7 +20,6 @@ import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
-import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +46,6 @@ public class RoundTripStreamingTest
     public static final StreamCopySpeed[] STREAM_COPY_SPEEDS =
         StreamCopySpeed.values();
 
-    private Printer       myPrinter;
     private StringBuilder myBuilder;
     private byte[]        myBuffer;
     private File          myTestFile;
@@ -63,7 +61,6 @@ public class RoundTripStreamingTest
     throws Exception
     {
         super.setUp();
-        myPrinter = new Printer();
         myBuilder = new StringBuilder();
         myBuffer = _Private_Utils.loadFileBytes(myTestFile);
     }
@@ -73,7 +70,6 @@ public class RoundTripStreamingTest
     public void tearDown()
     throws Exception
     {
-        myPrinter = null;
         myBuilder = null;
         myBuffer  = null;
         super.tearDown();
@@ -93,7 +89,13 @@ public class RoundTripStreamingTest
             else {
                 myBuilder.append(' ');
             }
-            myPrinter.print(value, myBuilder);
+            IonWriter writer = IonTextWriterBuilder.standard().build(myBuilder);
+            try {
+                value.writeTo(writer);
+            }
+            finally {
+                writer.close();
+            }
             // Why is this here?  myBuilder.append('\n');
         }
 
