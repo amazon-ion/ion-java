@@ -48,7 +48,6 @@ public class _Private_IonTextWriterBuilder
     public boolean _timestamp_as_millis;
     public boolean _timestamp_as_string;
     public boolean _untyped_nulls;
-    private _Private_CallbackBuilder _callback_builder;
 
     /**
      *
@@ -61,7 +60,6 @@ public class _Private_IonTextWriterBuilder
     private _Private_IonTextWriterBuilder(_Private_IonTextWriterBuilder that)
     {
         super(that);
-        this._callback_builder    = that._callback_builder   ;
         this._pretty_print        = that._pretty_print       ;
         this._blob_as_string      = that._blob_as_string     ;
         this._clob_as_string      = that._clob_as_string     ;
@@ -178,14 +176,9 @@ public class _Private_IonTextWriterBuilder
 
         SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
 
-        IonWriterSystemText systemWriter =
-            (getCallbackBuilder() == null
-                ? new IonWriterSystemText(defaultSystemSymtab,
-                                          this,
-                                          appender)
-                : new IonWriterSystemTextMarkup(defaultSystemSymtab,
-                                                this,
-                                                appender));
+        IonWriterSystemText systemWriter = new IonWriterSystemText(defaultSystemSymtab,
+                                                                   this,
+                                                                   appender);
 
         SymbolTable initialSymtab =
             initialSymtab(system, defaultSystemSymtab, imports);
@@ -243,52 +236,5 @@ public class _Private_IonTextWriterBuilder
         protected void mutationCheck()
         {
         }
-    }
-
-    //-------------------------------------------------------------------------
-
-    /**
-     * Gets the {@link _Private_CallbackBuilder} that will be used to create a
-     * {@link _Private_MarkupCallback} when a new writer is built.
-     * @return The builder that will be used to build a new MarkupCallback.
-     * @see #setCallbackBuilder(_Private_CallbackBuilder)
-     * @see #withCallbackBuilder(_Private_CallbackBuilder)
-     */
-    public final _Private_CallbackBuilder getCallbackBuilder()
-    {
-        return this._callback_builder;
-    }
-
-    /**
-     * Sets the {@link _Private_CallbackBuilder} that will be used to create a
-     * {@link _Private_MarkupCallback} when a new writer is built.
-     * @param builder
-     *            The builder that will be used to build a new MarkupCallback.
-     * @see #getCallbackBuilder()
-     * @see #withCallbackBuilder(_Private_CallbackBuilder)
-     * @throws UnsupportedOperationException
-     *             if this is immutable.
-     */
-    public void setCallbackBuilder(_Private_CallbackBuilder builder)
-    {
-        mutationCheck();
-        this._callback_builder = builder;
-    }
-
-    /**
-     * Declares the {@link _Private_CallbackBuilder} to use when building.
-     * @param builder
-     *            The builder that will be used to build a new MarkupCallback.
-     * @return this instance, if mutable; otherwise a mutable copy of this
-     *         instance.
-     * @see #getCallbackBuilder()
-     * @see #setCallbackBuilder(_Private_CallbackBuilder)
-     */
-    public final _Private_IonTextWriterBuilder
-                 withCallbackBuilder(_Private_CallbackBuilder builder)
-    {
-        _Private_IonTextWriterBuilder b = mutable();
-        b.setCallbackBuilder(builder);
-        return b;
     }
 }

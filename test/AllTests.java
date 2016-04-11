@@ -45,8 +45,6 @@ import com.amazon.ion.TimestampTest;
 import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.facet.FacetsTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
-import com.amazon.ion.impl.IonMarkupWriterFilesTest;
-import com.amazon.ion.impl.IonMarkupWriterTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.LocalSymbolTableTest;
@@ -123,10 +121,6 @@ import org.junit.runners.Suite;
     FieldNameEscapesTest.class,
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
-
-    // Markup tests
-    IonMarkupWriterTest.class,
-    IonMarkupWriterFilesTest.class,
 
     // Binary format tests
     BinaryTest.class,
