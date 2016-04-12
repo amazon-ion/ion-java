@@ -32,9 +32,6 @@ import java.math.MathContext;
  *  scalar values are handled by IonReaderBinarySystem and
  *  symbol tables (as well as field names and annotations as
  *  strings) are handled by IonBinaryReaderUser.
- *
- *  csuver
- *  16 July 2009
  */
 abstract class IonReaderBinaryRawX
     implements IonReader

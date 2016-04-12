@@ -93,9 +93,6 @@ import java.util.Set;
  * (A, V), where A is an ordered list of annotations, and V is an Ion Primitive
  * Data or Ion Complex Data value. The list of annotations, A is an tuple of Ion
  * Symbols (a specific type of Ion Primitive).
- * <p>
- *
- * @author Almann Goo
  */
 public final class Equivalence {
 

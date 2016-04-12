@@ -10,9 +10,6 @@ package com.amazon.ion;
  * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
- *
- * @author csuver
- *
  */
 public interface IonNumber // TODO ION-95 Complete this interface
     extends IonValue

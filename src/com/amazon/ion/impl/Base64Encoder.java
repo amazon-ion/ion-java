@@ -2,15 +2,21 @@
 
 package com.amazon.ion.impl;
 
-/*
+import com.amazon.ion.IonException;
+import com.amazon.ion.util.IonTextUtils;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+
+/**
  * This is a class that supports encoding and decoding binary
  * data in base 64 encodings.
- *
+ * <p>
  * The default encoding is the URL Safe encoding variant specified
  * in http://tools.ietf.org/html/rfc4648
- *
+ * <p>
  * It's character translation table is:
- *
+ * <pre>
  *    Table 2: The "URL and Filename safe" Base 64 Alphabet
  *
  * NO LONGER URL/FILENAME SAFE, BACK TO THE ORIGINAL URL CHARACTERS
@@ -33,20 +39,8 @@ package com.amazon.ion.impl;
  *       14 O            31 f            48 w
  *       15 P            32 g            49 x
  *       16 Q            33 h            50 y            (pad) =
- *
- *
- * Chris Suver
- * 7 Feb 2007
- *
+ * </pre>
  */
-
-import com.amazon.ion.IonException;
-import com.amazon.ion.util.IonTextUtils;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
-
-
 final class Base64Encoder
 {
     static class EL {  // EncoderLetter
@@ -340,8 +334,6 @@ final class Base64Encoder
      * The TextStream takes a reader over binary data and returns
      * a text reader.  This reads binary bytes and produces base64
      * encoded printable characters
-     *
-     * @author csuver
      */
     static final class TextStream
         extends Reader

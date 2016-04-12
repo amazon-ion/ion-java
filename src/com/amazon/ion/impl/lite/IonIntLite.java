@@ -68,8 +68,8 @@ final class IonIntLite
             if (_big_int_value == null)
             {
                 long lv = longValue();
-                // jonker memorial bug:  throw away top 32 bits if they're not
-                // interesting.  Otherwise n and -(n+1) get the same hash code.
+                // Throw away top 32 bits if they're not interesting.
+                // Otherwise n and -(n+1) get the same hash code.
                 result ^= (int) lv;
                 int hi_word = (int) (lv >>> 32);
                 if (hi_word != 0 && hi_word != -1)  {

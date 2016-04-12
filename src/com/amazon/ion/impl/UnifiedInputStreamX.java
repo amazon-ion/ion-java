@@ -348,7 +348,7 @@ abstract class UnifiedInputStreamX
         return;
     }
     // ION-175 - NB this method does not follow the contract of InputStream.read, it will return 0 at EOF
-    //           I don't know the implication to the rest of the system to make it 'conform' (almann@)
+    //           It is unclear what the implication to the rest of the system to make it 'conform'
     public final int read(byte[] dst, int offset, int length) throws IOException
     {
         if (!is_byte_data()) {

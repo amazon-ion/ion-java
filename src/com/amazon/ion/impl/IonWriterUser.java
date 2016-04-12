@@ -216,8 +216,6 @@ class IonWriterUser
      * <p>
      * If there was a makeSymbolTable(Reader) this copy might be,
      * at least partially, avoided.
-     *
-     * CSuver@
      */
     private void open_local_symbol_table_copy()
     {

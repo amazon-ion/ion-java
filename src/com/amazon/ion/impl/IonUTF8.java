@@ -18,10 +18,6 @@ import java.io.OutputStream;
  * are all static final methods, and very short, the Java compilers should
  * find them very easy to in-line.  (in previous testing I have observed
  * that the Sun JVM heavily in-lines such methods).
- *
- * @author csuver
- * 21 April 2009
- *
  */
 class IonUTF8 {
     private final static int UNICODE_MAX_ONE_BYTE_SCALAR       = 0x0000007F; // 7 bits     =  7 / 1 = 7    bits per byte
