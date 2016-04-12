@@ -9,9 +9,6 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.ValueVisitor;
 import java.util.Collection;
 
-/**
- *
- */
 final class IonSexpLite
     extends IonSequenceLite
     implements IonSexp

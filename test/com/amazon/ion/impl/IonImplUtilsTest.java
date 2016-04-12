@@ -5,9 +5,6 @@ package com.amazon.ion.impl;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonImplUtilsTest
 {
     @Test

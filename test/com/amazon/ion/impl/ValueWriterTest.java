@@ -13,9 +13,6 @@ import com.amazon.ion.Symtabs;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- *
- */
 public class ValueWriterTest
     extends IonWriterTestCase
 {

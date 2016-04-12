@@ -16,9 +16,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- *
- */
 public class TestUtils
 {
     public static final String US_ASCII_CHARSET_NAME = "US-ASCII";

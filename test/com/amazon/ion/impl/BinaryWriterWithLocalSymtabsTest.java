@@ -18,9 +18,6 @@ import java.io.ByteArrayOutputStream;
 import org.junit.After;
 import org.junit.Test;
 
-/**
- *
- */
 public class BinaryWriterWithLocalSymtabsTest
     extends IonTestCase
 {

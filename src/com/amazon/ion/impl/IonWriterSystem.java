@@ -18,9 +18,6 @@ import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 
 
-/**
- *
- */
 abstract class IonWriterSystem
     extends _Private_IonWriterBase
 {

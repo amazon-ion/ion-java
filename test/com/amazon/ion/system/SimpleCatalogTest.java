@@ -19,9 +19,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.junit.Test;
 
-/**
- *
- */
 public class SimpleCatalogTest
     extends IonTestCase
 {

@@ -2,9 +2,6 @@
 
 package com.amazon.ion.impl;
 
-/**
- *
- */
 final class IonMessages
 {
     static final String CANNOT_STEP_OUT =

@@ -12,9 +12,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 
-/**
- *
- */
 final class IonIntLite
     extends IonValueLite
     implements IonInt

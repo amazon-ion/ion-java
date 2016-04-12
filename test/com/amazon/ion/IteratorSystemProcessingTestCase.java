@@ -4,9 +4,6 @@ package com.amazon.ion;
 
 import java.util.Iterator;
 
-/**
- *
- */
 abstract class IteratorSystemProcessingTestCase
     extends SystemProcessingTestCase
 {

@@ -19,9 +19,6 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 
-/**
- *
- */
 final class IonReaderTreeUserX
     extends IonReaderTreeSystem
     implements _Private_ReaderWriter

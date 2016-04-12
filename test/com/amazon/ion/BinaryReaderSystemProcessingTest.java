@@ -4,9 +4,6 @@ package com.amazon.ion;
 
 
 
-/**
- *
- */
 public class BinaryReaderSystemProcessingTest
     extends ReaderSystemProcessingTestCase
 {

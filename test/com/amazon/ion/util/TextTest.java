@@ -10,9 +10,6 @@ import com.amazon.ion.impl._Private_IonTextAppender;
 import java.math.BigDecimal;
 import org.junit.Test;
 
-/**
- *
- */
 public class TextTest
     extends IonTestCase
 {

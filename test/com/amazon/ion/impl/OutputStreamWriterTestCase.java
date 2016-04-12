@@ -18,9 +18,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import org.junit.Test;
 
-/**
- *
- */
 public abstract class OutputStreamWriterTestCase
     extends IonWriterTestCase
 {

@@ -7,9 +7,6 @@ import org.junit.Test;
 
 
 
-/**
- *
- */
 public class FloatTest
     extends IonTestCase
 {

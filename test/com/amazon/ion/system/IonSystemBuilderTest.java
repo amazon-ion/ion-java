@@ -15,9 +15,6 @@ import com.amazon.ion.impl._Private_IonWriter;
 import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonSystemBuilderTest
 {
     @Test(expected = UnsupportedOperationException.class)

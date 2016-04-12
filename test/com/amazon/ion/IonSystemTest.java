@@ -18,9 +18,6 @@ import java.util.Iterator;
 import java.util.zip.GZIPOutputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonSystemTest
     extends IonTestCase
 {

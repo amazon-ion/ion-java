@@ -16,9 +16,6 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
 import org.junit.Test;
 
-/**
- *
- */
 public class LocalSymbolTableTest
     extends IonTestCase
 {

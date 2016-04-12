@@ -14,9 +14,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class InputStreamReaderTest
     extends ReaderTestCase
     implements InputStreamWrapper

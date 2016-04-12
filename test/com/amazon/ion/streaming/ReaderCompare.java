@@ -13,9 +13,6 @@ import com.amazon.ion.junit.IonAssert;
 import java.math.BigDecimal;
 import org.junit.Assert;
 
-/**
- *
- */
 public class ReaderCompare
     extends Assert
 {

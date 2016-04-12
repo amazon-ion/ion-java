@@ -27,9 +27,6 @@ import java.nio.charset.Charset;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonTextWriterBuilderTest
 {
     public void testBuildNull(IonTextWriterBuilder b)

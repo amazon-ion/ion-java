@@ -14,9 +14,6 @@ import com.amazon.ion.TextSpan;
 import com.amazon.ion.facet.Facets;
 import org.junit.After;
 
-/**
- *
- */
 public abstract class ReaderFacetTestCase
     extends ReaderTestCase
 {

@@ -21,9 +21,6 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
-/**
- *
- */
 class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
     implements _Private_ReaderWriter

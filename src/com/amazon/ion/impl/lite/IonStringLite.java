@@ -8,9 +8,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
-/**
- *
- */
 final class IonStringLite
     extends IonTextLite
     implements IonString

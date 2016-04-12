@@ -5,9 +5,6 @@ package com.amazon.ion;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
-/**
- *
- */
 public class LoadBinaryStreamSystemProcessingTest
     extends DatagramIteratorSystemProcessingTest
 {

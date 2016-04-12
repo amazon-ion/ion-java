@@ -3,9 +3,6 @@ package com.amazon.ion;
 
 import org.junit.Test;
 
-/**
- *
- */
 public abstract class TextTestCase
     extends IonTestCase
 {

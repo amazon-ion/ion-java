@@ -2,9 +2,6 @@
 
 package com.amazon.ion;
 
-/**
- *
- */
 public class AnnotationEscapesTest
     extends TextTestCase
 {

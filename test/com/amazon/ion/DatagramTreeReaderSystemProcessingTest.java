@@ -8,9 +8,6 @@ import com.amazon.ion.junit.Injected.Inject;
 import org.junit.After;
 
 
-/**
- *
- */
 public class DatagramTreeReaderSystemProcessingTest
     extends ReaderSystemProcessingTestCase
 {

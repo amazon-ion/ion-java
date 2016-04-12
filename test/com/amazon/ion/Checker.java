@@ -2,9 +2,6 @@
 
 package com.amazon.ion;
 
-/**
- *
- */
 public interface Checker
 {
     /**

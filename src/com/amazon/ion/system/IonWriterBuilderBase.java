@@ -7,9 +7,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 
 
-/**
- *
- */
 abstract class IonWriterBuilderBase<T extends IonWriterBuilderBase>
     extends IonWriterBuilder
 {

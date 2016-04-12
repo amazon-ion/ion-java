@@ -17,9 +17,6 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- *
- */
 abstract class IonSequenceLite
     extends IonContainerLite
     implements IonSequence

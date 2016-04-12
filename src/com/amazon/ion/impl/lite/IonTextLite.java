@@ -4,9 +4,6 @@ package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonText;
 
-/**
- *
- */
 abstract class IonTextLite
     extends IonValueLite
     implements IonText

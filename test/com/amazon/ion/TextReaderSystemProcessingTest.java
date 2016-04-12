@@ -5,9 +5,6 @@ package com.amazon.ion;
 
 
 
-/**
- *
- */
 public class TextReaderSystemProcessingTest
     extends ReaderSystemProcessingTestCase
 {

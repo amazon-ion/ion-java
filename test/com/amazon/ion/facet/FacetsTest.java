@@ -9,9 +9,6 @@ import static org.junit.Assert.assertSame;
 import com.amazon.ion.Span;
 import org.junit.Test;
 
-/**
- *
- */
 public class FacetsTest
 {
     private static final Integer i = 13;

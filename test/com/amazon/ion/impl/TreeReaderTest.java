@@ -14,9 +14,6 @@ import com.amazon.ion.TestUtils;
 import com.amazon.ion.streaming.ReaderTestCase;
 import org.junit.Test;
 
-/**
- *
- */
 public class TreeReaderTest
     extends ReaderTestCase
 {

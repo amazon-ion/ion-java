@@ -46,9 +46,6 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- *
- */
 @SuppressWarnings("deprecation")
 public abstract class IonWriterTestCase
     extends IonTestCase

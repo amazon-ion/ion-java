@@ -23,9 +23,6 @@ import java.util.Iterator;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- *
- */
 public class MiscStreamingTest
     extends IonTestCase
 {

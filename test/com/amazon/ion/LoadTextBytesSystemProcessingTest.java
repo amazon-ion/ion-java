@@ -5,9 +5,6 @@ package com.amazon.ion;
 import com.amazon.ion.impl._Private_Utils;
 
 
-/**
- *
- */
 public class LoadTextBytesSystemProcessingTest
     extends DatagramIteratorSystemProcessingTest
 {

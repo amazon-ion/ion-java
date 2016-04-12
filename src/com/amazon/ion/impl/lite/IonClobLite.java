@@ -13,9 +13,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 
-/**
- *
- */
 final class IonClobLite
     extends IonLobLite
     implements IonClob

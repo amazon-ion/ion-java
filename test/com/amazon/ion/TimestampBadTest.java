@@ -14,9 +14,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import org.junit.Test;
 
-/**
- *
- */
 public class TimestampBadTest
     extends IonTestCase
 {

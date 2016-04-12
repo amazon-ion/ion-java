@@ -9,9 +9,6 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 
-/**
- *
- */
 final class IonBoolLite
     extends IonValueLite
     implements IonBool

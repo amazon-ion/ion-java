@@ -6,9 +6,6 @@ package com.amazon.ion;
 
 import java.util.Iterator;
 
-/**
- *
- */
 public class DatagramIteratorSystemProcessingTest
     extends IteratorSystemProcessingTestCase
 {

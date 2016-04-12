@@ -12,9 +12,6 @@ public class UnexpectedEofException
 {
     private static final long serialVersionUID = 1L;
 
-    /**
-     *
-     */
     public UnexpectedEofException()
     {
         super();

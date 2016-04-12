@@ -4,9 +4,6 @@ package com.amazon.ion;
 
 
 
-/**
- *
- */
 public class LoadBinaryBytesSystemProcessingTest
     extends DatagramIteratorSystemProcessingTest
 {

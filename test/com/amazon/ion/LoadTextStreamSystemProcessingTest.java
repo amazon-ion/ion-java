@@ -7,9 +7,6 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 
-/**
- *
- */
 public class LoadTextStreamSystemProcessingTest
     extends DatagramIteratorSystemProcessingTest
 {

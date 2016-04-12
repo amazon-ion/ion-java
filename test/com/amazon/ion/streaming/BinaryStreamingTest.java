@@ -26,9 +26,6 @@ import java.util.Date;
 import java.util.Iterator;
 import org.junit.Test;
 
-/**
- *
- */
 public class BinaryStreamingTest
     extends IonTestCase
 {

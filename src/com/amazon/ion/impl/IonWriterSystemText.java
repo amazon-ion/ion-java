@@ -22,9 +22,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-/**
- *
- */
 class IonWriterSystemText
     extends IonWriterSystem
 {

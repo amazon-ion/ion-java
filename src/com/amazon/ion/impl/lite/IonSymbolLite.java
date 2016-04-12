@@ -17,9 +17,6 @@ import com.amazon.ion.impl._Private_IonSymbol;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 
-/**
- *
- */
 final class IonSymbolLite
     extends IonTextLite
     implements _Private_IonSymbol

@@ -16,9 +16,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-/**
- *
- */
 public abstract class SystemProcessingTestCase
     extends IonTestCase
 {

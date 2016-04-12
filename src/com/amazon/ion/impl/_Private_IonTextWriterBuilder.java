@@ -49,9 +49,6 @@ public class _Private_IonTextWriterBuilder
     public boolean _timestamp_as_string;
     public boolean _untyped_nulls;
 
-    /**
-     *
-     */
     private _Private_IonTextWriterBuilder()
     {
         super();

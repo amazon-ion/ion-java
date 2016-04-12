@@ -15,9 +15,6 @@ import java.io.StringReader;
 import java.util.Iterator;
 import org.junit.Test;
 
-/**
- *
- */
 public class TimestampGoodTest
     extends IonTestCase
 {

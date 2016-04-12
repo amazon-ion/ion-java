@@ -10,9 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.junit.Test;
 
-/**
- *
- */
 public class OffsetSpanReaderTest
     extends ReaderFacetTestCase
 {

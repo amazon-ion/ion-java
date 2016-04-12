@@ -10,9 +10,6 @@ import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- *
- */
 final class IonBlobLite
     extends IonLobLite
     implements IonBlob

@@ -13,9 +13,6 @@ import java.io.IOException;
 import org.junit.After;
 
 
-/**
- *
- */
 public abstract class ReaderTestCase
     extends IonTestCase
 {

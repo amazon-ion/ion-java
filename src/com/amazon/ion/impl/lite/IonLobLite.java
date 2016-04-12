@@ -7,9 +7,6 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.zip.CRC32;
 
-/**
- *
- */
 abstract class IonLobLite
     extends IonValueLite
     implements IonLob

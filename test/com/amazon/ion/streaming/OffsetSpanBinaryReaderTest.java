@@ -11,9 +11,6 @@ import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.RepeatInputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class OffsetSpanBinaryReaderTest
     extends ReaderFacetTestCase
 {

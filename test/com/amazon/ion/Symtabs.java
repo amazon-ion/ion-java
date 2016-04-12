@@ -16,9 +16,6 @@ import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.util.Arrays;
 
-/**
- *
- */
 public class Symtabs
 {
 

@@ -11,9 +11,6 @@ import com.amazon.ion.ValueVisitor;
 import java.io.IOException;
 import java.math.BigDecimal;
 
-/**
- *
- */
 final class IonDecimalLite
     extends IonValueLite
     implements IonDecimal

@@ -19,9 +19,6 @@ import java.util.Arrays;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- *
- */
 public class ReaderTest
     extends ReaderTestCase
 {
