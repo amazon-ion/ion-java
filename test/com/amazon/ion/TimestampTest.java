@@ -37,8 +37,6 @@ public class TimestampTest
 {
     /**
      * Earliest Ion timestamp possible, that is, "0001-01-01".
-     *
-     * @see <a href="https://w.amazon.com/index.php/Ion#Timestamps">Ion wiki page</a>
      */
     private static final Timestamp EARLIEST_ION_TIMESTAMP =
         Timestamp.valueOf("0001-01-01");
@@ -739,7 +737,7 @@ public class TimestampTest
         assertEquals("2010-02-01T10:11:12.34-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.34Z", ts.toZString());
 
-        // This was broken prior to R17. It had FRACTION precision, but no
+        // This was previously broken. It had FRACTION precision, but no
         // fractional data, and didn't equal the same value created other ways.
         ts = new Timestamp(2010, 2, 1, 10, 11, 12, BigDecimal.ZERO, 0);
         assertEquals(Timestamp.valueOf("2010-02-01T10:11:12Z"), ts);

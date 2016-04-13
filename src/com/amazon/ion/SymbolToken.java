@@ -13,7 +13,6 @@ package com.amazon.ion;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  *
- * @since IonJava R15
  */
 public interface SymbolToken
 {

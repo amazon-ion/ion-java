@@ -37,7 +37,6 @@ public enum IonType
      * @return true when {@code t} is {@link #LIST}, {@link #SEXP},
      * {@link #STRUCT}, or {@link #DATAGRAM}.
      *
-     * @since IonJava R13
      */
     public static boolean isContainer(IonType t)
     {
@@ -52,7 +51,6 @@ public enum IonType
      *
      * @return true when {@code t} is {@link #STRING} or {@link #SYMBOL}.
      *
-     * @since IonJava R15
      */
     public static boolean isText(IonType t)
     {
@@ -67,7 +65,6 @@ public enum IonType
      *
      * @return true when {@code t} is {@link #BLOB} or {@link #CLOB}.
      *
-     * @since IonJava R15
      */
     public static boolean isLob(IonType t)
     {

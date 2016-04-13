@@ -97,7 +97,7 @@ public final class Timestamp
          * the integer part has led to countless bugs. We intend to combine
          * the two under the SECOND precision.
          *
-         * @deprecated As of IonJava R21.
+         * @deprecated
          */
         @Deprecated
         FRACTION;
@@ -346,7 +346,7 @@ public final class Timestamp
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forDay(int, int, int)} instead.
      */
     @Deprecated
@@ -368,7 +368,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forMinute(int, int, int, int, int, Integer)} instead.
      */
     @Deprecated
@@ -391,7 +391,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forSecond(int, int, int, int, int, int, Integer)} instead.
      */
     @Deprecated
@@ -420,7 +420,7 @@ public final class Timestamp
      *
      * @throws NullPointerException if {@code frac} is {@code null}
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forSecond(int, int, int, int, int, BigDecimal, Integer)}
      * instead.
      */
@@ -544,7 +544,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @deprecated Since IonJava R17, with no direct replacement.
+     * @deprecated with no direct replacement.
      */
     @Deprecated
     public static Timestamp
@@ -577,7 +577,7 @@ public final class Timestamp
      * @throws IllegalArgumentException
      *          if {@code cal} has no appropriate calendar fields set.
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forCalendar(Calendar)} instead.
      */
     @Deprecated
@@ -688,7 +688,7 @@ public final class Timestamp
      *
      * @throws NullPointerException if {@code millis} is {@code null}
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forMillis(BigDecimal, Integer)} instead.
      */
     @Deprecated
@@ -725,7 +725,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @deprecated Since IonJava R17.
+     * @deprecated
      * Use {@link #forMillis(long, Integer)} instead.
      */
     @Deprecated
@@ -784,7 +784,6 @@ public final class Timestamp
      * @return
      *          {@code null} if the {@code CharSequence} is "null.timestamp"
      *
-     * @see <a href="https://w.amazon.com/index.php/Ion#Timestamps">Ion Timestamp Wiki</a>
      * @see <a href="http://www.w3.org/TR/NOTE-datetime">W3C Note on Date and Time Formats</a>
      */
     public static Timestamp valueOf(CharSequence ionFormattedTimestamp)
@@ -1117,7 +1116,6 @@ public final class Timestamp
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
      *
-     * @since IonJava R17
      */
     public static Timestamp forDay(int yearZ, int monthZ, int dayZ)
     {
@@ -1137,7 +1135,6 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
      *
-     * @since IonJava R17
      */
     public static Timestamp forMinute(int year, int month, int day,
                                       int hour, int minute,
@@ -1158,7 +1155,6 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
      *
-     * @since IonJava R17
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, int second,
@@ -1182,7 +1178,6 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
      *
-     * @since IonJava R17
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, BigDecimal second,
@@ -1208,7 +1203,6 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @since IonJava R17
      */
     public static Timestamp forMillis(long millis, Integer localOffset)
     {
@@ -1248,7 +1242,6 @@ public final class Timestamp
      *
      * @throws NullPointerException if {@code millis} is {@code null}
      *
-     * @since IonJava R17
      */
     public static Timestamp forMillis(BigDecimal millis, Integer localOffset)
     {
@@ -1265,7 +1258,6 @@ public final class Timestamp
      *   field set in the {@code Calendar};
      *   or {@code null} if {@code calendar} is {@code null}
      *
-     * @since IonJava R17
      */
     public static Timestamp forCalendar(Calendar calendar)
     {
@@ -1284,7 +1276,6 @@ public final class Timestamp
      *          a new Timestamp instance, in UTC, precise to the millisecond;
      *          {@code null} if {@code date} is {@code null}
      *
-     * @since IonJava R13
      */
     public static Timestamp forDateZ(Date date)
     {
@@ -1307,7 +1298,6 @@ public final class Timestamp
      *          nanosecond
      *          {@code null} if {@code sqlTimestamp} is {@code null}
      *
-     * @since IonJava R13
      */
     public static Timestamp forSqlTimestampZ(java.sql.Timestamp sqlTimestamp)
     {
@@ -1347,7 +1337,6 @@ public final class Timestamp
      *          a new Timestamp instance, in UTC, representing the current
      *          time.
      *
-     * @since IonJava R13
      */
     public static Timestamp nowZ()
     {
@@ -1384,7 +1373,6 @@ public final class Timestamp
      *
      * @return a new {@code Calendar} instance, in its local time.
      *
-     * @since IonJava R13
      */
     public Calendar calendarValue()
     {
@@ -1656,7 +1644,7 @@ public final class Timestamp
      *
      * @see #getZFractionalSecond()
      *
-     * @deprecated As of IonJava R21.
+     * @deprecated
      * Use {@link #getDecimalSecond()} instead.
      */
     @Deprecated
@@ -1786,7 +1774,7 @@ public final class Timestamp
      *
      * @see #getFractionalSecond()
      *
-     * @deprecated As of IonJava R21.
+     * @deprecated
      * Use {@link #getZDecimalSecond()} instead.
      */
     @Deprecated

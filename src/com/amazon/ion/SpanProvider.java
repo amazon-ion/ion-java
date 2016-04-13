@@ -11,7 +11,6 @@ package com.amazon.ion;
  * <p>
  * This functionality may be accessed as a facet of most {@link IonReader}s.
  *
- * @since IonJava R13
  */
 public interface SpanProvider
 {

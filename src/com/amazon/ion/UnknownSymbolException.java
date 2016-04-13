@@ -10,7 +10,6 @@ package com.amazon.ion;
  * not have the relevant shared symbol tables needed to decode Ion binary
  * data.
  *
- * @since IonJava R15
  */
 public class UnknownSymbolException
     extends IonException

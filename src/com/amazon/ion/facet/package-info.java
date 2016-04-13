@@ -60,6 +60,5 @@
  * This is an adaptation of the Extension Objects pattern as written by
  * Erich Gamma.  It was primarily inspired by ISO C++ {@code locale} facets.
  *
- * @since IonJava R13
  */
 package com.amazon.ion.facet;

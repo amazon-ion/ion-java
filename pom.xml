@@ -109,9 +109,9 @@
                 <exclude>**/*_Private_*</exclude>
               </sourceFileExcludes>
               <overview>${project.basedir}/src/com/amazon/ion/overview.html</overview>
-              <doctitle>The ion-java ${project.version} API Reference</doctitle>
+              <doctitle>The Amazon ion-java ${project.version} API Reference</doctitle>
               <windowtitle>ion-java ${project.version}</windowtitle>
-              <header>ion-java ${project.version} API Reference</header>
+              <header>Amazon ion-java ${project.version} API Reference</header>
               <encoding>UTF-8</encoding>
               <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${build.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
               <name>ion-java Javadoc</name>

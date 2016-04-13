@@ -24,7 +24,6 @@ package com.amazon.ion.facet;
  *
  * @see Facets
  *
- * @since IonJava R13
  */
 public interface Faceted
 {

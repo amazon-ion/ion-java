@@ -530,7 +530,7 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      *
-     * @deprecated Since IonJava R10. Use
+     * @deprecated Use
      * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
      */
     @Deprecated
@@ -547,7 +547,7 @@ public interface IonSystem
      *
      * @return a new {@link IonBinaryWriter} instance; not {@code null}.
      *
-     * @deprecated Since IonJava R10. Use
+     * @deprecated Use
      * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
      */
     @Deprecated

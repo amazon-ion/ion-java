@@ -19,7 +19,6 @@ import com.amazon.ion.util.Spans;
  * {@link Faceted#asFacet(Class) asFacet}{@code (TextSpan.class)} or one of
  * the helpers from {@link Spans}.
  *
- * @since IonJava R13
  */
 public interface TextSpan
 {

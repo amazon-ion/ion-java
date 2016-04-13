@@ -29,8 +29,6 @@ import java.util.Iterator;
  * <p>
  * <b>Implementations of this interface are safe for use by multiple
  * threads.</b>
- *
- * @see <a href="https://w.amazon.com/index.php/Ion/Symbols">Ion Symbols wiki page</a>
  */
 public interface SymbolTable
 {
@@ -84,7 +82,6 @@ public interface SymbolTable
      * <p>
      * Substitute tables are always shared, non-system tables.
      *
-     * @since IonJava R15
      */
     public boolean isSubstitute();
 
@@ -112,7 +109,6 @@ public interface SymbolTable
      *
      * @see #makeReadOnly()
      *
-     * @since IonJava R13
      */
     public boolean isReadOnly();
 
@@ -125,7 +121,6 @@ public interface SymbolTable
      *
      * @see #isReadOnly()
      *
-     * @since IonJava R13
      */
     public void makeReadOnly();
 
@@ -215,7 +210,6 @@ public interface SymbolTable
      *
      * @see #find(String)
      *
-     * @since IonJava R15
      */
     public SymbolToken intern(String text);
 
@@ -233,7 +227,6 @@ public interface SymbolTable
      *
      * @see #intern(String)
      *
-     * @since IonJava R15
      */
     public SymbolToken find(String text);
 

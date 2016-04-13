@@ -40,7 +40,6 @@ import com.amazon.ion.util.Spans;
  * @see <a href="http://portal.acm.org/citation.cfm?id=133234">Subsequence
  * References: First-Class Values for Substrings</a>
  *
- * @since IonJava R13
  */
 public interface Span
     extends Faceted

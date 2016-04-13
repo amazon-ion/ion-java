@@ -252,7 +252,7 @@ public interface ValueFactory
      * @throws IllegalArgumentException
      *   if any value in {@code values} is an {@link IonDatagram}.
      *
-     * @deprecated Since IonJava R10. This method can be invoked
+     * @deprecated This method can be invoked
      *  (accidentally and incorrectly) with an {@link IonSequence}!
      *  Use either {@link #newList(IonValue...)}
      *  or {@link #newList(IonValue...) newList()}{@link
@@ -386,7 +386,7 @@ public interface ValueFactory
      * @throws IllegalArgumentException
      *   if any value in {@code values} is an {@link IonDatagram}.
      *
-     * @deprecated Since IonJava R10. This method can be invoked
+     * @deprecated This method can be invoked
      *  (accidentally and incorrectly) with an {@link IonSequence}!
      *  Use either {@link #newSexp(IonValue...)}
      *  or {@link #newSexp(IonValue...) newSexp()}{@link
@@ -532,7 +532,6 @@ public interface ValueFactory
      * @param value the text and/or SID of the symbol;
      * may be <code>null</code> to make <code>null.symbol</code>.
      *
-     * @since IonJava R15
      */
     public IonSymbol newSymbol(SymbolToken value);
 

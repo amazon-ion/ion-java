@@ -10,9 +10,7 @@ import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 /**
- * Provides information about this release of the IonJava library.
- *
- * @since IonJava R13
+ * Provides information about this release of the ion-java library.
  */
 public final class JarInfo {
 

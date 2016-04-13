@@ -222,7 +222,6 @@ public interface IonValue
      *
      * @return null if this value isn't a struct field.
      *
-     * @since IonJava R15
      */
     public SymbolToken getFieldNameSymbol();
 
@@ -234,7 +233,7 @@ public interface IonValue
      * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated  Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
@@ -266,7 +265,6 @@ public interface IonValue
      *
      * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
      *
-     * @since IonJava R15
      */
     public IonValue topLevelValue();
 
@@ -288,7 +286,6 @@ public interface IonValue
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      *
-     * @since IonJava R15
      */
     public SymbolToken[] getTypeAnnotationSymbols();
 
@@ -311,7 +308,6 @@ public interface IonValue
      * @throws EmptySymbolException if any of the annotations are null or
      *  empty string.
      *
-     * @since IonJava R13
      */
     public void setTypeAnnotations(String... annotations);
 
@@ -327,7 +323,6 @@ public interface IonValue
      * If null or empty array, then all annotations are removed.
      * Any duplicates are preserved.
      *
-     * @since IonJava R15
      */
     public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
@@ -365,7 +360,6 @@ public interface IonValue
      * and performs a deep write, including the contents of
      * any containers encountered.
      *
-     * @since IonJava R13
      */
     public void writeTo(IonWriter writer);
 
@@ -468,7 +462,6 @@ public interface IonValue
      *
      * @return Ion text data equivalent to this value.
      *
-     * @since IonJava R22
      */
     public String toPrettyString();
 
@@ -482,7 +475,6 @@ public interface IonValue
      *
      * @return Ion text data equivalent to this value.
      *
-     * @since IonJava R22
      */
     public String toString(IonTextWriterBuilder writerBuilder);
 

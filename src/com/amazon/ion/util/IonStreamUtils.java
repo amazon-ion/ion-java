@@ -70,8 +70,6 @@ public class IonStreamUtils
      *
      * @return {@code true} if the buffer contains GZIPped data; {@code false}
      * if the buffer is null or if the {@code length} is too short.
-     *
-     * @since IonJava R16
      */
     public static boolean isGzip(byte[] buffer, int offset, int length)
     {
@@ -103,8 +101,6 @@ public class IonStreamUtils
     /**
      * Returns a stream that decompresses a stream if it contains GZIPped data,
      * otherwise has no effect on the stream (but may wrap it).
-     *
-     * @since IonJava R21
      */
     public static InputStream unGzip(InputStream in)
         throws IOException

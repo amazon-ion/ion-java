@@ -197,7 +197,6 @@ public interface IonStruct
      *   if {@code fieldName} is empty or
      *   if {@code element} is an {@link IonDatagram}.
      *
-     * @since IonJava R15
      */
     public void add(SymbolToken fieldName, IonValue child)
         throws ContainedValueException;

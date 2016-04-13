@@ -14,7 +14,7 @@ import com.amazon.ion.IonSystem;
  * {@link IonCatalog} implementation rather than using the default
  * {@link SimpleCatalog}.
  *
- * @deprecated Since IonJava R10. Use the more configurable
+ * @deprecated Use the more configurable
  * {@link IonSystemBuilder} instead.
  */
 @Deprecated
@@ -29,7 +29,7 @@ public final class SystemFactory
      *
      * @return a new {@link IonSystem} instance; not null.
      *
-     * @deprecated Since IonJava R10. Use
+     * @deprecated Use
      * {@link IonSystemBuilder IonSystemBuilder.standard().build()} instead.
      */
     @Deprecated
@@ -45,7 +45,7 @@ public final class SystemFactory
      *   If null, a new {@link SimpleCatalog} will be used.
      * @return a new {@link IonSystem} instance; not null.
      *
-     * @deprecated Since IonJava R10. Use
+     * @deprecated Use
      * {@link IonSystemBuilder IonSystemBuilder.standard().withCatalog(catalog).build()} instead.
      */
     @Deprecated

@@ -29,11 +29,9 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-84 if you need this.
+     * <!-- TODO ION-84 -->
      *
      * @throws UnsupportedOperationException at every call.
-     *
-     * @see <a href="https://issues.amazon.com/ION-84">ION-84</a>
      */
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException;
@@ -41,11 +39,9 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-84 if you need this.
+     * <!-- TODO ION-84 -->
      *
      * @throws UnsupportedOperationException at every call.
-     *
-     * @see <a href="https://issues.amazon.com/ION-84">ION-84</a>
      */
     public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException;
@@ -53,22 +49,18 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-83 if you need this.
+     * <!-- TODO ION-83 -->
      *
      * @throws UnsupportedOperationException at every call.
-     *
-     * @see <a href="https://issues.amazon.com/ION-83">ION-83</a>
      */
     public boolean addAll(int index, Collection<? extends IonValue> c);
 
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-90 if you need this.
+     * <!-- TODO ION-90 -->
      *
      * @throws UnsupportedOperationException at every call.
-     *
-     * @see <a href="https://issues.amazon.com/ION-90">ION-90</a>
      */
     public IonValue set(int index, IonValue element);
 
@@ -183,7 +175,7 @@ public interface IonDatagram
      *
      * @throws IonException if there's an error encoding the data.
      *
-     * @deprecated Since IonJava RC1 (2009). Use {@link #getBytes()} instead,
+     * @deprecated Use {@link #getBytes()} instead,
      * which is renamed for consistency with other interfaces.
      */
     @Deprecated
@@ -223,7 +215,7 @@ public interface IonDatagram
      *
      * @see #getBytes(byte[],int)
      *
-     * @deprecated Since IonJava R17, with no direct replacement.
+     * @deprecated with no direct replacement.
      */
     @Deprecated
     public int getBytes(byte[] dst) // TODO ION-365 Remove
@@ -246,7 +238,7 @@ public interface IonDatagram
      * @throws IndexOutOfBoundsException if {@code (dst.length - offset)} is
      * smaller than the result of {@link #byteSize()}.
      *
-     * @deprecated Since IonJava R17, with no direct replacement.
+     * @deprecated with no direct replacement.
      */
     @Deprecated
     public int getBytes(byte[] dst, int offset) // TODO ION-365 Remove
@@ -296,11 +288,10 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for SIM issue ION-85 if you need this.
+     * <!-- TODO ION-85 -->
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-85">ION-85</a>
      */
     public boolean retainAll(Collection<?> c);
 

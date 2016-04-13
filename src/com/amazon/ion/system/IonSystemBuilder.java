@@ -102,9 +102,6 @@ public class IonSystemBuilder
      * This is a back-door for allowing a JVM-level override of the default
      * DOM implementation.  The only reliable way to use this property is to
      * set via the command-line.
-     * <p>
-     * <b>DO NOT USE THIS WITHOUT APPROVAL FROM JONKER@AMAZON.COM!</b>
-     * This private feature is subject to change without notice.
      */
     private static final String BINARY_BACKED_DOM_PROPERTY =
         "com.amazon.ion.system.IonSystemBuilder.useBinaryBackedDom";
@@ -167,8 +164,6 @@ public class IonSystemBuilder
      *
      * @return this instance, if immutable;
      * otherwise an immutable copy of this instance.
-     *
-     * @since IonJava R15
      */
     public IonSystemBuilder immutable()
     {
@@ -180,8 +175,6 @@ public class IonSystemBuilder
      *
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
-     *
-     * @since IonJava R15
      */
     public IonSystemBuilder mutable()
     {
@@ -291,8 +284,6 @@ public class IonSystemBuilder
      *
      * @see #setStreamCopyOptimized(boolean)
      * @see #withStreamCopyOptimized(boolean)
-     *
-     * @since R13
      */
     public final boolean isStreamCopyOptimized()
     {
@@ -311,8 +302,6 @@ public class IonSystemBuilder
      *
      * @see #isStreamCopyOptimized()
      * @see #withStreamCopyOptimized(boolean)
-     *
-     * @since R13
      */
     public final void setStreamCopyOptimized(boolean optimized)
     {
@@ -330,8 +319,6 @@ public class IonSystemBuilder
      *
      * @see #isStreamCopyOptimized()
      * @see #setStreamCopyOptimized(boolean)
-     *
-     * @since R13
      */
     public final IonSystemBuilder withStreamCopyOptimized(boolean optimized)
     {

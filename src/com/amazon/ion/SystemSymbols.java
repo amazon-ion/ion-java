@@ -5,7 +5,6 @@ package com.amazon.ion;
 /**
  * Constants for symbols defined by the Ion specification.
  *
- * @since IonJava R13
  */
 public final class SystemSymbols
 {

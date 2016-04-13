@@ -15,7 +15,6 @@ package com.amazon.ion;
  * Violations of this constraint may not be detected reliably, so be careful
  * or you'll get unsatisfying results.
  *
- * @since IonJava R13
  */
 public interface SeekableReader
     extends SpanProvider

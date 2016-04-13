@@ -21,7 +21,7 @@ import java.util.Date;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://issues.amazon.com/ION-182">issue ION-182</a>
+ * <!-- TODO ION-182 -->
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
@@ -196,7 +196,6 @@ public interface IonWriter
      * that is, if {@link #isInStruct()} is false.
      * @throws NullPointerException if {@code name} is null.
      *
-     * @since IonJava R15
      */
     public void setFieldNameSymbol(SymbolToken name);
 
@@ -233,7 +232,6 @@ public interface IonWriter
      * @param annotations
      * If null or empty, any pending annotations are cleared.
      *
-     * @since IonJava R15
      */
     public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
@@ -298,7 +296,7 @@ public interface IonWriter
      *
      * @param value may be null, in which case this method does nothing.
      *
-     * @deprecated Since IonJava R13. Use
+     * @deprecated Use
      * {@link IonValue#writeTo(IonWriter)} instead.
      */
     @Deprecated // TODO ION-247 remove this
@@ -404,7 +402,7 @@ public interface IonWriter
      * @param value java.util Date holding the UTC timestamp;
      * may be null to represent {@code null.timestamp}.
      *
-     * @deprecated Since IonJava RC2 (2009). Use
+     * @deprecated Use
      * {@link #writeTimestamp(Timestamp) IonWriter.writeTimestamp(}{@link
      * Timestamp#forDateZ(Date) Timestamp.forDateZ(Date))} instead.
      */
@@ -431,7 +429,6 @@ public interface IonWriter
      * @throws IllegalArgumentException if the value contains an invalid UTF-16
      * surrogate pair.
      *
-     * @since IonJava R15
      */
     public void writeSymbolToken(SymbolToken content) throws IOException;
 

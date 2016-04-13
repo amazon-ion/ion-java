@@ -8,9 +8,6 @@ package com.amazon.ion.system;
  * <p>
  * <b>WARNING:</b> This class should not be extended by code outside of
  * this library.
- * <p>
- *
- * @since IonJava R15
  */
 public abstract class IonWriterBuilder
 {
@@ -26,8 +23,6 @@ public abstract class IonWriterBuilder
          * Always emits an initial IVM, even when the user hasn't explicitly
          * written one.  If the user <em>does</em> write one, this won't
          * cause an extra to be emitted.
-         *
-         * @since IonJava R16
          */
         ENSURE,
 
@@ -46,8 +41,6 @@ public abstract class IonWriterBuilder
      * stream; that's the job of {@link InitialIvmHandling}.
      *
      * @see IonTextWriterBuilder#setIvmMinimizing(IonWriterBuilder.IvmMinimizing)
-     *
-     * @since IonJava R16
      */
     public enum IvmMinimizing
     {
@@ -90,8 +83,6 @@ public abstract class IonWriterBuilder
      * stream; that's the job of {@link InitialIvmHandling}.
      *
      * @return the IVM minimizing strategy.
-     *
-     * @since IonJava R16
      */
     public abstract IvmMinimizing getIvmMinimizing();
 }

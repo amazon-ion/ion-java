@@ -8,7 +8,7 @@ import java.io.OutputStream;
 /**
  * An {@link IonWriter} that encodes Ion binary data.
  *
- * @deprecated Since IonJava R10. Use
+ * @deprecated Use
  * {@link IonSystem#newBinaryWriter(OutputStream, SymbolTable...)} instead.
  */
 @Deprecated
@@ -23,7 +23,7 @@ public interface IonBinaryWriter
      *
      * @return the size in bytes.
      *
-     * @deprecated Since IonJava R10.
+     * @deprecated
      */
     @Deprecated
     public int byteSize();
@@ -37,7 +37,7 @@ public interface IonBinaryWriter
      * @return the byte array with the writers output
      * @throws IOException
      *
-     * @deprecated Since IonJava R10.
+     * @deprecated
      */
     @Deprecated
     public byte[] getBytes()
@@ -57,7 +57,7 @@ public interface IonBinaryWriter
      * @return number of bytes written
      * @throws IOException
      *
-     * @deprecated Since IonJava R10.
+     * @deprecated
      */
     @Deprecated
     public int getBytes(byte[] bytes, int offset, int maxlen)
@@ -72,7 +72,7 @@ public interface IonBinaryWriter
      * @return int length of bytes written
      * @throws IOException
      *
-     * @deprecated Since IonJava R10.
+     * @deprecated
      */
     @Deprecated
     public int writeBytes(OutputStream userstream)

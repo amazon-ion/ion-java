@@ -28,7 +28,7 @@ import java.util.Iterator;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://issues.amazon.com/ION-183">issue ION-183</a>
+ * <!-- TODO ION-183 -->
  * <p>
  * An {@code IonReader} has a "cursor" tracking the <em>current value</em> on
  * which the reader is positioned. Generally, newly created readers are not
@@ -75,7 +75,7 @@ import java.util.Iterator;
  * <h3>The {@link SeekableReader} Facet</h3>
  * This facet is available on all readers <em>except</em> those created from
  * an {@link java.io.InputStream InputStream}.
- * (See <a href="https://issues.amazon.com/ION-243">issue ION-243</a>.)
+ * <!-- TODO ION-243 -->
  * It allows the user to reposition the reader to a {@link Span} over the
  * same reader instance or another reader with the same source.
  *
@@ -104,7 +104,7 @@ public interface IonReader
      * that you cannot reliably get values from the "current" element. The only
      * thing you should call after {@code hasNext()} is {@link #next()}!
      *
-     * @deprecated Since IonJava R8, with no direct replacement. Applications
+     * @deprecated with no direct replacement. Applications
      * should detect the end of the current level by checking for a {@code null}
      * response from {@link #next()}.
      */
@@ -194,7 +194,6 @@ public interface IonReader
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      *
-     * @since IonJava R15
      */
     public SymbolToken[] getTypeAnnotationSymbols();
 
@@ -222,7 +221,7 @@ public interface IonReader
      * If the current value is not a field, or if the symbol ID cannot be
      * determined, this method returns a value <em>less than one</em>.
      *
-     * @deprecated Since IonJava R15. Use {@link #getFieldNameSymbol()} instead.
+     * @deprecated Use {@link #getFieldNameSymbol()} instead.
      */
     @Deprecated
     public int getFieldId();
@@ -247,7 +246,6 @@ public interface IonReader
      * @return null if there is no current value or if the current value is
      *  not a field of a struct.
      *
-     * @since IonJava R15
      */
     public SymbolToken getFieldNameSymbol();
 
@@ -370,7 +368,6 @@ public interface IonReader
      *
      * @return null if {@link #isNullValue()}
      *
-     * @since IonJava R15
      */
     public SymbolToken symbolValue();
 

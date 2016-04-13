@@ -25,7 +25,7 @@ public class OptimizedBinaryWriterLengthPatchingTest
     /**
      * Variants of different container values as Ion text of different type
      * descriptor lengths (i.e., L in the type desc octet, not VarUInt Length).
-     * Refer to Ion's binary format wiki for more info.
+     * Refer to Ion's binary format spec for more info.
      */
     protected enum ContainerTypeDescLengthVariant
     {

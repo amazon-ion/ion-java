@@ -8,7 +8,7 @@ import com.amazon.ion.util.Spans;
  * Extends {@link IonReader} with capabilites specialized to Ion text data
  * streams.
  *
- * @deprecated Since IonJava R13. Use {@link TextSpan} instead.
+ * @deprecated Use {@link TextSpan} instead.
  *
  * @see SpanProvider
  * @see TextSpan

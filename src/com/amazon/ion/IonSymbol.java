@@ -31,7 +31,7 @@ public interface IonSymbol
      *
      * @throws NullValueException if this is <code>null.symbol</code>.
      *
-     * @deprecated Since IonJava R15. Use {@link #symbolValue()} instead.
+     * @deprecated Use {@link #symbolValue()} instead.
      */
     @Deprecated
     public int getSymbolId()
@@ -43,7 +43,6 @@ public interface IonSymbol
      *
      * @return null if {@link #isNullValue()}
      *
-     * @since IonJava R15
      */
     public SymbolToken symbolValue();
 

@@ -22,8 +22,6 @@ import java.io.OutputStream;
  * <p>
  * <b>Instances of this class are not not safe for use by multiple threads
  * unless they are {@linkplain #immutable() immutable}.</b>
- *
- * @since R21
  */
 public abstract class IonBinaryWriterBuilder
     extends IonWriterBuilderBase<IonBinaryWriterBuilder>

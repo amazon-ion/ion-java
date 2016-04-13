@@ -9,7 +9,6 @@ package com.amazon.ion.facet;
  *
  * @see Facets#assumeFacet(Class, Faceted)
  *
- * @since IonJava R13
  */
 public class UnsupportedFacetException
     extends UnsupportedOperationException

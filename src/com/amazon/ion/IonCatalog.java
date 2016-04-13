@@ -58,8 +58,7 @@ import com.amazon.ion.system.SimpleCatalog;
  * <p>
  * Binary <em>decoding</em> prefers an exact match, and in a couple edge cases,
  * requires it. Therefore a single "get latest version" method is insufficient.
- * See the
- * <a href="https://w.amazon.com/index.php/Ion/Symbols">Ion Symbols wiki page</a>
+ * See the Ion Symbols specification <!-- TODO public spec link? -->
  * for more details on this topic.
  * <p>
  * It's expected that many if not most applications will implement a dynamic

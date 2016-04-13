@@ -10,7 +10,6 @@ import com.amazon.ion.SpanProvider;
 /**
  * Utility methods for working with {@link Span}s.
  *
- * @since IonJava R13
  */
 public final class Spans
 {
