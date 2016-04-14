@@ -53,6 +53,24 @@ final class IonReaderTextRawTokensX
 {
     static final boolean _debug = false;
 
+    private static final Appendable NULL_APPENDABLE = new Appendable()
+    {
+        public Appendable append(CharSequence csq) throws IOException
+        {
+            return this;
+        }
+
+        public Appendable append(CharSequence csq, int start, int end)
+            throws IOException
+        {
+            return this;
+        }
+
+        public Appendable append(char c) throws IOException
+        {
+            return this;
+        }
+    };
 
     static final int   BASE64_EOF = 128; // still a byte, not -1, none of the low 6 bits on
     static final int[] BASE64_CHAR_TO_BIN = Base64Encoder.Base64EncodingCharToInt;
@@ -1322,9 +1340,7 @@ final class IonReaderTextRawTokensX
         c = read_char();
         radix.assertPrefix(c);
 
-        do {
-            c = read_char();
-        } while (radix.isValidDigit(c));
+        c = readNumeric(NULL_APPENDABLE, radix);
 
         if (!is_value_terminating_character(c)) {
             bad_token(c);
@@ -1652,11 +1668,13 @@ final class IonReaderTextRawTokensX
      */
     private final int load_digits(StringBuilder sb, int c) throws IOException
     {
-        while (IonTokenConstsX.isDigit(c)) {
-            sb.append((char)c);
-            c = read_char();
+        if (!IonTokenConstsX.isDigit(c))
+        {
+            return c;
         }
-        return c;
+        sb.append((char) c);
+
+        return readNumeric(sb, Radix.DECIMAL, NumericState.DIGIT);
     }
 
     private final void load_fixed_digits(StringBuilder sb, int len)
@@ -1800,17 +1818,10 @@ final class IonReaderTextRawTokensX
     private final int loadRadixValue(StringBuilder sb, boolean has_sign, int c2, Radix radix)
         throws IOException
     {
-        int c = read_char();
-
         radix.assertPrefix(c2);
         sb.append((char) c2);
 
-        do {
-            sb.append((char) c);
-            c = read_char();
-        } while(radix.isValidDigit(c));
-
-        return c;
+        return readNumeric(sb, radix);
     }
 
     private final int skip_over_symbol_identifier(SavePoint sp) throws IOException
@@ -2706,6 +2717,19 @@ final class IonReaderTextRawTokensX
             }
         },
 
+        DECIMAL
+        {
+            boolean isPrefix(int c)
+            {
+                return false;
+            }
+
+            boolean isValidDigit(int c)
+            {
+                return IonTokenConstsX.isDigit(c);
+            }
+        },
+
         HEX
         {
             boolean isPrefix(int c)
@@ -2726,5 +2750,68 @@ final class IonReaderTextRawTokensX
         {
             assert isPrefix(c);
         }
+    }
+
+    private int readNumeric(Appendable buffer, Radix radix) throws IOException
+    {
+        return readNumeric(buffer, radix, NumericState.START);
+    }
+
+    private int readNumeric(Appendable buffer, Radix radix, NumericState startingState) throws IOException
+    {
+        NumericState state = startingState;
+
+        for (;;)
+        {
+            int c = read_char();
+            switch (state)
+            {
+                case START:
+                    if (radix.isValidDigit(c))
+                    {
+                        buffer.append((char) c);
+                        state = NumericState.DIGIT;
+                    }
+                    else
+                    {
+                        return c;
+                    }
+                    break;
+                case DIGIT:
+                    if (radix.isValidDigit(c))
+                    {
+                        buffer.append((char) c);
+                        state = NumericState.DIGIT;
+                    }
+                    else if (c == '_')
+                    {
+                        state = NumericState.UNDERSCORE;
+                    }
+                    else
+                    {
+                        return c;
+                    }
+                    break;
+                case UNDERSCORE:
+                    if (radix.isValidDigit(c))
+                    {
+                        buffer.append((char) c);
+                        state = NumericState.DIGIT;
+                    }
+                    else
+                    {
+                        unread_char(c);
+                        return '_';
+                    }
+                    break;
+            }
+        }
+    }
+
+    private enum NumericState
+    {
+        START,
+        UNDERSCORE,
+        DIGIT,
     }
 }

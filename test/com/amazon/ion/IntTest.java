@@ -359,6 +359,49 @@ public class IntTest
             oneValue("0b" + big.toString(2)));
     }
 
+    @Test
+    public void testIntWithUnderscore()
+    {
+        assertEquals(system().newInt(10), oneValue("1_0"));
+    }
+
+    @Test
+    public void testIntWithLeadingUnderscoreIsActuallySymbol()
+    {
+        assertFalse(system().newInt(10).equals(oneValue("_10")));
+        assertTrue(system().newSymbol("_10").equals(oneValue("_10")));
+    }
+
+    @Test(expected = IonException.class)
+    public void testIntWithMultipleUnderscores()
+    {
+        oneValue("1__0");
+    }
+
+    @Test(expected = IonException.class)
+    public void testIntWithTrailingUnderscore()
+    {
+        oneValue("10_");
+    }
+
+    @Test(expected = IonException.class)
+    public void testBinaryIntWithUnderscoreAfterRadixPrefix()
+    {
+        oneValue("0x_10");
+    }
+
+    @Test
+    public void testHexIntWithUnderscore()
+    {
+        assertEquals(system().newInt(0x4d2), oneValue("0x4_d2"));
+    }
+
+    @Test(expected = IonException.class)
+    public void testHexIntWithTrailingUnderscore()
+    {
+        oneValue("0x4d2_");
+    }
+
     private IonInt binaryInt(int i)
     {
         return (IonInt) oneValue("0b" + Integer.toBinaryString(i));
