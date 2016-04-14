@@ -839,7 +839,7 @@ public class _Private_ScalarConversions
             add_value_type(AS_TYPE.date_value);
         }
         private final void fn_from_date_to_timestamp() {
-            _timestamp_value = new Timestamp(_date_value.getTime(), null);
+            _timestamp_value = Timestamp.forMillis(_date_value.getTime(), null);
             add_value_type(AS_TYPE.timestamp_value);
         }
     }

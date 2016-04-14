@@ -86,7 +86,6 @@ public final class Timestamp
     private static final int FLAG_DAY       = 0x04;
     private static final int FLAG_MINUTE    = 0x08;
     private static final int FLAG_SECOND    = 0x10;
-    private static final int FLAG_FRACTION  = 0x20;
 
     /**
      * The precision of the Timestamp.
@@ -97,17 +96,7 @@ public final class Timestamp
         DAY     (FLAG_YEAR | FLAG_MONTH | FLAG_DAY),
         // HOUR is not a supported precision per https://www.w3.org/TR/NOTE-datetime
         MINUTE  (FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE),
-        SECOND  (FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE | FLAG_SECOND),
-
-        /**
-         * DEPRECATED! Treating the fractional part of seconds separate from
-         * the integer part has led to countless bugs. We intend to combine
-         * the two under the SECOND precision.
-         *
-         * @deprecated As of IonJava R21.
-         */
-        @Deprecated
-        FRACTION(FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE | FLAG_SECOND | FLAG_FRACTION);
+        SECOND  (FLAG_YEAR | FLAG_MONTH | FLAG_DAY | FLAG_MINUTE | FLAG_SECOND);
 
         /** Bit flags for the precision. */
         private final int flags;
@@ -126,7 +115,6 @@ public final class Timestamp
         {
             switch (isIncluded)
             {
-                case FRACTION:  return (flags & FLAG_FRACTION) != 0;
                 case SECOND:    return (flags & FLAG_SECOND)   != 0;
                 case MINUTE:    return (flags & FLAG_MINUTE)   != 0;
                 case DAY:       return (flags & FLAG_DAY)      != 0;
@@ -306,13 +294,15 @@ public final class Timestamp
         _precision = precision;
         _offset = UNKNOWN_OFFSET;
         boolean dayPrecision = false;
+        boolean calendarHasMilliseconds = cal.isSet(Calendar.MILLISECOND);
 
         switch (this._precision) {
-            case FRACTION:
-                BigDecimal millis = BigDecimal.valueOf(cal.get(Calendar.MILLISECOND));
-                this._fraction = millis.movePointLeft(3); // convert to fraction
             case SECOND:
                 this._second = checkAndCastSecond(cal.get(Calendar.SECOND));
+                if (calendarHasMilliseconds) {
+                    BigDecimal millis = BigDecimal.valueOf(cal.get(Calendar.MILLISECOND));
+                    this._fraction = millis.movePointLeft(3); // convert to fraction
+                }
             case MINUTE:
             {
                 this._hour   = checkAndCastHour(cal.get(Calendar.HOUR_OF_DAY));
@@ -375,12 +365,8 @@ public final class Timestamp
      * Creates a new Timestamp, precise to the day, with unknown local offset.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forDay(int, int, int)} instead.
      */
-    @Deprecated
-    public Timestamp(int zyear, int zmonth, int zday)
+    private Timestamp(int zyear, int zmonth, int zday)
     {
         this(Precision.DAY, zyear, zmonth, zday, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
     }
@@ -397,12 +383,8 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forMinute(int, int, int, int, int, Integer)} instead.
      */
-    @Deprecated
-    public Timestamp(int year, int month, int day,
+    private Timestamp(int year, int month, int day,
                      int hour, int minute,
                      Integer offset)
     {
@@ -420,46 +402,12 @@ public final class Timestamp
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forSecond(int, int, int, int, int, int, Integer)} instead.
      */
-    @Deprecated
-    public Timestamp(int year, int month, int day,
+    private Timestamp(int year, int month, int day,
                      int hour, int minute, int second,
                      Integer offset)
     {
         this(Precision.SECOND, year, month, day, hour, minute, second, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES);
-    }
-
-    /**
-     * Creates a new Timestamp, precise to the second or fractional second,
-     * with a given local offset.
-     * <p>
-     * This is equivalent to the corresponding Ion value
-     * {@code YYYY-MM-DDThh:mm:ss.fff+-oo:oo}, where {@code oo:oo} represents
-     * the hour and minutes of the local offset from UTC, and {@code fff}
-     * represents the fractional seconds.
-     *
-     * @param frac
-     *          the fractional seconds; must not be {@code null}; if negative,
-     *          its absolute value is used
-     * @param offset
-     *          the local offset from UTC, measured in minutes;
-     *          may be {@code null} to represent an unknown local offset
-     *
-     * @throws NullPointerException if {@code frac} is {@code null}
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forSecond(int, int, int, int, int, BigDecimal, Integer)}
-     * instead.
-     */
-    @Deprecated
-    public Timestamp(int year, int month, int day,
-                     int hour, int minute, int second, BigDecimal frac,
-                     Integer offset)
-    {
-        this(Precision.FRACTION, year, month, day, hour, minute, second, frac, offset, APPLY_OFFSET_YES);
     }
 
     /**
@@ -485,22 +433,19 @@ public final class Timestamp
                       Integer offset, boolean shouldApplyOffset)
     {
         boolean dayPrecision = false;
-        boolean secondPrecision = false;
 
         switch (p) {
         default:
             throw new IllegalArgumentException("invalid Precision passed to constructor");
-        case FRACTION:
-            if (frac.equals(BigDecimal.ZERO))
+        case SECOND:
+            if (frac == null || frac.equals(BigDecimal.ZERO))
             {
-                secondPrecision = true;
                 _fraction = null;
             }
             else
             {
                 _fraction = frac.abs();
             }
-        case SECOND:
             _second = checkAndCastSecond(zsecond);
         case MINUTE:
             _minute = checkAndCastMinute(zminute);
@@ -519,7 +464,7 @@ public final class Timestamp
             _day    = checkAndCastDay(zday, zyear, zmonth);
         }
 
-        _precision = checkPrecision(secondPrecision ? Precision.SECOND : p, _fraction);
+        _precision = checkFraction(p, _fraction);
 
         if (shouldApplyOffset && offset != null) {
             apply_offset(offset);
@@ -574,7 +519,7 @@ public final class Timestamp
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
      *
-     * @deprecated Since IonJava R17, with no direct replacement.
+     * @deprecated This is an internal API that is subject to change without notice.
      */
     @Deprecated
     public static Timestamp
@@ -606,19 +551,12 @@ public final class Timestamp
      *
      * @throws IllegalArgumentException
      *          if {@code cal} has no appropriate calendar fields set.
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forCalendar(Calendar)} instead.
      */
-    @Deprecated
-    public Timestamp(Calendar cal)
+    private Timestamp(Calendar cal)
     {
         Precision precision;
 
-        if (cal.isSet(Calendar.MILLISECOND)) {
-            precision = Precision.FRACTION;
-        }
-        else if (cal.isSet(Calendar.SECOND)) {
+        if (cal.isSet(Calendar.MILLISECOND) || cal.isSet(Calendar.SECOND)) {
             precision = Precision.SECOND;
         }
         else if (cal.isSet(Calendar.HOUR_OF_DAY) || cal.isSet(Calendar.MINUTE)) {
@@ -670,17 +608,15 @@ public final class Timestamp
                 _minute = 0;
             case MINUTE:
                 _second = 0;
-            case SECOND:
                 _fraction = null;
                 break;
-
-            case FRACTION:
+            case SECOND:
                 BigDecimal secs = millis.movePointLeft(3);
                 BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
                 _fraction = secs.subtract(secsDown);
         }
 
-        _precision = checkPrecision(precision, _fraction);
+        _precision = checkFraction(precision, _fraction);
 
         _offset = localOffset;
     }
@@ -717,28 +653,23 @@ public final class Timestamp
      *          may be {@code null} to represent an unknown local offset
      *
      * @throws NullPointerException if {@code millis} is {@code null}
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forMillis(BigDecimal, Integer)} instead.
      */
-    @Deprecated
-    public Timestamp(BigDecimal millis, Integer localOffset)
+    private Timestamp(BigDecimal millis, Integer localOffset)
     {
         if (millis == null) throw new NullPointerException("millis is null");
 
         long ms = millis.longValue();
         set_fields_from_millis(ms);
 
+        this._precision = Precision.SECOND;
         int scale = millis.scale();
         if (scale <= -3) {
-            this._precision = Precision.SECOND;
             this._fraction = null;
         }
         else {
             BigDecimal secs = millis.movePointLeft(3);
             BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
             this._fraction = secs.subtract(secsDown);
-            this._precision = checkPrecision(Precision.FRACTION, _fraction);
         }
         this._offset = localOffset;
     }
@@ -754,12 +685,8 @@ public final class Timestamp
      * @param localOffset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset.
-     *
-     * @deprecated Since IonJava R17.
-     * Use {@link #forMillis(long, Integer)} instead.
      */
-    @Deprecated
-    public Timestamp(long millis, Integer localOffset)
+    private Timestamp(long millis, Integer localOffset)
     {
         this.set_fields_from_millis(millis);
 
@@ -767,7 +694,7 @@ public final class Timestamp
         BigDecimal secs = BigDecimal.valueOf(millis).movePointLeft(3);
         BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
         this._fraction = secs.subtract(secsDown);
-        this._precision = checkPrecision(Precision.FRACTION, _fraction);
+        this._precision = checkFraction(Precision.SECOND, _fraction);
 
         this._offset = localOffset;
     }
@@ -932,7 +859,6 @@ public final class Timestamp
                 throw fail(in,
                            "must have at least one digit after decimal point");
             }
-            precision = Precision.FRACTION;
             fraction = new BigDecimal(in.subSequence(19, pos).toString());
         } while (false);
 
@@ -1222,7 +1148,7 @@ public final class Timestamp
         // Storing them separately is silly.
         int s = second.intValue();
         BigDecimal frac = second.subtract(BigDecimal.valueOf(s));
-        return new Timestamp(Precision.FRACTION, year, month, day, hour, minute, s, frac, offset, APPLY_OFFSET_YES);
+        return new Timestamp(Precision.SECOND, year, month, day, hour, minute, s, frac, offset, APPLY_OFFSET_YES);
     }
 
 
@@ -1455,7 +1381,7 @@ public final class Timestamp
     {
         //                                        month is 0 based for Date
         long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-        if (this._precision == Precision.FRACTION) {
+        if (this._fraction != null) {
             int frac = this._fraction.movePointRight(3).intValue();
             millis += frac;
         }
@@ -1488,11 +1414,10 @@ public final class Timestamp
         case MINUTE:
         case SECOND:
             millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-            return BigDecimal.valueOf(millis);
-        case FRACTION:
-            millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
             dec = BigDecimal.valueOf(millis);
-            dec = dec.add(this._fraction.movePointRight(3));
+            if (_fraction != null) {
+                dec = dec.add(this._fraction.movePointRight(3));
+            }
             return dec;
         }
         throw new IllegalArgumentException();
@@ -1673,30 +1598,6 @@ public final class Timestamp
 
 
     /**
-     * Returns the fractional second of this Timestamp.
-     * <p>
-     * Fractional seconds are not affected by local offsets.
-     * As such, this method produces the same output as
-     * {@link #getZFractionalSecond()}.
-     *
-     * @return
-     *          a BigDecimal within the range [0, 1);
-     *          {@code null} is returned if the Timestamp isn't
-     *          precise to the fractional second
-     *
-     * @see #getZFractionalSecond()
-     *
-     * @deprecated As of IonJava R21.
-     * Use {@link #getDecimalSecond()} instead.
-     */
-    @Deprecated
-    public BigDecimal getFractionalSecond()
-    {
-        return this._fraction;
-    }
-
-
-    /**
      * Returns the year of this Timestamp, in UTC.
      *
      * @return
@@ -1806,18 +1707,13 @@ public final class Timestamp
      * Returns the fractional second of this Timestamp.
      * <p>
      * Fractional seconds are not affected by local offsets.
-     * As such, this method produces the same output as
-     * {@link #getFractionalSecond()}.
      *
      * @return
      *          a BigDecimal within the range [0, 1);
      *          {@code null} is returned if the Timestamp isn't
      *          precise to the fractional second
      *
-     * @see #getFractionalSecond()
-     *
-     * @deprecated As of IonJava R21.
-     * Use {@link #getZDecimalSecond()} instead.
+     * @deprecated This is an internal API that is subject to change without notice.
      */
     @Deprecated
     public BigDecimal getZFractionalSecond()
@@ -1965,7 +1861,6 @@ public final class Timestamp
             }
             case MINUTE:
             case SECOND:
-            case FRACTION:
             {
                 Timestamp ztime = this.clone();
                 ztime._offset = UTC_OFFSET;
@@ -2024,14 +1919,12 @@ public final class Timestamp
         out.append(":");
         print_digits(out, adjusted._minute, 2);
         // ok, so how much time do we have ?
-        if (adjusted._precision == Precision.SECOND
-            || adjusted._precision == Precision.FRACTION
-            ) {
+        if (adjusted._precision == Precision.SECOND) {
             out.append(":");
             print_digits(out, adjusted._second, 2);
-        }
-        if (adjusted._precision == Precision.FRACTION) {
-            print_fractional_digits(out, adjusted._fraction);
+            if (adjusted._fraction != null) {
+                print_fractional_digits(out, adjusted._fraction);
+            }
         }
 
         if (adjusted._offset != UNKNOWN_OFFSET) {
@@ -2225,7 +2118,7 @@ public final class Timestamp
         final int prime = 8191;
         int result = HASH_SIGNATURE;
 
-        result = prime * result + (this._precision == Precision.FRACTION
+        result = prime * result + (_fraction != null
             ? _fraction.hashCode()
             : 0);
 
@@ -2409,16 +2302,17 @@ public final class Timestamp
         }
 
         // we only look at the fraction if we know that it's actually there
-        if (this._precision == Precision.FRACTION) {
-            if (this._fraction == null) {
-                if (t._fraction != null) return false;
-            }
-            else {
-                if (t._fraction == null) return false;
-            }
-            if (!this._fraction.equals(t._fraction)) return false;
+
+        if ((this._fraction != null && t._fraction == null)
+            || (this._fraction == null && t._fraction != null)) {
+            // one of the fractions are null
+            return false;
         }
-        return true;
+        if (this._fraction == null && t._fraction == null) {
+            // both are null
+            return true;
+        }
+        return this._fraction.equals(t._fraction);
     }
 
     private static short checkAndCastYear(int year)
@@ -2481,17 +2375,16 @@ public final class Timestamp
         return (byte) second;
     }
 
-    private static Precision checkPrecision(Precision precision, BigDecimal fraction)
+    private static Precision checkFraction(Precision precision, BigDecimal fraction)
     {
-        if (precision == Precision.FRACTION) {
-            if (fraction == null)
-            {
-                throw new IllegalArgumentException("Fractional seconds cannot be null when the precision is Timestamp.TT_FRAC");
-            }
-            if (fraction.signum() == -1
-                || BigDecimal.ONE.compareTo(fraction) != 1)
-            {
+        if (precision == Precision.SECOND) {
+            if (fraction != null && (fraction.signum() == -1 || BigDecimal.ONE.compareTo(fraction) != 1)) {
                 throw new IllegalArgumentException(String.format("Fractional seconds %s must be greater than or equal to 0 and less than 1", fraction));
+            }
+        }
+        else {
+            if (fraction != null) {
+                throw new IllegalArgumentException("Fraction must be null for non-second precision: " + fraction);
             }
         }
 

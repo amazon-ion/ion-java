@@ -8,7 +8,6 @@ import static com.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static com.amazon.ion.Timestamp.UTC_OFFSET;
 import static com.amazon.ion.Timestamp.createFromUtcFields;
 import static com.amazon.ion.Timestamp.Precision.DAY;
-import static com.amazon.ion.Timestamp.Precision.FRACTION;
 import static com.amazon.ion.Timestamp.Precision.MINUTE;
 import static com.amazon.ion.Timestamp.Precision.MONTH;
 import static com.amazon.ion.Timestamp.Precision.SECOND;
@@ -157,20 +156,25 @@ public class TimestampTest
                              Integer expectedOffset,
                              Timestamp ts)
     {
+        BigDecimal expectedDecimalSeconds = BigDecimal.valueOf(expectedSecond);
+        if (expectedFraction != null) {
+            expectedDecimalSeconds = expectedDecimalSeconds.add(expectedFraction);
+        }
+
         assertEquals("year",     expectedYear,     ts.getYear());
         assertEquals("month",    expectedMonth,    ts.getMonth());
         assertEquals("day",      expectedDay,      ts.getDay());
         assertEquals("hour",     expectedHour,     ts.getHour());
         assertEquals("minute",   expectedMinute,   ts.getMinute());
         assertEquals("second",   expectedSecond,   ts.getSecond());
-        assertEquals("fraction", expectedFraction, ts.getFractionalSecond());
+        assertEquals("fraction", expectedDecimalSeconds, ts.getDecimalSecond());
         assertEquals("offset",   expectedOffset,   ts.getLocalOffset());
     }
 
     private void checkTime(int expectedYear, int expectedMonth, int expectedDay,
                            String expectedText, String ionText)
     {
-        Timestamp ts = new Timestamp(expectedYear, expectedMonth, expectedDay);
+        Timestamp ts = Timestamp.forDay(expectedYear, expectedMonth, expectedDay);
         checkFields(expectedYear, expectedMonth, expectedDay, 0, 0, 0, null,
                     UNKNOWN_OFFSET, DAY, ts);
         assertEquals(expectedText, ts.toString());
@@ -343,7 +347,7 @@ public class TimestampTest
         assertEquals("0001-01-01", EARLIEST_ION_TIMESTAMP.toString());
         assertEquals(-62135769600000L, EARLIEST_ION_TIMESTAMP.getMillis());
 
-        checkFields(1970, 1, 1, 0, 0, 0, new BigDecimal("0.000"), 0, FRACTION, UNIX_EPOCH_TIMESTAMP);
+        checkFields(1970, 1, 1, 0, 0, 0, new BigDecimal("0.000"), 0, SECOND, UNIX_EPOCH_TIMESTAMP);
         assertEquals("1970-01-01T00:00:00.000Z", UNIX_EPOCH_TIMESTAMP.toZString());
         assertEquals("1970-01-01T00:00:00.000Z", UNIX_EPOCH_TIMESTAMP.toString());
         assertEquals(0L, UNIX_EPOCH_TIMESTAMP.getMillis());
@@ -700,83 +704,65 @@ public class TimestampTest
     public void testNewTimestamp()
     {
         // ===== Test on Timestamp(...) date precise constructor =====
-        Timestamp ts = new Timestamp(2010, 2, 1);
+        Timestamp ts = Timestamp.forDay(2010, 2, 1);
         checkFields(2010, 2, 1, 0, 0, 0, null, UNKNOWN_OFFSET, DAY, ts);
         assertEquals("2010-02-01", ts.toString());
         assertEquals("2010-02-01", ts.toZString());
 
         // ===== Test on Timestamp(...) minute precise constructor =====
-        ts = new Timestamp(2010, 2, 1, 10, 11, PST_OFFSET);
+        ts = Timestamp.forMinute(2010, 2, 1, 10, 11, PST_OFFSET);
         checkFields(2010, 2, 1, 10, 11, 0, null, PST_OFFSET, MINUTE, ts);
         assertEquals("2010-02-01T10:11-08:00", ts.toString());
         assertEquals("2010-02-01T18:11Z", ts.toZString());
 
-        ts = new Timestamp(2010, 2, 1, 10, 11, null);
+        ts = Timestamp.forMinute(2010, 2, 1, 10, 11, null);
         checkFields(2010, 2, 1, 10, 11, 0, null, null, MINUTE, ts);
         assertEquals("2010-02-01T10:11-00:00", ts.toString());
         assertEquals("2010-02-01T10:11Z", ts.toZString());
 
         // ===== Test on Timestamp(...) second precise constructor =====
-        ts = new Timestamp(2010, 2, 1, 10, 11, 12, PST_OFFSET);
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, 12, PST_OFFSET);
         checkFields(2010, 2, 1, 10, 11, 12, null, PST_OFFSET, SECOND, ts);
         assertEquals("2010-02-01T10:11:12-08:00", ts.toString());
         assertEquals("2010-02-01T18:11:12Z", ts.toZString());
 
-        ts = new Timestamp(2010, 2, 1, 10, 11, 12, null);
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, 12, null);
         checkFields(2010, 2, 1, 10, 11, 12, null, null, SECOND, ts);
         assertEquals("2010-02-01T10:11:12-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12Z", ts.toZString());
 
-        // ===== Test on Timestamp(...) fractional second precise constructor =====
-        BigDecimal fraction = new BigDecimal(".34");
-        ts = new Timestamp(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET);
-        checkFields(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET, FRACTION, ts);
+        BigDecimal frac = new BigDecimal("0.34");
+        BigDecimal decimalSeconds = new BigDecimal("12.34");
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, decimalSeconds, PST_OFFSET);
+        checkFields(2010, 2, 1, 10, 11, 12, frac, PST_OFFSET, SECOND, ts);
         assertEquals("2010-02-01T10:11:12.34-08:00", ts.toString());
         assertEquals("2010-02-01T18:11:12.34Z", ts.toZString());
 
-        ts = new Timestamp(2010, 2, 1, 10, 11, 12, fraction, null);
-        checkFields(2010, 2, 1, 10, 11, 12, fraction, null, FRACTION, ts);
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, decimalSeconds, null);
+        checkFields(2010, 2, 1, 10, 11, 12, frac, null, SECOND, ts);
         assertEquals("2010-02-01T10:11:12.34-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.34Z", ts.toZString());
 
-        // This was broken prior to R17. It had FRACTION precision, but no
-        // fractional data, and didn't equal the same value created other ways.
-        ts = new Timestamp(2010, 2, 1, 10, 11, 12, BigDecimal.ZERO, 0);
-        assertEquals(Timestamp.valueOf("2010-02-01T10:11:12Z"), ts);
-        checkFields(2010, 2, 1, 10, 11, 12, null, 0, SECOND, ts);
-
-        // New static method unifies decimal seconds
-        BigDecimal second = new BigDecimal("12.34");
-        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, second, PST_OFFSET);
-        checkFields(2010, 2, 1, 10, 11, 12, fraction, PST_OFFSET, FRACTION, ts);
-        assertEquals("2010-02-01T10:11:12.34-08:00", ts.toString());
-        assertEquals("2010-02-01T18:11:12.34Z", ts.toZString());
-
-        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, second, null);
-        checkFields(2010, 2, 1, 10, 11, 12, fraction, null, FRACTION, ts);
-        assertEquals("2010-02-01T10:11:12.34-00:00", ts.toString());
-        assertEquals("2010-02-01T10:11:12.34Z", ts.toZString());
-
-        second = new BigDecimal("12.");
-        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, second, PST_OFFSET);
+        decimalSeconds = new BigDecimal("12.");
+        ts = Timestamp.forSecond(2010, 2, 1, 10, 11, decimalSeconds, PST_OFFSET);
         checkFields(2010, 2, 1, 10, 11, 12, null, PST_OFFSET, SECOND, ts);
         assertEquals("2010-02-01T10:11:12-08:00", ts.toString());
         assertEquals("2010-02-01T18:11:12Z", ts.toZString());
     }
 
-    /** Test for {@link Timestamp#Timestamp(BigDecimal, Integer)} */
+    /** Test for {@link Timestamp#forMillis(BigDecimal, Integer)} */
     @Test
     public void testNewTimestampFromBigDecimal()
     {
         BigDecimal bigDec = new BigDecimal("1325419950555.123");
 
-        Timestamp ts = new Timestamp(bigDec, PST_OFFSET);
-        checkFields(2012, 1, 1, 4, 12, 30, new BigDecimal("0.555123"), PST_OFFSET, FRACTION, ts);
+        Timestamp ts = Timestamp.forMillis(bigDec, PST_OFFSET);
+        checkFields(2012, 1, 1, 4, 12, 30, new BigDecimal("0.555123"), PST_OFFSET, SECOND, ts);
         assertEquals("2012-01-01T04:12:30.555123-08:00", ts.toString());
         assertEquals("2012-01-01T12:12:30.555123Z", ts.toZString());
 
-        ts = new Timestamp(bigDec, null);
-        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.555123"), null, FRACTION, ts);
+        ts = Timestamp.forMillis(bigDec, null);
+        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.555123"), null, SECOND, ts);
         assertEquals("2012-01-01T12:12:30.555123-00:00", ts.toString());
         assertEquals("2012-01-01T12:12:30.555123Z", ts.toZString());
     }
@@ -786,11 +772,11 @@ public class TimestampTest
     @Test (expected = NullPointerException.class)
     public void testNewTimestampFromBigDecimalWithNull()
     {
-        Timestamp ts = new Timestamp(null, PST_OFFSET);
+        Timestamp ts = Timestamp.forMillis(null, PST_OFFSET);
     }
 
     /**
-     * Test for {@link Timestamp#Timestamp(BigDecimal, Integer)},
+     * Test for {@link Timestamp#forMillis(BigDecimal, Integer)},
      * ensuring that varying BigDecimals with different scales produce
      * Timestamps (with correct precision of second/fractional seconds) as
      * expected.
@@ -818,44 +804,44 @@ public class TimestampTest
 
         Timestamp ts;
 
-        ts = new Timestamp(decScaleNegFour, null);
+        ts = Timestamp.forMillis(decScaleNegFour, null);
         checkFields(2012, 1, 1, 12, 12, 30, null, null, SECOND, ts);
 
-        ts = new Timestamp(decScaleNegThree, null);
+        ts = Timestamp.forMillis(decScaleNegThree, null);
         checkFields(2012, 1, 1, 12, 12, 30, null, null, SECOND, ts);
 
-        ts = new Timestamp(decScaleNegTwo, null);
-        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.5"), null, FRACTION, ts);
+        ts = Timestamp.forMillis(decScaleNegTwo, null);
+        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.5"), null, SECOND, ts);
 
-        ts = new Timestamp(decScaleNegOne, null);
-        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.55"), null, FRACTION, ts);
+        ts = Timestamp.forMillis(decScaleNegOne, null);
+        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.55"), null, SECOND, ts);
 
-        ts = new Timestamp(decScaleZero, null);
-        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.555"), null, FRACTION, ts);
+        ts = Timestamp.forMillis(decScaleZero, null);
+        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.555"), null, SECOND, ts);
 
-        ts = new Timestamp(decScalePosOne, null);
-        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.5555"), null, FRACTION, ts);
+        ts = Timestamp.forMillis(decScalePosOne, null);
+        checkFields(2012, 1, 1, 12, 12, 30, new BigDecimal("0.5555"), null, SECOND, ts);
 
-        ts = new Timestamp(new BigDecimal("0e3"), null);
+        ts = Timestamp.forMillis(new BigDecimal("0e3"), null);
         checkFields(1970, 1, 1, 0, 0, 0, null, null, SECOND, ts);
 
-        ts = new Timestamp(new BigDecimal("1e3"), null);
+        ts = Timestamp.forMillis(new BigDecimal("1e3"), null);
         checkFields(1970, 1, 1, 0, 0, 1, null, null, SECOND, ts);
     }
 
-    /** Test for {@link Timestamp#Timestamp(long, Integer)} */
+    /** Test for {@link Timestamp#forMillis(long, Integer)} */
     @Test
     public void testNewTimestampFromLong()
     {
         long actualMillis = 1265019072340L;
 
-        Timestamp ts = new Timestamp(actualMillis, PST_OFFSET);
-        checkFields(2010, 2, 1, 2, 11, 12, new BigDecimal("0.340"), PST_OFFSET, FRACTION, ts);
+        Timestamp ts = Timestamp.forMillis(actualMillis, PST_OFFSET);
+        checkFields(2010, 2, 1, 2, 11, 12, new BigDecimal("0.340"), PST_OFFSET, SECOND, ts);
         assertEquals("2010-02-01T02:11:12.340-08:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.340Z", ts.toZString());
 
-        ts = new Timestamp(actualMillis, null);
-        checkFields(2010, 2, 1, 10, 11, 12, new BigDecimal("0.340"), null, FRACTION, ts);
+        ts = Timestamp.forMillis(actualMillis, null);
+        checkFields(2010, 2, 1, 10, 11, 12, new BigDecimal("0.340"), null, SECOND, ts);
         assertEquals("2010-02-01T10:11:12.340-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.340Z", ts.toZString());
     }
@@ -904,11 +890,6 @@ public class TimestampTest
 
         p = SECOND;
         ts = Timestamp.createFromUtcFields(p, zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset);
-        // 2012-02-03T04:05:06-00:00
-        checkFields(zyear, zmonth, zday, zhour, zminute, zsecond, null, offset, p, ts);
-
-        p = FRACTION;
-        ts = Timestamp.createFromUtcFields(p, zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset);
         // 2012-02-03T04:05:06.007-00:00
         checkFields(zyear, zmonth, zday, zhour, zminute, zsecond, zfrac, offset, p, ts);
 
@@ -931,7 +912,7 @@ public class TimestampTest
         int zminute             = 5;
         int zsecond             = 6;
         BigDecimal zfrac        = new BigDecimal("0.007");
-        Precision p             = FRACTION;
+        Precision p             = SECOND;
 
         // Varying local offsets (in minutes)
         Integer offset;
@@ -983,7 +964,7 @@ public class TimestampTest
         cal.set(Calendar.YEAR, 2009);
         assertFalse(cal.isSet(Calendar.MONTH));
 
-        Timestamp ts = new Timestamp(cal);
+        Timestamp ts = Timestamp.forCalendar(cal);
         checkFields(2009, 1, 1, 0, 0, 0, null, UNKNOWN_OFFSET, YEAR, ts);
         assertEquals("2009T", ts.toString());
         assertEquals("2009T", ts.toZString());
@@ -994,7 +975,7 @@ public class TimestampTest
         cal.set(Calendar.MONTH, 2);
         assertFalse(cal.isSet(Calendar.HOUR_OF_DAY));
 
-        ts = new Timestamp(cal);
+        ts = Timestamp.forCalendar(cal);
         checkFields(2009, 3, 1, 0, 0, 0, null, UNKNOWN_OFFSET, MONTH, ts);
         assertEquals("2009-03T", ts.toString());
         assertEquals("2009-03T", ts.toZString());
@@ -1005,7 +986,7 @@ public class TimestampTest
         assertFalse(cal.isSet(Calendar.HOUR_OF_DAY) &&
                     cal.isSet(Calendar.MINUTE));
 
-        ts = new Timestamp(cal);
+        ts = Timestamp.forCalendar(cal);
         checkFields(2009, 3, 18, 0, 0, 0, null, UNKNOWN_OFFSET, DAY, ts);
         assertEquals("2009-03-18", ts.toString());
         assertEquals("2009-03-18", ts.toZString());
@@ -1015,7 +996,7 @@ public class TimestampTest
         cal.set(2009, 1, 1, 10, 11);
         assertFalse(cal.isSet(Calendar.SECOND));
 
-        ts = new Timestamp(cal);
+        ts = Timestamp.forCalendar(cal);
         checkFields(2009, 2, 1, 10, 11, 0, null, 0, MINUTE, ts);
         assertEquals("2009-02-01T10:11Z", ts.toString());
         assertEquals("2009-02-01T10:11Z", ts.toZString());
@@ -1025,7 +1006,7 @@ public class TimestampTest
         cal.set(2009, 1, 1, 10, 11, 12);
         assertFalse(cal.isSet(Calendar.MILLISECOND));
 
-        ts = new Timestamp(cal);
+        ts = Timestamp.forCalendar(cal);
         checkFields(2009, 2, 1, 10, 11, 12, null, 0, SECOND, ts);
         assertEquals("2009-02-01T10:11:12Z", ts.toString());
         assertEquals("2009-02-01T10:11:12Z", ts.toZString());
@@ -1036,8 +1017,8 @@ public class TimestampTest
         cal.set(Calendar.MILLISECOND, 345);
         assertTrue(cal.isSet(Calendar.MILLISECOND));
 
-        ts = new Timestamp(cal);
-        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), 0, FRACTION, ts);
+        ts = Timestamp.forCalendar(cal);
+        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), 0, SECOND, ts);
         assertEquals("2009-02-01T10:11:12.345Z", ts.toString());
         assertEquals("2009-02-01T10:11:12.345Z", ts.toZString());
 
@@ -1048,8 +1029,8 @@ public class TimestampTest
         cal.setTimeZone(TimeZone.getTimeZone("PST"));
         assertEquals(TimeZone.getTimeZone("PST"), cal.getTimeZone());
 
-        ts = new Timestamp(cal);
-        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, FRACTION, ts);
+        ts = Timestamp.forCalendar(cal);
+        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, SECOND, ts);
         assertEquals("2009-02-01T10:11:12.345-08:00", ts.toString());
         assertEquals("2009-02-01T18:11:12.345Z", ts.toZString());
 
@@ -1059,8 +1040,8 @@ public class TimestampTest
         cal.set(Calendar.MILLISECOND, 345);
         cal.set(Calendar.ZONE_OFFSET, -28800000);
 
-        ts = new Timestamp(cal);
-        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, FRACTION, ts);
+        ts = Timestamp.forCalendar(cal);
+        checkFields(2009, 2, 1, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, SECOND, ts);
         assertEquals("2009-02-01T10:11:12.345-08:00", ts.toString());
         assertEquals("2009-02-01T18:11:12.345Z", ts.toZString());
     }
@@ -1075,14 +1056,14 @@ public class TimestampTest
         cal.set(2012, 2, 9, 10, 11, 12);
         cal.set(Calendar.MILLISECOND, 345);
         cal.setTimeZone(TimeZone.getTimeZone("PST"));
-        Timestamp ts = new Timestamp(cal);
-        checkFields(2012, 3, 9, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, FRACTION, ts);
+        Timestamp ts = Timestamp.forCalendar(cal);
+        checkFields(2012, 3, 9, 10, 11, 12, new BigDecimal("0.345"), PST_OFFSET, SECOND, ts);
         assertEquals("2012-03-09T10:11:12.345-08:00", ts.toString());
 
         // Move forward into daylight savings
         cal.add(Calendar.DAY_OF_MONTH, 5);
-        ts = new Timestamp(cal);
-        checkFields(2012, 3, 14, 10, 11, 12, new BigDecimal("0.345"), -420, FRACTION, ts);
+        ts = Timestamp.forCalendar(cal);
+        checkFields(2012, 3, 14, 10, 11, 12, new BigDecimal("0.345"), -420, SECOND, ts);
         assertEquals("2012-03-14T10:11:12.345-07:00", ts.toString());
     }
 
@@ -1092,36 +1073,24 @@ public class TimestampTest
     {
         Calendar cal = makeUtcCalendar();
         cal.clear();
-        new Timestamp(cal);
+        Timestamp.forCalendar(cal);
     }
 
-
-    @Test
-    public void testTimestampWithNegativeFraction()
-    {
-        BigDecimal frac = Decimal.negativeZero(3);
-
-        Timestamp ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-        Timestamp expected = Timestamp.valueOf("2000-11-14T17:30:12.000Z");
-        assertEquals(expected, ts);
-        assertEquals(expected.hashCode(), ts.hashCode());
-
-        frac = new BigDecimal("-0.123");
-        ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-        assertEquals("2000-11-14T17:30:12.123Z", ts.toString());
-    }
-
-
+    @SuppressWarnings("deprecation")
     private void checkFraction(String textOfFrac, BigDecimal frac)
     {
         Timestamp expected =
             Timestamp.valueOf("2000-11-14T17:30:12" + textOfFrac + "Z");
 
-        Timestamp ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-        assertEquals(expected, ts);
-        assertEquals("hash code", expected.hashCode(), ts.hashCode());
+        // negative fractions are not meaningful for checking second construction
+        if (frac.signum() >= 0) {
+            BigDecimal seconds = BigDecimal.valueOf(12).add(frac);
+            Timestamp ts = Timestamp.forSecond(2000, 11, 14, 17, 30, seconds, 0);
+            assertEquals(expected, ts);
+            assertEquals("hash code", expected.hashCode(), ts.hashCode());
+        }
 
-        ts = createFromUtcFields(FRACTION, 2000, 11, 14, 17, 30, 12, frac,
+        Timestamp ts = createFromUtcFields(SECOND, 2000, 11, 14, 17, 30, 12, frac,
                                  UTC_OFFSET);
         assertEquals(expected, ts);
         assertEquals("hash code", expected.hashCode(), ts.hashCode());
@@ -1140,37 +1109,13 @@ public class TimestampTest
         checkFraction(".123", new BigDecimal ("-0.123"));
     }
 
-
-    @Test
-    public void testNewTimestampWithNullFraction()
-    {
-        BigDecimal frac = null;
-        try {
-            new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-            fail("Expected exception");
-        }
-        catch (NullPointerException e) { }
-
-        try {
-            Timestamp.createFromUtcFields(FRACTION,
-                                          2000, 11, 14, 17, 30, 12, frac, 0);
-            fail("Expected exception");
-        }
-        catch (NullPointerException e) { }
-    }
-
     @Test
     public void testNewTimestampWithLargeFraction()
     {
         BigDecimal frac = new BigDecimal("1.23");
-        try {
-            new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-            fail("Expected exception");
-        }
-        catch (IllegalArgumentException e) { }
 
         try {
-            Timestamp.createFromUtcFields(FRACTION,
+            Timestamp.createFromUtcFields(SECOND,
                                           2000, 11, 14, 17, 30, 12, frac, 0);
             fail("Expected exception");
         }
@@ -1329,12 +1274,8 @@ public class TimestampTest
         assertEquals(now.getTime(), ts.getMillis());
         assertEquals(Timestamp.UTC_OFFSET, ts.getLocalOffset());
 
-        BigDecimal frac = ts.getFractionalSecond();
-        frac = frac.movePointRight(9); // Convert to nanos
-        assertEquals("nanos", now.getNanos(), frac.intValue());
-
         BigDecimal second = BigDecimal.valueOf(ts.getSecond());
-        frac = ts.getDecimalSecond().subtract(second);
+        BigDecimal frac = ts.getDecimalSecond().subtract(second);
         frac = frac.movePointRight(9); // Convert to nanos
         assertEquals("nanos", now.getNanos(), frac.intValue());
 
@@ -1384,6 +1325,7 @@ public class TimestampTest
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testTimestampCopyConstructor()
     {
         BigDecimal second = new BigDecimal("12.3456789");
@@ -1393,14 +1335,13 @@ public class TimestampTest
                      expectedTs.toString());
 
         //===== Test on Timestamp(...) fractional precision copy-constructor =====
-        Timestamp actualTs = new Timestamp(expectedTs.getYear(),
-                                           expectedTs.getMonth(),
-                                           expectedTs.getDay(),
-                                           expectedTs.getHour(),
-                                           expectedTs.getMinute(),
-                                           expectedTs.getSecond(),
-                                           expectedTs.getFractionalSecond(),
-                                           expectedTs.getLocalOffset());
+        Timestamp actualTs = Timestamp.forSecond(expectedTs.getYear(),
+                                                 expectedTs.getMonth(),
+                                                 expectedTs.getDay(),
+                                                 expectedTs.getHour(),
+                                                 expectedTs.getMinute(),
+                                                 expectedTs.getDecimalSecond(),
+                                                 expectedTs.getLocalOffset());
         assertEquals(expectedTs, actualTs);
 
         //===== Test on Timestamp.createFromUtcFields(...) copy-constructor =====
@@ -1436,10 +1377,10 @@ public class TimestampTest
             new BigDecimal("-9223372036854.775808");
 
         Timestamp expectedTs =
-            new Timestamp(negativeEpochDecimalMillis, UTC_OFFSET);
+            Timestamp.forMillis(negativeEpochDecimalMillis, UTC_OFFSET);
         long expectedMillis = expectedTs.getMillis();
         Timestamp expectedTsMillis =
-            new Timestamp(expectedMillis, UTC_OFFSET);
+            Timestamp.forMillis(expectedMillis, UTC_OFFSET);
         Timestamp expectedTsMillisWithNanosPrecision =
             Timestamp.valueOf("1677-09-21T00:12:43.145000000Z");
 
@@ -1468,12 +1409,12 @@ public class TimestampTest
 
 
         //===== Test on Timestamp(BigDecimal, Integer) constructor =====
-        Timestamp actualTs = new Timestamp(negativeEpochDecimalMillis, UTC_OFFSET);
+        Timestamp actualTs = Timestamp.forMillis(negativeEpochDecimalMillis, UTC_OFFSET);
         assertEquals(expectedTs, actualTs);
 
 
         //===== Test on Timestamp(long, Integer) constructor =====
-        actualTs = new Timestamp(expectedMillis, UTC_OFFSET);
+        actualTs = Timestamp.forMillis(expectedMillis, UTC_OFFSET);
         assertEquals(expectedTsMillis, actualTs);
 
 

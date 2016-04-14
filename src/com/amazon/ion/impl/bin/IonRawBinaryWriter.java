@@ -19,7 +19,6 @@ import static com.amazon.ion.IonType.TIMESTAMP;
 import static com.amazon.ion.IonType.isContainer;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.Timestamp.Precision.DAY;
-import static com.amazon.ion.Timestamp.Precision.FRACTION;
 import static com.amazon.ion.Timestamp.Precision.MINUTE;
 import static com.amazon.ion.Timestamp.Precision.MONTH;
 import static com.amazon.ion.Timestamp.Precision.SECOND;
@@ -1226,11 +1225,11 @@ import java.util.NoSuchElementException;
         {
             final int second = value.getZSecond();
             writeVarUInt(second);
-        }
-        if (precision >= FRACTION.ordinal())
-        {
             final BigDecimal fraction = value.getZFractionalSecond();
-            writeDecimalValue(fraction);
+            if (fraction != null && !BigDecimal.ZERO.equals(fraction))
+            {
+                writeDecimalValue(fraction);
+            }
         }
 
         final ContainerInfo info = popContainer();

@@ -809,7 +809,6 @@ class ReverseBinaryEncoder
             switch (t.getPrecision())
             {
                 // Fall through each case - by design
-                case FRACTION:
                 case SECOND:
                 {
                     BigDecimal fraction = t.getZFractionalSecond();

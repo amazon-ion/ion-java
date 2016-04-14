@@ -1209,7 +1209,7 @@ public class SymbolTableTest
         writer.writeNull();
         writer.writeInt(10);
         writer.writeFloat(10.0);
-        writer.writeTimestamp(new Timestamp(2013, 1, 1));
+        writer.writeTimestamp(Timestamp.forDay(2013, 1, 1));
         writer.writeSymbol("abc");  // this is where symbol table injection happens
         writer.writeString("abc");
         writer.stepOut();

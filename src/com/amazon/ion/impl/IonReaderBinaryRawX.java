@@ -1142,7 +1142,6 @@ done:   for (;;) {
                         if (_local_remaining > 0) {
                             // now we read in our actual "milliseconds since the epoch"
                             frac = readDecimal(_local_remaining);
-                            p = Precision.FRACTION;
                         }
                     }
                 }
@@ -1152,6 +1151,7 @@ done:   for (;;) {
         _local_remaining  = save_limit;
         // now we let timestamp put it all together
         try {
+            @SuppressWarnings("deprecation")
             Timestamp val =
                 Timestamp.createFromUtcFields(p, year, month, day, hour,
                                               minute, second, frac, offset);

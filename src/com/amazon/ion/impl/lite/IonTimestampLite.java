@@ -120,12 +120,12 @@ final class IonTimestampLite
 
     public void setValue(BigDecimal millis, Integer localOffset)
     {
-        setValue(new Timestamp(millis, localOffset));
+        setValue(Timestamp.forMillis(millis, localOffset));
     }
 
     public void setValue(long millis, Integer localOffset)
     {
-        setValue(new Timestamp(millis, localOffset));
+        setValue(Timestamp.forMillis(millis, localOffset));
     }
 
     public void setTime(Date value)
