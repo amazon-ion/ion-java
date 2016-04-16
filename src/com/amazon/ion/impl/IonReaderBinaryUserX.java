@@ -175,7 +175,7 @@ final class IonReaderBinaryUserX
     }
 
     @Override
-    public boolean hasNext()
+    boolean hasNext()
     {
         if (!_eof && _has_next_needed) {
             clear_system_value_stack();

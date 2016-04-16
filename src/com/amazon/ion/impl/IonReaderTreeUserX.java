@@ -34,13 +34,6 @@ final class IonReaderTreeUserX
 
     //========================================================================
 
-
-    @Override
-    public boolean hasNext()
-    {
-        return next_helper_user();
-    }
-
     @Override
     public IonType next()
     {
@@ -53,7 +46,7 @@ final class IonReaderTreeUserX
         return this._curr.getType();
     }
 
-    boolean next_helper_user()
+    private boolean next_helper_user()
     {
         if (_eof) return false;
         if (_next != null) return true;

@@ -16,7 +16,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
@@ -238,9 +237,6 @@ public class MiscStreamingTest
     @SuppressWarnings("deprecation")
     private void testNullTextValue(IonReader reader, IonType textType)
     {
-        if (! _Private_Utils.READER_HASNEXT_REMOVED) {
-            assertTrue(reader.hasNext());
-        }
         assertEquals(textType, reader.next());
         assertEquals(textType, reader.getType());
         assertTrue(reader.isNullValue());

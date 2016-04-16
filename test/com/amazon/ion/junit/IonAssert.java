@@ -91,15 +91,11 @@ public final class IonAssert
     }
 
 
-    @SuppressWarnings("deprecation")
     public static void assertEof(IonReader in)
     {
-        assertFalse(in.hasNext());
-        assertFalse(in.hasNext());
         assertNull(in.next());
         assertNoCurrentValue(in);
         assertNull(in.next());
-        assertFalse(in.hasNext());
         assertNull(in.next());
     }
 

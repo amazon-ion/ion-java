@@ -111,7 +111,7 @@ class IonReaderTextUserX
      * @return true if more data remains, false on eof
      */
     @Override
-    public boolean hasNext()
+    boolean hasNext()
     {
         boolean has_next = has_next_user_value();
         return has_next;

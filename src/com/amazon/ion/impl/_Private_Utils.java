@@ -53,11 +53,6 @@ import java.util.TimeZone;
  */
 public final class _Private_Utils
 {
-    /**
-     * Marker for code points relevant to removal of IonReader.hasNext().
-     */
-    public static final boolean READER_HASNEXT_REMOVED = false;
-
     /** Just a zero-length byte array, used to avoid allocation. */
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 

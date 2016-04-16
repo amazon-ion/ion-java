@@ -534,14 +534,7 @@ final class SymbolTableReader
         return flag_state;
     }
 
-
-    public boolean hasNext()
-    {
-        boolean has_next = has_next_helper();
-        return has_next;
-    }
-
-    private final boolean has_next_helper()
+    private final boolean has_next()
     {
         // this just tells us whether or not we have more
         // value coming at our current scanning depth
@@ -746,7 +739,7 @@ final class SymbolTableReader
      */
     public IonType next()
     {
-        if (has_next_helper() == false) {
+        if (has_next() == false) {
             return null;
         }
         int new_state;

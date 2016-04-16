@@ -2,8 +2,6 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
-
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.File;
@@ -303,19 +301,9 @@ public class TestUtils
         }
     }
 
-    @SuppressWarnings("deprecation")
     private static IonType doNext(IonReader reader)
     {
-        boolean hasnext = true;
-        IonType t = null;
-
-        if (! READER_HASNEXT_REMOVED) {
-            hasnext = reader.hasNext();
-        }
-        if (hasnext) {
-            t = reader.next();
-        }
-        return t;
+        return reader.next();
     }
 
 

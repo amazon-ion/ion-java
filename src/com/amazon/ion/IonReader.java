@@ -92,25 +92,6 @@ import java.util.Iterator;
 public interface IonReader
     extends Closeable, Faceted
 {
-
-    /**
-     * Determines whether there is another value at the current depth;
-     * in other words whether there is a sibling value that may be reached
-     * using {@link #next()}.
-     * This method may be
-     * called multiple times, which does not move the current position.
-     * <p>
-     * <b>WARNING:</b> this method alters the internal state of the reader such
-     * that you cannot reliably get values from the "current" element. The only
-     * thing you should call after {@code hasNext()} is {@link #next()}!
-     *
-     * @deprecated Since IonJava R8, with no direct replacement. Applications
-     * should detect the end of the current level by checking for a {@code null}
-     * response from {@link #next()}.
-     */
-    @Deprecated
-    public boolean hasNext();
-
     /**
      * Positions this reader on the next sibling after the current value,
      * returning the type of that value.  Once so positioned the contents of

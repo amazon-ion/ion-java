@@ -222,10 +222,6 @@ public abstract class ReaderSystemProcessingTestCase
         assertFalse(myReader.isInStruct());
         assertEquals(0, myReader.getDepth());
 
-        assertTrue(myReader.hasNext());
-        assertFalse(myReader.isInStruct());
-        assertEquals(0, myReader.getDepth());
-
         assertEquals(IonType.STRUCT, myReader.next());
         assertFalse(myReader.isInStruct());
         assertEquals(0, myReader.getDepth());
@@ -233,10 +229,6 @@ public abstract class ReaderSystemProcessingTestCase
         myReader.stepIn();
         {
             assertTrue(myReader.isInStruct());
-            assertEquals(1, myReader.getDepth());
-
-            assertTrue(myReader.hasNext());    // List is coming up
-            assertTrue(myReader.isInStruct()); // but we're still at struct level
             assertEquals(1, myReader.getDepth());
 
             assertSame(IonType.LIST, myReader.next());
@@ -279,10 +271,8 @@ public abstract class ReaderSystemProcessingTestCase
         String text = "hello 2";
         startIteration(text);
 
-        assertTrue(myReader.hasNext());
         assertEquals(IonType.SYMBOL, myReader.next());
         assertEquals(IonType.SYMBOL, myReader.getType());
-        assertTrue(myReader.hasNext());
 
         // FIXed ME text reader was broken, now fixed
         // really the binary readers were returning the

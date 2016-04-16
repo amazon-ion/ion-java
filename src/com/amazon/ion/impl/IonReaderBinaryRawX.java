@@ -181,7 +181,8 @@ abstract class IonReaderBinaryRawX
         assert(_container_top > 0);
         _container_top -= POS_STACK_STEP;
     }
-    public boolean hasNext()
+
+    boolean hasNext()
     {
         if (!_eof && _has_next_needed) {
             try {

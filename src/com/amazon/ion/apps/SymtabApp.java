@@ -175,13 +175,9 @@ public class SymtabApp
     protected void process(IonReader reader)
         throws IonException
     {
-        while (reader.hasNext())
+        IonType type;
+        while ((type = reader.next()) != null)
         {
-            IonType type = reader.next();
-
-//            System.err.println("Next: " + type);
-//            System.err.println("isInStruct=" + reader.isInStruct());
-
             String fieldName = reader.getFieldName();
             intern(fieldName);
 
@@ -198,7 +194,6 @@ public class SymtabApp
                 case SEXP:
                 case STRUCT:
                 {
-//                    System.err.println("stepping in");
                     reader.stepIn();
                     break;
                 }
@@ -209,9 +204,8 @@ public class SymtabApp
                 }
             }
 
-            while (! reader.hasNext() && reader.getDepth() > 0)
+            while (reader.next() != null && reader.getDepth() > 0)
             {
-//                System.err.println("stepping out");
                 reader.stepOut();
             }
         }

@@ -144,15 +144,9 @@ class IonReaderTreeSystem
         _eof = false;
     }
 
-    public boolean hasNext()
-    {
-        IonType next_type = next_helper_system();
-        return (next_type != null);
-    }
-
     public IonType next()
     {
-        if (this._next == null && !this.hasNext()) {
+        if (this._next == null && next_helper_system() == null) {
             this._curr = null;
             return null;
         }
@@ -199,30 +193,6 @@ class IonReaderTreeSystem
 
     public final int getDepth() {
         return _top/2;
-    }
-
-    private void XXXposition(IonReader other)
-    {
-        if (!(other instanceof IonReaderTreeSystem)) {
-            throw new IllegalArgumentException("invalid reader type, classes must match");
-        }
-        IonReaderTreeSystem iother = (IonReaderTreeSystem)other;
-
-        this._eof = iother._eof;
-        this._curr = iother._curr;
-        this._parent = iother._parent;
-
-        if (iother._iter == null) {
-            this._iter = null;
-        }
-        else {
-            assert iother._parent instanceof IonContainer;
-            this._iter = new Children(((IonContainer)iother._parent));
-            while (this.hasNext()) {
-                this.next();
-                if (this._curr == iother._curr) break;
-            }
-        }
     }
 
     public SymbolTable getSymbolTable()

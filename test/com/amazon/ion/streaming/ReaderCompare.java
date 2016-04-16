@@ -2,8 +2,6 @@
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
-
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
@@ -18,8 +16,8 @@ public class ReaderCompare
 {
     public static void compare(IonReader it1, IonReader it2) {
         while (hasNext(it1, it2)) {
-            IonType t1 = (READER_HASNEXT_REMOVED ? it1.getType() : it1.next());
-            IonType t2 = (READER_HASNEXT_REMOVED ? it2.getType() : it2.next());
+            IonType t1 = it1.getType();
+            IonType t2 = it2.getType();
 
             if ((t1 != t2) && (t1 == null || t2 == null || !t1.equals(t2))) {
                 assertEquals("ion type", t1, t2);
@@ -71,20 +69,8 @@ public class ReaderCompare
     public static boolean hasNext(IonReader it1, IonReader it2)
     {
         boolean more;
-        if (READER_HASNEXT_REMOVED)
-        {
-            more = (it1.next() != null);
-            assertEquals("next results don't match", more, it2.next() != null);
-        }
-        else
-        {
-            more = it1.hasNext();
-            assertEquals("hasNext results don't match", more, it2.hasNext());
-
-            // Check that result doesn't change
-            assertEquals(more, it1.hasNext());
-            assertEquals(more, it2.hasNext());
-        }
+        more = (it1.next() != null);
+        assertEquals("next results don't match", more, it2.next() != null);
 
         if (!more) {
             assertEquals(null, it1.next());

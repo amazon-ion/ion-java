@@ -442,7 +442,7 @@ abstract class IonReaderTextRawX
      * but the user has chosen not to step into the collection).
      * @return true if more data remains, false on eof
      */
-    public boolean hasNext()
+    boolean hasNext()
     {
         boolean has_next = has_next_raw_value();
         return has_next;

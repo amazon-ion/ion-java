@@ -37,9 +37,6 @@ public class SurrogateEscapeTest extends IonTestCase {
         assertSingleCodePoint(expectedCode, ((IonString) dg.get(0)).stringValue());
 
         final IonReader reader = reader();
-        if (! _Private_Utils.READER_HASNEXT_REMOVED) {
-            assertTrue(reader.hasNext());
-        }
         assertEquals(IonType.STRING, reader.next());
         assertSingleCodePoint(expectedCode, reader.stringValue());
     }
