@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -16,12 +16,12 @@ import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
 import java.io.IOException;
 
 final class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -196,7 +196,7 @@ final class IonReaderBinaryUserX
     {
         super.hasNext();
         if (getDepth() == 0 && !_value_is_null) {
-            if (_value_tid == _Private_IonConstants.tidSymbol) {
+            if (_value_tid == PrivateIonConstants.tidSymbol) {
                 if (load_annotations() == 0) {
                     // $ion_1_0 is read as an IVM only if it is not annotated
                     load_cached_value(AS_TYPE.int_value);
@@ -208,7 +208,7 @@ final class IonReaderBinaryUserX
                     }
                 }
             }
-            else if (_value_tid == _Private_IonConstants.tidStruct) {
+            else if (_value_tid == PrivateIonConstants.tidStruct) {
                 int count = load_annotations();
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
@@ -226,7 +226,7 @@ final class IonReaderBinaryUserX
                 }
             }
             else {
-                assert (_value_tid != _Private_IonConstants.tidTypedecl);
+                assert (_value_tid != PrivateIonConstants.tidTypedecl);
             }
         }
     }
@@ -293,7 +293,7 @@ final class IonReaderBinaryUserX
             }
         }
 
-        if (facetType == _Private_ByteTransferReader.class)
+        if (facetType == PrivateByteTransferReader.class)
         {
             // This is a rather sketchy use of Facets, since the availability
             // of the facet depends upon the current state of this subject,
@@ -340,9 +340,9 @@ final class IonReaderBinaryUserX
     }
 
 
-    private class ByteTransferReaderFacet implements _Private_ByteTransferReader
+    private class ByteTransferReaderFacet implements PrivateByteTransferReader
     {
-        public void transferCurrentValue(_Private_ByteTransferSink sink)
+        public void transferCurrentValue(PrivateByteTransferSink sink)
             throws IOException
         {
             // Ensure there's a contiguous buffer we can copy.

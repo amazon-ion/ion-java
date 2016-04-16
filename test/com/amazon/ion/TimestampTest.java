@@ -12,7 +12,7 @@ import static com.amazon.ion.Timestamp.Precision.MINUTE;
 import static com.amazon.ion.Timestamp.Precision.MONTH;
 import static com.amazon.ion.Timestamp.Precision.SECOND;
 import static com.amazon.ion.Timestamp.Precision.YEAR;
-import static com.amazon.ion.impl._Private_Utils.UTC;
+import static com.amazon.ion.impl.PrivateUtils.UTC;
 
 import com.amazon.ion.Timestamp.Precision;
 import java.math.BigDecimal;

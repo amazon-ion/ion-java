@@ -3,7 +3,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 
 import org.junit.Test;
 

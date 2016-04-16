@@ -4,7 +4,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.IonType.DATAGRAM;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.IonAssert;
 import java.io.File;
 import org.junit.Test;
@@ -185,7 +185,7 @@ public class EquivsTestCase
     {
         if (myTestFile.getName().endsWith(".ion"))
         {
-            String ionText = _Private_Utils.utf8FileToString(myTestFile);
+            String ionText = PrivateUtils.utf8FileToString(myTestFile);
             IonDatagram dg = loader().load(ionText);
             runEquivalenceChecks(dg, myExpectedEquality);
         }

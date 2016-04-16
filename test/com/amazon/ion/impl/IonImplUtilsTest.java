@@ -10,8 +10,8 @@ public class IonImplUtilsTest
     @Test
     public void testEmptyUtf8()
     {
-        byte[] bytes = _Private_Utils.utf8("");
-        Assert.assertArrayEquals(_Private_Utils.EMPTY_BYTE_ARRAY, bytes);
+        byte[] bytes = PrivateUtils.utf8("");
+        Assert.assertArrayEquals(PrivateUtils.EMPTY_BYTE_ARRAY, bytes);
     }
 
     @Test
@@ -19,7 +19,7 @@ public class IonImplUtilsTest
     throws Exception
     {
         String input = "abcdefghijklm";
-        byte[] bytes = _Private_Utils.utf8(input);
+        byte[] bytes = PrivateUtils.utf8(input);
         byte[] direct = input.getBytes("UTF-8");
         Assert.assertArrayEquals(direct, bytes);
     }

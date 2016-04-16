@@ -14,8 +14,8 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
-import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -392,7 +392,7 @@ abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = _null_type;
         _v.setValueToNull(null_type);
-        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.null_value);
+        _v.setAuthoritativeType(PrivateScalarConversions.AS_TYPE.null_value);
     }
 
     private final void current_value_is_bool(boolean value)
@@ -400,7 +400,7 @@ abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = IonType.BOOL;
         _v.setValue(value);
-        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.boolean_value);
+        _v.setAuthoritativeType(PrivateScalarConversions.AS_TYPE.boolean_value);
     }
 
     private final void set_fieldname(SymbolToken sym) {
@@ -1311,12 +1311,12 @@ if (depth == debugging_depth) {
 
     public Iterator<String> iterateTypeAnnotations()
     {
-        return _Private_Utils.stringIterator(getTypeAnnotations());
+        return PrivateUtils.stringIterator(getTypeAnnotations());
     }
 
     public String[] getTypeAnnotations()
     {
-        return _Private_Utils.toStrings(_annotations, _annotation_count);
+        return PrivateUtils.toStrings(_annotations, _annotation_count);
     }
 
 

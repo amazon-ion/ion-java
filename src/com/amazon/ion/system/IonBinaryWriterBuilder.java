@@ -7,7 +7,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
+import com.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
 import java.io.OutputStream;
 
 
@@ -55,7 +55,7 @@ public abstract class IonBinaryWriterBuilder
      */
     public static IonBinaryWriterBuilder standard()
     {
-        return _Private_IonBinaryWriterBuilder.standard();
+        return PrivateIonBinaryWriterBuilder.standard();
     }
 
 

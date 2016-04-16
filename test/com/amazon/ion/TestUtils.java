@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -223,7 +223,7 @@ public class TestUtils
 
         IonDatagram dg = system.getLoader().load(ionData);
         String ionText = dg.toString();
-        return _Private_Utils.utf8(ionText);
+        return PrivateUtils.utf8(ionText);
     }
 
 
@@ -366,7 +366,7 @@ public class TestUtils
 
     public static String hexDump(final String str)
     {
-        final byte[] utf16Bytes = _Private_Utils.encode(str, UTF16BE_CHARSET);
+        final byte[] utf16Bytes = PrivateUtils.encode(str, UTF16BE_CHARSET);
         StringBuilder buf = new StringBuilder(utf16Bytes.length * 4);
         for (byte b : utf16Bytes) {
             buf.append(Integer.toString(0x00FF & b, 16));
@@ -522,7 +522,7 @@ public class TestUtils
 
     static
     {
-        if (! _Private_Utils.utf8(FERMATA_UTF8).equals(FERMATA))
+        if (! PrivateUtils.utf8(FERMATA_UTF8).equals(FERMATA))
         {
             throw new AssertionError("Broken encoding");
         }

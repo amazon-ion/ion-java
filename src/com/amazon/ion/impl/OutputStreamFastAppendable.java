@@ -2,20 +2,20 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
+import static com.amazon.ion.impl.PrivateIonConstants.makeUnicodeScalar;
 
-import com.amazon.ion.util._Private_FastAppendable;
+import com.amazon.ion.util.PrivateFastAppendable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Adapts an {@link OutputStream} to implement {@link _Private_FastAppendable}.
+ * Adapts an {@link OutputStream} to implement {@link PrivateFastAppendable}.
  * <b>This always outputs UTF-8!</b>
  */
 final class OutputStreamFastAppendable
-    implements _Private_FastAppendable, Closeable, Flushable
+    implements PrivateFastAppendable, Closeable, Flushable
 {
     private static final int MAX_BYTES_LEN = 4096;
 

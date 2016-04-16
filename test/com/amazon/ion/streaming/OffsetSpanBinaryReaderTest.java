@@ -7,7 +7,7 @@ import static com.amazon.ion.BinaryTest.hexToBytes;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.util.RepeatInputStream;
 import org.junit.Test;
 
@@ -73,7 +73,7 @@ public class OffsetSpanBinaryReaderTest
                                  + "84 "        //   name:
                                  + "AE 08 80"   //     blob, len=1024
                                 );
-        data = _Private_Utils.copyOf(data, data.length + 1024);
+        data = PrivateUtils.copyOf(data, data.length + 1024);
 
         readBeyondMaxInt(data, IonType.STRUCT);
     }

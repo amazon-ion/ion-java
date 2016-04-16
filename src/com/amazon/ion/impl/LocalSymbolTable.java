@@ -14,9 +14,9 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl._Private_Utils.copyOf;
-import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
-import static com.amazon.ion.impl._Private_Utils.safeEquals;
+import static com.amazon.ion.impl.PrivateUtils.copyOf;
+import static com.amazon.ion.impl.PrivateUtils.getSidForSymbolTableField;
+import static com.amazon.ion.impl.PrivateUtils.safeEquals;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonCatalog;
@@ -134,7 +134,7 @@ final class LocalSymbolTable
         if (symbolsList == null || symbolsList.isEmpty())
         {
             mySymbolsCount = 0;
-            mySymbolNames  = _Private_Utils.EMPTY_STRING_ARRAY;
+            mySymbolNames  = PrivateUtils.EMPTY_STRING_ARRAY;
         }
         else
         {

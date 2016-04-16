@@ -5,8 +5,8 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
 import static com.amazon.ion.Symtabs.makeLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.copyLocalSymbolTable;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.copyLocalSymbolTable;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;

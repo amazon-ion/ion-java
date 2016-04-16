@@ -5,7 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 
-import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl.PrivateIonSystem;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
@@ -51,7 +51,7 @@ public abstract class IonTestCase
 
     private static boolean              ourSystemPropertiesLoaded = false;
     protected SimpleCatalog             myCatalog;
-    protected _Private_IonSystem        mySystem;
+    protected PrivateIonSystem        mySystem;
     protected IonLoader                 myLoader;
 
     @Rule
@@ -214,7 +214,7 @@ public abstract class IonTestCase
      *          the singleton IonSystem, stream-copy optimized depending
      *          on the injected {@link #myStreamCopyOptimized}.
      */
-    protected _Private_IonSystem system()
+    protected PrivateIonSystem system()
     {
         if (mySystem == null)
         {
@@ -228,14 +228,14 @@ public abstract class IonTestCase
      *          a new IonSystem instance, stream-copy optimized depending on
      *          {@link #myStreamCopyOptimized}.
      */
-    protected _Private_IonSystem newSystem(IonCatalog catalog)
+    protected PrivateIonSystem newSystem(IonCatalog catalog)
     {
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
 
         b.withStreamCopyOptimized(myStreamCopyOptimized);
 
         IonSystem system = b.build();
-        return (_Private_IonSystem) system;
+        return (PrivateIonSystem) system;
     }
 
     protected SimpleCatalog catalog()

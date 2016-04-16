@@ -10,16 +10,16 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_ByteTransferReader;
-import com.amazon.ion.impl._Private_ByteTransferSink;
-import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl._Private_SymtabExtendsCache;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateByteTransferReader;
+import com.amazon.ion.impl.PrivateByteTransferSink;
+import com.amazon.ion.impl.PrivateIonWriter;
+import com.amazon.ion.impl.PrivateSymtabExtendsCache;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.math.BigInteger;
 
 /** Common adapter for binary {@link IonWriter} implementations. */
-/*package*/ abstract class AbstractIonWriter implements _Private_IonWriter, _Private_ByteTransferSink
+/*package*/ abstract class AbstractIonWriter implements PrivateIonWriter, PrivateByteTransferSink
 {
     /*package*/ enum WriteValueOptimization
     {
@@ -28,12 +28,12 @@ import java.math.BigInteger;
     }
 
     /** The cache for copy optimization checks--null if not copy optimized. */
-    private final _Private_SymtabExtendsCache symtabExtendsCache;
+    private final PrivateSymtabExtendsCache symtabExtendsCache;
 
     /*package*/ AbstractIonWriter(final WriteValueOptimization optimization)
     {
         this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
-            ? new _Private_SymtabExtendsCache() : null;
+            ? new PrivateSymtabExtendsCache() : null;
     }
 
     public final void writeValue(final IonValue value) throws IOException
@@ -55,11 +55,11 @@ import java.math.BigInteger;
 
         if (isStreamCopyOptimized())
         {
-            final _Private_ByteTransferReader transferReader =
-                reader.asFacet(_Private_ByteTransferReader.class);
+            final PrivateByteTransferReader transferReader =
+                reader.asFacet(PrivateByteTransferReader.class);
 
             if (transferReader != null
-                && (_Private_Utils.isNonSymbolScalar(type)
+                && (PrivateUtils.isNonSymbolScalar(type)
                  || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable())))
             {
                 // we have something we can pipe over

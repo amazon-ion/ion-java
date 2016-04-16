@@ -2268,10 +2268,10 @@ final class IonReaderTextRawTokensX
         if (_stream._is_byte_data) {
             return read_ut8_sequence(c);
         }
-        if (_Private_IonConstants.isHighSurrogate(c)) {
+        if (PrivateIonConstants.isHighSurrogate(c)) {
             int c2 = read_char();
-            if (_Private_IonConstants.isLowSurrogate(c2)) {
-                c = _Private_IonConstants.makeUnicodeScalar(c, c2);
+            if (PrivateIonConstants.isLowSurrogate(c2)) {
+                c = PrivateIonConstants.makeUnicodeScalar(c, c2);
             }
             else {
                 // we don't always pair up surrogates here

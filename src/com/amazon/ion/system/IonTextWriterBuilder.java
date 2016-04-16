@@ -7,8 +7,8 @@ import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl._Private_IonTextWriterBuilder;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonTextWriterBuilder;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
@@ -94,12 +94,12 @@ public abstract class IonTextWriterBuilder
     /**
      * The {@code "US-ASCII"} charset.
      */
-    public static final Charset ASCII = _Private_Utils.ASCII_CHARSET;
+    public static final Charset ASCII = PrivateUtils.ASCII_CHARSET;
 
     /**
      * The {@code "UTF-8"} charset.
      */
-    public static final Charset UTF8 = _Private_Utils.UTF8_CHARSET;
+    public static final Charset UTF8 = PrivateUtils.UTF8_CHARSET;
 
 
     /**
@@ -116,7 +116,7 @@ public abstract class IonTextWriterBuilder
      */
     public static IonTextWriterBuilder standard()
     {
-        return _Private_IonTextWriterBuilder.standard();
+        return PrivateIonTextWriterBuilder.standard();
     }
 
     /**

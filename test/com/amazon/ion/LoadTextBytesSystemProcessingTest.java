@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 
 
 public class LoadTextBytesSystemProcessingTest
@@ -14,7 +14,7 @@ public class LoadTextBytesSystemProcessingTest
     protected void prepare(String text)
         throws Exception
     {
-        myBytes = _Private_Utils.convertUtf16UnitsToUtf8(text);
+        myBytes = PrivateUtils.convertUtf16UnitsToUtf8(text);
     }
 
     @Override

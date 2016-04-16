@@ -1,7 +1,7 @@
 // Copyright (c) 2008-2012 Amazon.com, Inc.  All rights reserved.
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.expectField;
 
 import com.amazon.ion.Decimal;

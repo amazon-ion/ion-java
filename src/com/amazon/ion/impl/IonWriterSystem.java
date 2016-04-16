@@ -3,9 +3,9 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
-import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolTokens;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonType;
@@ -19,7 +19,7 @@ import java.io.IOException;
 
 
 abstract class IonWriterSystem
-    extends _Private_IonWriterBase
+    extends PrivateIonWriterBase
 {
     /**
      * The system symtab used when resetting the stream.
@@ -109,7 +109,7 @@ abstract class IonWriterSystem
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (symbols == null || _Private_Utils.symtabIsSharedNotSystem(symbols)) {
+        if (symbols == null || PrivateUtils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
         if (getDepth() > 0) {
@@ -430,7 +430,7 @@ abstract class IonWriterSystem
     final int[] internAnnotationsAndGetSids() throws IOException
     {
         int count = _annotation_count;
-        if (count == 0) return _Private_Utils.EMPTY_INT_ARRAY;
+        if (count == 0) return PrivateUtils.EMPTY_INT_ARRAY;
 
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
@@ -508,7 +508,7 @@ abstract class IonWriterSystem
             for (int i = 0; i < count; i++)
             {
                 SymbolToken sym = annotations[i];
-                sym = _Private_Utils.localize(symtab, sym);
+                sym = PrivateUtils.localize(symtab, sym);
                 _annotations[i] = sym;
             }
             _annotation_count = count;
@@ -518,7 +518,7 @@ abstract class IonWriterSystem
     @Override
     final String[] getTypeAnnotations()
     {
-        return _Private_Utils.toStrings(_annotations, _annotation_count);
+        return PrivateUtils.toStrings(_annotations, _annotation_count);
     }
 
     public final void setTypeAnnotations(String... annotations)
@@ -550,6 +550,6 @@ abstract class IonWriterSystem
     @Override
     final int[] getTypeAnnotationIds()
     {
-        return _Private_Utils.toSids(_annotations, _annotation_count);
+        return PrivateUtils.toSids(_annotations, _annotation_count);
     }
 }

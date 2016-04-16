@@ -5,7 +5,7 @@ package com.amazon.ion.impl;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -21,7 +21,7 @@ import com.amazon.ion.SymbolTable;
 
 final class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     IonCatalog _catalog;
 

@@ -35,8 +35,8 @@ import java.math.BigInteger;
  * {@link SymbolTable} is installed.
  */
 class IonWriterUser
-    extends _Private_IonWriterBase
-    implements _Private_IonWriter
+    extends PrivateIonWriterBase
+    implements PrivateIonWriter
 {
     /** Factory for constructing the DOM of local symtabs. Not null. */
     private final ValueFactory _symtab_value_factory;
@@ -245,7 +245,7 @@ class IonWriterUser
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
         SymbolTable symtab =
-            _Private_Utils.newLocalSymtab(activeSystemSymbolTable(),
+            PrivateUtils.newLocalSymtab(activeSystemSymbolTable(),
                                           _catalog,
                                           _symbol_table_value);
 
@@ -262,7 +262,7 @@ class IonWriterUser
         throws IOException
     {
         if (symbols == null ||
-            _Private_Utils.symtabIsSharedNotSystem(symbols))
+            PrivateUtils.symtabIsSharedNotSystem(symbols))
         {
             String message =
                 "symbol table must be local or system to be set, or reset";

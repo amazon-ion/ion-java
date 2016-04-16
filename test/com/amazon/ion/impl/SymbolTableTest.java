@@ -12,9 +12,9 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.stringIterator;
-import static com.amazon.ion.impl._Private_Utils.symtabTree;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.stringIterator;
+import static com.amazon.ion.impl.PrivateUtils.symtabTree;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -1050,7 +1050,7 @@ public class SymbolTableTest
         IonStruct stStruct = writeIonRep(st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
-        stStruct = _Private_Utils.symtabTree(system(), st);
+        stStruct = PrivateUtils.symtabTree(system(), st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
         SymbolTable importedTable = st.getImportedTables()[0];

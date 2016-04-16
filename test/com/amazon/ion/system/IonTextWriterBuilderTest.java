@@ -20,7 +20,7 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
-import com.amazon.ion.impl._Private_IonWriter;
+import com.amazon.ion.impl.PrivateIonWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -73,7 +73,7 @@ public class IonTextWriterBuilderTest
 
         StringBuilder out = new StringBuilder();
         IonWriter writer = b.build(out);
-        assertSame(catalog, ((_Private_IonWriter)writer).getCatalog());
+        assertSame(catalog, ((PrivateIonWriter)writer).getCatalog());
 
         IonCatalog catalog2 = new SimpleCatalog();
         b.setCatalog(catalog2);

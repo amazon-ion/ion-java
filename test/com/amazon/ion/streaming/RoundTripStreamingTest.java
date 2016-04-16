@@ -5,7 +5,7 @@ package com.amazon.ion.streaming;
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
-import static com.amazon.ion.impl._Private_Utils.utf8;
+import static com.amazon.ion.impl.PrivateUtils.utf8;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
 import com.amazon.ion.IonDatagram;
@@ -15,7 +15,7 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.RoundTripTest;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -62,7 +62,7 @@ public class RoundTripStreamingTest
     {
         super.setUp();
         myBuilder = new StringBuilder();
-        myBuffer = _Private_Utils.loadFileBytes(myTestFile);
+        myBuffer = PrivateUtils.loadFileBytes(myTestFile);
     }
 
     @Override

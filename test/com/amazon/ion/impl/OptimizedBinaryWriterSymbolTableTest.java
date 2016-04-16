@@ -3,8 +3,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.printLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
-import static com.amazon.ion.impl._Private_Utils.symtabExtends;
+import static com.amazon.ion.impl.PrivateUtils.isNonSymbolScalar;
+import static com.amazon.ion.impl.PrivateUtils.symtabExtends;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
@@ -16,7 +16,7 @@ import org.junit.Test;
 
 /**
  * {@link OptimizedBinaryWriterTestCase} tests related to
- * {@link _Private_Utils#symtabExtends(SymbolTable, SymbolTable)} checks.
+ * {@link PrivateUtils#symtabExtends(SymbolTable, SymbolTable)} checks.
  */
 public class OptimizedBinaryWriterSymbolTableTest
     extends OptimizedBinaryWriterTestCase

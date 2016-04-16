@@ -6,7 +6,7 @@ import com.amazon.ion.BlobTest;
 import com.amazon.ion.BlobTest.TestData;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonTestCase;
-import com.amazon.ion.impl._Private_IonTextAppender;
+import com.amazon.ion.impl.PrivateIonTextAppender;
 import java.math.BigDecimal;
 import org.junit.Test;
 
@@ -107,9 +107,9 @@ public class TextTest
                      IonTextUtils.symbolVariant(symbol));
 
         // unquoted in sexp
-        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
+        assertFalse(PrivateIonTextAppender.symbolNeedsQuoting(symbol, false));
         // unquoted elsewhere
-        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+        assertFalse(PrivateIonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
     private void quotedEverywhere(String symbol)
@@ -118,9 +118,9 @@ public class TextTest
                      IonTextUtils.symbolVariant(symbol));
 
         // Quoted in sexp
-        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
+        assertTrue(PrivateIonTextAppender.symbolNeedsQuoting(symbol, false));
         // Quoted elsewhere
-        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+        assertTrue(PrivateIonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
     private void unquotedInSexp(String symbol)
@@ -129,9 +129,9 @@ public class TextTest
                      IonTextUtils.symbolVariant(symbol));
 
         // unquoted in sexp
-        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
+        assertFalse(PrivateIonTextAppender.symbolNeedsQuoting(symbol, false));
         // quoted elsewheres
-        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+        assertTrue(PrivateIonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
 

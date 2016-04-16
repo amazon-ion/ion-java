@@ -6,7 +6,7 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -61,7 +61,7 @@ final class IonBlobLite
         InputStream byteStream = newInputStream();
         try
         {
-            _Private_Utils.writeAsBase64(byteStream, out);
+            PrivateUtils.writeAsBase64(byteStream, out);
         }
         finally
         {

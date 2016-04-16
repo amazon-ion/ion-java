@@ -6,7 +6,7 @@ import static com.amazon.ion.TestUtils.BAD_TIMESTAMP_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,7 +36,7 @@ public class TimestampBadTest
         String tsText;
         try
         {
-            tsText = _Private_Utils.utf8FileToString(myTestFile);
+            tsText = PrivateUtils.utf8FileToString(myTestFile);
         }
         catch (IonException e)
         {

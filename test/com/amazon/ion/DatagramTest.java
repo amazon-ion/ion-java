@@ -10,8 +10,8 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 
-import com.amazon.ion.impl._Private_IonSystem;
-import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl.PrivateIonSystem;
+import com.amazon.ion.impl.PrivateIonValue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
@@ -116,7 +116,7 @@ public class DatagramTest
     public void testAutomaticIVM()
         throws Exception
     {
-        _Private_IonSystem system = system();
+        PrivateIonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -137,7 +137,7 @@ public class DatagramTest
     public void testManualIVM()
         throws Exception
     {
-        _Private_IonSystem system = system();
+        PrivateIonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -624,7 +624,7 @@ public class DatagramTest
     public void testGetAssignedSymbolTable()
     {
         IonDatagram dg = system().newDatagram();
-        ((_Private_IonValue)dg).getAssignedSymbolTable();
+        ((PrivateIonValue)dg).getAssignedSymbolTable();
     }
 
     /**

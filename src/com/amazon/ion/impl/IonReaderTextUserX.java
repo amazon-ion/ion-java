@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
  */
 class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     private static final Pattern ION_VERSION_MARKER_REGEX = Pattern.compile("^\\$ion_[0-9]+_[0-9]+$");
 

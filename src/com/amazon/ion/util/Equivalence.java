@@ -2,7 +2,7 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+import static com.amazon.ion.impl.PrivateIonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;

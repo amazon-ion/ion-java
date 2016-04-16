@@ -3,9 +3,9 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl._Private_IonConstants.tidList;
-import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
-import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
+import static com.amazon.ion.impl.PrivateIonConstants.tidList;
+import static com.amazon.ion.impl.PrivateIonConstants.tidSexp;
+import static com.amazon.ion.impl.PrivateIonConstants.tidStruct;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -16,7 +16,7 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.util.IonTextUtils;
 import com.amazon.ion.util.IonTextUtils.SymbolVariant;
-import com.amazon.ion.util._Private_FastAppendable;
+import com.amazon.ion.util.PrivateFastAppendable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -26,11 +26,11 @@ class IonWriterSystemText
     extends IonWriterSystem
 {
     /** Not null. */
-    private final _Private_IonTextWriterBuilder _options;
+    private final PrivateIonTextWriterBuilder _options;
     /** At least one. */
     private final int _long_string_threshold;
 
-    private final _Private_IonTextAppender _output;
+    private final PrivateIonTextAppender _output;
 
     /** Ensure we don't use a closed {@link #output} stream. */
     private boolean _closed;
@@ -63,15 +63,15 @@ class IonWriterSystemText
      * @throws NullPointerException if any parameter is null.
      */
     protected IonWriterSystemText(SymbolTable defaultSystemSymtab,
-                                  _Private_IonTextWriterBuilder options,
-                                  _Private_FastAppendable out)
+                                  PrivateIonTextWriterBuilder options,
+                                  PrivateFastAppendable out)
     {
         super(defaultSystemSymtab,
               options.getInitialIvmHandling(),
               options.getIvmMinimizing());
 
         _output =
-            _Private_IonTextAppender.forFastAppendable(out,
+            PrivateIonTextAppender.forFastAppendable(out,
                                                        options.getCharset());
         _options = options;
 
@@ -88,7 +88,7 @@ class IonWriterSystemText
     }
 
 
-    _Private_IonTextWriterBuilder getBuilder()
+    PrivateIonTextWriterBuilder getBuilder()
     {
         return _options;
     }
@@ -110,16 +110,16 @@ class IonWriterSystemText
         }
         else {
             switch(_stack_parent_type[_top-1]) {
-            case _Private_IonConstants.tidDATAGRAM:
+            case PrivateIonConstants.tidDATAGRAM:
                 container = IonType.DATAGRAM;
                 break;
-            case _Private_IonConstants.tidSexp:
+            case PrivateIonConstants.tidSexp:
                 container = IonType.SEXP;
                 break;
-            case _Private_IonConstants.tidList:
+            case PrivateIonConstants.tidList:
                 container = IonType.LIST;
                 break;
-            case _Private_IonConstants.tidStruct:
+            case PrivateIonConstants.tidStruct:
                 container = IonType.STRUCT;
                 break;
             default:
@@ -136,11 +136,11 @@ class IonWriterSystemText
         _stack_parent_type[_top] = typeid;
         _stack_pending_comma[_top] = _pending_separator;
         switch (typeid) {
-        case _Private_IonConstants.tidSexp:
+        case PrivateIonConstants.tidSexp:
             _separator_character = ' ';
             break;
-        case _Private_IonConstants.tidList:
-        case _Private_IonConstants.tidStruct:
+        case PrivateIonConstants.tidList:
+        case PrivateIonConstants.tidStruct:
             _separator_character = ',';
             break;
         default:
@@ -168,15 +168,15 @@ class IonWriterSystemText
         int parentid = (_top > 0) ? _stack_parent_type[_top - 1] : -1;
         switch (parentid) {
         case -1:
-        case _Private_IonConstants.tidSexp:
+        case PrivateIonConstants.tidSexp:
             _in_struct = false;
             _separator_character = ' ';
             break;
-        case _Private_IonConstants.tidList:
+        case PrivateIonConstants.tidList:
             _in_struct = false;
             _separator_character = ',';
             break;
-        case _Private_IonConstants.tidStruct:
+        case PrivateIonConstants.tidStruct:
             _in_struct = true;
             _separator_character = ',';
             break;

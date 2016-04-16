@@ -6,7 +6,7 @@ import com.amazon.ion.IonClob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -72,7 +72,7 @@ final class IonClobLite
         byte[] bytes = getBytes();
         if (bytes == null) return null;
 
-        return _Private_Utils.decode(bytes, cs);
+        return PrivateUtils.decode(bytes, cs);
     }
 
     @Override

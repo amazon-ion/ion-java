@@ -5,7 +5,7 @@ package com.amazon.ion;
 import static com.amazon.ion.TestUtils.ensureBinary;
 import static com.amazon.ion.TestUtils.ensureText;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -216,7 +216,7 @@ public enum ReaderMaker
 
     public IonReader newReader(IonSystem system, String ionText)
     {
-        byte[] utf8 = _Private_Utils.utf8(ionText);
+        byte[] utf8 = PrivateUtils.utf8(ionText);
         return newReader(system, utf8);
     }
 

@@ -4,13 +4,13 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl.PrivateIonSystem;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
@@ -92,7 +92,7 @@ public class Symtabs
     {
         int[] maxIds = new int[serializedTables.length];
 
-        _Private_IonSystem system = (_Private_IonSystem)
+        PrivateIonSystem system = (PrivateIonSystem)
             IonSystemBuilder.standard().withCatalog(CATALOG).build();
 
         for (int i = 1; i < serializedTables.length; i++)

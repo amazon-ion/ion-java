@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.readFully;
+import static com.amazon.ion.impl.PrivateUtils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -25,7 +25,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_IonValue.SymbolTableProvider;
+import com.amazon.ion.impl.PrivateIonValue.SymbolTableProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -34,14 +34,14 @@ import java.util.Date;
 import java.util.Iterator;
 
 class IonReaderTreeSystem
-    implements IonReader, _Private_ReaderWriter
+    implements IonReader, PrivateReaderWriter
 {
     protected IonSystem           _system;
     protected SymbolTable         _symbols;
     protected Iterator<IonValue>  _iter;
     protected IonValue            _parent;
-    protected _Private_IonValue   _next;
-    protected _Private_IonValue   _curr;
+    protected PrivateIonValue   _next;
+    protected PrivateIonValue   _curr;
     protected boolean             _eof;
 
     /** Holds pairs: IonValue parent, Iterator<IonValue> cursor */
@@ -93,7 +93,7 @@ class IonReaderTreeSystem
         if (value instanceof IonDatagram) {
             // datagrams interacting with these readers must be
             // IonContainerPrivate containers
-            assert(value instanceof _Private_IonContainer);
+            assert(value instanceof PrivateIonContainer);
             IonDatagram dg = (IonDatagram) value;
             _parent = dg;
             _next = null;
@@ -101,7 +101,7 @@ class IonReaderTreeSystem
         }
         else {
             _parent = (hoisted ? null : value.getContainer());
-            _next = (_Private_IonValue) value;
+            _next = (PrivateIonValue) value;
         }
     }
 
@@ -162,7 +162,7 @@ class IonReaderTreeSystem
         if (this._next != null) return this._next.getType();
 
         if (this._iter != null && this._iter.hasNext()) {
-            this._next = (_Private_IonValue) this._iter.next();
+            this._next = (PrivateIonValue) this._iter.next();
         }
 
         if ((this._eof =(this._next == null)) == true) {
@@ -235,7 +235,7 @@ class IonReaderTreeSystem
     public final Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
-        return _Private_Utils.stringIterator(annotations);
+        return PrivateUtils.stringIterator(annotations);
     }
 
 
@@ -450,13 +450,13 @@ class IonReaderTreeSystem
     {
         boolean             _eof;
         int                 _next_idx;
-        _Private_IonContainer _parent;
+        PrivateIonContainer _parent;
         IonValue            _curr;
 
         Children(IonContainer parent)
         {
-            if (parent instanceof _Private_IonContainer) {
-                _parent = (_Private_IonContainer)parent;
+            if (parent instanceof PrivateIonContainer) {
+                _parent = (PrivateIonContainer)parent;
                 _next_idx = 0;
                 _curr = null;
                 if (_parent.isNullValue()) {

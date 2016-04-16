@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl.lite;
 
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
+import static com.amazon.ion.impl.PrivateIonReaderFactory.makeReader;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -11,7 +11,7 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl._Private_IonWriterFactory;
+import com.amazon.ion.impl.PrivateIonWriterFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -59,7 +59,7 @@ final class IonLoaderLite
     throws IOException
     {
         IonDatagramLite datagram = new IonDatagramLite(_system, _catalog);
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+        IonWriter writer = PrivateIonWriterFactory.makeWriter(datagram);
         writer.writeValues(reader);
         return datagram;
     }

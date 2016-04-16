@@ -5,7 +5,7 @@ import static com.amazon.ion.TestUtils.BAD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +57,7 @@ public class BadIonTest
             {
                 // This will fail if the file has bad UTF-8 data.
                 // That's OK, the other test will still do the right thing.
-                ionText = _Private_Utils.utf8FileToString(myTestFile);
+                ionText = PrivateUtils.utf8FileToString(myTestFile);
             }
             catch (IonException e)
             {

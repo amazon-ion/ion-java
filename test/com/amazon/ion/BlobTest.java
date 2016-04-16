@@ -3,8 +3,8 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.US_ASCII_CHARSET;
-import static com.amazon.ion.impl._Private_Utils.encode;
-import com.amazon.ion.impl._Private_Utils;
+import static com.amazon.ion.impl.PrivateUtils.encode;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import org.junit.Test;
@@ -202,7 +202,7 @@ public class BlobTest
 
     private static byte[] EncodeAscii(String ascii)
     {
-        return _Private_Utils.encode(ascii, US_ASCII_CHARSET);
+        return PrivateUtils.encode(ascii, US_ASCII_CHARSET);
     }
 
 

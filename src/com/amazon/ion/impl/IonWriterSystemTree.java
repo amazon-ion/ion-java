@@ -2,8 +2,8 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.valueIsLocalSymbolTable;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.valueIsLocalSymbolTable;
 
 import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonCatalog;
@@ -171,7 +171,7 @@ final class IonWriterSystemTree
         if (hasAnnotations()) {
             SymbolToken[] annotations = getTypeAnnotationSymbols();
             // TODO this makes an extra copy of the array
-            ((_Private_IonValue)value).setTypeAnnotationSymbols(annotations);
+            ((PrivateIonValue)value).setTypeAnnotationSymbols(annotations);
             this.clearAnnotations();
         }
 
@@ -225,7 +225,7 @@ final class IonWriterSystemTree
     {
         startValue();
         IonValue root = get_root();
-        ((_Private_IonDatagram)root).appendTrailingSymbolTable(systemSymtab);
+        ((PrivateIonDatagram)root).appendTrailingSymbolTable(systemSymtab);
         endValue();
     }
 
@@ -235,7 +235,7 @@ final class IonWriterSystemTree
         throws IOException
     {
         IonValue root = get_root();
-        ((_Private_IonDatagram)root).appendTrailingSymbolTable(symtab);
+        ((PrivateIonDatagram)root).appendTrailingSymbolTable(symtab);
 
         super.writeLocalSymtab(symtab);
     }

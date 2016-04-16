@@ -2,15 +2,15 @@
 
 package com.amazon.ion.system;
 
-import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.newLiteSystem;
+import static com.amazon.ion.impl.lite.PrivateLiteDomTrampoline.newLiteSystem;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
+import com.amazon.ion.impl.PrivateUtils;
 
 /**
  * The builder for creating {@link IonSystem}s.
@@ -271,15 +271,15 @@ public class IonSystemBuilder
             IonTextWriterBuilder.standard().withCharsetAscii();
         twb.setCatalog(catalog);
 
-        _Private_IonBinaryWriterBuilder bwb =
-            _Private_IonBinaryWriterBuilder.standard();
+        PrivateIonBinaryWriterBuilder bwb =
+            PrivateIonBinaryWriterBuilder.standard();
         bwb.setCatalog(catalog);
         bwb.setStreamCopyOptimized(myStreamCopyOptimized);
 
         // TODO Would be nice to remove this since it's implied by the BWB.
         //      However that currently causes problems in the IonSystem
         //      constructors (which get a null initialSymtab).
-        SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);
+        SymbolTable systemSymtab = PrivateUtils.systemSymtab(1);
         bwb.setInitialSymbolTable(systemSymtab);
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();

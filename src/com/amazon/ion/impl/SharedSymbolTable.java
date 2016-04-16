@@ -7,7 +7,7 @@ import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
+import static com.amazon.ion.impl.PrivateUtils.getSidForSymbolTableField;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonException;

@@ -2,7 +2,7 @@
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl._Private_Utils.utf8;
+import static com.amazon.ion.impl.PrivateUtils.utf8;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.IonDatagram;

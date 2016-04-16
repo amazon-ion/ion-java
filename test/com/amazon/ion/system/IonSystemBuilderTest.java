@@ -2,7 +2,7 @@
 
 package com.amazon.ion.system;
 
-import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.isLiteSystem;
+import static com.amazon.ion.impl.lite.PrivateLiteDomTrampoline.isLiteSystem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
@@ -11,7 +11,7 @@ import static org.junit.Assert.assertTrue;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl._Private_IonWriter;
+import com.amazon.ion.impl.PrivateIonWriter;
 import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
@@ -111,7 +111,7 @@ public class IonSystemBuilderTest
         assertTrue(isLiteSystem(ion));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter w = ion.newBinaryWriter(out);
-        assertTrue(((_Private_IonWriter)w).isStreamCopyOptimized());
+        assertTrue(((PrivateIonWriter)w).isStreamCopyOptimized());
     }
 
 

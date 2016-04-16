@@ -8,8 +8,8 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl.PrivateCurriedValueFactory;
+import com.amazon.ion.impl.PrivateIonValue;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Collection;
@@ -147,7 +147,7 @@ abstract class IonSequenceLite
 
     public ValueFactory add()
     {
-        return new _Private_CurriedValueFactory(this.getSystem())
+        return new PrivateCurriedValueFactory(this.getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -166,7 +166,7 @@ abstract class IonSequenceLite
 
     public ValueFactory add(final int index)
     {
-        return new _Private_CurriedValueFactory(getSystem())
+        return new PrivateCurriedValueFactory(getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -310,7 +310,7 @@ abstract class IonSequenceLite
         if (o == null) {
             throw new NullPointerException();
         }
-        _Private_IonValue v = (_Private_IonValue) o;
+        PrivateIonValue v = (PrivateIonValue) o;
         if (this != v.getContainer()) return -1;
         return v.getElementId();
     }

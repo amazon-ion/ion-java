@@ -2,9 +2,9 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_BYTE_ARRAY;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -303,7 +303,7 @@ public class IonSystemTest
         throws Exception
     {
         String ionText = "1234";
-        byte[] textBytes = _Private_Utils.utf8(ionText);
+        byte[] textBytes = PrivateUtils.utf8(ionText);
         byte[] gzipTextBytes = gzip(textBytes);
 
         checkGzipDetection(textBytes);

@@ -18,9 +18,9 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonDatagram;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateCurriedValueFactory;
+import com.amazon.ion.impl.PrivateIonDatagram;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -65,7 +65,7 @@ import java.util.NoSuchElementException;
 
 final class IonDatagramLite
     extends IonSequenceLite
-    implements IonDatagram, IonContext, _Private_IonDatagram
+    implements IonDatagram, IonContext, PrivateIonDatagram
 {
 
     private static final int HASH_SIGNATURE =
@@ -201,7 +201,7 @@ final class IonDatagramLite
     @Override
     public ValueFactory add()
     {
-        return new _Private_CurriedValueFactory(this.getSystem())
+        return new PrivateCurriedValueFactory(this.getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -243,7 +243,7 @@ final class IonDatagramLite
     @Override
     public ValueFactory add(final int index)
     {
-        return new _Private_CurriedValueFactory(getSystem())
+        return new PrivateCurriedValueFactory(getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -999,7 +999,7 @@ final class IonDatagramLite
                     }
                     else {
                         IonSystem sys = __iterator.get_datagram_system();
-                        rep = _Private_Utils.symtabTree(sys, new_symbol_table);
+                        rep = PrivateUtils.symtabTree(sys, new_symbol_table);
                     }
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 
@@ -1106,7 +1106,7 @@ final class IonDatagramLite
             int count = 0;
             while (curr.isLocalTable()) {
                 count++;
-                curr = _Private_Utils.symtabTree(sys, curr).getSymbolTable();
+                curr = PrivateUtils.symtabTree(sys, curr).getSymbolTable();
             }
             // we should terminate when the symbol tables symbol table is the system symbol table
             assert(curr != null);

@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Rule;

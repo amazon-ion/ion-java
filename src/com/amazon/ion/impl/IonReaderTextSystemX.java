@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_ScalarConversions.getValueTypeName;
+import static com.amazon.ion.impl.PrivateScalarConversions.getValueTypeName;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
@@ -22,8 +22,8 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
-import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.CantConvertException;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -41,7 +41,7 @@ import java.util.Date;
  */
 class IonReaderTextSystemX
     extends IonReaderTextRawX
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
@@ -368,7 +368,7 @@ class IonReaderTextSystemX
         for (int i = 0; i < count; i++)
         {
             SymbolToken sym = _annotations[i];
-            SymbolToken updated = _Private_Utils.localize(symbols, sym);
+            SymbolToken updated = PrivateUtils.localize(symbols, sym);
             if (updated != sym) _annotations[i] = updated;
             result[i] = updated;
         }
@@ -540,7 +540,7 @@ class IonReaderTextSystemX
         SymbolToken sym = super.getFieldNameSymbol();
         if (sym != null)
         {
-            sym = _Private_Utils.localize(getSymbolTable(), sym);
+            sym = PrivateUtils.localize(getSymbolTable(), sym);
         }
         return sym;
     }

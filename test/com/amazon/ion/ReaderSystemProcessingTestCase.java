@@ -2,7 +2,7 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 

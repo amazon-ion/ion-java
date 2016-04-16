@@ -2,10 +2,10 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.safeEquals;
+import static com.amazon.ion.impl.PrivateUtils.safeEquals;
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -1344,7 +1344,7 @@ public final class Timestamp
      */
     public Calendar calendarValue()
     {
-        Calendar cal = new GregorianCalendar(_Private_Utils.UTC);
+        Calendar cal = new GregorianCalendar(PrivateUtils.UTC);
 
         long millis = getMillis();
         Integer offset = _offset;

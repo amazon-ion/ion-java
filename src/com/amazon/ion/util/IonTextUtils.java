@@ -2,16 +2,16 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl._Private_IonConstants.isHighSurrogate;
-import static com.amazon.ion.impl._Private_IonConstants.isLowSurrogate;
-import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
-import static com.amazon.ion.impl._Private_IonTextAppender.ZERO_PADDING;
-import static com.amazon.ion.impl._Private_IonTextAppender.isIdentifierKeyword;
-import static com.amazon.ion.impl._Private_IonTextAppender.symbolNeedsQuoting;
-import static com.amazon.ion.impl._Private_IonTextWriterBuilder.STANDARD;
+import static com.amazon.ion.impl.PrivateIonConstants.isHighSurrogate;
+import static com.amazon.ion.impl.PrivateIonConstants.isLowSurrogate;
+import static com.amazon.ion.impl.PrivateIonConstants.makeUnicodeScalar;
+import static com.amazon.ion.impl.PrivateIonTextAppender.ZERO_PADDING;
+import static com.amazon.ion.impl.PrivateIonTextAppender.isIdentifierKeyword;
+import static com.amazon.ion.impl.PrivateIonTextAppender.symbolNeedsQuoting;
+import static com.amazon.ion.impl.PrivateIonTextWriterBuilder.STANDARD;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.impl._Private_IonTextAppender;
+import com.amazon.ion.impl.PrivateIonTextAppender;
 import java.io.IOException;
 import java.math.BigDecimal;
 
@@ -105,15 +105,15 @@ public class IonTextUtils
     }
 
     public static boolean isIdentifierStart(int codePoint) {
-        return _Private_IonTextAppender.isIdentifierStart(codePoint);
+        return PrivateIonTextAppender.isIdentifierStart(codePoint);
     }
 
     public static boolean isIdentifierPart(int codePoint) {
-        return _Private_IonTextAppender.isIdentifierPart(codePoint);
+        return PrivateIonTextAppender.isIdentifierPart(codePoint);
     }
 
     public static boolean isOperatorPart(int codePoint) {
-        return _Private_IonTextAppender.isOperatorPart(codePoint);
+        return PrivateIonTextAppender.isOperatorPart(codePoint);
     }
 
 
@@ -811,8 +811,8 @@ public class IonTextUtils
     public static void printDecimal(Appendable out, BigDecimal decimal)
         throws IOException
     {
-        _Private_IonTextAppender appender =
-            _Private_IonTextAppender.forAppendable(out);
+        PrivateIonTextAppender appender =
+            PrivateIonTextAppender.forAppendable(out);
         appender.printDecimal(STANDARD, decimal);
     }
 
@@ -840,8 +840,8 @@ public class IonTextUtils
     public static void printFloat(Appendable out, double value)
         throws IOException
     {
-        _Private_IonTextAppender appender =
-            _Private_IonTextAppender.forAppendable(out);
+        PrivateIonTextAppender appender =
+            PrivateIonTextAppender.forAppendable(out);
         appender.printFloat(value);
     }
 
@@ -864,8 +864,8 @@ public class IonTextUtils
     public static void printFloat(Appendable out, Double value)
         throws IOException
     {
-        _Private_IonTextAppender appender =
-            _Private_IonTextAppender.forAppendable(out);
+        PrivateIonTextAppender appender =
+            PrivateIonTextAppender.forAppendable(out);
         appender.printFloat(value);
     }
 
@@ -893,8 +893,8 @@ public class IonTextUtils
         }
         else
         {
-            _Private_IonTextAppender appender =
-                _Private_IonTextAppender.forAppendable(out);
+            PrivateIonTextAppender appender =
+                PrivateIonTextAppender.forAppendable(out);
             appender.printBlob(STANDARD, value, 0, value.length);
         }
     }
@@ -929,8 +929,8 @@ public class IonTextUtils
         }
         else
         {
-            _Private_IonTextAppender appender =
-                _Private_IonTextAppender.forAppendable(out);
+            PrivateIonTextAppender appender =
+                PrivateIonTextAppender.forAppendable(out);
             appender.printClob(STANDARD, value, 0, value.length);
         }
     }

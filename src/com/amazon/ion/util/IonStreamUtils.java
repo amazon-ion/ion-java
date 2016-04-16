@@ -2,13 +2,13 @@
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl.PrivateIonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.util.GzipOrRawInputStream.GZIP_HEADER;
 
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl._Private_ListWriter;
+import com.amazon.ion.impl.PrivateListWriter;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -127,8 +127,8 @@ public class IonStreamUtils
     public static void writeBoolList(IonWriter writer, boolean[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeBoolList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeBoolList(values);
             return;
         }
 
@@ -152,8 +152,8 @@ public class IonStreamUtils
     public static void writeFloatList(IonWriter writer, float[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeFloatList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeFloatList(values);
             return;
         }
 
@@ -175,8 +175,8 @@ public class IonStreamUtils
     public static void writeFloatList(IonWriter writer, double[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeFloatList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeFloatList(values);
             return;
         }
 
@@ -199,8 +199,8 @@ public class IonStreamUtils
     public static void writeIntList(IonWriter writer, byte[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeIntList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -222,8 +222,8 @@ public class IonStreamUtils
     public static void writeIntList(IonWriter writer, short[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeIntList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -245,8 +245,8 @@ public class IonStreamUtils
     public static void writeIntList(IonWriter writer, int[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeIntList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -268,8 +268,8 @@ public class IonStreamUtils
     public static void writeIntList(IonWriter writer, long[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeIntList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeIntList(values);
             return;
         }
 
@@ -292,8 +292,8 @@ public class IonStreamUtils
     public static void writeStringList(IonWriter writer, String[] values)
         throws IOException
     {
-        if (writer instanceof _Private_ListWriter) {
-            ((_Private_ListWriter)writer).writeStringList(values);
+        if (writer instanceof PrivateListWriter) {
+            ((PrivateListWriter)writer).writeStringList(values);
             return;
         }
 

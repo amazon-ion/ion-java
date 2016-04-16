@@ -43,7 +43,7 @@ public class TextWriterTest
         throws Exception
     {
         byte[] utf8Bytes = outputByteArray();
-        return _Private_Utils.utf8(utf8Bytes);
+        return PrivateUtils.utf8(utf8Bytes);
     }
 
     @Test

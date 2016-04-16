@@ -2,7 +2,7 @@
 
 package com.amazon.ion.junit;
 
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+import static com.amazon.ion.impl.PrivateIonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;

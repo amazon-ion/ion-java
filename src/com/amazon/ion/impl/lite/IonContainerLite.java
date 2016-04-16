@@ -11,9 +11,9 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonConstants;
-import com.amazon.ion.impl._Private_IonContainer;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonConstants;
+import com.amazon.ion.impl.PrivateIonContainer;
+import com.amazon.ion.impl.PrivateUtils;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 
 abstract class IonContainerLite
     extends IonValueLite
-    implements _Private_IonContainer, IonContext
+    implements PrivateIonContainer, IonContext
 {
 
     protected int            _child_count;
@@ -120,7 +120,7 @@ abstract class IonContainerLite
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return _Private_Utils.<IonValue> emptyIterator();
+            return PrivateUtils.<IonValue> emptyIterator();
         }
 
         return new SequenceContentIterator(index, isReadOnly());
@@ -514,20 +514,20 @@ abstract class IonContainerLite
      */
     static final int[] INITIAL_SIZE = make_initial_size_array();
     static int[] make_initial_size_array() {
-        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
-        sizes[_Private_IonConstants.tidList]     = 1;
-        sizes[_Private_IonConstants.tidSexp]     = 4;
-        sizes[_Private_IonConstants.tidStruct]   = 5;
-        sizes[_Private_IonConstants.tidDATAGRAM] = 3;
+        int[] sizes = new int[PrivateIonConstants.tidDATAGRAM + 1];
+        sizes[PrivateIonConstants.tidList]     = 1;
+        sizes[PrivateIonConstants.tidSexp]     = 4;
+        sizes[PrivateIonConstants.tidStruct]   = 5;
+        sizes[PrivateIonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
     static final int[] NEXT_SIZE = make_next_size_array();
     static int[] make_next_size_array() {
-        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
-        sizes[_Private_IonConstants.tidList]     = 4;
-        sizes[_Private_IonConstants.tidSexp]     = 8;
-        sizes[_Private_IonConstants.tidStruct]   = 8;
-        sizes[_Private_IonConstants.tidDATAGRAM] = 10;
+        int[] sizes = new int[PrivateIonConstants.tidDATAGRAM + 1];
+        sizes[PrivateIonConstants.tidList]     = 4;
+        sizes[PrivateIonConstants.tidSexp]     = 8;
+        sizes[PrivateIonConstants.tidStruct]   = 8;
+        sizes[PrivateIonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
     final protected int initialSize()

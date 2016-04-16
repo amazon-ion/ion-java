@@ -2,8 +2,8 @@
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.utf8;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.utf8;
 
 import com.amazon.ion.InputStreamWrapper;
 import com.amazon.ion.IonType;

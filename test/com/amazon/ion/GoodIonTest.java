@@ -7,7 +7,7 @@ import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
 import java.io.File;
@@ -93,7 +93,7 @@ public class GoodIonTest
     {
         if (! myFileIsBinary)
         {
-            String ionText = _Private_Utils.utf8FileToString(myTestFile);
+            String ionText = PrivateUtils.utf8FileToString(myTestFile);
             loader().load(ionText);
         }
     }
@@ -102,7 +102,7 @@ public class GoodIonTest
     public void testIterateByteArray()
     throws Exception
     {
-        byte[] bytes = _Private_Utils.loadFileBytes(myTestFile);
+        byte[] bytes = PrivateUtils.loadFileBytes(myTestFile);
 
         Iterator<IonValue> i = system().iterate(bytes);
         while (i.hasNext())

@@ -12,8 +12,8 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
-import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -107,7 +107,7 @@ abstract class IonReaderBinaryRawX
 
     final void re_init_raw() {
         _local_remaining = NO_LIMIT;
-        _parent_tid = _Private_IonConstants.tidDATAGRAM;
+        _parent_tid = PrivateIonConstants.tidDATAGRAM;
         _value_field_id = SymbolTable.UNKNOWN_SYMBOL_ID;
         _state = State.S_BEFORE_TID; // this is where we always start
         _has_next_needed = true;
@@ -166,7 +166,7 @@ abstract class IonReaderBinaryRawX
         assert(_container_top > 0);
         long type_limit = _container_stack[(_container_top - POS_STACK_STEP) + TYPE_LIMIT_OFFSET];
         int type = (int)(type_limit & TYPE_MASK);
-        if (type < 0 || type > _Private_IonConstants.tidDATAGRAM) {
+        if (type < 0 || type > PrivateIonConstants.tidDATAGRAM) {
             throwErrorAt("invalid type id in parent stack");
         }
         return type;
@@ -218,8 +218,8 @@ abstract class IonReaderBinaryRawX
     //      (byte) 0x01,
     //      (byte) 0x00,
     //      (byte) 0xEA };
-    private static final int BINARY_VERSION_MARKER_TID = _Private_IonConstants.getTypeCode(_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
-    private static final int BINARY_VERSION_MARKER_LEN = _Private_IonConstants.getLowNibble(_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
+    private static final int BINARY_VERSION_MARKER_TID = PrivateIonConstants.getTypeCode(PrivateIonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
+    private static final int BINARY_VERSION_MARKER_LEN = PrivateIonConstants.getLowNibble(PrivateIonConstants.BINARY_VERSION_MARKER_1_0[0] & 0xff);
     private final void has_next_helper_raw() throws IOException
     {
         clear_value();
@@ -243,7 +243,7 @@ abstract class IonReaderBinaryRawX
                     _eof = true;
                     break;
                 }
-                if (_value_tid == _Private_IonConstants.tidTypedecl) {
+                if (_value_tid == PrivateIonConstants.tidTypedecl) {
                     assert (_value_tid == (BINARY_VERSION_MARKER_TID & 0xff)); // the bvm tid happens to be type decl
                     if (_value_len == BINARY_VERSION_MARKER_LEN ) {
                         // this isn't valid for any type descriptor except the first byte
@@ -301,15 +301,15 @@ abstract class IonReaderBinaryRawX
     }
     private final void load_version_marker() throws IOException
     {
-        for (int ii=1; ii<_Private_IonConstants.BINARY_VERSION_MARKER_1_0.length; ii++) {
+        for (int ii=1; ii<PrivateIonConstants.BINARY_VERSION_MARKER_1_0.length; ii++) {
             int b = read();
-            if (b != (_Private_IonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
+            if (b != (PrivateIonConstants.BINARY_VERSION_MARKER_1_0[ii] & 0xff)) {
                 throwErrorAt("invalid binary image");
             }
         }
         // so it's a 4 byte version marker - make it look like
         // the symbol $ion_1_0 ...
-        _value_tid = _Private_IonConstants.tidSymbol;
+        _value_tid = PrivateIonConstants.tidSymbol;
         _value_len = 0; // so skip will go the right place - here
         _v.setValue(ION_1_0_SID);
         _v.setAuthoritativeType(AS_TYPE.int_value);
@@ -424,31 +424,31 @@ abstract class IonReaderBinaryRawX
         if (td < 0) {
             return UnifiedInputStreamX.EOF;
         }
-        int tid = _Private_IonConstants.getTypeCode(td);
-        int len = _Private_IonConstants.getLowNibble(td);
-        if (len == _Private_IonConstants.lnIsVarLen) {
+        int tid = PrivateIonConstants.getTypeCode(td);
+        int len = PrivateIonConstants.getLowNibble(td);
+        if (len == PrivateIonConstants.lnIsVarLen) {
             len = readVarUInt();
             start_of_value = _input.getPosition();
         }
-        else if (tid == _Private_IonConstants.tidNull) {
-            if (len != _Private_IonConstants.lnIsNull) {
+        else if (tid == PrivateIonConstants.tidNull) {
+            if (len != PrivateIonConstants.lnIsNull) {
                 throwErrorAt("invalid null type descriptor");
             }
             _value_is_null = true;
             len = 0;
             _state = State.S_AFTER_VALUE;
         }
-        else if (len == _Private_IonConstants.lnIsNull) {
+        else if (len == PrivateIonConstants.lnIsNull) {
             _value_is_null = true;
             len = 0;
             _state = State.S_AFTER_VALUE;
         }
-        else if (tid == _Private_IonConstants.tidBoolean) {
+        else if (tid == PrivateIonConstants.tidBoolean) {
             switch (len) {
-                case _Private_IonConstants.lnBooleanFalse:
+                case PrivateIonConstants.lnBooleanFalse:
                     _value_is_true = false;
                     break;
-                case _Private_IonConstants.lnBooleanTrue:
+                case PrivateIonConstants.lnBooleanTrue:
                     _value_is_true = true;
                     break;
                 default:
@@ -458,7 +458,7 @@ abstract class IonReaderBinaryRawX
             len = 0;
             _state = State.S_AFTER_VALUE;
         }
-        else if (tid == _Private_IonConstants.tidStruct) {
+        else if (tid == PrivateIonConstants.tidStruct) {
             if ((_struct_is_ordered = (len == 1))) {
                 // special case of an ordered struct, it gets the
                 // otherwise impossible to have length of 1
@@ -476,47 +476,47 @@ abstract class IonReaderBinaryRawX
     {
         IonType t = null;
         switch (tid) {
-        case _Private_IonConstants.tidNull:      // 0
+        case PrivateIonConstants.tidNull:      // 0
             t = IonType.NULL;
             break;
-        case _Private_IonConstants.tidBoolean:   // 1
+        case PrivateIonConstants.tidBoolean:   // 1
             t = IonType.BOOL;
             break;
-        case _Private_IonConstants.tidPosInt:    // 2
-        case _Private_IonConstants.tidNegInt:    // 3
+        case PrivateIonConstants.tidPosInt:    // 2
+        case PrivateIonConstants.tidNegInt:    // 3
             t = IonType.INT;
             break;
-        case _Private_IonConstants.tidFloat:     // 4
+        case PrivateIonConstants.tidFloat:     // 4
             t = IonType.FLOAT;
             break;
-        case _Private_IonConstants.tidDecimal:   // 5
+        case PrivateIonConstants.tidDecimal:   // 5
             t = IonType.DECIMAL;
             break;
-        case _Private_IonConstants.tidTimestamp: // 6
+        case PrivateIonConstants.tidTimestamp: // 6
             t = IonType.TIMESTAMP;
             break;
-        case _Private_IonConstants.tidSymbol:    // 7
+        case PrivateIonConstants.tidSymbol:    // 7
             t = IonType.SYMBOL;
             break;
-        case _Private_IonConstants.tidString:    // 8
+        case PrivateIonConstants.tidString:    // 8
             t = IonType.STRING;
             break;
-        case _Private_IonConstants.tidClob:      // 9
+        case PrivateIonConstants.tidClob:      // 9
             t = IonType.CLOB;
             break;
-        case _Private_IonConstants.tidBlob:      // 10 A
+        case PrivateIonConstants.tidBlob:      // 10 A
             t = IonType.BLOB;
             break;
-        case _Private_IonConstants.tidList:      // 11 B
+        case PrivateIonConstants.tidList:      // 11 B
             t = IonType.LIST;
             break;
-        case _Private_IonConstants.tidSexp:      // 12 C
+        case PrivateIonConstants.tidSexp:      // 12 C
             t = IonType.SEXP;
             break;
-        case _Private_IonConstants.tidStruct:    // 13 D
+        case PrivateIonConstants.tidStruct:    // 13 D
             t = IonType.STRUCT;
             break;
-        case _Private_IonConstants.tidTypedecl:  // 14 E
+        case PrivateIonConstants.tidTypedecl:  // 14 E
             t = null;  // we don't know yet
             break;
         default:
@@ -559,7 +559,7 @@ abstract class IonReaderBinaryRawX
             }
         }
         push(_parent_tid, next_position, next_remaining);
-        _is_in_struct = (_value_tid == _Private_IonConstants.tidStruct);
+        _is_in_struct = (_value_tid == PrivateIonConstants.tidStruct);
         _local_remaining = _value_len;
         _state = _is_in_struct ? State.S_BEFORE_FIELD : State.S_BEFORE_TID;
         _parent_tid = _value_tid;
@@ -580,7 +580,7 @@ abstract class IonReaderBinaryRawX
         _eof = false;
         _parent_tid = parent_tid;
         // later, only after we've skipped to our new location: _local_remaining = local_remaining;
-        if (_parent_tid == _Private_IonConstants.tidStruct) {
+        if (_parent_tid == PrivateIonConstants.tidStruct) {
             _is_in_struct = true;
             _state = State.S_BEFORE_FIELD;
         }
@@ -1181,8 +1181,8 @@ done:   for (;;) {
                 chars[ii++] = (char)c;
             }
             else { // when c is >= 0x10000 we need surrogate encoding
-                chars[ii++] = (char)_Private_IonConstants.makeHighSurrogate(c);
-                chars[ii++] = (char)_Private_IonConstants.makeLowSurrogate(c);
+                chars[ii++] = (char)PrivateIonConstants.makeHighSurrogate(c);
+                chars[ii++] = (char)PrivateIonConstants.makeLowSurrogate(c);
             }
         }
         _local_remaining = save_limit;

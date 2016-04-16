@@ -4,7 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
-import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
+import com.amazon.ion.impl.PrivateScalarConversions.CantConvertException;
 
 
 /**

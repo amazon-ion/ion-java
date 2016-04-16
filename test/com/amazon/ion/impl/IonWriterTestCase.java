@@ -7,8 +7,8 @@ import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.TestUtils.FERMATA;
-import static com.amazon.ion.impl._Private_IonWriterBase.ERROR_MISSING_FIELD_NAME;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateIonWriterBase.ERROR_MISSING_FIELD_NAME;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
@@ -990,7 +990,7 @@ public abstract class IonWriterTestCase
     {
         iw = makeWriter();
         iw.writeSymbol("foo");
-        ((_Private_IonWriter)iw).writeIonVersionMarker();
+        ((PrivateIonWriter)iw).writeIonVersionMarker();
         iw.writeInt(1);
 
         IonDatagram dg = reload();
@@ -1047,13 +1047,13 @@ public abstract class IonWriterTestCase
         iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
         iw.stepIn(IonType.STRUCT);
         {
-            assertEquals(1, ((_Private_IonWriter)iw).getDepth());
+            assertEquals(1, ((PrivateIonWriter)iw).getDepth());
 
             iw.setFieldName("open");
             iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
             iw.stepIn(IonType.STRUCT);
             {
-                assertEquals(2, ((_Private_IonWriter)iw).getDepth());
+                assertEquals(2, ((PrivateIonWriter)iw).getDepth());
             }
             iw.stepOut();
         }

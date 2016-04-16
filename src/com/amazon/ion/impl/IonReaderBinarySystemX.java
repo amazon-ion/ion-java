@@ -13,8 +13,8 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
-import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -23,7 +23,7 @@ import java.util.Iterator;
 
 class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     IonSystem _system;
     SymbolTable _symbols;
@@ -85,9 +85,9 @@ class IonReaderBinarySystemX
 
             if (!_v.can_convert(as_type)) {
                 String message = "can't cast from "
-                    +_Private_ScalarConversions.getValueTypeName(_v.getAuthoritativeType())
+                    +PrivateScalarConversions.getValueTypeName(_v.getAuthoritativeType())
                     +" to "
-                    +_Private_ScalarConversions.getValueTypeName(as_type);
+                    +PrivateScalarConversions.getValueTypeName(as_type);
                 throw new IllegalStateException(message);
             }
             int fnid = _v.get_conversion_fnid(as_type);
@@ -175,12 +175,12 @@ class IonReaderBinarySystemX
 
                 if (v < 0) {
                     // we really can't fit this magnitude properly into a Java long
-                    int signum = _value_tid == _Private_IonConstants.tidPosInt ? 1 : -1;
+                    int signum = _value_tid == PrivateIonConstants.tidPosInt ? 1 : -1;
                     BigInteger big = unsignedLongToBigInteger(signum, v);
                     _v.setValue(big);
                     _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
                 } else {
-                    if (_value_tid == _Private_IonConstants.tidNegInt) {
+                    if (_value_tid == PrivateIonConstants.tidNegInt) {
                         v = -v;
                     }
                     _v.setValue(v);
@@ -188,7 +188,7 @@ class IonReaderBinarySystemX
                 }
             }
             else {
-                boolean is_negative = (_value_tid == _Private_IonConstants.tidNegInt);
+                boolean is_negative = (_value_tid == PrivateIonConstants.tidNegInt);
                 BigInteger v = readBigInteger(_value_len, is_negative);
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
@@ -410,7 +410,7 @@ class IonReaderBinarySystemX
     public final Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        return _Private_Utils.stringIterator(annotations);
+        return PrivateUtils.stringIterator(annotations);
     }
 
     public final String[] getTypeAnnotations()
@@ -418,7 +418,7 @@ class IonReaderBinarySystemX
         load_annotations();
         String[] anns;
         if (_annotation_count < 1) {
-            anns = _Private_Utils.EMPTY_STRING_ARRAY;
+            anns = PrivateUtils.EMPTY_STRING_ARRAY;
         }
         else {
             anns = new String[_annotation_count];

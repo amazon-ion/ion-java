@@ -3,8 +3,8 @@
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonDatagram;
@@ -18,9 +18,9 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonValue;
-import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonValue;
+import com.amazon.ion.impl.PrivateIonWriter;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -36,7 +36,7 @@ import java.io.PrintWriter;
  *  original implementation.
  */
 abstract class IonValueLite
-    implements _Private_IonValue
+    implements PrivateIonValue
 {
     private static final int TYPE_ANNOTATION_HASH_SIGNATURE =
         "TYPE ANNOTATION".hashCode();
@@ -252,7 +252,7 @@ abstract class IonValueLite
                     String text = existingToken.getText();
                     if (text != null) {
                         this._annotations[i] =
-                            _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+                            PrivateUtils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     } else {
                         // TODO - this is clearly wrong; however was the existing behavior as
                         // existing under #getAnnotationTypeSymbols();
@@ -422,7 +422,7 @@ abstract class IonValueLite
             return null;
         }
 
-        return _Private_Utils.newSymbolToken(text, sid);
+        return PrivateUtils.newSymbolToken(text, sid);
     }
 
     /**
@@ -575,7 +575,7 @@ abstract class IonValueLite
         }
         else
         {
-            _Private_Utils.ensureNonEmptySymbols(annotations);
+            PrivateUtils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
         }
     }
@@ -599,14 +599,14 @@ abstract class IonValueLite
             return EMPTY_STRING_ARRAY;
         }
 
-        return _Private_Utils.toStrings(_annotations, count);
+        return PrivateUtils.toStrings(_annotations, count);
     }
 
     public void setTypeAnnotations(String... annotations)
     {
         checkForLock();
 
-        _annotations = _Private_Utils.newSymbolTokens(getSymbolTable(),
+        _annotations = PrivateUtils.newSymbolTokens(getSymbolTable(),
                                                        annotations);
     }
 
@@ -833,7 +833,7 @@ abstract class IonValueLite
     final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
     {
         if (writer.isInStruct()
-            && ! ((_Private_IonWriter) writer).isFieldNameSet())
+            && ! ((PrivateIonWriter) writer).isFieldNameSet())
         {
             SymbolToken tok = getFieldNameSymbol(symbolTableProvider);
             if (tok == null)

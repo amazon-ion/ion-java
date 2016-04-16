@@ -13,13 +13,13 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonSymbol;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonSymbol;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 
 final class IonSymbolLite
     extends IonTextLite
-    implements _Private_IonSymbol
+    implements PrivateIonSymbol
 {
     private static final int HASH_SIGNATURE =
         IonType.SYMBOL.toString().hashCode();
@@ -196,7 +196,7 @@ final class IonSymbolLite
 
         int sid = resolveSymbolId();
         String text = _stringValue(symbolTableProvider);
-        return _Private_Utils.newSymbolToken(text, sid);
+        return PrivateUtils.newSymbolToken(text, sid);
     }
 
 
