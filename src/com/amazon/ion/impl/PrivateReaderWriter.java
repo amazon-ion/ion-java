@@ -5,9 +5,10 @@ package com.amazon.ion.impl;
 import com.amazon.ion.SymbolTable;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_ReaderWriter
+@Deprecated
+public interface PrivateReaderWriter
 {
     public SymbolTable pop_passed_symbol_table();
 }

@@ -2,16 +2,18 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.symtabExtends;
+import static com.amazon.ion.impl.PrivateUtils.symtabExtends;
 
 import com.amazon.ion.SymbolTable;
 
 /**
  * Cache to reduce unnecessary calls to
- * {@link _Private_Utils#symtabExtends(SymbolTable, SymbolTable)}. This is
+ * {@link PrivateUtils#symtabExtends(SymbolTable, SymbolTable)}. This is
  * only used if the writer is stream copy optimized.
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_SymtabExtendsCache
+@Deprecated
+public final class PrivateSymtabExtendsCache
 {
     private SymbolTable myWriterSymtab;
     private SymbolTable myReaderSymtab;

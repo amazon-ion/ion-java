@@ -9,31 +9,32 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
-import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder.AllocatorMode;
+import com.amazon.ion.impl.bin.PrivateIonManagedBinaryWriterBuilder;
+import com.amazon.ion.impl.bin.PrivateIonManagedBinaryWriterBuilder.AllocatorMode;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public class _Private_IonBinaryWriterBuilder
+@Deprecated
+public class PrivateIonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
     // IONJAVA-467 expose configuration points properly and figure out deprecation path for the old writer.
-    private final _Private_IonManagedBinaryWriterBuilder myBinaryWriterBuilder;
+    private final PrivateIonManagedBinaryWriterBuilder myBinaryWriterBuilder;
     private ValueFactory mySymtabValueFactory;
 
     /** System or local */
     private SymbolTable  myInitialSymbolTable;
 
 
-    private _Private_IonBinaryWriterBuilder()
+    private PrivateIonBinaryWriterBuilder()
     {
         myBinaryWriterBuilder =
-            _Private_IonManagedBinaryWriterBuilder
+            PrivateIonManagedBinaryWriterBuilder
                 .create(AllocatorMode.POOLED)
                 .withPaddedLengthPreallocation(0)
                 ;
@@ -41,7 +42,7 @@ public class _Private_IonBinaryWriterBuilder
 
 
     private
-    _Private_IonBinaryWriterBuilder(_Private_IonBinaryWriterBuilder that)
+    PrivateIonBinaryWriterBuilder(PrivateIonBinaryWriterBuilder that)
     {
         super(that);
 
@@ -54,9 +55,9 @@ public class _Private_IonBinaryWriterBuilder
     /**
      * @return a new mutable builder.
      */
-    public static _Private_IonBinaryWriterBuilder standard()
+    public static PrivateIonBinaryWriterBuilder standard()
     {
-        return new _Private_IonBinaryWriterBuilder.Mutable();
+        return new PrivateIonBinaryWriterBuilder.Mutable();
     }
 
 
@@ -64,19 +65,19 @@ public class _Private_IonBinaryWriterBuilder
 
 
     @Override
-    public final _Private_IonBinaryWriterBuilder copy()
+    public final PrivateIonBinaryWriterBuilder copy()
     {
         return new Mutable(this);
     }
 
     @Override
-    public _Private_IonBinaryWriterBuilder immutable()
+    public PrivateIonBinaryWriterBuilder immutable()
     {
         return this;
     }
 
     @Override
-    public _Private_IonBinaryWriterBuilder mutable()
+    public PrivateIonBinaryWriterBuilder mutable()
     {
         return copy();
     }
@@ -99,10 +100,10 @@ public class _Private_IonBinaryWriterBuilder
         mySymtabValueFactory = factory;
     }
 
-    public _Private_IonBinaryWriterBuilder
+    public PrivateIonBinaryWriterBuilder
     withSymtabValueFactory(ValueFactory factory)
     {
-        _Private_IonBinaryWriterBuilder b = mutable();
+        PrivateIonBinaryWriterBuilder b = mutable();
         b.setSymtabValueFactory(factory);
         return b;
     }
@@ -168,9 +169,9 @@ public class _Private_IonBinaryWriterBuilder
      */
     @Override
     public
-    _Private_IonBinaryWriterBuilder withInitialSymbolTable(SymbolTable symtab)
+    PrivateIonBinaryWriterBuilder withInitialSymbolTable(SymbolTable symtab)
     {
-        _Private_IonBinaryWriterBuilder b = mutable();
+        PrivateIonBinaryWriterBuilder b = mutable();
         b.setInitialSymbolTable(symtab);
         return b;
     }
@@ -202,10 +203,10 @@ public class _Private_IonBinaryWriterBuilder
     /**
      * Fills all properties and returns an immutable builder.
      */
-    private _Private_IonBinaryWriterBuilder fillDefaults()
+    private PrivateIonBinaryWriterBuilder fillDefaults()
     {
         // Ensure that we don't modify the user's builder.
-        _Private_IonBinaryWriterBuilder b = copy();
+        PrivateIonBinaryWriterBuilder b = copy();
 
         if (b.getSymtabValueFactory() == null)
         {
@@ -235,7 +236,7 @@ public class _Private_IonBinaryWriterBuilder
     @Override
     public final IonWriter build(OutputStream out)
     {
-        _Private_IonBinaryWriterBuilder b = fillDefaults();
+        PrivateIonBinaryWriterBuilder b = fillDefaults();
         try
         {
             return b.myBinaryWriterBuilder.newWriter(out);
@@ -250,23 +251,23 @@ public class _Private_IonBinaryWriterBuilder
 
 
     private static final class Mutable
-        extends _Private_IonBinaryWriterBuilder
+        extends PrivateIonBinaryWriterBuilder
     {
         private Mutable() { }
 
-        private Mutable(_Private_IonBinaryWriterBuilder that)
+        private Mutable(PrivateIonBinaryWriterBuilder that)
         {
             super(that);
         }
 
         @Override
-        public _Private_IonBinaryWriterBuilder immutable()
+        public PrivateIonBinaryWriterBuilder immutable()
         {
-            return new _Private_IonBinaryWriterBuilder(this);
+            return new PrivateIonBinaryWriterBuilder(this);
         }
 
         @Override
-        public _Private_IonBinaryWriterBuilder mutable()
+        public PrivateIonBinaryWriterBuilder mutable()
         {
             return this;
         }

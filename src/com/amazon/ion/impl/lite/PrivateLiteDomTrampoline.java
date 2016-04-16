@@ -4,19 +4,19 @@ package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
+import com.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 
 /**
- * NOT FOR APPLICATION USE!
- * <p>
  * Isolates private APIs that are needed from other packages in this library.
- * The leading _ reduces the chance of somebody finding this via autocomplete.
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_LiteDomTrampoline
+@Deprecated
+public final class PrivateLiteDomTrampoline
 {
     public static IonSystem newLiteSystem(IonTextWriterBuilder twb,
-                                          _Private_IonBinaryWriterBuilder bwb)
+                                          PrivateIonBinaryWriterBuilder bwb)
     {
         return new IonSystemLite(twb, bwb);
     }

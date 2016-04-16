@@ -49,9 +49,10 @@ import java.util.NoSuchElementException;
 import java.util.TimeZone;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_Utils
+@Deprecated
+public final class PrivateUtils
 {
     /** Just a zero-length byte array, used to avoid allocation. */
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
@@ -365,7 +366,7 @@ public final class _Private_Utils
      */
     public static String[] toStrings(SymbolToken[] symbols, int count)
     {
-        if (count == 0) return _Private_Utils.EMPTY_STRING_ARRAY;
+        if (count == 0) return PrivateUtils.EMPTY_STRING_ARRAY;
 
         String[] annotations = new String[count];
         for (int i = 0; i < count; i++)
@@ -383,7 +384,7 @@ public final class _Private_Utils
 
     public static int[] toSids(SymbolToken[] symbols, int count)
     {
-        if (count == 0) return _Private_Utils.EMPTY_INT_ARRAY;
+        if (count == 0) return PrivateUtils.EMPTY_INT_ARRAY;
 
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
@@ -611,7 +612,7 @@ public final class _Private_Utils
     public static String utf8FileToString(File file)
         throws IonException, IOException
     {
-        byte[] utf8Bytes = _Private_Utils.loadFileBytes(file);
+        byte[] utf8Bytes = PrivateUtils.loadFileBytes(file);
         String s = utf8(utf8Bytes);
         return s;
     }
@@ -638,10 +639,10 @@ public final class _Private_Utils
         throws IonException, IOException
     {
         boolean isBinary = false;
-        byte[] cookie = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
+        byte[] cookie = new byte[PrivateIonConstants.BINARY_VERSION_MARKER_SIZE];
 
         int len = readFully(pushback, cookie);
-        if (len == _Private_IonConstants.BINARY_VERSION_MARKER_SIZE) {
+        if (len == PrivateIonConstants.BINARY_VERSION_MARKER_SIZE) {
             isBinary = isIonBinary(cookie);
         }
         if (len > 0) {
@@ -1119,7 +1120,7 @@ public final class _Private_Utils
     {
         if (values == null || values.length == 0)
         {
-            return _Private_Utils.<String>emptyIterator();
+            return PrivateUtils.<String>emptyIterator();
         }
         return new StringIterator(values, values.length);
     }
@@ -1128,7 +1129,7 @@ public final class _Private_Utils
     {
         if (values == null || values.length == 0 || len == 0)
         {
-            return _Private_Utils.<String>emptyIterator();
+            return PrivateUtils.<String>emptyIterator();
         }
         return new StringIterator(values, len);
     }
@@ -1168,7 +1169,7 @@ public final class _Private_Utils
     {
         if (values == null || values.length == 0)
         {
-            return _Private_Utils.<Integer>emptyIterator();
+            return PrivateUtils.<Integer>emptyIterator();
         }
         return new IntIterator(values);
     }
@@ -1177,7 +1178,7 @@ public final class _Private_Utils
     {
         if (values == null || values.length == 0 || len == 0)
         {
-            return _Private_Utils.<Integer>emptyIterator();
+            return PrivateUtils.<Integer>emptyIterator();
         }
         return new IntIterator(values, 0, len);
     }

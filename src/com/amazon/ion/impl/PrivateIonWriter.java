@@ -7,9 +7,10 @@ import com.amazon.ion.IonWriter;
 import java.io.IOException;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_IonWriter
+@Deprecated
+public interface PrivateIonWriter
     extends IonWriter
 {
     /** Mostly for testing at this point, but could be useful public API. */

@@ -2,7 +2,7 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.initialSymtab;
+import static com.amazon.ion.impl.PrivateUtils.initialSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -11,13 +11,14 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.util._Private_FastAppendable;
+import com.amazon.ion.util.PrivateFastAppendable;
 import java.io.OutputStream;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public class _Private_IonTextWriterBuilder
+@Deprecated
+public class PrivateIonTextWriterBuilder
     extends IonTextWriterBuilder
 {
     private final static CharSequence SPACE_CHARACTER = " ";
@@ -26,12 +27,12 @@ public class _Private_IonTextWriterBuilder
         System.getProperty("line.separator");
 
 
-    public static _Private_IonTextWriterBuilder standard()
+    public static PrivateIonTextWriterBuilder standard()
     {
-        return new _Private_IonTextWriterBuilder.Mutable();
+        return new PrivateIonTextWriterBuilder.Mutable();
     }
 
-    public static _Private_IonTextWriterBuilder STANDARD =
+    public static PrivateIonTextWriterBuilder STANDARD =
         standard().immutable();
 
 
@@ -49,12 +50,12 @@ public class _Private_IonTextWriterBuilder
     public boolean _timestamp_as_string;
     public boolean _untyped_nulls;
 
-    private _Private_IonTextWriterBuilder()
+    private PrivateIonTextWriterBuilder()
     {
         super();
     }
 
-    private _Private_IonTextWriterBuilder(_Private_IonTextWriterBuilder that)
+    private PrivateIonTextWriterBuilder(PrivateIonTextWriterBuilder that)
     {
         super(that);
         this._pretty_print        = that._pretty_print       ;
@@ -72,19 +73,19 @@ public class _Private_IonTextWriterBuilder
 
 
     @Override
-    public final _Private_IonTextWriterBuilder copy()
+    public final PrivateIonTextWriterBuilder copy()
     {
         return new Mutable(this);
     }
 
     @Override
-    public _Private_IonTextWriterBuilder immutable()
+    public PrivateIonTextWriterBuilder immutable()
     {
         return this;
     }
 
     @Override
-    public _Private_IonTextWriterBuilder mutable()
+    public PrivateIonTextWriterBuilder mutable()
     {
         return copy();
     }
@@ -95,7 +96,7 @@ public class _Private_IonTextWriterBuilder
     @Override
     public final IonTextWriterBuilder withPrettyPrinting()
     {
-        _Private_IonTextWriterBuilder b = mutable();
+        PrivateIonTextWriterBuilder b = mutable();
         b._pretty_print = true;
         return b;
     }
@@ -103,7 +104,7 @@ public class _Private_IonTextWriterBuilder
     @Override
     public final IonTextWriterBuilder withJsonDowngrade()
     {
-        _Private_IonTextWriterBuilder b = mutable();
+        PrivateIonTextWriterBuilder b = mutable();
 
         b.withMinimalSystemData();
 
@@ -142,7 +143,7 @@ public class _Private_IonTextWriterBuilder
 
     //=========================================================================
 
-    private _Private_IonTextWriterBuilder fillDefaults()
+    private PrivateIonTextWriterBuilder fillDefaults()
     {
         // Ensure that we don't modify the user's builder.
         IonTextWriterBuilder b = copy();
@@ -157,12 +158,12 @@ public class _Private_IonTextWriterBuilder
             b.setCharset(UTF8);
         }
 
-        return (_Private_IonTextWriterBuilder) b.immutable();
+        return (PrivateIonTextWriterBuilder) b.immutable();
     }
 
 
     /** Assumes that {@link #fillDefaults()} has been called. */
-    private IonWriter build(_Private_FastAppendable appender)
+    private IonWriter build(PrivateFastAppendable appender)
     {
         IonCatalog catalog = getCatalog();
         SymbolTable[] imports = getImports();
@@ -187,9 +188,9 @@ public class _Private_IonTextWriterBuilder
     @Override
     public final IonWriter build(Appendable out)
     {
-        _Private_IonTextWriterBuilder b = fillDefaults();
+        PrivateIonTextWriterBuilder b = fillDefaults();
 
-        _Private_FastAppendable fast = new AppendableFastAppendable(out);
+        PrivateFastAppendable fast = new AppendableFastAppendable(out);
 
         return b.build(fast);
     }
@@ -198,9 +199,9 @@ public class _Private_IonTextWriterBuilder
     @Override
     public final IonWriter build(OutputStream out)
     {
-        _Private_IonTextWriterBuilder b = fillDefaults();
+        PrivateIonTextWriterBuilder b = fillDefaults();
 
-        _Private_FastAppendable fast = new OutputStreamFastAppendable(out);
+        PrivateFastAppendable fast = new OutputStreamFastAppendable(out);
 
         return b.build(fast);
     }
@@ -208,23 +209,23 @@ public class _Private_IonTextWriterBuilder
     //=========================================================================
 
     private static final class Mutable
-        extends _Private_IonTextWriterBuilder
+        extends PrivateIonTextWriterBuilder
     {
         private Mutable() { }
 
-        private Mutable(_Private_IonTextWriterBuilder that)
+        private Mutable(PrivateIonTextWriterBuilder that)
         {
             super(that);
         }
 
         @Override
-        public _Private_IonTextWriterBuilder immutable()
+        public PrivateIonTextWriterBuilder immutable()
         {
-            return new _Private_IonTextWriterBuilder(this);
+            return new PrivateIonTextWriterBuilder(this);
         }
 
         @Override
-        public _Private_IonTextWriterBuilder mutable()
+        public PrivateIonTextWriterBuilder mutable()
         {
             return this;
         }

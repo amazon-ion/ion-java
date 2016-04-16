@@ -6,10 +6,13 @@ import java.io.IOException;
 
 
 /**
- * A destination sink that can be fed bytes.  The typical usage is a {@link _Private_ByteTransferReader} that funnels data
+ * A destination sink that can be fed bytes.  The typical usage is a {@link PrivateByteTransferReader} that funnels data
  * to an binary Ion target.
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_ByteTransferSink
+@Deprecated
+public interface PrivateByteTransferSink
 {
     /**
      * Writes the given data to the sink.

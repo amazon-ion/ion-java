@@ -6,10 +6,11 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.SymbolTable;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_IonDatagram
-    extends _Private_IonValue, IonDatagram
+@Deprecated
+public interface PrivateIonDatagram
+    extends PrivateIonValue, IonDatagram
 {
     void appendTrailingSymbolTable(SymbolTable symtab);
 }

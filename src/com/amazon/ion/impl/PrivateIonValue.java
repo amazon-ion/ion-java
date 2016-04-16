@@ -9,9 +9,10 @@ import com.amazon.ion.SymbolToken;
 import java.io.PrintWriter;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_IonValue
+@Deprecated
+public interface PrivateIonValue
     extends IonValue
 {
 

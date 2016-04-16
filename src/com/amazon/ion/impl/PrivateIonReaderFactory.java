@@ -2,8 +2,8 @@
 
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.impl.PrivateIonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.impl.UnifiedInputStreamX.makeStream;
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
 import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
 import com.amazon.ion.IonCatalog;
@@ -19,9 +19,10 @@ import java.io.Reader;
 import java.util.zip.GZIPInputStream;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_IonReaderFactory
+@Deprecated
+public final class PrivateIonReaderFactory
 {
     public static final IonReader makeReader(IonSystem system,
                                              IonCatalog catalog,

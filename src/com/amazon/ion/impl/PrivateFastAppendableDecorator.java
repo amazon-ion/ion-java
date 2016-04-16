@@ -2,20 +2,21 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.util._Private_FastAppendable;
+import com.amazon.ion.util.PrivateFastAppendable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public abstract class _Private_FastAppendableDecorator
-    implements _Private_FastAppendable, Closeable, Flushable
+@Deprecated
+public abstract class PrivateFastAppendableDecorator
+    implements PrivateFastAppendable, Closeable, Flushable
 {
-    private final _Private_FastAppendable myOutput;
+    private final PrivateFastAppendable myOutput;
 
-    public _Private_FastAppendableDecorator(_Private_FastAppendable output) {
+    public PrivateFastAppendableDecorator(PrivateFastAppendable output) {
         myOutput = output;
     }
 

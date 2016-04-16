@@ -4,8 +4,11 @@ package com.amazon.ion.util;
 
 import java.io.IOException;
 
-
-public interface _Private_FastAppendable
+/**
+ * @deprecated This is an internal API that is subject to change without notice.
+ */
+@Deprecated
+public interface PrivateFastAppendable
     extends Appendable
 {
     /**

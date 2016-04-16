@@ -12,15 +12,16 @@ import java.io.IOException;
 import java.math.BigDecimal;
 
 /**
- * NOT FOR APPLICATION USE!
- * <p>
  * Base type for Ion writers.  This handles the writeIonEvents and provides default
  * handlers for the list forms of write.  This also resolves symbols if a symbol
  * table is available (which it will not be if the underlying writer is a system
  * writer).
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public abstract class _Private_IonWriterBase
-    implements IonWriter, _Private_ReaderWriter
+@Deprecated
+public abstract class PrivateIonWriterBase
+    implements IonWriter, PrivateReaderWriter
 {
     protected static final String ERROR_MISSING_FIELD_NAME =
         "IonWriter.setFieldName() must be called before writing a value into a struct.";
@@ -236,10 +237,10 @@ public abstract class _Private_IonWriterBase
 
         if (reader.getType() == null) reader.next();
 
-        if (getDepth() == 0 && reader instanceof _Private_ReaderWriter) {
+        if (getDepth() == 0 && reader instanceof PrivateReaderWriter) {
             // Optimize symbol table copying
-            _Private_ReaderWriter private_reader =
-                (_Private_ReaderWriter)reader;
+            PrivateReaderWriter private_reader =
+                (PrivateReaderWriter)reader;
             while (reader.getType() != null) {
                 transfer_symbol_tables(private_reader);
                 writeValue(reader);
@@ -254,7 +255,7 @@ public abstract class _Private_IonWriterBase
         }
     }
 
-    private final void transfer_symbol_tables(_Private_ReaderWriter reader)
+    private final void transfer_symbol_tables(PrivateReaderWriter reader)
         throws IOException
     {
         SymbolTable reader_symbols = reader.pop_passed_symbol_table();

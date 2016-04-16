@@ -6,12 +6,13 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonValue;
 
 /**
- * NOT FOR APPLICATION USE!
- * <p>
  * Internal, private, interfaces for manipulating
  * the base child collection of IonContainer
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_IonContainer
+@Deprecated
+public interface PrivateIonContainer
     extends IonContainer
 {
     public int      get_child_count();

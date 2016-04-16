@@ -15,9 +15,10 @@ import java.io.Reader;
 import java.util.Iterator;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_IonSystem
+@Deprecated
+public interface PrivateIonSystem
     extends IonSystem
 {
     public SymbolTable newSharedSymbolTable(IonStruct ionRep);

@@ -6,11 +6,12 @@ import com.amazon.ion.IonWriter;
 import java.io.IOException;
 
 /**
- * NOT FOR APPLICATION USE!
- * <p>
  * An IonWriter that has optimized list-writing.
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_ListWriter
+@Deprecated
+public interface PrivateListWriter
     extends IonWriter
 {
     public void writeBoolList(boolean[] values)throws IOException;

@@ -9,9 +9,10 @@ import com.amazon.ion.util.JarInfo;
 import java.io.IOException;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_CommandLine
+@Deprecated
+public final class PrivateCommandLine
 {
     static final int argid_VERSION = 2;
     static final int argid_HELP    = 3;

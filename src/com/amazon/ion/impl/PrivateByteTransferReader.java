@@ -8,9 +8,12 @@ import java.io.IOException;
 /**
  * An {@link IonReader} {@linkplain com.amazon.ion.facet facet} that can rapidly bulk-copy
  * Ion binary data under certain circumstances.
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public interface _Private_ByteTransferReader
+@Deprecated
+public interface PrivateByteTransferReader
 {
-    public void transferCurrentValue(_Private_ByteTransferSink writer)
+    public void transferCurrentValue(PrivateByteTransferSink writer)
         throws IOException;
 }

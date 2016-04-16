@@ -10,11 +10,12 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 
 /**
- * NOT FOR APPLICATION USE!
- * <p>
  * This is the factory class for constructing writers with various capabilities.
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_IonWriterFactory
+@Deprecated
+public final class PrivateIonWriterFactory
 {
     /**
      * @param container must not be null.

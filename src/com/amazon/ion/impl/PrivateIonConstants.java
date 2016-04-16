@@ -5,11 +5,12 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonException;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public final class _Private_IonConstants
+@Deprecated
+public final class PrivateIonConstants
 {
-    private _Private_IonConstants() { }
+    private PrivateIonConstants() { }
 
 
     public final static int BB_TOKEN_LEN           =    1;
@@ -254,12 +255,12 @@ public final class _Private_IonConstants
     }
 
     public static final int True =
-        makeTypeDescriptor(_Private_IonConstants.tidBoolean,
-                           _Private_IonConstants.lnBooleanTrue);
+        makeTypeDescriptor(PrivateIonConstants.tidBoolean,
+                           PrivateIonConstants.lnBooleanTrue);
 
     public static final int False =
-        makeTypeDescriptor(_Private_IonConstants.tidBoolean,
-                           _Private_IonConstants.lnBooleanFalse);
+        makeTypeDescriptor(PrivateIonConstants.tidBoolean,
+                           PrivateIonConstants.lnBooleanFalse);
 
     /**
      * Prefix string used in IonStructs' equality checks.

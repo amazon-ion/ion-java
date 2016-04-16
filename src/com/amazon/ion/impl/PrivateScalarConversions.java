@@ -11,9 +11,10 @@ import java.math.BigInteger;
 import java.util.Date;
 
 /**
- * NOT FOR APPLICATION USE!
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public class _Private_ScalarConversions
+@Deprecated
+public class PrivateScalarConversions
 {
     public static final class AS_TYPE {
 
@@ -576,7 +577,7 @@ public class _Private_ScalarConversions
         }
 
         public final int get_conversion_fnid(int new_type) {
-            return _Private_ScalarConversions.getConversionFnid(_authoritative_type_idx, new_type);
+            return PrivateScalarConversions.getConversionFnid(_authoritative_type_idx, new_type);
         }
 
         public final void cast(int castfnid) {

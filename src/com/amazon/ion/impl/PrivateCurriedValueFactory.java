@@ -27,12 +27,13 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
- * NOT FOR APPLICATION USE!
- * <p>
  * Helper for implementing curried container insertion methods such as
  * {@link IonStruct#put(String)}.
+ *
+ * @deprecated This is an internal API that is subject to change without notice.
  */
-public abstract class _Private_CurriedValueFactory
+@Deprecated
+public abstract class PrivateCurriedValueFactory
     implements ValueFactory
 {
     private final ValueFactory myFactory;
@@ -40,7 +41,7 @@ public abstract class _Private_CurriedValueFactory
     /**
      * @param factory must not be null.
      */
-    protected _Private_CurriedValueFactory(ValueFactory factory)
+    protected PrivateCurriedValueFactory(ValueFactory factory)
     {
         myFactory = factory;
     }
