@@ -938,7 +938,6 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // Trap for ION-71
     @Test
     public void testTimestampWithRolloverOffset()
         throws Exception
@@ -1031,7 +1030,6 @@ public abstract class SystemProcessingTestCase
 
     // TODO ION-305 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
 
-    // Trap for ION-69
     @Test
     public void testHighUnicodeDirectInBlob()
     {
@@ -1071,7 +1069,7 @@ public abstract class SystemProcessingTestCase
     }
 
 
-    @Test // Trap for ION-173
+    @Test
     public void testDuplicateAnnotations()
     throws Exception
     {

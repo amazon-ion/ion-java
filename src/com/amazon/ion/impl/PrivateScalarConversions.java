@@ -798,7 +798,7 @@ public class PrivateScalarConversions
         }
         private final void fn_from_double_to_biginteger() {
             // To avoid decapitating values that are > Long.MAX_VALUE, we must
-            // convert to BigDecimal first.  IONJAVA-114 ION-263
+            // convert to BigDecimal first.
             _bigInteger_value =
                 Decimal.valueOf(_double_value).toBigInteger();
             add_value_type(AS_TYPE.bigInteger_value);

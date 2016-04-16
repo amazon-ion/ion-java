@@ -152,12 +152,9 @@ to use documented equivalence APIs such as
 
 <h1>JSON Integration</h1>
 The Ion text format is a superset of JSON, so JSON data <em>is</em> Ion data.
-This means that you can read JSON data as-is using the Ion libraries, with two
-caveats:
+This means that you can read JSON data as-is using the Ion libraries, with a
+caveat:
 <ul>
-  <li>Empty field names (for example, <code>{ "": 12 }</code>) will cause an
-      error.
-      See issue <a href="https://issues.amazon.com/ION-268">ION-268</a>.
   <li>JSON numbers with exponents are decoded as Ion float, while those with
       fractions (but not exponents) are decoded as Ion decimal.
 </ul>

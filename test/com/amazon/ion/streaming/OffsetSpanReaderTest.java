@@ -52,12 +52,10 @@ public class OffsetSpanReaderTest
 
         checkCurrentSpan(28, 30, 30);
 
-        // Capture for ION-217
         assertSame(IonType.STRING, in.next());
         checkCurrentSpan(30, 86, 33);
     }
 
-    // Capture for ION-219
     @Test
     public void testCurrentSpanFromStreamMed() throws IOException {
         final ByteArrayOutputStream buf = new ByteArrayOutputStream();

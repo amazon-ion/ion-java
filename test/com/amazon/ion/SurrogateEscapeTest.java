@@ -60,7 +60,6 @@ public class SurrogateEscapeTest extends IonTestCase {
         assertSingletonCodePoint(0x000CDE56);
     }
 
-    // Trap for ION-63
     @Test
     public void testLoadEscapeNonBmp() {
         buf.append("'''")

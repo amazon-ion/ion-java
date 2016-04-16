@@ -310,7 +310,7 @@ class IonReaderTreeSystem
         }
         if (_curr instanceof IonFloat)  {
             // To avoid decapitating values that are > Long.MAX_VALUE, we must
-            // convert to BigDecimal first.  IONJAVA-114 ION-263
+            // convert to BigDecimal first.
             BigDecimal bd = ((IonFloat)_curr).bigDecimalValue();
             return (bd == null ? null : bd.toBigInteger());
         }

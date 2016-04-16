@@ -284,7 +284,6 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.INT, myReader.next());
     }
 
-    // Trap for ION-79 - reported by Scott Barber
     @Test
     public void testDeepNesting()
         throws Exception
@@ -349,7 +348,7 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Test
-    public void testStepOutInMiddle() // ION-133
+    public void testStepOutInMiddle()
     throws Exception
     {
         startIteration("{a:{b:1,c:2},d:false}");
@@ -366,7 +365,6 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsNoQuote()
     throws Exception
@@ -374,7 +372,6 @@ public abstract class ReaderSystemProcessingTestCase
         testSkippingFields("");
     }
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsSingleQuote()
     throws Exception
@@ -382,7 +379,6 @@ public abstract class ReaderSystemProcessingTestCase
         testSkippingFields("'");
     }
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsDoubleQuote()
     throws Exception
@@ -390,7 +386,6 @@ public abstract class ReaderSystemProcessingTestCase
         testSkippingFields("\"");
     }
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsTripleQuote()
     throws Exception

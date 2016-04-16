@@ -30,7 +30,6 @@ import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
 import com.amazon.ion.impl.PrivateIonSystem;
 import com.amazon.ion.impl.PrivateIonWriterFactory;
-import com.amazon.ion.impl.PrivateScalarConversions.CantConvertException;
 import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
@@ -300,18 +299,7 @@ final class IonSystemLite
             case INT:
                 // TODO ION-176  Inefficient since we can't determine the size
                 // of the integer in order to avoid making BigIntegers.
-                if (true) {
-                    v = newInt(reader.bigIntegerValue());
-                    break;
-                }
-                try {
-                    v = newInt(reader.longValue());
-                    // FIXME ION-297 this is wrong!
-                    // This exception is not specified or tested and is not
-                    // thrown by all reader implementations.  ION-176
-                } catch (CantConvertException e) {
-                    v = newInt(reader.bigIntegerValue());
-                }
+                v = newInt(reader.bigIntegerValue());
                 break;
             case FLOAT:
                 v = newFloat(reader.doubleValue());

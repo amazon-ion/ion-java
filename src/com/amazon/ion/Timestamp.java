@@ -2113,7 +2113,6 @@ public final class Timestamp
         // Performs a Shift-Add-XOR-Rotate hash. Rotating at each step to
         // produce an "Avalanche" effect for timestamps with small deltas, which
         // is found to be a common input data set.
-        // Fixes ION-310.
 
         final int prime = 8191;
         int result = HASH_SIGNATURE;

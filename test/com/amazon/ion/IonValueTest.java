@@ -241,7 +241,6 @@ public class IonValueTest
         assertTrue(v.hasTypeAnnotation(ann));
     }
 
-    /** Trap for ION-144 */
     @Test
     public void testRemoveDuplicateAnnotation()
     {

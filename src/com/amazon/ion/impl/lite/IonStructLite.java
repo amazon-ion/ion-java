@@ -312,7 +312,6 @@ final class IonStructLite
 
                 // Additive hash is used to ensure insensitivity to order of
                 // fields, and will not lose data on value hash codes
-                // Fixes ION-309
                 result += fieldHashCode;
             }
         }

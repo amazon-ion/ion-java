@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import org.junit.Test;
 
-/** Based on ION-297 */
 public class ReaderDomCopyTest
 extends IonTestCase
 {

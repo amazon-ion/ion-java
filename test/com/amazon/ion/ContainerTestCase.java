@@ -288,9 +288,6 @@ it.next();
     }
 
 
-    /**
-     * Isolates issue ION-25.
-     */
     @Test
     public void testUnmaterializedInsert()
     {

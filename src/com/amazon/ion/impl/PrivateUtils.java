@@ -839,7 +839,7 @@ public final class PrivateUtils
      *          substituted table (whereby no exact match was found in its
      *          catalog)
      */
-    // TODO ION-395 We need to think about providing a suitable recovery process
+    // TODO We need to think about providing a suitable recovery process
     //      or configuration for users to properly handle the case when the
     //      local symtab has substituted symtabs for imports.
     public static SymbolTable copyLocalSymbolTable(SymbolTable symtab)
@@ -937,7 +937,7 @@ public final class PrivateUtils
         final SymbolTable[] supersetImports     = superset.getImportedTables();
         final SymbolTable[] subsetImports       = subset.getImportedTables();
 
-        // TODO ION-256 this is over-strict, but not as strict as LocalSymbolTable.symtabExtends()
+        // TODO this is over-strict, but not as strict as LocalSymbolTable.symtabExtends()
         if (supersetImports.length != subsetImports.length)
         {
             return false;

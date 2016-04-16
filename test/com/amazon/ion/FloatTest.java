@@ -192,9 +192,10 @@ public class FloatTest
     }
 
     /**
-     * Trap for the JDK defect parsing doubles.  ION-162
+     * TODO amznlabs/ion-java#64 Un-ignore this when all dependent build pipelines
+     * use a version of the JVM that doesn't have this defect.
      *
-     * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4421494
+     * https://blogs.oracle.com/security/entry/security_alert_for_cve-2010-44
      * http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/
      */
     @Test @Ignore

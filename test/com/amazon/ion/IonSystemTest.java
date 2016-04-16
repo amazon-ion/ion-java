@@ -233,7 +233,7 @@ public class IonSystemTest
         system().newValue(r);
     }
 
-    @Test // ION-297
+    @Test
     public void testNewValueWithHugeInt()
     {
         String huge = Long.MAX_VALUE + "0";

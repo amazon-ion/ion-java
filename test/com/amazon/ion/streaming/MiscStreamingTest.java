@@ -38,7 +38,6 @@ public class MiscStreamingTest
     static final String _QuotingString2_java = "s\'t2";
 
     @Test
-    @SuppressWarnings("deprecation")
     public void testQuoting()
     throws Exception
     {
@@ -234,7 +233,6 @@ public class MiscStreamingTest
         testNullTextValue(reader, IonType.SYMBOL);
     }
 
-    @SuppressWarnings("deprecation")
     private void testNullTextValue(IonReader reader, IonType textType)
     {
         assertEquals(textType, reader.next());
@@ -267,7 +265,6 @@ public class MiscStreamingTest
     }
 
 
-    /** ION-184 */
     @Test
     public void testReaderDataMangling()
     throws Exception
@@ -283,7 +280,6 @@ public class MiscStreamingTest
     }
 
 
-    /** ION-184 */
     @Test
     public void testIteratorDataMangling()
     throws Exception
@@ -299,7 +295,6 @@ public class MiscStreamingTest
     }
 
 
-    /** ION-140 IMSVT-2863 IMSVT-2573 */
     @Test
     public void testTextWriterSymtabs()
     throws IOException

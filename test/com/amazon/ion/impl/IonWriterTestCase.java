@@ -259,9 +259,6 @@ public abstract class IonWriterTestCase
     }
 
 
-    /**
-     * Trap for ION-52
-     */
     @Test
     public void testWritingNonAscii()
         throws Exception
@@ -361,9 +358,6 @@ public abstract class IonWriterTestCase
         catch (IllegalArgumentException e) { }
     }
 
-    /**
-     * Trap for ION-53
-     */
     @Test
     public void testWritingClob()
         throws Exception
@@ -419,7 +413,6 @@ public abstract class IonWriterTestCase
 
     @Test
     public void testWritingDeepNestedList() throws Exception {
-        // ION-60
         IonDatagram dg = loader().load("[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]");
         iw = makeWriter();
         dg.writeTo(iw);
@@ -853,8 +846,6 @@ public abstract class IonWriterTestCase
         iw.addTypeAnnotation("ann");
         iw.close();
         checkClosed();
-
-        // Per ION-181, close() doesn't stepOut()
     }
 
     @Test
@@ -1079,7 +1070,6 @@ public abstract class IonWriterTestCase
         assertArrayEquals(lobData, d);
     }
 
-    // Trap for ION-334
     @Test
     public void testAnnotationNotSetToIvmAfterFinish()
         throws Exception
@@ -1104,7 +1094,6 @@ public abstract class IonWriterTestCase
         IonAssert.assertIonEquals(expected, reload());
     }
 
-    // Trap for ION-334
     @Test
     public void testAnnotationNotSetToIvmOnStartOfStream()
         throws Exception

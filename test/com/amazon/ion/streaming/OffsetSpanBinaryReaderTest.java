@@ -48,7 +48,7 @@ public class OffsetSpanBinaryReaderTest
     }
 
 
-    @Test // Traps ION-216
+    @Test
     public void testCurrentSpanBeyondMaxInt()
     {
         IonDatagram dg = system().newDatagram();
@@ -63,7 +63,7 @@ public class OffsetSpanBinaryReaderTest
      * bug at time of writing).  This data is hand-coded since we don't have
      * an API to generate ordered structs.
      */
-    @Test // Traps ION-216
+    @Test
     public void testCurrentSpanBeyondMaxIntForOrderedStruct()
     {
         // Value is ordered-struct { name:{{ /* 1024 bytes */}} }

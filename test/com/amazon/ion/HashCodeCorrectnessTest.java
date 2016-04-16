@@ -511,7 +511,6 @@ public class HashCodeCorrectnessTest
         }
     }
 
-    // Trap for ION-309
     @Test
     public void testIonStructEvenEquivChildValueHashCode()
     {
@@ -527,7 +526,6 @@ public class HashCodeCorrectnessTest
                                        "{$99:456, $98:annot::456}");
     }
 
-    // Trap for ION-309
     @Test
     public void testIonStructSwappedFieldNameAndValueHashCode()
     {

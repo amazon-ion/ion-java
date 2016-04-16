@@ -691,7 +691,7 @@ public class TimestampTest
         badValue("2009-08-32T00:00Z");
         parse(   "2009-09-30T00:00Z");
         badValue("2009-09-31T00:00Z");
-        parse(   "2009-10-01T00:00+01:00"); // Trap for ION-71
+        parse(   "2009-10-01T00:00+01:00");
         parse(   "2009-10-31T00:00Z");
         badValue("2009-10-32T00:00Z");
         parse(   "2009-11-30T00:00Z");
@@ -1047,7 +1047,6 @@ public class TimestampTest
     }
 
 
-    /** Trap for ION-280 */
     @Test
     public void testFromCalendarWithDaylightSavingsTime()
     {
@@ -1182,9 +1181,6 @@ public class TimestampTest
         catch (IllegalArgumentException e) { }
     }
 
-    /**
-     * Trap for ION-124
-     */
     @Test
     public void testValueOfWithNonsenseText()
     {
@@ -1211,7 +1207,6 @@ public class TimestampTest
         Timestamp.valueOf("2010-11-17T12:34:56.Z");
     }
 
-    /** Trap for ION-193 */
     @Test
     public void testLocalBoundaryPositive() {
         // UTC is last month
@@ -1226,7 +1221,6 @@ public class TimestampTest
         assertEquals(45, ts.getZMinute());
     }
 
-    /** Trap for ION-193 */
     @Test
     public void testLocalBoundaryNegative() {
         // UTC is next month
@@ -1359,7 +1353,7 @@ public class TimestampTest
     }
 
     /**
-     * Trap for ION-324 - Ensures that a point in time represented by a
+     * Ensures that a point in time represented by a
      * millisecond value that is an offset from the Epoch with
      * fractional precision has its fractional seconds computed correctly during
      * construction of the Timestamp.

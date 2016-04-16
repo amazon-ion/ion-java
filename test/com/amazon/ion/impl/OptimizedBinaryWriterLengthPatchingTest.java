@@ -206,8 +206,6 @@ public class OptimizedBinaryWriterLengthPatchingTest
     /**
      * Tests that the internal implementation of binary {@link IonWriter}'s
      * patching mechanism is correct.
-     * <p>
-     * Fixes ION-373.
      *
      * @see IonWriterSystemBinary
      */

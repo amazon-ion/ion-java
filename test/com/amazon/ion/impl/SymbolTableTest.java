@@ -49,7 +49,6 @@ import org.junit.Test;
 /**
  * @see SharedSymbolTableTest
  */
-@SuppressWarnings("deprecation")
 public class SymbolTableTest
     extends IonTestCase
 {
@@ -246,7 +245,6 @@ public class SymbolTableTest
 
         final int import1id = systemMaxId() + 1;
         final int local1id = systemMaxId() + IMPORTED_1_MAX_ID + 1;
-        final int local2id = local1id + 1;
 
         String importingText =
             "$ion_1_0 "+
@@ -547,7 +545,6 @@ public class SymbolTableTest
         checkSymbol("fred3", 14, symbolTable);
         checkSymbol("fred4", 15, symbolTable);
 
-        // ION-76, redundant symbols should retain identity
         checkSymbol("imported 1", 12, /* dupe */ true, symbolTable);
         checkSymbol("imported 2", 13, /* dupe */ true, symbolTable);
     }
@@ -1095,7 +1092,6 @@ public class SymbolTableTest
 
     @Test
     public void testDoubleWrite() throws IOException {
-        // ION-73
         final SymbolTable table =
             system().newSharedSymbolTable("foobar", 1, Arrays.asList("moo").iterator());
         assertEquals(serialize(table), serialize(table));
@@ -1114,8 +1110,8 @@ public class SymbolTableTest
     @Test
     public void testWriteWithSymbolTable() throws IOException
     {
-        // this example code is the fix for IMSVT-2573
-        // which resulted in an assertion due to a but in
+        // this example code is the fix for a previous defect
+        // which resulted in a bad assertion in
         // IonWriterUser.close_local_symbol_table_copy
 
         IonDatagram data;
@@ -1176,8 +1172,6 @@ public class SymbolTableTest
         assertEquals("last sid", fred3.getMaxId(), sid);
     }
 
-
-    /** For ION-188 */
     @Test
     public void testExtendingSharedSymbolTableWithHoles()
     {
@@ -1199,7 +1193,6 @@ public class SymbolTableTest
                          v4);
     }
 
-    /** For ION-333 */
     @Test
     public void testSymtabBinaryInjection() throws Exception
     {

@@ -233,8 +233,8 @@ public class HashCodeDeltaCollisionTest
 
 
     /**
-     * Trap for ION-310 / IONJAVA-194.  Sometimes there are sets of
-     * timestamps within a brief period, and they shouldn't collide.
+     * Sometimes there are sets of timestamps within a brief period,
+     * and they shouldn't collide.
      */
     @Test
     public void testTimestampDeltaCollisions()

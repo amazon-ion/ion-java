@@ -66,7 +66,6 @@ public class SharedSymbolTableTest
     @Test
     public void testDomSharedSymbolTable()
     {
-        // ION-72
         String[] symbols = { "hello" };
         IonStruct struct = sharedSymtabStruct(system(), "foobar", 1, symbols);
         final SymbolTable table =  myMaker.newSharedSymtab(system(), struct);

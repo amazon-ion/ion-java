@@ -70,7 +70,7 @@ public class ReaderTest
         expectEof();
     }
 
-    @Test // Traps ION-133
+    @Test
     public void testStepOut() throws IOException
     {
         read("{a:{b:1,c:2},d:false}");
@@ -165,7 +165,7 @@ public class ReaderTest
 
 
     @Test
-    public void testReadingDecimalAsBigInteger() // IONJAVA-114
+    public void testReadingDecimalAsBigInteger()
     {
         //    decimal value         int conversion
         read("null.decimal          null.int                  " +
@@ -188,7 +188,7 @@ public class ReaderTest
 
 
     @Test
-    public void testReadingFloatAsBigInteger() // IONJAVA-114
+    public void testReadingFloatAsBigInteger()
     {
         // Note that one can't represent Long.MAX_VALUE as a double, there's
         // not enough bits in the mantissa!

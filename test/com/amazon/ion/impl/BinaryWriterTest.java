@@ -238,7 +238,6 @@ public class BinaryWriterTest
 
     /*
      * Tests write of a stream larger than 2GB.
-     * See IONJAVA-451. When the size restriction is relaxed, this should pass.
      */
     @Test
     public void testHugeWrite() throws IOException

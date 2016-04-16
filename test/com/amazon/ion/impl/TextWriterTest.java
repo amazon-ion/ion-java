@@ -176,7 +176,7 @@ public class TextWriterTest
 
 
     @Test
-    public void testC1ControlCodes()  // Tests IONJAVA-393
+    public void testC1ControlCodes()
         throws Exception
     {
         options = IonTextWriterBuilder.standard();
@@ -450,7 +450,6 @@ public class TextWriterTest
         super.testFinishDoesReset();
     }
 
-    // Trap for ION-334
     @Test @Override
     public void testAnnotationNotSetToIvmOnStartOfStream()
         throws Exception
