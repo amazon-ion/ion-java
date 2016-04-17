@@ -36,8 +36,6 @@ public class TimestampTest
 {
     /**
      * Earliest Ion timestamp possible, that is, "0001-01-01".
-     *
-     * @see <a href="https://w.amazon.com/index.php/Ion#Timestamps">Ion wiki page</a>
      */
     private static final Timestamp EARLIEST_ION_TIMESTAMP =
         Timestamp.valueOf("0001-01-01");
