@@ -75,7 +75,7 @@ import java.math.BigInteger;
     {
         final IonType type = reader.getType();
 
-        // TODO ION-607 make sure the plumbing symbol tokens do the right thing for
+        // TODO amznlabs/ion-java#45 make sure the plumbing symbol tokens do the right thing for
         //      different symbol contexts in the reader and this writer
 
         final SymbolToken fieldName = reader.getFieldNameSymbol();

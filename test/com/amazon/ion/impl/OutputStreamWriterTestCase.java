@@ -126,12 +126,12 @@ public abstract class OutputStreamWriterTestCase
     {
         iw = makeWriter();
 
-        // Force a local symtab.  TODO ION-165 Should have an API for this
+        // Force a local symtab.  TODO amznlabs/ion-java#8 Should have an API for this
         iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
         iw.stepIn(IonType.STRUCT);
         iw.stepOut();
 
-        SymbolTable symtab = iw.getSymbolTable();  // TODO ION-269
+        SymbolTable symtab = iw.getSymbolTable();  // TODO amznlabs/ion-java#22
         symtab.intern("fred_1");
         symtab.intern("fred_2");
         testFlushing();

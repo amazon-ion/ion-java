@@ -29,11 +29,11 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-84 if you need this.
+     * Vote for issue amznlabs/ion-java#48 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-84">ION-84</a>
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/48">amznlabs/ion-java#48</a>
      */
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException;
@@ -41,11 +41,11 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-84 if you need this.
+     * Vote for issue amznlabs/ion-java#48 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-84">ION-84</a>
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/48">amznlabs/ion-java#48</a>
      */
     public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException;
@@ -53,22 +53,22 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-83 if you need this.
+     * Vote for issue amznlabs/ion-java#47 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-83">ION-83</a>
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/47">amznlabs/ion-java#47</a>
      */
     public boolean addAll(int index, Collection<? extends IonValue> c);
 
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for issue ION-90 if you need this.
+     * Vote for issue amznlabs/ion-java#50 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-90">ION-90</a>
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/50">amznlabs/ion-java#50</a>
      */
     public IonValue set(int index, IonValue element);
 
@@ -228,11 +228,11 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * Vote for SIM issue ION-85 if you need this.
+     * Vote for SIM issue amznlabs/ion-java#49 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-85">ION-85</a>
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/49">amznlabs/ion-java#49</a>
      */
     public boolean retainAll(Collection<?> c);
 

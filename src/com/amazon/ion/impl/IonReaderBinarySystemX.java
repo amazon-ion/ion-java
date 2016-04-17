@@ -340,7 +340,7 @@ class IonReaderBinarySystemX
         return _v.getTimestamp();
     }
 
-    // TODO IONJAVA-97 this needs to use the appropriate symbol table for user values
+    // TODO amznlabs/ion-java#63 this needs to use the appropriate symbol table for user values
 
     public final String stringValue()
     {

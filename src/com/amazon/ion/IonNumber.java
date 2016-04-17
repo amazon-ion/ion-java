@@ -11,7 +11,7 @@ package com.amazon.ion;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  */
-public interface IonNumber // TODO ION-95 Complete this interface
+public interface IonNumber // TODO amznlabs/ion-java#53 Complete this interface
     extends IonValue
 {
 }

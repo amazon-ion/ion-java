@@ -215,7 +215,7 @@ public final class PrivateUtils
     public static SymbolToken newSymbolToken(SymbolTable symtab,
                                              String text)
     {
-        // TODO ION-267 symtab should not be null
+        // TODO amznlabs/ion-java#21 symtab should not be null
         if (text == null || text.length() == 0)
         {
             throw new EmptySymbolException();
@@ -236,7 +236,7 @@ public final class PrivateUtils
     {
         if (sid < 1) throw new IllegalArgumentException();
 
-        // TODO ION-267 symtab should not be null
+        // TODO amznlabs/ion-java#21 symtab should not be null
         String text = (symtab == null ? null : symtab.findKnownSymbol(sid));
         return new SymbolTokenImpl(text, sid);
     }
@@ -297,7 +297,7 @@ public final class PrivateUtils
         String text = sym.getText();
         int sid = sym.getSid();
 
-        if (symtab != null)  // TODO ION-267 require symtab
+        if (symtab != null)  // TODO amznlabs/ion-java#21 require symtab
         {
             if (text == null)
             {
@@ -1000,7 +1000,7 @@ public final class PrivateUtils
         // If the subset's symtab is a system symtab, the superset's is always
         // an extension of the subset's as system symtab-ness is irrelevant to
         // the conditions for copy opt. to be safe.
-        // TODO ION-285 System symtab-ness ARE relevant if there's multiple
+        // TODO amznlabs/ion-java#24 System symtab-ness ARE relevant if there's multiple
         //      versions.
         if (subset.isSystemTable()) return true;
 

@@ -43,7 +43,7 @@ public abstract class ReaderFacetTestCase
      *
      * @see NonSeekableReaderTest
      */
-    public static final ReaderMaker[] NON_SEEKABLE_READERS =  // TODO ION-243
+    public static final ReaderMaker[] NON_SEEKABLE_READERS =  // TODO amznlabs/ion-java#17
     {
         ReaderMaker.FROM_INPUT_STREAM_BINARY,
         ReaderMaker.FROM_INPUT_STREAM_TEXT,

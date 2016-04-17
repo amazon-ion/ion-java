@@ -28,13 +28,13 @@ import org.junit.Test;
  * Processes all text files in the "good" suite, transforming between text and
  * binary twice to ensure that the process is equivalent.
  *
- * TODO ION-332 Refactor this test class, possible duplicate test coverage in
+ * TODO amznlabs/ion-java#29 Refactor this test class, possible duplicate test coverage in
  * {@link RoundTripStreamingTest}.
  */
 public class RoundTripTest
     extends IonTestCase
 {
-    // TODO ION-320 Writing IonSymbol to bytes using IonSymbol.writeTo(IonWriter)
+    // TODO amznlabs/ion-java#27 Writing IonSymbol to bytes using IonSymbol.writeTo(IonWriter)
     // will throw UnknownSymbolException if symbol text is unknown
     public static final FilenameFilter ROUND_TRIP_TEST_SKIP_LIST =
         new FileIsNot("good/symbols.ion");

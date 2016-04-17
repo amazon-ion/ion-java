@@ -23,7 +23,7 @@ import java.io.OutputStream;
 public class PrivateIonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
-    // IONJAVA-467 expose configuration points properly and figure out deprecation path for the old writer.
+    // amznlabs/ion-java#59 expose configuration points properly and figure out deprecation path for the old writer.
     private final PrivateIonManagedBinaryWriterBuilder myBinaryWriterBuilder;
     private ValueFactory mySymtabValueFactory;
 

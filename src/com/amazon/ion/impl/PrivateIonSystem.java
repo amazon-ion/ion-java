@@ -24,19 +24,19 @@ public interface PrivateIonSystem
     public SymbolTable newSharedSymbolTable(IonStruct ionRep);
 
     /**
-     * TODO Must correct ION-233 before exposing this or using from public API.
+     * TODO Must correct amznlabs/ion-java#63 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(String ionText);
 
     /**
-     * TODO Must correct ION-233 before exposing this or using from public API.
+     * TODO Must correct amznlabs/ion-java#63 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(Reader ionText);
 
     public Iterator<IonValue> systemIterate(byte[] ionData);
 
     /**
-     * TODO Must correct ION-233 before exposing this or using from public API.
+     * TODO Must correct amznlabs/ion-java#63 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(InputStream ionData);
 

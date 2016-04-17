@@ -778,11 +778,11 @@ public abstract class IonWriterTestCase
 
         Iterator<IonValue> it = systemIterateOutput();
 
-        if (myOutputForm != OutputForm.TEXT) { // TODO ION-165
+        if (myOutputForm != OutputForm.TEXT) { // TODO amznlabs/ion-java#8
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
         checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
-        // TODO IONJAVA-97
+        // TODO amznlabs/ion-java#63
         if (myOutputForm != OutputForm.TEXT)
         {
             checkSymbol(null, 12, it.next());
@@ -865,7 +865,7 @@ public abstract class IonWriterTestCase
     }
 
 
-    @Test @Ignore // TODO ION-236
+    @Test @Ignore // TODO amznlabs/ion-java#15
     public void testWritingSymtabWithExtraAnnotations()
     throws Exception
     {
@@ -939,7 +939,7 @@ public abstract class IonWriterTestCase
     }
 
     /**
-     * TODO ION-165 datagram is lazy creating local symtabs.
+     * TODO amznlabs/ion-java#8 datagram is lazy creating local symtabs.
      * Should use a reader to check the results.
      */
     @Test
@@ -960,7 +960,7 @@ public abstract class IonWriterTestCase
         if (myOutputForm == OutputForm.BINARY) {
             checkAnnotation(ION_SYMBOL_TABLE, it.next());
         }
-        // TODO IONJAVA-97
+        // TODO amznlabs/ion-java#63
         if (myOutputForm == OutputForm.BINARY)
         {
             checkSymbol(null, 10, it.next());
@@ -988,7 +988,7 @@ public abstract class IonWriterTestCase
         assertEquals(2, dg.size());
     }
 
-    @Test // TODO ION-165 Inconsistencies between writers
+    @Test // TODO amznlabs/ion-java#8 Inconsistencies between writers
     public void testWritingDatagram()
         throws Exception
     {
@@ -1004,7 +1004,7 @@ public abstract class IonWriterTestCase
         if (myOutputForm != OutputForm.TEXT) {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
-        // TODO IONJAVA-97
+        // TODO amznlabs/ion-java#63
         if (myOutputForm != OutputForm.TEXT)
         {
             checkSymbol(null, 10, it.next());

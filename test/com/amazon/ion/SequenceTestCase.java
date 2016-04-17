@@ -557,7 +557,7 @@ public abstract class SequenceTestCase
                                                     (Object)nullValue2);
 
         IonSequence seq = makeEmpty();
-        // TODO ION-85 implement IonDatagram.retainAll
+        // TODO amznlabs/ion-java#49 implement IonDatagram.retainAll
         if (seq.getType() == IonType.DATAGRAM) return;
 
         assertFalse(seq.retainAll(empty));

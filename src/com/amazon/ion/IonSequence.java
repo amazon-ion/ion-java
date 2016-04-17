@@ -383,11 +383,11 @@ public interface IonSequence
     /**
      * This inherited method is not yet supported.
      * <p>
-     * Vote for issue ION-92 if you need this.
+     * Vote for issue amznlabs/ion-java#52 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
-     * @see <a href="https://issues.amazon.com/ION-92">ION-92</a>
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/52">amznlabs/ion-java#52</a>
      */
     public List<IonValue> subList(int fromIndex, int toIndex);
 

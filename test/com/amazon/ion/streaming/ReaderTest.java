@@ -224,7 +224,7 @@ public class ReaderTest
      * it's not what one would expect.
      */
     @Test @Ignore
-    public void testReadingFloatAsBigDecimal() // TODO IONJAVA-403
+    public void testReadingFloatAsBigDecimal() // TODO amznlabs/ion-java#56
     {
         // Note that one can't represent Long.MAX_VALUE as a double, there's
         // not enough bits in the mantissa!

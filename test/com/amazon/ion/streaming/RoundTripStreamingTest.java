@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * TODO ION-332 Refactor this test class, possible duplicate test coverage in
+ * TODO amznlabs/ion-java#29 Refactor this test class, possible duplicate test coverage in
  * {@link RoundTripTest}.
  */
 public class RoundTripStreamingTest

@@ -47,7 +47,7 @@ public class CloneTest
         SymbolToken tok = newSymbolToken(99);
         IonSymbol original = system().newSymbol(tok);
 
-        // TODO ION-339 An UnknownSymbolException is expected here, but
+        // TODO amznlabs/ion-java#30 An UnknownSymbolException is expected here, but
         // it isn't thrown.
         IonSymbol copy = otherSystem.clone(original);
 
@@ -102,7 +102,7 @@ public class CloneTest
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
 
-        // TODO ION-339 An UnknownSymbolException is expected here, but
+        // TODO amznlabs/ion-java#30 An UnknownSymbolException is expected here, but
         // it isn't thrown.
         IonInt copy = otherSystem.clone(original);
 
@@ -156,7 +156,7 @@ public class CloneTest
         // This works since the cloned child doesn't retain its field name.
         otherSystem.clone(child);
 
-        // TODO ION-339 An UnknownSymbolException is expected here, but
+        // TODO amznlabs/ion-java#30 An UnknownSymbolException is expected here, but
         // it isn't thrown.
         IonStruct copy = otherSystem.clone(original);
 

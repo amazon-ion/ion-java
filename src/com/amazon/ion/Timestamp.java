@@ -143,7 +143,7 @@ public final class Timestamp
     // These are the time field values for the Timestamp.
     // _month and _day are 1-based (0 is an invalid value for
     // these in a non-null Timestamp).
-    // TODO ION-328 - Represent internal time field values in its local time,
+    // TODO amznlabs/ion-java#28 - Represent internal time field values in its local time,
     // instead of UTC. This makes it much less confusing.
     private short       _year;
     private byte        _month = 1; // Initialized to valid default

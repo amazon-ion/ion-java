@@ -16,7 +16,7 @@ import java.util.List;
  * <p>
  * This class is <b>immutable</b>, and hence safe for use by multiple threads.
  */
-// TODO ION-389 Create specialized class to handle the common case where
+// TODO amznlabs/ion-java#37 Create specialized class to handle the common case where
 //      there are zero or one imported non-system shared symtab(s).
 final class LocalSymbolTableImports
 {

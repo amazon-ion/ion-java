@@ -46,7 +46,7 @@ public class BinaryStreamingTest
             value = tv_value;
         }
 
-        /** TODO ION-106 why this context? I think it will round-off values */
+        /** TODO amznlabs/ion-java#5 why this context? I think it will round-off values */
         static MathContext context = MathContext.DECIMAL128;
         static Decimal makeBigDecimal(double d) {
             Decimal bd = Decimal.valueOf(d, context);

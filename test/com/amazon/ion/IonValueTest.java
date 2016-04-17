@@ -130,7 +130,7 @@ public class IonValueTest
         IonValue v = system().newNull();
         v.setTypeAnnotations(nameCopy);
 
-        // TODO ION-267 fails because v doesn't have any symbol table at all
+        // TODO amznlabs/ion-java#21 fails because v doesn't have any symbol table at all
 //        assertSame(nameOrig, v.getTypeAnnotations()[0]);
 //        assertSame(nameOrig, v.getTypeAnnotationSymbols()[0].getText());
     }
@@ -275,7 +275,7 @@ public class IonValueTest
                      v.toString(IonTextWriterBuilder.standard()
                                     .withInitialIvmHandling(InitialIvmHandling.ENSURE)));
 
-        // TODO IONJAVA-460 determine if these really should be platform independent newlines
+        // TODO amznlabs/ion-java#57 determine if these really should be platform independent newlines
         final String pretty = format("%n[%n  hello,%n  a::12%n]");
         assertEquals(pretty,
                      v.toString(IonTextWriterBuilder.pretty()));

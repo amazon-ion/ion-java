@@ -22,7 +22,7 @@ public class PrivateIonTextWriterBuilder
     extends IonTextWriterBuilder
 {
     private final static CharSequence SPACE_CHARACTER = " ";
-    // TODO IONJAVA-460 decide if this should be platform-specific
+    // TODO amznlabs/ion-java#57 decide if this should be platform-specific
     private final static CharSequence LINE_SEPARATOR =
         System.getProperty("line.separator");
 

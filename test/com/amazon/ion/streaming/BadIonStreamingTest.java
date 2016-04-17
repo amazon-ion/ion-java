@@ -43,7 +43,7 @@ extends IonTestCase
     }
 
 
-    @Ignore // TODO ION-161
+    @Ignore // TODO amznlabs/ion-java#7
     @Test(expected = IonException.class)
     public void testSkippingScalars()
     throws Exception

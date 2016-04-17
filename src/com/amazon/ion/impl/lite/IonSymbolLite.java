@@ -243,7 +243,7 @@ final class IonSymbolLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        // TODO ION-320 Fix symbol handling
+        // TODO amznlabs/ion-java#27 Fix symbol handling
         // A million-dollar question is - if text is missing, do
         // we throw (cannot serialize) or do we pass the sid thru???
 

@@ -8,7 +8,7 @@ package com.amazon.ion;
  *
  * @see SymbolTable#isSubstitute()
  */
-// TODO ION-397 Provide some useful info to assist callers with handling this
+// TODO amznlabs/ion-java#40 Provide some useful info to assist callers with handling this
 //      exception. E.g. reference to the substitute import in violation.
 public class SubstituteSymbolTableException
     extends IonException
