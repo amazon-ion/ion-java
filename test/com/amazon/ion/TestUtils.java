@@ -121,8 +121,6 @@ public class TestUtils
                       ,"bad/emptyAnnotatedInt.10n"         // TODO IONJAVA-154
                       ,"bad/utf8/surrogate_5.ion"          // TODO IONJAVA-487
                       ,"equivs/paddedInts.10n"             // TODO IONJAVA-153
-                      ,"good/equivs/binaryInts.ion"        // TODO IONJAVA-598
-                      ,"good/intBinary.ion"                // TODO ION-592
                       ,"good/subfieldVarUInt32bit.ion"     // TODO IONJAVA-78
                       ,"good/symbolEmpty.ion"              // TODO ION-480
                       ,"good/symbolEmptyWithCR.ion"        // TODO ION-480

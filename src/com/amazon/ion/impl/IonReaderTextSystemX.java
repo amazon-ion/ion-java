@@ -90,6 +90,8 @@ class IonReaderTextSystemX
     static final int MAX_IMAGE_LENGTH_LONG = Long.toString(Long.MAX_VALUE).length()-1;
     static final int MAX_IMAGE_LENGTH_HEX_INT = Integer.toHexString(Integer.MAX_VALUE).length()-1;
     static final int MAX_IMAGE_LENGTH_HEX_LONG = Long.toHexString(Long.MAX_VALUE).length()-1;
+    static final int MAX_IMAGE_LENGTH_BINARY_INT = Integer.toBinaryString(Integer.MAX_VALUE).length();
+    static final int MAX_IMAGE_LENGTH_BINARY_LONG = Long.toBinaryString(Long.MAX_VALUE).length();
 
     private final void load_scalar_value() throws IOException {
         // make sure we're trying to load a scalar value here
@@ -139,6 +141,12 @@ class IonReaderTextSystemX
             assert((cs.length() > 2) && (cs.charAt(pos) == '0') && (cs.charAt(pos+1) == 'x' || cs.charAt(pos+1) == 'X'));
             cs.deleteCharAt(pos);
             cs.deleteCharAt(pos);
+        }
+        else if (token_type == IonTokenConstsX.TOKEN_BINARY) {
+            boolean isNegative = (cs.charAt(0) == '-');
+            int position = isNegative ? 1 : 0;
+            cs.deleteCharAt(position);
+            cs.deleteCharAt(position);
         }
 
 
@@ -197,6 +205,17 @@ class IonReaderTextSystemX
             }
             else {
                 _v.setValue(new BigInteger(s));
+            }
+            break;
+        case IonTokenConstsX.TOKEN_BINARY:
+            if (len <= MAX_IMAGE_LENGTH_BINARY_INT) {
+                _v.setValue(Integer.parseInt(s, 2));
+            }
+            else if (len <= MAX_IMAGE_LENGTH_BINARY_LONG) {
+                _v.setValue(Long.parseLong(s, 2));
+            }
+            else {
+                _v.setValue(new BigInteger(s, 2));
             }
             break;
         case IonTokenConstsX.TOKEN_HEX:

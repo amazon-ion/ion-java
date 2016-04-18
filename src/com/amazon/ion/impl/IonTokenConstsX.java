@@ -66,8 +66,10 @@ final class IonTokenConstsX
     public static final int TOKEN_OPEN_DOUBLE_BRACE     = 24;
     public static final int TOKEN_CLOSE_DOUBLE_BRACE    = 25;
 
-    public static final int TOKEN_MAX                   = 25;
-    public static final int TOKEN_count                 = 26;
+    public static final int TOKEN_BINARY                = 26;
+
+    public static final int TOKEN_MAX                   = 26;
+    public static final int TOKEN_count                 = 27;
 
     public static final int KEYWORD_unrecognized = -1;
     public static final int KEYWORD_none         =  0;
@@ -145,6 +147,7 @@ final class IonTokenConstsX
     public static final IonType ion_type_of_scalar(int token) {
         switch(token) {
         case TOKEN_INT:                 return IonType.INT;
+        case TOKEN_BINARY:              return IonType.INT;
         case TOKEN_HEX:                 return IonType.INT;
         case TOKEN_DECIMAL:             return IonType.DECIMAL;
         case TOKEN_FLOAT:               return IonType.FLOAT;
@@ -217,9 +220,15 @@ final class IonTokenConstsX
         }
         return is_hex;
     }
+
+    public static final boolean isBinaryDigit(int c) {
+        return c =='0' || c == '1';
+    }
+
     public final static boolean isHexDigit(int c) {
         return isHexDigit[c & 0xff] && is8bitValue(c);
     }
+
     public final static int hexDigitValue(int c) {
         if (!isHexDigit(c)) {
             IllegalArgumentException e = new IllegalArgumentException("character '"+((char)c)+"' is not a hex digit");

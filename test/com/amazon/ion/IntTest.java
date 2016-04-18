@@ -276,4 +276,139 @@ public class IntTest
         catch (ReadOnlyValueException e) { }
         assertEquals(1, v.intValue());
     }
+
+    @Test
+    public void testBinaryInt()
+    {
+        assertEquals(system().newInt(4), oneValue("0b0100"));
+    }
+
+    @Test
+    public void testNegativeBinaryInt()
+    {
+        assertEquals(system().newInt(-7), oneValue("-0B111"));
+    }
+
+    @Test
+    public void testIntMaxValueBinaryInt()
+    {
+        assertEquals(
+            system().newInt(Integer.MAX_VALUE),
+            binaryInt(Integer.MAX_VALUE));
+    }
+
+    @Test
+    public void testIntMaxValueBinaryIntAsInt()
+    {
+        assertEquals(Integer.MAX_VALUE, binaryInt(Integer.MAX_VALUE).intValue());
+    }
+
+    @Test
+    public void testIntMaxValueBinaryIntAsLong()
+    {
+        assertEquals(Integer.MAX_VALUE, binaryInt(Integer.MAX_VALUE).longValue());
+    }
+
+    @Test
+    public void testIntMaxValuePlusOneBinaryInt()
+    {
+        assertEquals(
+            system().newInt((long) Integer.MAX_VALUE + 1),
+            binaryInt((long) Integer.MAX_VALUE + 1));
+    }
+
+    @Test
+    public void testIntMaxValuePluxOneBinaryIntAsInt()
+    {
+        assertFalse((long) Integer.MAX_VALUE + 1 == (long) binaryInt((long) Integer.MAX_VALUE + 1).intValue());
+    }
+
+    @Test
+    public void testIntMaxValuePluxOneBinaryIntAsLong()
+    {
+        assertEquals((long) Integer.MAX_VALUE + 1, binaryInt((long) Integer.MAX_VALUE + 1).longValue());
+    }
+
+    @Test
+    public void testLongMaxValueBinaryInt()
+    {
+        assertEquals(
+            system().newInt(Long.MAX_VALUE),
+            oneValue("0b" + Long.toBinaryString(Long.MAX_VALUE)));
+    }
+
+    @Test
+    public void testLongMaxValueBinaryIntAsInt()
+    {
+        assertFalse(Long.MAX_VALUE == (long) binaryInt(Long.MAX_VALUE).intValue());
+    }
+
+    @Test
+    public void testLongMaxValueBinaryIntAsLong()
+    {
+        assertEquals(Long.MAX_VALUE, binaryInt(Long.MAX_VALUE).longValue());
+    }
+
+    @Test
+    public void testLongMaxValuePlusOneBinaryInt()
+    {
+        BigInteger big = BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE);
+
+        assertEquals(
+            system().newInt(big),
+            oneValue("0b" + big.toString(2)));
+    }
+
+    @Test
+    public void testIntWithUnderscore()
+    {
+        assertEquals(system().newInt(10), oneValue("1_0"));
+    }
+
+    @Test
+    public void testIntWithLeadingUnderscoreIsActuallySymbol()
+    {
+        assertFalse(system().newInt(10).equals(oneValue("_10")));
+        assertTrue(system().newSymbol("_10").equals(oneValue("_10")));
+    }
+
+    @Test(expected = IonException.class)
+    public void testIntWithMultipleUnderscores()
+    {
+        oneValue("1__0");
+    }
+
+    @Test(expected = IonException.class)
+    public void testIntWithTrailingUnderscore()
+    {
+        oneValue("10_");
+    }
+
+    @Test(expected = IonException.class)
+    public void testBinaryIntWithUnderscoreAfterRadixPrefix()
+    {
+        oneValue("0x_10");
+    }
+
+    @Test
+    public void testHexIntWithUnderscore()
+    {
+        assertEquals(system().newInt(0x4d2), oneValue("0x4_d2"));
+    }
+
+    @Test(expected = IonException.class)
+    public void testHexIntWithTrailingUnderscore()
+    {
+        oneValue("0x4d2_");
+    }
+
+    private IonInt binaryInt(int i)
+    {
+        return (IonInt) oneValue("0b" + Integer.toBinaryString(i));
+    }
+
+    private IonInt binaryInt(long l)
+    {
+        return (IonInt) oneValue("0b" + Long.toBinaryString(l));
+    }
 }
