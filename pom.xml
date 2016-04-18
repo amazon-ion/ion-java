@@ -68,8 +68,7 @@
           <archive>
             <manifest>
               <!-- This can be used to retrieve the compiled JarInfo. -->
-              <!-- TODO rename according to namespace change -->
-              <mainClass>com.amazon.ion.impl._Private_CommandLine</mainClass>
+              <mainClass>com.amazon.ion.impl.PrivateCommandLine</mainClass>
             </manifest>
             <manifestEntries>
               <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
@@ -97,7 +96,6 @@
       </plugin>
       <plugin>
         <!-- Generate the Javadocs. -->
-        <!-- TODO change all paths/packages to reflect namespace change after fork -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.10.3</version>
@@ -106,7 +104,7 @@
             <configuration>
               <excludePackageNames>com.amazon.ion.apps:com.amazon.ion.impl</excludePackageNames>
               <sourceFileExcludes>
-                <exclude>**/*_Private_*</exclude>
+                <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
               <overview>${project.basedir}/src/com/amazon/ion/overview.html</overview>
               <doctitle>The Amazon ion-java ${project.version} API Reference</doctitle>
