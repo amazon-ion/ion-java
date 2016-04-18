@@ -1,4 +1,16 @@
-// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -17,7 +29,7 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonException;
@@ -534,14 +546,7 @@ final class SymbolTableReader
         return flag_state;
     }
 
-
-    public boolean hasNext()
-    {
-        boolean has_next = has_next_helper();
-        return has_next;
-    }
-
-    private final boolean has_next_helper()
+    private final boolean has_next()
     {
         // this just tells us whether or not we have more
         // value coming at our current scanning depth
@@ -746,7 +751,7 @@ final class SymbolTableReader
      */
     public IonType next()
     {
-        if (has_next_helper() == false) {
+        if (has_next() == false) {
             return null;
         }
         int new_state;
@@ -1066,7 +1071,7 @@ final class SymbolTableReader
             }
             return new String[] { ION_SHARED_SYMBOL_TABLE };
         }
-        return _Private_Utils.EMPTY_STRING_ARRAY;
+        return PrivateUtils.EMPTY_STRING_ARRAY;
     }
 
     private static final SymbolToken ION_SYMBOL_TABLE_SYM =
@@ -1098,51 +1103,7 @@ final class SymbolTableReader
     public Iterator<String> iterateTypeAnnotations()
     {
         String[] annotations = getTypeAnnotations();
-        return _Private_Utils.stringIterator(annotations);
-    }
-
-
-    public int getFieldId()
-    {
-
-        switch (_current_state)
-        {
-        case S_STRUCT:
-        case S_IN_STRUCT:
-        case S_IN_IMPORTS:
-        case S_IMPORT_STRUCT:
-        case S_IN_IMPORT_STRUCT:
-        case S_IMPORT_STRUCT_CLOSE:
-        case S_IMPORT_LIST_CLOSE:
-        case S_AFTER_IMPORT_LIST:
-        case S_IN_SYMBOLS:
-        case S_SYMBOL:
-        case S_SYMBOL_LIST_CLOSE:
-        case S_STRUCT_CLOSE:
-        case S_EOF:
-            return SymbolTable.UNKNOWN_SYMBOL_ID;
-
-        case S_NAME:
-        case S_IMPORT_NAME:
-            return NAME_SID;
-
-        case S_VERSION:
-        case S_IMPORT_VERSION:
-            return VERSION_SID;
-
-        case S_MAX_ID:
-        case S_IMPORT_MAX_ID:
-            return MAX_ID_SID;
-
-        case S_IMPORT_LIST:
-            return IMPORTS_SID;
-
-        case S_SYMBOL_LIST:
-            return SYMBOLS_SID;
-
-        default:
-            throw new IonException("Internal error: UnifiedSymbolTableReader is in an unrecognized state: "+_current_state);
-        }
+        return PrivateUtils.stringIterator(annotations);
     }
 
     public String getFieldName()

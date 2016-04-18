@@ -1,4 +1,16 @@
-// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -8,7 +20,6 @@ import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 import static java.lang.String.format;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSequence;
@@ -20,12 +31,10 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class TextWriterTest
     extends OutputStreamWriterTestCase
 {
@@ -46,7 +55,7 @@ public class TextWriterTest
         throws Exception
     {
         byte[] utf8Bytes = outputByteArray();
-        return _Private_Utils.utf8(utf8Bytes);
+        return PrivateUtils.utf8(utf8Bytes);
     }
 
     @Test
@@ -128,11 +137,12 @@ public class TextWriterTest
     {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
 
-        IonBinaryWriter binaryWriter = system().newBinaryWriter(fred1);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        IonWriter binaryWriter = system().newBinaryWriter(buf, fred1);
         binaryWriter.writeSymbol("fred_1");
         binaryWriter.writeSymbol("ginger");
         binaryWriter.finish();
-        byte[] binaryData = binaryWriter.getBytes();
+        byte[] binaryData = buf.toByteArray();
 
         options = IonTextWriterBuilder.standard();
 
@@ -178,7 +188,7 @@ public class TextWriterTest
 
 
     @Test
-    public void testC1ControlCodes()  // Tests IONJAVA-393
+    public void testC1ControlCodes()
         throws Exception
     {
         options = IonTextWriterBuilder.standard();
@@ -272,7 +282,7 @@ public class TextWriterTest
 
         options.withPrettyPrinting();
         expectRendering(
-            // TODO IONJAVA-460 determine if these really should be platform independent newlines
+            // TODO amznlabs/ion-java#57 determine if these really should be platform independent newlines
             format(
                 "%n" +
                 "'''looong'''%n" +
@@ -452,7 +462,6 @@ public class TextWriterTest
         super.testFinishDoesReset();
     }
 
-    // Trap for ION-334
     @Test @Override
     public void testAnnotationNotSetToIvmOnStartOfStream()
         throws Exception

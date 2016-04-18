@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -237,31 +249,6 @@ public interface ValueFactory
      */
     public IonList newEmptyList();
 
-    /**
-     * Constructs a new <code>list</code> with given children.
-     *
-     * @param values
-     *  the initial set of children.  If <code>null</code>, then the new
-     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
-     *
-     * @throws ContainedValueException
-     *  if any value in {@code values}
-     *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException
-     *   if any value in {@code values} is null.
-     * @throws IllegalArgumentException
-     *   if any value in {@code values} is an {@link IonDatagram}.
-     *
-     * @deprecated This method can be invoked
-     *  (accidentally and incorrectly) with an {@link IonSequence}!
-     *  Use either {@link #newList(IonValue...)}
-     *  or {@link #newList(IonValue...) newList()}{@link
-     *  IonSequence#addAll(Collection) .addAll(Collection)}.
-     */
-    @Deprecated
-    public IonList newList(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException;
-
 
     /**
      * Constructs a new {@code list} with the given child.
@@ -369,32 +356,6 @@ public interface ValueFactory
      * Constructs a new empty (not null) <code>sexp</code> instance.
      */
     public IonSexp newEmptySexp();
-
-
-    /**
-     * Constructs a new <code>sexp</code> with given child elements.
-     *
-     * @param values
-     *  the initial set of children.  If <code>null</code>, then the new
-     *  instance will have <code>{@link IonValue#isNullValue()} == true</code>.
-     *
-     * @throws ContainedValueException
-     *  if any value in {@code values}
-     *  has <code>{@link IonValue#getContainer()} != null</code>.
-     * @throws NullPointerException
-     *   if any value in {@code values} is null.
-     * @throws IllegalArgumentException
-     *   if any value in {@code values} is an {@link IonDatagram}.
-     *
-     * @deprecated This method can be invoked
-     *  (accidentally and incorrectly) with an {@link IonSequence}!
-     *  Use either {@link #newSexp(IonValue...)}
-     *  or {@link #newSexp(IonValue...) newSexp()}{@link
-     *  IonSequence#addAll(Collection) .addAll(Collection)}.
-     */
-    @Deprecated
-    public IonSexp newSexp(Collection<? extends IonValue> values)
-        throws ContainedValueException, NullPointerException;
 
     /**
      * Constructs a new {@code sexp} with the given child.

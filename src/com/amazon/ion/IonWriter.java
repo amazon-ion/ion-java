@@ -1,4 +1,16 @@
-// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -10,7 +22,6 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
 
 /**
  * Writes Ion data to an output source.
@@ -21,7 +32,7 @@ import java.util.Date;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * <!-- TODO ION-182 -->
+ * See <a href="https://github.com/amznlabs/ion-java/issues/10">issue amznlabs/ion-java#10</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.
@@ -287,20 +298,6 @@ public interface IonWriter
     //=========================================================================
     // Value writing
 
-    /**
-     * writes the contents of the passed in Ion value to the output.
-     * <p>
-     * This method also writes annotations and field names (if in a struct),
-     * and performs a deep write, including the contents of
-     * any containers encountered.
-     *
-     * @param value may be null, in which case this method does nothing.
-     *
-     * @deprecated Use
-     * {@link IonValue#writeTo(IonWriter)} instead.
-     */
-    @Deprecated // TODO ION-247 remove this
-    public void writeValue(IonValue value) throws IOException;
 
     /**
      * Writes the current value from a reader.
@@ -396,20 +393,6 @@ public interface IonWriter
     public void writeTimestamp(Timestamp value) throws IOException;
 
     /**
-     * writes the passed in Date (in milliseconds since the epoch) as an
-     * IonTimestamp.  The Date value is treated as a UTC value with an
-     * unknown timezone offset (a z value).
-     * @param value java.util Date holding the UTC timestamp;
-     * may be null to represent {@code null.timestamp}.
-     *
-     * @deprecated Use
-     * {@link #writeTimestamp(Timestamp) IonWriter.writeTimestamp(}{@link
-     * Timestamp#forDateZ(Date) Timestamp.forDateZ(Date))} instead.
-     */
-    @Deprecated
-    public void writeTimestampUTC(Date value) throws IOException;
-
-    /**
      * Writes the text of an Ion symbol value.
      *
      * @param content may be null to represent {@code null.symbol}.
@@ -431,22 +414,6 @@ public interface IonWriter
      *
      */
     public void writeSymbolToken(SymbolToken content) throws IOException;
-
-    /**
-     * Write an Ion version marker symbol to the output.  This
-     * is the $ion_1_0 value currently (in later versions the
-     * number may change).  In text output this appears as the
-     * text symbol.  In binary this will be the symbol id if
-     * the writer is in a list, sexp or struct.  If the writer
-     * is currently at the top level this will write the
-     * "magic cookie" value.
-     *
-     *  Writing a version marker will reset the symbol table
-     *  to be the system symbol table.
-     *
-     * @throws IOException
-     */
-//    public void writeIonVersionMarker() throws IOException;
 
     /**
      * Writes a {@link java.lang.String} as an Ion string. Since Ion strings are

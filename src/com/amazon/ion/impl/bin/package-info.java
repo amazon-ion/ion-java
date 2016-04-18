@@ -1,10 +1,24 @@
+/*
+ * Copyright 2016-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
+
 /**
  * Provides the implementation for the second-generation Ion binary implementation.
  * At this time, this is limited to a binary {@link com.amazon.ion.IonWriter}.
  *
  * <p>
  * This package limits most of its APIs to package-level access, the public API of note is contained within
- * the {@link com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder} which builds instances of
+ * the {@link com.amazon.ion.impl.bin.PrivateIonManagedBinaryWriterBuilder} which builds instances of
  * {@link com.amazon.ion.impl.bin.IonManagedBinaryWriter}.  See the below section for what <i>Managed</i> means
  * in this context.
  *

@@ -14,9 +14,6 @@ public class NullValueException
 {
     private static final long serialVersionUID = 1L;
 
-    /**
-     *
-     */
     public NullValueException()
     {
         super();

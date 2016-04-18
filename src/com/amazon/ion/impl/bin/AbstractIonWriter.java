@@ -1,4 +1,16 @@
-// Copyright (c) 2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2015-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.bin;
 
@@ -10,17 +22,16 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_ByteTransferReader;
-import com.amazon.ion.impl._Private_ByteTransferSink;
-import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl._Private_SymtabExtendsCache;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateByteTransferReader;
+import com.amazon.ion.impl.PrivateByteTransferSink;
+import com.amazon.ion.impl.PrivateIonWriter;
+import com.amazon.ion.impl.PrivateSymtabExtendsCache;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Date;
 
 /** Common adapter for binary {@link IonWriter} implementations. */
-/*package*/ abstract class AbstractIonWriter implements _Private_IonWriter, _Private_ByteTransferSink
+/*package*/ abstract class AbstractIonWriter implements PrivateIonWriter, PrivateByteTransferSink
 {
     /*package*/ enum WriteValueOptimization
     {
@@ -29,12 +40,12 @@ import java.util.Date;
     }
 
     /** The cache for copy optimization checks--null if not copy optimized. */
-    private final _Private_SymtabExtendsCache symtabExtendsCache;
+    private final PrivateSymtabExtendsCache symtabExtendsCache;
 
     /*package*/ AbstractIonWriter(final WriteValueOptimization optimization)
     {
         this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
-            ? new _Private_SymtabExtendsCache() : null;
+            ? new PrivateSymtabExtendsCache() : null;
     }
 
     public final void writeValue(final IonValue value) throws IOException
@@ -43,7 +54,7 @@ import java.util.Date;
         {
             if (value instanceof IonDatagram)
             {
-                // XXX this is a hack to make the writer consistent with the backed DOM and flush out an IVM
+                // XXX this is a hack to make the writer consistent with the legacy implementations and flush out an IVM
                 finish();
             }
             value.writeTo(this);
@@ -56,11 +67,11 @@ import java.util.Date;
 
         if (isStreamCopyOptimized())
         {
-            final _Private_ByteTransferReader transferReader =
-                reader.asFacet(_Private_ByteTransferReader.class);
+            final PrivateByteTransferReader transferReader =
+                reader.asFacet(PrivateByteTransferReader.class);
 
             if (transferReader != null
-                && (_Private_Utils.isNonSymbolScalar(type)
+                && (PrivateUtils.isNonSymbolScalar(type)
                  || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable())))
             {
                 // we have something we can pipe over
@@ -75,6 +86,9 @@ import java.util.Date;
     public final void writeValueRecursive(final IonReader reader) throws IOException
     {
         final IonType type = reader.getType();
+
+        // TODO amznlabs/ion-java#45 make sure the plumbing symbol tokens do the right thing for
+        //      different symbol contexts in the reader and this writer
 
         final SymbolToken fieldName = reader.getFieldNameSymbol();
         if (fieldName != null && !isFieldNameSet() && isInStruct())
@@ -115,8 +129,8 @@ import java.util.Date;
                 writeTimestamp(timestampValue);
                 break;
             case SYMBOL:
-                final String symbolValue = reader.stringValue();
-                writeSymbol(symbolValue);
+                final SymbolToken symbolValue = reader.symbolValue();
+                writeSymbolToken(symbolValue);
                 break;
             case STRING:
                 final String stringValue = reader.stringValue();
@@ -156,11 +170,6 @@ import java.util.Date;
         {
             writeValue(reader);
         }
-    }
-
-    public final void writeTimestampUTC(final Date value) throws IOException
-    {
-        writeTimestamp(Timestamp.forDateZ(value));
     }
 
     public final boolean isStreamCopyOptimized()

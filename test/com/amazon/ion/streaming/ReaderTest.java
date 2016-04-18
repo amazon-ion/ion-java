@@ -1,4 +1,16 @@
-// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.streaming;
 
@@ -19,9 +31,6 @@ import java.util.Arrays;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- *
- */
 public class ReaderTest
     extends ReaderTestCase
 {
@@ -73,7 +82,7 @@ public class ReaderTest
         expectEof();
     }
 
-    @Test // Traps ION-133
+    @Test
     public void testStepOut() throws IOException
     {
         read("{a:{b:1,c:2},d:false}");
@@ -168,7 +177,7 @@ public class ReaderTest
 
 
     @Test
-    public void testReadingDecimalAsBigInteger() // IONJAVA-114
+    public void testReadingDecimalAsBigInteger()
     {
         //    decimal value         int conversion
         read("null.decimal          null.int                  " +
@@ -191,7 +200,7 @@ public class ReaderTest
 
 
     @Test
-    public void testReadingFloatAsBigInteger() // IONJAVA-114
+    public void testReadingFloatAsBigInteger()
     {
         // Note that one can't represent Long.MAX_VALUE as a double, there's
         // not enough bits in the mantissa!
@@ -227,7 +236,7 @@ public class ReaderTest
      * it's not what one would expect.
      */
     @Test @Ignore
-    public void testReadingFloatAsBigDecimal() // TODO IONJAVA-403
+    public void testReadingFloatAsBigDecimal() // TODO amznlabs/ion-java#56
     {
         // Note that one can't represent Long.MAX_VALUE as a double, there's
         // not enough bits in the mantissa!

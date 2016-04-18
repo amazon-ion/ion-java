@@ -13,9 +13,6 @@ public class ContainedValueException
 {
     private static final long serialVersionUID = 1L;
 
-    /**
-     *
-     */
     public ContainedValueException()
     {
         super();

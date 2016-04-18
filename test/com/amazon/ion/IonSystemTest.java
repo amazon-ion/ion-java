@@ -1,10 +1,22 @@
-// Copyright (c) 2010-2016 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_BYTE_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_BYTE_ARRAY;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -18,9 +30,6 @@ import java.util.Iterator;
 import java.util.zip.GZIPOutputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonSystemTest
     extends IonTestCase
 {
@@ -158,15 +167,11 @@ public class IonSystemTest
     {
         IonValue original = system().singleValue("some_symbol");
 
-        // Test on ValueFactory.clone() with different ValueFactory (and DOM impls)
-        for (DomType domType : DomType.values())
-        {
-            IonValue clone =
-                newSystem(new SimpleCatalog(), domType).clone(original);
+        IonValue clone =
+            newSystem(new SimpleCatalog()).clone(original);
 
-            assertNull("Cloned value should not have a container (parent)",
-                       clone.getContainer());
-        }
+        assertNull("Cloned value should not have a container (parent)",
+                   clone.getContainer());
     }
 
 
@@ -240,7 +245,7 @@ public class IonSystemTest
         system().newValue(r);
     }
 
-    @Test // ION-297
+    @Test
     public void testNewValueWithHugeInt()
     {
         String huge = Long.MAX_VALUE + "0";
@@ -310,7 +315,7 @@ public class IonSystemTest
         throws Exception
     {
         String ionText = "1234";
-        byte[] textBytes = _Private_Utils.utf8(ionText);
+        byte[] textBytes = PrivateUtils.utf8(ionText);
         byte[] gzipTextBytes = gzip(textBytes);
 
         checkGzipDetection(textBytes);

@@ -1,4 +1,16 @@
-// Copyright (c) 2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2015-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.bin;
 
@@ -25,6 +37,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 import java.io.IOException;
@@ -426,9 +439,13 @@ import java.util.Map;
                                 // in case this is intentional
                                 symbols = Symbols.unknownSharedSymbolTable(desc.name, desc.version, desc.maxId);
                             }
-                            if (desc.maxId != -1 && desc.maxId != symbols.getMaxId())
+                            final boolean hasDeclaredMaxId = desc.maxId != -1;
+                            final boolean declaredMaxIdMatches = desc.maxId == symbols.getMaxId();
+                            final boolean declaredVersionMatches = desc.version == symbols.getVersion();
+                            if (hasDeclaredMaxId && (!declaredMaxIdMatches || !declaredVersionMatches))
                             {
-                                throw new IllegalArgumentException("Import doesn't match Max ID: " + desc);
+                                // the max ID doesn't match, so we need a substitute
+                                symbols = PrivateUtils.newSubstituteSymtab(symbols, desc.version, desc.maxId);
                             }
                             self.userImports.add(symbols);
                         }
@@ -624,9 +641,10 @@ import java.util.Map;
     private final List<String>                  userSymbols;
     private final ImportDescriptor              userCurrentImport;
 
+    private boolean                             forceSystemOutput;
     private boolean                             closed;
 
-    /*package*/ IonManagedBinaryWriter(final _Private_IonManagedBinaryWriterBuilder builder,
+    /*package*/ IonManagedBinaryWriter(final PrivateIonManagedBinaryWriterBuilder builder,
                                        final OutputStream out)
                                        throws IOException
     {
@@ -657,6 +675,8 @@ import java.util.Map;
         this.localsLocked = false;
         this.localSymbolTableView = new LocalSymbolTableView();
         this.symbolState = SymbolState.SYSTEM_SYMBOLS;
+
+        this.forceSystemOutput = false;
         this.closed = false;
 
         this.userState = UserState.NORMAL;
@@ -985,9 +1005,9 @@ import java.util.Map;
             }
             else
             {
-                // no-op the write--we already wrote the IVM for the user
-                // TODO should this not no-op when called multiple times with IVMs?
-                // TODO integrate with all that IVM configuration-fu
+                // TODO determine if redundant IVM writes need to actually be surfaced
+                // we need to signal that we need to write out the IVM even if nothing else is written
+                forceSystemOutput = true;
             }
             return;
         }
@@ -1039,7 +1059,7 @@ import java.util.Map;
 
     private void unsafeFlush() throws IOException
     {
-        if (user.hasWrittenValuesSinceFinished())
+        if (user.hasWrittenValuesSinceFinished() || forceSystemOutput)
         {
             // this implies that we have a local symbol table of some sort and the user locked it
             symbolState.closeTable(symbols);
@@ -1047,6 +1067,7 @@ import java.util.Map;
 
         // make sure that until the local symbol state changes we no-op the table closing routine
         symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
+        forceSystemOutput = false;
         // push the data out
         symbols.finish();
         user.finish();

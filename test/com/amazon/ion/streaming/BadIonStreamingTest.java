@@ -1,4 +1,16 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.BAD_IONTESTS_FILES;
@@ -9,7 +21,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
 import java.io.IOException;
@@ -43,17 +55,14 @@ extends IonTestCase
     }
 
 
-    @Ignore // TODO ION-161
+    @Ignore // TODO amznlabs/ion-java#7
     @Test(expected = IonException.class)
     public void testSkippingScalars()
     throws Exception
     {
-        if (getDomType() != DomType.LITE)
-        {
-            // Newer readers don't validate while skipping scalars
-            // so we won't throw exceptions for all bad files.
-            readFile( false );
-        }
+        // Readers don't validate while skipping scalars
+        // so we won't throw exceptions for all bad files.
+        readFile( false );
     }
 
     private void readFile(boolean materializeScalars)
@@ -61,7 +70,7 @@ extends IonTestCase
     {
         try
         {
-            byte[] buf = _Private_Utils.loadFileBytes(myTestFile);
+            byte[] buf = PrivateUtils.loadFileBytes(myTestFile);
             IonReader it = system().newReader(buf);
             TestUtils.deepRead(it, materializeScalars);
         }

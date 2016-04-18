@@ -1,4 +1,16 @@
-// Copyright (c) 2008-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -28,7 +40,7 @@ import java.util.Iterator;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * <!-- TODO ION-183 -->
+ * See <a href="https://github.com/amznlabs/ion-java/issues/11">issue amznlabs/ion-java#11</a>
  * <p>
  * An {@code IonReader} has a "cursor" tracking the <em>current value</em> on
  * which the reader is positioned. Generally, newly created readers are not
@@ -75,7 +87,7 @@ import java.util.Iterator;
  * <h3>The {@link SeekableReader} Facet</h3>
  * This facet is available on all readers <em>except</em> those created from
  * an {@link java.io.InputStream InputStream}.
- * <!-- TODO ION-243 -->
+ * (See <a href="https://github.com/amznlabs/ion-java/issues/17">issue amznlabs/ion-java#17</a>.)
  * It allows the user to reposition the reader to a {@link Span} over the
  * same reader instance or another reader with the same source.
  *
@@ -92,25 +104,6 @@ import java.util.Iterator;
 public interface IonReader
     extends Closeable, Faceted
 {
-
-    /**
-     * Determines whether there is another value at the current depth;
-     * in other words whether there is a sibling value that may be reached
-     * using {@link #next()}.
-     * This method may be
-     * called multiple times, which does not move the current position.
-     * <p>
-     * <b>WARNING:</b> this method alters the internal state of the reader such
-     * that you cannot reliably get values from the "current" element. The only
-     * thing you should call after {@code hasNext()} is {@link #next()}!
-     *
-     * @deprecated with no direct replacement. Applications
-     * should detect the end of the current level by checking for a {@code null}
-     * response from {@link #next()}.
-     */
-    @Deprecated
-    public boolean hasNext();
-
     /**
      * Positions this reader on the next sibling after the current value,
      * returning the type of that value.  Once so positioned the contents of
@@ -207,24 +200,6 @@ public interface IonReader
      * @return not null.
      */
     public Iterator<String> iterateTypeAnnotations();
-
-    /**
-
-    /**
-     * Gets the symbol ID of the field name attached to the current value.
-     * <p>
-     * <b>This is an "expert method": correct use requires deep understanding
-     * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @return the symbol ID of the field name, if the current value is a
-     * field within a struct.
-     * If the current value is not a field, or if the symbol ID cannot be
-     * determined, this method returns a value <em>less than one</em>.
-     *
-     * @deprecated Use {@link #getFieldNameSymbol()} instead.
-     */
-    @Deprecated
-    public int getFieldId();
 
     /**
      * Return the field name of the current value. Or null if there is no valid

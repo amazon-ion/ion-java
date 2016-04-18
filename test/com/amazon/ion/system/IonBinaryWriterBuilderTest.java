@@ -1,9 +1,21 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.system;
 
 import static com.amazon.ion.TestUtils.symbolTableEquals;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -16,9 +28,9 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Symtabs;
-import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
-import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
+import com.amazon.ion.impl.PrivateIonWriter;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,9 +38,6 @@ import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonBinaryWriterBuilderTest
 {
     public void testBuildNull(IonBinaryWriterBuilder b)
@@ -69,7 +78,7 @@ public class IonBinaryWriterBuilderTest
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter writer = b.build(out);
-        assertSame(catalog, ((_Private_IonWriter)writer).getCatalog());
+        assertSame(catalog, ((PrivateIonWriter)writer).getCatalog());
 
         IonCatalog catalog2 = new SimpleCatalog();
         b.setCatalog(catalog2);
@@ -116,7 +125,7 @@ public class IonBinaryWriterBuilderTest
 
         OutputStream out = new ByteArrayOutputStream();
         IonWriter w = b.build(out);
-        assertTrue(((_Private_IonWriter)w).isStreamCopyOptimized());
+        assertTrue(((PrivateIonWriter)w).isStreamCopyOptimized());
     }
 
 
@@ -140,8 +149,8 @@ public class IonBinaryWriterBuilderTest
     {
         IonSystem system = IonSystemBuilder.standard().build();
 
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
+        PrivateIonBinaryWriterBuilder b =
+            PrivateIonBinaryWriterBuilder.standard();
         b.setSymtabValueFactory(system);
         assertSame(system, b.getSymtabValueFactory());
 
@@ -153,11 +162,11 @@ public class IonBinaryWriterBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testSymtabValueFactoryImmutability()
     {
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
+        PrivateIonBinaryWriterBuilder b =
+            PrivateIonBinaryWriterBuilder.standard();
         b.setSymtabValueFactory(IonSystemBuilder.standard().build());
 
-        _Private_IonBinaryWriterBuilder b2 = b.immutable();
+        PrivateIonBinaryWriterBuilder b2 = b.immutable();
         b2.setSymtabValueFactory(null);
     }
 
@@ -170,14 +179,14 @@ public class IonBinaryWriterBuilderTest
         throws IOException
     {
         IonSystem system = IonSystemBuilder.standard().build();
-        SymbolTable sst = _Private_Utils.systemSymtab(1);
+        SymbolTable sst = PrivateUtils.systemSymtab(1);
 
         SymbolTable lst0 = newLocalSymtab(system, sst,
                                           Collections.<String>emptyList());
         lst0.intern("hello");
 
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
+        PrivateIonBinaryWriterBuilder b =
+            PrivateIonBinaryWriterBuilder.standard();
         b.setInitialSymbolTable(lst0);
         assertSame(lst0, b.getInitialSymbolTable());
 
@@ -214,7 +223,7 @@ public class IonBinaryWriterBuilderTest
     public void testImmutableInitialSymtab()
     {
         IonSystem system = IonSystemBuilder.standard().build();
-        SymbolTable sst = _Private_Utils.systemSymtab(1);
+        SymbolTable sst = PrivateUtils.systemSymtab(1);
 
         // Immutable local symtabs shouldn't get copied.
         SymbolTable lst = newLocalSymtab(system, sst,
@@ -222,8 +231,8 @@ public class IonBinaryWriterBuilderTest
         lst.intern("hello");
         lst.makeReadOnly();
 
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
+        PrivateIonBinaryWriterBuilder b =
+            PrivateIonBinaryWriterBuilder.standard();
         b.setInitialSymbolTable(lst);
         assertSame(lst, b.getInitialSymbolTable());
 
@@ -238,11 +247,11 @@ public class IonBinaryWriterBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testInitialSymtabImmutability()
     {
-        _Private_IonBinaryWriterBuilder b =
-            _Private_IonBinaryWriterBuilder.standard();
+        PrivateIonBinaryWriterBuilder b =
+            PrivateIonBinaryWriterBuilder.standard();
         b.setInitialSymbolTable(null);
 
-        _Private_IonBinaryWriterBuilder b2 = b.immutable();
+        PrivateIonBinaryWriterBuilder b2 = b.immutable();
         b2.setInitialSymbolTable(null);
     }
 

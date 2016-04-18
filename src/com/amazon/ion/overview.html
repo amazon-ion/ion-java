@@ -1,8 +1,8 @@
 <!-- Copyright (c) 2007-2016 Amazon.com, Inc.  All rights reserved. -->
 <html>
 <body>
-ion-java is the reference implementation of the
-Amazon Ion data notation <!-- TODO link to the public spec --> for the
+Amazon Ion Java is the reference implementation of the
+<a href="http://amznlabs.github.io/ion-docs/spec.html">Ion data notation</a> for the
 Java<sup><font size="-4">TM</font></sup> 2 Platform Standard Edition 5.0
 and above.
 <p>
@@ -39,13 +39,6 @@ That should be sufficient for many, but not all, applications.  Long-running
 services will probably want to use a non-default
 {@linkplain com.amazon.ion.IonCatalog catalog} by configuring the builder
 before calling {@link com.amazon.ion.system.IonSystemBuilder#build() build()}.
-
-<h2>SystemFactory is Deprecated</h2>
-
-As of early 2011, the {@link com.amazon.ion.system.SystemFactory SystemFactory}
-class has been deprecated in favor of {@code IonSystemBuilder}.
-This should be a straightforward application change and we strongly recommend
-that all applications update.
 
 <h2>An Important Caveat</h2>
 Objects returned by one {@code IonSystem} cannot by mixed with objects returned
@@ -156,12 +149,9 @@ to use documented equivalence APIs such as
 
 <h1>JSON Integration</h1>
 The Ion text format is a superset of JSON, so JSON data <em>is</em> Ion data.
-This means that you can read JSON data as-is using the Ion libraries, with two
-caveats:
+This means that you can read JSON data as-is using the Ion libraries, with a
+caveat:
 <ul>
-  <li>Empty field names (for example, <code>{ "": 12 }</code>) will cause an
-      error.
-      <!-- TODO ION-268 -->
   <li>JSON numbers with exponents are decoded as Ion float, while those with
       fractions (but not exponents) are decoded as Ion decimal.
 </ul>
@@ -170,8 +160,6 @@ To output JSON with this library, Ion data can be "downconverted" to JSON
 format using an
 {@link com.amazon.ion.system.IonTextWriterBuilder IonTextWriterBuilder}.
 This replaces Ion-only datatypes with more-or-less equivalent JSON values.
-(The {@link com.amazon.ion.util.Printer Printer} can also be used, but it is
-no longer recommended and will be deprecated.)
 
 <h1>Thread Safety</h1>
 

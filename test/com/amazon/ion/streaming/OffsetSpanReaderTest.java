@@ -1,4 +1,16 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.streaming;
 
@@ -10,9 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.junit.Test;
 
-/**
- *
- */
 public class OffsetSpanReaderTest
     extends ReaderFacetTestCase
 {
@@ -55,12 +64,10 @@ public class OffsetSpanReaderTest
 
         checkCurrentSpan(28, 30, 30);
 
-        // Capture for ION-217
         assertSame(IonType.STRING, in.next());
         checkCurrentSpan(30, 86, 33);
     }
 
-    // Capture for ION-219
     @Test
     public void testCurrentSpanFromStreamMed() throws IOException {
         final ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -71,19 +78,14 @@ public class OffsetSpanReaderTest
             buf.write(BinaryTest.hexToBytes("22 03 E8"));
         }
 
-        // Textification is wonky and inconsistent here, it looks like:
-        //  LITE:   $ion_1_0 1000 1000 1000 1000 ...
-        //  BACKED: $ion_1_0 1000 $ion_1_0 1000 ...
-
         read(buf.toByteArray());
         int binaryStart = 4;
         int textStart = 9;
-        DomType domType = getDomType();
         for (int i = 0; i < count; i++) {
             assertSame(IonType.INT, in.next());
             checkCurrentSpan(binaryStart, binaryStart+3, textStart);
             binaryStart += 7;
-            textStart += (domType == DomType.BACKED) ? 14 : 5;
+            textStart += 5;
         }
         assertNull(in.next());
     }

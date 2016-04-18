@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -58,7 +70,8 @@ import com.amazon.ion.system.SimpleCatalog;
  * <p>
  * Binary <em>decoding</em> prefers an exact match, and in a couple edge cases,
  * requires it. Therefore a single "get latest version" method is insufficient.
- * See the Ion Symbols specification <!-- TODO public spec link? -->
+ * See the
+ * <a href="http://amznlabs.github.io/ion-docs/symbols.html">Ion Symbols page</a>
  * for more details on this topic.
  * <p>
  * It's expected that many if not most applications will implement a dynamic

@@ -1,4 +1,16 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.streaming;
 
@@ -7,13 +19,10 @@ import static com.amazon.ion.BinaryTest.hexToBytes;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.util.RepeatInputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class OffsetSpanBinaryReaderTest
     extends ReaderFacetTestCase
 {
@@ -51,7 +60,7 @@ public class OffsetSpanBinaryReaderTest
     }
 
 
-    @Test // Traps ION-216
+    @Test
     public void testCurrentSpanBeyondMaxInt()
     {
         IonDatagram dg = system().newDatagram();
@@ -66,7 +75,7 @@ public class OffsetSpanBinaryReaderTest
      * bug at time of writing).  This data is hand-coded since we don't have
      * an API to generate ordered structs.
      */
-    @Test // Traps ION-216
+    @Test
     public void testCurrentSpanBeyondMaxIntForOrderedStruct()
     {
         // Value is ordered-struct { name:{{ /* 1024 bytes */}} }
@@ -76,7 +85,7 @@ public class OffsetSpanBinaryReaderTest
                                  + "84 "        //   name:
                                  + "AE 08 80"   //     blob, len=1024
                                 );
-        data = _Private_Utils.copyOf(data, data.length + 1024);
+        data = PrivateUtils.copyOf(data, data.length + 1024);
 
         readBeyondMaxInt(data, IonType.STRUCT);
     }

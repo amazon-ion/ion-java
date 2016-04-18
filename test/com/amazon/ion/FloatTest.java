@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -7,9 +19,6 @@ import org.junit.Test;
 
 
 
-/**
- *
- */
 public class FloatTest
     extends IonTestCase
 {
@@ -195,9 +204,10 @@ public class FloatTest
     }
 
     /**
-     * Trap for the JDK defect parsing doubles.  ION-162
+     * TODO amznlabs/ion-java#64 Un-ignore this when all dependent build pipelines
+     * use a version of the JVM that doesn't have this defect.
      *
-     * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4421494
+     * https://blogs.oracle.com/security/entry/security_alert_for_cve-2010-44
      * http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/
      */
     @Test @Ignore

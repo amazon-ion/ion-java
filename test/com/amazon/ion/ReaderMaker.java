@@ -1,11 +1,23 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.ensureBinary;
 import static com.amazon.ion.TestUtils.ensureText;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -216,7 +228,7 @@ public enum ReaderMaker
 
     public IonReader newReader(IonSystem system, String ionText)
     {
-        byte[] utf8 = _Private_Utils.utf8(ionText);
+        byte[] utf8 = PrivateUtils.utf8(ionText);
         return newReader(system, utf8);
     }
 
@@ -234,14 +246,6 @@ public enum ReaderMaker
         throws IOException
     {
         return newReader(system, ionData);
-    }
-
-
-    public IonReader newReader(IonSystem system, InputStream ionData)
-        throws IOException
-    {
-        byte[] bytes = _Private_Utils.loadStreamBytes(ionData);
-        return newReader(system, bytes);
     }
 
 

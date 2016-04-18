@@ -1,10 +1,22 @@
-// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
 import com.amazon.ion.IonDatagram;
@@ -18,11 +30,10 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonValue;
-import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonValue;
+import com.amazon.ion.impl.PrivateIonWriter;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -37,10 +48,13 @@ import java.io.PrintWriter;
  *  original implementation.
  */
 abstract class IonValueLite
-    implements _Private_IonValue
+    implements PrivateIonValue
 {
     private static final int TYPE_ANNOTATION_HASH_SIGNATURE =
         "TYPE ANNOTATION".hashCode();
+
+    private static final IonTextWriterBuilder TO_STRING_TEXT_WRITER_BUILDER =
+        IonTextWriterBuilder.standard().withCharsetAscii().immutable();
 
     /**
      * this hold all the various boolean flags we have
@@ -250,7 +264,7 @@ abstract class IonValueLite
                     String text = existingToken.getText();
                     if (text != null) {
                         this._annotations[i] =
-                            _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+                            PrivateUtils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     } else {
                         // TODO - this is clearly wrong; however was the existing behavior as
                         // existing under #getAnnotationTypeSymbols();
@@ -385,23 +399,9 @@ abstract class IonValueLite
         return this._elementid();
     }
 
-
-    public final int getFieldId()
-    {
-        if (_fieldId != UNKNOWN_SYMBOL_ID || _fieldName == null)
-        {
-            return _fieldId;
-        }
-
-        SymbolToken tok = getSymbolTable().find(_fieldName);
-
-        return (tok != null ? tok.getSid() : UNKNOWN_SYMBOL_ID);
-    }
-
-
     public SymbolToken getFieldNameSymbol()
     {
-        // TODO ION-320 We should memoize the results of symtab lookups.
+        // TODO amznlabs/ion-java#27 We should memoize the results of symtab lookups.
         // BUT: that could cause thread-safety problems for read-only values.
         // I think makeReadOnly should populate the tokens fully
         // so that we only need to lookup from mutable instances.
@@ -434,7 +434,7 @@ abstract class IonValueLite
             return null;
         }
 
-        return _Private_Utils.newSymbolToken(text, sid);
+        return PrivateUtils.newSymbolToken(text, sid);
     }
 
     /**
@@ -495,13 +495,8 @@ abstract class IonValueLite
         if (_fieldName != null) return _fieldName;
         if (_fieldId < 0) return null;
 
-        // TODO ION-320 why no symtab lookup, like getFieldNameSymbol()?
+        // TODO amznlabs/ion-java#27 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
-    }
-
-    public final int getFieldNameId()
-    {
-        return getFieldId();
     }
 
     /**
@@ -565,7 +560,7 @@ abstract class IonValueLite
             String text = token.getText();
             if (text != null && token.getSid() == UNKNOWN_SYMBOL_ID)
             {
-                // TODO ION-320 We should memoize the result of symtab lookups
+                // TODO amznlabs/ion-java#27 We should memoize the result of symtab lookups
                 // into _annotations.
                 // See getFieldNameSymbol() for challenges doing so.
 
@@ -592,7 +587,7 @@ abstract class IonValueLite
         }
         else
         {
-            _Private_Utils.ensureNonEmptySymbols(annotations);
+            PrivateUtils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
         }
     }
@@ -616,14 +611,14 @@ abstract class IonValueLite
             return EMPTY_STRING_ARRAY;
         }
 
-        return _Private_Utils.toStrings(_annotations, count);
+        return PrivateUtils.toStrings(_annotations, count);
     }
 
     public void setTypeAnnotations(String... annotations)
     {
         checkForLock();
 
-        _annotations = _Private_Utils.newSymbolTokens(getSymbolTable(),
+        _annotations = PrivateUtils.newSymbolTokens(getSymbolTable(),
                                                        annotations);
     }
 
@@ -792,17 +787,7 @@ abstract class IonValueLite
     @Override
     public String toString()
     {
-        StringBuilder buf = new StringBuilder(1024);
-        try
-        {
-            Printer p = new Printer();
-            p.print(this, buf);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
-        return buf.toString();
+        return toString(TO_STRING_TEXT_WRITER_BUILDER);
     }
 
     public String toString(IonTextWriterBuilder writerBuilder)
@@ -860,7 +845,7 @@ abstract class IonValueLite
     final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
     {
         if (writer.isInStruct()
-            && ! ((_Private_IonWriter) writer).isFieldNameSet())
+            && ! ((PrivateIonWriter) writer).isFieldNameSet())
         {
             SymbolToken tok = getFieldNameSymbol(symbolTableProvider);
             if (tok == null)

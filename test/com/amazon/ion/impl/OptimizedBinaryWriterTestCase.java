@@ -1,4 +1,16 @@
-// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2013-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -33,7 +45,7 @@ public class OptimizedBinaryWriterTestCase
 
     /**
      * Denotes whether the
-     * {@link _Private_ByteTransferReader#transferCurrentValue(IonWriterSystemBinary)}
+     * {@link PrivateByteTransferReader#transferCurrentValue(IonWriterSystemBinary)}
      * has been called after an {@link IonWriter#writeValue(IonReader)}.
      */
     private boolean isTransferCurrentValueInvoked = false;
@@ -53,8 +65,8 @@ public class OptimizedBinaryWriterTestCase
         if (isStreamCopyOptimized())
         {
             assertTrue("IonWriter should be instance of _Private_IonWriter",
-                       writer instanceof _Private_IonWriter);
-            _Private_IonWriter privateWriter = (_Private_IonWriter) writer;
+                       writer instanceof PrivateIonWriter);
+            PrivateIonWriter privateWriter = (PrivateIonWriter) writer;
             assertTrue("IonWriter should be stream copy optimized",
                        privateWriter.isStreamCopyOptimized());
         }
@@ -95,16 +107,16 @@ public class OptimizedBinaryWriterTestCase
     }
 
     private class TransferCurrentValueWatchingReader
-        implements _Private_ByteTransferReader
+        implements PrivateByteTransferReader
     {
-        private final _Private_ByteTransferReader myDelegate;
+        private final PrivateByteTransferReader myDelegate;
 
-        TransferCurrentValueWatchingReader(_Private_ByteTransferReader byteTransferReader)
+        TransferCurrentValueWatchingReader(PrivateByteTransferReader byteTransferReader)
         {
             myDelegate = byteTransferReader;
         }
 
-        public void transferCurrentValue(_Private_ByteTransferSink sink)
+        public void transferCurrentValue(PrivateByteTransferSink sink)
             throws IOException
         {
             OptimizedBinaryWriterTestCase.this.isTransferCurrentValueInvoked = true;
@@ -114,7 +126,7 @@ public class OptimizedBinaryWriterTestCase
 
     /**
      * Obtains a dynamic proxy of {@link IonReader} over the passed in byte[],
-     * with an invocation handler hook over {@link _Private_ByteTransferReader} facet,
+     * with an invocation handler hook over {@link PrivateByteTransferReader} facet,
      * so as to verify whether the transferCurrentValue() method is actually
      * being called.
      *
@@ -131,10 +143,10 @@ public class OptimizedBinaryWriterTestCase
             {
                 if (method.getName().equals("asFacet") &&
                     args.length == 1 &&
-                    args[0] == _Private_ByteTransferReader.class)
+                    args[0] == PrivateByteTransferReader.class)
                 {
-                    _Private_ByteTransferReader transferReader =
-                        (_Private_ByteTransferReader) method.invoke(reader, args);
+                    PrivateByteTransferReader transferReader =
+                        (PrivateByteTransferReader) method.invoke(reader, args);
 
                     if (transferReader == null)
                         return null;
@@ -165,7 +177,7 @@ public class OptimizedBinaryWriterTestCase
         // Reset flag before calling IonWriter.writeValue
         isTransferCurrentValueInvoked = false;
 
-        // TODO ION-241 - Currently, doesn't copy annotations or field names,
+        // TODO amznlabs/ion-java#16 - Currently, doesn't copy annotations or field names,
         //      so we always expect no transfer of raw bytes
         if (ir.isInStruct() || ir.getTypeAnnotationSymbols().length > 0)
         {

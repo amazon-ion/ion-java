@@ -1,12 +1,24 @@
-// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
 import static com.amazon.ion.Symtabs.makeLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.copyLocalSymbolTable;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.copyLocalSymbolTable;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonTestCase;
@@ -16,9 +28,6 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Symtabs;
 import org.junit.Test;
 
-/**
- *
- */
 public class LocalSymbolTableTest
     extends IonTestCase
 {

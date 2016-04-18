@@ -1,4 +1,16 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -347,8 +359,8 @@ abstract class UnifiedInputStreamX
         }
         return;
     }
-    // ION-175 - NB this method does not follow the contract of InputStream.read, it will return 0 at EOF
-    //           I don't know the implication to the rest of the system to make it 'conform' (almann@)
+    // NB this method does not follow the contract of InputStream.read, it will return 0 at EOF
+    //    It is unclear what the implication to the rest of the system to make it 'conform'
     public final int read(byte[] dst, int offset, int length) throws IOException
     {
         if (!is_byte_data()) {

@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2016 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -202,7 +214,7 @@ public interface IonValue
      * local or system symbol table (or null).
      *
      * @return the symbol table, or <code>null</code> if this value is not
-     * currently backed by binary-encoded data.
+     * currently backed by a symbol table.
      */
     public SymbolTable getSymbolTable();
 
@@ -224,19 +236,6 @@ public interface IonValue
      *
      */
     public SymbolToken getFieldNameSymbol();
-
-
-    /**
-     * Gets the symbol ID of the field name attached to this value.
-     *
-     * @return the symbol ID of the field name, if this is part of an
-     * {@link IonStruct}. If this is not a field, or if the symbol ID cannot be
-     * determined, this method returns a value <em>less than one</em>.
-     *
-     * @deprecated  Use {@link #getFieldNameSymbol()} instead.
-     */
-    @Deprecated
-    public int getFieldId();
 
 
     /**

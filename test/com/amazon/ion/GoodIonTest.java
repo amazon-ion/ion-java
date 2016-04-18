@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -7,7 +19,7 @@ import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
 import java.io.File;
@@ -93,11 +105,8 @@ public class GoodIonTest
     {
         if (! myFileIsBinary)
         {
-            String ionText = _Private_Utils.utf8FileToString(myTestFile);
-            IonDatagram dg = loader().load(ionText);
-
-            // Flush out any encoding problems in the data.
-            forceDeepMaterialization(dg);
+            String ionText = PrivateUtils.utf8FileToString(myTestFile);
+            loader().load(ionText);
         }
     }
 
@@ -105,7 +114,7 @@ public class GoodIonTest
     public void testIterateByteArray()
     throws Exception
     {
-        byte[] bytes = _Private_Utils.loadFileBytes(myTestFile);
+        byte[] bytes = PrivateUtils.loadFileBytes(myTestFile);
 
         Iterator<IonValue> i = system().iterate(bytes);
         while (i.hasNext())

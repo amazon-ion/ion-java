@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -27,7 +39,9 @@ public class ListTest
     @Override
     protected IonList newSequence(Collection<? extends IonValue> children)
     {
-        return system().newList(children);
+        IonList list = system().newEmptyList();
+        list.addAll(children);
+        return list;
     }
 
     @Override
@@ -211,22 +225,26 @@ public class ListTest
         IonSystem system = system();
         List<IonValue> elements = null;
 
-        IonList v = system.newList(elements);
-        testFreshNullSequence(v);
+        IonList v;
+        try {
+            v = newSequence(elements);
+            fail("Expected NullPointerException");
+        }
+        catch (NullPointerException e) {}
 
         elements = new ArrayList<IonValue>();
-        v = system.newList(elements);
+        v = newSequence(elements);
         testEmptySequence(v);
 
         elements.add(system.newString("hi"));
         elements.add(system.newInt(1776));
-        v = system.newList(elements);
+        v = newSequence(elements);
         assertEquals(2, v.size());
         checkString("hi", v.get(0));
         checkInt(1776, v.get(1));
 
         try {
-            v = system.newList(elements);
+            v = newSequence(elements);
             fail("Expected ContainedValueException");
         }
         catch (ContainedValueException e) { }
@@ -235,7 +253,7 @@ public class ListTest
         elements.add(system.newInt(1776));
         elements.add(null);
         try {
-            system.newList(elements);
+            newSequence(elements);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }

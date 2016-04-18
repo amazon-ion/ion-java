@@ -1,4 +1,16 @@
-// Copyright (c) 2013-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2013-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
@@ -9,26 +21,26 @@ import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
-import static com.amazon.ion.impl._Private_IonConstants.lnBooleanFalse;
-import static com.amazon.ion.impl._Private_IonConstants.lnBooleanTrue;
-import static com.amazon.ion.impl._Private_IonConstants.lnIsNull;
-import static com.amazon.ion.impl._Private_IonConstants.lnIsVarLen;
-import static com.amazon.ion.impl._Private_IonConstants.tidBlob;
-import static com.amazon.ion.impl._Private_IonConstants.tidBoolean;
-import static com.amazon.ion.impl._Private_IonConstants.tidClob;
-import static com.amazon.ion.impl._Private_IonConstants.tidDecimal;
-import static com.amazon.ion.impl._Private_IonConstants.tidFloat;
-import static com.amazon.ion.impl._Private_IonConstants.tidList;
-import static com.amazon.ion.impl._Private_IonConstants.tidNegInt;
-import static com.amazon.ion.impl._Private_IonConstants.tidNull;
-import static com.amazon.ion.impl._Private_IonConstants.tidPosInt;
-import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
-import static com.amazon.ion.impl._Private_IonConstants.tidString;
-import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
-import static com.amazon.ion.impl._Private_IonConstants.tidSymbol;
-import static com.amazon.ion.impl._Private_IonConstants.tidTimestamp;
-import static com.amazon.ion.impl._Private_IonConstants.tidTypedecl;
+import static com.amazon.ion.impl.PrivateIonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl.PrivateIonConstants.lnBooleanFalse;
+import static com.amazon.ion.impl.PrivateIonConstants.lnBooleanTrue;
+import static com.amazon.ion.impl.PrivateIonConstants.lnIsNull;
+import static com.amazon.ion.impl.PrivateIonConstants.lnIsVarLen;
+import static com.amazon.ion.impl.PrivateIonConstants.tidBlob;
+import static com.amazon.ion.impl.PrivateIonConstants.tidBoolean;
+import static com.amazon.ion.impl.PrivateIonConstants.tidClob;
+import static com.amazon.ion.impl.PrivateIonConstants.tidDecimal;
+import static com.amazon.ion.impl.PrivateIonConstants.tidFloat;
+import static com.amazon.ion.impl.PrivateIonConstants.tidList;
+import static com.amazon.ion.impl.PrivateIonConstants.tidNegInt;
+import static com.amazon.ion.impl.PrivateIonConstants.tidNull;
+import static com.amazon.ion.impl.PrivateIonConstants.tidPosInt;
+import static com.amazon.ion.impl.PrivateIonConstants.tidSexp;
+import static com.amazon.ion.impl.PrivateIonConstants.tidString;
+import static com.amazon.ion.impl.PrivateIonConstants.tidStruct;
+import static com.amazon.ion.impl.PrivateIonConstants.tidSymbol;
+import static com.amazon.ion.impl.PrivateIonConstants.tidTimestamp;
+import static com.amazon.ion.impl.PrivateIonConstants.tidTypedecl;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBlob;
@@ -153,55 +165,6 @@ class ReverseBinaryEncoder
         byte[] bytes = new byte[length];
         System.arraycopy(myBuffer, myOffset, bytes, 0, length);
         return bytes;
-    }
-
-    /**
-     * Copies the current contents of the Ion binary-encoded byte array into a
-     * a given byte array.
-     * <p>
-     * The given array must be large enough to contain all the bytes of the
-     * Ion binary-encoded byte array.
-     * <p>
-     * This makes an unchecked assumption that {{@link #serialize(IonDatagram)}
-     * is already called.
-     * <p>
-     * TODO To be deprecated along with {@link IonDatagram#getBytes(byte[])}
-     *
-     * @param dst the byte array into which bytes are to be written
-     *
-     * @return the number of bytes copied into {@code dst}
-     */
-    int toNewByteArray(byte[] dst)
-    {
-        int length = myBuffer.length - myOffset;
-        System.arraycopy(myBuffer, myOffset, dst, 0, length);
-        return length;
-    }
-
-    /**
-     * Copies the current contents of the Ion binary-encoded byte array into a
-     * a given byte sub-array.
-     * <p>
-     * The given sub-array must be large enough to contain all the bytes of the
-     * Ion binary-encoded byte array.
-     * <p>
-     * This makes an unchecked assumption that {{@link #serialize(IonDatagram)}
-     * is already called.
-     * <p>
-     * TODO To be deprecated along with {@link IonDatagram#getBytes(byte[], int)}
-     *
-     * @param dst the byte sub-array into which bytes are to be written
-     * @param offset the offset within the sub-array of the first byte to be
-     *          written; must be non-negative and no larger
-     *          than {@code dst.length}
-     *
-     * @return the number of bytes copied into {@code dst}
-     */
-    int toNewByteArray(byte[] dst, int offset)
-    {
-        int length = myBuffer.length - myOffset;
-        System.arraycopy(myBuffer, myOffset, dst, offset, length);
-        return length;
     }
 
     /**
@@ -681,10 +644,6 @@ class ReverseBinaryEncoder
         writeByte(encoded);
     }
 
-    /**
-     * @see IonBinary#writeUIntValue(BigInteger value, int len)
-     * @param val
-     */
     private void writeIonIntContent(IonInt val)
     {
         if (val.isNullValue())
@@ -862,7 +821,6 @@ class ReverseBinaryEncoder
             switch (t.getPrecision())
             {
                 // Fall through each case - by design
-                case FRACTION:
                 case SECOND:
                 {
                     BigDecimal fraction = t.getZFractionalSecond();
@@ -1148,7 +1106,7 @@ class ReverseBinaryEncoder
         {
             final int originalOffset = myBuffer.length - myOffset;
 
-            // TODO ION-358 should not preserve the ordering of fields
+            // TODO amznlabs/ion-java#31 should not preserve the ordering of fields
             ArrayList<IonValue> values = new ArrayList<IonValue>();
 
             // Fill ArrayList with IonValues, the add() just copies the
@@ -1169,7 +1127,7 @@ class ReverseBinaryEncoder
                 writeVarUInt(sid);
             }
 
-            // TODO ION-42 Detect if the struct fields are sorted in ascending
+            // TODO amznlabs/ion-java#41 Detect if the struct fields are sorted in ascending
             // order of Sids. If so, 1 should be written into 'length' field.
             // Note that this 'length' field is not the same as the four-bit
             // length L in the type descriptor octet.
@@ -1260,7 +1218,7 @@ class ReverseBinaryEncoder
      *    have different Ion versions.
      * </ul>
      *
-     * TODO ION-305 Currently, {@link IonDatagram#systemIterator()} doesn't
+     * TODO amznlabs/ion-java#25 Currently, {@link IonDatagram#systemIterator()} doesn't
      * retain information about interspersed IVMs within the IonDatagram.
      * As such, we cannot obtain the location of interspersed IVMs, if any.
      *

@@ -1,11 +1,22 @@
-// Copyright (c) 2008-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.streaming;
 
-import static com.amazon.ion.impl._Private_Utils.utf8;
+import static com.amazon.ion.impl.PrivateUtils.utf8;
 
 import com.amazon.ion.BinaryTest;
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonString;
@@ -17,16 +28,12 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- *
- */
 public class MiscStreamingTest
     extends IonTestCase
 {
@@ -43,7 +50,6 @@ public class MiscStreamingTest
     static final String _QuotingString2_java = "s\'t2";
 
     @Test
-    @SuppressWarnings("deprecation")
     public void testQuoting()
     throws Exception
     {
@@ -62,12 +68,7 @@ public class MiscStreamingTest
         //    value2 symbol 'str2' (2 bytes: 1 typedesc + 1 sid)
         IonReader ir = system().newReader(s);
 
-        IonSystem system = system();
-        IonBinaryWriter wr = system.newBinaryWriter();
-        wr = system.newBinaryWriter();
-        wr.writeValues(ir);
-
-        byte[] buffer = wr.getBytes();
+        byte[] buffer = writeBinaryBytes(ir);
         assertSame("this buffer length is known to be 22", buffer.length, 22);
 
         IonReader sir = system().newReader(s);
@@ -244,12 +245,8 @@ public class MiscStreamingTest
         testNullTextValue(reader, IonType.SYMBOL);
     }
 
-    @SuppressWarnings("deprecation")
     private void testNullTextValue(IonReader reader, IonType textType)
     {
-        if (! _Private_Utils.READER_HASNEXT_REMOVED) {
-            assertTrue(reader.hasNext());
-        }
         assertEquals(textType, reader.next());
         assertEquals(textType, reader.getType());
         assertTrue(reader.isNullValue());
@@ -280,7 +277,6 @@ public class MiscStreamingTest
     }
 
 
-    /** ION-184 */
     @Test
     public void testReaderDataMangling()
     throws Exception
@@ -296,7 +292,6 @@ public class MiscStreamingTest
     }
 
 
-    /** ION-184 */
     @Test
     public void testIteratorDataMangling()
     throws Exception
@@ -312,7 +307,6 @@ public class MiscStreamingTest
     }
 
 
-    /** ION-140 IMSVT-2863 IMSVT-2573 */
     @Test
     public void testTextWriterSymtabs()
     throws IOException

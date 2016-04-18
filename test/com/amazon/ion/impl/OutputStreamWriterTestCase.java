@@ -1,4 +1,16 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -18,9 +30,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import org.junit.Test;
 
-/**
- *
- */
 public abstract class OutputStreamWriterTestCase
     extends IonWriterTestCase
 {
@@ -129,12 +138,12 @@ public abstract class OutputStreamWriterTestCase
     {
         iw = makeWriter();
 
-        // Force a local symtab.  TODO ION-165 Should have an API for this
+        // Force a local symtab.  TODO amznlabs/ion-java#8 Should have an API for this
         iw.addTypeAnnotation(SystemSymbols.ION_SYMBOL_TABLE);
         iw.stepIn(IonType.STRUCT);
         iw.stepOut();
 
-        SymbolTable symtab = iw.getSymbolTable();  // TODO ION-269
+        SymbolTable symtab = iw.getSymbolTable();  // TODO amznlabs/ion-java#22
         symtab.intern("fred_1");
         symtab.intern("fred_2");
         testFlushing();
@@ -331,7 +340,6 @@ public abstract class OutputStreamWriterTestCase
      *
      * @see #testAutoFlushTopLevelValuesForTypedWritesContainers()
      */
-    @SuppressWarnings("deprecation")
     @Test
     public void testAutoFlushTopLevelValuesForOtherWrites()
         throws Exception
@@ -341,11 +349,6 @@ public abstract class OutputStreamWriterTestCase
         //================== IonValue.writeTo(IonWriter) =======================
         iw = makeWriter();
         val.writeTo(iw);
-        checkFlushedAfterTopLevelValueWritten();
-
-        //================== IonWriter.writeValue(IonValue) ====================
-        iw = makeWriter();
-        iw.writeValue(val);
         checkFlushedAfterTopLevelValueWritten();
 
         //================== IonWriter.writeValues(IonReader) ==================

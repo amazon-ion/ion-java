@@ -1,10 +1,22 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -42,7 +54,7 @@ import java.util.regex.Pattern;
  */
 class IonReaderTextUserX
     extends IonReaderTextSystemX
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     private static final Pattern ION_VERSION_MARKER_REGEX = Pattern.compile("^\\$ion_[0-9]+_[0-9]+$");
 
@@ -111,7 +123,7 @@ class IonReaderTextUserX
      * @return true if more data remains, false on eof
      */
     @Override
-    public boolean hasNext()
+    boolean hasNext()
     {
         boolean has_next = has_next_user_value();
         return has_next;

@@ -1,24 +1,33 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static com.amazon.ion.util.IonTextUtils.printString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl.PrivateIonSystem;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.util.Arrays;
 
-/**
- *
- */
 public class Symtabs
 {
 
@@ -95,7 +104,7 @@ public class Symtabs
     {
         int[] maxIds = new int[serializedTables.length];
 
-        _Private_IonSystem system = (_Private_IonSystem)
+        PrivateIonSystem system = (PrivateIonSystem)
             IonSystemBuilder.standard().withCatalog(CATALOG).build();
 
         for (int i = 1; i < serializedTables.length; i++)

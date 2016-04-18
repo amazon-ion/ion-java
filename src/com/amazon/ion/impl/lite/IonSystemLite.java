@@ -1,18 +1,29 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
-import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
-import static com.amazon.ion.impl._Private_Utils.initialSymtab;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateIonReaderFactory.makeReader;
+import static com.amazon.ion.impl.PrivateIonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl.PrivateUtils.addAllNonNull;
+import static com.amazon.ion.impl.PrivateUtils.initialSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
@@ -20,7 +31,6 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -29,11 +39,10 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
-import com.amazon.ion.impl._Private_IonSystem;
-import com.amazon.ion.impl._Private_IonWriterFactory;
-import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
+import com.amazon.ion.impl.PrivateIonSystem;
+import com.amazon.ion.impl.PrivateIonWriterFactory;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,13 +54,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/**
- *
- */
-@SuppressWarnings("deprecation")
 final class IonSystemLite
     extends ValueFactoryLite
-    implements _Private_IonSystem
+    implements PrivateIonSystem
 {
 
     private final SymbolTable _system_symbol_table;
@@ -63,10 +68,10 @@ final class IonSystemLite
     /** Immutable. */
     private final IonTextWriterBuilder myTextWriterBuilder;
     /** Immutable. */
-    private final _Private_IonBinaryWriterBuilder myBinaryWriterBuilder;
+    private final PrivateIonBinaryWriterBuilder myBinaryWriterBuilder;
 
     public IonSystemLite(IonTextWriterBuilder twb,
-                          _Private_IonBinaryWriterBuilder bwb)
+                          PrivateIonBinaryWriterBuilder bwb)
     {
         IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
@@ -108,7 +113,7 @@ final class IonSystemLite
         if (value instanceof IonDatagram)
         {
             IonDatagram datagram = newDatagram();
-            IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
+            IonWriter writer = PrivateIonWriterFactory.makeWriter(datagram);
             IonReader reader = makeSystemReader(value.getSystem(), value);
 
             try {
@@ -189,22 +194,6 @@ final class IonSystemLite
         return iterator;
     }
 
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter()
-    {
-        _Private_IonBinaryWriterBuilder b = myBinaryWriterBuilder;
-        return b.buildLegacy();
-    }
-
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter(SymbolTable... imports)
-    {
-        _Private_IonBinaryWriterBuilder b = (_Private_IonBinaryWriterBuilder)
-            myBinaryWriterBuilder.withImports(imports);
-        return b.buildLegacy();
-    }
-
-
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports)
     {
         return myBinaryWriterBuilder.withImports(imports).build(out);
@@ -235,7 +224,7 @@ final class IonSystemLite
 
     public SymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        return _Private_Utils.newLocalSymtab(this,
+        return PrivateUtils.newLocalSymtab(this,
                                              getSystemSymbolTable(),
                                              null /* localSymbols */,
                                              imports);
@@ -243,18 +232,18 @@ final class IonSystemLite
 
     public SymbolTable newSharedSymbolTable(IonStruct ionRep)
     {
-        return _Private_Utils.newSharedSymtab(ionRep);
+        return PrivateUtils.newSharedSymtab(ionRep);
     }
 
     public SymbolTable newSharedSymbolTable(IonReader reader)
     {
-        return _Private_Utils.newSharedSymtab(reader, false);
+        return PrivateUtils.newSharedSymtab(reader, false);
     }
 
     public SymbolTable newSharedSymbolTable(IonReader reader,
                                             boolean isOnStruct)
     {
-        return _Private_Utils.newSharedSymtab(reader, isOnStruct);
+        return PrivateUtils.newSharedSymtab(reader, isOnStruct);
     }
 
     public SymbolTable newSharedSymbolTable(String name,
@@ -288,7 +277,7 @@ final class IonSystemLite
         addAllNonNull(syms, newSymbols);
 
         SymbolTable st =
-            _Private_Utils.newSharedSymtab(name, version, prior,
+            PrivateUtils.newSharedSymtab(name, version, prior,
                                            syms.iterator());
         return st;
     }
@@ -320,20 +309,9 @@ final class IonSystemLite
                 v = newBool(reader.booleanValue());
                 break;
             case INT:
-                // TODO ION-176  Inefficient since we can't determine the size
+                // TODO amznlabs/ion-java#9  Inefficient since we can't determine the size
                 // of the integer in order to avoid making BigIntegers.
-                if (true) {
-                    v = newInt(reader.bigIntegerValue());
-                    break;
-                }
-                try {
-                    v = newInt(reader.longValue());
-                    // FIXME ION-297 this is wrong!
-                    // This exception is not specified or tested and is not
-                    // thrown by all reader implementations.  ION-176
-                } catch (CantConvertException e) {
-                    v = newInt(reader.bigIntegerValue());
-                }
+                v = newInt(reader.bigIntegerValue());
                 break;
             case FLOAT:
                 v = newFloat(reader.doubleValue());
@@ -488,7 +466,7 @@ final class IonSystemLite
 
     public IonWriter newWriter(IonContainer container)
     {
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);
+        IonWriter writer = PrivateIonWriterFactory.makeWriter(container);
         return writer;
     }
 
@@ -697,7 +675,7 @@ final class IonSystemLite
     }
 
 
-    public IonTextReader newReader(String ionText)
+    public IonReader newReader(String ionText)
     {
         return makeReader(this, _catalog, ionText);
     }
@@ -718,25 +696,23 @@ final class IonSystemLite
         return makeSystemReader(this, ionData);
     }
 
-
-    //==========================================================================
-    // methods in IonSystemImpl (now declared in IonSystemPrivate)
-    //==========================================================================
-
     public IonReader newReader(Reader ionText)
     {
         return makeReader(this, _catalog, ionText);
     }
 
-    public IonReader newSystemReader(Reader ionText)
-    {
-        return makeSystemReader(this, ionText);
-    }
-
-
     public IonReader newReader(IonValue value)
     {
         return makeReader(this, _catalog, value);
+    }
+
+    //==========================================================================
+    // methods in _Private_IonSystem
+    //==========================================================================
+
+    public IonReader newSystemReader(Reader ionText)
+    {
+        return makeSystemReader(this, ionText);
     }
 
     public IonReader newSystemReader(IonValue value)
@@ -754,7 +730,7 @@ final class IonSystemLite
      */
     public IonWriter newTreeSystemWriter(IonContainer container)
     {
-        IonWriter writer = _Private_IonWriterFactory.makeSystemWriter(container);
+        IonWriter writer = PrivateIonWriterFactory.makeSystemWriter(container);
         return writer;
     }
 
@@ -763,7 +739,7 @@ final class IonSystemLite
      */
     public IonWriter newTreeWriter(IonContainer container)
     {
-        IonWriter writer = _Private_IonWriterFactory.makeWriter(container);
+        IonWriter writer = PrivateIonWriterFactory.makeWriter(container);
         return writer;
     }
 
@@ -771,25 +747,25 @@ final class IonSystemLite
     public Iterator<IonValue> systemIterate(Reader ionText)
     {
         IonReader ir = newSystemReader(ionText);
-        return _Private_Utils.iterate(this, ir);
+        return PrivateUtils.iterate(this, ir);
     }
 
     public Iterator<IonValue> systemIterate(String ionText)
     {
         IonReader ir = newSystemReader(ionText);
-        return _Private_Utils.iterate(this, ir);
+        return PrivateUtils.iterate(this, ir);
     }
 
     public Iterator<IonValue> systemIterate(InputStream ionData)
     {
         IonReader ir = newSystemReader(ionData);
-        return _Private_Utils.iterate(this, ir);
+        return PrivateUtils.iterate(this, ir);
     }
 
     public Iterator<IonValue> systemIterate(byte[] ionData)
     {
         IonReader ir = newSystemReader(ionData);
-        return _Private_Utils.iterate(this, ir);
+        return PrivateUtils.iterate(this, ir);
     }
 
 

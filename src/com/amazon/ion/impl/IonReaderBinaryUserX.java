@@ -1,11 +1,22 @@
-// Copyright (c) 2009-2012 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
@@ -15,17 +26,14 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SymbolToken;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
 import java.io.IOException;
-import java.util.Iterator;
 
 final class IonReaderBinaryUserX
     extends IonReaderBinarySystemX
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -34,14 +42,12 @@ final class IonReaderBinaryUserX
      */
     private final int _physical_start_offset;
 
-    SymbolTable _symbols;
     IonCatalog  _catalog;
 
     private static final class IonReaderBinarySpan
         extends DowncastingFaceted
         implements Span, OffsetSpan
     {
-        State       _state;
         long        _offset;
         long        _limit;
         SymbolTable _symbol_table;
@@ -55,15 +61,6 @@ final class IonReaderBinaryUserX
         {
             return _limit;
         }
-    }
-
-    @Deprecated
-    public IonReaderBinaryUserX(IonSystem system, IonCatalog catalog,
-                                byte[] bytes, int offset, int length)
-    {
-        super(system, bytes, offset, length);
-        _physical_start_offset = offset;
-        init_user(catalog);
     }
 
     public IonReaderBinaryUserX(IonSystem system,
@@ -130,8 +127,6 @@ final class IonReaderBinaryUserX
             pos._symbol_table = _symbols;
         }
 
-        pos._state = _state;
-
         return pos;
     }
 
@@ -177,19 +172,6 @@ final class IonReaderBinaryUserX
 
         // now we need to set our symbol table
         _symbols = pos._symbol_table;
-
-        // and the other misc state variables we had
-        // read past before getPosition gets called
-        //   jonker: Don't do this, we'll re-read the data from the stream.
-        //           Otherwise, this reader will be in the wrong state.
-        //           For example, getType() will return non-null but that
-        //           shouldn't happen until the user calls next().
-//        _state         = pos._state;
-//        _value_type    = pos._value_type;
-//        _value_is_null = pos._value_is_null;
-//        _value_is_true = pos._value_is_true;
-
-//        _is_in_struct = false;
     }
 
 
@@ -205,7 +187,7 @@ final class IonReaderBinaryUserX
     }
 
     @Override
-    public boolean hasNext()
+    boolean hasNext()
     {
         if (!_eof && _has_next_needed) {
             clear_system_value_stack();
@@ -226,7 +208,7 @@ final class IonReaderBinaryUserX
     {
         super.hasNext();
         if (getDepth() == 0 && !_value_is_null) {
-            if (_value_tid == _Private_IonConstants.tidSymbol) {
+            if (_value_tid == PrivateIonConstants.tidSymbol) {
                 if (load_annotations() == 0) {
                     // $ion_1_0 is read as an IVM only if it is not annotated
                     load_cached_value(AS_TYPE.int_value);
@@ -238,7 +220,7 @@ final class IonReaderBinaryUserX
                     }
                 }
             }
-            else if (_value_tid == _Private_IonConstants.tidStruct) {
+            else if (_value_tid == PrivateIonConstants.tidStruct) {
                 int count = load_annotations();
                 for(int ii=0; ii<count; ii++) {
                     if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
@@ -256,103 +238,11 @@ final class IonReaderBinaryUserX
                 }
             }
             else {
-                assert (_value_tid != _Private_IonConstants.tidTypedecl);
+                assert (_value_tid != PrivateIonConstants.tidTypedecl);
             }
         }
     }
 
-    @Override
-    public String getFieldName()
-    {
-        String name;
-        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) {
-            name = null;
-        }
-        else {
-            name = _symbols.findKnownSymbol(_value_field_id);
-            if (name == null) {
-                throw new UnknownSymbolException(_value_field_id);
-            }
-        }
-        return name;
-    }
-
-    @Override
-    public final SymbolToken getFieldNameSymbol()
-    {
-        if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
-        int sid = _value_field_id;
-        String text = _symbols.findKnownSymbol(sid);
-        return new SymbolTokenImpl(text, sid);
-    }
-
-    @Override
-    public Iterator<String> iterateTypeAnnotations()
-    {
-        String[] annotations = getTypeAnnotations();
-        return _Private_Utils.stringIterator(annotations);
-    }
-
-    @Override
-    public String[] getTypeAnnotations()
-    {
-        load_annotations();
-        String[] anns;
-        if (_annotation_count < 1) {
-            anns = _Private_Utils.EMPTY_STRING_ARRAY;
-        }
-        else {
-            anns = new String[_annotation_count];
-            for (int ii=0; ii<_annotation_count; ii++) {
-                anns[ii] = _symbols.findKnownSymbol(_annotation_ids[ii]);
-                if (anns[ii] == null) {
-                    throw new UnknownSymbolException(_annotation_ids[ii]);
-                }
-            }
-        }
-        return anns;
-    }
-
-    @Override // TODO this override shouldn't be necessary
-    public String stringValue()
-    {
-        if (! IonType.isText(_value_type)) throw new IllegalStateException();
-        if (_value_is_null) return null;
-
-        if (_value_type == IonType.SYMBOL) {
-            if (!_v.hasValueOfType(AS_TYPE.string_value)) {
-                int sid = getSymbolId();
-                String name = _symbols.findKnownSymbol(sid);
-                if (name == null) {
-                    throw new UnknownSymbolException(sid);
-                }
-                _v.addValue(name);
-            }
-        }
-        else {
-            prepare_value(AS_TYPE.string_value);
-        }
-        return _v.getString();
-    }
-
-    @Override
-    public SymbolToken symbolValue()
-    {
-        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
-        if (_value_is_null) return null;
-
-        int sid = getSymbolId();
-        assert sid != UNKNOWN_SYMBOL_ID;
-        String text = _symbols.findKnownSymbol(sid);
-
-        return new SymbolTokenImpl(text, sid);
-    }
-
-    @Override
-    public SymbolTable getSymbolTable()
-    {
-        return _symbols;
-    }
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX,
@@ -406,7 +296,7 @@ final class IonReaderBinaryUserX
             return facetType.cast(new SpanProviderFacet());
         }
 
-        // TODO ION-243 support seeking over InputStream
+        // TODO amznlabs/ion-java#17 support seeking over InputStream
         if (_input instanceof FromByteArray)
         {
             if (facetType == SeekableReader.class)
@@ -415,13 +305,13 @@ final class IonReaderBinaryUserX
             }
         }
 
-        if (facetType == _Private_ByteTransferReader.class)
+        if (facetType == PrivateByteTransferReader.class)
         {
             // This is a rather sketchy use of Facets, since the availability
             // of the facet depends upon the current state of this subject,
             // and that can change over time.
 
-            // TODO ION-241 Our {@link #transferCurrentValue} doesn't handle
+            // TODO amznlabs/ion-java#16 Our {@link #transferCurrentValue} doesn't handle
             //  field names and annotations.
 
             // Ensure there's a contiguous buffer we can copy.
@@ -462,9 +352,9 @@ final class IonReaderBinaryUserX
     }
 
 
-    private class ByteTransferReaderFacet implements _Private_ByteTransferReader
+    private class ByteTransferReaderFacet implements PrivateByteTransferReader
     {
-        public void transferCurrentValue(_Private_ByteTransferSink sink)
+        public void transferCurrentValue(PrivateByteTransferSink sink)
             throws IOException
         {
             // Ensure there's a contiguous buffer we can copy.
@@ -474,7 +364,7 @@ final class IonReaderBinaryUserX
                 throw new UnsupportedOperationException();
             }
 
-            // TODO ION-241 wrong if current value has a field name or
+            // TODO amznlabs/ion-java#16 wrong if current value has a field name or
             //   annotations since the position is in the wrong place.
             // TODO when implementing that, be careful to handle the case where
             //   the writer already holds a pending field name or annotations!

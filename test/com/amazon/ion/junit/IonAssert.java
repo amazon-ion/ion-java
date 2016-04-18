@@ -1,6 +1,27 @@
-// Copyright (c) 2011-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.junit;
+
+import static com.amazon.ion.impl.PrivateIonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+import static com.amazon.ion.util.IonTextUtils.printSymbol;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
@@ -13,24 +34,12 @@ import com.amazon.ion.ReaderChecker;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.util.Equivalence;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
-import static com.amazon.ion.util.IonTextUtils.printSymbol;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public final class IonAssert
 {
@@ -50,7 +59,6 @@ public final class IonAssert
 
         if (! inStruct) {
             assertNull("reader field name", in.getFieldName());
-            assertEquals("reader fieldId", UNKNOWN_SYMBOL_ID, in.getFieldId());
             assertNull("reader field symbol", in.getFieldNameSymbol());
         }
 
@@ -70,10 +78,9 @@ public final class IonAssert
         assertNull(in.getType());
 
         assertNull(in.getFieldName());
-        assertTrue(in.getFieldId() < 0);
         assertNull(in.getFieldNameSymbol());
 
-        // TODO ION-213 Text reader doesn't throw, but others do.
+        // TODO amznlabs/ion-java#13 Text reader doesn't throw, but others do.
         try {
             String[] ann = in.getTypeAnnotations();
             assertEquals(0, ann.length);
@@ -96,15 +103,11 @@ public final class IonAssert
     }
 
 
-    @SuppressWarnings("deprecation")
     public static void assertEof(IonReader in)
     {
-        assertFalse(in.hasNext());
-        assertFalse(in.hasNext());
         assertNull(in.next());
         assertNoCurrentValue(in);
         assertNull(in.next());
-        assertFalse(in.hasNext());
         assertNull(in.next());
     }
 
@@ -451,7 +454,7 @@ public final class IonAssert
             SymbolToken tok = v.getFieldNameSymbol();
             String text = tok.getText();
             if (text == null) {
-                text = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid(); // TODO ION-272
+                text = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid(); // TODO amznlabs/ion-java#23
             }
             List<IonValue> fields = sorted.get(text);
             if (fields == null)

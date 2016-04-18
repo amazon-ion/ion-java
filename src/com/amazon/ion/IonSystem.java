@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -81,7 +93,7 @@ public interface IonSystem
      * or if any but the first is a system table.
      * @throws NullPointerException if any import is null.
      */
-    // TODO ION-392 Should we allow substituted imports as valid args?
+    // TODO amznlabs/ion-java#38 Should we allow substituted imports as valid args?
     public SymbolTable newLocalSymbolTable(SymbolTable... imports);
 
 
@@ -349,8 +361,7 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      */
-    @SuppressWarnings("deprecation")
-    public IonTextReader newReader(String ionText);
+    public IonReader newReader(String ionText);
 
     /**
      * Creates an new {@link IonReader} instance over a block of Ion data,
@@ -524,34 +535,6 @@ public interface IonSystem
      * @throws NullPointerException if any import is null.
      */
     public IonWriter newBinaryWriter(OutputStream out, SymbolTable... imports);
-
-    /**
-     * Creates a new writer that will encode binary Ion data.
-     *
-     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
-     *
-     * @deprecated Use
-     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
-     */
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter();
-
-    /**
-     * Creates a new writer that will encode binary Ion data,
-     * using the given shared symbol tables as imports.
-     * <p>
-     * The output stream will be start with an Ion Version Marker and a
-     * local symbol table that uses the given {@code imports}.
-     *
-     * @param imports a sequence of shared symbol tables
-     *
-     * @return a new {@link IonBinaryWriter} instance; not {@code null}.
-     *
-     * @deprecated Use
-     * {@link #newBinaryWriter(OutputStream, SymbolTable...)} instead.
-     */
-    @Deprecated
-    public IonBinaryWriter newBinaryWriter(SymbolTable... imports);
 
 
     //-------------------------------------------------------------------------

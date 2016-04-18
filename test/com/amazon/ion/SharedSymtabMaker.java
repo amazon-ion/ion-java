@@ -1,11 +1,23 @@
-// Copyright (c) 2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
 import static com.amazon.ion.Symtabs.sharedSymtabStruct;
 import static junit.framework.Assert.assertSame;
 
-import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.impl.PrivateIonSystem;
 
 /**
  * Abstracts the various ways that a shared {@link SymbolTable} can be created
@@ -19,7 +31,7 @@ public enum SharedSymtabMaker
     FROM_READER
     {
         @Override
-        public SymbolTable newSharedSymtab(_Private_IonSystem system,
+        public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                            IonReader reader)
         {
             return system.newSharedSymbolTable(reader);
@@ -33,7 +45,7 @@ public enum SharedSymtabMaker
     FROM_READER_ON_STRUCT
     {
         @Override
-        public SymbolTable newSharedSymtab(_Private_IonSystem system,
+        public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                            IonReader reader)
         {
             assertSame(IonType.STRUCT, reader.next());
@@ -48,7 +60,7 @@ public enum SharedSymtabMaker
     FROM_READER_NOT_ON_STRUCT
     {
         @Override
-        public SymbolTable newSharedSymtab(_Private_IonSystem system,
+        public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                            IonReader reader)
         {
             return system.newSharedSymbolTable(reader, false);
@@ -61,7 +73,7 @@ public enum SharedSymtabMaker
     FROM_STRUCT
     {
         @Override
-        public SymbolTable newSharedSymtab(_Private_IonSystem system,
+        public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                            IonStruct struct)
         {
             return system.newSharedSymbolTable(struct);
@@ -69,7 +81,7 @@ public enum SharedSymtabMaker
     };
 
 
-    public SymbolTable newSharedSymtab(_Private_IonSystem system,
+    public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                        String name,
                                        int version,
                                        String... symbols)
@@ -81,7 +93,7 @@ public enum SharedSymtabMaker
     /**
      * @param reader must be positioned JUST BEFORE the symtab struct.
      */
-    public SymbolTable newSharedSymtab(_Private_IonSystem system,
+    public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                        IonReader reader)
     {
         assertSame(IonType.STRUCT, reader.next());
@@ -89,7 +101,7 @@ public enum SharedSymtabMaker
         return newSharedSymtab(system, struct);
     }
 
-    public SymbolTable newSharedSymtab(_Private_IonSystem system,
+    public SymbolTable newSharedSymtab(PrivateIonSystem system,
                                        IonStruct struct)
     {
         IonReader reader = system.newReader(struct);

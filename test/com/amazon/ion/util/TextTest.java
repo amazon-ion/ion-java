@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.util;
 
@@ -6,13 +18,10 @@ import com.amazon.ion.BlobTest;
 import com.amazon.ion.BlobTest.TestData;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonTestCase;
-import com.amazon.ion.impl._Private_IonTextAppender;
+import com.amazon.ion.impl.PrivateIonTextAppender;
 import java.math.BigDecimal;
 import org.junit.Test;
 
-/**
- *
- */
 public class TextTest
     extends IonTestCase
 {
@@ -110,9 +119,9 @@ public class TextTest
                      IonTextUtils.symbolVariant(symbol));
 
         // unquoted in sexp
-        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
+        assertFalse(PrivateIonTextAppender.symbolNeedsQuoting(symbol, false));
         // unquoted elsewhere
-        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+        assertFalse(PrivateIonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
     private void quotedEverywhere(String symbol)
@@ -121,9 +130,9 @@ public class TextTest
                      IonTextUtils.symbolVariant(symbol));
 
         // Quoted in sexp
-        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
+        assertTrue(PrivateIonTextAppender.symbolNeedsQuoting(symbol, false));
         // Quoted elsewhere
-        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+        assertTrue(PrivateIonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
     private void unquotedInSexp(String symbol)
@@ -132,9 +141,9 @@ public class TextTest
                      IonTextUtils.symbolVariant(symbol));
 
         // unquoted in sexp
-        assertFalse(_Private_IonTextAppender.symbolNeedsQuoting(symbol, false));
+        assertFalse(PrivateIonTextAppender.symbolNeedsQuoting(symbol, false));
         // quoted elsewheres
-        assertTrue(_Private_IonTextAppender.symbolNeedsQuoting(symbol, true));
+        assertTrue(PrivateIonTextAppender.symbolNeedsQuoting(symbol, true));
     }
 
 

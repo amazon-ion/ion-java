@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -29,9 +41,11 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * <!-- TODO ION-84 -->
+     * Vote for issue amznlabs/ion-java#48 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/48">amznlabs/ion-java#48</a>
      */
     public void add(int index, IonValue element)
         throws ContainedValueException, NullPointerException;
@@ -39,9 +53,11 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * <!-- TODO ION-84 -->
+     * Vote for issue amznlabs/ion-java#48 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/48">amznlabs/ion-java#48</a>
      */
     public ValueFactory add(int index)
         throws ContainedValueException, NullPointerException;
@@ -49,18 +65,22 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * <!-- TODO ION-83 -->
+     * Vote for issue amznlabs/ion-java#47 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/47">amznlabs/ion-java#47</a>
      */
     public boolean addAll(int index, Collection<? extends IonValue> c);
 
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * <!-- TODO ION-90 -->
+     * Vote for issue amznlabs/ion-java#50 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
+     *
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/50">amznlabs/ion-java#50</a>
      */
     public IonValue set(int index, IonValue element);
 
@@ -174,74 +194,8 @@ public interface IonDatagram
      * @return a new, non-empty byte array containing the encoded datagram.
      *
      * @throws IonException if there's an error encoding the data.
-     *
-     * @deprecated Use {@link #getBytes()} instead,
-     * which is renamed for consistency with other interfaces.
-     */
-    @Deprecated
-    public byte[] toBytes()
-        throws IonException;
-
-    /**
-     * Copies the binary-encoded form of this datagram into a new byte array.
-     *
-     * @return a new, non-empty byte array containing the encoded datagram.
-     *
-     * @throws IonException if there's an error encoding the data.
      */
     public byte[] getBytes()
-        throws IonException;
-
-
-    /**
-     * Copies the binary-encoded form of this datagram into a given array.
-     * <p>
-     * The given array must be large enough to contain all the bytes of this
-     * datagram.
-     * <p>
-     * An invocation of this method of the form {@code dg.get(a)} behaves in
-     * exactly the same way as the invocation:
-     *<pre>
-     *    dg.get(a, 0)
-     *</pre>
-     *
-     * @param dst the array into which bytes are to be written.
-     *
-     * @return the number of bytes copied into {@code dst}.
-     *
-     * @throws IonException if there's an error encoding the data.
-     * @throws IndexOutOfBoundsException if {@code dst.length} is
-     * smaller than the result of {@link #byteSize()}.
-     *
-     * @see #getBytes(byte[],int)
-     *
-     * @deprecated with no direct replacement.
-     */
-    @Deprecated
-    public int getBytes(byte[] dst) // TODO ION-365 Remove
-        throws IonException;
-
-
-    /**
-     * Copies the binary-encoded form of this datagram into a given sub-array.
-     * <p>
-     * The given subarray must be large enough to contain all the bytes of this
-     * datagram.
-     *
-     * @param dst the array into which bytes are to be written.
-     * @param offset the offset within the array of the first byte to be
-     *   written; must be non-negative and no larger than {@code dst.length}
-     *
-     * @return the number of bytes copied into {@code dst}.
-     *
-     * @throws IonException if there's an error encoding the data.
-     * @throws IndexOutOfBoundsException if {@code (dst.length - offset)} is
-     * smaller than the result of {@link #byteSize()}.
-     *
-     * @deprecated with no direct replacement.
-     */
-    @Deprecated
-    public int getBytes(byte[] dst, int offset) // TODO ION-365 Remove
         throws IonException;
 
 
@@ -288,10 +242,11 @@ public interface IonDatagram
     /**
      * This inherited method is not yet supported by datagrams.
      * <p>
-     * <!-- TODO ION-85 -->
+     * Vote for SIM issue amznlabs/ion-java#49 if you need this.
      *
      * @throws UnsupportedOperationException at every call.
      *
+     * @see <a href="https://github.com/amznlabs/ion-java/issues/49">amznlabs/ion-java#49</a>
      */
     public boolean retainAll(Collection<?> c);
 

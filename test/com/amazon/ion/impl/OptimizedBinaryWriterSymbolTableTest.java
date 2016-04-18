@@ -1,10 +1,22 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2013-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.printLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.isNonSymbolScalar;
-import static com.amazon.ion.impl._Private_Utils.symtabExtends;
+import static com.amazon.ion.impl.PrivateUtils.isNonSymbolScalar;
+import static com.amazon.ion.impl.PrivateUtils.symtabExtends;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
@@ -16,7 +28,7 @@ import org.junit.Test;
 
 /**
  * {@link OptimizedBinaryWriterTestCase} tests related to
- * {@link _Private_Utils#symtabExtends(SymbolTable, SymbolTable)} checks.
+ * {@link PrivateUtils#symtabExtends(SymbolTable, SymbolTable)} checks.
  */
 public class OptimizedBinaryWriterSymbolTableTest
     extends OptimizedBinaryWriterTestCase
@@ -231,7 +243,7 @@ public class OptimizedBinaryWriterSymbolTableTest
 
     /**
      * Writer's imports superset of Reader's: (could be) fully optimized.
-     * TODO ION-253 at the moment the compatability code requires
+     * TODO amznlabs/ion-java#18 at the moment the compatability code requires
      *      exact-match on imports.
      */
     @Test
@@ -277,7 +289,7 @@ public class OptimizedBinaryWriterSymbolTableTest
 
     /**
      * Reader's source contains interspersed LSTs.
-     * TODO ION-394 Investigate allowing a config. option to copy reader's LST
+     * TODO amznlabs/ion-java#39 Investigate allowing a config. option to copy reader's LST
      *              over to the writer.
      */
     @Test

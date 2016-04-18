@@ -1,8 +1,20 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.util;
 
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
+import static com.amazon.ion.impl.PrivateIonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -93,14 +105,11 @@ import java.util.Set;
  * (A, V), where A is an ordered list of annotations, and V is an Ion Primitive
  * Data or Ion Complex Data value. The list of annotations, A is an tuple of Ion
  * Symbols (a specific type of Ion Primitive).
- * <p>
- *
- * @author Almann Goo
  */
 public final class Equivalence {
 
     /**
-     * TODO ION-319 Marker for code that needs to be altered in order to
+     * TODO amznlabs/ion-java#26 Marker for code that needs to be altered in order to
      * support a public comparison API to determine ordering of values, not
      * just equality.
      */
@@ -328,7 +337,7 @@ public final class Equivalence {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
             if (name == null) {
-                // TODO ION-272 Problematic with unknown field names.
+                // TODO amznlabs/ion-java#23 Problematic with unknown field names.
                 name = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid();
             }
             this.name = name;
@@ -342,7 +351,7 @@ public final class Equivalence {
         @Override
         public int hashCode() {
             return name.hashCode();
-            // TODO IONJAVA-463 : implement hash code such that it respects
+            // TODO amznlabs/ion-java#58 : implement hash code such that it respects
             // 'strict'. The prevously attempted fix is commented out below but
             // is not sufficient because value.hasCode will always include
             // type annotations in the hash computation. Type annotations
@@ -426,14 +435,14 @@ public final class Equivalence {
                                             ((IonFloat) v2).doubleValue());
                     break;
                 case DECIMAL:
-                    assert !PUBLIC_COMPARISON_API; // TODO ION-319
+                    assert !PUBLIC_COMPARISON_API; // TODO amznlabs/ion-java#26
                     result = Decimal.equals(((IonDecimal) v1).decimalValue(),
                                             ((IonDecimal) v2).decimalValue())
                                             ? 0 : 1;
                     break;
                 case TIMESTAMP:
                     if (strict) {
-                        assert !PUBLIC_COMPARISON_API; // TODO ION-319
+                        assert !PUBLIC_COMPARISON_API; // TODO amznlabs/ion-java#26
                         result = (((IonTimestamp) v1).timestampValue().equals(
                                   ((IonTimestamp) v2).timestampValue())
                                   ? 0 : 1);
@@ -461,7 +470,7 @@ public final class Equivalence {
                     result = compareLobContents((IonLob) v1, (IonLob) v2);
                     break;
                 case STRUCT:
-                    assert !PUBLIC_COMPARISON_API; // TODO ION-319
+                    assert !PUBLIC_COMPARISON_API; // TODO amznlabs/ion-java#26
                     result = compareStructs((IonStruct) v1,
                                             (IonStruct) v2,
                                             strict);

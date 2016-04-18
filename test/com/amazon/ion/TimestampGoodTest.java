@@ -1,4 +1,16 @@
-// Copyright (c) 2011-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -6,7 +18,7 @@ import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.GOOD_TIMESTAMP_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,9 +27,6 @@ import java.io.StringReader;
 import java.util.Iterator;
 import org.junit.Test;
 
-/**
- *
- */
 public class TimestampGoodTest
     extends IonTestCase
 {
@@ -57,7 +66,7 @@ public class TimestampGoodTest
     {
         if (! myTestFile.getName().endsWith(".ion")) return;
 
-        String fileText = _Private_Utils.utf8FileToString(myTestFile);
+        String fileText = PrivateUtils.utf8FileToString(myTestFile);
         BufferedReader reader = new BufferedReader(new StringReader(fileText));
 
         String line = reader.readLine();

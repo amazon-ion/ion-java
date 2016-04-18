@@ -1,4 +1,16 @@
-// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
@@ -11,9 +23,9 @@ import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_IonConstants;
-import com.amazon.ion.impl._Private_IonContainer;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonConstants;
+import com.amazon.ion.impl.PrivateIonContainer;
+import com.amazon.ion.impl.PrivateUtils;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -21,7 +33,7 @@ import java.util.NoSuchElementException;
 
 abstract class IonContainerLite
     extends IonValueLite
-    implements _Private_IonContainer, IonContext
+    implements PrivateIonContainer, IonContext
 {
 
     protected int            _child_count;
@@ -120,7 +132,7 @@ abstract class IonContainerLite
         if (isNullValue())
         {
             if (index != 0) throw new IndexOutOfBoundsException();
-            return _Private_Utils.<IonValue> emptyIterator();
+            return PrivateUtils.<IonValue> emptyIterator();
         }
 
         return new SequenceContentIterator(index, isReadOnly());
@@ -376,24 +388,6 @@ abstract class IonContainerLite
         _isLocked(true);
     }
 
-
-
-
-    /**
-     * methods from IonValue
-     *
-     *   public void deepMaterialize()
-     *   public IonContainer getContainer()
-     *   public int getFieldId()
-     *   public String getFieldName()
-     *   public String[] getTypeAnnotations()
-     *   public boolean hasTypeAnnotation(String annotation)
-     *   public boolean isNullValue()
-     *   public boolean isReadOnly()
-     *   public void removeTypeAnnotation(String annotation)
-     */
-
-
     /*
      * IonContext methods
      *
@@ -532,20 +526,20 @@ abstract class IonContainerLite
      */
     static final int[] INITIAL_SIZE = make_initial_size_array();
     static int[] make_initial_size_array() {
-        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
-        sizes[_Private_IonConstants.tidList]     = 1;
-        sizes[_Private_IonConstants.tidSexp]     = 4;
-        sizes[_Private_IonConstants.tidStruct]   = 5;
-        sizes[_Private_IonConstants.tidDATAGRAM] = 3;
+        int[] sizes = new int[PrivateIonConstants.tidDATAGRAM + 1];
+        sizes[PrivateIonConstants.tidList]     = 1;
+        sizes[PrivateIonConstants.tidSexp]     = 4;
+        sizes[PrivateIonConstants.tidStruct]   = 5;
+        sizes[PrivateIonConstants.tidDATAGRAM] = 3;
         return sizes;
     }
     static final int[] NEXT_SIZE = make_next_size_array();
     static int[] make_next_size_array() {
-        int[] sizes = new int[_Private_IonConstants.tidDATAGRAM + 1];
-        sizes[_Private_IonConstants.tidList]     = 4;
-        sizes[_Private_IonConstants.tidSexp]     = 8;
-        sizes[_Private_IonConstants.tidStruct]   = 8;
-        sizes[_Private_IonConstants.tidDATAGRAM] = 10;
+        int[] sizes = new int[PrivateIonConstants.tidDATAGRAM + 1];
+        sizes[PrivateIonConstants.tidList]     = 4;
+        sizes[PrivateIonConstants.tidSexp]     = 8;
+        sizes[PrivateIonConstants.tidStruct]   = 8;
+        sizes[PrivateIonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
     final protected int initialSize()

@@ -1,12 +1,24 @@
-// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
 import static com.amazon.ion.CloneTest.DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
-import com.amazon.ion.impl._Private_IonValue;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateIonValue;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -604,7 +616,7 @@ public class StructTest
         IonStruct struct = system().newNullStruct();
         IonBool nullBool = system().newNullBool();
 
-        SymbolToken is = _Private_Utils.newSymbolToken("f", 1);
+        SymbolToken is = PrivateUtils.newSymbolToken("f", 1);
         struct.add(is, nullBool);
         is = nullBool.getFieldNameSymbol();
         checkSymbol("f", UNKNOWN_SYMBOL_ID, is);
@@ -634,7 +646,7 @@ public class StructTest
         }
         catch (NullPointerException e) { }
 
-        SymbolToken is = _Private_Utils.newSymbolToken("f", 1);
+        SymbolToken is = PrivateUtils.newSymbolToken("f", 1);
         try {
             value.add(is, null);
             fail("Expected NullPointerException");
@@ -776,7 +788,7 @@ public class StructTest
 
         f.removeFromContainer();
         assertEquals(null, f.getFieldName());
-        assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, f.getFieldId());
+        assertEquals(null, f.getFieldNameSymbol());
     }
 
     @Test
@@ -1506,7 +1518,7 @@ public class StructTest
         }
     }
     void dump(IonStruct s1_temp, ArrayList<TestField> s2) {
-        _Private_IonValue s1 = ((_Private_IonValue)s1_temp);
+        PrivateIonValue s1 = ((PrivateIonValue)s1_temp);
         s1.dump(new PrintWriter(System.out));
         System.out.println("array: "+s2.toString());
     }
@@ -1735,8 +1747,8 @@ public class StructTest
                 errors += "extra field in struct "+v;
                 errors += "\n";
             }
-            if (v instanceof _Private_IonValue) {
-                int eid = ((_Private_IonValue)v).getElementId();
+            if (v instanceof PrivateIonValue) {
+                int eid = ((PrivateIonValue)v).getElementId();
                 if (eid != struct_idx) {
                     difference = true;
                     errors += "index of struct field "+struct_idx+" doesn't match array index "+eid+": "+v;
@@ -1759,7 +1771,7 @@ public class StructTest
 
         if (_debug_print_flag) {
             // now check the map, if there is one
-            _Private_IonValue l = (_Private_IonValue)s1;
+            PrivateIonValue l = (PrivateIonValue)s1;
             String map_error = l.validate();
             if (map_error != null) {
                 errors += map_error;

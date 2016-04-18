@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 import com.amazon.ion.AnnotationEscapesTest;
 import com.amazon.ion.AssertionsEnabledTest;
@@ -44,11 +56,7 @@ import com.amazon.ion.TimestampGoodTest;
 import com.amazon.ion.TimestampTest;
 import com.amazon.ion.ValueFactorySequenceTest;
 import com.amazon.ion.facet.FacetsTest;
-import com.amazon.ion.impl.ByteBufferTest;
-import com.amazon.ion.impl.CharacterReaderTest;
 import com.amazon.ion.impl.IonImplUtilsTest;
-import com.amazon.ion.impl.IonMarkupWriterFilesTest;
-import com.amazon.ion.impl.IonMarkupWriterTest;
 import com.amazon.ion.impl.IonWriterTests;
 import com.amazon.ion.impl.IterationTest;
 import com.amazon.ion.impl.LocalSymbolTableTest;
@@ -77,7 +85,6 @@ import com.amazon.ion.system.SimpleCatalogTest;
 import com.amazon.ion.util.EquivalenceTest;
 import com.amazon.ion.util.IonStreamUtilsTest;
 import com.amazon.ion.util.JarInfoTest;
-import com.amazon.ion.util.PrinterTest;
 import com.amazon.ion.util.TextTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -92,9 +99,7 @@ import org.junit.runners.Suite;
     AssertionsEnabledTest.class,
     IonExceptionTest.class,
     FacetsTest.class,
-    ByteBufferTest.class,
     TextTest.class,
-    CharacterReaderTest.class,
     JavaNumericsTest.class,
     ExtendedDecimalTest.class,
     IonImplUtilsTest.class,
@@ -128,10 +133,6 @@ import org.junit.runners.Suite;
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
 
-    // Markup tests
-    IonMarkupWriterTest.class,
-    IonMarkupWriterFilesTest.class,
-
     // Binary format tests
     BinaryTest.class,
 
@@ -139,7 +140,6 @@ import org.junit.runners.Suite;
     JarInfoTest.class,
     LoaderTest.class,
     IterationTest.class,
-    PrinterTest.class,
     SymbolTableTest.class,
     SharedSymbolTableTest.class,
     LocalSymbolTableTest.class,

@@ -1,11 +1,23 @@
-// Copyright (c) 2010-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -19,12 +31,9 @@ import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 
-/**
- *
- */
 final class IonReaderTreeUserX
     extends IonReaderTreeSystem
-    implements _Private_ReaderWriter
+    implements PrivateReaderWriter
 {
     IonCatalog _catalog;
 
@@ -36,13 +45,6 @@ final class IonReaderTreeUserX
 
 
     //========================================================================
-
-
-    @Override
-    public boolean hasNext()
-    {
-        return next_helper_user();
-    }
 
     @Override
     public IonType next()
@@ -56,7 +58,7 @@ final class IonReaderTreeUserX
         return this._curr.getType();
     }
 
-    boolean next_helper_user()
+    private boolean next_helper_user()
     {
         if (_eof) return false;
         if (_next != null) return true;
@@ -79,7 +81,7 @@ final class IonReaderTreeUserX
                         // there are no null values we will consume here
                         break;
                     }
-                    int sid = sym.getSymbolId();
+                    int sid = sym.symbolValue().getSid();
                     if (sid == UNKNOWN_SYMBOL_ID) {
                         String name = sym.stringValue();
                         if (name != null) {

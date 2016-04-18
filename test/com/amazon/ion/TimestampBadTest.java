@@ -1,4 +1,16 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2013-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -6,7 +18,7 @@ import static com.amazon.ion.TestUtils.BAD_TIMESTAMP_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.testdataFiles;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,9 +26,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import org.junit.Test;
 
-/**
- *
- */
 public class TimestampBadTest
     extends IonTestCase
 {
@@ -39,7 +48,7 @@ public class TimestampBadTest
         String tsText;
         try
         {
-            tsText = _Private_Utils.utf8FileToString(myTestFile);
+            tsText = PrivateUtils.utf8FileToString(myTestFile);
         }
         catch (IonException e)
         {

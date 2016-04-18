@@ -1,4 +1,16 @@
-// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
@@ -10,7 +22,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_CurriedValueFactory;
+import com.amazon.ion.impl.PrivateCurriedValueFactory;
 import com.amazon.ion.util.Equivalence;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -23,9 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-/**
- *
- */
 final class IonStructLite
     extends IonContainerLite
     implements IonStruct
@@ -33,7 +42,7 @@ final class IonStructLite
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
 
-    // TODO ION-42: add support for _isOrdered
+    // TODO amznlabs/ion-java#41: add support for _isOrdered
 
     IonStructLite(ContainerlessContext context, boolean isNull)
     {
@@ -315,7 +324,6 @@ final class IonStructLite
 
                 // Additive hash is used to ensure insensitivity to order of
                 // fields, and will not lose data on value hash codes
-                // Fixes ION-309
                 result += fieldHashCode;
             }
         }
@@ -456,7 +464,7 @@ final class IonStructLite
 
     public ValueFactory add(final String fieldName)
     {
-        return new _Private_CurriedValueFactory(_context.getSystem())
+        return new PrivateCurriedValueFactory(_context.getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -526,7 +534,7 @@ final class IonStructLite
 
     public ValueFactory put(final String fieldName)
     {
-        return new _Private_CurriedValueFactory(_context.getSystem())
+        return new PrivateCurriedValueFactory(_context.getSystem())
         {
             @Override
             protected void handle(IonValue newValue)

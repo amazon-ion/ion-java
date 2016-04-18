@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -14,7 +26,6 @@ import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,13 +40,13 @@ import org.junit.Test;
  * Processes all text files in the "good" suite, transforming between text and
  * binary twice to ensure that the process is equivalent.
  *
- * TODO ION-332 Refactor this test class, possible duplicate test coverage in
+ * TODO amznlabs/ion-java#29 Refactor this test class, possible duplicate test coverage in
  * {@link RoundTripStreamingTest}.
  */
 public class RoundTripTest
     extends IonTestCase
 {
-    // TODO ION-320 Writing IonSymbol to bytes using IonSymbol.writeTo(IonWriter)
+    // TODO amznlabs/ion-java#27 Writing IonSymbol to bytes using IonSymbol.writeTo(IonWriter)
     // will throw UnknownSymbolException if symbol text is unknown
     public static final FilenameFilter ROUND_TRIP_TEST_SKIP_LIST =
         new FileIsNot("good/symbols.ion");
@@ -70,7 +81,6 @@ public class RoundTripTest
     public static final BinaryEncoderType[] BINARY_ENCODER_TYPES =
         BinaryEncoderType.values();
 
-    private Printer             myPrinter;
     private StringBuilder       myBuilder;
     private File                myTestFile;
     private BinaryEncoderType   myBinaryEncoderType;
@@ -91,7 +101,6 @@ public class RoundTripTest
     throws Exception
     {
         super.setUp();
-        myPrinter = new Printer();
         myBuilder = new StringBuilder();
     }
 
@@ -100,7 +109,6 @@ public class RoundTripTest
     public void tearDown()
     throws Exception
     {
-        myPrinter = null;
         myBuilder = null;
         super.tearDown();
     }
@@ -109,11 +117,16 @@ public class RoundTripTest
     private String renderSystemView(IonDatagram datagram)
     throws IOException
     {
-        // TODO use Printer in raw mode.
         for (Iterator i = datagram.systemIterator(); i.hasNext();)
         {
             IonValue value = (IonValue) i.next();
-            myPrinter.print(value, myBuilder);
+            IonWriter writer = IonTextWriterBuilder.standard().build(myBuilder);
+            try {
+                value.writeTo(writer);
+            }
+            finally {
+                writer.close();
+            }
             myBuilder.append('\n');
         }
 
@@ -125,11 +138,16 @@ public class RoundTripTest
     private String renderUserView(IonDatagram datagram)
     throws IOException
     {
-        // TODO use Printer in raw mode.
         for (Iterator i = datagram.iterator(); i.hasNext();)
         {
             IonValue value = (IonValue) i.next();
-            myPrinter.print(value, myBuilder);
+            IonWriter writer = IonTextWriterBuilder.standard().build(myBuilder);
+            try {
+                value.writeTo(writer);
+            }
+            finally {
+                writer.close();
+            }
             myBuilder.append('\n');
         }
 

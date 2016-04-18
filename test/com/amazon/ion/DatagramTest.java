@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -10,8 +22,8 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 
-import com.amazon.ion.impl._Private_IonSystem;
-import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl.PrivateIonSystem;
+import com.amazon.ion.impl.PrivateIonValue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
@@ -116,7 +128,7 @@ public class DatagramTest
     public void testAutomaticIVM()
         throws Exception
     {
-        _Private_IonSystem system = system();
+        PrivateIonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -137,7 +149,7 @@ public class DatagramTest
     public void testManualIVM()
         throws Exception
     {
-        _Private_IonSystem system = system();
+        PrivateIonSystem system = system();
         SymbolTable      systemSymtab_1_0 = system.getSystemSymbolTable(ION_1_0);
 
         IonDatagram dg = system.newDatagram();
@@ -150,7 +162,7 @@ public class DatagramTest
 
         assertSame(systemSymtab_1_0, sysId.getSymbolTable());
 
-        // TODO ION-261
+        // TODO amznlabs/ion-java#20
 //        assertEquals(0, dg.size());
 
         // TODO adding $ion_1_1 should fail: unsupported version
@@ -197,7 +209,7 @@ public class DatagramTest
         assertSame(symbol, datagram1.get(0));
 
         SymbolTable symtab = symbol.getSymbolTable();
-        assertEquals(symbol.getSymbolId(), symtab.getMaxId());
+        assertEquals(symbol.symbolValue().getSid(), symtab.getMaxId());
 
         // TODO if we keep max_id in the struct, should validate it here.
     }
@@ -252,34 +264,6 @@ public class DatagramTest
         // check strict data equivalence
         IonDatagram dg2 = myLoader.load(bytes2);
         assertIonEquals(dg, dg2);
-
-        // now check extraction into sub-array
-        final int OFFSET = 5;
-        assertTrue(bytes1.length > OFFSET);
-        bytes2 = new byte[size + OFFSET];
-
-        outLen = dg.getBytes(bytes2, OFFSET);
-        assertEquals(size, outLen);
-
-        for (int i = 0; i < bytes1.length; i++)
-        {
-            if (bytes1[i] != bytes2[i + OFFSET])
-            {
-                fail("Binary data differs at index " + i);
-            }
-        }
-
-        try {
-            dg.getBytes(new byte[3]);
-            fail("Expected IndexOutOfBoundsException");
-        }
-        catch (IndexOutOfBoundsException e) { /* good */ }
-
-        try {
-            dg.getBytes(new byte[size + OFFSET - 1], OFFSET);
-            fail("Expected IndexOutOfBoundsException");
-        }
-        catch (IndexOutOfBoundsException e) { /* good */ }
     }
 
 
@@ -401,7 +385,7 @@ public class DatagramTest
         }
         catch (IllegalArgumentException e) { }
 
-        // Cannot insert a datagram  // TODO ION-84
+        // Cannot insert a datagram  // TODO amznlabs/ion-java#48
 //        try
 //        {
 //            dg1.add(1, dg2);
@@ -484,7 +468,7 @@ public class DatagramTest
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
-//        testEmptySequence(dg); // TODO ION-84 implement add(int,v)
+//        testEmptySequence(dg); // TODO amznlabs/ion-java#48 implement add(int,v)
         dg.add().newInt(1);
         testClearContainer(dg);
     }
@@ -494,7 +478,7 @@ public class DatagramTest
     @Test
     public void testRemoveViaIteratorThenDirect()
     {
-        // TODO ION-91 implement remove on datagram iterator
+        // TODO amznlabs/ion-java#51 implement remove on datagram iterator
     }
 
 
@@ -556,7 +540,7 @@ public class DatagramTest
     @Test
     public void testToString()
     {
-        // TODO ION-165 I think this is wrong, the datagram has injected IVM
+        // TODO amznlabs/ion-java#8 I think this is wrong, the datagram has injected IVM
         IonDatagram dg = loader().load("1");
         assertEquals("$ion_1_0 1", dg.toString());
 
@@ -568,7 +552,7 @@ public class DatagramTest
                    text.endsWith(" {a:b}"));
 
         // Just force symtab analysis and make sure output is still okay
-        dg.getBytes(new byte[dg.byteSize()]);
+        dg.getBytes();
         text = dg.toString();
         assertTrue("missing version marker",
                    text.startsWith(ION_1_0 + ' '));
@@ -592,23 +576,7 @@ public class DatagramTest
         dg.getBytes();  // Force encoding and symtab construction
 
         String result = dg.toString();
-
-        // TODO ION-165 There are differences in behavior between Lazy and Lite
-        // DOM regarding handling of symtab construction.
-        DomType domType = getDomType();
-        if (domType.equals(DomType.BACKED))
-        {
-            // Lazy DOM impls injects symtab after getBytes()
-            assertEquals(ION_1_0 + ' '
-                         + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
-                         + " x",
-                         result);
-        }
-        else
-        {
-            // Lite DOM impls doesn't inject symtab after getBytes()
-            assertEquals(ION_1_0 + " x", result);
-        }
+        assertEquals(ION_1_0 + " x", result);
     }
 
 
@@ -668,12 +636,11 @@ public class DatagramTest
     public void testGetAssignedSymbolTable()
     {
         IonDatagram dg = system().newDatagram();
-        ((_Private_IonValue)dg).getAssignedSymbolTable();
+        ((PrivateIonValue)dg).getAssignedSymbolTable();
     }
 
     /**
-     * TODO ION-90 Datagram.set() should work, but it's documented to throw
-     * and doesn't work on lazy DOM.
+     * TODO amznlabs/ion-java#50 Datagram.set() should work, but it's documented to throw.
      */
     @Test(expected = UnsupportedOperationException.class)
     public void testSet()
@@ -686,11 +653,6 @@ public class DatagramTest
     @Test
     public void testSetWithSymbolTable()
     {
-
-        if (getDomType().equals(DomType.BACKED)){ //TODO add appears to be broken in the Backed DOM
-            return;
-        }
-
         String serializedX = ION_1_0 + ' '
             + ION_SYMBOL_TABLE + "::{" + SYMBOLS + ":[\"x\"]}"
             + " x";

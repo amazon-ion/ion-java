@@ -1,4 +1,16 @@
-// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -11,9 +23,6 @@ import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonValueTest
     extends IonTestCase
 {
@@ -133,7 +142,7 @@ public class IonValueTest
         IonValue v = system().newNull();
         v.setTypeAnnotations(nameCopy);
 
-        // TODO ION-267 fails because v doesn't have any symbol table at all
+        // TODO amznlabs/ion-java#21 fails because v doesn't have any symbol table at all
 //        assertSame(nameOrig, v.getTypeAnnotations()[0]);
 //        assertSame(nameOrig, v.getTypeAnnotationSymbols()[0].getText());
     }
@@ -244,7 +253,6 @@ public class IonValueTest
         assertTrue(v.hasTypeAnnotation(ann));
     }
 
-    /** Trap for ION-144 */
     @Test
     public void testRemoveDuplicateAnnotation()
     {
@@ -279,7 +287,7 @@ public class IonValueTest
                      v.toString(IonTextWriterBuilder.standard()
                                     .withInitialIvmHandling(InitialIvmHandling.ENSURE)));
 
-        // TODO IONJAVA-460 determine if these really should be platform independent newlines
+        // TODO amznlabs/ion-java#57 determine if these really should be platform independent newlines
         final String pretty = format("%n[%n  hello,%n  a::12%n]");
         assertEquals(pretty,
                      v.toString(IonTextWriterBuilder.pretty()));
@@ -298,12 +306,8 @@ public class IonValueTest
         IonValue v2 = system().clone(v);
         IonAssert.assertIonEquals(v, v2);
 
-        // Try cross-product of system implementations.
-        for (DomType dom : DomType.values())
-        {
-            IonSystem system2 = newSystem(null, dom);
-            v2 = system2.clone(v);
-            IonAssert.assertIonEquals(v, v2);
-        }
+        IonSystem system2 = newSystem(null);
+        v2 = system2.clone(v);
+        IonAssert.assertIonEquals(v, v2);
     }
 }

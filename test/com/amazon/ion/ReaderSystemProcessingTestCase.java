@@ -1,8 +1,20 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.junit.IonAssert.assertNoCurrentValue;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
@@ -13,9 +25,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 
-/**
- *
- */
 public abstract class ReaderSystemProcessingTestCase
     extends SystemProcessingTestCase
 {
@@ -225,10 +234,6 @@ public abstract class ReaderSystemProcessingTestCase
         assertFalse(myReader.isInStruct());
         assertEquals(0, myReader.getDepth());
 
-        assertTrue(myReader.hasNext());
-        assertFalse(myReader.isInStruct());
-        assertEquals(0, myReader.getDepth());
-
         assertEquals(IonType.STRUCT, myReader.next());
         assertFalse(myReader.isInStruct());
         assertEquals(0, myReader.getDepth());
@@ -236,10 +241,6 @@ public abstract class ReaderSystemProcessingTestCase
         myReader.stepIn();
         {
             assertTrue(myReader.isInStruct());
-            assertEquals(1, myReader.getDepth());
-
-            assertTrue(myReader.hasNext());    // List is coming up
-            assertTrue(myReader.isInStruct()); // but we're still at struct level
             assertEquals(1, myReader.getDepth());
 
             assertSame(IonType.LIST, myReader.next());
@@ -282,10 +283,8 @@ public abstract class ReaderSystemProcessingTestCase
         String text = "hello 2";
         startIteration(text);
 
-        assertTrue(myReader.hasNext());
         assertEquals(IonType.SYMBOL, myReader.next());
         assertEquals(IonType.SYMBOL, myReader.getType());
-        assertTrue(myReader.hasNext());
 
         // FIXed ME text reader was broken, now fixed
         // really the binary readers were returning the
@@ -297,7 +296,6 @@ public abstract class ReaderSystemProcessingTestCase
         assertEquals(IonType.INT, myReader.next());
     }
 
-    // Trap for ION-79 - reported by Scott Barber
     @Test
     public void testDeepNesting()
         throws Exception
@@ -362,7 +360,7 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
     @Test
-    public void testStepOutInMiddle() // ION-133
+    public void testStepOutInMiddle()
     throws Exception
     {
         startIteration("{a:{b:1,c:2},d:false}");
@@ -379,7 +377,6 @@ public abstract class ReaderSystemProcessingTestCase
     }
 
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsNoQuote()
     throws Exception
@@ -387,7 +384,6 @@ public abstract class ReaderSystemProcessingTestCase
         testSkippingFields("");
     }
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsSingleQuote()
     throws Exception
@@ -395,7 +391,6 @@ public abstract class ReaderSystemProcessingTestCase
         testSkippingFields("'");
     }
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsDoubleQuote()
     throws Exception
@@ -403,7 +398,6 @@ public abstract class ReaderSystemProcessingTestCase
         testSkippingFields("\"");
     }
 
-    /** Trap for ION-201 */
     @Test
     public void testSkippingFieldsTripleQuote()
     throws Exception

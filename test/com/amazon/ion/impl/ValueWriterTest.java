@@ -1,4 +1,16 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -13,9 +25,6 @@ import com.amazon.ion.Symtabs;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- *
- */
 public class ValueWriterTest
     extends IonWriterTestCase
 {
@@ -128,13 +137,13 @@ public class ValueWriterTest
     }
 
 
-    @Override @Test @Ignore // TODO ION-165
+    @Override @Test @Ignore // TODO amznlabs/ion-java#8
     public void testWriteIVMImplicitly()
         throws Exception
     {
         super.testWriteIVMImplicitly();
 
-        // TODO ION-261
+        // TODO amznlabs/ion-java#20
         // assertEquals(2, myDatagram.size());
     }
 
@@ -144,7 +153,7 @@ public class ValueWriterTest
         throws Exception
     {
         super.testWriteIVMExplicitly();
-        // TODO ION-261
+        // TODO amznlabs/ion-java#20
         //assertEquals(2, myDatagram.size());
     }
 }

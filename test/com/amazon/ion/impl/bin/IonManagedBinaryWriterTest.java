@@ -1,3 +1,17 @@
+/*
+ * Copyright 2016-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
+
 package com.amazon.ion.impl.bin;
 
 import static java.util.Arrays.asList;
@@ -14,7 +28,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolResolverMode;
-import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder.AllocatorMode;
+import com.amazon.ion.impl.bin.PrivateIonManagedBinaryWriterBuilder.AllocatorMode;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 
-@SuppressWarnings("deprecation")
 public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
 {
     @SuppressWarnings("unchecked")
@@ -112,7 +125,7 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
             catalog.putTable(table);
         }
 
-        final IonWriter writer = _Private_IonManagedBinaryWriterBuilder
+        final IonWriter writer = PrivateIonManagedBinaryWriterBuilder
             .create(AllocatorMode.POOLED)
             .withImports(importedSymbolResolverMode, symbolTables)
             .withPreallocationMode(preallocationMode)

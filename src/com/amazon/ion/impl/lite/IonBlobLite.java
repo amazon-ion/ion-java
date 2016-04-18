@@ -1,4 +1,16 @@
-// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
@@ -6,13 +18,10 @@ import com.amazon.ion.IonBlob;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_LazyDomTrampoline;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- *
- */
 final class IonBlobLite
     extends IonLobLite
     implements IonBlob
@@ -64,7 +73,7 @@ final class IonBlobLite
         InputStream byteStream = newInputStream();
         try
         {
-            _Private_LazyDomTrampoline.writeAsBase64(byteStream, out);
+            PrivateUtils.writeAsBase64(byteStream, out);
         }
         finally
         {

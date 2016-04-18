@@ -1,14 +1,25 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.newLocalSymtab;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
-import static com.amazon.ion.impl._Private_Utils.newSymbolTokens;
+import static com.amazon.ion.impl.PrivateUtils.newLocalSymtab;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolTokens;
 
 import com.amazon.ion.EmptySymbolException;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -19,11 +30,8 @@ import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 import java.io.IOException;
 
 
-/**
- *
- */
 abstract class IonWriterSystem
-    extends _Private_IonWriterBase
+    extends PrivateIonWriterBase
 {
     /**
      * The system symtab used when resetting the stream.
@@ -113,7 +121,7 @@ abstract class IonWriterSystem
     public final void setSymbolTable(SymbolTable symbols)
         throws IOException
     {
-        if (symbols == null || _Private_Utils.symtabIsSharedNotSystem(symbols)) {
+        if (symbols == null || PrivateUtils.symtabIsSharedNotSystem(symbols)) {
             throw new IllegalArgumentException("symbol table must be local or system to be set, or reset");
         }
         if (getDepth() > 0) {
@@ -130,20 +138,20 @@ abstract class IonWriterSystem
         }
         if (_initial_ivm_handling == InitialIvmHandling.SUPPRESS)
         {
-            // TODO ION-285 Must write IVM if given system != 1.0
+            // TODO amznlabs/ion-java#24 Must write IVM if given system != 1.0
             return false;
         }
-        // TODO ION-285 Add SUPPRESS_ALL to suppress non 1.0 IVMs
+        // TODO amznlabs/ion-java#24 Add SUPPRESS_ALL to suppress non 1.0 IVMs
 
         if (_ivm_minimizing == IvmMinimizing.ADJACENT)
         {
-            // TODO ION-285 Write IVM if current system version != given system
+            // TODO amznlabs/ion-java#24 Write IVM if current system version != given system
             // For now we assume that it's the same since we only support 1.0
             return ! _previous_value_was_ivm;
         }
         if (_ivm_minimizing == IvmMinimizing.DISTANT)
         {
-            // TODO ION-285 Write IVM if current system version != given system
+            // TODO amznlabs/ion-java#24 Write IVM if current system version != given system
             // For now we assume that it's the same since we only support 1.0
             return ! _anything_written;
         }
@@ -282,7 +290,7 @@ abstract class IonWriterSystem
             && getDepth() == 0
             && _annotation_count == 0) {
             // $ion_1_0 is written as an IVM only if it is not annotated
-            // TODO ION-285 Make sure to get the right symtab, default may differ.
+            // TODO amznlabs/ion-java#24 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
         else
@@ -297,7 +305,7 @@ abstract class IonWriterSystem
             && getDepth() == 0
             && _annotation_count == 0) {
             // $ion_1_0 is written as an IVM only if it is not annotated
-            // TODO ION-285 Make sure to get the right symtab, default may differ.
+            // TODO amznlabs/ion-java#24 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
         else {
@@ -395,40 +403,6 @@ abstract class IonWriterSystem
         }
     }
 
-    /**
-     * Returns the symbol id of the current field name, if the field name
-     * has been set.  If the name has not been set, either as either a String
-     * or a symbol id value, this returns -1 (undefined symbol).
-     * @return symbol id of the name of the field about to be written or -1 if
-     * it is not set
-     */
-    final int getFieldId()
-    {
-        int id;
-
-        if (_field_name_type == null) {
-            throw new IllegalStateException("the field has not be set");
-        }
-        switch (_field_name_type) {
-        case STRING:
-                try {
-                    id = add_symbol(_field_name);
-                }
-                catch (IOException e) {
-                    throw new IonException(e);
-                }
-                // TODO cache the sid?
-            break;
-        case INT:
-            id = _field_name_sid;
-            break;
-        default:
-            throw new IllegalStateException("the field has not be set");
-        }
-
-        return id;
-    }
-
     final SymbolToken assumeFieldNameSymbol()
     {
         if (_field_name_type == null)  {
@@ -468,7 +442,7 @@ abstract class IonWriterSystem
     final int[] internAnnotationsAndGetSids() throws IOException
     {
         int count = _annotation_count;
-        if (count == 0) return _Private_Utils.EMPTY_INT_ARRAY;
+        if (count == 0) return PrivateUtils.EMPTY_INT_ARRAY;
 
         int[] sids = new int[count];
         for (int i = 0; i < count; i++)
@@ -546,7 +520,7 @@ abstract class IonWriterSystem
             for (int i = 0; i < count; i++)
             {
                 SymbolToken sym = annotations[i];
-                sym = _Private_Utils.localize(symtab, sym);
+                sym = PrivateUtils.localize(symtab, sym);
                 _annotations[i] = sym;
             }
             _annotation_count = count;
@@ -556,7 +530,7 @@ abstract class IonWriterSystem
     @Override
     final String[] getTypeAnnotations()
     {
-        return _Private_Utils.toStrings(_annotations, _annotation_count);
+        return PrivateUtils.toStrings(_annotations, _annotation_count);
     }
 
     public final void setTypeAnnotations(String... annotations)
@@ -588,6 +562,6 @@ abstract class IonWriterSystem
     @Override
     final int[] getTypeAnnotationIds()
     {
-        return _Private_Utils.toSids(_annotations, _annotation_count);
+        return PrivateUtils.toSids(_annotations, _annotation_count);
     }
 }

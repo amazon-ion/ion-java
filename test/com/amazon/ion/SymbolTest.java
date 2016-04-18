@@ -1,9 +1,21 @@
-// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 
 import org.junit.Test;
 
@@ -19,12 +31,6 @@ public class SymbolTest
         assertTrue("isNullValue() is false",   value.isNullValue());
         assertNull("stringValue() isn't null", value.stringValue());
         assertNull("symbolValue() isn't null", value.symbolValue());
-
-        try {
-            value.getSymbolId();
-            fail("Expected NullValueException");
-        }
-        catch (NullValueException e) { }
     }
 
     public void modifySymbol(IonSymbol value)
@@ -41,7 +47,7 @@ public class SymbolTest
         String modValue1 = "dude!";
         value.setValue(modValue1);
         checkSymbol(modValue1, value);
-        int sid = value.getSymbolId();
+        int sid = value.symbolValue().getSid();
 
         try {
             value.setValue("");

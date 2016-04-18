@@ -1,8 +1,20 @@
-// Copyright (c) 2007-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.impl.PrivateUtils.newSymbolToken;
 
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Rule;
@@ -42,20 +54,17 @@ public class CloneTest
     @Test
     public void testDifferentValueFactoryCloneWithUnknownSymbolText()
     {
-        for (DomType domType : DomType.values())
-        {
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+        IonSystem otherSystem = newSystem(new SimpleCatalog());
 
-            SymbolToken tok = newSymbolToken(99);
-            IonSymbol original = system().newSymbol(tok);
+        SymbolToken tok = newSymbolToken(99);
+        IonSymbol original = system().newSymbol(tok);
 
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            IonSymbol copy = otherSystem.clone(original);
+        // TODO amznlabs/ion-java#30 An UnknownSymbolException is expected here, but
+        // it isn't thrown.
+        IonSymbol copy = otherSystem.clone(original);
 
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.symbolValue().getSid());
-        }
+        // If we don't fail we should at least retain the SID.
+        assertEquals(99, copy.symbolValue().getSid());
     }
 
     static final boolean DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT = true;
@@ -99,21 +108,18 @@ public class CloneTest
     @Test
     public void testDifferentValueFactoryCloneWithUnknownAnnotationText()
     {
-        for (DomType domType : DomType.values())
-        {
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+        IonSystem otherSystem = newSystem(new SimpleCatalog());
 
-            SymbolToken tok = newSymbolToken(99);
-            IonInt original = system().newInt(5);
-            original.setTypeAnnotationSymbols(tok);
+        SymbolToken tok = newSymbolToken(99);
+        IonInt original = system().newInt(5);
+        original.setTypeAnnotationSymbols(tok);
 
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            IonInt copy = otherSystem.clone(original);
+        // TODO amznlabs/ion-java#30 An UnknownSymbolException is expected here, but
+        // it isn't thrown.
+        IonInt copy = otherSystem.clone(original);
 
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
-        }
+        // If we don't fail we should at least retain the SID.
+        assertEquals(99, copy.getTypeAnnotationSymbols()[0].getSid());
     }
 
 
@@ -152,24 +158,21 @@ public class CloneTest
     @Test
     public void testDifferentValueFactoryCloneWithUnknownFieldNameText()
     {
-        for (DomType domType : DomType.values())
-        {
-            IonSystem otherSystem = newSystem(new SimpleCatalog(), domType);
+        IonSystem otherSystem = newSystem(new SimpleCatalog());
 
-            SymbolToken tok = newSymbolToken(99);
-            IonStruct original = system().newEmptyStruct();
-            IonValue child = system().newNull();
-            original.add(tok, child);
+        SymbolToken tok = newSymbolToken(99);
+        IonStruct original = system().newEmptyStruct();
+        IonValue child = system().newNull();
+        original.add(tok, child);
 
-            // This works since the cloned child doesn't retain its field name.
-            otherSystem.clone(child);
+        // This works since the cloned child doesn't retain its field name.
+        otherSystem.clone(child);
 
-            // TODO ION-339 An UnknownSymbolException is expected here, but
-            // it isn't thrown.
-            IonStruct copy = otherSystem.clone(original);
+        // TODO amznlabs/ion-java#30 An UnknownSymbolException is expected here, but
+        // it isn't thrown.
+        IonStruct copy = otherSystem.clone(original);
 
-            // If we don't fail we should at least retain the SID.
-            assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
-        }
+        // If we don't fail we should at least retain the SID.
+        assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
     }
 }

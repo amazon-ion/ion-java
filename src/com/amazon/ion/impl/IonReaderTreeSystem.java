@@ -1,8 +1,20 @@
-// Copyright (c) 2010-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.readFully;
+import static com.amazon.ion.impl.PrivateUtils.readFully;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBool;
@@ -25,7 +37,7 @@ import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_IonValue.SymbolTableProvider;
+import com.amazon.ion.impl.PrivateIonValue.SymbolTableProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -33,18 +45,15 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 
-/**
- *
- */
 class IonReaderTreeSystem
-    implements IonReader, _Private_ReaderWriter
+    implements IonReader, PrivateReaderWriter
 {
     protected IonSystem           _system;
     protected SymbolTable         _symbols;
     protected Iterator<IonValue>  _iter;
     protected IonValue            _parent;
-    protected _Private_IonValue   _next;
-    protected _Private_IonValue   _curr;
+    protected PrivateIonValue   _next;
+    protected PrivateIonValue   _curr;
     protected boolean             _eof;
 
     /** Holds pairs: IonValue parent, Iterator<IonValue> cursor */
@@ -65,12 +74,12 @@ class IonReaderTreeSystem
         else {
             _system = value.getSystem();
             re_init(value, /* hoisted */ false);
-            _symbolTableAccessor = new SymbolTableProvider() 
+            _symbolTableAccessor = new SymbolTableProvider()
             {
                 public SymbolTable getSymbolTable()
                 {
                     return null == _symbols ? _system.getSystemSymbolTable() : _symbols;
-                }       
+                }
             };
         }
     }
@@ -96,7 +105,7 @@ class IonReaderTreeSystem
         if (value instanceof IonDatagram) {
             // datagrams interacting with these readers must be
             // IonContainerPrivate containers
-            assert(value instanceof _Private_IonContainer);
+            assert(value instanceof PrivateIonContainer);
             IonDatagram dg = (IonDatagram) value;
             _parent = dg;
             _next = null;
@@ -104,7 +113,7 @@ class IonReaderTreeSystem
         }
         else {
             _parent = (hoisted ? null : value.getContainer());
-            _next = (_Private_IonValue) value;
+            _next = (PrivateIonValue) value;
         }
     }
 
@@ -147,15 +156,9 @@ class IonReaderTreeSystem
         _eof = false;
     }
 
-    public boolean hasNext()
-    {
-        IonType next_type = next_helper_system();
-        return (next_type != null);
-    }
-
     public IonType next()
     {
-        if (this._next == null && !this.hasNext()) {
+        if (this._next == null && next_helper_system() == null) {
             this._curr = null;
             return null;
         }
@@ -171,7 +174,7 @@ class IonReaderTreeSystem
         if (this._next != null) return this._next.getType();
 
         if (this._iter != null && this._iter.hasNext()) {
-            this._next = (_Private_IonValue) this._iter.next();
+            this._next = (PrivateIonValue) this._iter.next();
         }
 
         if ((this._eof =(this._next == null)) == true) {
@@ -202,30 +205,6 @@ class IonReaderTreeSystem
 
     public final int getDepth() {
         return _top/2;
-    }
-
-    private void XXXposition(IonReader other)
-    {
-        if (!(other instanceof IonReaderTreeSystem)) {
-            throw new IllegalArgumentException("invalid reader type, classes must match");
-        }
-        IonReaderTreeSystem iother = (IonReaderTreeSystem)other;
-
-        this._eof = iother._eof;
-        this._curr = iother._curr;
-        this._parent = iother._parent;
-
-        if (iother._iter == null) {
-            this._iter = null;
-        }
-        else {
-            assert iother._parent instanceof IonContainer;
-            this._iter = new Children(((IonContainer)iother._parent));
-            while (this.hasNext()) {
-                this.next();
-                if (this._curr == iother._curr) break;
-            }
-        }
     }
 
     public SymbolTable getSymbolTable()
@@ -268,7 +247,7 @@ class IonReaderTreeSystem
     public final Iterator<String> iterateTypeAnnotations()
     {
         String [] annotations = getTypeAnnotations();
-        return _Private_Utils.stringIterator(annotations);
+        return PrivateUtils.stringIterator(annotations);
     }
 
 
@@ -285,12 +264,6 @@ class IonReaderTreeSystem
 
         }
         return _curr.isNullValue();
-    }
-
-    public int getFieldId()
-    {
-        // FIXME IonValueImpl.getFieldId doesn't return -1 as specced here!
-        return (_curr == null || (_hoisted && _top == 0)) ? SymbolTable.UNKNOWN_SYMBOL_ID : _curr.getFieldId();
     }
 
     public String getFieldName()
@@ -349,7 +322,7 @@ class IonReaderTreeSystem
         }
         if (_curr instanceof IonFloat)  {
             // To avoid decapitating values that are > Long.MAX_VALUE, we must
-            // convert to BigDecimal first.  IONJAVA-114 ION-263
+            // convert to BigDecimal first.
             BigDecimal bd = ((IonFloat)_curr).bigDecimalValue();
             return (bd == null ? null : bd.toBigInteger());
         }
@@ -489,18 +462,13 @@ class IonReaderTreeSystem
     {
         boolean             _eof;
         int                 _next_idx;
-        _Private_IonContainer _parent;
+        PrivateIonContainer _parent;
         IonValue            _curr;
 
         Children(IonContainer parent)
         {
-            if (parent instanceof _Private_IonContainer) {
-                _parent = (_Private_IonContainer)parent;
-
-if (_parent instanceof IonValueImpl) {
-((IonValueImpl)_parent).makeReady();
-}
-
+            if (parent instanceof PrivateIonContainer) {
+                _parent = (PrivateIonContainer)parent;
                 _next_idx = 0;
                 _curr = null;
                 if (_parent.isNullValue()) {

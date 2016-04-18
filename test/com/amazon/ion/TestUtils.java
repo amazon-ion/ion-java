@@ -1,10 +1,20 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
-
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -16,9 +26,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- *
- */
 public class TestUtils
 {
     public static final String US_ASCII_CHARSET_NAME = "US-ASCII";
@@ -121,20 +128,19 @@ public class TestUtils
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
-                       "bad/annotationNested.10n"          // TODO IONJAVA-154
-                      ,"bad/clobWithNullCharacter.ion"     // TODO ION-572
-                      ,"bad/emptyAnnotatedInt.10n"         // TODO IONJAVA-154
-                      ,"bad/utf8/surrogate_5.ion"          // TODO IONJAVA-487
-                      ,"equivs/paddedInts.10n"             // TODO IONJAVA-153
-                      ,"good/subfieldVarUInt32bit.ion"     // TODO IONJAVA-78
-                      ,"good/symbolEmpty.ion"              // TODO ION-480
-                      ,"good/symbolEmptyWithCR.ion"        // TODO ION-480
-                      ,"good/symbolEmptyWithCRLF.ion"      // TODO ION-480
-                      ,"good/symbolEmptyWithLF.ion"        // TODO ION-480
-                      ,"good/symbolEmptyWithLFLF.ion"      // TODO ION-480
-                      ,"good/utf16.ion"                    // TODO IONJAVA-488
-                      ,"good/utf32.ion"                    // TODO IONJAVA-488
-
+                       "bad/annotationNested.10n"          // TODO amznlabs/ion-java#55
+                      ,"bad/clobWithNullCharacter.ion"     // TODO amznlabs/ion-java#43
+                      ,"bad/emptyAnnotatedInt.10n"         // TODO amznlabs/ion-java#55
+                      ,"bad/utf8/surrogate_5.ion"          // TODO amznlabs/ion-java#60
+                      ,"equivs/paddedInts.10n"             // TODO amznlabs/ion-java#54
+                      ,"good/subfieldVarUInt32bit.ion"     // TODO amznlabs/ion-java#62
+                      ,"good/symbolEmpty.ion"              // TODO amznlabs/ion-java#42
+                      ,"good/symbolEmptyWithCR.ion"        // TODO amznlabs/ion-java#42
+                      ,"good/symbolEmptyWithCRLF.ion"      // TODO amznlabs/ion-java#42
+                      ,"good/symbolEmptyWithLF.ion"        // TODO amznlabs/ion-java#42
+                      ,"good/symbolEmptyWithLFLF.ion"      // TODO amznlabs/ion-java#42
+                      ,"good/utf16.ion"                    // TODO amznlabs/ion-java#61
+                      ,"good/utf32.ion"                    // TODO amznlabs/ion-java#61
                       );
 
 
@@ -226,7 +232,7 @@ public class TestUtils
 
         IonDatagram dg = system.getLoader().load(ionData);
         String ionText = dg.toString();
-        return _Private_Utils.utf8(ionText);
+        return PrivateUtils.utf8(ionText);
     }
 
 
@@ -304,19 +310,9 @@ public class TestUtils
         }
     }
 
-    @SuppressWarnings("deprecation")
     private static IonType doNext(IonReader reader)
     {
-        boolean hasnext = true;
-        IonType t = null;
-
-        if (! READER_HASNEXT_REMOVED) {
-            hasnext = reader.hasNext();
-        }
-        if (hasnext) {
-            t = reader.next();
-        }
-        return t;
+        return reader.next();
     }
 
 
@@ -379,7 +375,7 @@ public class TestUtils
 
     public static String hexDump(final String str)
     {
-        final byte[] utf16Bytes = _Private_Utils.encode(str, UTF16BE_CHARSET);
+        final byte[] utf16Bytes = PrivateUtils.encode(str, UTF16BE_CHARSET);
         StringBuilder buf = new StringBuilder(utf16Bytes.length * 4);
         for (byte b : utf16Bytes) {
             buf.append(Integer.toString(0x00FF & b, 16));
@@ -535,7 +531,7 @@ public class TestUtils
 
     static
     {
-        if (! _Private_Utils.utf8(FERMATA_UTF8).equals(FERMATA))
+        if (! PrivateUtils.utf8(FERMATA_UTF8).equals(FERMATA))
         {
             throw new AssertionError("Broken encoding");
         }

@@ -1,4 +1,16 @@
-// Copyright (c) 2010-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -35,8 +47,8 @@ import java.math.BigInteger;
  * {@link SymbolTable} is installed.
  */
 class IonWriterUser
-    extends _Private_IonWriterBase
-    implements _Private_IonWriter
+    extends PrivateIonWriterBase
+    implements PrivateIonWriter
 {
     /** Factory for constructing the DOM of local symtabs. Not null. */
     private final ValueFactory _symtab_value_factory;
@@ -216,8 +228,6 @@ class IonWriterUser
      * <p>
      * If there was a makeSymbolTable(Reader) this copy might be,
      * at least partially, avoided.
-     *
-     * CSuver@
      */
     private void open_local_symbol_table_copy()
     {
@@ -247,7 +257,7 @@ class IonWriterUser
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
         SymbolTable symtab =
-            _Private_Utils.newLocalSymtab(activeSystemSymbolTable(),
+            PrivateUtils.newLocalSymtab(activeSystemSymbolTable(),
                                           _catalog,
                                           _symbol_table_value);
 
@@ -264,7 +274,7 @@ class IonWriterUser
         throws IOException
     {
         if (symbols == null ||
-            _Private_Utils.symtabIsSharedNotSystem(symbols))
+            PrivateUtils.symtabIsSharedNotSystem(symbols))
         {
             String message =
                 "symbol table must be local or system to be set, or reset";

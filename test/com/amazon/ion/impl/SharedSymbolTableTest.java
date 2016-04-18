@@ -1,11 +1,23 @@
-// Copyright (c) 2011-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.Symtabs.sharedSymtabStruct;
 import static com.amazon.ion.impl.SymbolTableTest.checkSharedTable;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.stringIterator;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.stringIterator;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -66,7 +78,6 @@ public class SharedSymbolTableTest
     @Test
     public void testDomSharedSymbolTable()
     {
-        // ION-72
         String[] symbols = { "hello" };
         IonStruct struct = sharedSymtabStruct(system(), "foobar", 1, symbols);
         final SymbolTable table =  myMaker.newSharedSymtab(system(), struct);

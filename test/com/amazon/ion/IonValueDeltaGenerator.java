@@ -1,8 +1,21 @@
-// Copyright (c) 2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2013-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.amazon.ion.Timestamp.Precision;
 import java.math.BigDecimal;
@@ -12,7 +25,6 @@ import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import junit.framework.Assert;
 
 /**
  * Class that generates {@link IonValue} based off configured properties.
@@ -69,18 +81,16 @@ public class IonValueDeltaGenerator
     }
 
     public enum IonTimestampDeltaType {
-        FRAC_YEAR,
-        FRAC_MONTH,
-        FRAC_DAY,
-        FRAC_MINUTE,
-        FRAC_SECOND,
-        FRAC_FRAC,
+        SECOND_YEAR,
+        SECOND_MONTH,
+        SECOND_DAY,
+        SECOND_MINUTE,
+        SECOND_SECOND,
         YEAR,
         MONTH,
         DAY,
         MINUTE,
         SECOND,
-        FRAC,
     }
 
     /**
@@ -99,7 +109,7 @@ public class IonValueDeltaGenerator
         }
 
         /**
-         * Configures the IonSystem that is the entry point for Lazy/Lite DOMs.
+         * Configures the IonSystem that is the entry point for the DOM.
          */
         public Builder ionSystem(IonSystem val) {
             this.ionSystem = val;
@@ -209,7 +219,7 @@ public class IonValueDeltaGenerator
             (baseInt.compareTo(LONG_MAX_VALUE) < 0) &&
             ((IonIntDeltaType) deltaType).equals(IonIntDeltaType.BIGINTEGER))
         {
-            Assert.fail("IonInt is tested on the BigInteger dimension but the " +
+            fail("IonInt is tested on the BigInteger dimension but the " +
                         "value isn't sufficiently large to be backed by a " +
                         "BigInteger");
         }
@@ -244,7 +254,7 @@ public class IonValueDeltaGenerator
             case TIMESTAMP:
                 return generateIonTimestamps();
             default:
-                Assert.fail("not supported: " + valueType);
+                fail("not supported: " + valueType);
                 return null;
         }
     }
@@ -275,7 +285,7 @@ public class IonValueDeltaGenerator
                 scale = 16;
                 break;
             default:
-                Assert.fail("not supported: " + deltaType);
+                fail("not supported: " + deltaType);
         }
 
         BigDecimal decimalDelta = BigDecimal.valueOf(delta, scale);
@@ -309,7 +319,7 @@ public class IonValueDeltaGenerator
                 floatDelta = delta * 1.0d;
                 break;
             default:
-                Assert.fail("not supported: " + deltaType);
+                fail("not supported: " + deltaType);
         }
 
         double curr = ((IonFloat) baseValue).doubleValue();
@@ -337,7 +347,7 @@ public class IonValueDeltaGenerator
                 intDelta = BigInteger.valueOf(delta);
                 break;
             default:
-                Assert.fail("not supported: " + deltaType);
+                fail("not supported: " + deltaType);
         }
 
         IonInt curr = (IonInt) baseValue;
@@ -371,7 +381,7 @@ public class IonValueDeltaGenerator
                     break;
                 case TEXT: // TODO How should we test for text deltas?
                 default:
-                    Assert.fail("not supported: " + deltaType);
+                    fail("not supported: " + deltaType);
             }
 
             IonSymbol next = ionSystem.newSymbol(nextToken);
@@ -408,35 +418,28 @@ public class IonValueDeltaGenerator
             case SECOND:
                 precisionToSet = precisionToDelta = Precision.SECOND;
                 break;
-            case FRAC:
-                precisionToSet = precisionToDelta = Precision.FRACTION;
-                break;
-            case FRAC_YEAR:
-                precisionToSet = Precision.FRACTION;
+            case SECOND_YEAR:
+                precisionToSet = Precision.SECOND;
                 precisionToDelta = Precision.YEAR;
                 break;
-            case FRAC_MONTH:
-                precisionToSet = Precision.FRACTION;
+            case SECOND_MONTH:
+                precisionToSet = Precision.SECOND;
                 precisionToDelta = Precision.MONTH;
                 break;
-            case FRAC_DAY:
-                precisionToSet = Precision.FRACTION;
+            case SECOND_DAY:
+                precisionToSet = Precision.SECOND;
                 precisionToDelta = Precision.DAY;
                 break;
-            case FRAC_MINUTE:
-                precisionToSet = Precision.FRACTION;
+            case SECOND_MINUTE:
+                precisionToSet = Precision.SECOND;
                 precisionToDelta = Precision.MINUTE;
                 break;
-            case FRAC_SECOND:
-                precisionToSet = Precision.FRACTION;
+            case SECOND_SECOND:
+                precisionToSet = Precision.SECOND;
                 precisionToDelta = Precision.SECOND;
                 break;
-            case FRAC_FRAC:
-                precisionToSet = Precision.FRACTION;
-                precisionToDelta = Precision.FRACTION;
-                break;
             default:
-                Assert.fail("not supported: " + deltaType);
+                fail("not supported: " + deltaType);
         }
 
         IonTimestamp curr = (IonTimestamp) baseValue;
@@ -490,13 +493,10 @@ public class IonValueDeltaGenerator
                 cal.add(Calendar.MINUTE, delta);
                 break;
             case SECOND:
-                cal.add(Calendar.SECOND, delta);
-                break;
-            case FRACTION:
                 cal.add(Calendar.MILLISECOND, delta);
                 break;
             default:
-                Assert.fail("not supported: " + precisionToDelta);
+                fail("not supported: " + precisionToDelta);
         }
 
         switch (precisionToSet)
@@ -513,14 +513,12 @@ public class IonValueDeltaGenerator
             case SECOND:
                 cal.clear(Calendar.MILLISECOND);
                 break;
-            case FRACTION:
-                break;
             default:
-                Assert.fail("not supported: " + precisionToSet);
+                fail("not supported: " + precisionToSet);
         }
 
-        Timestamp nextTimestamp = new Timestamp(cal);
-        Assert.assertTrue(nextTimestamp.getPrecision().equals(precisionToSet));
+        Timestamp nextTimestamp = Timestamp.forCalendar(cal);
+        assertTrue(nextTimestamp.getPrecision().equals(precisionToSet));
 
         return ionSystem.newTimestamp(nextTimestamp);
     }

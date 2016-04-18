@@ -1,21 +1,33 @@
-// Copyright (c) 2008-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
+import static com.amazon.ion.impl.PrivateIonConstants.makeUnicodeScalar;
 
-import com.amazon.ion.util._Private_FastAppendable;
+import com.amazon.ion.util.PrivateFastAppendable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Adapts an {@link OutputStream} to implement {@link _Private_FastAppendable}.
+ * Adapts an {@link OutputStream} to implement {@link PrivateFastAppendable}.
  * <b>This always outputs UTF-8!</b>
  */
 final class OutputStreamFastAppendable
-    implements _Private_FastAppendable, Closeable, Flushable
+    implements PrivateFastAppendable, Closeable, Flushable
 {
     private static final int MAX_BYTES_LEN = 4096;
 

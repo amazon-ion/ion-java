@@ -1,10 +1,22 @@
-// Copyright (c) 2007-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 package com.amazon.ion;
 
 
-import static com.amazon.ion.impl._Private_Utils.UTF8_CHARSET;
+import static com.amazon.ion.impl.PrivateUtils.UTF8_CHARSET;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -17,7 +29,7 @@ public class ClobTest
 {
     public static final String SAMPLE_ASCII = "Wow!";
     public static final byte[] SAMPLE_ASCII_AS_UTF8 =
-        _Private_Utils.utf8(SAMPLE_ASCII);
+        PrivateUtils.utf8(SAMPLE_ASCII);
 
 
     public void checkNullClob(IonClob value)

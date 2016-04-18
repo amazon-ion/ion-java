@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -14,9 +26,9 @@ import static com.amazon.ion.SystemSymbols.SYMBOLS;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
-import static com.amazon.ion.impl._Private_Utils.copyOf;
-import static com.amazon.ion.impl._Private_Utils.getSidForSymbolTableField;
-import static com.amazon.ion.impl._Private_Utils.safeEquals;
+import static com.amazon.ion.impl.PrivateUtils.copyOf;
+import static com.amazon.ion.impl.PrivateUtils.getSidForSymbolTableField;
+import static com.amazon.ion.impl.PrivateUtils.safeEquals;
 
 import com.amazon.ion.EmptySymbolException;
 import com.amazon.ion.IonCatalog;
@@ -134,7 +146,7 @@ final class LocalSymbolTable
         if (symbolsList == null || symbolsList.isEmpty())
         {
             mySymbolsCount = 0;
-            mySymbolNames  = _Private_Utils.EMPTY_STRING_ARRAY;
+            mySymbolNames  = PrivateUtils.EMPTY_STRING_ARRAY;
         }
         else
         {
@@ -303,9 +315,9 @@ final class LocalSymbolTable
                 sid = getSidForSymbolTableField(fieldName);
             }
 
-            // TODO ION-386 If there's more than one 'symbols' or 'imports'
+            // TODO amznlabs/ion-java#35 If there's more than one 'symbols' or 'imports'
             //      field, they will be merged together.
-            // TODO ION-387 Switching over SIDs doesn't cover the case
+            // TODO amznlabs/ion-java#36 Switching over SIDs doesn't cover the case
             //      where the relevant field names are defined by a prev LST;
             //      the prev LST could have 'symbols' defined locally with a
             //      different SID!
@@ -1027,7 +1039,7 @@ final class LocalSymbolTable
         // Superset must have same/more known symbols than subset.
         if (getMaxId() < subset.getMaxId()) return false;
 
-        // TODO ION-253 Currently, we check imports by their refs. which
+        // TODO amznlabs/ion-java#18 Currently, we check imports by their refs. which
         //      might be overly strict; imports which are not the same ref.
         //      but have the same semantic states fails the extension check.
         if (! myImportsList.equalImports(subset.myImportsList))

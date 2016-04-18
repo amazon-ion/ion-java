@@ -1,4 +1,16 @@
-// Copyright (c) 2011-2016 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -42,7 +54,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO ION-165
+        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
         iw.getSymbolTable().makeReadOnly();
         thrown.expect(IonException.class);
         iw.writeSymbol("s");
@@ -53,7 +65,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO ION-165
+        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
         iw.getSymbolTable().makeReadOnly();
         thrown.expect(IonException.class);
         iw.addTypeAnnotation("a");
@@ -64,7 +76,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO ION-165
+        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
         iw.getSymbolTable().makeReadOnly();
         iw.stepIn(IonType.STRUCT);
         thrown.expect(IonException.class);
@@ -117,7 +129,7 @@ public class BinaryWriterTest
     throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO ION-165
+        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
         SymbolTable symtab = iw.getSymbolTable();
         symtab.intern("fred_1");
         symtab.intern("fred_2");
@@ -238,7 +250,6 @@ public class BinaryWriterTest
 
     /*
      * Tests write of a stream larger than 2GB.
-     * See IONJAVA-451. When the size restriction is relaxed, this should pass.
      */
     @Test
     public void testHugeWrite() throws IOException

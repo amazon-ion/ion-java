@@ -1,4 +1,16 @@
-// Copyright (c) 2010-2016 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
@@ -18,9 +30,9 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.ValueVisitor;
-import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonDatagram;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateCurriedValueFactory;
+import com.amazon.ion.impl.PrivateIonDatagram;
+import com.amazon.ion.impl.PrivateUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -65,7 +77,7 @@ import java.util.NoSuchElementException;
 
 final class IonDatagramLite
     extends IonSequenceLite
-    implements IonDatagram, IonContext, _Private_IonDatagram
+    implements IonDatagram, IonContext, PrivateIonDatagram
 {
 
     private static final int HASH_SIGNATURE =
@@ -201,7 +213,7 @@ final class IonDatagramLite
     @Override
     public ValueFactory add()
     {
-        return new _Private_CurriedValueFactory(this.getSystem())
+        return new PrivateCurriedValueFactory(this.getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -243,7 +255,7 @@ final class IonDatagramLite
     @Override
     public ValueFactory add(final int index)
     {
-        return new _Private_CurriedValueFactory(getSystem())
+        return new PrivateCurriedValueFactory(getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -400,7 +412,7 @@ final class IonDatagramLite
     {
         try
         {
-            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO ION-165 ???
+            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO amznlabs/ion-java#8 ???
         } catch (IOException ioe) {
             throw new IonException(ioe);
         }
@@ -440,22 +452,6 @@ final class IonDatagramLite
             new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
         encoder.serialize(this);
         return encoder.toNewByteArray();
-    }
-
-    public int getBytes(byte[] dst) throws IonException
-    {
-        ReverseBinaryEncoder encoder =
-            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-        encoder.serialize(this);
-        return encoder.toNewByteArray(dst);
-    }
-
-    public int getBytes(byte[] dst, int offset) throws IonException
-    {
-        ReverseBinaryEncoder encoder =
-            new ReverseBinaryEncoder(REVERSE_BINARY_ENCODER_INITIAL_SIZE);
-        encoder.serialize(this);
-        return encoder.toNewByteArray(dst, offset);
     }
 
     public int getBytes(OutputStream out) throws IOException, IonException
@@ -519,11 +515,6 @@ final class IonDatagramLite
         while (elementid < get_child_count() && _children[elementid].getContext() == startContext){
             _children[elementid++].setContext(context);
         }
-    }
-
-    public byte[] toBytes() throws IonException
-    {
-        return getBytes();
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -1020,7 +1011,7 @@ final class IonDatagramLite
                     }
                     else {
                         IonSystem sys = __iterator.get_datagram_system();
-                        rep = _Private_Utils.symtabTree(sys, new_symbol_table);
+                        rep = PrivateUtils.symtabTree(sys, new_symbol_table);
                     }
                     assert(rep != null && __iterator.get_datagram_system() == rep.getSystem());
 
@@ -1127,7 +1118,7 @@ final class IonDatagramLite
             int count = 0;
             while (curr.isLocalTable()) {
                 count++;
-                curr = _Private_Utils.symtabTree(sys, curr).getSymbolTable();
+                curr = PrivateUtils.symtabTree(sys, curr).getSymbolTable();
             }
             // we should terminate when the symbol tables symbol table is the system symbol table
             assert(curr != null);

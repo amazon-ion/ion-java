@@ -1,9 +1,20 @@
-// Copyright (c) 2011-2012 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2011-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.system;
 
-import static com.amazon.ion.impl._Private_LazyDomTrampoline.isLazySystem;
-import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.isLiteSystem;
+import static com.amazon.ion.impl.lite.PrivateLiteDomTrampoline.isLiteSystem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
@@ -12,13 +23,10 @@ import static org.junit.Assert.assertTrue;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl._Private_IonWriter;
+import com.amazon.ion.impl.PrivateIonWriter;
 import java.io.ByteArrayOutputStream;
 import org.junit.Test;
 
-/**
- *
- */
 public class IonSystemBuilderTest
 {
     @Test(expected = UnsupportedOperationException.class)
@@ -30,7 +38,6 @@ public class IonSystemBuilderTest
     @Test
     public void testStandard()
     {
-        assertEquals(false, IonSystemBuilder.standard().isBinaryBacked());
         assertEquals(null, IonSystemBuilder.standard().getCatalog());
 
         IonSystem ion = IonSystemBuilder.standard().build();
@@ -97,32 +104,13 @@ public class IonSystemBuilderTest
         assertSame(catalog, b.getCatalog());
     }
 
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testBinaryBackedLockCheck()
-    {
-        IonSystemBuilder b = IonSystemBuilder.standard().copy().immutable();
-        b.setBinaryBacked(true);
-    }
-
     @Test
     public void testLite()
     {
         IonSystemBuilder b = IonSystemBuilder.standard().copy();
-        b.setBinaryBacked(false);
         IonSystem ion = b.build();
         assertTrue(isLiteSystem(ion));
     }
-
-    @Test
-    public void testBinaryBacked()
-    {
-        IonSystemBuilder b = IonSystemBuilder.standard().copy();
-        b.setBinaryBacked(true);
-        IonSystem ion = b.build();
-        assertTrue(isLazySystem(ion));
-    }
-
 
     //-------------------------------------------------------------------------
 
@@ -135,7 +123,7 @@ public class IonSystemBuilderTest
         assertTrue(isLiteSystem(ion));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter w = ion.newBinaryWriter(out);
-        assertTrue(((_Private_IonWriter)w).isStreamCopyOptimized());
+        assertTrue(((PrivateIonWriter)w).isStreamCopyOptimized());
     }
 
 
@@ -159,11 +147,9 @@ public class IonSystemBuilderTest
         IonCatalog catalog = new SimpleCatalog();
         IonSystem ion = IonSystemBuilder.standard()
                                         .withCatalog(catalog)
-                                        .withBinaryBacked(true)
                                         .withStreamCopyOptimized(true)
                                         .build();
         assertSame(catalog, ion.getCatalog());
-        assertTrue(isLazySystem(ion));
     }
 
     @Test
@@ -172,12 +158,10 @@ public class IonSystemBuilderTest
         IonCatalog catalog = new SimpleCatalog();
         IonSystemBuilder b1 = IonSystemBuilder.standard()
                                               .withCatalog(catalog)
-                                              .withBinaryBacked(true)
                                               .withStreamCopyOptimized(true);
         IonSystemBuilder b2 = b1.copy();
         assertNotSame(b1, b2);
         assertSame(b1.getCatalog(),     b2.getCatalog());
-        assertSame(b1.isBinaryBacked(), b2.isBinaryBacked());
         assertSame(b1.isStreamCopyOptimized(), b2.isStreamCopyOptimized());
     }
 }

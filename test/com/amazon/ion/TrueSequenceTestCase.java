@@ -1,8 +1,20 @@
-// Copyright (c) 2009-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl.PrivateIonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,7 +81,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-83  Implement indexed addAll for datagram
+     *  TODO amznlabs/ion-java#47  Implement indexed addAll for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -142,7 +154,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -188,14 +200,14 @@ public abstract class TrueSequenceTestCase
         assertSame(origElement, removed);
         assertEquals(null, removed.getContainer());
 
-        assertEquals(index, ((_Private_IonValue)newElement).getElementId());
+        assertEquals(index, ((PrivateIonValue)newElement).getElementId());
 
         assertEquals(expectedElements, s);
     }
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -207,7 +219,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -221,7 +233,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -234,7 +246,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -248,7 +260,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -262,7 +274,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO ION-90 Implement set for datagram
+     *  TODO amznlabs/ion-java#50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test

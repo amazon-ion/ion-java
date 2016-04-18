@@ -1,4 +1,16 @@
-// Copyright (c) 2010-2015 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl.lite;
 
@@ -8,8 +20,8 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueFactory;
-import com.amazon.ion.impl._Private_CurriedValueFactory;
-import com.amazon.ion.impl._Private_IonValue;
+import com.amazon.ion.impl.PrivateCurriedValueFactory;
+import com.amazon.ion.impl.PrivateIonValue;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Collection;
@@ -17,9 +29,6 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- *
- */
 abstract class IonSequenceLite
     extends IonContainerLite
     implements IonSequence
@@ -150,7 +159,7 @@ abstract class IonSequenceLite
 
     public ValueFactory add()
     {
-        return new _Private_CurriedValueFactory(this.getSystem())
+        return new PrivateCurriedValueFactory(this.getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -169,7 +178,7 @@ abstract class IonSequenceLite
 
     public ValueFactory add(final int index)
     {
-        return new _Private_CurriedValueFactory(getSystem())
+        return new PrivateCurriedValueFactory(getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -313,7 +322,7 @@ abstract class IonSequenceLite
         if (o == null) {
             throw new NullPointerException();
         }
-        _Private_IonValue v = (_Private_IonValue) o;
+        PrivateIonValue v = (PrivateIonValue) o;
         if (this != v.getContainer()) return -1;
         return v.getElementId();
     }
@@ -325,8 +334,8 @@ abstract class IonSequenceLite
 
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
-        // TODO ION-92
-        throw new UnsupportedOperationException("issue ION-92");
+        // TODO amznlabs/ion-java#52
+        throw new UnsupportedOperationException("issue amznlabs/ion-java#52");
     }
 
     public IonValue[] toArray()

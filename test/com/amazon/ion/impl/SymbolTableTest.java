@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2014 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -12,9 +24,9 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.SystemSymbols.NAME;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
-import static com.amazon.ion.impl._Private_Utils.stringIterator;
-import static com.amazon.ion.impl._Private_Utils.symtabTree;
+import static com.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static com.amazon.ion.impl.PrivateUtils.stringIterator;
+import static com.amazon.ion.impl.PrivateUtils.symtabTree;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -49,7 +61,6 @@ import org.junit.Test;
 /**
  * @see SharedSymbolTableTest
  */
-@SuppressWarnings("deprecation")
 public class SymbolTableTest
     extends IonTestCase
 {
@@ -246,7 +257,6 @@ public class SymbolTableTest
 
         final int import1id = systemMaxId() + 1;
         final int local1id = systemMaxId() + IMPORTED_1_MAX_ID + 1;
-        final int local2id = local1id + 1;
 
         String importingText =
             "$ion_1_0 "+
@@ -547,12 +557,11 @@ public class SymbolTableTest
         checkSymbol("fred3", 14, symbolTable);
         checkSymbol("fred4", 15, symbolTable);
 
-        // ION-76, redundant symbols should retain identity
         checkSymbol("imported 1", 12, /* dupe */ true, symbolTable);
         checkSymbol("imported 2", 13, /* dupe */ true, symbolTable);
     }
 
-    // ION-75
+    // amznlabs/ion-java#46
     @Test @Ignore
     public void testDupLocalSymbolOnDatagram() throws Exception {
         final IonSystem ion1 = system();
@@ -560,7 +569,7 @@ public class SymbolTableTest
         final IonMutableCatalog cat = new SimpleCatalog();
         cat.putTable(st);
 
-        // ION-75 has the datagram producing something like:
+        // amznlabs/ion-java#46 has the datagram producing something like:
         // $ion_1_0 $ion_symbol_table::{imports:[{name: "foobar", version: 1, max_id: 1}], symbols: ["s1", "l1"]} $11 $12
         // local table should not have "s1", user values should be $10 $11
         IonDatagram dg = ion1.newDatagram(st);
@@ -853,7 +862,7 @@ public class SymbolTableTest
     }
 
 
-    @Test @Ignore // TODO ION-189
+    @Test @Ignore // TODO amznlabs/ion-java#12
     public void testSharedSymtabCreationWithEmptyName()
     {
         String[] syms = { "a", "b", "", "c" };
@@ -1050,7 +1059,7 @@ public class SymbolTableTest
         IonStruct stStruct = writeIonRep(st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
-        stStruct = _Private_Utils.symtabTree(system(), st);
+        stStruct = PrivateUtils.symtabTree(system(), st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
         SymbolTable importedTable = st.getImportedTables()[0];
@@ -1095,7 +1104,6 @@ public class SymbolTableTest
 
     @Test
     public void testDoubleWrite() throws IOException {
-        // ION-73
         final SymbolTable table =
             system().newSharedSymbolTable("foobar", 1, Arrays.asList("moo").iterator());
         assertEquals(serialize(table), serialize(table));
@@ -1114,8 +1122,8 @@ public class SymbolTableTest
     @Test
     public void testWriteWithSymbolTable() throws IOException
     {
-        // this example code is the fix for IMSVT-2573
-        // which resulted in an assertion due to a but in
+        // this example code is the fix for a previous defect
+        // which resulted in a bad assertion in
         // IonWriterUser.close_local_symbol_table_copy
 
         IonDatagram data;
@@ -1127,7 +1135,7 @@ public class SymbolTableTest
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = system().newTextWriter(out);
-        writer.writeValue(data);
+        data.writeTo(writer);
         writer.close();
 
         // dataMap.put("value", out.toByteArray());
@@ -1176,8 +1184,6 @@ public class SymbolTableTest
         assertEquals("last sid", fred3.getMaxId(), sid);
     }
 
-
-    /** For ION-188 */
     @Test
     public void testExtendingSharedSymbolTableWithHoles()
     {
@@ -1199,7 +1205,6 @@ public class SymbolTableTest
                          v4);
     }
 
-    /** For ION-333 */
     @Test
     public void testSymtabBinaryInjection() throws Exception
     {
@@ -1209,7 +1214,7 @@ public class SymbolTableTest
         writer.writeNull();
         writer.writeInt(10);
         writer.writeFloat(10.0);
-        writer.writeTimestamp(new Timestamp(2013, 1, 1));
+        writer.writeTimestamp(Timestamp.forDay(2013, 1, 1));
         writer.writeSymbol("abc");  // this is where symbol table injection happens
         writer.writeString("abc");
         writer.stepOut();

@@ -1,4 +1,16 @@
-// Copyright (c) 2009-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.impl;
 
@@ -8,14 +20,14 @@ import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_PAREN;
 import static com.amazon.ion.impl.IonTokenConstsX.TOKEN_CLOSE_SQUARE;
 
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonTextReader;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
-import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
-import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
+import com.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
+import com.amazon.ion.impl.PrivateScalarConversions.ValueVariant;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -37,7 +49,7 @@ import java.util.Iterator;
  *
  * This reader scan skip values and in doing so it does not
  * materialize the contents and it does not validate the contents.
- * TODO ION-161 We may want to make validation on skip optional.
+ * TODO amznlabs/ion-java#7 We may want to make validation on skip optional.
  *
  * This manages the value buffer (_v ValueVariant) and the lob
  * content (_lob_*) which is cached in some cases.  It's main
@@ -57,7 +69,7 @@ import java.util.Iterator;
  *
  */
 abstract class IonReaderTextRawX
-    implements IonTextReader
+    implements IonReader
 {
     public abstract BigInteger bigIntegerValue();
 
@@ -393,7 +405,7 @@ abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = _null_type;
         _v.setValueToNull(null_type);
-        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.null_value);
+        _v.setAuthoritativeType(PrivateScalarConversions.AS_TYPE.null_value);
     }
 
     private final void current_value_is_bool(boolean value)
@@ -401,7 +413,7 @@ abstract class IonReaderTextRawX
         clear_current_value_buffer();
         _value_type = IonType.BOOL;
         _v.setValue(value);
-        _v.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.boolean_value);
+        _v.setAuthoritativeType(PrivateScalarConversions.AS_TYPE.boolean_value);
     }
 
     private final void set_fieldname(SymbolToken sym) {
@@ -443,7 +455,7 @@ abstract class IonReaderTextRawX
      * but the user has chosen not to step into the collection).
      * @return true if more data remains, false on eof
      */
-    public boolean hasNext()
+    boolean hasNext()
     {
         boolean has_next = has_next_raw_value();
         return has_next;
@@ -1293,7 +1305,7 @@ if (depth == debugging_depth) {
         return _field_name;
     }
 
-    public int getFieldId()
+    int getFieldId()
     {
         // For hoisting
         if (getDepth() == 0 && is_in_struct_internal()) return UNKNOWN_SYMBOL_ID;
@@ -1313,12 +1325,12 @@ if (depth == debugging_depth) {
 
     public Iterator<String> iterateTypeAnnotations()
     {
-        return _Private_Utils.stringIterator(getTypeAnnotations());
+        return PrivateUtils.stringIterator(getTypeAnnotations());
     }
 
     public String[] getTypeAnnotations()
     {
-        return _Private_Utils.toStrings(_annotations, _annotation_count);
+        return PrivateUtils.toStrings(_annotations, _annotation_count);
     }
 
 

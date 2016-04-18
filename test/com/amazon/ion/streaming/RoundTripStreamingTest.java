@@ -1,14 +1,25 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
 import static com.amazon.ion.TestUtils.testdataFiles;
-import static com.amazon.ion.impl._Private_Utils.utf8;
+import static com.amazon.ion.impl.PrivateUtils.utf8;
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 
-import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
@@ -16,12 +27,11 @@ import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.RoundTripTest;
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
-import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * TODO ION-332 Refactor this test class, possible duplicate test coverage in
+ * TODO amznlabs/ion-java#29 Refactor this test class, possible duplicate test coverage in
  * {@link RoundTripTest}.
  */
 public class RoundTripStreamingTest
@@ -48,7 +58,6 @@ public class RoundTripStreamingTest
     public static final StreamCopySpeed[] STREAM_COPY_SPEEDS =
         StreamCopySpeed.values();
 
-    private Printer       myPrinter;
     private StringBuilder myBuilder;
     private byte[]        myBuffer;
     private File          myTestFile;
@@ -64,9 +73,8 @@ public class RoundTripStreamingTest
     throws Exception
     {
         super.setUp();
-        myPrinter = new Printer();
         myBuilder = new StringBuilder();
-        myBuffer = _Private_Utils.loadFileBytes(myTestFile);
+        myBuffer = PrivateUtils.loadFileBytes(myTestFile);
     }
 
     @Override
@@ -74,7 +82,6 @@ public class RoundTripStreamingTest
     public void tearDown()
     throws Exception
     {
-        myPrinter = null;
         myBuilder = null;
         myBuffer  = null;
         super.tearDown();
@@ -94,7 +101,13 @@ public class RoundTripStreamingTest
             else {
                 myBuilder.append(' ');
             }
-            myPrinter.print(value, myBuilder);
+            IonWriter writer = IonTextWriterBuilder.standard().build(myBuilder);
+            try {
+                value.writeTo(writer);
+            }
+            finally {
+                writer.close();
+            }
             // Why is this here?  myBuilder.append('\n');
         }
 
@@ -140,10 +153,7 @@ public class RoundTripStreamingTest
     throws IOException
     {
         IonReader in = makeIterator(buffer);
-        IonBinaryWriter bw = system().newBinaryWriter();
-
-        bw.writeValues(in);
-        byte[] buf = bw.getBytes(); // this is binary
+        byte[] buf = writeBinaryBytes(in);
 
         return buf;
     }

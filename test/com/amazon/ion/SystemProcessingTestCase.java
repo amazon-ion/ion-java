@@ -1,4 +1,16 @@
-// Copyright (c) 2008-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2008-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
@@ -16,9 +28,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-/**
- *
- */
 public abstract class SystemProcessingTestCase
     extends IonTestCase
 {
@@ -180,7 +189,7 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
-    /** TODO ION-165 This is broken for loaders which are now more lazy */
+    /** TODO amznlabs/ion-java#8 This is broken for loaders which are now more lazy */
     @Test @Ignore
     public void testLocalTableResetting()
         throws Exception
@@ -941,7 +950,6 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // Trap for ION-71
     @Test
     public void testTimestampWithRolloverOffset()
         throws Exception
@@ -1032,9 +1040,8 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // TODO ION-305 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
+    // TODO amznlabs/ion-java#25 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
 
-    // Trap for ION-69
     @Test
     public void testHighUnicodeDirectInBlob()
     {
@@ -1074,7 +1081,7 @@ public abstract class SystemProcessingTestCase
     }
 
 
-    @Test // Trap for ION-173
+    @Test
     public void testDuplicateAnnotations()
     throws Exception
     {
@@ -1138,6 +1145,10 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
+    // TODO amznlabs/ion-java#44 current binary writer doesn't support this (ignores this)
+    //              we need to determine if we want the **writer** to support emitting
+    //              malformed symbol data and support it appropriately.
+    @Ignore
     @Test
     public void testLocalSymtabWithMalformedSymbolEntries()
         throws Exception

@@ -1,8 +1,20 @@
-// Copyright (c) 2009-2011 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2009-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.impl.PrivateUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -11,12 +23,12 @@ public class SurrogateEscapeTest extends IonTestCase {
     private StringBuilder buf = new StringBuilder();
 
     private IonDatagram load() {
-        byte[] utf8 = _Private_Utils.utf8(buf.toString());
+        byte[] utf8 = PrivateUtils.utf8(buf.toString());
         return loader().load(utf8);
     }
 
     private IonReader reader() {
-        byte[] utf8 = _Private_Utils.utf8(buf.toString());
+        byte[] utf8 = PrivateUtils.utf8(buf.toString());
         return system().newReader(utf8);
     }
 
@@ -37,9 +49,6 @@ public class SurrogateEscapeTest extends IonTestCase {
         assertSingleCodePoint(expectedCode, ((IonString) dg.get(0)).stringValue());
 
         final IonReader reader = reader();
-        if (! _Private_Utils.READER_HASNEXT_REMOVED) {
-            assertTrue(reader.hasNext());
-        }
         assertEquals(IonType.STRING, reader.next());
         assertSingleCodePoint(expectedCode, reader.stringValue());
     }
@@ -63,7 +72,6 @@ public class SurrogateEscapeTest extends IonTestCase {
         assertSingletonCodePoint(0x000CDE56);
     }
 
-    // Trap for ION-63
     @Test
     public void testLoadEscapeNonBmp() {
         buf.append("'''")

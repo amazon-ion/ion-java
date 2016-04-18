@@ -1,4 +1,16 @@
-// Copyright (c) 2007-2013 Amazon.com, Inc.  All rights reserved.
+/*
+ * Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at:
+ *
+ *     http://aws.amazon.com/apache2.0/
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+ * language governing permissions and limitations under the License.
+ */
 package com.amazon.ion;
 
 import java.math.BigDecimal;
@@ -183,24 +195,24 @@ public class DecimalTest
         testPrinting("123d0",  "123.");
         testPrinting("123d-1", "12.3");
         testPrinting("123d-2", "1.23");
-        testPrinting("123d-3", "1.23d-1");
-        testPrinting("123d-4", "1.23d-2");
+        testPrinting("123d-3", "0.123");
+        testPrinting("123d-4", "0.0123");
 
         testPrinting("-123d3",  "-123d3");
         testPrinting("-123d1",  "-123d1");
         testPrinting("-123d0",  "-123.");
         testPrinting("-123d-1", "-12.3");
         testPrinting("-123d-2", "-1.23");
-        testPrinting("-123d-3", "-1.23d-1");
-        testPrinting("-123d-4", "-1.23d-2");
+        testPrinting("-123d-3", "-0.123");
+        testPrinting("-123d-4", "-0.0123");
 
         // Zeros are a bit trickier
 //        testPrinting("0.0", "0.0");
 //        testPrinting("0.00", "0.00");
         testPrinting("0d1",   "0d1");
-        testPrinting("0d-1",  "0d-1");
+        testPrinting("0d-1",  "0.0");
         testPrinting("0d2",   "0d2");
-        testPrinting("0d-2",  "0d-2"); // should be 0.00 or 0.0d-1 ?
+        testPrinting("0d-2",  "0.00"); // should be 0.00 or 0.0d-1 ?
     }
 
     public void testPrinting(String input, String output)
