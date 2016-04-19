@@ -54,7 +54,7 @@ dependency into your project's `pom.xml`:
 
 ```
 <dependency>
-  <groupId>com.amazon</groupId>
+  <groupId>software.amazon</groupId>
   <artifactId>ion-java</artifactId>
   <version>0.1</version>
 </dependency>
