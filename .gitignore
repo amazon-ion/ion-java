@@ -1,0 +1,6 @@
+.eclipseout
+junit*.properties
+tmp*
+/target
+/resources
+*~

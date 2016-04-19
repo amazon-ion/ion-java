@@ -1,0 +1,127 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>software.amazon</groupId>
+  <artifactId>ion-java</artifactId>
+  <version>1.0</version>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
+    <build.year>${maven.build.timestamp}</build.year>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+    <testSourceDirectory>test</testSourceDirectory>
+    <plugins>
+      <plugin>
+        <!--
+        Since the format of maven.build.timestamp cannot be changed
+        during the build, define the build.time property here.
+        -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>initialize</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <target>
+                <tstamp>
+                  <format property="build.time" pattern="yyyy-MM-dd'T'HH:mm:ss'Z'"/>
+                </tstamp>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- Run the unit tests. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.19.1</version>
+        <configuration>
+          <excludes>
+            <exclude>**/*TestCase.java</exclude>
+          </excludes>
+          <argLine>-ea -Xmx3000M</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- Package the jar. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <!-- This can be used to retrieve the compiled JarInfo. -->
+              <mainClass>software.amazon.ion.impl.PrivateCommandLine</mainClass>
+            </manifest>
+            <manifestEntries>
+              <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
+              <Build-Time>${build.time}</Build-Time>
+              <Project-Version>${project.version}</Project-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <!-- TODO findbugs, checkstyle -->
+    </plugins>
+  </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <!-- TODO replace with coverage report? -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>2.19.1</version>
+        <configuration>
+          <outputName>test-report</outputName>
+          <showSuccess>false</showSuccess>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- Generate the Javadocs. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.3</version>
+        <reportSets>
+          <reportSet>
+            <configuration>
+              <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
+              <sourceFileExcludes>
+                <exclude>**/*Private*</exclude>
+              </sourceFileExcludes>
+              <overview>${project.basedir}/src/software/amazon/ion/overview.html</overview>
+              <doctitle>The Amazon ion-java ${project.version} API Reference</doctitle>
+              <windowtitle>ion-java ${project.version}</windowtitle>
+              <header>Amazon ion-java ${project.version} API Reference</header>
+              <encoding>UTF-8</encoding>
+              <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${build.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
+              <name>ion-java Javadoc</name>
+              <additionalparam>-Xdoclint:none</additionalparam>
+            </configuration>
+            <reports>
+              <report>javadoc-no-fork</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+
+</project>
