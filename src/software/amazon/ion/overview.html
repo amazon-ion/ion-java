@@ -1,0 +1,169 @@
+<!-- Copyright (c) 2007-2016 Amazon.com, Inc.  All rights reserved. -->
+<html>
+<body>
+Amazon Ion Java is the reference implementation of the
+<a href="http://amznlabs.github.io/ion-docs/spec.html">Ion data notation</a> for the
+Java<sup><font size="-4">TM</font></sup> 2 Platform Standard Edition 5.0
+and above.
+<p>
+This document describes all APIs intended for public consumption, limited to
+the packages listed here. The ion-java library distribution includes other
+packages not documented here; use of those packages is not supported.
+<p>
+More generally:
+<b>Any behavior or features not present in this API documentation is
+unsupported, probably untested, and subject to change without notice.</b>
+<p>
+In addition, unless otherwise noted, <b>interfaces and classes listed here
+should not be implemented or extended by code outside of this library</b>. We
+may add or remove API(s) of existing interfaces or classes in future releases.
+
+<h1>Start at IonSystem</h1>
+
+The central interface in ion-java is {@link software.amazon.ion.IonSystem}, which is
+the main factory and facade for all Ion processing.
+The intended architectural pattern is for your application to build a
+single system instance and use it
+throughout the application.  The {@code IonSystem} interface provides access
+to all other components, including the capability to construct
+{@link software.amazon.ion.IonValue IonValue} hierarchies.
+<p>
+What all this means is that your first task is acquiring a system instance, and
+for that we turn to
+{@link software.amazon.ion.system.IonSystemBuilder IonSystemBuilder}.
+Here's the easiest way to bootstrap:
+<pre>
+    IonSystem ion = IonSystemBuilder.standard().build();
+</pre>
+That should be sufficient for many, but not all, applications.  Long-running
+services will probably want to use a non-default
+{@linkplain software.amazon.ion.IonCatalog catalog} by configuring the builder
+before calling {@link software.amazon.ion.system.IonSystemBuilder#build() build()}.
+
+<h2>An Important Caveat</h2>
+Objects returned by one {@code IonSystem} cannot by mixed with objects returned
+by another {@code IonSystem}!  For example, the following code is <b>not
+guaranteed to work</b>:
+
+<pre>
+    IonSystem sys1 = IonSystemBuilder.standard().build();
+    IonSystem sys2 = IonSystemBuilder.standard().build();
+
+    IonList parent = sys1.newEmptyList();
+    IonInt  child  = sys2.newInt(23);
+    parent.add(child); // NOT SUPPORTED
+</pre>
+
+Given any {@code IonValue} instance it is possible to retrieve the relevant
+system via {@link software.amazon.ion.IonValue#getSystem()}.
+This is generally the best way to ensure
+that you're using the correct system while modifying existing trees.
+You can also use the "Curried" insertion methods to add new values to
+collections:
+<pre>
+    struct.put("f").newInt(3);
+    list.add().newString("demo");
+</pre>
+
+
+<h1>Getting Data In</h1>
+
+This release defines three mechanisms for accepting Ion data:
+<ul>
+  <li>{@link software.amazon.ion.IonReader IonReader} scans an input stream using a
+    "pull parsing" paradigm. This is a low-level, high-performance API, and
+    the other mechanisms are built on top of it.
+  <li>Iteration reads an input stream by
+    iterating over its top-level elements.  This "one at a time" input
+    mechanism is intended for stream-oriented applications.
+  <li>{@link software.amazon.ion.IonLoader IonLoader} loads an entire input stream
+    into a single {@linkplain software.amazon.ion.IonDatagram datagram}.
+    This "all at once" input mechanism is intended for document-oriented
+    applications.
+</ul>
+
+All mechanisms accept either text or binary Ion data, and applications should
+rarely care about the input format.
+<p>
+To construct an {@code IonReader}, call one of the {@code newReader} methods
+on {@code IonSystem}; for example
+{@link software.amazon.ion.IonSystem#newReader(InputStream)}.
+You can then pull data from the reader. Don't forget to
+{@link software.amazon.ion.IonReader#close() close} it when you're done!
+<p>
+Ion iterators are extensions of
+{@link java.util.Iterator} so they are used once and then discarded.
+Use the various {@code iterate} methods on {@code IonSystem} to
+create them; for example
+{@link software.amazon.ion.IonSystem#iterate(InputStream)}.
+<p>
+To construct an {@code IonLoader}, call
+{@link software.amazon.ion.IonSystem#newLoader()} and configure it as necessary.
+{@code IonLoaders} are safe for use by multiple threads. The {@code IonSystem}
+also maintains a "default loader" so you don't have to pass one around, see
+{@link software.amazon.ion.IonSystem#getLoader()}.
+
+<h1>Getting Data Out</h1>
+
+There's also several mechanisms for generating Ion data:
+<ul>
+  <li>{@link software.amazon.ion.IonWriter IonWriter} is the low-level API for
+    generating Ion data in some form. It's agnostic to the output format; in
+    theory the actual output could be some other format entirely.
+  <li>{@link software.amazon.ion.IonValue#toString() IonValue.toString()} will also
+    generate Ion text, but it's primarily intended for debugging purposes and
+    cannot be customized.  The particular layout is not specified by contract,
+    so don't assume that it will always output the same thing!
+  <li>{@link software.amazon.ion.IonValue#writeTo(IonWriter)} outputs Ion data in
+    the writer's format. This is the best way to output the data model.
+  <li>From an {@link software.amazon.ion.IonDatagram IonDatagram} you can call
+    {@link software.amazon.ion.IonDatagram#getBytes() getBytes()} to get Ion
+    binary data.
+</ul>
+
+You can create {@code IonWriter}s using methods on {@code IonSystem}, but the
+{@link software.amazon.ion.system.IonTextWriterBuilder} provides more flexibility.
+
+<h2>No Canonical Serialization</h2>
+
+There is no specified canonical form of Ion serialized data, and none of the
+APIs in this library attempt to create one.  Further, no API in this library
+guarantees repeatable or stable output for any data type.  Different releases
+of this library, or even different invocations of the same API, may produce
+different encodings from the same input.
+This caveat applies to both Ion text and binary forms, although violations
+are far more common (and easier to make) using Ion text.
+<p>
+Therefore, applications and tests should never compare the serialized form of
+data to determine equality.  For example, the following JUnit idiom is
+<b>not supported</b>:
+<pre>
+    assertEquals(expectedIonValue.toString(), actualIonValue.toString());
+</pre>
+The same goes for output via any other API, including
+{@link software.amazon.ion.IonWriter IonWriter}s.
+<p>
+The correct approach to performing semantic equivalence checks over Ion data is
+to use documented equivalence APIs such as
+{@link software.amazon.ion.IonValue#equals(Object) IonValue.equals()}. 
+
+<h1>JSON Integration</h1>
+The Ion text format is a superset of JSON, so JSON data <em>is</em> Ion data.
+This means that you can read JSON data as-is using the Ion libraries, with a
+caveat:
+<ul>
+  <li>JSON numbers with exponents are decoded as Ion float, while those with
+      fractions (but not exponents) are decoded as Ion decimal.
+</ul>
+<p>
+To output JSON with this library, Ion data can be "downconverted" to JSON
+format using an
+{@link software.amazon.ion.system.IonTextWriterBuilder IonTextWriterBuilder}.
+This replaces Ion-only datatypes with more-or-less equivalent JSON values.
+
+<h1>Thread Safety</h1>
+
+All interfaces and classes are <b>not safe for use by multiple threads</b>
+unless documented otherwise.
+</body>
+</html>
