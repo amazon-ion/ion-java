@@ -9,7 +9,7 @@ The easiest way to clone the `ion-java` repository and initialize its `ion-tests
 submodule is to run the following command.
 
 ```
-$ git clone --recursive https://github.com/amznlabs/ion-java
+$ git clone --recursive git@github.com:amznlabs/ion-java.git
 ```
 
 Alternatively, the submodule may be initialized independently from the clone
