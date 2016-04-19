@@ -107,7 +107,7 @@
                 <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
               <overview>${project.basedir}/src/software/amazon/ion/overview.html</overview>
-              <doctitle>The Amazon ion-java ${project.version} API Reference</doctitle>
+              <doctitle>Amazon ion-java ${project.version} API Reference</doctitle>
               <windowtitle>ion-java ${project.version}</windowtitle>
               <header>Amazon ion-java ${project.version} API Reference</header>
               <encoding>UTF-8</encoding>
