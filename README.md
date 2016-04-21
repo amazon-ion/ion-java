@@ -9,7 +9,7 @@ The easiest way to clone the `ion-java` repository and initialize its `ion-tests
 submodule is to run the following command.
 
 ```
-$ git clone --recursive git@github.com:amznlabs/ion-java.git
+$ git clone --recursive https://github.com/amznlabs/ion-java.git ion-java
 ```
 
 Alternatively, the submodule may be initialized independently from the clone
@@ -47,15 +47,20 @@ currently specified in the `.gitmodules` file.
 For detailed walkthroughs of git submodule usage, see the
 [Git Tools documentation](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 
-### Using the Library
+### Depending on the Library
 
 To start using `ion-java` in your code with Maven, insert the following
 dependency into your project's `pom.xml`:
 
 ```
 <dependency>
-  <groupId>software.amazon</groupId>
+  <groupId>software.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
-  <version>0.1</version>
+  <version>1.0.0</version>
 </dependency>
 ```    
+
+## Using the Library
+A great way to get started is to use the [Ion cookbook](http://amznlabs.github.io/ion-docs/cookbook.html).
+The [API documentation](http://amznlabs.github.io/ion-docs/ion-java-api/index.html) will give a lot
+of detailed information about how to use the library.
