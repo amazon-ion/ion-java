@@ -40,7 +40,7 @@
               <exportAntProperties>true</exportAntProperties>
               <target>
                 <tstamp>
-                  <format property="build.time" pattern="yyyy-MM-dd'T'HH:mm:ss'Z'"/>
+                  <format property="build.time" pattern="yyyy-MM-dd'T'HH:mm:ssXXX"/>
                 </tstamp>
               </target>
             </configuration>
@@ -72,8 +72,8 @@
             </manifest>
             <manifestEntries>
               <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
-              <Build-Time>${build.time}</Build-Time>
-              <Project-Version>${project.version}</Project-Version>
+              <Ion-Java-Build-Time>${build.time}</Ion-Java-Build-Time>
+              <Ion-Java-Project-Version>${project.version}</Ion-Java-Project-Version>
             </manifestEntries>
           </archive>
         </configuration>
