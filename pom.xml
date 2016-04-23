@@ -1,8 +1,49 @@
 <project>
+
   <modelVersion>4.0.0</modelVersion>
   <groupId>software.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <name>${project.groupId}:${project.artifactId}</name>
+  <description>
+    An Java implementation of the Amazon Ion data notation.
+  </description>
+  <url>https://github.com/amznlabs/ion-java/</url>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <developers>
+     <developer>
+       <name>Amazon Ion Team</name>
+       <email>ion-team@amazon.com</email>
+       <organization>Amazon.com Labs</organization>
+       <organizationUrl>https://github.com/amznlabs</organizationUrl>
+     </developer>
+   </developers>
+
+  <scm>
+    <connection>scm:git:git@github.com:amznlabs/ion-java.git</connection>
+    <developerConnection>scm:git:git@github.com:amznlabs/ion-java.git</developerConnection>
+    <url>git@github.com:amznlabs/ion-java.git</url>
+  </scm>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
@@ -107,12 +148,12 @@
                 <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
               <overview>${project.basedir}/src/software/amazon/ion/overview.html</overview>
-              <doctitle>Amazon ion-java ${project.version} API Reference</doctitle>
-              <windowtitle>ion-java ${project.version}</windowtitle>
-              <header>Amazon ion-java ${project.version} API Reference</header>
+              <doctitle>Amazon Ion Java ${project.version} API Reference</doctitle>
+              <windowtitle>Ion Java ${project.version}</windowtitle>
+              <header>Amazon Ion Java ${project.version} API Reference</header>
               <encoding>UTF-8</encoding>
               <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${build.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
-              <name>ion-java Javadoc</name>
+              <name>Ion Java Javadoc</name>
               <additionalparam>-Xdoclint:none</additionalparam>
             </configuration>
             <reports>
@@ -123,5 +164,84 @@
       </plugin>
     </plugins>
   </reporting>
+
+  <profiles>
+    <profile> 
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- Package the source jar. -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.2.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- Package the javadoc jar. -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.9.1</version>
+            <configuration>
+              <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
+              <sourceFileExcludes>
+                <exclude>**/*Private*</exclude>
+              </sourceFileExcludes>
+              <overview>${project.basedir}/src/software/amazon/ion/overview.html</overview>
+              <doctitle>Amazon Ion Java ${project.version} API Reference</doctitle>
+              <windowtitle>Ion Java ${project.version}</windowtitle>
+              <header>Amazon Ion Java ${project.version} API Reference</header>
+              <encoding>UTF-8</encoding>
+              <bottom><![CDATA[<center>Copyright &#169; 2007&ndash;${build.year} Amazon.com. All Rights Reserved.</center>]]></bottom>
+              <name>Ion Java Javadoc</name>
+              <additionalparam>-Xdoclint:none</additionalparam>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- GPG signing. -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.5</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!-- Publish the artifacts. -->
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.3</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>true</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
