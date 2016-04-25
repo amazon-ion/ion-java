@@ -189,7 +189,7 @@
             <!-- Package the javadoc jar. -->
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.9.1</version>
+            <version>2.10.3</version>
             <configuration>
               <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
               <sourceFileExcludes>
