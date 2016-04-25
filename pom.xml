@@ -7,7 +7,7 @@
 
   <name>${project.groupId}:${project.artifactId}</name>
   <description>
-    An Java implementation of the Amazon Ion data notation.
+    A Java implementation of the Amazon Ion data notation.
   </description>
   <url>https://github.com/amznlabs/ion-java/</url>
 
@@ -22,7 +22,7 @@
      <developer>
        <name>Amazon Ion Team</name>
        <email>ion-team@amazon.com</email>
-       <organization>Amazon.com Labs</organization>
+       <organization>Amazon Labs</organization>
        <organizationUrl>https://github.com/amznlabs</organizationUrl>
      </developer>
    </developers>
@@ -33,6 +33,7 @@
     <url>git@github.com:amznlabs/ion-java.git</url>
   </scm>
 
+  <!-- http://central.sonatype.org/pages/ossrh-guide.html -->
   <distributionManagement>
     <snapshotRepository>
       <id>ossrh</id>
