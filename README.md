@@ -1,7 +1,9 @@
-[![Build Status](https://travis-ci.org/amznlabs/ion-java.svg?branch=master)](https://travis-ci.org/amznlabs/ion-java)
-
 # Amazon Ion Java
 A Java implementation of the [Ion data notation](http://amznlabs.github.io/ion-docs/index.html).
+
+[![Build Status](https://travis-ci.org/amznlabs/ion-java.svg?branch=master)](https://travis-ci.org/amznlabs/ion-java)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java)
+[![Javadoc](https://javadoc-emblem.rhcloud.com/doc/software.amazon.ion/ion-java/badge.svg)](http://www.javadoc.io/doc/software.amazon.ion/ion-java)
 
 ## Setup
 This repository contains a [git submodule](https://git-scm.com/docs/git-submodule)
@@ -64,5 +66,5 @@ dependency into your project's `pom.xml`:
 
 ## Using the Library
 A great way to get started is to use the [Ion cookbook](http://amznlabs.github.io/ion-docs/cookbook.html).
-The [API documentation](http://amznlabs.github.io/ion-docs/ion-java-api/index.html) will give a lot
+The [API documentation](http://www.javadoc.io/doc/software.amazon.ion/ion-java) will give a lot
 of detailed information about how to use the library.
