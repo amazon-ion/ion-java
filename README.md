@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/amznlabs/ion-java.svg?branch=master)](https://travis-ci.org/amznlabs/ion-java)
+
 # Amazon Ion Java
 A Java implementation of the [Ion data notation](http://amznlabs.github.io/ion-docs/index.html).
 
