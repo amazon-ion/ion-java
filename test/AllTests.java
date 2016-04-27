@@ -76,6 +76,7 @@ import software.amazon.ion.streaming.GoodIonStreamingTest;
 import software.amazon.ion.streaming.InputStreamReaderTest;
 import software.amazon.ion.streaming.MiscStreamingTest;
 import software.amazon.ion.streaming.ReaderDomCopyTest;
+import software.amazon.ion.streaming.ReaderIntegerSizeTest;
 import software.amazon.ion.streaming.ReaderSkippingTest;
 import software.amazon.ion.streaming.ReaderTest;
 import software.amazon.ion.streaming.RoundTripStreamingTest;
@@ -173,6 +174,7 @@ import software.amazon.ion.util.TextTest;
     RoundTripStreamingTest.class,
     ReaderDomCopyTest.class,
     ReaderSkippingTest.class,
+    ReaderIntegerSizeTest.class,
 
     IonSystemTest.class,
     ValueFactorySequenceTest.class,

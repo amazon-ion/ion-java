@@ -113,8 +113,23 @@ import software.amazon.ion.impl.PrivateUtils;
                 writeBool(booleanValue);
                 break;
             case INT:
-                final BigInteger bigIntegerValue = reader.bigIntegerValue();
-                writeInt(bigIntegerValue);
+                switch (reader.getIntegerSize())
+                {
+                    case INT:
+                        final int intValue = reader.intValue();
+                        writeInt(intValue);
+                        break;
+                    case LONG:
+                        final long longValue = reader.longValue();
+                        writeInt(longValue);
+                        break;
+                    case BIG_INTEGER:
+                        final BigInteger bigIntegerValue = reader.bigIntegerValue();
+                        writeInt(bigIntegerValue);
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                }
                 break;
             case FLOAT:
                 final double doubleValue = reader.doubleValue();

@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 import software.amazon.ion.Decimal;
+import software.amazon.ion.IntegerSize;
 import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.NullValueException;
@@ -76,18 +77,23 @@ class IonReaderBinarySystemX
         return result;
     }
 
-    //
-    //  basic scalar value getters (for actual content)
-    //
-    protected final void prepare_value(int as_type) {
+    private void load_once()
+    {
         if (_v.isEmpty()) {
             try {
-                load_cached_value(as_type);
+                load_scalar_value();
             }
             catch (IOException e) {
                 error(e);
             }
         }
+    }
+
+    //
+    //  basic scalar value getters (for actual content)
+    //
+    protected final void prepare_value(int as_type) {
+        load_once();
         if (as_type != 0 && !_v.hasValueOfType(as_type)) {
             // we should never get here with a symbol asking for anything other
             // than a numeric cast (from some other numeric already loaded)
@@ -141,8 +147,8 @@ class IonReaderBinarySystemX
         return new BigInteger(signum, magnitude);
     }
 
-    static final int MAX_BINARY_LENGTH_INT = 4;
-    static final int MAX_BINARY_LENGTH_LONG = 8;
+    static final BigInteger MIN_LONG_VALUE = BigInteger.valueOf(Long.MIN_VALUE);
+    static final BigInteger MAX_LONG_VALUE = BigInteger.valueOf(Long.MAX_VALUE);
 
     private final void load_scalar_value() throws IOException
     {
@@ -182,21 +188,35 @@ class IonReaderBinarySystemX
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.int_value);
             }
-            else if (_value_len <= MAX_BINARY_LENGTH_LONG) {
+            else if (_value_len <= Long.BYTES) {
                 long v = readULong(_value_len);
+                boolean is_negative = _value_tid == PrivateIonConstants.tidNegInt;
 
                 if (v < 0) {
-                    // we really can't fit this magnitude properly into a Java long
-                    int signum = _value_tid == PrivateIonConstants.tidPosInt ? 1 : -1;
+                    // we probably can't fit this magnitude properly into a Java long
+                    int signum = !is_negative ? 1 : -1;
                     BigInteger big = unsignedLongToBigInteger(signum, v);
                     _v.setValue(big);
-                    _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
-                } else {
-                    if (_value_tid == PrivateIonConstants.tidNegInt) {
+                    // boundary condition
+                    if (big.compareTo(MIN_LONG_VALUE) < 0 || big.compareTo(MAX_LONG_VALUE) > 0) {
+                        _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
+                    } else {
+                        // fits in long
+                        _v.addValue(big.longValue()); // keep the BigInteger value set in case the user wants to resurrect it as such
+                        _v.setAuthoritativeType(AS_TYPE.long_value);
+                    }
+                }
+                else {
+                    if (is_negative) {
                         v = -v;
                     }
-                    _v.setValue(v);
-                    _v.setAuthoritativeType(AS_TYPE.long_value);
+                    if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
+                        _v.setValue(v);
+                        _v.setAuthoritativeType(AS_TYPE.long_value);
+                    } else {
+                        _v.setValue((int)v);
+                        _v.setAuthoritativeType(AS_TYPE.int_value);
+                    }
                 }
             }
             else {
@@ -350,6 +370,17 @@ class IonReaderBinarySystemX
         }
         prepare_value(AS_TYPE.timestamp_value);
         return _v.getTimestamp();
+    }
+
+    @Override
+    public IntegerSize getIntegerSize()
+    {
+        load_once();
+        if (_value_type != IonType.INT || _v.isNull())
+        {
+            return null;
+        }
+        return PrivateScalarConversions.getIntegerSize(_v.getAuthoritativeType());
     }
 
     // TODO amznlabs/ion-java#63 this needs to use the appropriate symbol table for user values

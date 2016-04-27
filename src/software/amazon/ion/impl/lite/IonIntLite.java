@@ -17,6 +17,7 @@ package software.amazon.ion.impl.lite;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import software.amazon.ion.IntegerSize;
 import software.amazon.ion.IonInt;
 import software.amazon.ion.IonType;
 import software.amazon.ion.IonWriter;
@@ -37,9 +38,17 @@ final class IonIntLite
     private static final int HASH_SIGNATURE =
         IonType.INT.toString().hashCode();
 
+
+    // This mask combines the IS_BOOL_TRUE (0x08) and IS_IVM (0x10)
+    // masks from IonValueLite. Those flags are never relevant for
+    // IonInts, which makes them safe for reuse here.
+    private static final int INT_SIZE_MASK  = 0x18;
+    private static final int INT_SIZE_SHIFT = 0x03;
+
+    private static final IntegerSize[] SIZES = IntegerSize.values();
+
     private long _long_value;
     private BigInteger _big_int_value;
-
 
     /**
      * Constructs a <code>null.int</code> element.
@@ -137,14 +146,13 @@ final class IonIntLite
 
     public void setValue(int value)
     {
-        checkForLock();
-        doSetValue(Long.valueOf(value), false);
+        setValue((long)value);
     }
 
     public void setValue(long value)
     {
         checkForLock();
-        doSetValue(Long.valueOf(value), false);
+        doSetValue(value, false);
     }
 
     public void setValue(Number value)
@@ -154,24 +162,21 @@ final class IonIntLite
         {
             doSetValue(0, true);
         }
+        else if (value instanceof BigInteger)
+        {
+            BigInteger big = (BigInteger) value;
+            doSetValue(big);
+        }
+        else if (value instanceof BigDecimal)
+        {
+            BigDecimal bd = (BigDecimal) value;
+            doSetValue(bd.toBigInteger());
+        }
         else
         {
-            if (value instanceof BigInteger)
-            {
-                BigInteger big = (BigInteger) value;
-                doSetValue(big);
-            }
-            else if (value instanceof BigDecimal)
-            {
-                BigDecimal bd = (BigDecimal) value;
-                doSetValue(bd.toBigInteger());
-            }
-            else
-            {
-                // XXX this is essentially a narrowing conversion
-                // for some types of numbers
-                doSetValue(value.longValue(), false);
-            }
+            // XXX this is essentially a narrowing conversion
+            // for some types of numbers
+            doSetValue(value.longValue(), false);
         }
     }
 
@@ -198,27 +203,54 @@ final class IonIntLite
         _long_value = value;
         _big_int_value = null;
         _isNullValue(isNull);
+        if (!isNull)
+        {
+            if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE)
+            {
+                // fits in long
+                setSize(IntegerSize.LONG);
+            }
+            else
+            {
+                // fits in int
+                setSize(IntegerSize.INT);
+            }
+        }
     }
 
     private void doSetValue(BigInteger value) {
         if ((value.compareTo(LONG_MIN_VALUE) < 0) ||
             (value.compareTo(LONG_MAX_VALUE) > 0))
         {
+            setSize(IntegerSize.BIG_INTEGER);
             _long_value = 0L;
             _big_int_value = value;
             _isNullValue(false);
         }
-        else
-        {
-            // fits in long
+        else {
             doSetValue(value.longValue(), false);
         }
+    }
+
+    private void setSize(IntegerSize size)
+    {
+        _setMetadata(size.ordinal(), INT_SIZE_MASK, INT_SIZE_SHIFT);
     }
 
     @Override
     public void accept(ValueVisitor visitor) throws Exception
     {
         visitor.visit(this);
+    }
+
+    @Override
+    public IntegerSize getIntegerSize()
+    {
+        if (isNullValue())
+        {
+            return null;
+        }
+        return SIZES[_getMetadata(INT_SIZE_MASK, INT_SIZE_SHIFT)];
     }
 
 }

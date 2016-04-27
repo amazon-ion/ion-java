@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import software.amazon.ion.Decimal;
+import software.amazon.ion.IntegerSize;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonType;
 import software.amazon.ion.Timestamp;
@@ -58,6 +59,20 @@ public class PrivateScalarConversions
                                                    | idx_to_bit_mask(datetime_types)
                                                    | idx_to_bit_mask(boolean_value)
                                                    | idx_to_bit_mask(string_value);
+    }
+
+    public static IntegerSize getIntegerSize(int authoritative_type) {
+        switch (authoritative_type)
+        {
+            case AS_TYPE.int_value:
+                return IntegerSize.INT;
+            case AS_TYPE.long_value:
+                return IntegerSize.LONG;
+            case AS_TYPE.bigInteger_value:
+                return IntegerSize.BIG_INTEGER;
+            default:
+                return null;
+        }
     }
 
     public static String getValueTypeName(int value_type) {
@@ -413,6 +428,7 @@ public class PrivateScalarConversions
                                + getValueTypeName(value_type);
                 throw new IllegalStateException(message);
             }
+            _authoritative_type_idx = value_type;
         }
         public final void setValueToNull(IonType t) {
             _is_null = true;

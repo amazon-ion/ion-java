@@ -56,6 +56,15 @@ public interface IonInt
     public BigInteger bigIntegerValue();
 
     /**
+     * Gets an {@link IntegerSize} representing the smallest-possible
+     * Java type of the underlying content, or {@code null} if this is
+     * {@code null.int}.
+     *
+     * @see IonReader#getIntegerSize()
+     */
+    public IntegerSize getIntegerSize();
+
+    /**
      * Sets the content of this value.
      */
     public void setValue(int value);

@@ -172,6 +172,18 @@ public interface IonReader
     public IonType getType();
 
     /**
+     * Returns an {@link IntegerSize} representing the smallest-possible
+     * Java type of the Ion {@code int} at the current value.
+     *
+     * If the current value is {@code null.int} or is not an Ion
+     * {@code int}, or if there is no current value, {@code null} will
+     * be returned.
+     *
+     * @see IonInt#getIntegerSize()
+     */
+    public IntegerSize getIntegerSize();
+
+    /**
      * Return the annotations of the current value as an array of strings.
      *
      * @return the (ordered) annotations on the current value, or an empty
