@@ -656,7 +656,8 @@ import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
             WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
-            builder.preallocationMode
+            builder.preallocationMode,
+            builder.isFloatBinary32Enabled
         );
         this.user = new IonRawBinaryWriter(
             builder.provider,
@@ -665,7 +666,8 @@ import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
             WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
             StreamCloseMode.CLOSE,
             StreamFlushMode.FLUSH,
-            builder.preallocationMode
+            builder.preallocationMode,
+            builder.isFloatBinary32Enabled
         );
 
         this.catalog = builder.catalog;

@@ -104,6 +104,12 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         }
     }
 
+    @Override
+    public int ivmLength() {
+        return 4;
+    }
+
+
     @Inject("importedSymbolResolverMode")
     public static final ImportedSymbolResolverMode[] RESOLVER_DIMENSIONS = ImportedSymbolResolverMode.values();
 
@@ -131,6 +137,7 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
             .create(AllocatorMode.POOLED)
             .withImports(importedSymbolResolverMode, symbolTables)
             .withPreallocationMode(preallocationMode)
+            .withFloatBinary32Enabled()
             .newWriter(out);
 
         final SymbolTable locals = writer.getSymbolTable();

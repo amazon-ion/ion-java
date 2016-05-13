@@ -173,6 +173,63 @@ public abstract class IonBinaryWriterBuilder
     IonBinaryWriterBuilder withInitialSymbolTable(SymbolTable symtab);
 
 
+    /**
+     * Enables or disables writing Binary32 (4-byte, single precision,
+     * IEEE-754) values for floats when there would be no loss in precision.
+     * By default Binary32 support is disabled to ensure the broadest
+     * compatibility with existing Ion implementations. Historically,
+     * implementations were only able to read Binary64 values.
+     * <p>
+     * When enabled, floats are evaluated for a possible loss of data at single
+     * precision. If the value can be represented in single precision without
+     * data loss, it is written as a 4-byte, Binary32 value. Floats which cannot
+     * be represented as single-precision values are  written as 8-byte,
+     * Binary64 values (this is the legacy behavior for all  floats, regardless
+     * of value).
+     *
+     * @param enabled {@code true} to enable writing 4-byte floats,
+     * {@code false} to always write 8-byte floats.
+     *
+     * @see IonBinaryWriterBuilder#withFloatBinary32Enabled
+     * @see IonBinaryWriterBuilder#withFloatBinary32Disabled
+     */
+    public abstract void setIsFloatBinary32Enabled(boolean enabled);
+
+    /**
+     * Enables writing Binary32 (4-byte, single precision,  IEEE-754) values
+     * for floats when there would be no loss in precision. By default Binary32
+     * support is disabled to ensure the broadest compatibility with existing
+     * Ion implementations. Historically, implementations were only able to read
+     * Binary64 values.
+     * <p>
+     * When enabled, floats are evaluated for a possible loss of data at single
+     * precision. If the value can be represented in single precision without
+     * data loss, it is written as a 4-byte, Binary32 value. Floats which
+     * cannot be represented as single-precision values are written as 8-byte,
+     * Binary64 values (this is the legacy behavior for all floats, regardless
+     * of value).
+     *
+     * @see IonBinaryWriterBuilder#setIsFloatBinary32Enabled(boolean)
+     * @see IonBinaryWriterBuilder#withFloatBinary32Disabled
+     */
+    public abstract IonBinaryWriterBuilder withFloatBinary32Enabled();
+
+    /**
+     * Disables writing Binary32 (4-byte, single precision, IEEE-754) values for
+     * floats. This is the default behavior.
+     * <p>
+     * When disabled, floats are always written as 8-byte, Binary64 values
+     * regardless of value. This is the legacy behavior for all Ion binary
+     * writers and ensures the boarded compatibility with other Ion consumers.
+     *
+     * @param enabled {@code true} to enable writing 4-byte floats,
+     * {@code false} to always write 8-byte floats.
+     *
+     * @see IonBinaryWriterBuilder#setIsFloatBinary32Enabled(boolean)
+     * @see IonBinaryWriterBuilder#withFloatBinary32Enabled
+     */
+    public abstract IonBinaryWriterBuilder withFloatBinary32Disabled();
+
     //=========================================================================
 
 

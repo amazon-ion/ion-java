@@ -114,7 +114,8 @@ public class IonRawBinaryWriterTest extends Assert
             WriteValueOptimization.NONE,
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
-            preallocationMode
+            preallocationMode,
+            true
         );
     }
 
@@ -231,6 +232,50 @@ public class IonRawBinaryWriterTest extends Assert
 
         writer.writeFloat(Double.POSITIVE_INFINITY);
         assertValue("+inf");
+    }
+
+    public int ivmLength() {
+        return 0;
+    }
+
+    @Test
+    public void testVariableFloat() throws Exception
+    {
+        // IonRawBinaryWriterTest writes a single BVM,
+        // but IonManagedBinaryWriterTest writes a BVM
+        // when a value is written after a #finish()
+        // call. Normalize before the test.
+        writer.writeFloat(0.0);
+        writer.finish();
+        buffer.reset();
+
+        // 0e0 - 32-bit
+        writer.writeFloat(0.0);
+        writer.finish();
+        assertEquals(ivmLength() + 5,
+                     buffer.size());
+        buffer.reset();
+
+        // +inf - 32-bit
+        writer.writeFloat(Double.POSITIVE_INFINITY);
+        writer.finish();
+        assertEquals(ivmLength() + 5,
+                     buffer.size());
+        buffer.reset();
+
+        // 64-bit value - fraction overflows 32-bits
+        writer.writeFloat(2.147483647e9);
+        writer.finish();
+        assertEquals(ivmLength() + 9,
+                     buffer.size());
+        buffer.reset();
+
+        // 64-bit value - exponent overflows 32-bits
+        writer.writeFloat(6e128);
+        writer.finish();
+        assertEquals(ivmLength() + 9,
+                     buffer.size());
+        buffer.reset();
     }
 
     private static final String DECIMAL_10_DIGIT  = "1.000000001";

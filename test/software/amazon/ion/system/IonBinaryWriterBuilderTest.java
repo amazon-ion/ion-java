@@ -146,6 +146,65 @@ public class IonBinaryWriterBuilderTest
 
     //-------------------------------------------------------------------------
 
+    @Test
+    public void testSetIsFloatBinary32Enabled() throws IOException
+    {
+        IonSystem system = IonSystemBuilder.standard().build();
+
+        IonBinaryWriterBuilder b = IonBinaryWriterBuilder.standard();
+        b.setIsFloatBinary32Enabled(true);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = b.build(out);
+        writer.writeFloat(1.0);
+        writer.close();
+        assertEquals(9, out.size());
+        assertEquals(system.newFloat(1.0), system.singleValue(out.toByteArray()));
+
+        b.setIsFloatBinary32Enabled(false);
+
+        out = new ByteArrayOutputStream();
+        writer = b.build(out);
+        writer.writeFloat(1.0);
+        writer.close();
+        assertEquals(13, out.size());
+        assertEquals(system.newFloat(1.0), system.singleValue(out.toByteArray()));
+    }
+
+    @Test
+    public void testWithFloatBinary32Enabled() throws IOException
+    {
+        IonSystem system = IonSystemBuilder.standard().build();
+
+        IonBinaryWriterBuilder b = IonBinaryWriterBuilder.standard()
+            .withFloatBinary32Enabled();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = b.build(out);
+        writer.writeFloat(1.0);
+        writer.close();
+        assertEquals(9, out.size());
+        assertEquals(system.newFloat(1.0), system.singleValue(out.toByteArray()));
+    }
+
+    @Test
+    public void testWithFloatBinary32Disabled() throws IOException
+    {
+        IonSystem system = IonSystemBuilder.standard().build();
+
+        IonBinaryWriterBuilder b = IonBinaryWriterBuilder.standard()
+            .withFloatBinary32Disabled();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = b.build(out);
+        writer.writeFloat(1.0);
+        writer.close();
+        assertEquals(13, out.size());
+        assertEquals(system.newFloat(1.0), system.singleValue(out.toByteArray()));
+    }
+
+    //-------------------------------------------------------------------------
+
 
     @Test
     public void testSymtabValueFactory()

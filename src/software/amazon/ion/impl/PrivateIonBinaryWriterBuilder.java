@@ -189,6 +189,35 @@ public class PrivateIonBinaryWriterBuilder
     }
 
     @Override
+    public void setIsFloatBinary32Enabled(boolean enabled) {
+        mutationCheck();
+        if (enabled)
+        {
+            myBinaryWriterBuilder.withFloatBinary32Enabled();
+        }
+        else
+        {
+            myBinaryWriterBuilder.withFloatBinary32Disabled();
+        }
+    }
+
+    @Override
+    public
+    PrivateIonBinaryWriterBuilder withFloatBinary32Enabled() {
+        PrivateIonBinaryWriterBuilder b = mutable();
+        b.setIsFloatBinary32Enabled(true);
+        return b;
+    }
+
+    @Override
+    public
+    PrivateIonBinaryWriterBuilder withFloatBinary32Disabled() {
+        PrivateIonBinaryWriterBuilder b = mutable();
+        b.setIsFloatBinary32Enabled(false);
+        return b;
+    }
+
+    @Override
     public void setImports(final SymbolTable... imports)
     {
         super.setImports(imports);

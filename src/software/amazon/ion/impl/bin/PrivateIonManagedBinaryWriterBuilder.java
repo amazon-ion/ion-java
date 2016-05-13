@@ -75,6 +75,7 @@ public final class PrivateIonManagedBinaryWriterBuilder
     /*package*/ volatile IonCatalog             catalog;
     /*package*/ volatile WriteValueOptimization optimization;
     /*package*/ volatile SymbolTable            initialSymbolTable;
+    /*package*/ volatile boolean                isFloatBinary32Enabled;
 
     private PrivateIonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
     {
@@ -85,6 +86,7 @@ public final class PrivateIonManagedBinaryWriterBuilder
         this.preallocationMode = PreallocationMode.PREALLOCATE_2;
         this.catalog = new SimpleCatalog();
         this.optimization = WriteValueOptimization.NONE;
+        this.isFloatBinary32Enabled = false;
     }
 
     private PrivateIonManagedBinaryWriterBuilder(final PrivateIonManagedBinaryWriterBuilder other)
@@ -97,6 +99,7 @@ public final class PrivateIonManagedBinaryWriterBuilder
         this.catalog            = other.catalog;
         this.optimization       = other.optimization;
         this.initialSymbolTable = other.initialSymbolTable;
+        this.isFloatBinary32Enabled = other.isFloatBinary32Enabled;
     }
 
     public PrivateIonManagedBinaryWriterBuilder copy()
@@ -185,6 +188,16 @@ public final class PrivateIonManagedBinaryWriterBuilder
     public PrivateIonManagedBinaryWriterBuilder withStreamCopyOptimization(boolean optimized)
     {
         this.optimization = optimized ? WriteValueOptimization.COPY_OPTIMIZED : WriteValueOptimization.NONE;
+        return this;
+    }
+
+    public PrivateIonManagedBinaryWriterBuilder withFloatBinary32Enabled() {
+        isFloatBinary32Enabled = true;
+        return this;
+    }
+
+    public PrivateIonManagedBinaryWriterBuilder withFloatBinary32Disabled() {
+        isFloatBinary32Enabled = false;
         return this;
     }
 

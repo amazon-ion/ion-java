@@ -15,6 +15,7 @@
 package software.amazon.ion.impl.bin;
 
 import static java.lang.Double.doubleToRawLongBits;
+import static java.lang.Float.floatToRawIntBits;
 import static software.amazon.ion.Decimal.isNegativeZero;
 import static software.amazon.ion.IonType.BLOB;
 import static software.amazon.ion.IonType.BOOL;
@@ -99,7 +100,7 @@ import software.amazon.ion.Timestamp;
 
     private static final byte POS_INT_TYPE      = (byte) 0x20;
     private static final byte NEG_INT_TYPE      = (byte) 0x30;
-    private static final byte FLOAT_TYPE        = (byte) 0x48;
+    private static final byte FLOAT_TYPE        = (byte) 0x40;
 
     private static final byte DECIMAL_TYPE      = (byte) 0x50;
     private static final byte TIMESTAMP_TYPE    = (byte) 0x60;
@@ -458,6 +459,7 @@ import software.amazon.ion.Timestamp;
     private final StreamCloseMode               streamCloseMode;
     private final StreamFlushMode               streamFlushMode;
     private final PreallocationMode             preallocationMode;
+    private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
     private final WriteBuffer                   patchBuffer;
     private final PatchList                     patchPoints;
@@ -479,7 +481,8 @@ import software.amazon.ion.Timestamp;
                                    final WriteValueOptimization optimization,
                                    final StreamCloseMode streamCloseMode,
                                    final StreamFlushMode streamFlushMode,
-                                   final PreallocationMode preallocationMode)
+                                   final PreallocationMode preallocationMode,
+                                   final boolean isFloatBinary32Enabled)
                                    throws IOException
     {
         super(optimization);
@@ -491,6 +494,7 @@ import software.amazon.ion.Timestamp;
         this.streamCloseMode   = streamCloseMode;
         this.streamFlushMode   = streamFlushMode;
         this.preallocationMode = preallocationMode;
+        this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator);
         this.patchBuffer       = new WriteBuffer(allocator);
         this.patchPoints       = new PatchList();
@@ -1035,9 +1039,17 @@ import software.amazon.ion.Timestamp;
     public void writeFloat(final double value) throws IOException
     {
         prepareValue();
-        updateLength(9);
-        buffer.writeUInt8(FLOAT_TYPE);
-        buffer.writeUInt64(doubleToRawLongBits(value));
+
+        if (isFloatBinary32Enabled && value == ((double) ((float) value))) {
+            updateLength(5);
+            buffer.writeUInt8(FLOAT_TYPE | 4);
+            buffer.writeUInt32(floatToRawIntBits((float) value));
+        } else {
+            updateLength(9);
+            buffer.writeUInt8(FLOAT_TYPE | 8);
+            buffer.writeUInt64(doubleToRawLongBits(value));
+        }
+
         finishValue();
     }
 
