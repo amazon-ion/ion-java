@@ -1045,12 +1045,16 @@ done:   for (;;) {
             // special case, return pos zero
             return 0.0d;
         }
-        if (len != 8)
+        if (len != 4 && len != 8)
         {
-            throw new IOException("Length of float read must be 0 or 8");
+            throw new IOException("Length of float read must be 0, 4, or 8");
         }
+
         long dBits = this.readULong(len);
-        return Double.longBitsToDouble(dBits);
+
+        return len == 4
+            ? (double) Float.intBitsToFloat((int) (dBits & 0xffffffffL))
+            : Double.longBitsToDouble(dBits);
     }
     protected final long readVarULong() throws IOException
     {

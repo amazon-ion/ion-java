@@ -173,6 +173,28 @@ public class BinaryTest extends IonTestCase
     }
 
     @Test
+    public void testBinReadFloat05()
+    {
+        // 1e0
+        IonValue val = ion("44 3f 80 00 00");
+
+        assertTrue(val instanceof IonFloat);
+        assertTrue(1.0 == ((IonFloat) val).doubleValue());
+    }
+
+    @Test
+    public void testBinReadFloat06()
+    {
+        // ≈ -991221.0227
+        IonValue val = ion("44 C9 71 FF 50");
+
+        assertTrue(val instanceof IonFloat);
+        // since 32-bit values are upcast to 64-bit values, check
+        // the double representation
+        assertDoubleBits(val, 0xc12e3fea00000000L);
+    }
+
+    @Test
     public void testBinWriteFloat01()
     {
         IonFloat fval = system().newNullFloat();
