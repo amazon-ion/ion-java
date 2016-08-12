@@ -361,6 +361,16 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      */
+    public IonReader newReader(CharSequence ionText);
+
+    /**
+     * Creates an new {@link IonReader} instance over Ion text data.
+     * <p>
+     * The text is parsed incrementally by the reader, so any syntax errors
+     * will not be detected during this call.
+     *
+     * @param ionText must not be null.
+     */
     public IonReader newReader(String ionText);
 
     /**

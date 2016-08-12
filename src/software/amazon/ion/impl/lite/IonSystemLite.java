@@ -674,6 +674,9 @@ final class IonSystemLite
         return makeSystemReader(this, ionData, offset, len);
     }
 
+    public IonReader newReader(CharSequence ionText) {
+        return makeReader(this, _catalog, ionText);
+    }
 
     public IonReader newReader(String ionText)
     {
