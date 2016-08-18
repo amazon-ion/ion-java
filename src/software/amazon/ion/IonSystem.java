@@ -371,6 +371,7 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      */
+    @Deprecated
     public IonReader newReader(String ionText);
 
     /**
