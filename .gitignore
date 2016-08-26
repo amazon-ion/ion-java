@@ -1,4 +1,7 @@
 .eclipseout
+.p4config
+/build
+/*.iml
 junit*.properties
 tmp*
 /target
