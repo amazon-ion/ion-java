@@ -74,6 +74,36 @@ abstract class IonValueLite
     private   static final int ELEMENT_MASK       = 0xff;
     protected static final int ELEMENT_SHIFT      = 8; // low 8 bits is flag, upper 24 (or 48 is element id)
 
+    /**
+     * Used by subclasses to retrieve metadata set by
+     * {@link #_setMetadata(int, int, int)}.
+     * @param mask the location of the metadata to retrieve.
+     * @param shift the number of bits to right-shift the metadata so that
+     *              it starts at bit index 0.
+     * @return the metadata from _flags at the given mask.
+     */
+    protected final int _getMetadata(int mask, int shift) {
+        return (_flags & mask) >>> shift;
+    }
+
+    /**
+     * May be used by subclasses to reuse _flag bits for purposes specific
+     * to that subclass. It is important that only flag bits not currently
+     * used by that subclass are chosen; otherwise important data may be
+     * overwritten. NOTE: only the lower 8 bits may be used, because the
+     * upper 24 are reserved for the element ID.
+     * @param metadata the metadata to set.
+     * @param mask the location at which to set the metadata. Must be within
+     *             the lower 8 bits.
+     * @param shift the number of bits to left-shift the metadata so that
+     *              it starts at the index of the mask's LSB.
+     */
+    protected final void _setMetadata(int metadata, int mask, int shift) {
+        assert(mask <= ELEMENT_MASK); // don't overwrite the element ID
+        _flags &= ~mask;
+        _flags |= ((metadata << shift) & mask);
+    }
+
     protected final void _elementid(int elementid) {
         _flags &= ELEMENT_MASK;
         _flags |= (elementid << ELEMENT_SHIFT);

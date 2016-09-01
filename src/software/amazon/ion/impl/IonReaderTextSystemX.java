@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 import software.amazon.ion.Decimal;
+import software.amazon.ion.IntegerSize;
 import software.amazon.ion.IonBlob;
 import software.amazon.ion.IonClob;
 import software.amazon.ion.IonException;
@@ -72,6 +73,32 @@ class IonReaderTextSystemX
         return _system;
     }
 
+    // TODO getIntegerType() is duplicated in IonReaderBinarySystemX. It could
+    // be consolidated into a single location, but that would have to be part
+    // of a larger refactor of common logic from both IonReader*SystemX classes
+    // into a base class (the *Value() methods also share a lot of similarity).
+    @Override
+    public IntegerSize getIntegerSize()
+    {
+        load_once();
+        if (_value_type != IonType.INT || _v.isNull())
+        {
+            return null;
+        }
+        return PrivateScalarConversions.getIntegerSize(_v.getAuthoritativeType());
+    }
+
+    private void load_once()
+    {
+        if (_v.isEmpty()) {
+            try {
+                load_scalar_value();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+        }
+    }
 
     /**
      * this checks the state of the raw reader to make sure
@@ -85,25 +112,100 @@ class IonReaderTextSystemX
      * @throws IOException
      */
     private final void load_or_cast_cached_value(int value_type) {
-        if (_v.isEmpty()) {
-            try {
-                load_scalar_value();
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
+        load_once();
         if (value_type != 0 && !_v.hasValueOfType(value_type)) {
             cast_cached_value(value_type);
         }
     }
 
-    static final int MAX_IMAGE_LENGTH_INT = Integer.toString(Integer.MAX_VALUE).length()-1;
-    static final int MAX_IMAGE_LENGTH_LONG = Long.toString(Long.MAX_VALUE).length()-1;
-    static final int MAX_IMAGE_LENGTH_HEX_INT = Integer.toHexString(Integer.MAX_VALUE).length()-1;
-    static final int MAX_IMAGE_LENGTH_HEX_LONG = Long.toHexString(Long.MAX_VALUE).length()-1;
-    static final int MAX_IMAGE_LENGTH_BINARY_INT = Integer.toBinaryString(Integer.MAX_VALUE).length();
-    static final int MAX_IMAGE_LENGTH_BINARY_LONG = Long.toBinaryString(Long.MAX_VALUE).length();
+    enum Radix
+    {
+        DECIMAL
+        {
+
+            @Override
+            boolean isInt(String image, int len)
+            {
+                return valueWithinBounds(image, len, MIN_INT_IMAGE, MAX_INT_IMAGE);
+            }
+
+            @Override
+            boolean isLong(String image, int len)
+            {
+                return valueWithinBounds(image, len, MIN_LONG_IMAGE, MAX_LONG_IMAGE);
+            }
+
+        },
+        HEX
+        {
+
+            @Override
+            boolean isInt(String image, int len)
+            {
+                return valueWithinBounds(image, len, MIN_HEX_INT_IMAGE, MAX_HEX_INT_IMAGE);
+            }
+
+            @Override
+            boolean isLong(String image, int len)
+            {
+                return valueWithinBounds(image, len, MIN_HEX_LONG_IMAGE, MAX_HEX_LONG_IMAGE);
+            }
+
+        },
+        BINARY
+        {
+
+            @Override
+            boolean isInt(String image, int len)
+            {
+                return valueWithinBounds(image, len, MIN_BINARY_INT_IMAGE, MAX_BINARY_INT_IMAGE);
+            }
+
+            @Override
+            boolean isLong(String image, int len)
+            {
+                return valueWithinBounds(image, len, MIN_BINARY_LONG_IMAGE, MAX_BINARY_LONG_IMAGE);
+            }
+
+        };
+
+        private static final char[] MAX_INT_IMAGE = Integer.toString(Integer.MAX_VALUE).toCharArray();
+        private static final char[] MIN_INT_IMAGE = Integer.toString(Integer.MIN_VALUE).toCharArray();
+        private static final char[] MAX_LONG_IMAGE = Long.toString(Long.MAX_VALUE).toCharArray();
+        private static final char[] MIN_LONG_IMAGE = Long.toString(Long.MIN_VALUE).toCharArray();
+        private static final char[] MAX_BINARY_INT_IMAGE = Integer.toBinaryString(Integer.MAX_VALUE).toCharArray();
+        private static final char[] MIN_BINARY_INT_IMAGE = ("-" + Integer.toBinaryString(Integer.MIN_VALUE)).toCharArray();
+        private static final char[] MAX_BINARY_LONG_IMAGE = Long.toBinaryString(Long.MAX_VALUE).toCharArray();
+        private static final char[] MIN_BINARY_LONG_IMAGE = ("-" + Long.toBinaryString(Long.MIN_VALUE)).toCharArray();
+        private static final char[] MAX_HEX_INT_IMAGE = Integer.toHexString(Integer.MAX_VALUE).toCharArray();
+        private static final char[] MIN_HEX_INT_IMAGE = ("-" + Integer.toHexString(Integer.MIN_VALUE)).toCharArray();
+        private static final char[] MAX_HEX_LONG_IMAGE = Long.toHexString(Long.MAX_VALUE).toCharArray();
+        private static final char[] MIN_HEX_LONG_IMAGE = ("-" + Long.toHexString(Long.MIN_VALUE)).toCharArray();
+
+        abstract boolean isInt(String image, int len);
+        abstract boolean isLong(String image, int len);
+
+        private static boolean valueWithinBounds(String value, int len, char[] minImage, char[] maxImage)
+        {
+            boolean negative = value.charAt(0) == '-';
+            char[] boundaryImage = negative ? minImage : maxImage;
+            int maxImageLength = boundaryImage.length;
+            return len < maxImageLength || (len == maxImageLength && magnitudeLessThanOrEqualTo(value, len, boundaryImage));
+        }
+
+        private static boolean magnitudeLessThanOrEqualTo(String lhs, int lhsLen, char[] rhs)
+        {
+            assert lhsLen == rhs.length;
+            for (int i = lhsLen - 1; i >= 0; i--)
+            {
+                if (lhs.charAt(i) > rhs[i])
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
 
     private final void load_scalar_value() throws IOException {
         // make sure we're trying to load a scalar value here
@@ -171,10 +273,10 @@ class IonReaderTextSystemX
         case IonTokenConstsX.TOKEN_UNKNOWN_NUMERIC:
             switch (_value_type) {
             case INT:
-                if (len <= MAX_IMAGE_LENGTH_INT) {
+                if (Radix.DECIMAL.isInt(s, len)) {
                     _v.setValue(Integer.parseInt(s));
                 }
-                else if (len <= MAX_IMAGE_LENGTH_LONG) {
+                else if (Radix.DECIMAL.isLong(s, len)) {
                     _v.setValue(Long.parseLong(s));
                 }
                 else {
@@ -209,10 +311,10 @@ class IonReaderTextSystemX
             }
             break;
         case IonTokenConstsX.TOKEN_INT:
-            if (len <= MAX_IMAGE_LENGTH_INT) {
+            if (Radix.DECIMAL.isInt(s, len)) {
                 _v.setValue(Integer.parseInt(s));
             }
-            else if (len <= MAX_IMAGE_LENGTH_LONG) {
+            else if (Radix.DECIMAL.isLong(s, len)) {
                 _v.setValue(Long.parseLong(s));
             }
             else {
@@ -220,10 +322,10 @@ class IonReaderTextSystemX
             }
             break;
         case IonTokenConstsX.TOKEN_BINARY:
-            if (len <= MAX_IMAGE_LENGTH_BINARY_INT) {
+            if (Radix.BINARY.isInt(s, len)) {
                 _v.setValue(Integer.parseInt(s, 2));
             }
-            else if (len <= MAX_IMAGE_LENGTH_BINARY_LONG) {
+            else if (Radix.BINARY.isLong(s, len)) {
                 _v.setValue(Long.parseLong(s, 2));
             }
             else {
@@ -231,11 +333,11 @@ class IonReaderTextSystemX
             }
             break;
         case IonTokenConstsX.TOKEN_HEX:
-            if (len <= MAX_IMAGE_LENGTH_HEX_INT) {
+            if (Radix.HEX.isInt(s, len)) {
                 int v_int = Integer.parseInt(s, 16);
                 _v.setValue(v_int);
             }
-            else if (len <= MAX_IMAGE_LENGTH_HEX_LONG) {
+            else if (Radix.HEX.isLong(s, len)) {
                 long v_long = Long.parseLong(s, 16);
                 _v.setValue(v_long);
             }

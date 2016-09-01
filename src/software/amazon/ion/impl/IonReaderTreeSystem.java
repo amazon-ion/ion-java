@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.Iterator;
 import software.amazon.ion.Decimal;
+import software.amazon.ion.IntegerSize;
 import software.amazon.ion.IonBool;
 import software.amazon.ion.IonContainer;
 import software.amazon.ion.IonDatagram;
@@ -532,6 +533,18 @@ class IonReaderTreeSystem
     // system readers don't skip any symbol tables
     public SymbolTable pop_passed_symbol_table()
     {
+        return null;
+    }
+
+
+    @Override
+    public IntegerSize getIntegerSize()
+    {
+        if(_curr instanceof IonInt)
+        {
+            return ((IonInt)_curr).getIntegerSize();
+
+        }
         return null;
     }
 }

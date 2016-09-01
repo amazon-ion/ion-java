@@ -16,13 +16,6 @@ package software.amazon.ion;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import org.junit.Test;
-import software.amazon.ion.IonDatagram;
-import software.amazon.ion.IonException;
-import software.amazon.ion.IonInt;
-import software.amazon.ion.IonType;
-import software.amazon.ion.IonValue;
-import software.amazon.ion.NullValueException;
-import software.amazon.ion.ReadOnlyValueException;
 
 
 
@@ -430,4 +423,81 @@ public class IntTest
     {
         return (IonInt) oneValue("0b" + Long.toBinaryString(l));
     }
+
+    @Test
+    public void testGetIntegerSizeNull() {
+        IonInt nullInt1 = system().newNullInt();
+        assertNull(nullInt1.getIntegerSize());
+        IonInt nullInt2 = (IonInt)oneValue("null.int");
+        assertNull(nullInt2.getIntegerSize());
+    }
+
+    @Test
+    public void testGetIntegerSizeMutatedValue() {
+        IonInt value = system().newInt(0);
+        assertEquals(IntegerSize.INT, value.getIntegerSize());
+        value.setValue(Long.MAX_VALUE);
+        assertEquals(IntegerSize.LONG, value.getIntegerSize());
+        value.setValue(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+        assertEquals(IntegerSize.BIG_INTEGER, value.getIntegerSize());
+        value.setValue(BigDecimal.valueOf(Long.MAX_VALUE));
+        assertEquals(IntegerSize.LONG, value.getIntegerSize());
+        value.setValue(null);
+        assertNull(value.getIntegerSize());
+    }
+
+    @Test
+    public void testGetIntegerSizeFromBigDecimal() {
+        IonInt value = system().newInt(BigDecimal.valueOf(Integer.MIN_VALUE));
+        assertEquals(IntegerSize.INT, value.getIntegerSize());
+        value = system().newInt(BigDecimal.valueOf(Long.MIN_VALUE));
+        assertEquals(IntegerSize.LONG, value.getIntegerSize());
+        value = system().newInt(new BigDecimal(BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE)));
+        assertEquals(IntegerSize.BIG_INTEGER, value.getIntegerSize());
+    }
+
+    @Test
+    public void testGetIntegerSizePositiveLongBoundary() {
+        testGetIntegerSizeLongBoundary(Long.MAX_VALUE);
+    }
+
+    @Test
+    public void testGetIntegerSizeNegativeLongBoundary() {
+        testGetIntegerSizeLongBoundary(Long.MIN_VALUE);
+    }
+
+    @Test
+    public void testGetIntegerSizePositiveIntBoundary() {
+        testGetIntegerSizeIntBoundary(Integer.MAX_VALUE);
+    }
+
+    @Test
+    public void testGetIntegerSizeNegativeIntBoundary() {
+        testGetIntegerSizeIntBoundary(Integer.MIN_VALUE);
+    }
+
+    private void testGetIntegerSizeLongBoundary(long boundaryValue) {
+        BigInteger boundary = BigInteger.valueOf(boundaryValue);
+        IonInt boundaryIon = (IonInt)oneValue(boundary.toString());
+        assertEquals(IntegerSize.LONG, boundaryIon.getIntegerSize());
+        assertEquals(boundaryValue, boundaryIon.longValue());
+
+        BigInteger pastBoundary = (boundaryValue < 0) ? boundary.subtract(BigInteger.ONE) : boundary.add(BigInteger.ONE);
+        IonInt pastBoundaryIon = (IonInt)oneValue(pastBoundary.toString());
+        assertEquals(IntegerSize.BIG_INTEGER, pastBoundaryIon.getIntegerSize());
+        assertEquals(pastBoundary, pastBoundaryIon.bigIntegerValue());
+    }
+
+    private void testGetIntegerSizeIntBoundary(int boundaryValue) {
+        BigInteger boundary = BigInteger.valueOf(boundaryValue);
+        IonInt boundaryIon = (IonInt)oneValue(boundary.toString());
+        assertEquals(IntegerSize.INT, boundaryIon.getIntegerSize());
+        assertEquals(boundaryValue, boundaryIon.intValue());
+
+        BigInteger pastBoundary = (boundaryValue < 0) ? boundary.subtract(BigInteger.ONE) : boundary.add(BigInteger.ONE);
+        IonInt pastBoundaryIon = (IonInt)oneValue(pastBoundary.toString());
+        assertEquals(IntegerSize.LONG, pastBoundaryIon.getIntegerSize());
+        assertEquals(pastBoundary.longValue(), pastBoundaryIon.longValue());
+    }
+
 }

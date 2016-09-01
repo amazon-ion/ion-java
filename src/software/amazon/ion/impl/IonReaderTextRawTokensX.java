@@ -2727,6 +2727,12 @@ final class IonReaderTextRawTokensX
             {
                 return IonTokenConstsX.isBinaryDigit(c);
             }
+
+            @Override
+            char normalizeDigit(char c)
+            {
+                return c; // no normalization required
+            }
         },
 
         DECIMAL
@@ -2739,6 +2745,12 @@ final class IonReaderTextRawTokensX
             boolean isValidDigit(int c)
             {
                 return IonTokenConstsX.isDigit(c);
+            }
+
+            @Override
+            char normalizeDigit(char c)
+            {
+                return c; // no normalization required
             }
         },
 
@@ -2753,10 +2765,17 @@ final class IonReaderTextRawTokensX
             {
                 return IonTokenConstsX.isHexDigit(c);
             }
+
+            @Override
+            char normalizeDigit(char c)
+            {
+                return Character.toLowerCase(c);
+            }
         };
 
         abstract boolean isPrefix(int c);
         abstract boolean isValidDigit(int c);
+        abstract char normalizeDigit(char c);
 
         void assertPrefix(int c)
         {
@@ -2781,7 +2800,7 @@ final class IonReaderTextRawTokensX
                 case START:
                     if (radix.isValidDigit(c))
                     {
-                        buffer.append((char) c);
+                        buffer.append(radix.normalizeDigit((char) c));
                         state = NumericState.DIGIT;
                     }
                     else
@@ -2792,7 +2811,7 @@ final class IonReaderTextRawTokensX
                 case DIGIT:
                     if (radix.isValidDigit(c))
                     {
-                        buffer.append((char) c);
+                        buffer.append(radix.normalizeDigit((char) c));
                         state = NumericState.DIGIT;
                     }
                     else if (c == '_')
@@ -2807,7 +2826,7 @@ final class IonReaderTextRawTokensX
                 case UNDERSCORE:
                     if (radix.isValidDigit(c))
                     {
-                        buffer.append((char) c);
+                        buffer.append(radix.normalizeDigit((char) c));
                         state = NumericState.DIGIT;
                     }
                     else

@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import software.amazon.ion.Decimal;
+import software.amazon.ion.IntegerSize;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
 import software.amazon.ion.IonType;
@@ -1352,5 +1353,14 @@ final class SymbolTableReader
     public void close() throws IOException
     {
         _current_state = S_EOF;
+    }
+
+    public IntegerSize getIntegerSize()
+    {
+        if (stateType(_current_state) != IonType.INT)
+        {
+            return null;
+        }
+        return IntegerSize.INT; // all of SymbolTable's integers are type int
     }
 }
