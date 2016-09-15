@@ -621,16 +621,4 @@ public abstract class IonTextWriterBuilder
      * @return a new {@link IonWriter} instance; not {@code null}.
      */
     public abstract IonWriter build(Appendable out);
-
-
-    /**
-     * Creates a new writer that will write text to the given output
-     * stream.
-     *
-     * @param out the stream that will receive Ion text data.
-     * Must not be null.
-     *
-     * @return a new {@link IonWriter} instance; not {@code null}.
-     */
-    public abstract IonWriter build(OutputStream out);
 }
