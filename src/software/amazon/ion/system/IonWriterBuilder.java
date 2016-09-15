@@ -14,6 +14,8 @@
 
 package software.amazon.ion.system;
 
+import java.io.OutputStream;
+import software.amazon.ion.IonWriter;
 
 /**
  * Common options for writing Ion data streams of any form.
@@ -97,4 +99,15 @@ public abstract class IonWriterBuilder
      * @return the IVM minimizing strategy.
      */
     public abstract IvmMinimizing getIvmMinimizing();
+
+    /**
+     * Builds a new writer based on this builder's configuration
+     * properties.
+     *
+     * @param out the stream that will receive Ion data.
+     * Must not be null.
+     *
+     * @return a new {@link IonWriter} instance; not {@code null}.
+     */
+    public abstract IonWriter build(OutputStream out);
 }

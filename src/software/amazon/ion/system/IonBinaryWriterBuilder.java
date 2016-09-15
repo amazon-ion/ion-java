@@ -14,7 +14,6 @@
 
 package software.amazon.ion.system;
 
-import java.io.OutputStream;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonReader;
 import software.amazon.ion.IonWriter;
@@ -284,19 +283,4 @@ public abstract class IonBinaryWriterBuilder
         b.setStreamCopyOptimized(optimized);
         return b;
     }
-
-
-    //=========================================================================
-
-
-    /**
-     * Builds a new binary writer based on this builder's configuration
-     * properties.
-     *
-     * @param out the stream that will receive Ion binary data.
-     * Must not be null.
-     *
-     * @return a new {@link IonWriter} instance; not {@code null}.
-     */
-    public abstract IonWriter build(OutputStream out);
 }
