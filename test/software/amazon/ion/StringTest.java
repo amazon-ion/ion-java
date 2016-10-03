@@ -276,10 +276,10 @@ public class StringTest
         badValue("'''\u0006'''");
         badValue("'''\u0007'''");
         badValue("'''\u0008'''");
-        badValue("'''\u0009'''");
+        // 0009 is allowed
         // 000A is allowed
-        badValue("'''\u000B'''");
-        badValue("'''\u000C'''");
+        // 000B is allowed
+        // 000C is allowed
         // 000D is allowed
         badValue("'''\u000E'''");
         badValue("'''\u000F'''");
@@ -312,10 +312,10 @@ public class StringTest
         badValue("\"\u0006\"");
         badValue("\"\u0007\"");
         badValue("\"\u0008\"");
-        badValue("\"\u0009\"");
+        // 0009 is allowed
         badValue("\"\n\""); // 000A
-        badValue("\"\u000B\"");
-        badValue("\"\u000C\"");
+        // 000B is allowed
+        // 000C is allowed
         badValue("\"\r\""); // 000D
         badValue("\"\u000E\"");
         badValue("\"\u000F\"");

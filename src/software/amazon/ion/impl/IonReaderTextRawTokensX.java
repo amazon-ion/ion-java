@@ -2681,7 +2681,7 @@ final class IonReaderTextRawTokensX
         {
             boolean includes(int c)
             {
-                return isControlCharacter(c);
+                return isControlCharacter(c) && !isWhitespace(c);
             }
         },
 
@@ -2689,7 +2689,7 @@ final class IonReaderTextRawTokensX
         {
             boolean includes(int c)
             {
-                return isControlCharacter(c) && !isNewline(c);
+                return isControlCharacter(c) && !isWhitespace(c) && !isNewline(c);
             }
         },
 
@@ -2711,6 +2711,15 @@ final class IonReaderTextRawTokensX
         private static boolean isNewline(int c)
         {
             return c == 0x0A || c == 0x0D;
+        }
+
+        private static boolean isWhitespace(int c)
+        {
+            return c == 0x09 // tab
+                || c == 0x0B // vertical tab
+                || c == 0x0C // form feed
+                || c == 0x20 // space
+            ;
         }
     }
 
