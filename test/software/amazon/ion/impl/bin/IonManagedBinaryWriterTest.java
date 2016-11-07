@@ -18,6 +18,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -199,5 +200,30 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         }
         writer.stepOut();
         assertValue("{a:1, b:2, c:3, d:4, e:5}");
+    }
+
+    @Test
+    public void testSymbolTableExport() throws Exception {
+        writer.stepIn(IonType.STRUCT);
+        {
+            writer.setFieldName("a");
+            writer.writeInt(1);
+
+            writer.setFieldName("d");
+            writer.writeInt(4);
+        }
+        writer.stepOut();
+        assertValue("{a:1, d:4}");
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        IonWriter symbolTableWriter = system().newBinaryWriter(bos);
+        try {
+            writer.getSymbolTable().writeTo(symbolTableWriter);
+        } finally {
+            symbolTableWriter.close();
+        }
+        // SymbolTable expected = system().newSharedSymbolTable("version", )
+        bos.toByteArray();
+
     }
 }

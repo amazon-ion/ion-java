@@ -16,6 +16,7 @@ package software.amazon.ion.impl.bin;
 
 import static software.amazon.ion.IonType.LIST;
 import static software.amazon.ion.IonType.STRUCT;
+import static software.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
@@ -96,6 +97,7 @@ import software.amazon.ion.SymbolToken;
             final SymbolTable[] imports = getImportedTables();
             if (imports != null && imports.length > 0)
             {
+                writer.setFieldNameSymbol(systemSymbol(IMPORTS_SID));
                 writer.stepIn(LIST);
                 for (final SymbolTable st : imports)
                 {
@@ -108,6 +110,7 @@ import software.amazon.ion.SymbolToken;
                         writer.setFieldNameSymbol(systemSymbol(MAX_ID_SID));
                         writer.writeInt(st.getMaxId());
                     }
+                    writer.stepOut();
                 }
                 writer.stepOut();
             }
