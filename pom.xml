@@ -128,7 +128,8 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Export-Package>software.amazon.ion.*</Export-Package>
+            <Private-Package>software.amazon.ion.impl.*</Private-Package>
+            <Export-Package>!software.amazon.ion.impl.*,software.amazon.ion.*</Export-Package>
             <Import-Package>!software.amazon.ion.*</Import-Package>
           </instructions>
         </configuration>
