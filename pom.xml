@@ -4,6 +4,7 @@
   <groupId>software.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
   <version>1.0.2-SNAPSHOT</version>
+  <packaging>bundle</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
   <description>
@@ -118,6 +119,18 @@
               <Ion-Java-Project-Version>${project.version}</Ion-Java-Project-Version>
             </manifestEntries>
           </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>3.2.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Export-Package>software.amazon.ion.*</Export-Package>
+            <Import-Package>!software.amazon.ion.*</Import-Package>
+          </instructions>
         </configuration>
       </plugin>
       <!-- TODO findbugs, checkstyle -->
