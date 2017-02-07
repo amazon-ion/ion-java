@@ -109,9 +109,11 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Private-Package>software.amazon.ion.impl.*</Private-Package>
-            <Export-Package>!software.amazon.ion.impl.*,software.amazon.ion.*</Export-Package>
-            <Import-Package>!software.amazon.ion.*</Import-Package>
+            <Export-Package>
+              !software.amazon.ion.apps.*,
+              !software.amazon.ion.impl.*,
+              software.amazon.ion.*,
+            </Export-Package>
             <!-- This can be used to retrieve the compiled JarInfo. -->
             <Main-Class>software.amazon.ion.impl.PrivateCommandLine</Main-Class>
             <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
@@ -167,7 +169,7 @@
   </reporting>
 
   <profiles>
-    <profile> 
+    <profile>
       <id>release</id>
       <build>
         <plugins>
