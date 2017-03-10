@@ -376,42 +376,11 @@ abstract class UnifiedInputStreamX
             _pos += ready;
             offset += ready;
             remaining -= ready;
-            if (_pos < _limit || refill_helper()) {
+            if (remaining == 0 || _pos < _limit || refill_helper()) {
                 break;
             }
         }
         return length - remaining;
-    }
-    public final int read(char[] dst, int offset, int length) throws IOException
-    {
-        if (is_byte_data()) {
-            throw new IOException("character read is not support over byte data sources");
-        }
-        int remaining = length;
-        while (remaining > 0 && !isEOF()) {
-            int ready = _limit - _pos;
-            if (ready > remaining) {
-                ready = remaining;
-            }
-            System.arraycopy(_chars, _pos, dst, offset, ready);
-            _pos += ready;
-            offset += ready;
-            if (refill_helper()) {
-                break;
-            }
-        }
-        return length - remaining;
-    }
-
-    public int readScalar() throws IOException
-    {
-        int c;
-
-        c = read();
-        if (c != EOF && _is_byte_data && IonUTF8.isStartByte(c)) {
-            c = read_utf8(c);
-        }
-        return c;
     }
     private int read_utf8(int c) throws IOException
     {
