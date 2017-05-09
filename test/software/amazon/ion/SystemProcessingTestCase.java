@@ -193,7 +193,7 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
-    /** TODO amznlabs/ion-java#8 This is broken for loaders which are now more lazy */
+    /** TODO amzn/ion-java#8 This is broken for loaders which are now more lazy */
     @Test @Ignore
     public void testLocalTableResetting()
         throws Exception
@@ -1044,7 +1044,7 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // TODO amznlabs/ion-java#25 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
+    // TODO amzn/ion-java#25 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
 
     @Test
     public void testHighUnicodeDirectInBlob()
@@ -1149,7 +1149,7 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // TODO amznlabs/ion-java#44 current binary writer doesn't support this (ignores this)
+    // TODO amzn/ion-java#44 current binary writer doesn't support this (ignores this)
     //              we need to determine if we want the **writer** to support emitting
     //              malformed symbol data and support it appropriately.
     @Ignore

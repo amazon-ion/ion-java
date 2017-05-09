@@ -562,7 +562,7 @@ public class SymbolTableTest
         checkSymbol("imported 2", 13, /* dupe */ true, symbolTable);
     }
 
-    // amznlabs/ion-java#46
+    // amzn/ion-java#46
     @Test @Ignore
     public void testDupLocalSymbolOnDatagram() throws Exception {
         final IonSystem ion1 = system();
@@ -570,7 +570,7 @@ public class SymbolTableTest
         final IonMutableCatalog cat = new SimpleCatalog();
         cat.putTable(st);
 
-        // amznlabs/ion-java#46 has the datagram producing something like:
+        // amzn/ion-java#46 has the datagram producing something like:
         // $ion_1_0 $ion_symbol_table::{imports:[{name: "foobar", version: 1, max_id: 1}], symbols: ["s1", "l1"]} $11 $12
         // local table should not have "s1", user values should be $10 $11
         IonDatagram dg = ion1.newDatagram(st);
@@ -863,7 +863,7 @@ public class SymbolTableTest
     }
 
 
-    @Test @Ignore // TODO amznlabs/ion-java#12
+    @Test @Ignore // TODO amzn/ion-java#12
     public void testSharedSymtabCreationWithEmptyName()
     {
         String[] syms = { "a", "b", "", "c" };

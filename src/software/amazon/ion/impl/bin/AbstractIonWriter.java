@@ -87,7 +87,7 @@ import software.amazon.ion.impl.PrivateUtils;
     {
         final IonType type = reader.getType();
 
-        // TODO amznlabs/ion-java#45 make sure the plumbing symbol tokens do the right thing for
+        // TODO amzn/ion-java#45 make sure the plumbing symbol tokens do the right thing for
         //      different symbol contexts in the reader and this writer
 
         final SymbolToken fieldName = reader.getFieldNameSymbol();

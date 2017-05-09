@@ -296,7 +296,7 @@ final class IonReaderBinaryUserX
             return facetType.cast(new SpanProviderFacet());
         }
 
-        // TODO amznlabs/ion-java#17 support seeking over InputStream
+        // TODO amzn/ion-java#17 support seeking over InputStream
         if (_input instanceof FromByteArray)
         {
             if (facetType == SeekableReader.class)
@@ -311,7 +311,7 @@ final class IonReaderBinaryUserX
             // of the facet depends upon the current state of this subject,
             // and that can change over time.
 
-            // TODO amznlabs/ion-java#16 Our {@link #transferCurrentValue} doesn't handle
+            // TODO amzn/ion-java#16 Our {@link #transferCurrentValue} doesn't handle
             //  field names and annotations.
 
             // Ensure there's a contiguous buffer we can copy.
@@ -364,7 +364,7 @@ final class IonReaderBinaryUserX
                 throw new UnsupportedOperationException();
             }
 
-            // TODO amznlabs/ion-java#16 wrong if current value has a field name or
+            // TODO amzn/ion-java#16 wrong if current value has a field name or
             //   annotations since the position is in the wrong place.
             // TODO when implementing that, be careful to handle the case where
             //   the writer already holds a pending field name or annotations!

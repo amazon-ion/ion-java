@@ -1,7 +1,7 @@
 # Amazon Ion Java
-A Java implementation of the [Ion data notation](http://amznlabs.github.io/ion-docs/index.html).
+A Java implementation of the [Ion data notation](http://amzn.github.io/ion-docs).
 
-[![Build Status](https://travis-ci.org/amznlabs/ion-java.svg?branch=master)](https://travis-ci.org/amznlabs/ion-java)
+[![Build Status](https://travis-ci.org/amzn/ion-java.svg?branch=master)](https://travis-ci.org/amzn/ion-java)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java)
 [![Javadoc](https://javadoc-emblem.rhcloud.com/doc/software.amazon.ion/ion-java/badge.svg)](http://www.javadoc.io/doc/software.amazon.ion/ion-java)
 
@@ -13,7 +13,7 @@ The easiest way to clone the `ion-java` repository and initialize its `ion-tests
 submodule is to run the following command.
 
 ```
-$ git clone --recursive https://github.com/amznlabs/ion-java.git ion-java
+$ git clone --recursive https://github.com/amzn/ion-java.git ion-java
 ```
 
 Alternatively, the submodule may be initialized independently from the clone
@@ -65,6 +65,6 @@ dependency into your project's `pom.xml`:
 ```    
 
 ## Using the Library
-A great way to get started is to use the [Ion cookbook](http://amznlabs.github.io/ion-docs/cookbook.html).
+A great way to get started is to use the [Ion cookbook](http://amzn.github.io/ion-docs/cookbook.html).
 The [API documentation](http://www.javadoc.io/doc/software.amazon.ion/ion-java) will give a lot
 of detailed information about how to use the library.

@@ -1,4 +1,4 @@
 [submodule "ion-tests"]
 	path = ion-tests
-	url = https://github.com/amznlabs/ion-tests.git
+	url = https://github.com/amzn/ion-tests.git
 	branch = master

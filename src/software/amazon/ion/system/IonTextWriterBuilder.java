@@ -65,7 +65,7 @@ import software.amazon.ion.impl.PrivateUtils;
  * <p>
  * Currently, there is no configuration point available to disable the
  * auto-flushing mechanism. Please vote on
- * <a href="https://github.com/amznlabs/ion-java/issues/32">issue amznlabs/ion-java#32</a>
+ * <a href="https://github.com/amzn/ion-java/issues/32">issue amzn/ion-java#32</a>
  * if you require it.
  */
 public abstract class IonTextWriterBuilder

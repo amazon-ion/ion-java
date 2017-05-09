@@ -207,7 +207,7 @@ public class FloatTest
     }
 
     /**
-     * TODO amznlabs/ion-java#64 Un-ignore this when all dependent build pipelines
+     * TODO amzn/ion-java#64 Un-ignore this when all dependent build pipelines
      * use a version of the JVM that doesn't have this defect.
      *
      * https://blogs.oracle.com/security/entry/security_alert_for_cve-2010-44

@@ -10,7 +10,7 @@
   <description>
     A Java implementation of the Amazon Ion data notation.
   </description>
-  <url>https://github.com/amznlabs/ion-java/</url>
+  <url>https://github.com/amzn/ion-java/</url>
 
   <licenses>
     <license>
@@ -24,14 +24,14 @@
        <name>Amazon Ion Team</name>
        <email>ion-team@amazon.com</email>
        <organization>Amazon Labs</organization>
-       <organizationUrl>https://github.com/amznlabs</organizationUrl>
+       <organizationUrl>https://github.com/amzn</organizationUrl>
      </developer>
    </developers>
 
   <scm>
-    <connection>scm:git:git@github.com:amznlabs/ion-java.git</connection>
-    <developerConnection>scm:git:git@github.com:amznlabs/ion-java.git</developerConnection>
-    <url>git@github.com:amznlabs/ion-java.git</url>
+    <connection>scm:git:git@github.com:amzn/ion-java.git</connection>
+    <developerConnection>scm:git:git@github.com:amzn/ion-java.git</developerConnection>
+    <url>git@github.com:amzn/ion-java.git</url>
   </scm>
 
   <!-- http://central.sonatype.org/pages/ossrh-guide.html -->

@@ -80,7 +80,7 @@ public final class IonAssert
         assertNull(in.getFieldName());
         assertNull(in.getFieldNameSymbol());
 
-        // TODO amznlabs/ion-java#13 Text reader doesn't throw, but others do.
+        // TODO amzn/ion-java#13 Text reader doesn't throw, but others do.
         try {
             String[] ann = in.getTypeAnnotations();
             assertEquals(0, ann.length);
@@ -454,7 +454,7 @@ public final class IonAssert
             SymbolToken tok = v.getFieldNameSymbol();
             String text = tok.getText();
             if (text == null) {
-                text = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid(); // TODO amznlabs/ion-java#23
+                text = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid(); // TODO amzn/ion-java#23
             }
             List<IonValue> fields = sorted.get(text);
             if (fields == null)

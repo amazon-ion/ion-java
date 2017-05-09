@@ -309,7 +309,7 @@ final class IonSystemLite
                 v = newBool(reader.booleanValue());
                 break;
             case INT:
-                // TODO amznlabs/ion-java#9  Inefficient since we can't determine the size
+                // TODO amzn/ion-java#9  Inefficient since we can't determine the size
                 // of the integer in order to avoid making BigIntegers.
                 v = newInt(reader.bigIntegerValue());
                 break;

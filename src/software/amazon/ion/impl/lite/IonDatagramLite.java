@@ -412,7 +412,7 @@ final class IonDatagramLite
     {
         try
         {
-            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO amznlabs/ion-java#8 ???
+            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO amzn/ion-java#8 ???
         } catch (IOException ioe) {
             throw new IonException(ioe);
         }

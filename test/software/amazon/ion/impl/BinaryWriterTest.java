@@ -54,7 +54,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
+        iw.writeSymbol("force a local symtab"); // TODO amzn/ion-java#8
         iw.getSymbolTable().makeReadOnly();
         thrown.expect(IonException.class);
         iw.writeSymbol("s");
@@ -65,7 +65,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
+        iw.writeSymbol("force a local symtab"); // TODO amzn/ion-java#8
         iw.getSymbolTable().makeReadOnly();
         thrown.expect(IonException.class);
         iw.addTypeAnnotation("a");
@@ -76,7 +76,7 @@ public class BinaryWriterTest
         throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
+        iw.writeSymbol("force a local symtab"); // TODO amzn/ion-java#8
         iw.getSymbolTable().makeReadOnly();
         iw.stepIn(IonType.STRUCT);
         thrown.expect(IonException.class);
@@ -129,7 +129,7 @@ public class BinaryWriterTest
     throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO amznlabs/ion-java#8
+        iw.writeSymbol("force a local symtab"); // TODO amzn/ion-java#8
         SymbolTable symtab = iw.getSymbolTable();
         symtab.intern("fred_1");
         symtab.intern("fred_2");

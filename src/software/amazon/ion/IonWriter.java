@@ -32,7 +32,7 @@ import software.amazon.ion.util.IonStreamUtils;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://github.com/amznlabs/ion-java/issues/10">issue amznlabs/ion-java#10</a>
+ * See <a href="https://github.com/amzn/ion-java/issues/10">issue amzn/ion-java#10</a>
  * <p>
  * A value is written via the set of typed {@code write*()} methods such as
  * {@link #writeBool(boolean)} and {@link #writeInt(long)}.

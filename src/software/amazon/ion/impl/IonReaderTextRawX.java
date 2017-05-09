@@ -49,7 +49,7 @@ import software.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
  *
  * This reader scan skip values and in doing so it does not
  * materialize the contents and it does not validate the contents.
- * TODO amznlabs/ion-java#7 We may want to make validation on skip optional.
+ * TODO amzn/ion-java#7 We may want to make validation on skip optional.
  *
  * This manages the value buffer (_v ValueVariant) and the lob
  * content (_lob_*) which is cached in some cases.  It's main

@@ -244,7 +244,7 @@ public class OptimizedBinaryWriterSymbolTableTest
 
     /**
      * Writer's imports superset of Reader's: (could be) fully optimized.
-     * TODO amznlabs/ion-java#18 at the moment the compatability code requires
+     * TODO amzn/ion-java#18 at the moment the compatability code requires
      *      exact-match on imports.
      */
     @Test
@@ -290,7 +290,7 @@ public class OptimizedBinaryWriterSymbolTableTest
 
     /**
      * Reader's source contains interspersed LSTs.
-     * TODO amznlabs/ion-java#39 Investigate allowing a config. option to copy reader's LST
+     * TODO amzn/ion-java#39 Investigate allowing a config. option to copy reader's LST
      *              over to the writer.
      */
     @Test
