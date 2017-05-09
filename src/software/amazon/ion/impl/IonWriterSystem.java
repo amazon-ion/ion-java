@@ -138,20 +138,20 @@ abstract class IonWriterSystem
         }
         if (_initial_ivm_handling == InitialIvmHandling.SUPPRESS)
         {
-            // TODO amznlabs/ion-java#24 Must write IVM if given system != 1.0
+            // TODO amzn/ion-java#24 Must write IVM if given system != 1.0
             return false;
         }
-        // TODO amznlabs/ion-java#24 Add SUPPRESS_ALL to suppress non 1.0 IVMs
+        // TODO amzn/ion-java#24 Add SUPPRESS_ALL to suppress non 1.0 IVMs
 
         if (_ivm_minimizing == IvmMinimizing.ADJACENT)
         {
-            // TODO amznlabs/ion-java#24 Write IVM if current system version != given system
+            // TODO amzn/ion-java#24 Write IVM if current system version != given system
             // For now we assume that it's the same since we only support 1.0
             return ! _previous_value_was_ivm;
         }
         if (_ivm_minimizing == IvmMinimizing.DISTANT)
         {
-            // TODO amznlabs/ion-java#24 Write IVM if current system version != given system
+            // TODO amzn/ion-java#24 Write IVM if current system version != given system
             // For now we assume that it's the same since we only support 1.0
             return ! _anything_written;
         }
@@ -290,7 +290,7 @@ abstract class IonWriterSystem
             && getDepth() == 0
             && _annotation_count == 0) {
             // $ion_1_0 is written as an IVM only if it is not annotated
-            // TODO amznlabs/ion-java#24 Make sure to get the right symtab, default may differ.
+            // TODO amzn/ion-java#24 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
         else
@@ -305,7 +305,7 @@ abstract class IonWriterSystem
             && getDepth() == 0
             && _annotation_count == 0) {
             // $ion_1_0 is written as an IVM only if it is not annotated
-            // TODO amznlabs/ion-java#24 Make sure to get the right symtab, default may differ.
+            // TODO amzn/ion-java#24 Make sure to get the right symtab, default may differ.
             writeIonVersionMarker();
         }
         else {

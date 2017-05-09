@@ -155,7 +155,7 @@ public final class Timestamp
     // These are the time field values for the Timestamp.
     // _month and _day are 1-based (0 is an invalid value for
     // these in a non-null Timestamp).
-    // TODO amznlabs/ion-java#28 - Represent internal time field values in its local time,
+    // TODO amzn/ion-java#28 - Represent internal time field values in its local time,
     // instead of UTC. This makes it much less confusing.
     private short       _year;
     private byte        _month = 1; // Initialized to valid default
@@ -759,7 +759,7 @@ public final class Timestamp
      * @return
      *          {@code null} if the {@code CharSequence} is "null.timestamp"
      *
-     * @see <a href="http://amznlabs.github.io/ion-docs/spec.html#timestamp">Ion Timestamp Page</a>
+     * @see <a href="http://amzn.github.io/ion-docs/spec.html#timestamp">Ion Timestamp Page</a>
      * @see <a href="http://www.w3.org/TR/NOTE-datetime">W3C Note on Date and Time Formats</a>
      */
     public static Timestamp valueOf(CharSequence ionFormattedTimestamp)

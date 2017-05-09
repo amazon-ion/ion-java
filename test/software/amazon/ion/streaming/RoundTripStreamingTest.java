@@ -41,7 +41,7 @@ import software.amazon.ion.system.IonTextWriterBuilder;
 import software.amazon.ion.util.Equivalence;
 
 /**
- * TODO amznlabs/ion-java#29 Refactor this test class, possible duplicate test coverage in
+ * TODO amzn/ion-java#29 Refactor this test class, possible duplicate test coverage in
  * {@link RoundTripTest}.
  */
 public class RoundTripStreamingTest

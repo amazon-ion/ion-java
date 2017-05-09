@@ -137,13 +137,13 @@ public class ValueWriterTest
     }
 
 
-    @Override @Test @Ignore // TODO amznlabs/ion-java#8
+    @Override @Test @Ignore // TODO amzn/ion-java#8
     public void testWriteIVMImplicitly()
         throws Exception
     {
         super.testWriteIVMImplicitly();
 
-        // TODO amznlabs/ion-java#20
+        // TODO amzn/ion-java#20
         // assertEquals(2, myDatagram.size());
     }
 
@@ -153,7 +153,7 @@ public class ValueWriterTest
         throws Exception
     {
         super.testWriteIVMExplicitly();
-        // TODO amznlabs/ion-java#20
+        // TODO amzn/ion-java#20
         //assertEquals(2, myDatagram.size());
     }
 }

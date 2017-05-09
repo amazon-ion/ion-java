@@ -180,7 +180,7 @@ public class OptimizedBinaryWriterTestCase
         // Reset flag before calling IonWriter.writeValue
         isTransferCurrentValueInvoked = false;
 
-        // TODO amznlabs/ion-java#16 - Currently, doesn't copy annotations or field names,
+        // TODO amzn/ion-java#16 - Currently, doesn't copy annotations or field names,
         //      so we always expect no transfer of raw bytes
         if (ir.isInStruct() || ir.getTypeAnnotationSymbols().length > 0)
         {

@@ -28,7 +28,7 @@ import software.amazon.ion.SymbolToken;
  * <p>
  * This class is <b>immutable</b>, and hence safe for use by multiple threads.
  */
-// TODO amznlabs/ion-java#37 Create specialized class to handle the common case where
+// TODO amzn/ion-java#37 Create specialized class to handle the common case where
 //      there are zero or one imported non-system shared symtab(s).
 final class LocalSymbolTableImports
 {

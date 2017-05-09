@@ -109,7 +109,7 @@ import software.amazon.ion.SymbolToken;
 public final class Equivalence {
 
     /**
-     * TODO amznlabs/ion-java#26 Marker for code that needs to be altered in order to
+     * TODO amzn/ion-java#26 Marker for code that needs to be altered in order to
      * support a public comparison API to determine ordering of values, not
      * just equality.
      */
@@ -337,7 +337,7 @@ public final class Equivalence {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
             if (name == null) {
-                // TODO amznlabs/ion-java#23 Problematic with unknown field names.
+                // TODO amzn/ion-java#23 Problematic with unknown field names.
                 name = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid();
             }
             this.name = name;
@@ -351,7 +351,7 @@ public final class Equivalence {
         @Override
         public int hashCode() {
             return name.hashCode();
-            // TODO amznlabs/ion-java#58 : implement hash code such that it respects
+            // TODO amzn/ion-java#58 : implement hash code such that it respects
             // 'strict'. The prevously attempted fix is commented out below but
             // is not sufficient because value.hasCode will always include
             // type annotations in the hash computation. Type annotations
@@ -435,14 +435,14 @@ public final class Equivalence {
                                             ((IonFloat) v2).doubleValue());
                     break;
                 case DECIMAL:
-                    assert !PUBLIC_COMPARISON_API; // TODO amznlabs/ion-java#26
+                    assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java#26
                     result = Decimal.equals(((IonDecimal) v1).decimalValue(),
                                             ((IonDecimal) v2).decimalValue())
                                             ? 0 : 1;
                     break;
                 case TIMESTAMP:
                     if (strict) {
-                        assert !PUBLIC_COMPARISON_API; // TODO amznlabs/ion-java#26
+                        assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java#26
                         result = (((IonTimestamp) v1).timestampValue().equals(
                                   ((IonTimestamp) v2).timestampValue())
                                   ? 0 : 1);
@@ -470,7 +470,7 @@ public final class Equivalence {
                     result = compareLobContents((IonLob) v1, (IonLob) v2);
                     break;
                 case STRUCT:
-                    assert !PUBLIC_COMPARISON_API; // TODO amznlabs/ion-java#26
+                    assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java#26
                     result = compareStructs((IonStruct) v1,
                                             (IonStruct) v2,
                                             strict);

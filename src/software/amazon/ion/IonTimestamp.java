@@ -28,7 +28,7 @@ import java.util.Date;
 public interface IonTimestamp
     extends IonValue
 {
-    // TODO amznlabs/ion-java#33 Deprecate setters and getters
+    // TODO amzn/ion-java#33 Deprecate setters and getters
 
     /**
      * Gets the value of this <code>timestamp</code> in a form suitable for

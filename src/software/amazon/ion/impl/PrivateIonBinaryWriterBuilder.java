@@ -35,7 +35,7 @@ import software.amazon.ion.system.IonSystemBuilder;
 public class PrivateIonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
-    // amznlabs/ion-java#59 expose configuration points properly and figure out deprecation path for the old writer.
+    // amzn/ion-java#59 expose configuration points properly and figure out deprecation path for the old writer.
     private final PrivateIonManagedBinaryWriterBuilder myBinaryWriterBuilder;
     private ValueFactory mySymtabValueFactory;
 

@@ -334,8 +334,8 @@ abstract class IonSequenceLite
 
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
-        // TODO amznlabs/ion-java#52
-        throw new UnsupportedOperationException("issue amznlabs/ion-java#52");
+        // TODO amzn/ion-java#52
+        throw new UnsupportedOperationException("issue amzn/ion-java#52");
     }
 
     public IonValue[] toArray()

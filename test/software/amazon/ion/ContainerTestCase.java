@@ -255,7 +255,7 @@ public abstract class ContainerTestCase
     }
 
 
-    /** TODO amznlabs/ion-java#8 datagram is lazy creating local symtabs */
+    /** TODO amzn/ion-java#8 datagram is lazy creating local symtabs */
     @Test @Ignore
     public void testDetachHasDifferentSymtab()
     {
@@ -365,7 +365,7 @@ it.next();
         assertSame(n, c.iterator().next());
     }
 
-    /** TODO amznlabs/ion-java#6 */
+    /** TODO amzn/ion-java#6 */
     @Test @Ignore
     public void testSelfContainment()
     {

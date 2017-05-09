@@ -431,7 +431,7 @@ abstract class IonValueLite
 
     public SymbolToken getFieldNameSymbol()
     {
-        // TODO amznlabs/ion-java#27 We should memoize the results of symtab lookups.
+        // TODO amzn/ion-java#27 We should memoize the results of symtab lookups.
         // BUT: that could cause thread-safety problems for read-only values.
         // I think makeReadOnly should populate the tokens fully
         // so that we only need to lookup from mutable instances.
@@ -525,7 +525,7 @@ abstract class IonValueLite
         if (_fieldName != null) return _fieldName;
         if (_fieldId < 0) return null;
 
-        // TODO amznlabs/ion-java#27 why no symtab lookup, like getFieldNameSymbol()?
+        // TODO amzn/ion-java#27 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
     }
 
@@ -590,7 +590,7 @@ abstract class IonValueLite
             String text = token.getText();
             if (text != null && token.getSid() == UNKNOWN_SYMBOL_ID)
             {
-                // TODO amznlabs/ion-java#27 We should memoize the result of symtab lookups
+                // TODO amzn/ion-java#27 We should memoize the result of symtab lookups
                 // into _annotations.
                 // See getFieldNameSymbol() for challenges doing so.
 

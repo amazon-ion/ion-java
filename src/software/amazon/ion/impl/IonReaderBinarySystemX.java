@@ -383,7 +383,7 @@ class IonReaderBinarySystemX
         return PrivateScalarConversions.getIntegerSize(_v.getAuthoritativeType());
     }
 
-    // TODO amznlabs/ion-java#63 this needs to use the appropriate symbol table for user values
+    // TODO amzn/ion-java#63 this needs to use the appropriate symbol table for user values
 
     public final String stringValue()
     {

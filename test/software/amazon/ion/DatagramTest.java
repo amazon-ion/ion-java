@@ -177,7 +177,7 @@ public class DatagramTest
 
         assertSame(systemSymtab_1_0, sysId.getSymbolTable());
 
-        // TODO amznlabs/ion-java#20
+        // TODO amzn/ion-java#20
 //        assertEquals(0, dg.size());
 
         // TODO adding $ion_1_1 should fail: unsupported version
@@ -400,7 +400,7 @@ public class DatagramTest
         }
         catch (IllegalArgumentException e) { }
 
-        // Cannot insert a datagram  // TODO amznlabs/ion-java#48
+        // Cannot insert a datagram  // TODO amzn/ion-java#48
 //        try
 //        {
 //            dg1.add(1, dg2);
@@ -483,7 +483,7 @@ public class DatagramTest
     public void testEmptyDatagram()
     {
         IonDatagram dg = loader().load("");
-//        testEmptySequence(dg); // TODO amznlabs/ion-java#48 implement add(int,v)
+//        testEmptySequence(dg); // TODO amzn/ion-java#48 implement add(int,v)
         dg.add().newInt(1);
         testClearContainer(dg);
     }
@@ -493,7 +493,7 @@ public class DatagramTest
     @Test
     public void testRemoveViaIteratorThenDirect()
     {
-        // TODO amznlabs/ion-java#51 implement remove on datagram iterator
+        // TODO amzn/ion-java#51 implement remove on datagram iterator
     }
 
 
@@ -555,7 +555,7 @@ public class DatagramTest
     @Test
     public void testToString()
     {
-        // TODO amznlabs/ion-java#8 I think this is wrong, the datagram has injected IVM
+        // TODO amzn/ion-java#8 I think this is wrong, the datagram has injected IVM
         IonDatagram dg = loader().load("1");
         assertEquals("$ion_1_0 1", dg.toString());
 
@@ -655,7 +655,7 @@ public class DatagramTest
     }
 
     /**
-     * TODO amznlabs/ion-java#50 Datagram.set() should work, but it's documented to throw.
+     * TODO amzn/ion-java#50 Datagram.set() should work, but it's documented to throw.
      */
     @Test(expected = UnsupportedOperationException.class)
     public void testSet()

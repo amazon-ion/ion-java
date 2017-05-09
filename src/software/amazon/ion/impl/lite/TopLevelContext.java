@@ -39,7 +39,7 @@ final class TopLevelContext
      * symbol table and following the parent/owning_context
      * chain will lead to a system object.
      * <p>
-     * TODO amznlabs/ion-java#19 we cannot assume that the IonSystem knows the proper IVM
+     * TODO amzn/ion-java#19 we cannot assume that the IonSystem knows the proper IVM
      * in this context
      */
     private final SymbolTable _symbols;

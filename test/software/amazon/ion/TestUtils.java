@@ -135,19 +135,19 @@ public class TestUtils
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
-                       "bad/annotationNested.10n"          // TODO amznlabs/ion-java#55
-                      ,"bad/clobWithNullCharacter.ion"     // TODO amznlabs/ion-java#43
-                      ,"bad/emptyAnnotatedInt.10n"         // TODO amznlabs/ion-java#55
-                      ,"bad/utf8/surrogate_5.ion"          // TODO amznlabs/ion-java#60
-                      ,"equivs/paddedInts.10n"             // TODO amznlabs/ion-java#54
-                      ,"good/subfieldVarUInt32bit.ion"     // TODO amznlabs/ion-java#62
-                      ,"good/symbolEmpty.ion"              // TODO amznlabs/ion-java#42
-                      ,"good/symbolEmptyWithCR.ion"        // TODO amznlabs/ion-java#42
-                      ,"good/symbolEmptyWithCRLF.ion"      // TODO amznlabs/ion-java#42
-                      ,"good/symbolEmptyWithLF.ion"        // TODO amznlabs/ion-java#42
-                      ,"good/symbolEmptyWithLFLF.ion"      // TODO amznlabs/ion-java#42
-                      ,"good/utf16.ion"                    // TODO amznlabs/ion-java#61
-                      ,"good/utf32.ion"                    // TODO amznlabs/ion-java#61
+                       "bad/annotationNested.10n"          // TODO amzn/ion-java#55
+                      ,"bad/clobWithNullCharacter.ion"     // TODO amzn/ion-java#43
+                      ,"bad/emptyAnnotatedInt.10n"         // TODO amzn/ion-java#55
+                      ,"bad/utf8/surrogate_5.ion"          // TODO amzn/ion-java#60
+                      ,"equivs/paddedInts.10n"             // TODO amzn/ion-java#54
+                      ,"good/subfieldVarUInt32bit.ion"     // TODO amzn/ion-java#62
+                      ,"good/symbolEmpty.ion"              // TODO amzn/ion-java#42
+                      ,"good/symbolEmptyWithCR.ion"        // TODO amzn/ion-java#42
+                      ,"good/symbolEmptyWithCRLF.ion"      // TODO amzn/ion-java#42
+                      ,"good/symbolEmptyWithLF.ion"        // TODO amzn/ion-java#42
+                      ,"good/symbolEmptyWithLFLF.ion"      // TODO amzn/ion-java#42
+                      ,"good/utf16.ion"                    // TODO amzn/ion-java#61
+                      ,"good/utf32.ion"                    // TODO amzn/ion-java#61
                       );
 
 
