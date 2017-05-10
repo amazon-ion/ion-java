@@ -7,3 +7,6 @@ tmp*
 /target
 /resources
 *~
+.settings
+.classpath
+.project
