@@ -14,6 +14,9 @@
 
 package software.amazon.ion;
 
+import software.amazon.ion.impl.PrivateUtils;
+import software.amazon.ion.util.IonStreamUtils;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.math.BigDecimal;
@@ -23,15 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import software.amazon.ion.IonDatagram;
-import software.amazon.ion.IonReader;
-import software.amazon.ion.IonSystem;
-import software.amazon.ion.IonType;
-import software.amazon.ion.SymbolTable;
-import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Timestamp;
-import software.amazon.ion.impl.PrivateUtils;
-import software.amazon.ion.util.IonStreamUtils;
 
 public class TestUtils
 {
@@ -135,20 +129,33 @@ public class TestUtils
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
-                       "bad/annotationNested.10n"          // TODO amzn/ion-java#55
-                      ,"bad/clobWithNullCharacter.ion"     // TODO amzn/ion-java#43
-                      ,"bad/emptyAnnotatedInt.10n"         // TODO amzn/ion-java#55
-                      ,"bad/utf8/surrogate_5.ion"          // TODO amzn/ion-java#60
-                      ,"equivs/paddedInts.10n"             // TODO amzn/ion-java#54
-                      ,"good/subfieldVarUInt32bit.ion"     // TODO amzn/ion-java#62
-                      ,"good/symbolEmpty.ion"              // TODO amzn/ion-java#42
-                      ,"good/symbolEmptyWithCR.ion"        // TODO amzn/ion-java#42
-                      ,"good/symbolEmptyWithCRLF.ion"      // TODO amzn/ion-java#42
-                      ,"good/symbolEmptyWithLF.ion"        // TODO amzn/ion-java#42
-                      ,"good/symbolEmptyWithLFLF.ion"      // TODO amzn/ion-java#42
-                      ,"good/utf16.ion"                    // TODO amzn/ion-java#61
-                      ,"good/utf32.ion"                    // TODO amzn/ion-java#61
-                      );
+            "bad/annotationNested.10n"          // TODO amzn/ion-java#55
+            , "bad/clobWithNullCharacter.ion"               // TODO amzn/ion-java#43
+            , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
+            , "bad/structOrderedEmpty.10n"                  // TODO amzn/ion-java#100
+            , "bad/symbolIDUnmapped.ion"                    // TODO amzn/ion-java#101
+            , "bad/emptyAnnotatedInt.10n"                   // TODO amzn/ion-java#55
+            , "bad/timestamp/timestampNegativeFraction.10n" // TODO amzn/ion-java#102
+            , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
+            , "bad/utf8/surrogate_1.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_2.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_4.ion"                    // TODO amzn/ion-java#105
+            , "equivs/paddedInts.10n"                       // TODO amzn/ion-java#54
+            , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
+            , "good/symbolEmpty.ion"                        // TODO amzn/ion-java#42
+            , "good/symbolEmptyWithCR.ion"                  // TODO amzn/ion-java#42
+            , "good/symbolEmptyWithCRLF.ion"                // TODO amzn/ion-java#42
+            , "good/symbolEmptyWithLF.ion"                  // TODO amzn/ion-java#42
+            , "good/symbolEmptyWithLFLF.ion"                // TODO amzn/ion-java#42
+            , "good/utf16.ion"                              // TODO amzn/ion-java#61
+            , "good/utf32.ion"                              // TODO amzn/ion-java#61
+            , "good/symbolExplicitZero.10n"                 // TODO amzn/ion-java#103
+            , "good/symbolImplicitZero.10n"                 // TODO amzn/ion-java#103
+            , "good/whitespace.ion"                         // TODO amzn/ion-java#104
+            , "good/nopPad16Bytes.10n"                      // TODO amzn/ion-java#97
+            , "good/nopPadOneByte.10n"                      // TODO amzn/ion-java#97
+            , "bad/symbolWithTab.ion"                       // remove after https://github.com/amzn/ion-tests/pull/32 is pushed
+        );
 
 
     private static void testdataFiles(FilenameFilter filter,
