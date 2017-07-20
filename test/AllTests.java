@@ -14,73 +14,15 @@
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import software.amazon.ion.AnnotationEscapesTest;
-import software.amazon.ion.AssertionsEnabledTest;
-import software.amazon.ion.BadIonTest;
-import software.amazon.ion.BinaryReaderWrappedValueLengthTest;
-import software.amazon.ion.BinaryTest;
-import software.amazon.ion.BlobTest;
-import software.amazon.ion.BoolTest;
-import software.amazon.ion.ClobTest;
-import software.amazon.ion.CloneTest;
-import software.amazon.ion.DatagramTest;
-import software.amazon.ion.DecimalTest;
-import software.amazon.ion.EquivTimelineTest;
-import software.amazon.ion.EquivsTest;
-import software.amazon.ion.ExtendedDecimalTest;
-import software.amazon.ion.FieldNameEscapesTest;
-import software.amazon.ion.FloatTest;
-import software.amazon.ion.GoodIonTest;
-import software.amazon.ion.HashCodeCorrectnessTest;
-import software.amazon.ion.HashCodeDeltaCollisionTest;
-import software.amazon.ion.HashCodeDistributionTest;
-import software.amazon.ion.IntTest;
-import software.amazon.ion.IonExceptionTest;
-import software.amazon.ion.IonReaderToIonValueTest;
-import software.amazon.ion.IonSystemTest;
-import software.amazon.ion.IonValueTest;
-import software.amazon.ion.JavaNumericsTest;
-import software.amazon.ion.ListTest;
-import software.amazon.ion.LoaderTest;
-import software.amazon.ion.LongStringTest;
-import software.amazon.ion.NonEquivsTest;
-import software.amazon.ion.NullTest;
-import software.amazon.ion.RoundTripTest;
-import software.amazon.ion.SexpTest;
-import software.amazon.ion.StringFieldNameEscapesTest;
-import software.amazon.ion.StringTest;
-import software.amazon.ion.StructTest;
-import software.amazon.ion.SurrogateEscapeTest;
-import software.amazon.ion.SymbolTest;
-import software.amazon.ion.SystemProcessingTests;
-import software.amazon.ion.TimestampBadTest;
-import software.amazon.ion.TimestampGoodTest;
-import software.amazon.ion.TimestampTest;
-import software.amazon.ion.ValueFactorySequenceTest;
+import software.amazon.ion.*;
 import software.amazon.ion.facet.FacetsTest;
-import software.amazon.ion.impl.IonImplUtilsTest;
-import software.amazon.ion.impl.IonWriterTests;
-import software.amazon.ion.impl.IterationTest;
-import software.amazon.ion.impl.LocalSymbolTableTest;
-import software.amazon.ion.impl.SharedSymbolTableTest;
-import software.amazon.ion.impl.SymbolTableTest;
-import software.amazon.ion.impl.TreeReaderTest;
+import software.amazon.ion.impl.*;
 import software.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
 import software.amazon.ion.impl.bin.IonRawBinaryWriterTest;
 import software.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
 import software.amazon.ion.impl.bin.WriteBufferTest;
 import software.amazon.ion.impl.lite.IonContextTest;
-import software.amazon.ion.streaming.BadIonStreamingTest;
-import software.amazon.ion.streaming.BinaryStreamingTest;
-import software.amazon.ion.streaming.GoodIonStreamingTest;
-import software.amazon.ion.streaming.InputStreamReaderTest;
-import software.amazon.ion.streaming.MiscStreamingTest;
-import software.amazon.ion.streaming.ReaderDomCopyTest;
-import software.amazon.ion.streaming.ReaderIntegerSizeTest;
-import software.amazon.ion.streaming.ReaderSkippingTest;
-import software.amazon.ion.streaming.ReaderTest;
-import software.amazon.ion.streaming.RoundTripStreamingTest;
-import software.amazon.ion.streaming.SpanTests;
+import software.amazon.ion.streaming.*;
 import software.amazon.ion.system.IonBinaryWriterBuilderTest;
 import software.amazon.ion.system.IonSystemBuilderTest;
 import software.amazon.ion.system.IonTextWriterBuilderTest;
@@ -133,6 +75,8 @@ import software.amazon.ion.util.TextTest;
     FieldNameEscapesTest.class,
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
+
+    NopPaddingTest.class,
 
     // Binary format tests
     BinaryTest.class,

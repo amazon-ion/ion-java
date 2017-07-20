@@ -14,21 +14,17 @@
 
 package software.amazon.ion;
 
-import static software.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
-import static software.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
-import static software.amazon.ion.TestUtils.testdataFiles;
-import static software.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
+import org.junit.Test;
+import software.amazon.ion.impl.PrivateUtils;
+import software.amazon.ion.junit.Injected.Inject;
+import software.amazon.ion.streaming.ReaderCompare;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
-import org.junit.Test;
-import software.amazon.ion.IonDatagram;
-import software.amazon.ion.IonReader;
-import software.amazon.ion.IonValue;
-import software.amazon.ion.impl.PrivateUtils;
-import software.amazon.ion.junit.Injected.Inject;
-import software.amazon.ion.streaming.ReaderCompare;
+
+import static software.amazon.ion.TestUtils.*;
+import static software.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
 public class GoodIonTest
     extends IonTestCase
@@ -129,8 +125,13 @@ public class GoodIonTest
     /**
      * Test files containing values with unknown text for symbols.
      */
-    private static final String[] FILES_WITH_UNKNOWN_SYMBOL_TEXT =
-                                  { "good" + File.separator + "item1.10n", "good" + File.separator + "symbols.ion" };
+    private static final String[] FILES_WITH_UNKNOWN_SYMBOL_TEXT = {
+        "good" + File.separator + "item1.10n",
+        "good" + File.separator + "symbols.ion",
+        "good" + File.separator + "nopPadInsideStructWithNopPadThenValueNonZeroSymbolId.10n",
+        "good" + File.separator + "nopPadInsideStructWithNopPadThenValueZeroSymbolId.10n",
+        "good" + File.separator + "nopPadInsideStructWithValueThenNopPad.10n",
+    };
 
     /**
      * Skipping test files with unknown text for symbols.
