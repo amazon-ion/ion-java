@@ -450,11 +450,19 @@ public abstract class IonWriterTestCase
     public void testSetEmptyFieldName()
         throws Exception
     {
-        iw = makeWriter();
-        iw.writeSymbol("");
+        String data = "{'':true}";
+        IonReader ir = system().newReader(data);
+        ir.next();
+        ir.stepIn();
+        expectNextField(ir, "");
 
-        IonSymbol symbol = (IonSymbol) reloadSingleValue();
-        checkSymbol("", symbol);
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("");
+        iw.writeValue(ir);
+        iw.stepOut();
+
+        assertEquals("{'':true}", reloadSingleValue().toString());
     }
 
     @Test
