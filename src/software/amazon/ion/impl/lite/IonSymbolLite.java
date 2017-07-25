@@ -19,7 +19,6 @@ import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import java.io.IOException;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonType;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;

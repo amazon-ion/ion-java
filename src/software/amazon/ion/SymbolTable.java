@@ -253,7 +253,6 @@ public interface SymbolTable
      * {@link #UNKNOWN_SYMBOL_ID} if it's not defined.
      *
      * @throws NullPointerException if {@code name} is null.
-     * @throws EmptySymbolException if {@code name} is empty.
      */
     public int findSymbol(String name);
 

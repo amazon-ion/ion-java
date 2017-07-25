@@ -29,7 +29,6 @@ import java.math.BigInteger;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import software.amazon.ion.Decimal;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.impl.Base64Encoder.TextStream;
 import software.amazon.ion.system.IonTextWriterBuilder;
 import software.amazon.ion.util.PrivateFastAppendable;
@@ -479,7 +478,6 @@ public final class PrivateIonTextAppender
      *
      * @throws NullPointerException
      *         if <code>symbol</code> is <code>null</code>.
-     * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
     public static boolean symbolNeedsQuoting(CharSequence symbol,
                                              boolean      quoteOperators)

@@ -304,8 +304,7 @@ public interface IonValue
      * @param annotations the new annotations.  If null or empty array, then
      *  all annotations are removed.  Any duplicates are preserved.
      *
-     * @throws EmptySymbolException if any of the annotations are null or
-     *  empty string.
+     * @throws NullPointerException if any of the annotations are null
      *
      */
     public void setTypeAnnotations(String... annotations);

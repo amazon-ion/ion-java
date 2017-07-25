@@ -18,7 +18,6 @@ import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolToken;
 
 import org.junit.Test;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonDatagram;
 import software.amazon.ion.IonList;
 import software.amazon.ion.IonSymbol;

@@ -19,7 +19,6 @@ import static software.amazon.ion.junit.IonAssert.assertAnnotations;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonList;
 import software.amazon.ion.IonStruct;
 import software.amazon.ion.IonSystem;
@@ -156,7 +155,7 @@ public class IonValueTest
 //        assertSame(nameOrig, v.getTypeAnnotationSymbols()[0].getText());
     }
 
-    @Test(expected = EmptySymbolException.class)
+    @Test(expected = NullPointerException.class)
     public void testSetTypeAnnotationsWithNullString()
     {
         IonValue v = system().newNull();

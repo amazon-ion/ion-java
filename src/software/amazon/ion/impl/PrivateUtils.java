@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
@@ -193,10 +192,7 @@ public final class PrivateUtils
                                              String text)
     {
         // TODO amzn/ion-java#21 symtab should not be null
-        if (text == null)
-        {
-            throw new EmptySymbolException();
-        }
+        text.getClass(); // quick null check
 
         SymbolToken tok = (symtab == null ? null : symtab.find(text));
         if (tok == null)

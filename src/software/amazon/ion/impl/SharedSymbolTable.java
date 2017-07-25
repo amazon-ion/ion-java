@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
 import software.amazon.ion.IonStruct;

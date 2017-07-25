@@ -24,7 +24,6 @@ import static software.amazon.ion.impl.PrivateIonTextWriterBuilder.STANDARD;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.impl.PrivateIonTextAppender;
 
 
@@ -140,11 +139,10 @@ public class IonTextUtils
      *
      * @throws NullPointerException
      *         if <code>symbol</code> is <code>null</code>.
-     * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
     public static SymbolVariant symbolVariant(CharSequence symbol)
     {
-        int length = symbol.length();
+        int length = symbol.length(); // acts as null check
 
         // If the symbol's text matches an Ion keyword or it's an empty symbol, we must quote it.
         // Eg, the symbol 'false' and '' must be rendered quoted.
@@ -570,7 +568,6 @@ public class IonTextUtils
      * @param out the stream to receive the Ion data.
      * @param text the symbol text; may be {@code null}.
      *
-     * @throws EmptySymbolException if {@code text} is empty.
      * @throws IOException if the {@link Appendable} throws an exception.
      *
      * @see #printSymbol(CharSequence)
@@ -633,7 +630,6 @@ public class IonTextUtils
      * @param text the symbol text; may be {@code null}.
      *
      * @throws IOException if the {@link Appendable} throws an exception.
-     * @throws EmptySymbolException if {@code text} is empty.
      * @throws IllegalArgumentException
      *     if the text contains invalid UTF-16 surrogates.
      */

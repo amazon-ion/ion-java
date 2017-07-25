@@ -33,7 +33,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.FakeSymbolToken;
 import software.amazon.ion.IonBlob;
 import software.amazon.ion.IonClob;

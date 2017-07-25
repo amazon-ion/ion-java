@@ -37,7 +37,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonList;
