@@ -163,7 +163,6 @@ public class IonValueTest
         v.setTypeAnnotations(ann, null);
     }
 
-    @Test(expected = EmptySymbolException.class)
     public void testSetTypeAnnotationsWithEmptyString()
     {
         IonValue v = system().newNull();

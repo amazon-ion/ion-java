@@ -794,10 +794,6 @@ import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         {
             return null;
         }
-        if ("".equals(text))
-        {
-            throw new EmptySymbolException();
-        }
         try
         {
             SymbolToken token = imports.importedSymbols.get(text);

@@ -20,7 +20,6 @@ import static software.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolTokens;
 
 import java.io.IOException;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonType;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
@@ -366,9 +365,9 @@ abstract class IonWriterSystem
         if (!this.isInStruct()) {
             throw new IllegalStateException();
         }
-        if (name.length() == 0) {
-            throw new EmptySymbolException();
-        }
+
+        name.getClass(); // fast null check
+
         _field_name_type = IonType.STRING;
         _field_name = name;
         _field_name_sid = UNKNOWN_SYMBOL_ID;
@@ -383,9 +382,6 @@ abstract class IonWriterSystem
         String text = name.getText();
         if (text != null)
         {
-            if (text.length() == 0) {
-                throw new EmptySymbolException();
-            }
             _field_name_type = IonType.STRING;
             _field_name = text;
             _field_name_sid = UNKNOWN_SYMBOL_ID;

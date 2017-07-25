@@ -62,9 +62,6 @@ final class IonSymbolLite
 
             if (text != null)
             {
-                if (text.length() == 0) {
-                    throw new EmptySymbolException();
-                }
                 super.setValue(text);
 
                 // TODO why is the sid ignored in this case?
@@ -215,10 +212,6 @@ final class IonSymbolLite
     @Override
     public void setValue(String value)
     {
-        if ("".equals(value)) {
-            throw new EmptySymbolException();
-        }
-
         super.setValue(value);  // Calls checkForLock and _isNullValue
         _sid = UNKNOWN_SYMBOL_ID;
     }

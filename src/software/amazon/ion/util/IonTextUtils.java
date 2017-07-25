@@ -145,13 +145,10 @@ public class IonTextUtils
     public static SymbolVariant symbolVariant(CharSequence symbol)
     {
         int length = symbol.length();
-        if (length == 0) {
-            throw new EmptySymbolException();
-        }
 
-        // If the symbol's text matches an Ion keyword, we must quote it.
-        // Eg, the symbol 'false' must be rendered quoted.
-        if (isIdentifierKeyword(symbol))
+        // If the symbol's text matches an Ion keyword or it's an empty symbol, we must quote it.
+        // Eg, the symbol 'false' and '' must be rendered quoted.
+        if(length == 0 || isIdentifierKeyword(symbol))
         {
             return SymbolVariant.QUOTED;
         }
@@ -646,10 +643,6 @@ public class IonTextUtils
         if (text == null)
         {
             out.append("null.symbol");
-        }
-        else if (text.length() == 0)
-        {
-            throw new EmptySymbolException();
         }
         else
         {

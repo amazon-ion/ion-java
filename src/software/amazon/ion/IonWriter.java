@@ -189,7 +189,6 @@ public interface IonWriter
      * @throws IllegalStateException if the current container isn't a struct,
      * that is, if {@link #isInStruct()} is false.
      * @throws NullPointerException if {@code name} is null.
-     * @throws EmptySymbolException if {@code name} is empty.
      */
     public void setFieldName(String name);
 

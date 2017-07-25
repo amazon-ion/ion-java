@@ -58,11 +58,6 @@ public class SymbolTest
         checkSymbol(modValue1, value);
         int sid = value.symbolValue().getSid();
 
-        try {
-            value.setValue("");
-            fail("Expected EmptySymbolException");
-        }
-        catch (EmptySymbolException e) { }
         checkSymbol(modValue1, sid, value);
 
         value.setValue(null);
@@ -160,6 +155,13 @@ public class SymbolTest
         modifySymbol(value);
     }
 
+    @Test
+    public void testEmptySymbol()
+    {
+        IonSymbol value = (IonSymbol) oneValue("''");
+        checkSymbol("", value);
+        modifySymbol(value);
+    }
 
     @Test
     public void testSyntheticSymbols()
@@ -216,7 +218,17 @@ public class SymbolTest
     @Test
     public void testSymbolWithEscapedNewline()
     {
-        badValue("'\\\n'");
+        IonSymbol symbol = (IonSymbol) oneValue("'\\\n'");
+
+        checkSymbol("", symbol);
+    }
+
+    @Test
+    public void testSymbolWithNewline()
+    {
+        IonSymbol symbol = (IonSymbol) oneValue("'\\n'");
+
+        checkSymbol("\n", symbol);
     }
 
     @Test(expected = UnsupportedIonVersionException.class)

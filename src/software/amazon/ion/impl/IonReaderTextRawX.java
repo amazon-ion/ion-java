@@ -417,13 +417,8 @@ abstract class IonReaderTextRawX
     }
 
     private final void set_fieldname(SymbolToken sym) {
-        String text = sym.getText();
-        int sid = sym.getSid();
-        if (text != null && text.length() < 1) {
-            parse_error("empty strings are not valid field names");
-        }
-        _field_name = text;
-        _field_name_sid = sid;
+        _field_name = sym.getText();
+        _field_name_sid = sym.getSid();
     }
 
     private final void clear_fieldname() {
@@ -877,10 +872,7 @@ abstract class IonReaderTextRawX
             case ACTION_LOAD_ANNOTATION:
             {
                 sb = token_contents_load(t);
-                if (sb.length() < 1) {
-                    // this is the case for an empty symbol
-                    parse_error("empty symbols are not valid");
-                }
+
                 trailing_whitespace = _scanner.skip_whitespace();
                 if (!_scanner.skipDoubleColon()) {
                     // unnecessary: set_current_value(sp);

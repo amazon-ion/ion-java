@@ -534,12 +534,6 @@ public class StructTest
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
-
-        try {
-            value.get("");
-            fail("Expected IllegalArgumentException");
-        }
-        catch (IllegalArgumentException e) { }
     }
 
     @Test
@@ -593,12 +587,6 @@ public class StructTest
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
-
-        try {
-            value.put("", nullBool);
-            fail("Expected IllegalArgumentException");
-        }
-        catch (IllegalArgumentException e) { }
     }
 
     @Test
@@ -614,18 +602,33 @@ public class StructTest
         catch (NullPointerException e) { }
 
         try {
-            value.add("", nullBool);
-            fail("Expected IllegalArgumentException");
-        }
-        catch (IllegalArgumentException e) { }
-
-        try {
             value.add("f", null);
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
     }
 
+    @Test
+    public void testAddEmptyField()
+    {
+        IonStruct value = system().newNullStruct();
+        IonBool trueBool = system().newBool(true);
+
+        value.add("", trueBool);
+
+        assertEquals(trueBool, value.get(""));
+    }
+
+    @Test
+    public void testPutEmptyField()
+    {
+        IonStruct value = system().newNullStruct();
+        IonBool trueBool = system().newBool(true);
+
+        value.put("", trueBool);
+
+        assertEquals(trueBool, value.get(""));
+    }
 
     @Test
     public void testAddSymbolTokenWithBadSid()

@@ -142,11 +142,6 @@ public class TestUtils
             , "bad/utf8/surrogate_4.ion"                    // TODO amzn/ion-java#105
             , "equivs/paddedInts.10n"                       // TODO amzn/ion-java#54
             , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
-            , "good/symbolEmpty.ion"                        // TODO amzn/ion-java#42
-            , "good/symbolEmptyWithCR.ion"                  // TODO amzn/ion-java#42
-            , "good/symbolEmptyWithCRLF.ion"                // TODO amzn/ion-java#42
-            , "good/symbolEmptyWithLF.ion"                  // TODO amzn/ion-java#42
-            , "good/symbolEmptyWithLFLF.ion"                // TODO amzn/ion-java#42
             , "good/utf16.ion"                              // TODO amzn/ion-java#61
             , "good/utf32.ion"                              // TODO amzn/ion-java#61
             , "good/symbolExplicitZero.10n"                 // TODO amzn/ion-java#103

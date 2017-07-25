@@ -526,10 +526,7 @@ final class SharedSymbolTable
 
     public SymbolToken find(String text)
     {
-        if (text.length() < 1)
-        {
-            throw new EmptySymbolException();
-        }
+        text.getClass(); // fast null check
 
         Integer sid = mySymbolsMap.get(text);
         if (sid != null)
@@ -549,11 +546,6 @@ final class SharedSymbolTable
 
     public int findSymbol(String name)
     {
-        if (name.length() < 1)
-        {
-            throw new EmptySymbolException();
-        }
-
         Integer sid = mySymbolsMap.get(name);
         if (sid != null)
         {

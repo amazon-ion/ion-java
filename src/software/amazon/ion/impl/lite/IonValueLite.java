@@ -617,7 +617,6 @@ abstract class IonValueLite
         }
         else
         {
-            PrivateUtils.ensureNonEmptySymbols(annotations);
             _annotations = annotations.clone();
         }
     }

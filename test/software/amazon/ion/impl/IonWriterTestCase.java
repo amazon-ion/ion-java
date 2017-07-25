@@ -307,12 +307,11 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
-        try
-        {
-            iw.writeSymbol("");
-            fail("expected exception");
-        }
-        catch (EmptySymbolException e) { }
+        iw.writeSymbol("");
+
+        IonReader in = reread();
+        in.next();
+        IonAssert.checkSymbol("", in);
     }
 
     @Test
@@ -434,7 +433,7 @@ public abstract class IonWriterTestCase
     // TODO test failure of getBytes before stepping all the way out
 
     @Test
-    public void testBadSetFieldName()
+    public void testSetNullFieldName()
         throws Exception
     {
         iw = makeWriter();
@@ -445,12 +444,17 @@ public abstract class IonWriterTestCase
             fail("expected exception");
         }
         catch (NullPointerException e) { }
+    }
 
-        try {
-            iw.setFieldName("");
-            fail("expected exception");
-        }
-        catch (EmptySymbolException e) { }
+    @Test
+    public void testSetEmptyFieldName()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.writeSymbol("");
+
+        IonSymbol symbol = (IonSymbol) reloadSingleValue();
+        checkSymbol("", symbol);
     }
 
     @Test
