@@ -25,7 +25,7 @@ public class NopPaddingTest
     public void testEmptyWithSingleByteNopPadding()
         throws Exception
     {
-        IonDatagram datagram = loadTestFile("good/emptySingleByteNopPad.10n");
+        IonDatagram datagram = loadTestFile("good/nopPadOneByte.10n");
 
         assertEquals(0, datagram.size());
     }
@@ -43,7 +43,7 @@ public class NopPaddingTest
     public void testEmptyWithVariableBytesNopPadding()
         throws Exception
     {
-        IonDatagram datagram = loadTestFile("good/emptySixteenBytesNopPad.10n");
+        IonDatagram datagram = loadTestFile("good/nopPad16Bytes.10n");
 
         assertEquals(0, datagram.size());
     }
@@ -125,13 +125,9 @@ public class NopPaddingTest
         throws Exception
     {
         myExpectedException.expect(IonException.class);
-        myExpectedException.expectMessage("Annotations are not allowed for NOP padding");
+        myExpectedException.expectMessage("NOP padding is not allowed within annotation wrappers.");
 
-        IonDatagram datagram = loadTestFile("bad/nopPadWithAnnotations.10n");
-        assertEquals(1, datagram.size());
-
-        final IonStruct struct = (IonStruct) datagram.get(0);
-        assertTrue(struct.isEmpty());
+        loadTestFile("bad/nopPadWithAnnotations.10n");
     }
 
     private void assertSingleValueStruct(final IonDatagram datagram)

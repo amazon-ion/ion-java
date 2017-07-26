@@ -125,13 +125,7 @@ public class GoodIonTest
     /**
      * Test files containing values with unknown text for symbols.
      */
-    private static final String[] FILES_WITH_UNKNOWN_SYMBOL_TEXT = {
-        "good" + File.separator + "item1.10n",
-        "good" + File.separator + "symbols.ion",
-        "good" + File.separator + "nopPadInsideStructWithNopPadThenValueNonZeroSymbolId.10n",
-        "good" + File.separator + "nopPadInsideStructWithNopPadThenValueZeroSymbolId.10n",
-        "good" + File.separator + "nopPadInsideStructWithValueThenNopPad.10n",
-    };
+    private static final String[] FILES_WITH_UNKNOWN_SYMBOL_TEXT = { "good" + File.separator + "item1.10n" };
 
     /**
      * Skipping test files with unknown text for symbols.

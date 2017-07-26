@@ -355,7 +355,7 @@ abstract class IonReaderBinaryRawX
         // that is there now, before the call)
         _value_tid = read_type_id();
         if (_value_tid == PrivateIonConstants.tidNopPad) {
-            throwErrorAt("Annotations are not allowed for NOP padding");
+            throwErrorAt("NOP padding is not allowed within annotation wrappers.");
         }
         if (_value_tid == UnifiedInputStreamX.EOF) {
             throwErrorAt("unexpected EOF encountered where a type descriptor byte was expected");
