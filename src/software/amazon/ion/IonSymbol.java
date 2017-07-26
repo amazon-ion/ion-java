@@ -50,11 +50,8 @@ public interface IonSymbol
      * @param value the new value of this symbol;
      * may be <code>null</code> to make this <code>null.symbol</code>.
      *
-     * @throws EmptySymbolException if <code>value</code> is the empty string.
      */
-    public void setValue(String value)
-        throws EmptySymbolException;
-
+    public void setValue(String value);
 
     public IonSymbol clone()
         throws UnknownSymbolException;

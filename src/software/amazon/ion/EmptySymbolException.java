@@ -7,7 +7,11 @@ package software.amazon.ion;
 /**
  * An error caused by a symbol not containing at least one character for
  * its text.
+ *
+ * @deprecated this exception is not used as empty symbols are valid. In cases where null is used as the symbol value it was
+ * replaced by {@link NullPointerException}
  */
+@Deprecated
 public class EmptySymbolException
     extends IonException
 {

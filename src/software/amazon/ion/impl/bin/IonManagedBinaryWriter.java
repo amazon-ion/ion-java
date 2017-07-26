@@ -42,7 +42,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonType;
@@ -793,10 +792,6 @@ import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         if (text == null)
         {
             return null;
-        }
-        if ("".equals(text))
-        {
-            throw new EmptySymbolException();
         }
         try
         {

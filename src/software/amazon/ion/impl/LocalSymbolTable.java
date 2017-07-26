@@ -37,7 +37,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonList;
@@ -333,17 +332,14 @@ final class LocalSymbolTable
                         IonType type;
                         while ((type = reader.next()) != null)
                         {
-                            String text = null;
+                            final String text;
                             if (type == IonType.STRING)
                             {
-                                // As per the Spec, if any element of
-                                // the list is the empty string or any
-                                // other type, treat it as null
                                 text = reader.stringValue();
-                                if (text != null && text.length() == 0)
-                                {
-                                    text = null;
-                                }
+                            }
+                            else
+                            {
+                                text = null;
                             }
 
                             symbolsList.add(text);
@@ -483,11 +479,6 @@ final class LocalSymbolTable
 
     public int findSymbol(String name)
     {
-        if (name.length() < 1) // throws NPE if null
-        {
-            throw new EmptySymbolException();
-        }
-
         // Look in system then imports
         int sid = myImportsList.findSymbol(name);
 
@@ -502,8 +493,6 @@ final class LocalSymbolTable
 
     private int findLocalSymbol(String name)
     {
-        assert(name.length() > 0);
-
         Integer isid;
         synchronized (this)
         {
@@ -533,10 +522,7 @@ final class LocalSymbolTable
 
     public SymbolToken find(String text)
     {
-        if (text.length() < 1)
-        {
-            throw new EmptySymbolException();
-        }
+        text.getClass(); // fast null check
 
         // Look in system then imports
         SymbolToken symTok = myImportsList.find(text);
@@ -566,10 +552,9 @@ final class LocalSymbolTable
 
     private static final void validateSymbol(String name)
     {
-        if (name == null || name.length() < 1)
+        if (name == null)
         {
-            String message = "symbols must contain 1 or more characters";
-            throw new IllegalArgumentException(message);
+            throw new IllegalArgumentException("symbols must not be null");
         }
         for (int i = 0; i < name.length(); ++i)
         {
@@ -607,8 +592,6 @@ final class LocalSymbolTable
      */
     private int putSymbol(String symbolName)
     {
-        assert symbolName.length() != 0;
-
         if (isReadOnly)
         {
             throw new ReadOnlyValueException(SymbolTable.class);

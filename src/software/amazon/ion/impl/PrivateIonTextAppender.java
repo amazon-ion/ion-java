@@ -29,7 +29,6 @@ import java.math.BigInteger;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import software.amazon.ion.Decimal;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.impl.Base64Encoder.TextStream;
 import software.amazon.ion.system.IonTextWriterBuilder;
 import software.amazon.ion.util.PrivateFastAppendable;
@@ -410,6 +409,12 @@ public final class PrivateIonTextAppender
     {
         int pos = 0;
         int valuelen = text.length();
+
+        if(valuelen == 0)
+        {
+            return false;
+        }
+
         boolean keyword = false;
 
         // there has to be at least 1 character or we wouldn't be here
@@ -473,51 +478,51 @@ public final class PrivateIonTextAppender
      *
      * @throws NullPointerException
      *         if <code>symbol</code> is <code>null</code>.
-     * @throws EmptySymbolException if <code>symbol</code> is empty.
      */
     public static boolean symbolNeedsQuoting(CharSequence symbol,
                                              boolean      quoteOperators)
     {
         int length = symbol.length();
-        if (length == 0) {
-            throw new EmptySymbolException();
-        }
 
-        // If the symbol's text matches an Ion keyword, we must quote it.
-        // Eg, the symbol 'false' must be rendered quoted.
-        if (! isIdentifierKeyword(symbol))
+        // If the symbol's text matches an Ion keyword or it's an empty symbol, we must quote it.
+        // Eg, the symbol 'false' and '' must be rendered quoted.
+        if(length == 0 || isIdentifierKeyword(symbol))
         {
-            char c = symbol.charAt(0);
-            // Surrogates are neither identifierStart nor operatorPart, so the
-            // first one we hit will fall through and return true.
-            // TODO test that
-
-            if (!quoteOperators && isOperatorPart(c))
-            {
-                for (int ii = 0; ii < length; ii++) {
-                    c = symbol.charAt(ii);
-                    // We don't need to look for escapes since all
-                    // operator characters are ASCII.
-                    if (!isOperatorPart(c)) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else if (isIdentifierStart(c))
-            {
-                for (int ii = 0; ii < length; ii++) {
-                    c = symbol.charAt(ii);
-                    if ((c == '\'' || c < 32 || c > 126)
-                        || !isIdentifierPart(c))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
+            return true;
         }
 
+        char c = symbol.charAt(0);
+
+        // Surrogates are neither identifierStart nor operatorPart, so the
+        // first one we hit will fall through and return true.
+        // TODO test that
+
+        if (!quoteOperators && isOperatorPart(c))
+        {
+            for (int ii = 0; ii < length; ii++) {
+                c = symbol.charAt(ii);
+                // We don't need to look for escapes since all
+                // operator characters are ASCII.
+                if (!isOperatorPart(c)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        else if (isIdentifierStart(c))
+        {
+            for (int ii = 0; ii < length; ii++) {
+                c = symbol.charAt(ii);
+                if ((c == '\'' || c < 32 || c > 126)
+                    || !isIdentifierPart(c))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // quote by default
         return true;
     }
 
@@ -533,10 +538,6 @@ public final class PrivateIonTextAppender
         if (text == null)
         {
             appendAscii("null.symbol");
-        }
-        else if (text.length() == 0)
-        {
-            throw new EmptySymbolException();
         }
         else if (symbolNeedsQuoting(text, true)) {
             appendAscii('\'');
@@ -560,10 +561,6 @@ public final class PrivateIonTextAppender
         if (text == null)
         {
             appendAscii("null.symbol");
-        }
-        else if (text.length() == 0)
-        {
-            throw new EmptySymbolException();
         }
         else
         {

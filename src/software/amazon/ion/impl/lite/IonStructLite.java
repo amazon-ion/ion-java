@@ -797,10 +797,6 @@ final class IonStructLite
         {
             throw new NullPointerException("fieldName is null");
         }
-        if (fieldName.length() == 0)
-        {
-            throw new IllegalArgumentException("fieldName is empty");
-        }
     }
 
     @Override

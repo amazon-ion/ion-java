@@ -33,7 +33,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.FakeSymbolToken;
 import software.amazon.ion.IonBlob;
 import software.amazon.ion.IonClob;
@@ -307,12 +306,11 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
-        try
-        {
-            iw.writeSymbol("");
-            fail("expected exception");
-        }
-        catch (EmptySymbolException e) { }
+        iw.writeSymbol("");
+
+        IonReader in = reread();
+        in.next();
+        IonAssert.checkSymbol("", in);
     }
 
     @Test
@@ -434,7 +432,7 @@ public abstract class IonWriterTestCase
     // TODO test failure of getBytes before stepping all the way out
 
     @Test
-    public void testBadSetFieldName()
+    public void testSetNullFieldName()
         throws Exception
     {
         iw = makeWriter();
@@ -445,12 +443,25 @@ public abstract class IonWriterTestCase
             fail("expected exception");
         }
         catch (NullPointerException e) { }
+    }
 
-        try {
-            iw.setFieldName("");
-            fail("expected exception");
-        }
-        catch (EmptySymbolException e) { }
+    @Test
+    public void testSetEmptyFieldName()
+        throws Exception
+    {
+        String data = "{'':true}";
+        IonReader ir = system().newReader(data);
+        ir.next();
+        ir.stepIn();
+        expectNextField(ir, "");
+
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        iw.setFieldName("");
+        iw.writeValue(ir);
+        iw.stepOut();
+
+        assertEquals("{'':true}", reloadSingleValue().toString());
     }
 
     @Test

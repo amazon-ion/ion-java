@@ -42,11 +42,8 @@ public interface IonText
      * @param value the new value of this text value;
      * may be <code>null</code> to make this an Ion null value.
      *
-     * @throws EmptySymbolException if this is an {@link IonSymbol} and
-     * <code>value</code> is the empty string.
      */
-    public void setValue(String value)
-        throws EmptySymbolException;
+    public void setValue(String value);
 
     public IonText clone()
         throws UnknownSymbolException;

@@ -19,7 +19,6 @@ import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import java.io.IOException;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonType;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
@@ -62,9 +61,6 @@ final class IonSymbolLite
 
             if (text != null)
             {
-                if (text.length() == 0) {
-                    throw new EmptySymbolException();
-                }
                 super.setValue(text);
 
                 // TODO why is the sid ignored in this case?
@@ -215,10 +211,6 @@ final class IonSymbolLite
     @Override
     public void setValue(String value)
     {
-        if ("".equals(value)) {
-            throw new EmptySymbolException();
-        }
-
         super.setValue(value);  // Calls checkForLock and _isNullValue
         _sid = UNKNOWN_SYMBOL_ID;
     }

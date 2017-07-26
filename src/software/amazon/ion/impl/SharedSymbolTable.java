@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
 import software.amazon.ion.IonStruct;
@@ -526,10 +525,7 @@ final class SharedSymbolTable
 
     public SymbolToken find(String text)
     {
-        if (text.length() < 1)
-        {
-            throw new EmptySymbolException();
-        }
+        text.getClass(); // fast null check
 
         Integer sid = mySymbolsMap.get(text);
         if (sid != null)
@@ -549,11 +545,6 @@ final class SharedSymbolTable
 
     public int findSymbol(String name)
     {
-        if (name.length() < 1)
-        {
-            throw new EmptySymbolException();
-        }
-
         Integer sid = mySymbolsMap.get(name);
         if (sid != null)
         {

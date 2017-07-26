@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
-import software.amazon.ion.EmptySymbolException;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
@@ -169,41 +168,6 @@ public final class PrivateUtils
         }
     }
 
-
-    /**
-     * Throws {@link EmptySymbolException} if any of the strings are null or
-     * empty.
-     *
-     * @param strings must not be null array.
-     */
-    public static void ensureNonEmptySymbols(String[] strings)
-    {
-        for (String s : strings)
-        {
-            if (s == null || s.length() == 0)
-            {
-                throw new EmptySymbolException();
-            }
-        }
-    }
-
-    /**
-     * Throws {@link EmptySymbolException} if any of the symbols are null or
-     * their text empty.
-     *
-     * @param symbols must not be null array.
-     */
-    public static void ensureNonEmptySymbols(SymbolToken[] symbols)
-    {
-        for (SymbolToken s : symbols)
-        {
-            if (s == null || s.getText() != null && s.getText().length() == 0)
-            {
-                throw new EmptySymbolException();
-            }
-        }
-    }
-
     /**
      * @return not null
      */
@@ -228,10 +192,8 @@ public final class PrivateUtils
                                              String text)
     {
         // TODO amzn/ion-java#21 symtab should not be null
-        if (text == null || text.length() == 0)
-        {
-            throw new EmptySymbolException();
-        }
+        text.getClass(); // quick null check
+
         SymbolToken tok = (symtab == null ? null : symtab.find(text));
         if (tok == null)
         {
