@@ -14,18 +14,22 @@
 
 package software.amazon.ion.impl;
 
-import software.amazon.ion.*;
-import software.amazon.ion.Timestamp.Precision;
-import software.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
-import software.amazon.ion.impl.PrivateScalarConversions.ValueVariant;
-import software.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
+import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-
-import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
+import software.amazon.ion.Decimal;
+import software.amazon.ion.IonException;
+import software.amazon.ion.IonReader;
+import software.amazon.ion.IonType;
+import software.amazon.ion.SymbolTable;
+import software.amazon.ion.Timestamp;
+import software.amazon.ion.Timestamp.Precision;
+import software.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
+import software.amazon.ion.impl.PrivateScalarConversions.ValueVariant;
+import software.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 
 
 /**

@@ -14,17 +14,21 @@
 
 package software.amazon.ion;
 
-import org.junit.Test;
-import software.amazon.ion.impl.PrivateUtils;
-import software.amazon.ion.junit.Injected.Inject;
-import software.amazon.ion.streaming.ReaderCompare;
+import static software.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
+import static software.amazon.ion.TestUtils.GOOD_IONTESTS_FILES;
+import static software.amazon.ion.TestUtils.testdataFiles;
+import static software.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
-
-import static software.amazon.ion.TestUtils.*;
-import static software.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
+import org.junit.Test;
+import software.amazon.ion.IonDatagram;
+import software.amazon.ion.IonReader;
+import software.amazon.ion.IonValue;
+import software.amazon.ion.impl.PrivateUtils;
+import software.amazon.ion.junit.Injected.Inject;
+import software.amazon.ion.streaming.ReaderCompare;
 
 public class GoodIonTest
     extends IonTestCase
