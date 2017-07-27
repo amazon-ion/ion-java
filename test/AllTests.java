@@ -44,6 +44,7 @@ import software.amazon.ion.ListTest;
 import software.amazon.ion.LoaderTest;
 import software.amazon.ion.LongStringTest;
 import software.amazon.ion.NonEquivsTest;
+import software.amazon.ion.NopPaddingTest;
 import software.amazon.ion.NullTest;
 import software.amazon.ion.RoundTripTest;
 import software.amazon.ion.SexpTest;
@@ -133,6 +134,8 @@ import software.amazon.ion.util.TextTest;
     FieldNameEscapesTest.class,
     StringFieldNameEscapesTest.class,
     SurrogateEscapeTest.class,
+
+    NopPaddingTest.class,
 
     // Binary format tests
     BinaryTest.class,

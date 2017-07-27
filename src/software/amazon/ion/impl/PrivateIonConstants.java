@@ -131,6 +131,7 @@ public final class PrivateIonConstants
     public static final int tidUnused       = 15; // f
 
     public static final int tidDATAGRAM     = 16; // not a real type id
+    public static final int tidNopPad       = 99; // not a real type id
 
 /* this is just here to help programmer productivity ...
     switch (((td & 0xf0) >> 4)) {

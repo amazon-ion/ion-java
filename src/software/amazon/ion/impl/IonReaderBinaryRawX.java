@@ -51,6 +51,7 @@ abstract class IonReaderBinaryRawX
     static final int DEFAULT_CONTAINER_STACK_SIZE = 12; // a multiple of 3
     static final int DEFAULT_ANNOTATION_SIZE = 10;
     static final int NO_LIMIT = Integer.MIN_VALUE;
+
     protected enum State {
         S_INVALID,
         S_BEFORE_FIELD, // only true in structs
@@ -224,8 +225,8 @@ abstract class IonReaderBinaryRawX
         assert( _value_type != null || _eof == true);
         return _value_type;
     }
-    //from IonConstants
-    //public static final byte[] BINARY_VERSION_MARKER_1_0 =
+    // from IonConstants
+    // public static final byte[] BINARY_VERSION_MARKER_1_0 =
     //    { (byte) 0xE0,
     //      (byte) 0x01,
     //      (byte) 0x00,
@@ -255,7 +256,13 @@ abstract class IonReaderBinaryRawX
                     _eof = true;
                     break;
                 }
-                if (_value_tid == PrivateIonConstants.tidTypedecl) {
+                if (_value_tid == PrivateIonConstants.tidNopPad) {
+                    // skips size of pad and resets State machine
+                    skip(_value_len);
+                    clear_value();
+                    break;
+                }
+                else if (_value_tid == PrivateIonConstants.tidTypedecl) {
                     assert (_value_tid == (BINARY_VERSION_MARKER_TID & 0xff)); // the bvm tid happens to be type decl
                     if (_value_len == BINARY_VERSION_MARKER_LEN ) {
                         // this isn't valid for any type descriptor except the first byte
@@ -351,6 +358,9 @@ abstract class IonReaderBinaryRawX
         // length as well (over-writing the len + annotations value
         // that is there now, before the call)
         _value_tid = read_type_id();
+        if (_value_tid == PrivateIonConstants.tidNopPad) {
+            throwErrorAt("NOP padding is not allowed within annotation wrappers.");
+        }
         if (_value_tid == UnifiedInputStreamX.EOF) {
             throwErrorAt("unexpected EOF encountered where a type descriptor byte was expected");
         }
@@ -438,14 +448,20 @@ abstract class IonReaderBinaryRawX
         }
         int tid = PrivateIonConstants.getTypeCode(td);
         int len = PrivateIonConstants.getLowNibble(td);
-        if (len == PrivateIonConstants.lnIsVarLen) {
+
+        // NOP Padding
+        if (tid == PrivateIonConstants.tidNull && len != PrivateIonConstants.lnIsNull) {
+            if (len == PrivateIonConstants.lnIsVarLen) {
+                len = readVarUInt();
+            }
+            _state = _is_in_struct ? State.S_BEFORE_FIELD : State.S_BEFORE_TID;
+            tid = PrivateIonConstants.tidNopPad; // override typeId to use Pad marker
+        }
+        else if (len == PrivateIonConstants.lnIsVarLen) {
             len = readVarUInt();
             start_of_value = _input.getPosition();
         }
         else if (tid == PrivateIonConstants.tidNull) {
-            if (len != PrivateIonConstants.lnIsNull) {
-                throwErrorAt("invalid null type descriptor");
-            }
             _value_is_null = true;
             len = 0;
             _state = State.S_AFTER_VALUE;
@@ -484,6 +500,7 @@ abstract class IonReaderBinaryRawX
         _position_start = start_of_tid;
         return tid;
     }
+
     private final IonType get_iontype_from_tid(int tid)
     {
         IonType t = null;
