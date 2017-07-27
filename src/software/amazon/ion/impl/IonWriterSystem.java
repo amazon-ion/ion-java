@@ -342,7 +342,7 @@ abstract class IonWriterSystem
         if (_field_name_type != null) {
             switch (_field_name_type) {
             case STRING:
-                return _field_name != null && _field_name.length() > 0;
+                return _field_name != null;
             case INT:
                 return _field_name_sid > 0;
             default:
