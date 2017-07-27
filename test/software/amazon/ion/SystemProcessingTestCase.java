@@ -1149,10 +1149,10 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // TODO amzn/ion-java#44 current binary writer doesn't support this (ignores this)
-    //              we need to determine if we want the **writer** to support emitting
-    //              malformed symbol data and support it appropriately.
-    @Ignore
+    /**
+     * According to the spec malformed symbol entries must be interpreted as null, this test
+     * verifies this behavior
+     */
     @Test
     public void testLocalSymtabWithMalformedSymbolEntries()
         throws Exception
