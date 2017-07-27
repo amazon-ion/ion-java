@@ -1163,7 +1163,6 @@ public abstract class SystemProcessingTestCase
         checkLocalSymtabWithMalformedSymbolEntry("0.123");                      // decimal
         checkLocalSymtabWithMalformedSymbolEntry("-0.12e4");                    // float
         checkLocalSymtabWithMalformedSymbolEntry("2013-05-09");                 // timestamp
-        checkLocalSymtabWithMalformedSymbolEntry("\"\"");                       // empty string
         checkLocalSymtabWithMalformedSymbolEntry("a_symbol");                   // symbol
         checkLocalSymtabWithMalformedSymbolEntry("{{MTIz}}");                   // blob
         checkLocalSymtabWithMalformedSymbolEntry("{{'''clob_content'''}}");     // clob
