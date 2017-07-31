@@ -75,7 +75,21 @@ final class LocalSymbolTableImports
     {
         int importTablesSize = importTables.size();
 
-        myImports = importTables.toArray(new SymbolTable[importTablesSize]);
+        // detects and adapts local tables so they are importable
+        myImports = new SymbolTable[importTablesSize];
+        for(int i = 0; i < importTables.size(); i++)
+        {
+            SymbolTable symbolTable = importTables.get(i);
+            if(symbolTable.isLocalTable())
+            {
+                myImports[i] = new LocalSymbolTableImportAdapter(symbolTable);
+            }
+            else
+            {
+                myImports[i] = symbolTable;
+            }
+        }
+
         myBaseSids = new int[importTablesSize];
         myMaxId = prepBaseSids(myBaseSids, myImports);
     }
@@ -150,7 +164,7 @@ final class LocalSymbolTableImports
         {
             SymbolTable importedTable = imports[i];
 
-            if (importedTable.isLocalTable() || importedTable.isSystemTable())
+            if (importedTable.isSystemTable())
             {
                 String message = "only non-system shared tables can be imported";
                 throw new IllegalArgumentException(message);

@@ -354,6 +354,13 @@ final class LocalSymbolTable
                     {
                         prepImportsList(importsList, reader, catalog);
                     }
+                    else if (fieldType == IonType.SYMBOL)
+                    {
+                        // trying to import the current table
+                        if(reader.getSymbolTable().isLocalTable() && ION_SYMBOL_TABLE.equals(reader.stringValue())) {
+                            importsList.add(reader.getSymbolTable());
+                        }
+                    }
                     break;
                 }
                 default:
