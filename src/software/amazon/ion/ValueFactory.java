@@ -478,8 +478,6 @@ public interface ValueFactory
      *
      * @param value the text of the symbol;
      * may be <code>null</code> to make <code>null.symbol</code>.
-     *
-     * @throws NullPointerException if <code>value</code> is null.
      */
     public IonSymbol newSymbol(String value);
 
