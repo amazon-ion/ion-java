@@ -141,15 +141,14 @@ public class TestUtils
             , "bad/utf8/surrogate_2.ion"                    // TODO amzn/ion-java#105
             , "bad/utf8/surrogate_4.ion"                    // TODO amzn/ion-java#105
             , "equivs/paddedInts.10n"                       // TODO amzn/ion-java#54
+            , "equivs/nonIVMNoOps.ion"                      // TODO amzn/ion-java#114
             , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
             , "good/utf16.ion"                              // TODO amzn/ion-java#61
             , "good/utf32.ion"                              // TODO amzn/ion-java#61
             , "good/symbolExplicitZero.10n"                 // TODO amzn/ion-java#103
             , "good/symbolImplicitZero.10n"                 // TODO amzn/ion-java#103
+            , "good/symbolZero.ion"                         // TODO amzn/ion-java#103
             , "good/whitespace.ion"                         // TODO amzn/ion-java#104
-            , "good/nopPad16Bytes.10n"                      // TODO amzn/ion-java#97
-            , "good/nopPadOneByte.10n"                      // TODO amzn/ion-java#97
-            , "bad/symbolWithTab.ion"                       // remove after https://github.com/amzn/ion-tests/pull/32 is pushed
         );
 
 
