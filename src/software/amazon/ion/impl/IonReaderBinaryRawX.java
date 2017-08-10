@@ -365,7 +365,7 @@ abstract class IonReaderBinaryRawX
             throwErrorAt("unexpected EOF encountered where a type descriptor byte was expected");
         }
         if (_value_tid == PrivateIonConstants.tidTypedecl) {
-            throwErrorAt("Malformed ION, annotation of an annotation found.");
+            throwErrorAt("An annotation wrapper may not contain another annotation wrapper.");
         }
 
         value_type = get_iontype_from_tid(_value_tid);
