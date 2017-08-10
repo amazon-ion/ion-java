@@ -129,8 +129,7 @@ public class TestUtils
 
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
-            "bad/annotationNested.10n"          // TODO amzn/ion-java#55
-            , "bad/clobWithNullCharacter.ion"               // TODO amzn/ion-java#43
+              "bad/clobWithNullCharacter.ion"               // TODO amzn/ion-java#43
             , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
             , "bad/structOrderedEmpty.10n"                  // TODO amzn/ion-java#100
             , "bad/symbolIDUnmapped.ion"                    // TODO amzn/ion-java#101
