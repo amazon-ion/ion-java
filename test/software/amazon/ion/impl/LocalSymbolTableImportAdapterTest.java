@@ -1,28 +1,22 @@
 package software.amazon.ion.impl;
 
 import java.util.Arrays;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import software.amazon.ion.IonTestCase;
 import software.amazon.ion.ReadOnlyValueException;
 import software.amazon.ion.SymbolTable;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import software.amazon.ion.SymbolToken;
 
-public class LocalSymbolTableImportAdapterTest
+public class LocalSymbolTableImportAdapterTest extends IonTestCase
 {
-    private static SymbolTableMockBuilder symbolTableMockBuilder()
-    {
-        return new SymbolTableMockBuilder();
-    }
-
     @Test
     public void testIsReadOnlyByDefault()
         throws Exception
     {
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter( symbolTableMockBuilder().build());
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(localSymbolTableBuilder().build());
 
         assertEquals(true, subject.isReadOnly());
     }
@@ -31,7 +25,7 @@ public class LocalSymbolTableImportAdapterTest
     public void testNoSystemSymbolTable()
         throws Exception
     {
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter( symbolTableMockBuilder().build());
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(localSymbolTableBuilder().build());
 
         assertEquals(null, subject.getSystemSymbolTable());
     }
@@ -40,14 +34,14 @@ public class LocalSymbolTableImportAdapterTest
     public void testImportedTables()
         throws Exception
     {
-        SymbolTable imported1 = mock(SymbolTable.class, "imported1");
-        SymbolTable imported2 = mock(SymbolTable.class, "imported2");
+        SymbolTable imported1 = mockImport();
+        SymbolTable imported2 = mockImport();
 
-        SymbolTable delegate =  symbolTableMockBuilder()
+        LocalSymbolTable delegate = localSymbolTableBuilder()
             .setImportedTables(imported1, imported2)
             .build();
 
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
         assertEquals(2, subject.getImportedTables().length);
         assertEquals(imported1, subject.getImportedTables()[0]);
@@ -55,79 +49,68 @@ public class LocalSymbolTableImportAdapterTest
     }
 
     @Test
-    public void testMaxIdDelegateWithSystemTable()
+    public void testMaxIdNoImports()
         throws Exception
     {
-        SymbolTable systemTable =  symbolTableMockBuilder()
-            .setMaxId(4)
+        LocalSymbolTable delegate = localSymbolTableBuilder()
+            .setSymbols("one", "two")
             .build();
 
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setMaxId(10)
-            .setSystemTable(systemTable)
-            .build();
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
-        when(delegate.getSystemSymbolTable()).thenReturn(systemTable);
-
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
-
-        assertEquals(6, subject.getMaxId());
+        assertEquals(2, subject.getMaxId());
     }
 
     @Test
-    public void testMaxIdDelegateWithoutSystemTable()
+    public void testMaxIdWithImports()
         throws Exception
     {
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setMaxId(10)
+        SymbolTable imported = mockImport("1", "2", "3");
+
+        LocalSymbolTable delegate = localSymbolTableBuilder()
+            .setSymbols("one", "two")
+            .setImportedTables(imported)
             .build();
 
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
-        assertEquals(10, subject.getMaxId());
+        assertEquals(5, subject.getMaxId());
     }
 
     @Test
-    public void testImportedMaxIdDelegateWithSystemTable()
+    public void testImportedMaxIdNoImports()
         throws Exception
     {
-        SymbolTable systemTable =  symbolTableMockBuilder()
-            .setMaxId(4)
+        LocalSymbolTable delegate = localSymbolTableBuilder()
+            .setSymbols("one", "two")
             .build();
 
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setMaxId(10)
-            .setImportedMaxId(4)
-            .setSystemTable(systemTable)
-            .build();
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
-        when(delegate.getSystemSymbolTable()).thenReturn(systemTable);
-
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
-
-        // ignores symbols imported from system table so imported are 4 - 4 = 0
         assertEquals(0, subject.getImportedMaxId());
     }
 
     @Test
-    public void testImportedMaxIdDelegateWithoutSystemTable()
+    public void testImportedMaxIdWithImports()
         throws Exception
     {
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setMaxId(10)
-            .setImportedMaxId(4)
+        SymbolTable imported = mockImport("1", "2", "3");
+
+        LocalSymbolTable delegate = localSymbolTableBuilder()
+            .setSymbols("one", "two")
+            .setImportedTables(imported)
             .build();
 
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
-        assertEquals(4, subject.getImportedMaxId());
+        assertEquals(3, subject.getImportedMaxId());
     }
 
     @Test(expected = ReadOnlyValueException.class)
     public void testIntern()
         throws Exception
     {
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter( symbolTableMockBuilder().build());
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(localSymbolTableBuilder().build());
 
         subject.intern("");
     }
@@ -136,19 +119,14 @@ public class LocalSymbolTableImportAdapterTest
     public void testFind()
         throws Exception
     {
-        SymbolTable imported =  symbolTableMockBuilder()
-            .setSymbols("onImport")
-            .setMaxId(1)
-            .build();
+        SymbolTable imported = mockImport("onImport");
 
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setImportedMaxId(1)
-            .setMaxId(2)
+        LocalSymbolTable delegate = localSymbolTableBuilder()
             .setImportedTables(imported)
             .setSymbols("onDelegate")
             .build();
 
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
         SymbolToken onDelegateSymbol = subject.find("onDelegate");
         assertEquals("onDelegate", onDelegateSymbol.getText());
@@ -162,26 +140,40 @@ public class LocalSymbolTableImportAdapterTest
         assertNull(unknown);
     }
 
+    private LocalSymbolTableMockBuilder localSymbolTableBuilder()
+    {
+        return new LocalSymbolTableMockBuilder(system());
+    }
+
+    private SymbolTable mockImport(String... symbols)
+    {
+        SymbolTable mock = mock(SymbolTable.class);
+        when(mock.getMaxId()).thenReturn(symbols.length);
+        for (int i = 0; i < symbols.length; i++)
+        {
+            String text = symbols[i];
+            int sid = i + 1;
+
+            when(mock.find(text)).thenReturn(new SymbolTokenImpl(text, sid));
+            when(mock.findKnownSymbol(sid)).thenReturn(text);
+            when(mock.findSymbol(text)).thenReturn(sid);
+        }
+        return mock;
+    }
+
 
     @Test
     public void testFindSymbol()
         throws Exception
     {
-        SymbolTable imported = symbolTableMockBuilder()
-            .setMockName("imported")
-            .setSymbols("onImport")
-            .setMaxId(1)
-            .build();
+        SymbolTable imported = mockImport("onImport");
 
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setMockName("delegate")
-            .setImportedMaxId(1)
-            .setMaxId(2)
+        LocalSymbolTable delegate =  localSymbolTableBuilder()
             .setImportedTables(imported)
             .setSymbols("onDelegate")
             .build();
 
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
         int onDelegateSid = subject.findSymbol("onDelegate");
         assertEquals(2, onDelegateSid);
@@ -197,21 +189,14 @@ public class LocalSymbolTableImportAdapterTest
     public void testFindKnownSymbol()
         throws Exception
     {
-        SymbolTable imported =  symbolTableMockBuilder()
-            .setMockName("imported")
-            .setSymbols("onImport")
-            .setMaxId(1)
-            .build();
+        SymbolTable imported = mockImport("onImport");
 
-        SymbolTable delegate =  symbolTableMockBuilder()
-            .setMockName("delegate")
-            .setImportedMaxId(1)
-            .setMaxId(2)
+        LocalSymbolTable delegate =  localSymbolTableBuilder()
             .setImportedTables(imported)
             .setSymbols("onDelegate")
             .build();
 
-        LocalSymbolTableImportAdapter subject = new LocalSymbolTableImportAdapter(delegate);
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
 
         String onDelegate = subject.findKnownSymbol(2);
         assertEquals("onDelegate", onDelegate);
@@ -223,74 +208,39 @@ public class LocalSymbolTableImportAdapterTest
         assertNull(unknown);
     }
 
-    private static class SymbolTableMockBuilder
+    private static class LocalSymbolTableMockBuilder
     {
-        private int maxId = 0;
-        private int importedMaxId = 0;
+        private final PrivateIonSystem system;
         private String[] symbols = new String[0];
         private SymbolTable[] importedTables = new SymbolTable[0];
-        private String mockName = null;
 
-        private SymbolTable systemTable = null;
-
-        public SymbolTable build()
+        private LocalSymbolTableMockBuilder(PrivateIonSystem system)
         {
-            SymbolTable mock = mock(SymbolTable.class, mockName);
-
-            when(mock.getMaxId()).thenReturn(maxId);
-            when(mock.getImportedMaxId()).thenReturn(importedMaxId);
-            when(mock.getImportedTables()).thenReturn(importedTables);
-            when(mock.getSystemSymbolTable()).thenReturn(systemTable);
-
-            when(mock.iterateDeclaredSymbolNames()).thenReturn(Arrays.asList(symbols).iterator());
-            for(int i = 0; i < symbols.length; i++)
-            {
-                String text = symbols[i];
-                int sid = importedMaxId + i + 1;
-
-                when(mock.find(text)).thenReturn(new SymbolTokenImpl(text, sid));
-                when(mock.findKnownSymbol(sid)).thenReturn(text);
-            }
-
-            return mock;
+            this.system = system;
         }
 
-        public SymbolTableMockBuilder setMockName(String mockName)
+        public LocalSymbolTable build()
         {
-            this.mockName = mockName;
+            LocalSymbolTable localSymbolTable = LocalSymbolTable.makeNewLocalSymbolTable(
+                system,
+                system.getSystemSymbolTable(),
+                Arrays.asList(symbols),
+                importedTables
+            );
 
-            return this;
+            localSymbolTable.makeReadOnly();
+
+            return localSymbolTable;
         }
 
-        public SymbolTableMockBuilder setSystemTable(SymbolTable systemTable)
-        {
-            this.systemTable = systemTable;
-
-            return this;
-        }
-
-        public SymbolTableMockBuilder setMaxId(final int maxId)
-        {
-            this.maxId = maxId;
-
-            return this;
-        }
-
-        public SymbolTableMockBuilder setImportedMaxId(final int importedMaxId)
-        {
-            this.importedMaxId = importedMaxId;
-
-            return this;
-        }
-
-        public SymbolTableMockBuilder setSymbols(final String... symbols)
+        public LocalSymbolTableMockBuilder setSymbols(final String... symbols)
         {
             this.symbols = symbols;
 
             return this;
         }
 
-        public SymbolTableMockBuilder setImportedTables(final SymbolTable... importedTables)
+        public LocalSymbolTableMockBuilder setImportedTables(final SymbolTable... importedTables)
         {
             this.importedTables = importedTables;
 

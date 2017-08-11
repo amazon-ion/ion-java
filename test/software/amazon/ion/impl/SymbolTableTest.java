@@ -178,6 +178,26 @@ public class SymbolTableTest
     }
 
     @Test
+    public void testLocalSymbolTableAppendThroughDom()
+    {
+        SymbolTable base = system().newLocalSymbolTable();
+        base.intern("beforeDerivedCreation");
+
+        SymbolTable derived = system().newLocalSymbolTable(base);
+        derived.intern("onDerived");
+
+        base.intern("afterDerivedCreation");
+
+        checkSymbol("beforeDerivedCreation", systemMaxId() + 1, derived);
+        checkSymbol("onDerived", systemMaxId() + 2, derived);
+
+        // derived only see symbols that were added in base before derived creation
+        // so "afterDerivedCreation" is unknown to derived
+        checkUnknownSymbol("afterDerivedCreation", UNKNOWN_SYMBOL_ID, derived);
+        checkSymbol("afterDerivedCreation", systemMaxId() + 2, base);
+    }
+
+    @Test
     public void testLocalSymbolTableMultiAppend()
     {
         String text =

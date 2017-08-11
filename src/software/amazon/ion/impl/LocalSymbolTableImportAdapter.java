@@ -31,7 +31,32 @@ final class LocalSymbolTableImportAdapter
     private String[] sidToLocalText;
     private SymbolTable[] importedTables;
 
-    LocalSymbolTableImportAdapter(final SymbolTable delegate)
+    static LocalSymbolTableImportAdapter of(final LocalSymbolTable delegate)
+    {
+        /*
+         * There is a hard boundary between the data regions from the imported and derived table. Example:
+         *
+         * LST A that contains symbol A1, LST B is created importing LST A and after B is created symbol A2 is added
+         * to LST A. LST B should have symbol A1, through the import, but it should not have symbol A2 as it was included
+         * after LST B creation
+         *
+         * To maintain this boundary we make a read only copy for mutable LSTs. Copying is not necessary for read only LSTs
+         * as no extra items can be added into them
+         */
+        final LocalSymbolTable readOnlyDelegate;
+        if(delegate.isReadOnly())
+        {
+            readOnlyDelegate = delegate;
+        }
+        else {
+            readOnlyDelegate = delegate.makeCopy();
+            readOnlyDelegate.makeReadOnly();
+        }
+
+        return new LocalSymbolTableImportAdapter(readOnlyDelegate);
+    }
+
+    private LocalSymbolTableImportAdapter(final LocalSymbolTable delegate)
     {
         super(delegate);
 
@@ -52,7 +77,7 @@ final class LocalSymbolTableImportAdapter
     @Override
     public void makeReadOnly()
     {
-        // is read only by default
+        // read only by default
     }
 
     @Override
@@ -150,7 +175,7 @@ final class LocalSymbolTableImportAdapter
         return getSidToLocalText()[index];
     }
 
-    private List<SymbolTable> createImportList(SymbolTable delegate)
+    private List<SymbolTable> createImportList(LocalSymbolTable delegate)
     {
         SymbolTable[] asArray = delegate.getImportedTables();
         List<SymbolTable> imports = new ArrayList<SymbolTable>(asArray.length);

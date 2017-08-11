@@ -14,6 +14,7 @@
 
 package software.amazon.ion.impl;
 
+import java.util.ArrayList;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
 import java.util.Arrays;
@@ -82,7 +83,7 @@ final class LocalSymbolTableImports
             SymbolTable symbolTable = importTables.get(i);
             if(symbolTable.isLocalTable())
             {
-                myImports[i] = new LocalSymbolTableImportAdapter(symbolTable);
+                myImports[i] = LocalSymbolTableImportAdapter.of((LocalSymbolTable) symbolTable);
             }
             else
             {
@@ -117,18 +118,33 @@ final class LocalSymbolTableImports
 
         if (imports != null && imports.length > 0)
         {
+            final int offset;
+            final SymbolTable systemTable;
             if (imports[0].isSystemTable())
             {
-                // copy imports as-is
-                myImports = new SymbolTable[imports.length];
-                System.arraycopy(imports, 0, myImports, 0, imports.length);
+                offset = 0;
+                systemTable = imports[0];
             }
             else
             {
-                // use defaultSystemSymtab and append imports
-                myImports = new SymbolTable[imports.length + 1];
-                myImports[0] = defaultSystemSymtab;
-                System.arraycopy(imports, 0, myImports, 1, imports.length);
+                offset = 1;
+                systemTable = defaultSystemSymtab;
+            }
+
+            myImports = new SymbolTable[imports.length + offset];
+            myImports[0] = systemTable;
+
+            for(int i = 1 - offset; i < imports.length; i++)
+            {
+                SymbolTable symbolTable = imports[i];
+                if(symbolTable.isLocalTable())
+                {
+                    myImports[i + offset] = LocalSymbolTableImportAdapter.of((LocalSymbolTable) symbolTable);
+                }
+                else
+                {
+                    myImports[i + offset] = symbolTable;
+                }
             }
         }
         else
