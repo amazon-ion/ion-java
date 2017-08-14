@@ -327,7 +327,7 @@ final class LocalSymbolTable
                     // As per the Spec, other field types are treated as
                     // empty lists
                     if(foundLocalSymbolList){
-                        throw new IonException("Multiple symbol tables found.");
+                        throw new IonException("Multiple symbol fields found within a single local symbol table.");
                     }
                     foundLocalSymbolList = true;
                     if (fieldType == IonType.LIST)
@@ -355,7 +355,7 @@ final class LocalSymbolTable
                 case IMPORTS_SID:
                 {
                     if(foundImportList){
-                        throw new IonException("Multiple import tables found.");
+                        throw new IonException("Multiple imports fields found within a single local symbol table.");
                     }
                     foundImportList = true;
                     if (fieldType == IonType.LIST)
