@@ -238,7 +238,7 @@ class IonWriterSystemText
     private void writeSidLiteral(int sid)
         throws IOException
     {
-        assert sid > 0;
+        assert sid >= 0;
 
         // No extra handling needed for JSON strings, this is already legal.
 

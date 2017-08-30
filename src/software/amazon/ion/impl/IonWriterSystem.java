@@ -281,8 +281,8 @@ abstract class IonWriterSystem
     @Override
     final void writeSymbol(int symbolId) throws IOException
     {
-        if (symbolId < 1) {
-            throw new IllegalArgumentException("symbol IDs are greater than 0");
+        if (symbolId < 0) {
+            throw new IllegalArgumentException("symbol IDs are >= 0.");
         }
 
         if (symbolId == SystemSymbols.ION_1_0_SID
@@ -389,7 +389,7 @@ abstract class IonWriterSystem
         else
         {
             int sid = name.getSid();
-            if (sid <= 0) {
+            if (sid < 0) {
                 throw new IllegalArgumentException();
             }
 

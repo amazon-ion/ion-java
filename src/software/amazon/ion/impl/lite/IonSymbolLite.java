@@ -57,7 +57,7 @@ final class IonSymbolLite
         {
             String text = sym.getText();
             int sid = sym.getSid();
-            assert text != null || sid > 0;
+            assert text != null || sid >= 0;
 
             if (text != null)
             {
@@ -79,7 +79,11 @@ final class IonSymbolLite
     @Override
     IonSymbolLite clone(IonContext context)
     {
-        return new IonSymbolLite(this, context);
+        IonSymbolLite clone = new IonSymbolLite(this, context);
+        if(this._sid == 0) {
+            clone._sid = 0;
+        }
+        return clone;
     }
 
     @Override
@@ -88,7 +92,7 @@ final class IonSymbolLite
         // If this symbol has unknown text but known Sid, this symbol has no
         // semantic meaning, as such cloning should throw an exception.
         if (!isNullValue()
-            && _sid != UNKNOWN_SYMBOL_ID
+            && _sid != UNKNOWN_SYMBOL_ID && _sid != 0
             && _stringValue() == null) {
             throw new UnknownSymbolException(_sid);
         }
@@ -144,7 +148,7 @@ final class IonSymbolLite
         String name = _get_value();
         if (name == null)
         {
-            assert _sid > 0;
+            assert _sid >= 0;
 
             SymbolTable symbols = symbolTableProvider.getSymbolTable();
             name = symbols.findKnownSymbol(_sid);

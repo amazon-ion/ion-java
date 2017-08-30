@@ -28,7 +28,7 @@ final class SymbolTokenImpl
 
     SymbolTokenImpl(String text, int sid)
     {
-        assert text != null || sid > 0 : "Neither text nor sid is defined";
+        assert text != null || sid >= 0 : "Neither text nor sid is defined";
 
         myText = text;
         mySid = sid;
@@ -36,7 +36,7 @@ final class SymbolTokenImpl
 
     SymbolTokenImpl(int sid)
     {
-        assert sid > 0 : "sid is undefined";
+        assert sid >= 0 : "sid is undefined";
 
         myText = null;
         mySid = sid;

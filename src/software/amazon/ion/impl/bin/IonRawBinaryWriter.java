@@ -46,13 +46,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import software.amazon.ion.IonCatalog;
-import software.amazon.ion.IonException;
-import software.amazon.ion.IonType;
-import software.amazon.ion.IonWriter;
-import software.amazon.ion.SymbolTable;
-import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Timestamp;
+
+import software.amazon.ion.*;
+import software.amazon.ion.impl.PrivateUtils;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -740,7 +736,7 @@ import software.amazon.ion.Timestamp;
     private static int checkSid(SymbolToken symbol)
     {
         final int sid = symbol.getSid();
-        if (sid < 1)
+        if (sid < 0)
         {
             throw new IllegalArgumentException("Invalid symbol: " + symbol.getText() + " SID: " + sid);
         }

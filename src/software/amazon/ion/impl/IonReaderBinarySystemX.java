@@ -250,7 +250,7 @@ class IonReaderBinarySystemX
             break;
         case SYMBOL:
             long sid = readULong(_value_len);
-            if (sid < 1 || sid > Integer.MAX_VALUE) {
+            if (sid < 0 || sid > Integer.MAX_VALUE) {
                 String message = "symbol id ["
                                + sid
                                + "] out of range "
