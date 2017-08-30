@@ -556,14 +556,13 @@ final class SharedSymbolTable
 
     public String findKnownSymbol(int id)
     {
-        if (id < 1)
+        if (id < 0)
         {
-            throw new
-                IllegalArgumentException("symbol IDs must be greater than 0");
+            throw new IllegalArgumentException("symbol IDs must be >= 0");
         }
 
         int offset = id - 1;
-        if (offset < mySymbolNames.length)
+        if (id != 0 && offset < mySymbolNames.length)
         {
             return mySymbolNames[offset];
         }

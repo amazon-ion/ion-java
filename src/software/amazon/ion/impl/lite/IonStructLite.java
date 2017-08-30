@@ -517,7 +517,7 @@ final class IonStructLite
             return;
         }
 
-        if (fieldName.getSid() < 1)
+        if (fieldName.getSid() < 0)
         {
             throw new IllegalArgumentException("fieldName has no text or ID");
         }

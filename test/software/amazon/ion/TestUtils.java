@@ -144,9 +144,6 @@ public class TestUtils
             , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
             , "good/utf16.ion"                              // TODO amzn/ion-java#61
             , "good/utf32.ion"                              // TODO amzn/ion-java#61
-            , "good/symbolExplicitZero.10n"                 // TODO amzn/ion-java#103
-            , "good/symbolImplicitZero.10n"                 // TODO amzn/ion-java#103
-            , "good/symbolZero.ion"                         // TODO amzn/ion-java#103
             , "good/whitespace.ion"                         // TODO amzn/ion-java#104
         );
 

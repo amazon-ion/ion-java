@@ -459,11 +459,10 @@ abstract class IonValueLite
         else if (sid > 0) {
             text = symbolTableProvider.getSymbolTable().findKnownSymbol(sid);
         }
-        else {
+        else if(sid != 0){
             // not a struct field
             return null;
         }
-
         return PrivateUtils.newSymbolToken(text, sid);
     }
 
@@ -514,7 +513,7 @@ abstract class IonValueLite
      */
     final void setFieldNameSymbol(SymbolToken name)
     {
-        assert(this.getContainer() == null);
+        //assert(this.getContainer() == null);
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name.getText();
         _fieldId   = name.getSid();
@@ -524,6 +523,8 @@ abstract class IonValueLite
     {
         if (_fieldName != null) return _fieldName;
         if (_fieldId < 0) return null;
+        //if sid == 0 than we accept the symbolid 0 with a null fieldname
+        if (_fieldId == 0) return null;
 
         // TODO amzn/ion-java#27 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
