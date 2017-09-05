@@ -300,6 +300,8 @@ final class LocalSymbolTable
         importsList.add(systemSymbolTable);
 
         IonType fieldType;
+        boolean foundImportList = false;
+        boolean foundLocalSymbolList = false;
         while ((fieldType = reader.next()) != null)
         {
             if (reader.isNullValue()) continue;
@@ -314,8 +316,6 @@ final class LocalSymbolTable
                 sid = getSidForSymbolTableField(fieldName);
             }
 
-            // TODO amzn/ion-java#35 If there's more than one 'symbols' or 'imports'
-            //      field, they will be merged together.
             // TODO amzn/ion-java#36 Switching over SIDs doesn't cover the case
             //      where the relevant field names are defined by a prev LST;
             //      the prev LST could have 'symbols' defined locally with a
@@ -326,6 +326,10 @@ final class LocalSymbolTable
                 {
                     // As per the Spec, other field types are treated as
                     // empty lists
+                    if(foundLocalSymbolList){
+                        throw new IonException("Multiple symbol tables found.");
+                    }
+                    foundLocalSymbolList = true;
                     if (fieldType == IonType.LIST)
                     {
                         reader.stepIn();
@@ -350,6 +354,10 @@ final class LocalSymbolTable
                 }
                 case IMPORTS_SID:
                 {
+                    if(foundImportList){
+                        throw new IonException("Multiple import tables found.");
+                    }
+                    foundImportList = true;
                     if (fieldType == IonType.LIST)
                     {
                         prepImportsList(importsList, reader, catalog);
