@@ -61,14 +61,9 @@ abstract class IonContainerLite
                      : this;
 
                 IonValueLite copy = child.clone(childContext);
-                if (isStruct) {//dont need the getsid==0 for test cases but might be important for edgecase
-                        if(child.getFieldName() == null && child.getFieldNameSymbol().getSid() == 0) {
-                            copy.setFieldNameSymbol(child.getFieldNameSymbol());
-                        }else {
-                            copy.setFieldName(child.getFieldName());
-                        }
+                if (isStruct) {
+                        copy.setFieldNameSymbol(child.getKnownFieldNameSymbol());
                 }
-
                 this._children[i] = copy;
             }
         }
