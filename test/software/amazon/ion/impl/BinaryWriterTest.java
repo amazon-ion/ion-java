@@ -248,33 +248,6 @@ public class BinaryWriterTest
         Assert.assertArrayEquals(bytes2, bytes3);
     }
 
-    /*
-     * Tests write of a stream larger than 2GB.
-     */
-    @Test
-    public void testHugeWrite() throws IOException
-    {
-        IonSystem ion = system();
-        IonWriter ionWriter = IonBinaryWriterBuilder.standard().build(new NullOutputStream());
-        final int CHUNK_LENGTH = 1024;
-        byte[] bytes = new byte[CHUNK_LENGTH];
-        for (int i = 0; i < CHUNK_LENGTH; i++)
-        {
-            bytes[i] = (byte)(i % 128);
-        }
-        IonValue value = ion.newString(new String(bytes, "UTF-8"));
-        long twoGB = 2L * 1024 * 1024 * 1024;
-        long repeats = (twoGB / CHUNK_LENGTH) + 1; //go just past the limit
-        long bytesWritten = 0;
-        for (long i = 0; i < repeats; i++)
-        {
-            value.writeTo(ionWriter);
-            bytesWritten += CHUNK_LENGTH;
-        }
-        ionWriter.close();
-        assertTrue(bytesWritten >= twoGB);
-    }
-
     @Test
     public void testNoIVMWrittenWhenNoValuesWritten() throws IOException
     {
