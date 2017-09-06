@@ -740,7 +740,7 @@ import software.amazon.ion.Timestamp;
     private static int checkSid(SymbolToken symbol)
     {
         final int sid = symbol.getSid();
-        if (sid < 1)
+        if (sid < 0)
         {
             throw new IllegalArgumentException("Invalid symbol: " + symbol.getText() + " SID: " + sid);
         }

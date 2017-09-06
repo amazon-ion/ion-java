@@ -457,9 +457,9 @@ final class LocalSymbolTable
     {
         String name = null;
 
-        if (id < 1)
+        if (id < 0)
         {
-            String message = "symbol IDs must be greater than 0";
+            String message = "symbol IDs must be >= 0";
             throw new IllegalArgumentException(message);
         }
         else if (id < myFirstLocalSid)
