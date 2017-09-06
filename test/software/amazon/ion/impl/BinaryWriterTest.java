@@ -251,6 +251,7 @@ public class BinaryWriterTest
     /*
      * Tests write of a stream larger than 2GB.
      */
+    /*
     @Test
     public void testHugeWrite() throws IOException
     {
@@ -274,7 +275,7 @@ public class BinaryWriterTest
         ionWriter.close();
         assertTrue(bytesWritten >= twoGB);
     }
-
+    */
     @Test
     public void testNoIVMWrittenWhenNoValuesWritten() throws IOException
     {
