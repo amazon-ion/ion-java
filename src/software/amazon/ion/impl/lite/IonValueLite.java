@@ -469,7 +469,7 @@ abstract class IonValueLite
     public final SymbolToken getKnownFieldNameSymbol()
     {
         SymbolToken token = this.getFieldNameSymbol();
-        if(this.getFieldName() == null && token.getSid() != 0) {
+        if (token.getText() == null && token.getSid() != 0) {
             throw new UnknownSymbolException(_fieldId);
         }
         return token;
@@ -522,7 +522,6 @@ abstract class IonValueLite
      */
     final void setFieldNameSymbol(SymbolToken name)
     {
-        //assert(this.getContainer() == null);
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name.getText();
         _fieldId   = name.getSid();
