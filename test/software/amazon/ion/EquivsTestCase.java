@@ -17,6 +17,9 @@ package software.amazon.ion;
 import static software.amazon.ion.IonType.DATAGRAM;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import org.junit.Test;
 import software.amazon.ion.IonDatagram;
 import software.amazon.ion.IonSequence;
@@ -24,6 +27,9 @@ import software.amazon.ion.IonString;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.junit.IonAssert;
+import software.amazon.ion.system.IonBinaryWriterBuilder;
+import software.amazon.ion.system.IonSystemBuilder;
+import software.amazon.ion.system.IonTextWriterBuilder;
 
 public class EquivsTestCase
     extends IonTestCase
@@ -101,6 +107,7 @@ public class EquivsTestCase
             {
                 for (int i = 0; i < sequenceSize; i++)
                 {
+
                     IonValue thisValue = sequence.get(i);
                     if (embeddedDocuments)
                     {
@@ -187,12 +194,45 @@ public class EquivsTestCase
         }
     }
 
+    protected void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) {
+        IonSystem system = IonSystemBuilder.standard().build();
+        IonLoader loader = system.getLoader();
+
+        try {
+            File textFile = File.createTempFile("temp", "");
+            File binaryFile = File.createTempFile("temp", "");
+            IonWriter textWriter = IonTextWriterBuilder.standard().build(new FileOutputStream(textFile));
+            IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(new FileOutputStream(binaryFile));
+            IonReader reader = system.newReader(input);
+            textWriter.writeValues(reader);
+            textWriter.close();
+            reader = system.newReader(input);
+            binaryWriter.writeValues(reader);
+            binaryWriter.close();
+            IonDatagram text = loader.load(textFile);
+            IonDatagram binary = loader.load(binaryFile);
+            textFile.delete();
+            binaryFile.delete();
+            runEquivalenceChecks(text, myExpectedEquality);
+            runEquivalenceChecks(binary, myExpectedEquality);
+            checkEquivalence(input, text, true);
+            checkEquivalence(text, binary, true);
+            checkEquivalence(binary, input, true);
+        }catch(Exception IOException){
+            System.out.println("File IO failure.");
+        }
+
+
+
+    }
+
     @Test
     public void testEquivsOverFile()
     throws Exception
     {
         IonDatagram dg = loader().load(myTestFile);
         runEquivalenceChecks(dg, myExpectedEquality);
+        roundTripEquivalence(dg, myExpectedEquality);
     }
 
     @Test
