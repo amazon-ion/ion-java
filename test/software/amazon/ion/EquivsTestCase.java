@@ -16,10 +16,6 @@ package software.amazon.ion;
 
 import static software.amazon.ion.IonType.DATAGRAM;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import org.junit.Test;
 import software.amazon.ion.IonDatagram;
 import software.amazon.ion.IonSequence;
@@ -30,6 +26,10 @@ import software.amazon.ion.junit.IonAssert;
 import software.amazon.ion.system.IonBinaryWriterBuilder;
 import software.amazon.ion.system.IonSystemBuilder;
 import software.amazon.ion.system.IonTextWriterBuilder;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 
 public class EquivsTestCase
     extends IonTestCase
@@ -194,36 +194,26 @@ public class EquivsTestCase
         }
     }
 
-    protected void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) {
+    protected void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
         IonSystem system = IonSystemBuilder.standard().build();
         IonLoader loader = system.getLoader();
-
-        try {
-            File textFile = File.createTempFile("temp", "");
-            File binaryFile = File.createTempFile("temp", "");
-            IonWriter textWriter = IonTextWriterBuilder.standard().build(new FileOutputStream(textFile));
-            IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(new FileOutputStream(binaryFile));
-            IonReader reader = system.newReader(input);
-            textWriter.writeValues(reader);
-            textWriter.close();
-            reader = system.newReader(input);
-            binaryWriter.writeValues(reader);
-            binaryWriter.close();
-            IonDatagram text = loader.load(textFile);
-            IonDatagram binary = loader.load(binaryFile);
-            textFile.delete();
-            binaryFile.delete();
-            runEquivalenceChecks(text, myExpectedEquality);
-            runEquivalenceChecks(binary, myExpectedEquality);
-            checkEquivalence(input, text, true);
-            checkEquivalence(text, binary, true);
-            checkEquivalence(binary, input, true);
-        }catch(Exception IOException){
-            System.out.println("File IO failure.");
-        }
-
-
-
+        ByteArrayOutputStream textOutputStream = new ByteArrayOutputStream();
+        ByteArrayOutputStream binaryOutputStream = new ByteArrayOutputStream();
+        IonWriter textWriter = IonTextWriterBuilder.standard().build(textOutputStream);
+        IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOutputStream);
+        IonReader reader = system.newReader(input);
+        textWriter.writeValues(reader);
+        textWriter.close();
+        reader = system.newReader(input);
+        binaryWriter.writeValues(reader);
+        binaryWriter.close();
+        IonDatagram text = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
+        IonDatagram binary = loader.load(new ByteArrayInputStream(binaryOutputStream.toByteArray()));
+        runEquivalenceChecks(text, myExpectedEquality);
+        runEquivalenceChecks(binary, myExpectedEquality);
+        checkEquivalence(input, text, true);
+        checkEquivalence(text, binary, true);
+        checkEquivalence(binary, input, true);
     }
 
     @Test
