@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 
 public class EquivsTestCase
     extends IonTestCase
@@ -194,7 +195,7 @@ public class EquivsTestCase
         }
     }
 
-    protected void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
+    public static IonDatagram[] roundTripDatagram(IonDatagram input) throws IOException{
         IonSystem system = IonSystemBuilder.standard().build();
         IonLoader loader = system.getLoader();
         ByteArrayOutputStream textOutputStream = new ByteArrayOutputStream();
@@ -207,13 +208,18 @@ public class EquivsTestCase
         reader = system.newReader(input);
         binaryWriter.writeValues(reader);
         binaryWriter.close();
-        IonDatagram text = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
-        IonDatagram binary = loader.load(new ByteArrayInputStream(binaryOutputStream.toByteArray()));
-        runEquivalenceChecks(text, myExpectedEquality);
-        runEquivalenceChecks(binary, myExpectedEquality);
-        checkEquivalence(input, text, true);
-        checkEquivalence(text, binary, true);
-        checkEquivalence(binary, input, true);
+        IonDatagram[] data = new IonDatagram[3];
+        data[0] = input;
+        data[1] = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
+        data[2] = loader.load(new ByteArrayInputStream(binaryOutputStream.toByteArray()));
+        return data;
+    }
+
+    public static void roundTripEquivalence(IonDatagram input) throws IOException {
+        IonDatagram[] data = roundTripDatagram(input);
+        IonAssert.assertIonEquals(data[0], data[1]);
+        IonAssert.assertIonEquals(data[2], data[0]);
+        IonAssert.assertIonEquals(data[1], data[2]);
     }
 
     @Test
@@ -222,7 +228,7 @@ public class EquivsTestCase
     {
         IonDatagram dg = loader().load(myTestFile);
         runEquivalenceChecks(dg, myExpectedEquality);
-        roundTripEquivalence(dg, myExpectedEquality);
+        roundTripEquivalence(dg);
     }
 
     @Test

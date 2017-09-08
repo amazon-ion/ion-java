@@ -28,6 +28,7 @@ import software.amazon.ion.IonReader;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.junit.Injected.Inject;
+import software.amazon.ion.junit.IonAssert;
 import software.amazon.ion.streaming.ReaderCompare;
 
 public class GoodIonTest
@@ -98,6 +99,8 @@ public class GoodIonTest
             IonReader binaryReader = system().newReader(encoded);
 
             ReaderCompare.compare(treeReader, binaryReader);
+        } else {
+           EquivsTest.roundTripEquivalence(datagram);
         }
     }
 
