@@ -108,7 +108,6 @@ public class EquivsTestCase
             {
                 for (int i = 0; i < sequenceSize; i++)
                 {
-
                     IonValue thisValue = sequence.get(i);
                     if (embeddedDocuments)
                     {
@@ -180,8 +179,7 @@ public class EquivsTestCase
             IonAssert.assertIonEquals(right, left);
 
             // IonDatagram's hashCode() is unsupported
-            if (left.getType() != DATAGRAM &&
-                    right.getType() != DATAGRAM)
+            if (left.getType() != DATAGRAM && right.getType() != DATAGRAM)
                 assertEquals("Equal values have unequal hashes",
                         left.hashCode(), right.hashCode());
         }
@@ -225,9 +223,9 @@ public class EquivsTestCase
 
     public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
         IonDatagram[] data = roundTripDatagram(input);
-        for(int i = 0; i < data.length - 1; i++){
+        for(int i = 0; i < data.length; i++){
             runEquivalenceChecks(data[i], myExpectedEquality);
-            checkEquivalence(data[i], data[i + 1], true);
+            checkEquivalence(data[i], data[((i + 1) % data.length)], true);
         }
     }
 
