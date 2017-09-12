@@ -89,10 +89,10 @@ public class GoodIonTest
             in.close();
         }
 
-            treeReader = system().newReader(datagram);
-            byte[] encoded = datagram.getBytes();
-            IonReader binaryReader = system().newReader(encoded);
-            ReaderCompare.compare(treeReader, binaryReader);
+        treeReader = system().newReader(datagram);
+        byte[] encoded = datagram.getBytes();
+        IonReader binaryReader = system().newReader(encoded);
+        ReaderCompare.compare(treeReader, binaryReader);
     }
 
 
