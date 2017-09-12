@@ -89,19 +89,10 @@ public class GoodIonTest
             in.close();
         }
 
-
-        // Pass 4: Encode to binary, and use Reader
-        if (! myFileIsBinary) {
-            // Check the encoding of text to binary.
             treeReader = system().newReader(datagram);
-
             byte[] encoded = datagram.getBytes();
             IonReader binaryReader = system().newReader(encoded);
-
             ReaderCompare.compare(treeReader, binaryReader);
-        } else {
-           EquivsTest.roundTripEquivalence(datagram);
-        }
     }
 
 

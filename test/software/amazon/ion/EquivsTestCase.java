@@ -172,21 +172,17 @@ public class EquivsTestCase
      */
     protected void checkEquivalence(final IonValue left,
                                     final IonValue right,
-                                    boolean expectedEquality)
-    {
-        if (expectedEquality)
-        {
+                                    boolean expectedEquality) {
+        if (expectedEquality) {
             IonAssert.assertIonEquals(left, right);
             IonAssert.assertIonEquals(right, left);
 
             // IonDatagram's hashCode() is unsupported
-            if (left.getType()  != DATAGRAM &&
-                right.getType() != DATAGRAM)
+            if (left.getType() != DATAGRAM &&
+                    right.getType() != DATAGRAM)
                 assertEquals("Equal values have unequal hashes",
-                             left.hashCode(), right.hashCode());
-        }
-        else
-        {
+                        left.hashCode(), right.hashCode());
+        } else {
             // Ensure the two values compared both ways return the same consistent
             // result, i.e. false. This is not related to the symmetric property
             // of equalities.
@@ -215,11 +211,12 @@ public class EquivsTestCase
         return data;
     }
 
-    public static void roundTripEquivalence(IonDatagram input) throws IOException {
+    public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
         IonDatagram[] data = roundTripDatagram(input);
-        IonAssert.assertIonEquals(data[0], data[1]);
-        IonAssert.assertIonEquals(data[2], data[0]);
-        IonAssert.assertIonEquals(data[1], data[2]);
+        for(int i = 0; i < data.length - 1; i++){
+            runEquivalenceChecks(data[i], myExpectedEquality);
+            checkEquivalence(data[i], data[i + 1], true);
+        }
     }
 
     @Test
@@ -228,7 +225,7 @@ public class EquivsTestCase
     {
         IonDatagram dg = loader().load(myTestFile);
         runEquivalenceChecks(dg, myExpectedEquality);
-        roundTripEquivalence(dg);
+        roundTripEquivalence(dg, myExpectedEquality);
     }
 
     @Test
