@@ -447,12 +447,13 @@ public final class IonAssert
      */
     private static HashMap<String,List<IonValue>> sortFields(IonStruct s)
     {
-        HashMap<String,List<IonValue>> sorted = new HashMap<String,List<IonValue>>();
+        HashMap<String,List<IonValue>> sorted =
+            new HashMap<String,List<IonValue>>();
         for (IonValue v : s)
         {
             SymbolToken tok = v.getFieldNameSymbol();
             String text = tok.getText();
-            if (text == null && tok.getSid() != 0) {
+            if (text == null) {
                 text = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid(); // TODO amzn/ion-java#23
             }
             List<IonValue> fields = sorted.get(text);
