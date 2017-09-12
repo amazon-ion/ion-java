@@ -60,11 +60,11 @@ public class EquivTimelineTest
         for(int i = 0; i < data.length; i++) {
             runEquivalenceChecks(data[i], myExpectedEquality);
             for(int j = i + 1; j < data.length; j++) {
-                for(int sexpIndice = 0; sexpIndice < data[i].size(); sexpIndice++) {
-                    int maxTimeStampIndice = ((IonSexp)data[i].get(sexpIndice)).size();
+                for(int seqIndice = 0; seqIndice < data[i].size(); seqIndice++) {
+                    int maxTimeStampIndice = ((IonSequence)data[i].get(seqIndice)).size();
                     for(int timeStampIndice = 0; timeStampIndice < maxTimeStampIndice; timeStampIndice++) {
-                        IonValue timeStamp1 = ((IonSexp)(data[i].get(sexpIndice))).get(timeStampIndice);
-                        IonValue timeStamp2 = ((IonSexp)(data[j].get(sexpIndice))).get(timeStampIndice);
+                        IonValue timeStamp1 = ((IonSequence)(data[i].get(seqIndice))).get(timeStampIndice);
+                        IonValue timeStamp2 = ((IonSequence)(data[j].get(seqIndice))).get(timeStampIndice);
                         checkEquivalence(timeStamp1, timeStamp2, true);
                     }
                 }
