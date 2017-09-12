@@ -179,9 +179,10 @@ public class EquivsTestCase
             IonAssert.assertIonEquals(right, left);
 
             // IonDatagram's hashCode() is unsupported
-            if (left.getType() != DATAGRAM && right.getType() != DATAGRAM)
+            if (left.getType() != DATAGRAM &&
+                right.getType() != DATAGRAM)
                 assertEquals("Equal values have unequal hashes",
-                        left.hashCode(), right.hashCode());
+                             left.hashCode(), right.hashCode());
         }
         else
         {
