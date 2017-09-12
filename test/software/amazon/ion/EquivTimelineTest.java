@@ -57,12 +57,15 @@ public class EquivTimelineTest
     @Override
     public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
         IonDatagram[] data = roundTripDatagram(input);
-        for(int i = 0; i < data.length - 1; i++){
+        for(int i = 0; i < data.length; i++) {
             runEquivalenceChecks(data[i], myExpectedEquality);
             for(int j = i + 1; j < data.length; j++) {
                 for(int sexpIndice = 0; sexpIndice < data[i].size(); sexpIndice++) {
-                    for(int timestampIndice = 0; timestampIndice < ((IonSexp)data[i].get(sexpIndice)).size(); timestampIndice++) {
-                        checkEquivalence(((IonSexp)(data[i].get(sexpIndice))).get(timestampIndice), ((IonSexp)(data[j].get(sexpIndice))).get(timestampIndice), true);
+                    int maxTimeStampIndice = ((IonSexp)data[i].get(sexpIndice)).size();
+                    for(int timeStampIndice = 0; timeStampIndice < maxTimeStampIndice; timeStampIndice++) {
+                        IonValue timeStamp1 = ((IonSexp)(data[i].get(sexpIndice))).get(timeStampIndice);
+                        IonValue timeStamp2 = ((IonSexp)(data[j].get(sexpIndice))).get(timeStampIndice);
+                        checkEquivalence(timeStamp1, timeStamp2, true);
                     }
                 }
             }

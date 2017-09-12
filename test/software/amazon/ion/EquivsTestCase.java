@@ -172,8 +172,10 @@ public class EquivsTestCase
      */
     protected void checkEquivalence(final IonValue left,
                                     final IonValue right,
-                                    boolean expectedEquality) {
-        if (expectedEquality) {
+                                    boolean expectedEquality)
+    {
+        if (expectedEquality)
+        {
             IonAssert.assertIonEquals(left, right);
             IonAssert.assertIonEquals(right, left);
 
@@ -182,7 +184,9 @@ public class EquivsTestCase
                     right.getType() != DATAGRAM)
                 assertEquals("Equal values have unequal hashes",
                         left.hashCode(), right.hashCode());
-        } else {
+        }
+        else
+        {
             // Ensure the two values compared both ways return the same consistent
             // result, i.e. false. This is not related to the symmetric property
             // of equalities.
@@ -191,23 +195,27 @@ public class EquivsTestCase
         }
     }
 
-    public static IonDatagram[] roundTripDatagram(IonDatagram input) throws IOException{
+    public static IonDatagram[] roundTripDatagram(IonDatagram input) throws IOException {
         IonSystem system = IonSystemBuilder.standard().build();
         IonLoader loader = system.getLoader();
         ByteArrayOutputStream textOutputStream = new ByteArrayOutputStream();
         ByteArrayOutputStream binaryOutputStream = new ByteArrayOutputStream();
-        IonWriter textWriter = IonTextWriterBuilder.standard().build(textOutputStream);
-        IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOutputStream);
+        IonReader textReader = null, binaryReader = null;
+        IonWriter textWriter = null, binaryWriter = null;
         IonDatagram[] data = new IonDatagram[3];
-        try {
-            IonReader reader = system.newReader(input);
-            textWriter.writeValues(reader);
-            reader = system.newReader(input);
-            binaryWriter.writeValues(reader);
 
+        try {
+            textReader = system.newReader(input);
+            textWriter = IonTextWriterBuilder.standard().build(textOutputStream);
+            textWriter.writeValues(textReader);
+            binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOutputStream);
+            binaryReader = system.newReader(input);
+            binaryWriter.writeValues(binaryReader);
         } finally {
             textWriter.close();
             binaryWriter.close();
+            textReader.close();
+            binaryReader.close();
         }
         data[0] = input;
         data[1] = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
