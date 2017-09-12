@@ -199,20 +199,21 @@ public class EquivsTestCase
             ByteArrayOutputStream binaryOutputStream = new ByteArrayOutputStream();
             IonWriter textWriter = IonTextWriterBuilder.standard().build(textOutputStream);
             IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOutputStream);
+            IonDatagram[] data = new IonDatagram[3];
             try {
                 IonReader reader = system.newReader(input);
                 textWriter.writeValues(reader);
                 reader = system.newReader(input);
                 binaryWriter.writeValues(reader);
-                IonDatagram[] data = new IonDatagram[3];
+
                 data[0] = input;
                 data[1] = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
                 data[2] = loader.load(new ByteArrayInputStream(binaryOutputStream.toByteArray()));
-                return data;
             } finally {
                 textWriter.close();
                 binaryWriter.close();
             }
+                return data;
     }
 
     public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
