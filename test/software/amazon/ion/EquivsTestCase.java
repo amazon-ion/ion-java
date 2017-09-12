@@ -192,23 +192,27 @@ public class EquivsTestCase
     }
 
     public static IonDatagram[] roundTripDatagram(IonDatagram input) throws IOException{
-        IonSystem system = IonSystemBuilder.standard().build();
-        IonLoader loader = system.getLoader();
-        ByteArrayOutputStream textOutputStream = new ByteArrayOutputStream();
-        ByteArrayOutputStream binaryOutputStream = new ByteArrayOutputStream();
-        IonWriter textWriter = IonTextWriterBuilder.standard().build(textOutputStream);
-        IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOutputStream);
-        IonReader reader = system.newReader(input);
-        textWriter.writeValues(reader);
-        textWriter.close();
-        reader = system.newReader(input);
-        binaryWriter.writeValues(reader);
-        binaryWriter.close();
-        IonDatagram[] data = new IonDatagram[3];
-        data[0] = input;
-        data[1] = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
-        data[2] = loader.load(new ByteArrayInputStream(binaryOutputStream.toByteArray()));
-        return data;
+
+            IonSystem system = IonSystemBuilder.standard().build();
+            IonLoader loader = system.getLoader();
+            ByteArrayOutputStream textOutputStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream binaryOutputStream = new ByteArrayOutputStream();
+            IonWriter textWriter = IonTextWriterBuilder.standard().build(textOutputStream);
+            IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOutputStream);
+            try {
+                IonReader reader = system.newReader(input);
+                textWriter.writeValues(reader);
+                reader = system.newReader(input);
+                binaryWriter.writeValues(reader);
+                IonDatagram[] data = new IonDatagram[3];
+                data[0] = input;
+                data[1] = loader.load(new ByteArrayInputStream(textOutputStream.toByteArray()));
+                data[2] = loader.load(new ByteArrayInputStream(binaryOutputStream.toByteArray()));
+                return data;
+            } finally {
+                textWriter.close();
+                binaryWriter.close();
+            }
     }
 
     public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
