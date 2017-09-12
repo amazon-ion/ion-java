@@ -28,6 +28,7 @@ import software.amazon.ion.IonReader;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.junit.Injected.Inject;
+import software.amazon.ion.junit.IonAssert;
 import software.amazon.ion.streaming.ReaderCompare;
 
 public class GoodIonTest
@@ -88,17 +89,10 @@ public class GoodIonTest
             in.close();
         }
 
-
-        // Pass 4: Encode to binary, and use Reader
-        if (! myFileIsBinary) {
-            // Check the encoding of text to binary.
-            treeReader = system().newReader(datagram);
-
-            byte[] encoded = datagram.getBytes();
-            IonReader binaryReader = system().newReader(encoded);
-
-            ReaderCompare.compare(treeReader, binaryReader);
-        }
+        treeReader = system().newReader(datagram);
+        byte[] encoded = datagram.getBytes();
+        IonReader binaryReader = system().newReader(encoded);
+        ReaderCompare.compare(treeReader, binaryReader);
     }
 
 

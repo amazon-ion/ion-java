@@ -19,6 +19,8 @@ import static software.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static software.amazon.ion.TestUtils.testdataFiles;
 
 import java.io.File;
+import java.io.IOException;
+
 import software.amazon.ion.IonTimestamp;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.Timestamp;
@@ -50,5 +52,23 @@ public class EquivTimelineTest
         assertEquals("millis", lTime.getMillis(), rTime.getMillis());
         assertEquals("calendar", lTime.calendarValue(), rTime.calendarValue());
         assertEquals("date", lTime.dateValue(), rTime.dateValue());
+    }
+
+    @Override
+    public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
+        IonDatagram[] data = roundTripDatagram(input);
+        for(int i = 0; i < data.length; i++) {
+            runEquivalenceChecks(data[i], myExpectedEquality);
+            for(int j = i + 1; j < data.length; j++) {
+                for(int seqIndice = 0; seqIndice < data[i].size(); seqIndice++) {
+                    int maxTimeStampIndice = ((IonSequence)data[i].get(seqIndice)).size();
+                    for(int timeStampIndice = 0; timeStampIndice < maxTimeStampIndice; timeStampIndice++) {
+                        IonValue timeStamp1 = ((IonSequence)(data[i].get(seqIndice))).get(timeStampIndice);
+                        IonValue timeStamp2 = ((IonSequence)(data[j].get(seqIndice))).get(timeStampIndice);
+                        checkEquivalence(timeStamp1, timeStamp2, true);
+                    }
+                }
+            }
+        }
     }
 }
