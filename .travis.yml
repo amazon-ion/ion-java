@@ -4,3 +4,4 @@ jdk:
 env:
   global:
     JAVA_OPTS=-Xmx3g
+    _JAVA_OPTIONS=-Xmx3g
