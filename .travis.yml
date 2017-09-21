@@ -1,3 +1,5 @@
 language: java
 jdk:
   - oraclejdk8
+env:
+  - MAVEN_OPTS="-Xmx3g -Xms2g"
