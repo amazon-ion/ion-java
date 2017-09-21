@@ -14,6 +14,7 @@
 
 package software.amazon.ion.impl;
 
+import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import software.amazon.ion.SymbolToken;
@@ -261,6 +262,42 @@ public class SymbolTableTest
         SymbolToken appendedSymbol = appendedSymbolTable.find("s1");
 
         assertEquals(originalSymbol.getSid(), appendedSymbol.getSid());
+    }
+
+    @Test
+    public void testLocalSymbolTableAppendImportBoundary()
+    {
+        String text =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  symbols:[ \"s11\"]" +
+                "}\n" +
+                "1\n" +
+                LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[ \"s21\"]" +
+                "}\n" +
+                "null";
+
+        IonDatagram datagram = loader().load(text);
+
+        SymbolTable original = datagram.get(0).getSymbolTable();
+        original.intern("o1");
+
+        SymbolTable appended = datagram.get(1).getSymbolTable();
+        appended.intern("a1");
+
+        // new symbols in `original` don't influence SIDs for new symbols in `appended` after import
+        checkSymbol("s11", systemMaxId() + 1, appended);
+        checkSymbol("o1", systemMaxId() + 2, original);
+        checkSymbol("s11", systemMaxId() + 1, appended);
+        checkSymbol("s21", systemMaxId() + 2, appended);
+        checkSymbol("a1", systemMaxId() + 3, appended);
+
+        // new symbols in `original` are not accessible from `appended` after import
+        assertNull(original.find("a1"));
+        assertNull(appended.find("o1"));
     }
 
     @Test

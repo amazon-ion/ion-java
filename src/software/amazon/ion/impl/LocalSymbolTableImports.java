@@ -74,6 +74,8 @@ final class LocalSymbolTableImports
      */
     LocalSymbolTableImports(List<SymbolTable> importTables)
     {
+        validateImports(importTables);
+
         int importTablesSize = importTables.size();
 
         // detects and adapts local tables so they are importable
@@ -93,6 +95,26 @@ final class LocalSymbolTableImports
 
         myBaseSids = new int[importTablesSize];
         myMaxId = prepBaseSids(myBaseSids, myImports);
+    }
+
+    /**
+     * Validates the import list to ensure that if there is a {@link LocalSymbolTable} in it then it's a single import
+     * apart from the system table
+     */
+    private void validateImports(final List<SymbolTable> importTables)
+    {
+        int sizeWithoutSystemTables = importTables.size();
+        int numberOfLocalTables = 0;
+
+        for(SymbolTable table : importTables)
+        {
+            if(table.isLocalTable()) numberOfLocalTables++;
+            if(table.isSystemTable()) sizeWithoutSystemTables--;
+        }
+
+        if(numberOfLocalTables > 0 && sizeWithoutSystemTables != 1){
+            throw new IllegalArgumentException("when importing LocalSymbolTables it needs to be the only import");
+        }
     }
 
     /**
@@ -133,6 +155,9 @@ final class LocalSymbolTableImports
 
             myImports = new SymbolTable[imports.length + offset];
             myImports[0] = systemTable;
+
+            // no need to consider the offset here as it only comes in play when there is a system table
+            validateImports(Arrays.asList(imports));
 
             for(int i = 1 - offset; i < imports.length; i++)
             {
