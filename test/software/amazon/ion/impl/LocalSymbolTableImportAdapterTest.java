@@ -1,27 +1,31 @@
 package software.amazon.ion.impl;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
+import org.junit.Assert;
 import org.junit.Test;
-import software.amazon.ion.IonTestCase;
+import software.amazon.ion.IonWriter;
 import software.amazon.ion.ReadOnlyValueException;
 import software.amazon.ion.SymbolTable;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import software.amazon.ion.SymbolToken;
 
-public class LocalSymbolTableImportAdapterTest extends IonTestCase
+public class LocalSymbolTableImportAdapterTest extends BaseSymbolTableWrapperTest
 {
     @Test
     public void testIsReadOnlyByDefault()
-        throws Exception
     {
-        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(lstBuilder().build());
+        LocalSymbolTable lst = lstBuilder().build();
+        assertEquals(false, lst.isReadOnly());
+
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(lst);
 
         assertEquals(true, subject.isReadOnly());
     }
 
     @Test
-    public void testNoSystemSymbolTable()
-        throws Exception
+    public void testGetSystemSymbolTable()
     {
         LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(lstBuilder().build());
 
@@ -30,7 +34,6 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
     @Test(expected = IllegalArgumentException.class)
     public void testImportedTables()
-        throws Exception
     {
         LocalSymbolTable imported1 = lstBuilder().build();
         LocalSymbolTable imported2 = lstBuilder().build();
@@ -40,7 +43,6 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
     @Test
     public void testMaxIdNoImports()
-        throws Exception
     {
         LocalSymbolTable delegate = lstBuilder()
             .setSymbols("one", "two")
@@ -52,8 +54,7 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
     }
 
     @Test
-    public void testMaxIdWithImports()
-        throws Exception
+    public void testGetMaxId()
     {
         SymbolTable imported = lstBuilder().setSymbols("1", "2", "3").build();
 
@@ -69,7 +70,6 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
     @Test
     public void testImportedMaxIdNoImports()
-        throws Exception
     {
         LocalSymbolTable delegate = lstBuilder()
             .setSymbols("one", "two")
@@ -81,8 +81,7 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
     }
 
     @Test
-    public void testImportedMaxIdWithImports()
-        throws Exception
+    public void testGetImportedMaxId()
     {
         SymbolTable imported = lstBuilder().setSymbols("1", "2", "3").build();
 
@@ -98,7 +97,6 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
     @Test(expected = ReadOnlyValueException.class)
     public void testIntern()
-        throws Exception
     {
         LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(lstBuilder().build());
 
@@ -107,7 +105,6 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
     @Test
     public void testFind()
-        throws Exception
     {
         SymbolTable imported = lstBuilder().setSymbols("onImport").build();
 
@@ -132,18 +129,34 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
         assertNull(unknown);
     }
 
-    private LocalSymbolTableBuilder lstBuilder()
+    protected BaseSymbolTableWrapper getSubject()
     {
-        return new LocalSymbolTableBuilder(system());
+        return LocalSymbolTableImportAdapter.of(lstBuilder().build());
     }
+
+    public void testMakeReadOnly()
+    {
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(lstBuilder().build());
+        subject.makeReadOnly();
+        assertEquals(true, subject.isReadOnly());
+
+        try
+        {
+            subject.intern("asd");
+            Assert.fail("could modify read only");
+        } catch (ReadOnlyValueException ignored)
+        {
+
+        }
+    }
+
 
     @Test
     public void testFindSymbol()
-        throws Exception
     {
         SymbolTable imported = lstBuilder().setSymbols("onImport").build();
 
-        LocalSymbolTable delegate =  lstBuilder()
+        LocalSymbolTable delegate = lstBuilder()
             .setImportedTables(imported)
             .setSymbols("onDelegate")
             .build();
@@ -162,11 +175,10 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
     @Test
     public void testFindKnownSymbol()
-        throws Exception
     {
         SymbolTable imported = lstBuilder().setSymbols("onImport").build();
 
-        LocalSymbolTable delegate =  lstBuilder()
+        LocalSymbolTable delegate = lstBuilder()
             .setImportedTables(imported)
             .setSymbols("onDelegate")
             .build();
@@ -183,6 +195,39 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
         assertNull(unknown);
     }
 
+    public void testWriteTo() throws IOException
+    {
+        LocalSymbolTable delegate = lstBuilder().setSymbols("mySymbol").build();
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
+
+        StringBuilder out = new StringBuilder();
+
+        IonWriter ionWriter = system().newTextWriter(out);
+        subject.writeTo(ionWriter);
+        ionWriter.close();
+
+        assertEquals(out.toString(), "$ion_symbol_table::{symbols:[\"mySymbol\"]}");
+    }
+
+    public void testWriteToBinary() throws IOException
+    {
+        LocalSymbolTable delegate = lstBuilder().setSymbols("mySymbol").build();
+        LocalSymbolTableImportAdapter subject = LocalSymbolTableImportAdapter.of(delegate);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        IonWriter ionWriter = system().newBinaryWriter(out);
+        subject.writeTo(ionWriter);
+        ionWriter.close();
+
+        assertEquals(out.toString(), "$ion_symbol_table::{symbols:[\"mySymbol\"]}");
+    }
+
+    private LocalSymbolTableBuilder lstBuilder()
+    {
+        return new LocalSymbolTableBuilder(system());
+    }
+
     private static class LocalSymbolTableBuilder
     {
         private final PrivateIonSystem system;
@@ -196,16 +241,12 @@ public class LocalSymbolTableImportAdapterTest extends IonTestCase
 
         public LocalSymbolTable build()
         {
-            LocalSymbolTable localSymbolTable = LocalSymbolTable.makeNewLocalSymbolTable(
+            return LocalSymbolTable.makeNewLocalSymbolTable(
                 system,
                 system.getSystemSymbolTable(),
                 Arrays.asList(symbols),
                 importedTables
             );
-
-            localSymbolTable.makeReadOnly();
-
-            return localSymbolTable;
         }
 
         public LocalSymbolTableBuilder setSymbols(final String... symbols)

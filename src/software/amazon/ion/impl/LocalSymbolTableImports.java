@@ -162,7 +162,7 @@ final class LocalSymbolTableImports
             for(int i = 1 - offset; i < imports.length; i++)
             {
                 SymbolTable symbolTable = imports[i];
-                if(symbolTable.isLocalTable())
+                if(symbolTable instanceof LocalSymbolTable)
                 {
                     myImports[i + offset] = LocalSymbolTableImportAdapter.of((LocalSymbolTable) symbolTable);
                 }

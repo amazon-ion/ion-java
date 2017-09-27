@@ -1,260 +1,134 @@
 package software.amazon.ion.impl;
 
-import org.junit.Before;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import org.mockito.runners.MockitoJUnitRunner;
-import software.amazon.ion.IonWriter;
+import software.amazon.ion.IonTestCase;
 import software.amazon.ion.SymbolTable;
 
-@RunWith(MockitoJUnitRunner.class)
-public final class BaseSymbolTableWrapperTest
+/**
+ * Parent test class for classes that extend {@link BaseSymbolTableWrapper}. Provides simple equality tests for non void
+ * methods with no arguments by comparing delegate and subject returns. Other methods and overridden methods need to be
+ * handled by the subclasses
+ */
+public abstract class BaseSymbolTableWrapperTest extends IonTestCase
 {
-    @Mock
-    private SymbolTable delegate;
+    protected abstract BaseSymbolTableWrapper getSubject();
 
-    private BaseSymbolTableWrapper subject;
-
-    @Before
-    public void before()
+    @Test
+    public void testGetName()
     {
-        subject = new BaseSymbolTableWrapper(delegate)
+        assertEquals(getDelegate().getName(), getSubject().getName());
+    }
+
+    @Test
+    public void testGetVersion()
+    {
+        assertEquals(getDelegate().getVersion(), getSubject().getVersion());
+    }
+
+    @Test
+    public void testIsLocalTable()
+    {
+        assertEquals(getDelegate().isLocalTable(), getSubject().isLocalTable());
+    }
+
+    @Test
+    public void testIsSharedTable()
+    {
+        assertEquals(getDelegate().isSharedTable(), getSubject().isSharedTable());
+    }
+
+    @Test
+    public void testIsSubstitute()
+    {
+        assertEquals(getDelegate().isSubstitute(), getSubject().isSubstitute());
+    }
+
+    @Test
+    public void testIsSystemTable()
+    {
+        assertEquals(getDelegate().isSystemTable(), getSubject().isSystemTable());
+    }
+
+    @Test
+    public void testIsReadOnly()
+    {
+        assertEquals(getDelegate().isReadOnly(), getSubject().isReadOnly());
+    }
+
+    @Test
+    public abstract void testMakeReadOnly();
+
+    @Test
+    public void testGetSystemSymbolTable()
+    {
+        assertEquals(getDelegate().getSystemSymbolTable(), getSubject().getSystemSymbolTable());
+    }
+
+    @Test
+    public void testGetIonVersionId()
+    {
+        assertEquals(getDelegate().getIonVersionId(), getSubject().getIonVersionId());
+    }
+
+    @Test
+    public void testGetImportedTables()
+    {
+        assertEquals(getDelegate().getImportedTables(), getSubject().getImportedTables());
+    }
+
+    @Test
+    public void testGetImportedMaxId()
+    {
+        assertEquals(getDelegate().getImportedMaxId(), getSubject().getImportedMaxId());
+    }
+
+    @Test
+    public void testGetMaxId()
+    {
+        assertEquals(getDelegate().getMaxId(), getSubject().getMaxId());
+    }
+
+    @Test
+    public abstract void testIntern();
+
+    @Test
+    public abstract void testFind();
+
+    @Test
+    public abstract void testFindSymbol();
+
+    @Test
+    public abstract void testFindKnownSymbol();
+
+    @Test
+    public void testIterateDeclaredSymbolNames()
+    {
+        Iterator<String> expected = getDelegate().iterateDeclaredSymbolNames();
+        Iterator<String> actual = getSubject().iterateDeclaredSymbolNames();
+
+        assertEquals(collect(expected), collect(actual));
+    }
+
+    private <T> List<T> collect(Iterator<T> iterator) {
+        List<T> list = new ArrayList<T>();
+
+        for(T t = null; iterator.hasNext(); t = iterator.next())
         {
-            // empty
-        };
+            list.add(t);
+        }
+
+        return list;
     }
 
     @Test
-    public void getName() throws Exception
+    public abstract void testWriteTo() throws IOException;
+
+    private SymbolTable getDelegate()
     {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getName();
-
-        verify(delegate).getName();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void getVersion() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getVersion();
-
-        verify(delegate).getVersion();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void isLocalTable() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.isLocalTable();
-
-        verify(delegate).isLocalTable();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void isSharedTable() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.isSharedTable();
-
-        verify(delegate).isSharedTable();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void isSubstitute() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.isSubstitute();
-
-        verify(delegate).isSubstitute();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void isSystemTable() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.isSystemTable();
-
-        verify(delegate).isSystemTable();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void isReadOnly() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.isReadOnly();
-
-        verify(delegate).isReadOnly();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void makeReadOnly() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.makeReadOnly();
-
-        verify(delegate).makeReadOnly();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void getSystemSymbolTable() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getSystemSymbolTable();
-
-        verify(delegate).getSystemSymbolTable();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void getIonVersionId() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getIonVersionId();
-
-        verify(delegate).getIonVersionId();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void getImportedTables() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getImportedTables();
-
-        verify(delegate).getImportedTables();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void getImportedMaxId() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getImportedMaxId();
-
-        verify(delegate).getImportedMaxId();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void getMaxId() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.getMaxId();
-
-        verify(delegate).getMaxId();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void intern() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.intern("");
-
-        verify(delegate).intern("");
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void find() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.find("");
-
-        verify(delegate).find("");
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void findSymbol() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.findSymbol("");
-
-        verify(delegate).findSymbol("");
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void findKnownSymbol() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.findKnownSymbol(1);
-
-        verify(delegate).findKnownSymbol(1);
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void iterateDeclaredSymbolNames() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        subject.iterateDeclaredSymbolNames();
-
-        verify(delegate).iterateDeclaredSymbolNames();
-        verifyNoMoreInteractions(delegate);
-    }
-
-    @Test
-    public void writeTo() throws Exception
-    {
-        // verifying no previous interaction
-        verifyZeroInteractions(delegate);
-
-        IonWriter writer = mock(IonWriter.class);
-        subject.writeTo(writer);
-
-        verify(delegate).writeTo(writer);
-        verifyNoMoreInteractions(delegate);
+        return getSubject().getDelegate();
     }
 }

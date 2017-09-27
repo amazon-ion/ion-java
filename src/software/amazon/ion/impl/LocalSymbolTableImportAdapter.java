@@ -19,17 +19,8 @@ import software.amazon.ion.SymbolToken;
 final class LocalSymbolTableImportAdapter
     extends BaseSymbolTableWrapper
 {
-    private final List<SymbolTable> imports;
-
+    private final SymbolTable[] imports;
     private final int systemSymbolCount;
-    private final int maxImportedId;
-    private final int maxId;
-    private final int numberOfLocalSymbols;
-
-    // Lazy, access only through getters
-    private Map<String, Integer> localTextToSidMap;
-    private String[] sidToLocalText;
-    private SymbolTable[] importedTables;
 
     static LocalSymbolTableImportAdapter of(final LocalSymbolTable delegate)
     {
@@ -60,24 +51,9 @@ final class LocalSymbolTableImportAdapter
     {
         super(delegate);
 
-        imports = createImportList(delegate);
+        imports = createImports(delegate);
 
         systemSymbolCount = countSystemSymbols(getDelegate());
-        maxImportedId = getDelegate().getImportedMaxId() - systemSymbolCount;
-        maxId = getDelegate().getMaxId() - systemSymbolCount;
-        numberOfLocalSymbols = maxId - maxImportedId;
-    }
-
-    @Override
-    public boolean isReadOnly()
-    {
-        return true;
-    }
-
-    @Override
-    public void makeReadOnly()
-    {
-        // read only by default
     }
 
     @Override
@@ -89,101 +65,61 @@ final class LocalSymbolTableImportAdapter
     @Override
     public SymbolTable[] getImportedTables()
     {
-        if (importedTables == null)
-        {
-            importedTables = imports.toArray(new SymbolTable[imports.size()]);
-        }
-
-        return importedTables;
+        return imports;
     }
 
     @Override
     public int getImportedMaxId()
     {
-        return maxImportedId;
+        return getDelegate().getImportedMaxId() - systemSymbolCount;
     }
 
     @Override
     public int getMaxId()
     {
-        return maxId;
-    }
-
-    @Override
-    public SymbolToken intern(String text)
-    {
-        throw new ReadOnlyValueException(this.getClass());
+        return getDelegate().getMaxId() - systemSymbolCount;
     }
 
     @Override
     public SymbolToken find(String text)
     {
-        for (SymbolTable importedTable : imports)
+        SymbolToken symbolToken = getDelegate().find(text);
+        if(symbolToken != null)
         {
-            SymbolToken symbolToken = importedTable.find(text);
-
-            if (symbolToken != null)
-            {
-                return symbolToken;
-            }
+            symbolToken = new SymbolTokenImpl(symbolToken.getText(), symbolToken.getSid() - systemSymbolCount);
         }
 
-        Integer sid = getLocalTextToSidMap().get(text);
-        if (sid != null)
-        {
-            return new SymbolTokenImpl(text, sid);
-        }
-
-        return null;
+        return symbolToken;
     }
 
     @Override
     public int findSymbol(String name)
     {
-        SymbolToken token = find(name);
-        return (token == null ? UNKNOWN_SYMBOL_ID : token.getSid());
+        int sid = getDelegate().findSymbol(name);
+        if(sid != UNKNOWN_SYMBOL_ID){
+            sid = sid - systemSymbolCount;
+        }
+
+        return sid;
     }
 
     @Override
     public String findKnownSymbol(int id)
     {
-        if (id < 0)
-        {
-            throw new IllegalArgumentException("symbol IDs must be greater than 0");
-        }
-
-        if (id > getMaxId()) // not in this table or imports
-        {
-            return null;
-        }
-
-        // look into imports
-        if (id <= maxImportedId)
-        {
-            for (SymbolTable importedSymbolTable : imports)
-            {
-                String text = importedSymbolTable.findKnownSymbol(id);
-                if (text != null)
-                {
-                    return text;
-                }
-            }
-        }
-
-        // not in imports get from local
-        int index = id - maxImportedId - 1;
-        return getSidToLocalText()[index];
+        return getDelegate().findKnownSymbol(id + systemSymbolCount);
     }
 
-    private List<SymbolTable> createImportList(LocalSymbolTable delegate)
+    private SymbolTable[] createImports(LocalSymbolTable delegate)
     {
-        SymbolTable[] asArray = delegate.getImportedTables();
-        List<SymbolTable> imports = new ArrayList<SymbolTable>(asArray.length);
-        for (SymbolTable s : asArray)
+        SymbolTable[] delegateImports = delegate.getImportedTables();
+        SymbolTable[] imports = new SymbolTable[delegateImports.length];
+
+        int j = 0;
+        for (SymbolTable delegateImport : delegateImports)
         {
-            if (!s.isSystemTable())
+            if (!delegateImport.isSystemTable())
             {
-                imports.add(s);
+                imports[j++] = delegateImport;
             }
         }
 
@@ -200,44 +136,5 @@ final class LocalSymbolTableImportAdapter
         }
 
         return 0;
-    }
-
-    private Map<String, Integer> getLocalTextToSidMap()
-    {
-        if (localTextToSidMap == null)
-        {
-            localTextToSidMap = new HashMap<String, Integer>(numberOfLocalSymbols);
-
-            for (Iterator<String> it = iterateDeclaredSymbolNames(); it.hasNext(); )
-            {
-                SymbolToken symbolToken = getDelegate().find(it.next());
-                String text = symbolToken.getText();
-
-                // have to adjust SID to ignore potential system tables
-                int relativeSid = symbolToken.getSid() - systemSymbolCount;
-                localTextToSidMap.put(text, relativeSid);
-            }
-        }
-
-        return localTextToSidMap;
-    }
-
-    private String[] getSidToLocalText()
-    {
-        if (sidToLocalText == null)
-        {
-            sidToLocalText = new String[numberOfLocalSymbols];
-
-            for (Iterator<String> it = getDelegate().iterateDeclaredSymbolNames(); it.hasNext(); )
-            {
-                SymbolToken symbolToken = getDelegate().find(it.next());
-                String text = symbolToken.getText();
-                int relativeSid = symbolToken.getSid() - getDelegate().getImportedMaxId();
-
-                sidToLocalText[relativeSid - 1] = text;
-            }
-        }
-
-        return sidToLocalText;
     }
 }
