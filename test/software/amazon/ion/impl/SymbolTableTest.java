@@ -14,7 +14,10 @@
 
 package software.amazon.ion.impl;
 
+import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import software.amazon.ion.SymbolToken;
 import static software.amazon.ion.Symtabs.printLocalSymtab;
 import static software.amazon.ion.SystemSymbols.ION;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
@@ -56,7 +59,6 @@ import software.amazon.ion.SymbolTable;
 import software.amazon.ion.Symtabs;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.Timestamp;
-import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.system.SimpleCatalog;
 
 /**
@@ -145,6 +147,158 @@ public class SymbolTableTest
 
     //=========================================================================
     // Test cases
+
+    @Test
+    public void testLocalSymbolTableAppend()
+    {
+        String text =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  symbols:[ \"s1\", \"s2\"]" +
+                "}\n" +
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[ \"s3\", \"s4\", \"s5\"]" +
+                "}\n" +
+                "null";
+
+        SymbolTable symbolTable = oneValue(text).getSymbolTable();
+
+        checkLocalTable(symbolTable);
+
+        // table contains all symbols and SIDs are in correct order
+        checkSymbol("s1", systemMaxId() + 1, symbolTable);
+        checkSymbol("s2", systemMaxId() + 2, symbolTable);
+        checkSymbol("s3", systemMaxId() + 3, symbolTable);
+        checkSymbol("s4", systemMaxId() + 4, symbolTable);
+        checkSymbol("s5", systemMaxId() + 5, symbolTable);
+
+        checkUnknownSymbol("unknown", UNKNOWN_SYMBOL_ID, symbolTable);
+        checkUnknownSymbol(33, symbolTable);
+    }
+
+    @Test
+    public void testLocalSymbolTableAppendThroughDom()
+    {
+        SymbolTable base = system().newLocalSymbolTable();
+        base.intern("beforeDerivedCreation");
+
+        SymbolTable derived = system().newLocalSymbolTable(base);
+        derived.intern("onDerived");
+
+        base.intern("afterDerivedCreation");
+
+        checkSymbol("beforeDerivedCreation", systemMaxId() + 1, derived);
+        checkSymbol("onDerived", systemMaxId() + 2, derived);
+
+        // derived only see symbols that were added in base before derived creation
+        // so "afterDerivedCreation" is unknown to derived
+        checkUnknownSymbol("afterDerivedCreation", UNKNOWN_SYMBOL_ID, derived);
+        checkSymbol("afterDerivedCreation", systemMaxId() + 2, base);
+    }
+
+    @Test
+    public void testLocalSymbolTableMultiAppend()
+    {
+        String text =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  symbols:[ \"s1\", \"s2\"]" +
+                "}\n" +
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[ \"s3\"]" +
+                "}\n" +
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[\"s4\", \"s5\"]" +
+                "}\n" +
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[\"s6\"]" +
+                "}\n" +
+                "null";
+
+        SymbolTable symbolTable = oneValue(text).getSymbolTable();
+
+        checkLocalTable(symbolTable);
+
+        // table contains all symbols and SIDs are in correct order
+        checkSymbol("s1", systemMaxId() + 1, symbolTable);
+        checkSymbol("s2", systemMaxId() + 2, symbolTable);
+        checkSymbol("s3", systemMaxId() + 3, symbolTable);
+        checkSymbol("s4", systemMaxId() + 4, symbolTable);
+        checkSymbol("s5", systemMaxId() + 5, symbolTable);
+        checkSymbol("s6", systemMaxId() + 6, symbolTable);
+
+        checkUnknownSymbol("unknown", UNKNOWN_SYMBOL_ID, symbolTable);
+        checkUnknownSymbol(33, symbolTable);
+    }
+
+    @Test
+    public void testLocalSymbolTableAppendEmptyList()
+    {
+        String original =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  symbols:[ \"s1\"]" +
+                "}\n";
+
+        String appended = original +
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[]" +
+                "}\n";
+
+        SymbolTable originalSymbolTable = oneValue(original + "null").getSymbolTable();
+        SymbolTable appendedSymbolTable = oneValue(appended + "null").getSymbolTable();
+
+        SymbolToken originalSymbol = originalSymbolTable.find("s1");
+        SymbolToken appendedSymbol = appendedSymbolTable.find("s1");
+
+        assertEquals(originalSymbol.getSid(), appendedSymbol.getSid());
+    }
+
+    @Test
+    public void testLocalSymbolTableAppendImportBoundary()
+    {
+        String text =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  symbols:[ \"s11\"]" +
+                "}\n" +
+                "1\n" +
+                LocalSymbolTablePrefix +
+                "{" +
+                "  imports:" + ION_SYMBOL_TABLE + "," +
+                "  symbols:[ \"s21\"]" +
+                "}\n" +
+                "null";
+
+        IonDatagram datagram = loader().load(text);
+
+        SymbolTable original = datagram.get(0).getSymbolTable();
+        original.intern("o1");
+
+        SymbolTable appended = datagram.get(1).getSymbolTable();
+        appended.intern("a1");
+
+        // new symbols in `original` don't influence SIDs for new symbols in `appended` after import
+        checkSymbol("s11", systemMaxId() + 1, appended);
+        checkSymbol("o1", systemMaxId() + 2, original);
+        checkSymbol("s11", systemMaxId() + 1, appended);
+        checkSymbol("s21", systemMaxId() + 2, appended);
+        checkSymbol("a1", systemMaxId() + 3, appended);
+
+        // new symbols in `original` are not accessible from `appended` after import
+        assertNull(original.find("a1"));
+        assertNull(appended.find("o1"));
+    }
 
     @Test
     public void testSymtabsPrintLocalSymtabWithGaps()
@@ -778,7 +932,7 @@ public class SymbolTableTest
         assertEquals(1, st.getImportedTables().length);
         assertSame(fred1, st.getImportedTables()[0]);
 
-        st = system().newLocalSymbolTable(new SymbolTable[]{ systemTable });
+        st = system().newLocalSymbolTable(systemTable);
         checkEmptyLocalSymtab(st);
     }
 

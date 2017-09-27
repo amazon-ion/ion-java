@@ -50,7 +50,6 @@ import software.amazon.ion.UnsupportedIonVersionException;
  *    symbol is a system symbol or if there is a local symbol
  *    table in the input stream.  Otherwise it return the
  *    undefined symbol value.
- *
  */
 class IonReaderTextUserX
     extends IonReaderTextSystemX
