@@ -1249,8 +1249,9 @@ import software.amazon.ion.Timestamp;
         {
             final int second = value.getZSecond();
             writeVarUInt(second);
+
             final BigDecimal fraction = value.getZFractionalSecond();
-            if (fraction != null && !BigDecimal.ZERO.equals(fraction))
+            if (fraction != null && !BigDecimal.ZERO.equals(fraction) && fraction.scale() > -1)
             {
                 writeDecimalValue(fraction);
             }
