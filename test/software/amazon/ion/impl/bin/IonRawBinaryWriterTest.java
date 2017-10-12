@@ -48,6 +48,7 @@ import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.IonWriter;
+import software.amazon.ion.TestUtils;
 import software.amazon.ion.Timestamp;
 import software.amazon.ion.impl.bin.BlockAllocatorProviders;
 import software.amazon.ion.impl.bin.IonRawBinaryWriter;
@@ -313,6 +314,19 @@ public class IonRawBinaryWriterTest extends Assert
             writer.writeTimestamp(ts);
             assertValue(ts.toString());
         }
+    }
+
+    @Test
+    public void testTimestampInvalidFractionalSeconds() throws IOException
+    {
+        Timestamp ts = Timestamp.createFromUtcFields(
+            Timestamp.Precision.SECOND, 2000, 1, 1, 0, 0, 0, new BigDecimal(new BigInteger("0"), -1), 0);
+        writer.writeTimestamp(ts);
+        writer.finish();
+        assertEquals(
+            TestUtils.hexDump(new byte[] {(byte)0xe0, 0x01, 0x00, (byte)0xea,
+                0x68, (byte)0x80, 0x0f, (byte)0xd0, (byte)0x81, (byte)0x81, (byte)0x80, (byte)0x80, (byte)0x80 }),
+            TestUtils.hexDump(buffer.toByteArray()));
     }
 
     // note that we stick to system symbols for round trip assertions
