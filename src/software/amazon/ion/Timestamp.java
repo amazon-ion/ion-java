@@ -265,6 +265,9 @@ public final class Timestamp
         }
     }
 
+    // 0001-01-01T00:00:00.0Z in millis
+    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
+
     /**
      * This method uses deprecated methods from {@link java.util.Date}
      * instead of {@link Calendar} so that this code can be used (more easily)
@@ -273,6 +276,10 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     private void set_fields_from_millis(long millis)
     {
+        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS){
+            throw new IllegalArgumentException("year is less than 1");
+        }
+
         Date date = new Date(millis);
 
         // These fields are in the system timezone!
@@ -339,7 +346,15 @@ public final class Timestamp
                 // Calendar months are 0 based, Timestamp months are 1 based
                 this._month  = checkAndCastMonth((cal.get(Calendar.MONTH) + 1));
             case YEAR:
-                this._year   = checkAndCastYear(cal.get(Calendar.YEAR));
+                int year;
+                if(cal.get(Calendar.ERA) == GregorianCalendar.AD) {
+                    year = cal.get(Calendar.YEAR);
+                }
+                else {
+                    year = -cal.get(Calendar.YEAR);
+                }
+
+                this._year = checkAndCastYear(year);
         }
 
         if (dayPrecision)

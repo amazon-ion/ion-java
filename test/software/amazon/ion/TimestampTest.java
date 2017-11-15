@@ -41,8 +41,6 @@ import software.amazon.ion.NullValueException;
 import software.amazon.ion.Timestamp;
 import software.amazon.ion.Timestamp.Precision;
 
-
-
 /**
  * Validates Ion date parsing, specified as per W3C but with requiring
  * at least year-month-day.
@@ -1619,6 +1617,20 @@ public class TimestampTest
         addYearWithMins("2012-02-29",  5, "2017-02-28");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddYearOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addYear(10000);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddYearOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addYear(-2000);
+    }
+
     //-------------------------------------------------------------------------
 
     private void addMonth(String orig, int amount, String expected)
@@ -1688,6 +1700,19 @@ public class TimestampTest
         addMonthWithMins("2013-01-31",-11, "2012-02-29");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddMonthOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addYear(10000*12);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddMonthOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addYear(-2000*12);
+    }
 
     //-------------------------------------------------------------------------
 
@@ -1744,7 +1769,6 @@ public class TimestampTest
         addDay("2012-04T", 30, "2012-05T");
         addDay("2012-04T", 31, "2012-05T");
 
-
         addDayWithMins("2011-01-31",-31, "2010-12-31");
         addDayWithMins("2011-01-31",-30, "2011-01-01");
         addDayWithMins("2011-01-31",  1, "2011-02-01");
@@ -1756,6 +1780,20 @@ public class TimestampTest
         addDayWithMins("2012-01-31", 29, "2012-02-29");
         addDayWithMins("2012-01-31", 30, "2012-03-01");
         addDayWithMins("2012-03-01",-30, "2012-01-31");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddDayOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addDay(10000*12*35);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddDayOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addDay(-2000*12*35);
     }
 
     //-------------------------------------------------------------------------
@@ -1828,7 +1866,6 @@ public class TimestampTest
         addHour("2012-10-04", 24, "2012-10-05");
         addHour("2012-10-04", 48, "2012-10-06");
 
-
         addHourWithMins("2011-01-31T12",  0, "2011-01-31T12");
         addHourWithMins("2011-01-31T12", 12, "2011-02-01T00");
 
@@ -1837,6 +1874,20 @@ public class TimestampTest
 
         addHourWithMins("2011-03-01T02", -4, "2011-02-28T22");
         addHourWithMins("2012-03-01T02", -4, "2012-02-29T22");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddHourOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addHour(10000*12*35*24);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddHourOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.addHour(-2000*12*35*24);
     }
 
     //-------------------------------------------------------------------------
@@ -1909,8 +1960,6 @@ public class TimestampTest
         addMinute("2012-10-04",  24 * 60, "2012-10-05");
         addMinute("2012-10-04",  48 * 60, "2012-10-06");
 
-
-
         addMinuteWithsSecs("2011-01-31T12:03",  -60, "2011-01-31T11:03");
         addMinuteWithsSecs("2011-01-31T12:03",    0, "2011-01-31T12:03");
         addMinuteWithsSecs("2011-01-31T12:03",   60, "2011-01-31T13:03");
@@ -1923,6 +1972,19 @@ public class TimestampTest
         addMinuteWithsSecs("2012-03-01T02:35", -4 * 60, "2012-02-29T22:35");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddMinuteOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.addMinute(2*12*35*24*60);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddMinuteOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.addMinute(-2*12*35*24*60);
+    }
 
     //-------------------------------------------------------------------------
 
@@ -1994,7 +2056,6 @@ public class TimestampTest
         addSecond("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05");
         addSecond("2012-10-04",  48 * 60 * 60    , "2012-10-06");
 
-
         addSecondWithsFrac("2011-01-31T12:03:23",  -60 * 60, "2011-01-31T11:03:23");
         addSecondWithsFrac("2011-01-31T12:03:23",         0, "2011-01-31T12:03:23");
         addSecondWithsFrac("2011-01-31T12:03:23",   60 * 60, "2011-01-31T13:03:23");
@@ -2005,6 +2066,20 @@ public class TimestampTest
 
         addSecondWithsFrac("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23");
         addSecondWithsFrac("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddSecondOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.addSecond(2*12*35*24*60*60);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddSecondOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.addSecond(-1);
     }
 
     @Test
