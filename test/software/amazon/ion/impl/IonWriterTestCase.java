@@ -496,16 +496,20 @@ public abstract class IonWriterTestCase
         iw.writeValue(ir);
         iw.stepOut();
         assertEquals(data, reloadSingleValue());
+    }
 
+    @Test(expected = IllegalStateException.class)
+    public void testWriteValueCantCopyFieldName()
+            throws Exception
+    {
+        IonStruct data = struct("{a:{b:10}}");
         IonValue a = data.get("a");
-        ir = system().newReader(a);
+        IonReader ir = system().newReader(a);
         ir.next();
 
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
-        iw.writeValue(ir);
-        iw.stepOut();
-        assertEquals(data, reloadSingleValue());
+        iw.writeValue(ir);  // should throw IllegalStateException ("Field name not set")
     }
 
     @Test

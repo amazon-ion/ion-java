@@ -84,10 +84,10 @@ public class TreeReaderTest
         IonStruct s = struct("{f:null}");
         in = system().newReader(s.get("f"));
 
-        assertTopLevel(in, /* inStruct */ true);
+        assertTopLevel(in, /* inStruct */ false);
         expectNoCurrentValue();
 
-        check().next().fieldName("f").type(IonType.NULL);
-        assertTopLevel(in, /* inStruct */ true);
+        check().next().fieldName((String)null).type(IonType.NULL);
+        assertTopLevel(in, /* inStruct */ false);
     }
 }
