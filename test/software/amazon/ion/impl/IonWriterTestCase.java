@@ -32,7 +32,9 @@ import java.util.Iterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import software.amazon.ion.FakeSymbolToken;
 import software.amazon.ion.IonBlob;
 import software.amazon.ion.IonClob;
@@ -67,6 +69,9 @@ public abstract class IonWriterTestCase
     OutputForm myOutputForm;
 
     protected IonWriter iw;
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     /**
      * Closes {@link #iw} if it's not null.
@@ -498,9 +503,9 @@ public abstract class IonWriterTestCase
         assertEquals(data, reloadSingleValue());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testWriteValueCantCopyFieldName()
-            throws Exception
+        throws Exception
     {
         IonStruct data = struct("{a:{b:10}}");
         IonValue a = data.get("a");
@@ -509,7 +514,9 @@ public abstract class IonWriterTestCase
 
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
-        iw.writeValue(ir);  // should throw IllegalStateException ("Field name not set")
+
+        thrown.expect(IllegalStateException.class);  // field name not set
+        iw.writeValue(ir);
     }
 
     @Test

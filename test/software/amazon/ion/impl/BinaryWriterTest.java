@@ -18,12 +18,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
-import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.IonWriter;
@@ -31,16 +28,10 @@ import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.Symtabs;
 import software.amazon.ion.junit.IonAssert;
-import software.amazon.ion.system.IonBinaryWriterBuilder;
-import software.amazon.ion.util.NullOutputStream;
 
 public class BinaryWriterTest
     extends OutputStreamWriterTestCase
 {
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Override
     protected IonWriter makeWriter(OutputStream out, SymbolTable... imports)
         throws Exception
