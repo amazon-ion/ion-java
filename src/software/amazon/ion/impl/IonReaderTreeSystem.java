@@ -60,7 +60,6 @@ class IonReaderTreeSystem
     /** Holds pairs: IonValue parent, Iterator<IonValue> cursor */
     private   Object[]           _stack = new Object[10];
     protected int                _top;
-    private   boolean            _hoisted;
 
     // Interface that allows access to the _symbols value (whatever that might be in terms of
     // stream processing context)
@@ -102,7 +101,6 @@ class IonReaderTreeSystem
         _curr = null;
         _eof = false;
         _top = 0;
-        _hoisted = hoisted;
         if (value instanceof IonDatagram) {
             // datagrams interacting with these readers must be
             // IonContainerPrivate containers
@@ -254,7 +252,7 @@ class IonReaderTreeSystem
 
     public boolean isInStruct()
     {
-        return (_parent instanceof IonStruct);
+        return getDepth() > 0 && _parent instanceof IonStruct;
     }
 
     public boolean isNullValue()
@@ -269,12 +267,12 @@ class IonReaderTreeSystem
 
     public String getFieldName()
     {
-        return (_curr == null || (_hoisted && _top == 0)) ? null : _curr.getFieldName();
+        return (_curr == null || _top == 0) ? null : _curr.getFieldName();
     }
 
     public final SymbolToken getFieldNameSymbol()
     {
-        if (_curr == null || (_hoisted && _top == 0)) return null;
+        if (_curr == null || _top == 0) return null;
         return _curr.getFieldNameSymbol(_symbolTableAccessor);
     }
 
