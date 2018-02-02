@@ -171,7 +171,7 @@ final class IonSymbolLite
         return symbolValue(new LazySymbolTableProvider(this));
     }
 
-    private int resolveSymbolId()
+    private int resolveSymbolId(SymbolTableProvider symbolTableProvider)
     {
         validateThisNotNull();
 
@@ -179,7 +179,7 @@ final class IonSymbolLite
             return _sid;
         }
 
-        SymbolTable symtab = getSymbolTable();
+        SymbolTable symtab = symbolTableProvider.getSymbolTable();
         if (symtab == null) {
             symtab = getSystem().getSystemSymbolTable();
         }
@@ -206,7 +206,7 @@ final class IonSymbolLite
     {
         if (isNullValue()) return null;
 
-        int sid = resolveSymbolId();
+        int sid = resolveSymbolId(symbolTableProvider);
         String text = _stringValue(symbolTableProvider);
         return PrivateUtils.newSymbolToken(text, sid);
     }
