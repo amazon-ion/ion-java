@@ -62,7 +62,15 @@ abstract class IonContainerLite
 
                 IonValueLite copy = child.clone(childContext);
                 if (isStruct) {
-                    copy.setFieldNameSymbol(child.getKnownFieldNameSymbol());
+                    if(child.getFieldName() == null) {
+                        // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
+                        // this is expensive so only do it when necessary
+                        copy.setFieldNameSymbol(child.getKnownFieldNameSymbol());
+                    }
+                    else {
+                        // if we have a non null name copying it is sufficient
+                        copy.setFieldName(child.getFieldName());
+                    }
                 }
                 this._children[i] = copy;
             }
