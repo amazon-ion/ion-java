@@ -65,6 +65,8 @@ abstract class IonContainerLite
                     if(child.getFieldName() == null) {
                         // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
                         // this is expensive so only do it when necessary
+                        // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
+                        // is not necessary. https://github.com/amzn/ion-java/issues/140
                         copy.setFieldNameSymbol(child.getKnownFieldNameSymbol());
                     }
                     else {
