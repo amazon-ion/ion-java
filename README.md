@@ -33,7 +33,7 @@ the following command.
 ```
 $ mvn install
 ```
-    
+
 ### Pulling in Upstream Changes
 To pull upstream changes into `ion-java`, start with a simple `git pull`.
 This will pull in any changes to `ion-java` itself (including any changes
@@ -60,7 +60,7 @@ dependency into your project's `pom.xml`:
 <dependency>
   <groupId>software.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 </dependency>
 ```
 
