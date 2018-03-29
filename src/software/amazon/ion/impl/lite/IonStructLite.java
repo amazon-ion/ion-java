@@ -787,7 +787,6 @@ final class IonStructLite
      * Ensures that a given field name is valid. Used as a helper for
      * methods that have that precondition.
      *
-     * @throws IllegalArgumentException if <code>fieldName</code> is empty.
      * @throws NullPointerException if the <code>fieldName</code>
      * is <code>null</code>.
      */
