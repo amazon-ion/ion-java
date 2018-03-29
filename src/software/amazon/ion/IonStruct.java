@@ -91,7 +91,6 @@ public interface IonStruct
      * @param fieldName the desired field.
      * @return the value of the field, or <code>null</code> if it doesn't
      * exist in this struct, or if this is {@code null.struct}.
-     * @throws IllegalArgumentException if <code>fieldName</code> is empty.
      * @throws NullPointerException if the <code>fieldName</code>
      * is <code>null</code>.
      */
@@ -118,7 +117,6 @@ public interface IonStruct
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
-     *   if {@code fieldName} is empty or
      *   if {@code element} is an {@link IonDatagram}.
      */
     public void put(String fieldName, IonValue child)
@@ -138,8 +136,6 @@ public interface IonStruct
      *
      * @throws NullPointerException
      *   if {@code fieldName} is <code>null</code>.
-     * @throws IllegalArgumentException
-     *   if {@code fieldName} is empty.
      *
      * @see #put(String, IonValue)
      */
@@ -180,7 +176,6 @@ public interface IonStruct
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
-     *   if {@code fieldName} is empty or
      *   if {@code element} is an {@link IonDatagram}.
      */
     public void add(String fieldName, IonValue child)
@@ -206,7 +201,6 @@ public interface IonStruct
      * @throws ContainedValueException
      *   if {@code child} is already part of a container.
      * @throws IllegalArgumentException
-     *   if {@code fieldName} is empty or
      *   if {@code element} is an {@link IonDatagram}.
      *
      */
@@ -227,8 +221,6 @@ public interface IonStruct
      *
      * @throws NullPointerException
      *   if {@code fieldName} is <code>null</code>.
-     * @throws IllegalArgumentException
-     *   if {@code fieldName} is empty.
      *
      * @see #add(String, IonValue)
      */
@@ -246,7 +238,7 @@ public interface IonStruct
      * If this struct is an {@linkplain #isNullValue() Ion null value} or empty,
      * then this method returns null and has no effect.
      *
-     * @param fieldName must not be null or empty.
+     * @param fieldName must not be null.
      *
      * @return previous value associated with the specified field name, or
      * {@code null} if there was no such field.
