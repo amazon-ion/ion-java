@@ -24,7 +24,6 @@ import java.util.Date;
 import java.util.Iterator;
 import software.amazon.ion.Decimal;
 import software.amazon.ion.IntegerSize;
-import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.NullValueException;
 import software.amazon.ion.SymbolTable;
@@ -38,16 +37,14 @@ class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
     implements PrivateReaderWriter
 {
-    IonSystem _system;
     SymbolTable _symbols;
-    // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
 
-    IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX in)
+    IonReaderBinarySystemX(UnifiedInputStreamX in)
     {
         super();
         init_raw(in);
-        _system = system;
-        _symbols = system.getSystemSymbolTable();
+        // TODO check IVM to determine version: amznlabs/ion-java#19, amznlabs/ion-java#24
+        _symbols = SharedSymbolTable.getSystemSymbolTable(1);
     }
 
 

@@ -15,7 +15,7 @@
 package software.amazon.ion.impl.lite;
 
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static software.amazon.ion.Symtabs.CATALOG;
+import static software.amazon.ion.impl.Symtabs.CATALOG;
 
 import org.junit.Test;
 import software.amazon.ion.IonDatagram;
@@ -27,7 +27,7 @@ import software.amazon.ion.IonTestCase;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Symtabs;
+import software.amazon.ion.impl.Symtabs;
 import software.amazon.ion.impl.lite.ContainerlessContext;
 import software.amazon.ion.impl.lite.IonContainerLite;
 import software.amazon.ion.impl.lite.IonContext;

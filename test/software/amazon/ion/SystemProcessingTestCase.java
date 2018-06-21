@@ -15,12 +15,12 @@
 package software.amazon.ion;
 
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static software.amazon.ion.Symtabs.LocalSymbolTablePrefix;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static software.amazon.ion.TestUtils.FERMATA;
+import static software.amazon.ion.impl.Symtabs.LocalSymbolTablePrefix;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,6 +29,7 @@ import software.amazon.ion.IonType;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.Timestamp;
 import software.amazon.ion.impl.SymbolTableTest;
+import software.amazon.ion.impl.Symtabs;
 import software.amazon.ion.system.SimpleCatalog;
 
 

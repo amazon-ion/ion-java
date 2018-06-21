@@ -14,7 +14,6 @@
 
 package software.amazon.ion.impl;
 
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static software.amazon.ion.impl.PrivateUtils.valueIsLocalSymbolTable;
 
 import java.io.IOException;
@@ -51,12 +50,17 @@ import software.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
 final class IonWriterSystemTree
     extends IonWriterSystem
 {
+
+     /** Factory for constructing local symbol tables. Not null. */
+     private final LocalSymbolTableAsStruct.Factory _lst_factory;
+
+
     private final ValueFactory _factory;
 
     /** Used to construct new local symtabs. May be null */
     private final IonCatalog    _catalog;
 
-    private final int _initialDepth;
+    private final int           _initialDepth;
 
     private boolean             _in_struct;
 
@@ -82,9 +86,8 @@ final class IonWriterSystemTree
         super(defaultSystemSymbolTable, initialIvmHandling,
               IvmMinimizing.ADJACENT);
 
-        if (rootContainer == null) throw new NullPointerException();
-
         _factory = rootContainer.getSystem();
+        _lst_factory = (LocalSymbolTableAsStruct.Factory)((PrivateValueFactory)_factory).getLstFactory();
         _catalog = catalog;
         _current_parent = rootContainer;
         _in_struct = (_current_parent instanceof IonStruct);
@@ -223,9 +226,7 @@ final class IonWriterSystemTree
             && valueIsLocalSymbolTable(prior))
         {
             // We just finish writing a symbol table!
-            SymbolTable symbol_table =
-                newLocalSymtab(_default_system_symbol_table,
-                               _catalog, (IonStruct) prior);
+            SymbolTable symbol_table = _lst_factory.newLocalSymtab(_catalog, (IonStruct) prior);
             setSymbolTable(symbol_table);
         }
     }
@@ -255,7 +256,7 @@ final class IonWriterSystemTree
     @Override
     final SymbolTable inject_local_symbol_table() throws IOException
     {
-        return newLocalSymtab(_factory, getSymbolTable());
+        return _lst_factory.newLocalSymtab(getSymbolTable());
     }
 
     //========================================================================

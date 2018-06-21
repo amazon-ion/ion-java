@@ -42,6 +42,7 @@ import software.amazon.ion.IonStruct;
 import software.amazon.ion.IonSymbol;
 import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonValue;
+import software.amazon.ion.impl.Symtabs;
 import software.amazon.ion.system.SimpleCatalog;
 
 public class LoaderTest

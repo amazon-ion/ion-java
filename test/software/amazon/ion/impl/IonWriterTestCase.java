@@ -14,13 +14,13 @@
 
 package software.amazon.ion.impl;
 
-import static software.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static software.amazon.ion.SystemSymbols.NAME_SID;
 import static software.amazon.ion.TestUtils.FERMATA;
 import static software.amazon.ion.impl.PrivateIonWriterBase.ERROR_MISSING_FIELD_NAME;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolToken;
+import static software.amazon.ion.impl.Symtabs.FRED_MAX_IDS;
 import static software.amazon.ion.junit.IonAssert.assertIonEquals;
 import static software.amazon.ion.junit.IonAssert.expectNextField;
 
@@ -54,7 +54,6 @@ import software.amazon.ion.IonValue;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.TestUtils;
 import software.amazon.ion.impl.PrivateIonWriter;

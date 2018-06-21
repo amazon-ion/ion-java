@@ -29,6 +29,7 @@ import software.amazon.ion.IonReader;
 import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.impl.PrivateIonWriterFactory;
+import software.amazon.ion.impl.PrivateLocalSymbolTableFactory;
 
 final class IonLoaderLite
     implements IonLoader
@@ -37,6 +38,8 @@ final class IonLoaderLite
 
     /** Not null. */
     private final IonCatalog    _catalog;
+
+    private final PrivateLocalSymbolTableFactory _lstFactory;
 
     /**
      * @param system must not be null.
@@ -49,6 +52,7 @@ final class IonLoaderLite
 
         _system = system;
         _catalog = catalog;
+        _lstFactory = system.getLstFactory();
     }
 
     public IonSystem getSystem()
@@ -93,7 +97,7 @@ final class IonLoaderLite
     public IonDatagram load(String ionText) throws IonException
     {
         try {
-            IonReader reader = makeReader(_system, _catalog, ionText);
+            IonReader reader = makeReader(_catalog, ionText, _lstFactory);
             IonDatagramLite datagram = load_helper(reader);
             return datagram;
         }
@@ -105,7 +109,7 @@ final class IonLoaderLite
     public IonDatagram load(Reader ionText) throws IonException, IOException
     {
         try {
-            IonReader reader = makeReader(_system, _catalog, ionText);
+            IonReader reader = makeReader(_catalog, ionText, _lstFactory);
             IonDatagramLite datagram = load_helper(reader);
             return datagram;
         }
@@ -119,7 +123,7 @@ final class IonLoaderLite
     public IonDatagram load(byte[] ionData) throws IonException
     {
         try {
-            IonReader reader = makeReader(_system, _catalog, ionData, 0, ionData.length);
+            IonReader reader = makeReader(_catalog, ionData, 0, ionData.length, _lstFactory);
             IonDatagramLite datagram = load_helper(reader);
             return datagram;
         }
@@ -132,7 +136,7 @@ final class IonLoaderLite
         throws IonException, IOException
     {
         try {
-            IonReader reader = makeReader(_system, _catalog, ionData);
+            IonReader reader = makeReader(_catalog, ionData, _lstFactory);
             IonDatagramLite datagram = load_helper(reader);
             return datagram;
         }

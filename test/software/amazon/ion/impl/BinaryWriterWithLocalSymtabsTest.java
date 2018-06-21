@@ -14,10 +14,10 @@
 
 package software.amazon.ion.impl;
 
-import static software.amazon.ion.Symtabs.FRED_MAX_IDS;
-import static software.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
-import static software.amazon.ion.Symtabs.makeLocalSymtab;
 import static software.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
+import static software.amazon.ion.impl.Symtabs.FRED_MAX_IDS;
+import static software.amazon.ion.impl.Symtabs.LOCAL_SYMBOLS_ABC;
+import static software.amazon.ion.impl.Symtabs.makeLocalSymtab;
 
 import java.io.ByteArrayOutputStream;
 import org.junit.After;
@@ -27,7 +27,6 @@ import software.amazon.ion.IonTestCase;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.system.IonBinaryWriterBuilder;
 
 public class BinaryWriterWithLocalSymtabsTest

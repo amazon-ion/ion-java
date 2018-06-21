@@ -42,11 +42,9 @@ import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
-import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonReader;
 import software.amazon.ion.IonStruct;
@@ -739,53 +737,6 @@ public final class PrivateUtils
                                                       symbols);
     }
 
-
-    public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
-                                             SymbolTable systemSymtab,
-                                             List<String> localSymbols,
-                                             SymbolTable... imports)
-    {
-        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                        systemSymtab,
-                                                        localSymbols,
-                                                        imports);
-    }
-
-
-    public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
-                                             SymbolTable systemSymtab,
-                                             SymbolTable... imports)
-    {
-        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                        systemSymtab,
-                                                        null /*localSymbols*/,
-                                                        imports);
-    }
-
-
-    public static SymbolTable newLocalSymtab(SymbolTable systemSymbtab,
-                                             IonCatalog catalog,
-                                             IonStruct ionRep)
-    {
-        return LocalSymbolTable.makeNewLocalSymbolTable(systemSymbtab,
-                                                        catalog,
-                                                        ionRep);
-    }
-
-
-    public static SymbolTable newLocalSymtab(ValueFactory imageFactory,
-                                             SymbolTable systemSymbolTable,
-                                             IonCatalog catalog,
-                                             IonReader reader,
-                                             boolean alreadyInStruct)
-    {
-        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                        systemSymbolTable,
-                                                        catalog,
-                                                        reader,
-                                                        alreadyInStruct);
-    }
-
     public static SymbolTable newSubstituteSymtab(SymbolTable original,
                                                   int version,
                                                   int maxId)
@@ -845,14 +796,27 @@ public final class PrivateUtils
         return ((LocalSymbolTable) symtab).makeCopy();
     }
 
+    /**
+     * Trampoline to {@link LocalSymbolTableAsStruct.Factory#Factory(ValueFactory)}
+     * @param imageFactory
+     *          the ValueFactory from which to construct the IonStruct representation of the LST
+     * @return a new {@link LocalSymbolTableAsStruct.Factory}
+     * @deprecated due to DOM entanglement. Streaming applications should use
+     *             {@value LocalSymbolTable#DEFAULT_LST_FACTORY}.
+     */
+    @Deprecated
+    public static PrivateLocalSymbolTableFactory newLocalSymbolTableAsStructFactory(ValueFactory imageFactory)
+    {
+        return new LocalSymbolTableAsStruct.Factory(imageFactory);
+    }
 
     /**
      * Returns a minimal symtab, either system or local depending on the
-     * given values. If the imports are empty, the default system symtab is
-     * returned.
+     * given values, that supports representation as an IonStruct. If the
+     * imports are empty, the default system symtab is returned.
      *
-     * @param imageFactory
-     *          the factory to use when building a DOM image, may be null
+     * @param lstFactory
+     *          the factory to use to build the local symbol table, never null
      * @param defaultSystemSymtab
      *          the default system symtab, which will be used if the first
      *          import in {@code imports} isn't a system symtab, never null
@@ -861,7 +825,7 @@ public final class PrivateUtils
      * The first (and only the first) may be a system table, in which case the
      * {@code defaultSystemSymtab} is ignored.
      */
-    public static SymbolTable initialSymtab(ValueFactory imageFactory,
+    public static SymbolTable initialSymtab(PrivateLocalSymbolTableFactory lstFactory,
                                             SymbolTable defaultSystemSymtab,
                                             SymbolTable... imports)
     {
@@ -875,20 +839,17 @@ public final class PrivateUtils
             return imports[0];
         }
 
-        return LocalSymbolTable.makeNewLocalSymbolTable(imageFactory,
-                                                        defaultSystemSymtab,
-                                                        null, /*localSymbols*/
-                                                        imports);
+        return lstFactory.newLocalSymtab(defaultSystemSymtab, imports);
     }
 
 
     /**
      * Trampoline to
-     * {@link LocalSymbolTable#getIonRepresentation(ValueFactory)};
+     * {@link LocalSymbolTableAsStruct#getIonRepresentation()};
      */
-    public static IonStruct symtabTree(ValueFactory vf, SymbolTable symtab)
+    public static IonStruct symtabTree(SymbolTable symtab)
     {
-        return ((LocalSymbolTable)symtab).getIonRepresentation(vf);
+        return ((LocalSymbolTableAsStruct)symtab).getIonRepresentation();
     }
 
     /**

@@ -52,6 +52,7 @@ import software.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
 import software.amazon.ion.impl.PrivateIonSystem;
 import software.amazon.ion.impl.PrivateIonWriterFactory;
 import software.amazon.ion.impl.PrivateUtils;
+import software.amazon.ion.system.IonReaderBuilder;
 import software.amazon.ion.system.IonTextWriterBuilder;
 
 final class IonSystemLite
@@ -63,19 +64,22 @@ final class IonSystemLite
 
     /** Not null. */
     private final IonCatalog         _catalog;
-    private       ValueFactoryLite   _value_factory;
     private final IonLoader          _loader;
     /** Immutable. */
     private final IonTextWriterBuilder myTextWriterBuilder;
     /** Immutable. */
     private final PrivateIonBinaryWriterBuilder myBinaryWriterBuilder;
+    /** Immutable. **/
+    private final IonReaderBuilder myReaderBuilder;
 
     public IonSystemLite(IonTextWriterBuilder twb,
-                          PrivateIonBinaryWriterBuilder bwb)
+                         PrivateIonBinaryWriterBuilder bwb,
+                         IonReaderBuilder rb)
     {
         IonCatalog catalog = twb.getCatalog();
         assert catalog != null;
         assert catalog == bwb.getCatalog();
+        assert catalog == rb.getCatalog();
 
         _catalog = catalog;
         _loader = new IonLoaderLite(this, catalog);
@@ -84,12 +88,12 @@ final class IonSystemLite
 
         myTextWriterBuilder = twb.immutable();
 
-        // whacked but I'm not going to figure this out right now
-        _value_factory = this;
-        _value_factory.set_system(this);
+        set_system(this);
 
-        bwb.setSymtabValueFactory(_value_factory);
+        bwb.setSymtabValueFactory(this);
         myBinaryWriterBuilder = bwb.immutable();
+
+        myReaderBuilder = rb.immutable();
     }
 
     //==========================================================================
@@ -168,28 +172,28 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(Reader ionText)
     {
-        IonReader reader = makeReader(this, _catalog, ionText);
+        IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
-        IonReader reader = newReader(ionData);
+        IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        IonReader reader = makeReader(this, _catalog, ionText);
+        IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
-        IonReader reader = makeReader(this, _catalog, ionData);
+        IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -224,10 +228,7 @@ final class IonSystemLite
 
     public SymbolTable newLocalSymbolTable(SymbolTable... imports)
     {
-        return PrivateUtils.newLocalSymtab(this,
-                                             getSystemSymbolTable(),
-                                             null /* localSymbols */,
-                                             imports);
+        return _lstFactory.newLocalSymtab(getSystemSymbolTable(), imports);
     }
 
     public SymbolTable newSharedSymbolTable(IonStruct ionRep)
@@ -646,8 +647,7 @@ final class IonSystemLite
     public IonDatagram newDatagram(IonCatalog catalog, SymbolTable... imports)
     {
         SymbolTable defaultSystemSymtab = getSystemSymbolTable();
-        SymbolTable symbols =
-            initialSymtab(this, defaultSystemSymtab, imports);
+        SymbolTable symbols = initialSymtab(_lstFactory, defaultSystemSymtab, imports);
         IonDatagramLite dg = newDatagram(catalog);
         dg.appendTrailingSymbolTable(symbols);
         return dg;
@@ -655,55 +655,55 @@ final class IonSystemLite
 
     public IonReader newReader(byte[] ionData)
     {
-        return makeReader(this, _catalog, ionData);
+        return myReaderBuilder.build(ionData);
     }
 
     public IonReader newSystemReader(byte[] ionData)
     {
-        return makeSystemReader(this, ionData);
+        return makeSystemReader(ionData);
     }
 
 
     public IonReader newReader(byte[] ionData, int offset, int len)
     {
-        return makeReader(this, _catalog, ionData, offset, len);
+        return myReaderBuilder.build(ionData, offset, len);
     }
 
     public IonReader newSystemReader(byte[] ionData, int offset, int len)
     {
-        return makeSystemReader(this, ionData, offset, len);
+        return makeSystemReader(ionData, offset, len);
     }
 
 
     public IonReader newReader(String ionText)
     {
-        return makeReader(this, _catalog, ionText);
+        return myReaderBuilder.build(ionText);
     }
 
     public IonReader newSystemReader(String ionText)
     {
-        return makeSystemReader(this, ionText);
+        return makeSystemReader(ionText);
     }
 
 
     public IonReader newReader(InputStream ionData)
     {
-        return makeReader(this, _catalog, ionData);
+        return myReaderBuilder.build(ionData);
     }
 
     public IonReader newSystemReader(InputStream ionData)
     {
-        return makeSystemReader(this, ionData);
+        return makeSystemReader(ionData);
     }
 
     public IonReader newReader(Reader ionText)
     {
-        return makeReader(this, _catalog, ionText);
+        return myReaderBuilder.build(ionText);
     }
 
     public IonReader newReader(IonValue value)
     {
-        return makeReader(this, _catalog, value);
+        return myReaderBuilder.build(value);
     }
 
     //==========================================================================
@@ -712,7 +712,7 @@ final class IonSystemLite
 
     public IonReader newSystemReader(Reader ionText)
     {
-        return makeSystemReader(this, ionText);
+        return makeSystemReader(ionText);
     }
 
     public IonReader newSystemReader(IonValue value)

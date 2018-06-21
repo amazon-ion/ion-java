@@ -17,6 +17,7 @@ package software.amazon.ion.impl.lite;
 import software.amazon.ion.IonSystem;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
+import software.amazon.ion.system.IonReaderBuilder;
 import software.amazon.ion.system.IonTextWriterBuilder;
 
 /**
@@ -27,10 +28,12 @@ import software.amazon.ion.system.IonTextWriterBuilder;
 @Deprecated
 public final class PrivateLiteDomTrampoline
 {
+
     public static IonSystem newLiteSystem(IonTextWriterBuilder twb,
-                                          PrivateIonBinaryWriterBuilder bwb)
+                                          PrivateIonBinaryWriterBuilder bwb,
+                                          IonReaderBuilder rb)
     {
-        return new IonSystemLite(twb, bwb);
+        return new IonSystemLite(twb, bwb, rb);
     }
 
     public static boolean isLiteSystem(IonSystem system)

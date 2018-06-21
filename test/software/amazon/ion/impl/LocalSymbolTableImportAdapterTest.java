@@ -1,15 +1,15 @@
 package software.amazon.ion.impl;
 
+import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Test;
 import software.amazon.ion.IonDatagram;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.ReadOnlyValueException;
 import software.amazon.ion.SymbolTable;
-import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import software.amazon.ion.SymbolToken;
 
 public class LocalSymbolTableImportAdapterTest extends BaseSymbolTableWrapperTest
@@ -251,12 +251,16 @@ public class LocalSymbolTableImportAdapterTest extends BaseSymbolTableWrapperTes
 
         public LocalSymbolTable build()
         {
-            return LocalSymbolTable.makeNewLocalSymbolTable(
-                system,
+            LocalSymbolTable lst = (LocalSymbolTable) LocalSymbolTable.DEFAULT_LST_FACTORY.newLocalSymtab(
                 system.getSystemSymbolTable(),
-                Arrays.asList(symbols),
                 importedTables
             );
+
+            for(String symbol : symbols) {
+                lst.intern(symbol);
+            }
+
+            return lst;
         }
 
         public LocalSymbolTableBuilder setSymbols(final String... symbols)

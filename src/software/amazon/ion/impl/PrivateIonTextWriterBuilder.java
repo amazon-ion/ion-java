@@ -191,7 +191,7 @@ public class PrivateIonTextWriterBuilder
                                                                    appender);
 
         SymbolTable initialSymtab =
-            initialSymtab(system, defaultSystemSymtab, imports);
+            initialSymtab(((PrivateValueFactory)system).getLstFactory(), defaultSystemSymtab, imports);
 
         return new IonWriterUser(catalog, system, systemWriter, initialSymtab);
     }

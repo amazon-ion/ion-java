@@ -14,11 +14,11 @@
 
 package software.amazon.ion.impl;
 
-import static software.amazon.ion.Symtabs.FRED_MAX_IDS;
-import static software.amazon.ion.Symtabs.LOCAL_SYMBOLS_ABC;
-import static software.amazon.ion.Symtabs.makeLocalSymtab;
 import static software.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
 import static software.amazon.ion.impl.PrivateUtils.copyLocalSymbolTable;
+import static software.amazon.ion.impl.Symtabs.FRED_MAX_IDS;
+import static software.amazon.ion.impl.Symtabs.LOCAL_SYMBOLS_ABC;
+import static software.amazon.ion.impl.Symtabs.makeLocalSymtab;
 
 import org.junit.Test;
 import software.amazon.ion.IonException;
@@ -26,7 +26,6 @@ import software.amazon.ion.IonTestCase;
 import software.amazon.ion.SubstituteSymbolTableException;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.impl.LocalSymbolTable;
 import software.amazon.ion.impl.SubstituteSymbolTable;
 

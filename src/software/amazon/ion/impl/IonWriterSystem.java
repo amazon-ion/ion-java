@@ -15,7 +15,6 @@
 package software.amazon.ion.impl;
 
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolTokens;
 
@@ -226,7 +225,7 @@ abstract class IonWriterSystem
         assert _symbol_table.isSystemTable();
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
-        return newLocalSymtab(null /*system*/, _symbol_table);
+        return LocalSymbolTable.DEFAULT_LST_FACTORY.newLocalSymtab(_symbol_table);
     }
 
     @Override
