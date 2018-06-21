@@ -14,10 +14,10 @@
 
 package software.amazon.ion.impl;
 
-import static software.amazon.ion.Symtabs.sharedSymtabStruct;
 import static software.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
 import static software.amazon.ion.impl.PrivateUtils.stringIterator;
 import static software.amazon.ion.impl.SymbolTableTest.checkSharedTable;
+import static software.amazon.ion.impl.Symtabs.sharedSymtabStruct;
 
 import java.io.IOException;
 import org.junit.Test;
@@ -30,7 +30,6 @@ import software.amazon.ion.IonWriter;
 import software.amazon.ion.SharedSymtabMaker;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.junit.Injected.Inject;
 

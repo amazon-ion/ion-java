@@ -17,7 +17,6 @@ package software.amazon.ion.impl;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonDatagram;
@@ -35,16 +34,33 @@ final class IonReaderTreeUserX
     extends IonReaderTreeSystem
     implements PrivateReaderWriter
 {
-    IonCatalog _catalog;
 
-    public IonReaderTreeUserX(IonValue value, IonCatalog catalog)
+    private final PrivateLocalSymbolTableFactory _lstFactory;
+
+    IonCatalog _catalog;
+    private SymbolTable _symbols;
+
+    public IonReaderTreeUserX(IonValue value, IonCatalog catalog, PrivateLocalSymbolTableFactory lstFactory)
     {
-        super(value);
+        super(value); // calls re_init
         _catalog = catalog;
+        _lstFactory = lstFactory;
     }
 
+    @Override
+    void re_init(IonValue value, boolean hoisted)
+    {
+        super.re_init(value, hoisted);
+        _symbols = _system_symtab;
+    }
 
     //========================================================================
+
+    @Override
+    public SymbolTable getSymbolTable()
+    {
+        return _symbols;
+    }
 
     @Override
     public IonType next()
@@ -85,14 +101,14 @@ final class IonReaderTreeUserX
                     if (sid == UNKNOWN_SYMBOL_ID) {
                         String name = sym.stringValue();
                         if (name != null) {
-                            sid = _system.getSystemSymbolTable().findSymbol(name);
+                            sid = _system_symtab.findSymbol(name);
                         }
                     }
                     if (sid == ION_1_0_SID
                         && _next.getTypeAnnotationSymbols().length == 0) {
                         // $ion_1_0 is read as an IVM only if it is not annotated
-                        SymbolTable symbols = _system.getSystemSymbolTable();
-                        set_symbol_table(symbols);
+                        SymbolTable symbols = _system_symtab;
+                        _symbols = symbols;
                         push_symbol_table(symbols);
                         _next = null;
                         continue;
@@ -103,13 +119,9 @@ final class IonReaderTreeUserX
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
-                    IonReader reader = new IonReaderTreeUserX(_next, _catalog);
-                    SymbolTable symtab =
-                        newLocalSymtab(_system,
-                                       _system.getSystemSymbolTable(),
-                                       _system.getCatalog(),
-                                       reader, false);
-                    set_symbol_table(symtab);
+                    IonReader reader = new IonReaderTreeUserX(_next, _catalog, _lstFactory);
+                    SymbolTable symtab = _lstFactory.newLocalSymtab(_catalog, reader, false);
+                    _symbols = symtab;
                     push_symbol_table(symtab);
                     _next = null;
                     continue;

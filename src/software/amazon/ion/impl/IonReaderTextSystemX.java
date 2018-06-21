@@ -58,19 +58,13 @@ class IonReaderTextSystemX
 {
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
-    protected IonSystem _system;
+    SymbolTable _system_symtab;
 
-
-    protected IonReaderTextSystemX(IonSystem system, UnifiedInputStreamX iis)
+    protected IonReaderTextSystemX(UnifiedInputStreamX iis)
     {
-        _system = system;
+        _system_symtab = PrivateUtils.systemSymtab(1); // TODO check IVM to determine version: amznlabs/ion-java#19, amznlabs/ion-java#24
         init_once();
         init(iis, IonType.DATAGRAM);
-    }
-
-    public IonSystem getSystem()
-    {
-        return _system;
     }
 
     // TODO getIntegerType() is duplicated in IonReaderBinarySystemX. It could
@@ -623,7 +617,7 @@ class IonReaderTextSystemX
         SymbolTable symtab = super.getSymbolTable();
         if (symtab == null)
         {
-            symtab = _system.getSystemSymbolTable();
+            symtab = _system_symtab;
         }
         return symtab;
     }

@@ -256,10 +256,9 @@ class IonWriterUser
 
         // convert the struct we just wrote with the TreeWriter to a
         // local symbol table
-        SymbolTable symtab =
-            PrivateUtils.newLocalSymtab(activeSystemSymbolTable(),
-                                          _catalog,
-                                          _symbol_table_value);
+        LocalSymbolTableAsStruct.Factory lstFactory =
+            (LocalSymbolTableAsStruct.Factory)((PrivateValueFactory)_symtab_value_factory).getLstFactory();
+        SymbolTable symtab = lstFactory.newLocalSymtab(_catalog, _symbol_table_value);
 
         _symbol_table_value = null;
         _current_writer     = _system_writer;

@@ -23,7 +23,6 @@ import software.amazon.ion.IonReader;
 import software.amazon.ion.IonSymbol;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
 
 public class ValueWriterTest
     extends IonWriterTestCase

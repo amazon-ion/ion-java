@@ -29,7 +29,6 @@ import software.amazon.ion.IonSequence;
 import software.amazon.ion.IonStruct;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.system.IonTextWriterBuilder;

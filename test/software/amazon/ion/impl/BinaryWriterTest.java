@@ -26,7 +26,6 @@ import software.amazon.ion.IonValue;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.junit.IonAssert;
 
 public class BinaryWriterTest

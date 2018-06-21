@@ -49,8 +49,7 @@ import software.amazon.ion.impl.PrivateIonValue.SymbolTableProvider;
 class IonReaderTreeSystem
     implements IonReader, PrivateReaderWriter
 {
-    protected IonSystem           _system;
-    protected SymbolTable         _symbols;
+    protected final SymbolTable   _system_symtab;
     protected Iterator<IonValue>  _iter;
     protected IonValue            _parent;
     protected PrivateIonValue   _next;
@@ -69,16 +68,17 @@ class IonReaderTreeSystem
     {
         if (value == null) {
             // do nothing
+            _system_symtab = null;
             _symbolTableAccessor = null;
         }
         else {
-            _system = value.getSystem();
+            _system_symtab = value.getSystem().getSystemSymbolTable();
             re_init(value, /* hoisted */ false);
             _symbolTableAccessor = new SymbolTableProvider()
             {
                 public SymbolTable getSymbolTable()
                 {
-                    return null == _symbols ? _system.getSystemSymbolTable() : _symbols;
+                    return IonReaderTreeSystem.this.getSymbolTable();
                 }
             };
         }
@@ -97,7 +97,6 @@ class IonReaderTreeSystem
 
     void re_init(IonValue value, boolean hoisted)
     {
-        _symbols = null;
         _curr = null;
         _eof = false;
         _top = 0;
@@ -119,12 +118,6 @@ class IonReaderTreeSystem
     public void close()
     {
         _eof = true;
-    }
-
-    protected void set_symbol_table(SymbolTable symtab)
-    {
-        _symbols = symtab;
-        return;
     }
 
     private void push() {
@@ -208,16 +201,7 @@ class IonReaderTreeSystem
 
     public SymbolTable getSymbolTable()
     {
-        SymbolTable symboltable = null;
-
-        if (_curr != null) {
-            symboltable = _curr.getSymbolTable();
-        }
-        else if (_parent != null) {
-            symboltable = _parent.getSymbolTable();
-        }
-
-        return symboltable;
+        return _system_symtab;
     }
 
     public IonType getType()
