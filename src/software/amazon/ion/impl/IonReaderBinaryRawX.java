@@ -886,10 +886,10 @@ abstract class IonReaderBinaryRawX
         }
         return value;
     }
+
     protected final int readVarInt() throws IOException
     {
-        Integer varInt = readVarInteger();
-        return varInt == null ? 0 : varInt;
+        return readVarInt(read());
     }
 
     /**
@@ -898,67 +898,77 @@ abstract class IonReaderBinaryRawX
      */
     protected final Integer readVarInteger() throws IOException
     {
+        int firstByte = read();
+
+        // if byte represents -0 returns null
+        if (firstByte == 0xC0) {
+            return null;
+        }
+
+        return readVarInt(firstByte);
+    }
+
+    /**
+     * reads a varInt after the last octet was read. The last octet is used to specify the sign and -0 has different
+     * representation on the protected API that was called
+     *
+     * @param lastOctet last varInt octet
+     */
+    private int readVarInt(int lastOctet) throws IOException {
         // VarInt uses the high-order bit of the last octet as a marker; some (but not all) 5-byte VarInts can fit
         // into a Java int.
         // To validate overflows we accumulate the VarInt in a long and then check if it can be represented by an int
         //
         // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
 
-        long    retvalue = 0;
-        boolean is_negative = false;
-        int     b;
-        // synthetic label "done" (yuck)
-        done:   for (;;) {
+        long retValue = 0;
+        int b = lastOctet;
+        boolean isNegative = false;
 
-            // read the first byte - it has the sign bit
-            if ((b = read()) < 0) throwUnexpectedEOFException();
+        for (;;) {
+            if (b < 0) throwUnexpectedEOFException();
+
             if ((b & 0x40) != 0) {
-                is_negative = true;
+                isNegative = true;
             }
-            retvalue = (b & 0x3F);
-
-            if ((b & 0x80) != 0) break done;
-            // for the second byte we shift our earlier bits just as much,
-            // but there are fewer of them there to shift
+            retValue = (b & 0x3F);
+            if ((b & 0x80) != 0) break;
 
             if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
+            retValue = (retValue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break;
             // for the rest, they're all the same
 
             if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
+            retValue = (retValue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break;
             // for the rest, they're all the same
 
             if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
+            retValue = (retValue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break;
             // for the rest, they're all the same
 
             if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
+            retValue = (retValue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break;
 
             // Don't support anything above a 5-byte VarInt for now, see https://github.com/amzn/ion-java/issues/146
             throwVarIntOverflowException();
         }
 
-        if (is_negative) {
-            retvalue = -retvalue;
+        if (isNegative) {
+            retValue = -retValue;
         }
 
-        int retValueAsInt = (int) retvalue;
-        if (retvalue != ((long) retValueAsInt)) {
+        int retValueAsInt = (int) retValue;
+        if (retValue != ((long) retValueAsInt)) {
             throwVarIntOverflowException();
-        }
-
-        if (is_negative && retValueAsInt == 0) {
-            return null;
         }
 
         return retValueAsInt;
     }
+
     protected final int readVarUIntOrEOF() throws IOException
     {
         // VarUInt uses the high-order bit of the last octet as a marker; some (but not all) 5-byte VarUInt can fit
