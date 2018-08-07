@@ -888,127 +888,133 @@ abstract class IonReaderBinaryRawX
     }
     protected final int readVarInt() throws IOException
     {
-        int     retvalue = 0;
-        boolean is_negative = false;
-        int     b;
-        // synthetic label "done" (yuck)
-done:   for (;;) {
-            // read the first byte - it has the sign bit
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            if ((b & 0x40) != 0) {
-                is_negative = true;
-            }
-            retvalue = (b & 0x3F);
-            if ((b & 0x80) != 0) break done;
-            // for the second byte we shift our eariler bits just as much,
-            // but there are fewer of them there to shift
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
-            // for the rest, they're all the same
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
-            // for the rest, they're all the same
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
-            // for the rest, they're all the same
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break done;
-            // if we get here we have more bits than we have room for :(
-            throwIntOverflowExeption();
-        }
-        if (is_negative) {
-            retvalue = -retvalue;
-        }
-        return retvalue;
-    }
-    protected final long readVarLong() throws IOException
-    {
+        // VarUInt use the last octet as a marker so a 5 byte VarUInt can fit in a Java int.
+        // Integer.MAX_VALUE = 2147483647 is represented as 0x07 0x7F 0x7F 0x7F 0xFF.
+        // To validate overflows we accumulate the varUInt in a long and then check if it'd fit in an int
+        // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
         long    retvalue = 0;
         boolean is_negative = false;
         int     b;
         // synthetic label "done" (yuck)
 done:   for (;;) {
+
             // read the first byte - it has the sign bit
             if ((b = read()) < 0) throwUnexpectedEOFException();
             if ((b & 0x40) != 0) {
                 is_negative = true;
             }
             retvalue = (b & 0x3F);
+
             if ((b & 0x80) != 0) break done;
             // for the second byte we shift our eariler bits just as much,
             // but there are fewer of them there to shift
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
             // for the rest, they're all the same
-            for (;;) {
-                if ((b = read()) < 0) throwUnexpectedEOFException();
-                if ((retvalue & 0xFE00000000000000L) != 0) throwIntOverflowExeption();
-                retvalue = (retvalue << 7) | (b & 0x7F);
-                if ((b & 0x80) != 0) break done;
-            }
+
+            if ((b = read()) < 0) throwUnexpectedEOFException();
+            retvalue = (retvalue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break done;
+            // for the rest, they're all the same
+
+            if ((b = read()) < 0) throwUnexpectedEOFException();
+            retvalue = (retvalue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break done;
+            // for the rest, they're all the same
+
+            if ((b = read()) < 0) throwUnexpectedEOFException();
+            retvalue = (retvalue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break done;
+
+            // Don't support anything above a 5 bytes VarUInt for now, see https://github.com/amzn/ion-java/issues/146
+            throwVarIntOverflowException();
         }
         if (is_negative) {
             retvalue = -retvalue;
         }
-        return retvalue;
+
+        int retValueAsInt = (int) retvalue;
+        if(retvalue != ((long)retValueAsInt)) {
+            throwVarIntOverflowException();
+        }
+
+        return retValueAsInt;
     }
+
     /**
      * Reads an integer value, returning null to mean -0.
      * @throws IOException
      */
     protected final Integer readVarInteger() throws IOException
     {
-        int     retvalue = 0;
+        // VarUInt use the last octet as a marker so a 5 byte VarUInt can fit in a Java int.
+        // Integer.MAX_VALUE = 2147483647 is represented as 0x07 0x7F 0x7F 0x7F 0xFF.
+        // To validate overflows we accumulate the varUInt in a long and then check if it'd fit in an int
+        // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
+        long    retvalue = 0;
         boolean is_negative = false;
         int     b;
-        // Synthetic label "done" (yuck)
-done:   for (;;) {
+        // synthetic label "done" (yuck)
+        done:   for (;;) {
+
             // read the first byte - it has the sign bit
             if ((b = read()) < 0) throwUnexpectedEOFException();
             if ((b & 0x40) != 0) {
                 is_negative = true;
             }
             retvalue = (b & 0x3F);
+
             if ((b & 0x80) != 0) break done;
             // for the second byte we shift our eariler bits just as much,
             // but there are fewer of them there to shift
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
             // for the rest, they're all the same
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
             // for the rest, they're all the same
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
             // for the rest, they're all the same
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break done;
-            // if we get here we have more bits than we have room for :(
-            throwIntOverflowExeption();
+
+            // Don't support anything above a 5 bytes VarUInt for now, see https://github.com/amzn/ion-java/issues/146
+            throwVarIntOverflowException();
         }
-        Integer retInteger = null;
+
         if (is_negative) {
-            if (retvalue != 0) {
-                retInteger = new Integer(-retvalue);
-            }
+            retvalue = -retvalue;
         }
-        else {
-            retInteger = new Integer(retvalue);
+
+        int retValueAsInt = (int) retvalue;
+        if(retvalue != ((long)retValueAsInt)) {
+            throwVarIntOverflowException();
         }
-        return retInteger;
+
+        if (is_negative && retValueAsInt == 0) {
+            return null;
+        }
+
+        return retValueAsInt;
     }
     protected final int readVarUIntOrEOF() throws IOException
     {
-        int retvalue = 0;
+        // VarUInt use the last octet as a marker so a 5 byte VarUInt can fit in a Java int.
+        // Integer.MAX_VALUE = 2147483647 is represented as 0x07 0x7F 0x7F 0x7F 0xFF.
+        // To validate overflows we accumulate the varUInt in a long and then check if it'd fit in an int
+        // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
+        long retvalue = 0;
         int  b;
         for (;;) { // fake loop to create a "goto done"
             if ((b = read()) < 0) {
@@ -1016,47 +1022,76 @@ done:   for (;;) {
             }
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-            // if we get here we have more bits than we have room for :(
-            throwIntOverflowExeption();
+
+            // Don't support anything above a 5 bytes VarUInt for now, see https://github.com/amzn/ion-java/issues/146
+            throwVarIntOverflowException();
         }
-        return retvalue;
+
+        int retValueAsInt = (int) retvalue;
+        if(retvalue != ((long)retValueAsInt)) {
+            throwVarIntOverflowException();
+        }
+
+        return retValueAsInt;
     }
+
     protected final int readVarUInt() throws IOException
     {
-        int retvalue = 0;
+        // VarUInt use the last octet as a marker so a 5 byte VarUInt can fit in a Java int.
+        // Integer.MAX_VALUE = 2147483647 is represented as 0x07 0x7F 0x7F 0x7F 0xFF.
+        // To validate overflows we accumulate the varUInt in a long and then check if it'd fit in an int
+        // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
+        long retvalue = 0;
         int  b;
+
         for (;;) { // fake loop to create a "goto done"
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
+
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
-            // if we get here we have more bits than we have room for :(
-            throwIntOverflowExeption();
+
+            // Don't support anything above a 5 bytes VarUInt for now, see https://github.com/amzn/ion-java/issues/146
+            throwVarIntOverflowException();
         }
-        return retvalue;
+
+        int retValueAsInt = (int) retvalue;
+        if(retvalue != ((long)retValueAsInt)) {
+            throwVarIntOverflowException();
+        }
+
+        return retValueAsInt;
     }
     protected final double readFloat(int len) throws IOException
     {
@@ -1076,18 +1111,7 @@ done:   for (;;) {
             ? (double) Float.intBitsToFloat((int) (dBits & 0xffffffffL))
             : Double.longBitsToDouble(dBits);
     }
-    protected final long readVarULong() throws IOException
-    {
-        long retvalue = 0;
-        int  b;
-        for (;;) {
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            if ((retvalue & 0xFE00000000000000L) != 0) throwIntOverflowExeption();
-            retvalue = (retvalue << 7) | (b & 0x7F);
-            if ((b & 0x80) != 0) break;
-        }
-        return retvalue;
-    }
+
     protected final Decimal readDecimal(int len) throws IOException
     {
         MathContext mathContext = MathContext.UNLIMITED;
@@ -1276,8 +1300,8 @@ done:   for (;;) {
     private final void throwUnexpectedEOFException() throws IOException {
         throwErrorAt("unexpected EOF in value");
     }
-    private final void throwIntOverflowExeption() throws IOException {
-        throwErrorAt("int in stream is too long for a Java int 32 use readLong()");
+    private final void throwVarIntOverflowException() throws IOException {
+        throwErrorAt("int in stream is too long for a Java int 32");
     }
 
     protected IonException newErrorAt(String msg) {
