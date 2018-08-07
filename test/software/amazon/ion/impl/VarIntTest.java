@@ -12,9 +12,7 @@ public class VarIntTest extends IonTestCase {
 
     @Test
     public void readMaxVarUInt() throws Exception {
-        int actual = makeReader("077F7F7FFF").readVarUInt();
-
-        assertEquals(Integer.MAX_VALUE, actual);
+        assertEquals(Integer.MAX_VALUE, makeReader("077F7F7FFF").readVarUInt());
     }
 
     @Test(expected = IonException.class)
@@ -22,18 +20,34 @@ public class VarIntTest extends IonTestCase {
         makeReader("0800000080").readVarUInt(); // Integer.MAX_VALUE + 1
     }
 
+    @Test(expected = IonException.class)
+    public void readEOFVarUInt() throws Exception {
+        makeReader("").readVarUInt();
+    }
+
+    @Test
+    public void readMaxVarUIntOrEOF() throws Exception {
+        assertEquals(Integer.MAX_VALUE, makeReader("077F7F7FFF").readVarUIntOrEOF());
+    }
+
+    @Test(expected = IonException.class)
+    public void overflowVarUIntOrEOF() throws Exception {
+        makeReader("0800000080").readVarUIntOrEOF(); // Integer.MAX_VALUE + 1
+    }
+
+    @Test
+    public void readEOFVarUIntOrEOF() throws Exception {
+        assertEquals(UnifiedInputStreamX.EOF, makeReader("").readVarUIntOrEOF());
+    }
+
     @Test
     public void readMaxVarInt() throws Exception {
-        int actual = makeReader("077F7F7FFF").readVarInt();
-
-        assertEquals(Integer.MAX_VALUE, actual);
+        assertEquals(Integer.MAX_VALUE, makeReader("077F7F7FFF").readVarInt());
     }
 
     @Test
     public void readMinVarInt() throws Exception {
-        int actual = makeReader("4800000080").readVarInt();
-
-        assertEquals(Integer.MIN_VALUE, actual);
+        assertEquals(Integer.MIN_VALUE, makeReader("4800000080").readVarInt());
     }
 
     @Test(expected = IonException.class)
@@ -46,19 +60,14 @@ public class VarIntTest extends IonTestCase {
         makeReader("4800000081").readVarInt(); // Integer.MIN_VALUE - 1
     }
 
-
     @Test
     public void readMaxVarInteger() throws Exception {
-        Integer actual = makeReader("077F7F7FFF").readVarInteger();
-
-        assertEquals(Integer.MAX_VALUE, (int) actual);
+        assertEquals(Integer.MAX_VALUE, (int) makeReader("077F7F7FFF").readVarInteger());
     }
 
     @Test
     public void readMinVarInteger() throws Exception {
-        Integer actual = makeReader("4800000080").readVarInteger();
-
-        assertEquals(Integer.MIN_VALUE, (int) actual);
+        assertEquals(Integer.MIN_VALUE, (int) makeReader("4800000080").readVarInteger());
     }
 
     @Test(expected = IonException.class)
@@ -73,13 +82,10 @@ public class VarIntTest extends IonTestCase {
 
     @Test
     public void readVarIntegerNegativeZero() throws Exception {
-        Integer actual = makeReader("C0").readVarInteger();
-
-        assertNull(actual);
+        assertNull(makeReader("C0").readVarInteger());
     }
 
     private IonReaderBinaryUserX makeReader(String hex) throws Exception {
-
         ByteArrayInputStream input = new ByteArrayInputStream(DatatypeConverter.parseHexBinary("E00100EA" + hex));
 
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(input);
