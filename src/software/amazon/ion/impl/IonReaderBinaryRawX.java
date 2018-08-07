@@ -909,12 +909,12 @@ abstract class IonReaderBinaryRawX
     }
 
     /**
-     * reads a varInt after the last octet was read. The last octet is used to specify the sign and -0 has different
+     * reads a varInt after the first byte was read. The first byte is used to specify the sign and -0 has different
      * representation on the protected API that was called
      *
-     * @param lastOctet last varInt octet
+     * @param firstByte last varInt octet
      */
-    private int readVarInt(int lastOctet) throws IOException {
+    private int readVarInt(int firstByte) throws IOException {
         // VarInt uses the high-order bit of the last octet as a marker; some (but not all) 5-byte VarInts can fit
         // into a Java int.
         // To validate overflows we accumulate the VarInt in a long and then check if it can be represented by an int
@@ -922,7 +922,7 @@ abstract class IonReaderBinaryRawX
         // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
 
         long retValue = 0;
-        int b = lastOctet;
+        int b = firstByte;
         boolean isNegative = false;
 
         for (;;) {
