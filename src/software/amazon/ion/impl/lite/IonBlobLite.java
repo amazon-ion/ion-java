@@ -70,14 +70,9 @@ final class IonBlobLite
         throws IOException
     {
         validateThisNotNull();
-        InputStream byteStream = newInputStream();
-        try
+        try (InputStream byteStream = newInputStream())
         {
             PrivateUtils.writeAsBase64(byteStream, out);
-        }
-        finally
-        {
-            byteStream.close();
         }
     }
 

@@ -82,15 +82,10 @@ final class IonLoaderLite
 
     public IonDatagram load(File ionFile) throws IonException, IOException
     {
-        InputStream ionData = new FileInputStream(ionFile);
-        try
+        try (InputStream ionData = new FileInputStream(ionFile))
         {
             IonDatagram datagram = load(ionData);
             return datagram;
-        }
-        finally
-        {
-            ionData.close();
         }
     }
 

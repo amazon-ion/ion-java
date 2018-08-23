@@ -71,8 +71,7 @@ abstract class BaseApp
 
         byte[] buffer = new byte[(int) len];
 
-        FileInputStream in = new FileInputStream(file);
-        try
+        try (FileInputStream in = new FileInputStream(file))
         {
             int readBytesCount = in.read(buffer);
             if (readBytesCount != len || in.read() != -1)
@@ -81,10 +80,6 @@ abstract class BaseApp
                                        + file);
                 return null;
             }
-        }
-        finally
-        {
-            in.close();
         }
 
         return buffer;
@@ -213,9 +208,7 @@ abstract class BaseApp
         File catalogFile = new File(catalogPath);
         try
         {
-            InputStream in =
-                new BufferedInputStream(new FileInputStream(catalogFile));
-            try
+            try (InputStream in = new BufferedInputStream(new FileInputStream(catalogFile)))
             {
                 IonReader reader = mySystem.newReader(in);
                 while (reader.next() != null)
@@ -224,10 +217,6 @@ abstract class BaseApp
                         mySystem.newSharedSymbolTable(reader, true);
                     myCatalog.putTable(symtab);
                 }
-            }
-            finally
-            {
-                in.close();
             }
         }
         catch (Exception e)
