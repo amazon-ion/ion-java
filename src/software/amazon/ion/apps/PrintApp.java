@@ -107,14 +107,9 @@ public class PrintApp
         {
             String fileName = inputFile.getName();
             File outputFile = new File(myOutputDir, fileName);
-            FileOutputStream out = new FileOutputStream(outputFile);
-            try
+            try (FileOutputStream out = new FileOutputStream(outputFile))
             {
                 process(reader, out);
-            }
-            finally
-            {
-                out.close();
             }
         }
     }
@@ -130,14 +125,9 @@ public class PrintApp
         else
         {
             File outputFile = new File(myOutputFile);
-            FileOutputStream out = new FileOutputStream(outputFile);
-            try
+            try (FileOutputStream out = new FileOutputStream(outputFile))
             {
                 process(reader, out);
-            }
-            finally
-            {
-                out.close();
             }
         }
     }

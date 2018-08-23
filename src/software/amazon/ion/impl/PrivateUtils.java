@@ -565,17 +565,13 @@ public final class PrivateUtils
 
         byte[] buf = new byte[(int) len];
 
-        FileInputStream in = new FileInputStream(file);
-        try {
+        try (FileInputStream in = new FileInputStream(file)) {
             int readBytesCount = in.read(buf);
             if (readBytesCount != len || in.read() != -1)
             {
                 throw new IOException("Read the wrong number of bytes from "
                                        + file);
             }
-        }
-        finally {
-            in.close();
         }
 
         return buf;
