@@ -56,6 +56,7 @@ import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.TestUtils;
+import software.amazon.ion.UnknownSymbolException;
 import software.amazon.ion.impl.PrivateIonWriter;
 import software.amazon.ion.junit.IonAssert;
 
@@ -229,7 +230,7 @@ public abstract class IonWriterTestCase
         iw = makeWriter();
         iw.stepIn(IonType.STRUCT);
         iw.setFieldName("foo");
-        iw.setFieldNameSymbol(newSymbolToken((String) null, 99)); // Replaces "foo"
+        iw.setFieldNameSymbol(newSymbolToken((String) null, 0)); // Replaces "foo"
         iw.writeNull();
         iw.stepOut();
 
@@ -237,7 +238,7 @@ public abstract class IonWriterTestCase
         r.next();
         r.stepIn();
         r.next();
-        check(r).fieldName(null, 99);
+        check(r).fieldName(null, 0);
     }
 
     @Test
@@ -322,11 +323,27 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         iw = makeWriter();
+        thrown.expect(UnknownSymbolException.class);
         iw.writeSymbolToken(newSymbolToken((String) null, 99));
+    }
 
-        IonReader in = reread();
-        in.next();
-        IonAssert.checkSymbol(in, null, 99);
+    @Test
+    public void testWritingUnknownFieldName()
+        throws Exception
+    {
+        iw = makeWriter();
+        iw.stepIn(IonType.STRUCT);
+        thrown.expect(UnknownSymbolException.class);
+        iw.setFieldNameSymbol(newSymbolToken((String) null, 99));
+    }
+
+    @Test
+    public void testWritingUnknownAnnotation()
+        throws Exception
+    {
+        iw = makeWriter();
+        thrown.expect(UnknownSymbolException.class);
+        iw.setTypeAnnotationSymbols(newSymbolToken((String) null, 99));
     }
 
     @Test
@@ -728,10 +745,10 @@ public abstract class IonWriterTestCase
         iw = makeWriter();
         IonDatagram expected = system().newDatagram();
 
-        iw.setTypeAnnotationSymbols(newSymbolToken((String) null, 99));
+        iw.setTypeAnnotationSymbols(newSymbolToken((String) null, 0));
         iw.writeNull(); // expected: the type annotation is written
         IonValue v = expected.add().newNull();
-        v.setTypeAnnotationSymbols(newSymbolToken(99));
+        v.setTypeAnnotationSymbols(newSymbolToken(0));
 
         assertEquals(expected, reload());
     }
@@ -816,7 +833,7 @@ public abstract class IonWriterTestCase
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
         checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
-        // TODO amzn/ion-java#63
+        // TODO amzn/ion-java#14
         if (myOutputForm != OutputForm.TEXT)
         {
             checkSymbol(null, 12, it.next());
@@ -994,7 +1011,7 @@ public abstract class IonWriterTestCase
         if (myOutputForm == OutputForm.BINARY) {
             checkAnnotation(ION_SYMBOL_TABLE, it.next());
         }
-        // TODO amzn/ion-java#63
+        // TODO amzn/ion-java#14
         if (myOutputForm == OutputForm.BINARY)
         {
             checkSymbol(null, 10, it.next());
@@ -1038,7 +1055,7 @@ public abstract class IonWriterTestCase
         if (myOutputForm != OutputForm.TEXT) {
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
-        // TODO amzn/ion-java#63
+        // TODO amzn/ion-java#14
         if (myOutputForm != OutputForm.TEXT)
         {
             checkSymbol(null, 10, it.next());

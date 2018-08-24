@@ -662,7 +662,7 @@ class IonReaderTextSystemX
     }
 
     @Override
-    public final SymbolToken getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         SymbolToken sym = super.getFieldNameSymbol();
         if (sym != null)

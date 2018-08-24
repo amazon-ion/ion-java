@@ -391,6 +391,7 @@ abstract class IonWriterSystem
             if (sid < 0) {
                 throw new IllegalArgumentException();
             }
+            validateSymbolId(sid);
 
             _field_name_type = IonType.INT;
             _field_name_sid = sid;
@@ -483,6 +484,9 @@ abstract class IonWriterSystem
             for (int i = 0; i < count; i++)
             {
                 SymbolToken sym = annotations[i];
+                if (sym.getText() == null) {
+                    validateSymbolId(sym.getSid());
+                }
                 sym = PrivateUtils.localize(symtab, sym);
                 _annotations[i] = sym;
             }

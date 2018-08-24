@@ -27,6 +27,7 @@ import software.amazon.ion.SpanProvider;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.TextSpan;
+import software.amazon.ion.UnknownSymbolException;
 import software.amazon.ion.UnsupportedIonVersionException;
 
 /**
@@ -177,6 +178,36 @@ class IonReaderTextUserX
         return;
     }
 
+    private void validateSymbolToken(SymbolToken symbol) {
+        if (symbol != null) {
+            if (symbol.getText() == null && symbol.getSid() > getSymbolTable().getMaxId()) {
+                throw new UnknownSymbolException(symbol.getSid());
+            }
+        }
+    }
+
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols() {
+        SymbolToken[] annotations = super.getTypeAnnotationSymbols();
+        for (SymbolToken annotation : annotations) {
+            validateSymbolToken(annotation);
+        }
+        return annotations;
+    }
+
+    @Override
+    public final SymbolToken getFieldNameSymbol() {
+        SymbolToken fieldName = super.getFieldNameSymbol();
+        validateSymbolToken(fieldName);
+        return fieldName;
+    }
+
+    @Override
+    public final SymbolToken symbolValue() {
+        SymbolToken symbol = super.symbolValue();
+        validateSymbolToken(symbol);
+        return symbol;
+    }
 
     @Override
     public SymbolTable getSymbolTable()
