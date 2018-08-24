@@ -74,8 +74,6 @@ public class CloneTest
         assertEquals(99, copy.symbolValue().getSid());
     }
 
-    static final boolean DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT = true;
-
     @Test
     public void testIonValueCloneWithUnknownAnnotationText()
     {
@@ -83,15 +81,8 @@ public class CloneTest
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
 
-        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
-            thrown.expect(UnknownSymbolException.class);
-            thrown.expectMessage("$99");
-        }
-
         IonInt actual = original.clone();
-        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
-            assertEquals(original, actual);
-        }
+        assertEquals(original, actual);
     }
 
     @Test
@@ -101,15 +92,8 @@ public class CloneTest
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
 
-        if (! DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
-            thrown.expect(UnknownSymbolException.class);
-            thrown.expectMessage("$99");
-        }
-
         IonInt actual = system().clone(original);
-        if (DEFECTIVE_CLONE_OF_UNKNOWN_ANNOTATION_TEXT) {
-            assertEquals(original, actual);
-        }
+        assertEquals(original, actual);
     }
 
     @Test

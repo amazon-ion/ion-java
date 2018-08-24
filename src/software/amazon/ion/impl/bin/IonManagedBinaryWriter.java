@@ -48,6 +48,7 @@ import software.amazon.ion.IonType;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.Timestamp;
+import software.amazon.ion.UnknownSymbolException;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
@@ -842,6 +843,12 @@ import software.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         {
             // string content always makes us intern
             return intern(text);
+        }
+        final int sid = token.getSid();
+        if (sid > getSymbolTable().getMaxId()) {
+            // There is no slot for this symbol ID in the symbol table,
+            // so an error would be raised on read. Fail early on write.
+            throw new UnknownSymbolException(sid);
         }
         // no text, we just return what we got
         return token;

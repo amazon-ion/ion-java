@@ -403,7 +403,7 @@ class IonReaderBinarySystemX
         return _v.getString();
     }
 
-    public final SymbolToken symbolValue()
+    public SymbolToken symbolValue()
     {
         if (_value_type != SYMBOL) throw new IllegalStateException();
         if (_value_is_null) return null;
@@ -439,7 +439,7 @@ class IonReaderBinarySystemX
         return name;
     }
 
-    public final SymbolToken getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
         int sid = _value_field_id;

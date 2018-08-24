@@ -272,11 +272,12 @@ public class IonValueTest
     @Test
     public void testDetachWithUnknownAnnotation()
     {
-        IonList list = (IonList) system().singleValue("[$99::null]");
+        String sharedSymbolTable = "$ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id: 90}]}";
+        IonList list = (IonList) system().singleValue(sharedSymbolTable + "[$99::null]");
         IonValue child = list.get(0);
         child.removeFromContainer();
 
-        IonAssert.assertIonEquals(system().singleValue("$99::null"), child);
+        IonAssert.assertIonEquals(system().singleValue(sharedSymbolTable + "$99::null"), child);
     }
 
 

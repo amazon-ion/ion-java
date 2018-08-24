@@ -132,7 +132,6 @@ public class TestUtils
              "bad/clobWithNullCharacter.ion"                // TODO amzn/ion-java#43
             , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
             , "bad/structOrderedEmpty.10n"                  // TODO amzn/ion-java#100
-            , "bad/symbolIDUnmapped.ion"                    // TODO amzn/ion-java#101
             , "bad/emptyAnnotatedInt.10n"                   // TODO amzn/ion-java#55
             , "bad/timestamp/timestampNegativeFraction.10n" // TODO amzn/ion-java#102
             , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
@@ -147,6 +146,7 @@ public class TestUtils
             , "good/whitespace.ion"                         // TODO amzn/ion-java#104
             , "bad/negativeIntZero.10n"                     // TODO amzn/ion-java#138
             , "bad/negativeIntZeroLn.10n"                   // TODO amzn/ion-java#138
+            , "good/item1.10n"                              // TODO amzn/ion-java#126 (roundtrip symbols with unknown text)
         );
 
 
