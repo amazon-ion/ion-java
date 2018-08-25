@@ -148,11 +148,9 @@ class IonWriterUser
         return _catalog;
     }
 
-
     @Override
-    boolean has_annotation(String name, int id)
-    {
-        return _current_writer.has_annotation(name, id);
+    int findAnnotation(String name) {
+        return _current_writer.findAnnotation(name);
     }
 
     @Override
@@ -374,7 +372,7 @@ class IonWriterUser
         // see if it looks like we're starting a local symbol table
         if (containerType == IonType.STRUCT
             && _current_writer.getDepth() == 0
-            && has_annotation(ION_SYMBOL_TABLE, ION_SYMBOL_TABLE_SID))
+            && findAnnotation(ION_SYMBOL_TABLE) == 0)
         {
             open_local_symbol_table_copy();
         }

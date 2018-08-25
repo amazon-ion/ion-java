@@ -128,19 +128,12 @@ class IonReaderTextUserX
             if (_value_type != null && !isNullValue() && IonType.DATAGRAM.equals(getContainerType())) {
                 switch (_value_type) {
                 case STRUCT:
-                    if (_annotation_count > 0) {
-                        for (int ii=0; ii<_annotation_count; ii++) {
-                            SymbolToken a = _annotations[ii];
-                            // TODO SID only?
-                            if (ION_SYMBOL_TABLE.equals(a.getText())) {
-                                _symbols = _lstFactory.newLocalSymtab(_catalog,
-                                                                      this,
-                                                                      true);
-                                push_symbol_table(_symbols);
-                                _has_next_called = false;
-                                break;
-                            }
-                        }
+                    if (_annotation_count > 0 && ION_SYMBOL_TABLE.equals(_annotations[0].getText())) {
+                        _symbols = _lstFactory.newLocalSymtab(_catalog,
+                                                              this,
+                                                              true);
+                        push_symbol_table(_symbols);
+                        _has_next_called = false;
                     }
                     break;
                 case SYMBOL:

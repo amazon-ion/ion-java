@@ -124,8 +124,12 @@ public abstract class PrivateIonWriterBase
     //========================================================================
     // Annotations
 
-
-    abstract boolean has_annotation(String name, int id);
+    /**
+     * Returns the given annotation's index in the value's annotations list, or -1 if not present.
+     * @param name the annotation to find.
+     * @return the index or -1.
+     */
+    abstract int findAnnotation(String name);
 
 
     /**

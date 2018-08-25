@@ -434,36 +434,9 @@ abstract class IonWriterSystem
     }
 
 
-    final int[] internAnnotationsAndGetSids() throws IOException
-    {
-        int count = _annotation_count;
-        if (count == 0) return PrivateUtils.EMPTY_INT_ARRAY;
-
-        int[] sids = new int[count];
-        for (int i = 0; i < count; i++)
-        {
-            SymbolToken sym = _annotations[i];
-            int sid = sym.getSid();
-            if (sid == UNKNOWN_SYMBOL_ID)
-            {
-                String text = sym.getText();
-                sid = add_symbol(text);
-                _annotations[i] = new SymbolTokenImpl(text, sid);
-            }
-            sids[i] = sid;
-        }
-        return sids;
-    }
-
-
     final boolean hasAnnotations()
     {
         return _annotation_count != 0;
-    }
-
-    final int annotationCount()
-    {
-        return _annotation_count;
     }
 
     final void clearAnnotations()
@@ -471,21 +444,16 @@ abstract class IonWriterSystem
         _annotation_count = 0;
     }
 
-
     @Override
-    final boolean has_annotation(String name, int id)
-    {
-        assert(this._symbol_table.findKnownSymbol(id).equals(name));
-        if (_annotation_count < 1) {
-            return false;
-        }
-
-        for (int ii=0; ii<_annotation_count; ii++) {
-            if (name.equals(_annotations[ii].getText())) {
-                return true;
+    final int findAnnotation(String name) {
+        if (_annotation_count > 0) {
+            for (int ii=0; ii<_annotation_count; ii++) {
+                if (name.equals(_annotations[ii].getText())) {
+                    return ii;
+                }
             }
         }
-        return false;
+        return -1;
     }
 
     final SymbolToken[] getTypeAnnotationSymbols()

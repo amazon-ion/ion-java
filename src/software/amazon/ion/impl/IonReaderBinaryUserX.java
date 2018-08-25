@@ -214,13 +214,10 @@ final class IonReaderBinaryUserX
             }
             else if (_value_tid == PrivateIonConstants.tidStruct) {
                 int count = load_annotations();
-                for(int ii=0; ii<count; ii++) {
-                    if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
-                        _symbols = _lstFactory.newLocalSymtab(_catalog, this, false);
-                        push_symbol_table(_symbols);
-                        _has_next_needed = true;
-                        break;
-                    }
+                if (count > 0 && _annotation_ids[0] == ION_SYMBOL_TABLE_SID) {
+                    _symbols = _lstFactory.newLocalSymtab(_catalog, this, false);
+                    push_symbol_table(_symbols);
+                    _has_next_needed = true;
                 }
             }
             else {
