@@ -219,7 +219,7 @@ final class IonWriterSystemTree
 
     public void stepOut() throws IOException
     {
-        IonValue prior = _current_parent;
+        PrivateIonValue prior = (PrivateIonValue)_current_parent;
         popParent();
 
         if (_current_parent instanceof IonDatagram

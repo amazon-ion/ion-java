@@ -644,10 +644,10 @@ public final class PrivateUtils
      *
      * @return boolean true if v can be a local symbol table otherwise false
      */
-    public static boolean valueIsLocalSymbolTable(IonValue v)
+    public static boolean valueIsLocalSymbolTable(PrivateIonValue v)
     {
         return (v instanceof IonStruct
-                && v.hasTypeAnnotation(ION_SYMBOL_TABLE));
+                && v.findTypeAnnotation(ION_SYMBOL_TABLE) == 0);
     }
 
 

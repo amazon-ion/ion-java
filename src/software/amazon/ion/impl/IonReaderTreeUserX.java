@@ -115,7 +115,7 @@ final class IonReaderTreeUserX
                     }
                 }
                 else if (IonType.STRUCT.equals(next_type)
-                      && _next.hasTypeAnnotation(ION_SYMBOL_TABLE)
+                      && _next.findTypeAnnotation(ION_SYMBOL_TABLE) == 0
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
