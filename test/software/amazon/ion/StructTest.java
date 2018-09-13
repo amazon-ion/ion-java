@@ -739,6 +739,29 @@ public class StructTest
     }
 
     @Test
+    public void testMapAfterClone()
+    {
+        String[] inserts = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+        IonStruct s1 = (IonStruct)oneValue("{}");
+        for(int i = 0; i < inserts.length; i++) {
+            s1.add(inserts[i], oneValue(Integer.toString(i)));
+        }
+        IonStruct s2 = system().clone(s1);
+        for(int i = 0; i < inserts.length; i++) {
+            assertEquals(s2.get(inserts[i]), oneValue(Integer.toString(i)));
+        }
+        int transitionCutoff = 4;
+        s1 = (IonStruct)oneValue("{}");
+        for(int i = 0; i < transitionCutoff; i++) {
+            s1.add(inserts[i], oneValue(Integer.toString(i)));
+        }
+        s2 = system().clone(s1);
+        for(int i = 0; i < transitionCutoff; i++) {
+            assertEquals(s2.get(inserts[i]), oneValue(Integer.toString(i)));
+        }
+    }
+
+    @Test
     public void testRemoveAfterClone()
     {
         IonStruct s1 = (IonStruct) oneValue("{a:1,b:2}");
