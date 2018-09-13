@@ -36,9 +36,9 @@ public class UnknownSymbolException
         mySid = sid;
         myText = null;
     }
-    public UnknownSymbolException(String text)
+    public UnknownSymbolException(String message)
     {
-        myText = text;
+        myText = message;
         mySid = 0;
     }
 
@@ -53,7 +53,7 @@ public class UnknownSymbolException
         if(myText == null) {
             return "Unknown symbol text for $" + mySid;
         } else {
-            return "Unknown symbol for text: " + myText;
+            return myText;
         }
     }
 }

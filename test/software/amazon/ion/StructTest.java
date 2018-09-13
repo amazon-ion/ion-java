@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
+
+import com.sun.org.apache.bcel.internal.classfile.Unknown;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -739,26 +741,18 @@ public class StructTest
     }
 
     @Test
-    public void testMapAfterClone()
+    public void testUnknownSymbolException()
     {
-        String[] inserts = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-        IonStruct s1 = (IonStruct)oneValue("{}");
-        for(int i = 0; i < inserts.length; i++) {
-            s1.add(inserts[i], oneValue(Integer.toString(i)));
-        }
-        IonStruct s2 = system().clone(s1);
-        for(int i = 0; i < inserts.length; i++) {
-            assertEquals(s2.get(inserts[i]), oneValue(Integer.toString(i)));
-        }
-        int transitionCutoff = 4;
-        s1 = (IonStruct)oneValue("{}");
-        for(int i = 0; i < transitionCutoff; i++) {
-            s1.add(inserts[i], oneValue(Integer.toString(i)));
-        }
-        s2 = system().clone(s1);
-        for(int i = 0; i < transitionCutoff; i++) {
-            assertEquals(s2.get(inserts[i]), oneValue(Integer.toString(i)));
-        }
+        String input = "$ion_symbol_table::{imports:[{name:\"foo\", version:1, max_id:1}]} { $10: \"Unknown symbol\"}";
+        IonDatagram dg = loader().load(input);
+        IonStruct val = (IonStruct) dg.get(0);
+        try {
+            val.get("z");
+            fail("Should've thrown UnknownSymbolException");
+        } catch (UnknownSymbolException e) { }
+        try {
+            val = system().clone(val);
+        } catch (UnknownSymbolException e) { }
     }
 
     @Test
