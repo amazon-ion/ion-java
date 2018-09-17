@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
+
+import com.sun.org.apache.bcel.internal.classfile.Unknown;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -736,6 +738,21 @@ public class StructTest
         s.makeNull();
         assertNull("Removed value should have null container",
                    val.getContainer());
+    }
+
+    @Test
+    public void testUnknownSymbolException()
+    {
+        String input = "$ion_symbol_table::{imports:[{name:\"foo\", version:1, max_id:1}]} { $10: \"Unknown symbol\"}";
+        IonDatagram dg = loader().load(input);
+        IonStruct val = (IonStruct) dg.get(0);
+        try {
+            val.get("z");
+            fail("Should've thrown UnknownSymbolException");
+        } catch (UnknownSymbolException e) { }
+        try {
+            val = system().clone(val);
+        } catch (UnknownSymbolException e) { }
     }
 
     @Test

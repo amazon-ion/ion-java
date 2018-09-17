@@ -34,6 +34,7 @@ import software.amazon.ion.ValueVisitor;
 import software.amazon.ion.impl.PrivateCurriedValueFactory;
 import software.amazon.ion.util.Equivalence;
 import java.util.Set;
+import software.amazon.ion.UnknownSymbolException;
 
 final class IonStructLite
     extends IonContainerLite
@@ -41,7 +42,6 @@ final class IonStructLite
 {
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
-
     // TODO amzn/ion-java#41: add support for _isOrdered
 
     IonStructLite(ContainerlessContext context, boolean isNull)
@@ -54,14 +54,13 @@ final class IonStructLite
         super(existing, context, true);
         // field map can be shallow cloned due to it dealing with String and Integer
         // values - both of which are immutable constructs and so safe to retain as references
-        this._field_map = null == _field_map
-                                ? null
-                                : new HashMap<String, Integer>(existing._field_map);
+        this._field_map = null == existing._field_map ? null : new HashMap<String, Integer>(existing._field_map);
         this._field_map_duplicate_count = existing._field_map_duplicate_count;
+        this.hasNullFieldName = existing.hasNullFieldName;
     }
 
     private Map<String, Integer> _field_map;
-
+    private boolean hasNullFieldName = false;
 
     public int                      _field_map_duplicate_count;
 
@@ -402,9 +401,9 @@ final class IonStructLite
         IonValue field;
 
         if (field_idx < 0) {
+            if(hasNullFieldName) throw new UnknownSymbolException("Unable to determine whether the field exists because the struct contains field names with unknown text.");
             field = null;
-        }
-        else {
+        } else {
             field = get_child(field_idx);
         }
 
@@ -450,11 +449,6 @@ final class IonStructLite
     {
         // TODO validate in struct.setFieldName
         String text = child.getFieldNameSymbol().getText();
-        if (text != null)
-        {
-            validateFieldName(text);
-        }
-
         IonValueLite concrete = (IonValueLite) child;
         _add(text, concrete);
 
@@ -483,6 +477,7 @@ final class IonStructLite
      */
     private void _add(String fieldName, IonValueLite child)
     {
+        hasNullFieldName |= fieldName == null;
         int size = get_child_count();
 
         // add this to the Container child collection
