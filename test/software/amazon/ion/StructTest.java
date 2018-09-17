@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
-
-import com.sun.org.apache.bcel.internal.classfile.Unknown;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
