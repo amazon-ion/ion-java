@@ -477,7 +477,7 @@ final class IonStructLite
      */
     private void _add(String fieldName, IonValueLite child)
     {
-        if(!hasNullFieldName && fieldName == null) hasNullFieldName = true;
+        hasNullFieldName |= fieldName == null;
         int size = get_child_count();
 
         // add this to the Container child collection
