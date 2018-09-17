@@ -401,7 +401,7 @@ final class IonStructLite
         IonValue field;
 
         if (field_idx < 0) {
-            if(hasNullFieldName) throw new UnknownSymbolException("Unable to resolve fieldname due to null fields.");
+            if(hasNullFieldName) throw new UnknownSymbolException("Unable to determine whether the field exists because the struct contains field names with unknown text.");
             field = null;
         } else {
             field = get_child(field_idx);
