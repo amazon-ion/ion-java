@@ -236,19 +236,14 @@ class IonReaderTextSystemX
                     break;
                 }
             }
-        } else if (token_type == IonTokenConstsX.TOKEN_HEX) {
+        } else if (token_type == IonTokenConstsX.TOKEN_HEX || token_type == IonTokenConstsX.TOKEN_BINARY) {
             boolean isNegative = (cs.charAt(0) == '-');
             // prefix = is_negative ? "-0x" : "0x";
             int pos = isNegative ? 1 : 0;
-            if (cs.length() <= (isNegative ? 3 : 2) || Character.toLowerCase(cs.charAt(pos + 1)) != 'x') {
-                parse_error("Invalid hexadecimal value.");
+            char caseChar = token_type == IonTokenConstsX.TOKEN_HEX? 'x' : 'b';
+            if (cs.length() <= (isNegative ? 3 : 2) || Character.toLowerCase(cs.charAt(pos + 1)) != caseChar) {
+                parse_error("Invalid " + (caseChar == 'x'? "hexadecimal" : "binary") + " int value.");
             }
-            cs.deleteCharAt(pos);
-            cs.deleteCharAt(pos);
-        } else if (token_type == IonTokenConstsX.TOKEN_BINARY) {
-            boolean isNegative = (cs.charAt(0) == '-');
-            int pos = isNegative ? 1 : 0;
-            if (cs.length() <= (isNegative ? 3 : 2)) parse_error("Invalid binary int value");
             cs.deleteCharAt(pos);
             cs.deleteCharAt(pos);
         }
