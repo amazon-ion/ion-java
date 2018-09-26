@@ -132,7 +132,6 @@ public class IntTest
         assertEquals(Integer.MIN_VALUE, value.intValue());
     }
 
-
     @Test
     public void testPositiveSign()
     {
@@ -243,6 +242,8 @@ public class IntTest
     {
         checkInt(-3, oneValue("-0x3"));
         checkInt(-3, oneValue("-0x0003"));
+        badValue("0x");
+        badValue("-0x");
     }
 
     @Test
@@ -293,6 +294,8 @@ public class IntTest
     public void testBinaryInt()
     {
         assertEquals(system().newInt(4), oneValue("0b0100"));
+        badValue("-0b");
+        badValue("0b");
     }
 
     @Test

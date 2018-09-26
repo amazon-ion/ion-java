@@ -41,6 +41,7 @@ import software.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenExcept
 import software.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import software.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
 import software.amazon.ion.impl.PrivateScalarConversions.CantConvertException;
+import java.lang.Character;
 
 /**
  * This reader calls the {@link IonReaderTextRawX} for low level events.
@@ -235,26 +236,16 @@ class IonReaderTextSystemX
                     break;
                 }
             }
-        }
-        else if (token_type == IonTokenConstsX.TOKEN_HEX) {
-            boolean is_negative = (cs.charAt(0) == '-');
-            // prefix = is_negative ? "-0x" : "0x";
-            int pos;
-            if (is_negative) {
-                pos = 1;
-            }
-            else {
-                pos = 0;
-            }
-            assert((cs.length() > 2) && (cs.charAt(pos) == '0') && (cs.charAt(pos+1) == 'x' || cs.charAt(pos+1) == 'X'));
-            cs.deleteCharAt(pos);
-            cs.deleteCharAt(pos);
-        }
-        else if (token_type == IonTokenConstsX.TOKEN_BINARY) {
+        } else if (token_type == IonTokenConstsX.TOKEN_HEX || token_type == IonTokenConstsX.TOKEN_BINARY) {
             boolean isNegative = (cs.charAt(0) == '-');
-            int position = isNegative ? 1 : 0;
-            cs.deleteCharAt(position);
-            cs.deleteCharAt(position);
+            // prefix = is_negative ? "-0x" : "0x";
+            int pos = isNegative ? 1 : 0;
+            char caseChar = token_type == IonTokenConstsX.TOKEN_HEX ? 'x' : 'b';
+            if (cs.length() <= (isNegative ? 3 : 2) || Character.toLowerCase(cs.charAt(pos + 1)) != caseChar) {
+                parse_error("Invalid " + (caseChar == 'x' ? "hexadecimal" : "binary") + " int value.");
+            }
+            cs.deleteCharAt(pos);
+            cs.deleteCharAt(pos);
         }
 
 
