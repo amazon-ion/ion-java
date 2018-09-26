@@ -242,7 +242,7 @@ class IonReaderTextSystemX
             int pos = isNegative ? 1 : 0;
             char caseChar = token_type == IonTokenConstsX.TOKEN_HEX ? 'x' : 'b';
             if (cs.length() <= (isNegative ? 3 : 2) || Character.toLowerCase(cs.charAt(pos + 1)) != caseChar) {
-                parse_error("Invalid " + (caseChar == 'x'? "hexadecimal" : "binary") + " int value.");
+                parse_error("Invalid " + (caseChar == 'x' ? "hexadecimal" : "binary") + " int value.");
             }
             cs.deleteCharAt(pos);
             cs.deleteCharAt(pos);
