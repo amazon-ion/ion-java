@@ -240,7 +240,7 @@ class IonReaderTextSystemX
             boolean isNegative = (cs.charAt(0) == '-');
             // prefix = is_negative ? "-0x" : "0x";
             int pos = isNegative ? 1 : 0;
-            char caseChar = token_type == IonTokenConstsX.TOKEN_HEX? 'x' : 'b';
+            char caseChar = token_type == IonTokenConstsX.TOKEN_HEX ? 'x' : 'b';
             if (cs.length() <= (isNegative ? 3 : 2) || Character.toLowerCase(cs.charAt(pos + 1)) != caseChar) {
                 parse_error("Invalid " + (caseChar == 'x'? "hexadecimal" : "binary") + " int value.");
             }
