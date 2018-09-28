@@ -2025,7 +2025,7 @@ public final class Timestamp
      * Returns a timestamp relative to this one by the given number of
      * milliseconds.
      *
-     * @param amount a (positive or negative) number of milliseconds.
+     * @param amount a number of milliseconds.
      */
     public final Timestamp addMillis(long amount)
     {
@@ -2052,7 +2052,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of seconds.
      *
-     * @param amount a (positive or negative) number of seconds.
+     * @param amount a number of seconds.
      */
     public final Timestamp addSecond(int amount)
     {
@@ -2064,7 +2064,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of minutes.
      *
-     * @param amount a (positive or negative) number of minutes.
+     * @param amount a number of minutes.
      */
     public final Timestamp addMinute(int amount)
     {
@@ -2076,7 +2076,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of hours.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of hours.
      */
     public final Timestamp addHour(int amount)
     {
@@ -2088,7 +2088,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of days.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of days.
      */
     public final Timestamp addDay(int amount)
     {
@@ -2107,7 +2107,7 @@ public final class Timestamp
      * leap days.  For example, adding one month to {@code 2011-01-31}
      * results in {@code 2011-02-28}.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of months.
      */
     public final Timestamp addMonth(int amount)
     {
@@ -2124,7 +2124,7 @@ public final class Timestamp
      * The day field may be adjusted to account for leap days.  For example,
      * adding one year to {@code 2012-02-29} results in {@code 2013-02-28}.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of years.
      */
     public final Timestamp addYear(int amount)
     {
