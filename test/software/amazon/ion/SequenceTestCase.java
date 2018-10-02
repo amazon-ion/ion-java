@@ -679,7 +679,7 @@ public abstract class SequenceTestCase
 
         try
         {
-            seq.toArray(null);
+            seq.toArray((Object[]) null);
             fail("expected exception");
         }
         catch (NullPointerException e) { }
