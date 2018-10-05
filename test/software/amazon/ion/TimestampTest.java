@@ -16,7 +16,7 @@ package software.amazon.ion;
 
 import static software.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static software.amazon.ion.Decimal.negativeZero;
-import static software.amazon.ion.Timestamp.MAXIMUM_ALLOWED_FRACTIONAL_MILLIS;
+import static software.amazon.ion.Timestamp.FRACTIONAL_MILLIS_UPPER_BOUND;
 import static software.amazon.ion.Timestamp.MINIMUM_ALLOWED_FRACTIONAL_MILLIS;
 import static software.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static software.amazon.ion.Timestamp.UTC_OFFSET;
@@ -789,10 +789,10 @@ public class TimestampTest
     @Test
     public void testNewTimestampFromBigDecimalWithMaximumAllowedMillis()
     {
-        Timestamp ts = Timestamp.forMillis(MAXIMUM_ALLOWED_FRACTIONAL_MILLIS, PST_OFFSET);
-        checkFields(9999, 12, 31, 15, 59, 59, new BigDecimal("0.999999999999"), PST_OFFSET, SECOND, ts);
-        assertEquals("9999-12-31T15:59:59.999999999999-08:00", ts.toString());
-        assertEquals("9999-12-31T23:59:59.999999999999Z", ts.toZString());
+        Timestamp ts = Timestamp.forMillis(FRACTIONAL_MILLIS_UPPER_BOUND.add(BigDecimal.ONE.negate()), PST_OFFSET);
+        checkFields(9999, 12, 31, 15, 59, 59, new BigDecimal("0.999"), PST_OFFSET, SECOND, ts);
+        assertEquals("9999-12-31T15:59:59.999-08:00", ts.toString());
+        assertEquals("9999-12-31T23:59:59.999Z", ts.toZString());
     }
 
     @Test(expected = NullPointerException.class)
@@ -811,8 +811,8 @@ public class TimestampTest
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromBigDecimalWithMillisTooBig()
     {
-        // Max + 1
-        Timestamp.forMillis(MAXIMUM_ALLOWED_FRACTIONAL_MILLIS.add(BigDecimal.ONE), PST_OFFSET);
+        // Max
+        Timestamp.forMillis(FRACTIONAL_MILLIS_UPPER_BOUND, PST_OFFSET);
     }
 
     @Test(expected = IllegalArgumentException.class)

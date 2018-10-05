@@ -90,11 +90,16 @@ public final class Timestamp
     // 0001-01-01T00:00:00.0Z in millis
     static final BigDecimal MINIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal(MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS);
 
-    // 9999-12-31T23:59:59.999999999999Z in millis
-    static final BigDecimal MAXIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal("253402300799999.999999999");
+    // 10000T in millis, upper bound exclusive
+    static final BigDecimal FRACTIONAL_MILLIS_UPPER_BOUND = new BigDecimal(253402300800000L);
 
-    // determined empirically as a safe scale
-    private static final int MAXIMUM_ALLOWED_MILLIS_SCALE = 100000;
+    // Determined by running a micro benchmark against BigDecimal#longValue()
+    // Results:
+    // 1000	    ~0ms
+    // 10000	~1ms
+    // 100000	~170ms
+    // 1000000	~704ms
+    private static final int MAXIMUM_ALLOWED_MILLIS_SCALE = 10000;
 
     /**
      * Unknown local offset from UTC.
@@ -716,12 +721,12 @@ public final class Timestamp
         // check bounds to avoid hanging when calling longValue() on decimals with large positive exponents,
         // e.g. 1e10000000
         if(millis.compareTo(MINIMUM_ALLOWED_FRACTIONAL_MILLIS) < 0 ||
-            millis.compareTo(MAXIMUM_ALLOWED_FRACTIONAL_MILLIS) > 0) {
+            FRACTIONAL_MILLIS_UPPER_BOUND.compareTo(millis) < 0) {
             throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
                 + MINIMUM_ALLOWED_FRACTIONAL_MILLIS
-                + " to "
-                + MAXIMUM_ALLOWED_FRACTIONAL_MILLIS
-                + " both inclusive");
+                + ", inclusive, to "
+                + FRACTIONAL_MILLIS_UPPER_BOUND
+                + " , exclusive");
         }
 
         // check scale size to avoid hanging on methods that need to inflate the fractional bigDecimal
