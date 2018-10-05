@@ -16,6 +16,8 @@ package software.amazon.ion;
 
 import static software.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static software.amazon.ion.Decimal.negativeZero;
+import static software.amazon.ion.Timestamp.MAXIMUM_ALLOWED_FRACTIONAL_MILLIS;
+import static software.amazon.ion.Timestamp.MINIMUM_ALLOWED_FRACTIONAL_MILLIS;
 import static software.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static software.amazon.ion.Timestamp.UTC_OFFSET;
 import static software.amazon.ion.Timestamp.createFromUtcFields;
@@ -32,13 +34,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import org.junit.Ignore;
 import org.junit.Test;
-import software.amazon.ion.Decimal;
-import software.amazon.ion.IonTimestamp;
-import software.amazon.ion.IonType;
-import software.amazon.ion.IonValue;
-import software.amazon.ion.NullValueException;
-import software.amazon.ion.Timestamp;
 import software.amazon.ion.Timestamp.Precision;
 
 /**
@@ -781,12 +778,53 @@ public class TimestampTest
         assertEquals("2012-01-01T12:12:30.555123Z", ts.toZString());
     }
 
+    @Test
+    @Ignore // see https://github.com/amzn/ion-java/issues/160
+    public void testNewTimestampFromMinimumAllowedMillis()
+    {
+        Timestamp ts = Timestamp.forMillis(MINIMUM_ALLOWED_FRACTIONAL_MILLIS, PST_OFFSET);
+        assertEquals("0001-01-01T00:00:00.000Z", ts.toZString());
+    }
 
-    @SuppressWarnings("unused")
-    @Test (expected = NullPointerException.class)
+    @Test
+    public void testNewTimestampFromBigDecimalWithMaximumAllowedMillis()
+    {
+        Timestamp ts = Timestamp.forMillis(MAXIMUM_ALLOWED_FRACTIONAL_MILLIS, PST_OFFSET);
+        checkFields(9999, 12, 31, 15, 59, 59, new BigDecimal("0.999999999999"), PST_OFFSET, SECOND, ts);
+        assertEquals("9999-12-31T15:59:59.999999999999-08:00", ts.toString());
+        assertEquals("9999-12-31T23:59:59.999999999999Z", ts.toZString());
+    }
+
+    @Test(expected = NullPointerException.class)
     public void testNewTimestampFromBigDecimalWithNull()
     {
-        Timestamp ts = Timestamp.forMillis(null, PST_OFFSET);
+        Timestamp.forMillis(null, PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithMillisTooSmall()
+    {
+        // MIN - 1
+        Timestamp.forMillis(MINIMUM_ALLOWED_FRACTIONAL_MILLIS.add(BigDecimal.ONE.negate()), PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithMillisTooBig()
+    {
+        // Max + 1
+        Timestamp.forMillis(MAXIMUM_ALLOWED_FRACTIONAL_MILLIS.add(BigDecimal.ONE), PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithScaleTooBigPositive()
+    {
+        Timestamp.forMillis(new BigDecimal("1e100000"), PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithScaleTooBigNegative()
+    {
+        Timestamp.forMillis(new BigDecimal("1e-100000"), PST_OFFSET);
     }
 
     /**

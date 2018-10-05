@@ -84,6 +84,18 @@ public final class Timestamp
     private static final int NO_SECONDS = 0;
     private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
 
+    // 0001-01-01T00:00:00.0Z in millis
+    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
+
+    // 0001-01-01T00:00:00.0Z in millis
+    static final BigDecimal MINIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal(MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS);
+
+    // 9999-12-31T23:59:59.999999999999Z in millis
+    static final BigDecimal MAXIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal("253402300799999.999999999");
+
+    // determined empirically as a safe scale
+    private static final int MAXIMUM_ALLOWED_MILLIS_SCALE = 100000;
+
     /**
      * Unknown local offset from UTC.
      */
@@ -265,9 +277,6 @@ public final class Timestamp
             if (_year > 9999) throw new IllegalArgumentException("year exceeds 9999");
         }
     }
-
-    // 0001-01-01T00:00:00.0Z in millis
-    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
 
     /**
      * This method uses deprecated methods from {@link java.util.Date}
@@ -703,6 +712,28 @@ public final class Timestamp
     private Timestamp(BigDecimal millis, Integer localOffset)
     {
         if (millis == null) throw new NullPointerException("millis is null");
+
+        // check bounds to avoid hanging when calling longValue() on decimals with large positive exponents,
+        // e.g. 1e10000000
+        if(millis.compareTo(MINIMUM_ALLOWED_FRACTIONAL_MILLIS) < 0 ||
+            millis.compareTo(MAXIMUM_ALLOWED_FRACTIONAL_MILLIS) > 0) {
+            throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
+                + MINIMUM_ALLOWED_FRACTIONAL_MILLIS
+                + " to "
+                + MAXIMUM_ALLOWED_FRACTIONAL_MILLIS
+                + " both inclusive");
+        }
+
+        // check scale size to avoid hanging on methods that need to inflate the fractional bigDecimal
+        // Examples: toString and toMillis
+        if(Math.abs(millis.scale()) >= MAXIMUM_ALLOWED_MILLIS_SCALE) {
+            throw new IllegalArgumentException("millis: " + millis + " has a scale outside the valid range:"
+                + "from"
+                + -MAXIMUM_ALLOWED_MILLIS_SCALE
+                + "to"
+                + MAXIMUM_ALLOWED_MILLIS_SCALE
+                + "both inclusive");
+        }
 
         long ms = millis.longValue();
         set_fields_from_millis(ms);
