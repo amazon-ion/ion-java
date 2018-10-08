@@ -28,6 +28,7 @@ import static software.amazon.ion.Timestamp.Precision.SECOND;
 import static software.amazon.ion.Timestamp.Precision.YEAR;
 import static software.amazon.ion.impl.PrivateUtils.UTC;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -819,12 +820,6 @@ public class TimestampTest
     public void testNewTimestampFromBigDecimalWithScaleTooBigPositive()
     {
         Timestamp.forMillis(new BigDecimal("1e100000"), PST_OFFSET);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testNewTimestampFromBigDecimalWithScaleTooBigNegative()
-    {
-        Timestamp.forMillis(new BigDecimal("1e-100000"), PST_OFFSET);
     }
 
     /**
@@ -2344,5 +2339,45 @@ public class TimestampTest
 
         Timestamp t = Timestamp.forCalendar(cal);
         assertEquals(year, t.getYear());
+    }
+
+    // High scale timeout tests
+
+    // max scale permitted by BigDecimal from the String constructor
+    private static BigDecimal LARGE_SCALE_DECIMAL = new BigDecimal("1e-1000000000");
+    private static BigDecimal MAX_SCALE_FOR_SAFE_METHODS = new BigDecimal("1e-10000");
+
+    @Test(timeout = 50L)
+    public void testForMillisWithLargeScaleBigDecimal()
+    {
+        Timestamp ts = Timestamp.forMillis(LARGE_SCALE_DECIMAL, PST_OFFSET);
+    }
+
+    @Test(timeout = 50L)
+    public void testGetMillisWithLargeScaleBigDecimal()
+    {
+        Timestamp.forMillis(LARGE_SCALE_DECIMAL, PST_OFFSET).getMillis();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSafeToStringWithLargeScaleBigDecimal()
+    {
+        Timestamp.forMillis(MAX_SCALE_FOR_SAFE_METHODS, PST_OFFSET).safeToString();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSafeToZStringWithLargeScaleBigDecimal()
+    {
+        Timestamp.forMillis(MAX_SCALE_FOR_SAFE_METHODS, PST_OFFSET).safeToZString();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSafePrintWithLargeScaleBigDecimal() throws IOException {
+        Timestamp.forMillis(MAX_SCALE_FOR_SAFE_METHODS, PST_OFFSET).safePrint(new StringBuilder());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSafePrintZWithLargeScaleBigDecimal() throws IOException {
+        Timestamp.forMillis(MAX_SCALE_FOR_SAFE_METHODS, PST_OFFSET).safePrintZ(new StringBuilder());
     }
 }

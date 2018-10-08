@@ -93,6 +93,7 @@ public final class Timestamp
     // 10000T in millis, upper bound exclusive
     static final BigDecimal FRACTIONAL_MILLIS_UPPER_BOUND = new BigDecimal(253402300800000L);
 
+    // Used for safe variants of methods that can hang for a large scale, e.g. toString
     // Determined by running a micro benchmark against BigDecimal#longValue()
     // Results:
     // 1000	    ~0ms
@@ -729,18 +730,7 @@ public final class Timestamp
                 + " , exclusive");
         }
 
-        // check scale size to avoid hanging on methods that need to inflate the fractional bigDecimal
-        // Examples: toString and toMillis
-        if(Math.abs(millis.scale()) >= MAXIMUM_ALLOWED_MILLIS_SCALE) {
-            throw new IllegalArgumentException("millis: " + millis + " has a scale outside the valid range:"
-                + "from"
-                + -MAXIMUM_ALLOWED_MILLIS_SCALE
-                + "to"
-                + MAXIMUM_ALLOWED_MILLIS_SCALE
-                + "both inclusive");
-        }
-
-        long ms = millis.longValue();
+        long ms = millis.divideToIntegralValue(BigDecimal.ONE).longValue();
         set_fields_from_millis(ms);
 
         this._precision = Precision.SECOND;
@@ -750,10 +740,24 @@ public final class Timestamp
         }
         else {
             BigDecimal secs = millis.movePointLeft(3);
-            BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
+            BigDecimal secsDown = fastZeroScaleRoundDown(secs);
             this._fraction = secs.subtract(secsDown);
         }
         this._offset = localOffset;
+    }
+
+    /**
+     * Same effect of <pre>BigDecimal.setScale(0, RoundingMode.FLOOR)</pre> but avoids inflating the BigDecimal
+     * so is much faster
+     */
+    private BigDecimal fastZeroScaleRoundDown(final BigDecimal decimal) {
+        BigDecimal zeroScale = decimal.divideToIntegralValue(BigDecimal.ONE);
+
+        if(zeroScale.compareTo(BigDecimal.ZERO) < 0) {
+            return zeroScale.add(BigDecimal.ONE.negate());
+        }
+
+        return zeroScale;
     }
 
     /**
@@ -1454,7 +1458,7 @@ public final class Timestamp
         //                                        month is 0 based for Date
         long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
         if (this._fraction != null) {
-            int frac = this._fraction.movePointRight(3).intValue();
+            int frac = this._fraction.movePointRight(3).divideToIntegralValue(BigDecimal.ONE).intValue();
             millis += frac;
         }
         return millis;
@@ -1833,6 +1837,11 @@ public final class Timestamp
      * Returns the string representation (in Ion format) of this Timestamp in
      * its local time.
      *
+     * <br>
+     * <strong>WARNING:</strong> this method can hang for Timestamps with a very large
+     * fractional scale, e.g. 1,000,000.
+     *
+     * @see #safeToString()
      * @see #toZString()
      * @see #print(Appendable)
      */
@@ -1852,12 +1861,35 @@ public final class Timestamp
         return buffer.toString();
     }
 
+    private void checkFractionScale() {
+        if(_fraction.scale() >= MAXIMUM_ALLOWED_MILLIS_SCALE) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+
+    /**
+     * Safe version of toString failing if the fractional second scale is bigger than a safe threshold to avoid hanging.
+     *
+     * @throws UnsupportedOperationException if the fraction second scale is bigger than a safe threshold.
+     *
+     * @see #toString()
+     */
+    public String safeToString()
+    {
+        checkFractionScale();
+        return toString();
+    }
 
     /**
      * Returns the string representation (in Ion format) of this Timestamp
      * in UTC.
      *
+     * <br>
+     * <strong>WARNING:</strong> this method can hang for Timestamps with a very large
+     * fractional scale, e.g. 1,000,000.
+     *
      * @see #toString()
+     * @see #safeToZString()
      * @see #printZ(Appendable)
      */
     public String toZString()
@@ -1870,9 +1902,23 @@ public final class Timestamp
         catch (IOException e)
         {
             throw new RuntimeException("Exception printing to StringBuilder",
-                                       e);
+                e);
         }
         return buffer.toString();
+    }
+
+    /**
+     * Safe version of toZString failing if the fractional second scale is bigger than a safe threshold to
+     * avoid hanging.
+     *
+     * @throws UnsupportedOperationException if the fraction second scale is bigger than a safe threshold.
+     *
+     * @see #toZString()
+     */
+    public String safeToZString()
+    {
+        checkFractionScale();
+        return toZString();
     }
 
 
@@ -1882,11 +1928,16 @@ public final class Timestamp
      * <p>
      * This method produces the same output as {@link #toString()}.
      *
+     * <br>
+     * <strong>WARNING:</strong> this method can hang for Timestamps with a very large
+     * fractional scale, e.g. 1,000,000.
+     *
      * @param out not {@code null}
      *
      * @throws IOException propagated when the {@link Appendable} throws it
      *
      * @see #printZ(Appendable)
+     * @see #safePrint(Appendable)
      */
     public void print(Appendable out)
         throws IOException
@@ -1904,6 +1955,20 @@ public final class Timestamp
         print(out, adjusted);
     }
 
+    /**
+     * Safe version of print failing if the fractional second scale is bigger than a safe threshold to
+     * avoid hanging.
+     *
+     * @throws UnsupportedOperationException if the fraction second scale is bigger than a safe threshold.
+     *
+     * @see #print(Appendable)
+     */
+    public void safePrint(Appendable out)
+        throws IOException
+    {
+        checkFractionScale();
+        print(out);
+    }
 
     /**
      * Prints to an {@code Appendable} the string representation (in Ion format)
@@ -1911,11 +1976,16 @@ public final class Timestamp
      * <p>
      * This method produces the same output as {@link #toZString()}.
      *
+     * <br>
+     * <strong>WARNING:</strong> this method can hang for Timestamps with a very large
+     * fractional scale, e.g. 1,000,000.
+     *
      * @param out not {@code null}
      *
      * @throws IOException propagated when the {@code Appendable} throws it.
      *
      * @see #print(Appendable)
+     * @see #safePrintZ(Appendable)
      */
     public void printZ(Appendable out)
         throws IOException
@@ -1942,6 +2012,20 @@ public final class Timestamp
         }
     }
 
+    /**
+     * Safe version of printZ failing if the fractional second scale is bigger than a safe threshold to
+     * avoid hanging.
+     *
+     * @throws UnsupportedOperationException if the fraction second scale is bigger than a safe threshold.
+     *
+     * @see #printZ(Appendable)
+     */
+    public void safePrintZ(Appendable out)
+        throws IOException
+    {
+        checkFractionScale();
+        printZ(out);
+    }
 
     /**
      * helper for print(out) and printZ(out) so that printZ can create
