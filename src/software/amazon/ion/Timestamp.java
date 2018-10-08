@@ -725,8 +725,10 @@ public final class Timestamp
             FRACTIONAL_MILLIS_UPPER_BOUND.compareTo(millis) < 0) {
             throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
                 + MINIMUM_ALLOWED_FRACTIONAL_MILLIS
+                + " (0001T)"
                 + ", inclusive, to "
                 + FRACTIONAL_MILLIS_UPPER_BOUND
+                + " (10000T)"
                 + " , exclusive");
         }
 
@@ -1863,7 +1865,8 @@ public final class Timestamp
 
     private void checkFractionScale() {
         if(_fraction.scale() >= MAXIMUM_ALLOWED_MILLIS_SCALE) {
-            throw new UnsupportedOperationException("TODO");
+            throw new UnsupportedOperationException("fraction scale is higher than the safe threshold: "
+                + MAXIMUM_ALLOWED_MILLIS_SCALE);
         }
     }
 
