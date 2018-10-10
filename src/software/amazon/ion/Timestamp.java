@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.util.IonTextUtils;
 
@@ -276,14 +277,33 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     private void set_fields_from_millis(long millis)
     {
-        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS){
+        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS) {
             throw new IllegalArgumentException("year is less than 1");
         }
 
         Date date = new Date(millis);
 
-        // These fields are in the system timezone!
-        this._year    = checkAndCastYear(date.getYear() + 1900);
+        // java.util.Date has a Date(long) constructor that expects an epoch time in milliseconds. Date's getYear(),
+        // getMonth(), getHour(), etc, are supposed to return values that are in the machine's local time. This means
+        // that if I were in Seattle in the early fall (with an offset of -08:00) and to pass an epoch time
+        // equivalent to 2000T, the Date.get*() methods should return values for 1999-12-31T16:00:00.000Z. It follows
+        // then that if I pass an epoch time equivalent to 0001T to Date(long), the get*() methods should return values
+        // for 0000T-12-31T16:00:00.000Z, however that is not the case! The year is off by one! The Date.get*()
+        // functions instead return values for 0001T-12-31T16:00:00.000Z! The bug is caused then when we copy the
+        // values returned from the get*() methods to the Timestamp fields and account for the offset--this causes the
+        // year to roll over from 1 to 2.
+
+        // We work around this bug determining if we will be effected by it and if so we force the correct value.
+        // Otherwise, we read the value of Date.getYear() as per usual.
+
+        int currentRawOffset = TimeZone.getDefault().getRawOffset();
+        if(currentRawOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentRawOffset > millis) {
+            this._year = 0;
+        } else {
+            this._year = checkAndCastYear(date.getYear() + 1900);
+        }
+
+        // Note: date.get*() return values are in the local timezone!
         this._month   = checkAndCastMonth(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
         this._day     = checkAndCastDay(date.getDate(), _year, _month);
         this._hour    = checkAndCastHour(date.getHours());
