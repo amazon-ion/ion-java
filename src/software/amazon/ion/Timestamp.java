@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.util.IonTextUtils;
 
@@ -276,14 +277,27 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     private void set_fields_from_millis(long millis)
     {
-        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS){
+        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS) {
             throw new IllegalArgumentException("year is less than 1");
         }
 
         Date date = new Date(millis);
 
-        // These fields are in the system timezone!
-        this._year    = checkAndCastYear(date.getYear() + 1900);
+        // https://github.com/amzn/ion-java/issues/160
+        // The java.util.Date(long) constructor expects an epoch time in milliseconds, and getYear(), getMonth(),
+        // getHour() on the resulting Date are supposed to return values adjusted to the default timezone.
+        // In Pacific Standard Time (offset -08:00), for a Date constructed with an epoch time equivalent to
+        // 0001-01-01T00:00:00.000Z, the Date.get*() methods should return values for
+        // 0000-12-31T16:00:00.000Z;  however, Date.getYear() incorrectly returns a value for year 1 (-1899)
+        // in this scenario. The following if/else block compensates for this bug:
+        int currentRawOffset = TimeZone.getDefault().getRawOffset();
+        if(currentRawOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentRawOffset > millis) {
+            this._year = 0;
+        } else {
+            this._year = checkAndCastYear(date.getYear() + 1900);
+        }
+
+        // Note: date.get*() return values are in the local timezone!
         this._month   = checkAndCastMonth(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
         this._day     = checkAndCastDay(date.getDate(), _year, _month);
         this._hour    = checkAndCastHour(date.getHours());
