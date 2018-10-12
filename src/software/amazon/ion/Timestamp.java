@@ -283,19 +283,13 @@ public final class Timestamp
 
         Date date = new Date(millis);
 
-        // java.util.Date has a Date(long) constructor that expects an epoch time in milliseconds. Date's getYear(),
-        // getMonth(), getHour(), etc, are supposed to return values that are in the machine's local time. This means
-        // that if I were in Seattle in the early fall (with an offset of -08:00) and to pass an epoch time
-        // equivalent to 2000T, the Date.get*() methods should return values for 1999-12-31T16:00:00.000Z. It follows
-        // then that if I pass an epoch time equivalent to 0001T to Date(long), the get*() methods should return values
-        // for 0000T-12-31T16:00:00.000Z, however that is not the case! The year is off by one! The Date.get*()
-        // functions instead return values for 0001T-12-31T16:00:00.000Z! The bug is caused then when we copy the
-        // values returned from the get*() methods to the Timestamp fields and account for the offset--this causes the
-        // year to roll over from 1 to 2.
-
-        // We work around this bug determining if we will be effected by it and if so we force the correct value.
-        // Otherwise, we read the value of Date.getYear() as per usual.
-
+        // https://github.com/amzn/ion-java/issues/160
+        // The java.util.Date(long) constructor expects an epoch time in milliseconds, and getYear(), getMonth(),
+        // getHour() on the resulting Date are supposed to return values adjusted to the default timezone.
+        // In Pacific Standard Time (offset -08:00), for a Date constructed with an epoch time equivalent to
+        // 0001-01-01T00:00:00.000Z, the Date.get*() methods should return values for
+        // 0000-12-31T16:00:00.000Z;  however, Date.getYear() incorrectly returns a value for year 1 (-1899)
+        // in this scenario. The following if/else block compensates for this bug:
         int currentRawOffset = TimeZone.getDefault().getRawOffset();
         if(currentRawOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentRawOffset > millis) {
             this._year = 0;

@@ -864,7 +864,7 @@ public class TimestampTest
      * Regression test for https://github.com/amzn/ion-java/issues/160
      */
     @Test
-    public void testNewTimestampFromLongYearOneRegressionBug()
+    public void testNewTimestampFromYearOneRegressionBug()
     {
         // This is the same as the private field Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
         final long MINIMUM_TIMESTAMP_MILLIS = -62135769600000L;
@@ -887,23 +887,24 @@ public class TimestampTest
                 Timestamp minimumTimestampFromMillis = Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS, 0);
                 assertEquals(MINIMUM_TIMESTAMP, minimumTimestampFromMillis);
 
-                // This will be the latest millisecond in which the bug with `java.util.Date` can happen
-                Timestamp maximumTimestampWithBug =
-                    Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset(), 0);
-                assertEquals(1, maximumTimestampWithBug.getYear());
+                // Only perform further assertions on timezones with negative offsets because positive
+                // offsets create millisecond values that are less than Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
+                if (tz.getRawOffset() < 0) {
+                    // This will be the latest millisecond in which the bug with `java.util.Date` can happen
+                    Timestamp maximumTimestampWithBug =
+                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset(), 0);
+                    assertEquals(1, maximumTimestampWithBug.getYear());
 
-                // Test one millisecond after, just to be sure.
-                Timestamp timestampPlusOne =
-                    Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() + 1, 0);
-                assertEquals(1, timestampPlusOne.getYear());
+                    // Test one millisecond after, just to be sure.
+                    Timestamp timestampPlusOne =
+                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() + 1, 0);
+                    assertEquals(1, timestampPlusOne.getYear());
 
-                // Don't attempt to test this last case since it would create a timestamp that is before year 1.
-                if(tz.getRawOffset() >= 0) break;
-
-                // Also test one milliscond before, just to be sure.
-                Timestamp timestampMinusOne =
-                    Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() - 1L, 0);
-                assertEquals(1, timestampMinusOne.getYear());
+                    // Also test one milliscond before, just to be sure.
+                    Timestamp timestampMinusOne =
+                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() - 1L, 0);
+                    assertEquals(1, timestampMinusOne.getYear());
+                }
             }
         } finally {
             // Have to set the TimeZone back to its original value so as not to effect other tests.
