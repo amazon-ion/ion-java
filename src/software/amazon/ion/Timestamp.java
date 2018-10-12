@@ -23,7 +23,6 @@ import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.TimeZone;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.util.IonTextUtils;
 
@@ -290,8 +289,8 @@ public final class Timestamp
         // 0001-01-01T00:00:00.000Z, the Date.get*() methods should return values for
         // 0000-12-31T16:00:00.000Z;  however, Date.getYear() incorrectly returns a value for year 1 (-1899)
         // in this scenario. The following if/else block compensates for this bug:
-        int currentRawOffset = TimeZone.getDefault().getRawOffset();
-        if(currentRawOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentRawOffset > millis) {
+        int currentOffset = -date.getTimezoneOffset() * 60 * 1000;
+        if(currentOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentOffset > millis) {
             this._year = 0;
         } else {
             this._year = checkAndCastYear(date.getYear() + 1900);
