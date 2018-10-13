@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.util.IonTextUtils;
 
