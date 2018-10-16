@@ -866,11 +866,11 @@ public class TimestampTest
     @Test
     public void testNewTimestampFromYearOneRegressionBug()
     {
-        // This is the same as the private field Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
-        final long MINIMUM_TIMESTAMP_MILLIS = -62135769600000L;
         // This is the minimum timestamp instantiating by parsing a timestamp string,
         // which is not effected by the `java.util.Date` bug.
         final Timestamp MINIMUM_TIMESTAMP = Timestamp.valueOf("0001-01-01T00:00:00.000Z");
+        // This is the same as the private field Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
+        final long MINIMUM_TIMESTAMP_MILLIS = MINIMUM_TIMESTAMP.getMillis();
         // Save the original timezone since we modify it below.
         final TimeZone originalTimeZone = TimeZone.getDefault();
 
@@ -885,7 +885,7 @@ public class TimestampTest
                 // since `java.util.Date` references the default TimeZone when calculating the values for its
                 // date field accessor methods (i.e. Date.get*()).
                 Timestamp minimumTimestampFromMillis = Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS, 0);
-                assertEquals(MINIMUM_TIMESTAMP, minimumTimestampFromMillis);
+                assertEquals(1, minimumTimestampFromMillis.getYear());
 
                 // Only perform further assertions on timezones with negative offsets because positive
                 // offsets create millisecond values that are less than Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
