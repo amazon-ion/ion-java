@@ -289,8 +289,8 @@ public final class Timestamp
         // In Pacific Standard Time (offset -08:00), for a Date constructed with an epoch time equivalent to
         // 0001-01-01T00:00:00.000Z, the Date.get*() methods should return values for
         // 0000-12-31T16:00:00.000Z;  however, Date.getYear() incorrectly returns a value for year 1 (-1899)
-        // in this scenario. The following if/else block compensates for this bug:
-        int currentOffset = -date.getTimezoneOffset() * 60 * 1000;
+        // in this scenario. The following if/else block compensates for this bug.
+        int currentOffset = TimeZone.getDefault().getOffset(date.getTime());
         if(currentOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentOffset > millis) {
             this._year = 0;
         } else {
