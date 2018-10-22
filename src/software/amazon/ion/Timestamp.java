@@ -84,6 +84,15 @@ public final class Timestamp
     private static final int NO_SECONDS = 0;
     private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
 
+    // 0001-01-01T00:00:00.0Z in millis
+    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
+
+    // 0001-01-01T00:00:00.0Z in millis
+    static final BigDecimal MINIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal(MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS);
+
+    // 10000T in millis, upper bound exclusive
+    static final BigDecimal FRACTIONAL_MILLIS_UPPER_BOUND = new BigDecimal(253402300800000L);
+
     /**
      * Unknown local offset from UTC.
      */
@@ -265,9 +274,6 @@ public final class Timestamp
             if (_year > 9999) throw new IllegalArgumentException("year exceeds 9999");
         }
     }
-
-    // 0001-01-01T00:00:00.0Z in millis
-    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
 
     /**
      * This method uses deprecated methods from {@link java.util.Date}
@@ -704,7 +710,22 @@ public final class Timestamp
     {
         if (millis == null) throw new NullPointerException("millis is null");
 
-        long ms = millis.longValue();
+        // check bounds to avoid hanging when calling longValue() on decimals with large positive exponents,
+        // e.g. 1e10000000
+        if(millis.compareTo(MINIMUM_ALLOWED_FRACTIONAL_MILLIS) < 0 ||
+            FRACTIONAL_MILLIS_UPPER_BOUND.compareTo(millis) < 0) {
+            throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
+                + MINIMUM_ALLOWED_FRACTIONAL_MILLIS
+                + " (0001T)"
+                + ", inclusive, to "
+                + FRACTIONAL_MILLIS_UPPER_BOUND
+                + " (10000T)"
+                + " , exclusive");
+        }
+
+        // quick handle integral zero
+        long ms = isIntegralZero(millis) ? 0 : millis.longValue();
+
         set_fields_from_millis(ms);
 
         this._precision = Precision.SECOND;
@@ -714,10 +735,17 @@ public final class Timestamp
         }
         else {
             BigDecimal secs = millis.movePointLeft(3);
-            BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
+            BigDecimal secsDown = isIntegralZero(secs) ? BigDecimal.ZERO : secs.setScale(0, BigDecimal.ROUND_FLOOR);
             this._fraction = secs.subtract(secsDown);
         }
         this._offset = localOffset;
+    }
+
+    private boolean isIntegralZero(final BigDecimal decimal) {
+        // zero || no low-order bits || < 1.0
+        return  decimal.signum() == 0
+            || decimal.scale() < -63
+            || (decimal.precision() - decimal.scale() <= 0);
     }
 
     /**
@@ -1418,7 +1446,8 @@ public final class Timestamp
         //                                        month is 0 based for Date
         long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
         if (this._fraction != null) {
-            int frac = this._fraction.movePointRight(3).intValue();
+            BigDecimal fracAsDecimal = this._fraction.movePointRight(3);
+            int frac = isIntegralZero(fracAsDecimal) ? 0 : fracAsDecimal.intValue();
             millis += frac;
         }
         return millis;
@@ -1816,7 +1845,6 @@ public final class Timestamp
         return buffer.toString();
     }
 
-
     /**
      * Returns the string representation (in Ion format) of this Timestamp
      * in UTC.
@@ -1834,11 +1862,10 @@ public final class Timestamp
         catch (IOException e)
         {
             throw new RuntimeException("Exception printing to StringBuilder",
-                                       e);
+                e);
         }
         return buffer.toString();
     }
-
 
     /**
      * Prints to an {@code Appendable} the string representation (in Ion format)
@@ -1867,7 +1894,6 @@ public final class Timestamp
 
         print(out, adjusted);
     }
-
 
     /**
      * Prints to an {@code Appendable} the string representation (in Ion format)
@@ -1905,7 +1931,6 @@ public final class Timestamp
             }
         }
     }
-
 
     /**
      * helper for print(out) and printZ(out) so that printZ can create
