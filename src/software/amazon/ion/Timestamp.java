@@ -735,10 +735,16 @@ public final class Timestamp
         }
         else {
             BigDecimal secs = millis.movePointLeft(3);
-            BigDecimal secsDown = isIntegralZero(secs) ? BigDecimal.ZERO : secs.setScale(0, BigDecimal.ROUND_FLOOR);
+            BigDecimal secsDown = fastRoundZeroFloor(secs);
             this._fraction = secs.subtract(secsDown);
         }
         this._offset = localOffset;
+    }
+
+    private BigDecimal fastRoundZeroFloor(final BigDecimal decimal) {
+        BigDecimal fastValue = decimal.signum() < 0 ? BigDecimal.ONE.negate() : BigDecimal.ZERO;
+
+        return isIntegralZero(decimal) ? fastValue : decimal.setScale(0, RoundingMode.FLOOR);
     }
 
     private boolean isIntegralZero(final BigDecimal decimal) {

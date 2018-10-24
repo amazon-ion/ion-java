@@ -782,6 +782,13 @@ public class TimestampTest
     }
 
     @Test
+    public void testForMillisWithNegativeMilli()
+    {
+        Timestamp ts = Timestamp.forMillis(BigDecimal.valueOf(-1), 0);
+        assertEquals("1969-12-31T23:59:59.999Z", ts.toZString());
+    }
+
+    @Test
     @Ignore // see https://github.com/amzn/ion-java/issues/160
     public void testNewTimestampFromMinimumAllowedMillis()
     {
