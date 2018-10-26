@@ -915,4 +915,12 @@ public class WriteBufferTest
         buf.writeBytes("DOO".getBytes("UTF-8"));
         assertBuffer("ARGLEFOOBARGLEDOO".getBytes("UTF-8"));
     }
+
+    @Test
+    public void testTruncate() throws IOException
+    {
+        buf.writeBytes("ARGLEFOOBARGLEDOO".getBytes("UTF-8"));
+        buf.truncate(3);
+        assertBuffer("ARG".getBytes("UTF-8"));
+    }
 }
