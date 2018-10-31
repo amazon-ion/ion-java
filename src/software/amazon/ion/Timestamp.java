@@ -40,7 +40,7 @@ import software.amazon.ion.util.IonTextUtils;
  * as the start of the new year/month/day.
  *
  *
- * <h4>Equality and Comparison</h4>
+ * <h3>Equality and Comparison</h3>
  *
  * As with {@link IonValue} classes, the {@link #equals equals} methods on this class
  * perform a strict equivalence that observes the precision and local offset
@@ -544,7 +544,7 @@ public final class Timestamp
      *</pre>
      * Note: All of these resulting Timestamps have the similar value (in UTC) 2012-02-03T04:05:06.007Z.
      *
-     * <h4>Precision "Narrowing"</h4>
+     * <h3>Precision "Narrowing"</h3>
      *
      * <p>
      * Any time component that is more precise
@@ -2226,10 +2226,10 @@ public final class Timestamp
      *
      * <p>
      * This method is provided in preference to individual methods for each of
-     * the six boolean comparison operators (<, ==, >, >=, !=, <=).
+     * the six boolean comparison operators (&lt;, ==, &gt;, &gt;=, !=, &lt;=).
      * The suggested idiom for performing these comparisons is:
-     * {@code (x.compareTo(y)}<em>&lt;op></em>{@code 0)},
-     * where <em>&lt;op></em> is one of the six comparison operators.
+     * {@code (x.compareTo(y)}<em>&lt;op&gt;</em>{@code 0)},
+     * where <em>&lt;op&gt;</em> is one of the six comparison operators.
      *
      * <p>
      * For example, the pairs below will return a {@code 0} result:
