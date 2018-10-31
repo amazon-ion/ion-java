@@ -60,7 +60,7 @@ public interface IonSequence
      * @return the element at the given index; not <code>null</code>.
      * @throws NullValueException if {@link #isNullValue()}.
      * @throws IndexOutOfBoundsException if the index is out of range
-     * (<code>index < 0 || index >= size()</code>).
+     * (<code>index &lt; 0 || index &gt;= size()</code>).
      */
     public IonValue get(int index)
         throws NullValueException, IndexOutOfBoundsException;
@@ -113,7 +113,7 @@ public interface IonSequence
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      * @throws IndexOutOfBoundsException if the index is out of range
-     * (index < 0 || index > size()).
+     * (index &lt; 0 || index &gt; size()).
      */
     public void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException;
@@ -169,7 +169,7 @@ public interface IonSequence
      * @return the element previously at the specified position.
      *
      * @throws IndexOutOfBoundsException if the index is out of range
-     * (index < 0 || index >= size()).
+     * (index &lt; 0 || index &gt;= size()).
      */
     public IonValue remove(int index);
 
@@ -357,7 +357,7 @@ public interface IonSequence
      * @throws ContainedValueException
      * if one of the elements is already contained by an {@link IonContainer}.
      * @throws IndexOutOfBoundsException
-     * if the index is out of range (index < 0 || index > size()).
+     * if the index is out of range (index &lt; 0 || index &gt; size()).
      */
     public boolean addAll(int index, Collection<? extends IonValue> c);
 

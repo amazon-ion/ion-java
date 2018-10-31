@@ -59,8 +59,6 @@ import software.amazon.ion.SymbolToken;
  *    boolean equivalent = ionEquals( v1, v2 );
  *</pre>
  *
- * </p>
- *
  * <p>
  * <h3>Ion Equivalence</h3>
  * In order to make Ion a useful model to describe data, we must first define

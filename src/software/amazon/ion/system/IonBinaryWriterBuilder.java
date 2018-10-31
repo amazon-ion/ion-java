@@ -221,9 +221,6 @@ public abstract class IonBinaryWriterBuilder
      * regardless of value. This is the legacy behavior for all Ion binary
      * writers and ensures the boarded compatibility with other Ion consumers.
      *
-     * @param enabled {@code true} to enable writing 4-byte floats,
-     * {@code false} to always write 8-byte floats.
-     *
      * @see IonBinaryWriterBuilder#setIsFloatBinary32Enabled(boolean)
      * @see IonBinaryWriterBuilder#withFloatBinary32Enabled
      */
