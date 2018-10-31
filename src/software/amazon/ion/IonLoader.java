@@ -127,7 +127,7 @@ public interface IonLoader
     /**
      * Loads an entire stream of Ion data into a single datagram,
      * detecting whether it's text or binary data.
-     * <p/>
+     * <p>
      * The specified stream remains open after this method returns.
      * <p>
      * This method will auto-detect and uncompress GZIPped Ion data.
