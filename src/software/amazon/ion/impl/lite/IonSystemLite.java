@@ -140,7 +140,7 @@ final class IonSystemLite
         return _catalog;
     }
 
-    public synchronized IonLoader getLoader()
+    public IonLoader getLoader()
     {
         return _loader;
     }
