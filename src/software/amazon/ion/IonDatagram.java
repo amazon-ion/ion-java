@@ -238,19 +238,6 @@ public interface IonDatagram
      */
     public void makeNull();
 
-
-    /**
-     * This inherited method is not yet supported by datagrams.
-     * <p>
-     * Vote for SIM issue amzn/ion-java#49 if you need this.
-     *
-     * @throws UnsupportedOperationException at every call.
-     *
-     * @see <a href="https://github.com/amzn/ion-java/issues/49">amzn/ion-java#49</a>
-     */
-    public boolean retainAll(Collection<?> c);
-
-
     public IonDatagram clone()
         throws UnknownSymbolException;
 }
