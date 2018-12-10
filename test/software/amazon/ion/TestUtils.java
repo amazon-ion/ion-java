@@ -144,8 +144,6 @@ public class TestUtils
             , "good/utf16.ion"                              // TODO amzn/ion-java#61
             , "good/utf32.ion"                              // TODO amzn/ion-java#61
             , "good/whitespace.ion"                         // TODO amzn/ion-java#104
-            , "bad/negativeIntZero.10n"                     // TODO amzn/ion-java#138
-            , "bad/negativeIntZeroLn.10n"                   // TODO amzn/ion-java#138
             , "good/item1.10n"                              // TODO amzn/ion-java#126 (roundtrip symbols with unknown text)
         );
 
