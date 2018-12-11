@@ -661,14 +661,16 @@ abstract class IonValueLite
     public final boolean hasTypeAnnotation(String annotation)
     {
         if (annotation != null && annotation.length() > 0) {
-            int pos = find_type_annotation(annotation);
+            int pos = findTypeAnnotation(annotation);
             if (pos >= 0) {
                 return true;
             }
         }
         return false;
     }
-    private final int find_type_annotation(String annotation)
+
+    @Override
+    public final int findTypeAnnotation(String annotation)
     {
         assert(annotation != null && annotation.length() > 0);
 
@@ -802,7 +804,7 @@ abstract class IonValueLite
         checkForLock();
 
         if (annotation != null && annotation.length() > 0) {
-            int pos = find_type_annotation(annotation);
+            int pos = findTypeAnnotation(annotation);
             if (pos < 0) {
                 return;
             }

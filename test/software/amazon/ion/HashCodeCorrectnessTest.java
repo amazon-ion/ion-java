@@ -543,10 +543,11 @@ public class HashCodeCorrectnessTest
                                        "{a:456, b:456}");
         assertIonNotEqImpliesHashNotEq("{a:annot::123, b:123}",
                                        "{a:456, b:annot::456}");
-        assertIonNotEqImpliesHashNotEq("{$99:123, $98:123}",
-                                       "{$99:456, $98:456}");
-        assertIonNotEqImpliesHashNotEq("{$99:annot::123, $98:123}",
-                                       "{$99:456, $98:annot::456}");
+        String sharedSymbolTable = "$ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id:90}]}";
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "{$99:123, $98:123}",
+                                       sharedSymbolTable + "{$99:456, $98:456}");
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "{$99:annot::123, $98:123}",
+                                       sharedSymbolTable + "{$99:456, $98:annot::456}");
     }
 
     @Test
@@ -564,18 +565,20 @@ public class HashCodeCorrectnessTest
                                        "{alpha:a, beta:b}");
         assertIonNotEqImpliesHashNotEq("{a:alpha, b:beta, c:charlie}",
                                        "{alpha:a, beta:b, charlie:c}");
-        assertIonNotEqImpliesHashNotEq("{$99:a}",
-                                       "{a:$99}");
-        assertIonNotEqImpliesHashNotEq("{$99:a, $999:b}",
-                                       "{a:$99, b:$999}");
-        assertIonNotEqImpliesHashNotEq("{$99:a, $999:b, $9999:c}",
-                                       "{a:$99, b:$999, c:$9999}");
+        String sharedSymbolTable = "$ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id:9990}]} ";
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "{$99:a}",
+                                       sharedSymbolTable + "{a:$99}");
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "{$99:a, $999:b}",
+                                       sharedSymbolTable + "{a:$99, b:$999}");
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "{$99:a, $999:b, $9999:c}",
+                                       sharedSymbolTable + "{a:$99, b:$999, c:$9999}");
     }
 
     protected void testTypeAnnotationHashCode(String text, IonType type)
     {
+        String sharedSymbolTable = "$ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id:90}]}";
         checkType(type, oneValue("annot1::" + text));
-        checkType(type, oneValue("$99::" + text));
+        checkType(type, oneValue(sharedSymbolTable + "$99::" + text));
 
         assertIonEqImpliesHashEq(oneValue("annot1::" + text),
                                  oneValue("annot2::" + text));
@@ -584,12 +587,12 @@ public class HashCodeCorrectnessTest
         assertIonEqImpliesHashEq(oneValue("annot1::annot2::annot3::" + text),
                                  oneValue("annot1::annot2::annot3::" + text));
 
-        assertIonEqImpliesHashEq(oneValue("$99::" + text),
-                                 oneValue("$98::" + text));
-        assertIonEqImpliesHashEq(oneValue("$99::$98::" + text),
-                                 oneValue("$99::$98::" + text));
-        assertIonEqImpliesHashEq(oneValue("$99::$98::$97::" + text),
-                                 oneValue("$99::$98::$97::" + text));
+        assertIonEqImpliesHashEq(oneValue(sharedSymbolTable + "$99::" + text),
+                                 oneValue(sharedSymbolTable + "$98::" + text));
+        assertIonEqImpliesHashEq(oneValue(sharedSymbolTable + "$99::$98::" + text),
+                                 oneValue(sharedSymbolTable + "$99::$98::" + text));
+        assertIonEqImpliesHashEq(oneValue(sharedSymbolTable + "$99::$98::$97::" + text),
+                                 oneValue(sharedSymbolTable + "$99::$98::$97::" + text));
 
         assertIonNotEqImpliesHashNotEq("annot1::" + text,
                                        "annot2::" + text);
@@ -598,12 +601,12 @@ public class HashCodeCorrectnessTest
         assertIonNotEqImpliesHashNotEq("annot1::annot2::annot3::" + text,
                                        "annot3::annot2::annot1::" + text);
 
-        assertIonNotEqImpliesHashNotEq("$99::" + text,
-                                       "$98::" + text);
-        assertIonNotEqImpliesHashNotEq("$99::$98::" + text,
-                                       "$98::$99::" + text);
-        assertIonNotEqImpliesHashNotEq("$99::$98::$97::" + text,
-                                       "$97::$98::$99::" + text);
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "$99::" + text,
+                                       sharedSymbolTable + "$98::" + text);
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "$99::$98::" + text,
+                                       sharedSymbolTable + "$98::$99::" + text);
+        assertIonNotEqImpliesHashNotEq(sharedSymbolTable + "$99::$98::$97::" + text,
+                                       sharedSymbolTable + "$97::$98::$99::" + text);
     }
 
     @Test

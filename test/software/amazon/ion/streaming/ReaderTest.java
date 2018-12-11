@@ -14,7 +14,7 @@
 
 package software.amazon.ion.streaming;
 
-import static software.amazon.ion.Symtabs.printLocalSymtab;
+import static software.amazon.ion.impl.Symtabs.printLocalSymtab;
 import static software.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import java.io.IOException;
@@ -27,9 +27,10 @@ import software.amazon.ion.BinaryTest;
 import software.amazon.ion.Decimal;
 import software.amazon.ion.IonType;
 import software.amazon.ion.ReaderMaker;
+import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
-import software.amazon.ion.junit.IonAssert;
 import software.amazon.ion.junit.Injected.Inject;
+import software.amazon.ion.junit.IonAssert;
 
 public class ReaderTest
     extends ReaderTestCase
@@ -367,4 +368,15 @@ public class ReaderTest
         testSkippingLob("{a:1, b:{ c:", " }}");
         testSkippingLob("{a:1, b:{ c:", "}}");
     }
+
+    @Test
+    public void testGetSymbolTableBeforeFirstValue()
+    {
+        read("123");
+        SymbolTable symtab = in.getSymbolTable();
+        expectNoCurrentValue();
+        assertNotNull(symtab);
+        assertTrue(symtab.isSystemTable());
+    }
+
 }

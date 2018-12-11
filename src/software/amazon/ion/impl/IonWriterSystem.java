@@ -15,7 +15,6 @@
 package software.amazon.ion.impl;
 
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolToken;
 import static software.amazon.ion.impl.PrivateUtils.newSymbolTokens;
 
@@ -226,7 +225,7 @@ abstract class IonWriterSystem
         assert _symbol_table.isSystemTable();
         // no catalog since it doesn't matter as this is a
         // pure local table, with no imports
-        return newLocalSymtab(null /*system*/, _symbol_table);
+        return LocalSymbolTable.DEFAULT_LST_FACTORY.newLocalSymtab(_symbol_table);
     }
 
     @Override
@@ -392,6 +391,7 @@ abstract class IonWriterSystem
             if (sid < 0) {
                 throw new IllegalArgumentException();
             }
+            validateSymbolId(sid);
 
             _field_name_type = IonType.INT;
             _field_name_sid = sid;
@@ -435,36 +435,9 @@ abstract class IonWriterSystem
     }
 
 
-    final int[] internAnnotationsAndGetSids() throws IOException
-    {
-        int count = _annotation_count;
-        if (count == 0) return PrivateUtils.EMPTY_INT_ARRAY;
-
-        int[] sids = new int[count];
-        for (int i = 0; i < count; i++)
-        {
-            SymbolToken sym = _annotations[i];
-            int sid = sym.getSid();
-            if (sid == UNKNOWN_SYMBOL_ID)
-            {
-                String text = sym.getText();
-                sid = add_symbol(text);
-                _annotations[i] = new SymbolTokenImpl(text, sid);
-            }
-            sids[i] = sid;
-        }
-        return sids;
-    }
-
-
     final boolean hasAnnotations()
     {
         return _annotation_count != 0;
-    }
-
-    final int annotationCount()
-    {
-        return _annotation_count;
     }
 
     final void clearAnnotations()
@@ -472,21 +445,16 @@ abstract class IonWriterSystem
         _annotation_count = 0;
     }
 
-
     @Override
-    final boolean has_annotation(String name, int id)
-    {
-        assert(this._symbol_table.findKnownSymbol(id).equals(name));
-        if (_annotation_count < 1) {
-            return false;
-        }
-
-        for (int ii=0; ii<_annotation_count; ii++) {
-            if (name.equals(_annotations[ii].getText())) {
-                return true;
+    final int findAnnotation(String name) {
+        if (_annotation_count > 0) {
+            for (int ii=0; ii<_annotation_count; ii++) {
+                if (name.equals(_annotations[ii].getText())) {
+                    return ii;
+                }
             }
         }
-        return false;
+        return -1;
     }
 
     final SymbolToken[] getTypeAnnotationSymbols()
@@ -516,6 +484,9 @@ abstract class IonWriterSystem
             for (int i = 0; i < count; i++)
             {
                 SymbolToken sym = annotations[i];
+                if (sym.getText() == null) {
+                    validateSymbolId(sym.getSid());
+                }
                 sym = PrivateUtils.localize(symtab, sym);
                 _annotations[i] = sym;
             }

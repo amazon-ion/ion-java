@@ -83,6 +83,7 @@ import software.amazon.ion.streaming.ReaderTest;
 import software.amazon.ion.streaming.RoundTripStreamingTest;
 import software.amazon.ion.streaming.SpanTests;
 import software.amazon.ion.system.IonBinaryWriterBuilderTest;
+import software.amazon.ion.system.IonReaderBuilderTest;
 import software.amazon.ion.system.IonSystemBuilderTest;
 import software.amazon.ion.system.IonTextWriterBuilderTest;
 import software.amazon.ion.system.SimpleCatalogTest;
@@ -186,6 +187,7 @@ import software.amazon.ion.util.TextTest;
     IonBinaryWriterBuilderTest.class,
     IonReaderToIonValueTest.class,
     BinaryReaderWrappedValueLengthTest.class,
+    IonReaderBuilderTest.class,
 
     // experimental binary writer tests
     PooledBlockAllocatorProviderTest.class,

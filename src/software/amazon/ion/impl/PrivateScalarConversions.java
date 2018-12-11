@@ -800,7 +800,7 @@ public class PrivateScalarConversions
             ) {
                 throw new CantConvertException("BigDecimal value is too large to fit in a long");
             }
-            _long_value = _decimal_value.intValue();
+            _long_value = _decimal_value.longValue();
             add_value_type(AS_TYPE.long_value);
         }
         private final void fn_from_double_to_long() {

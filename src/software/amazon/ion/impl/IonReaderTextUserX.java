@@ -16,11 +16,9 @@ package software.amazon.ion.impl;
 
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import java.util.regex.Pattern;
 import software.amazon.ion.IonCatalog;
-import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.OffsetSpan;
 import software.amazon.ion.SeekableReader;
@@ -29,6 +27,7 @@ import software.amazon.ion.SpanProvider;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.TextSpan;
+import software.amazon.ion.UnknownSymbolException;
 import software.amazon.ion.UnsupportedIonVersionException;
 
 /**
@@ -63,47 +62,29 @@ class IonReaderTextUserX
      * {@link OffsetSpan}s.
      */
     private final int _physical_start_offset;
+    private final PrivateLocalSymbolTableFactory _lstFactory;
 
     // IonSystem   _system; now in IonReaderTextSystemX where it could be null
     IonCatalog  _catalog;
     SymbolTable _symbols;
 
 
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog,
+    protected IonReaderTextUserX(IonCatalog catalog,
+                                 PrivateLocalSymbolTableFactory lstFactory,
                                  UnifiedInputStreamX uis,
                                  int physicalStartOffset)
     {
-        super(system, uis);
+        super(uis);
+        _symbols = _system_symtab;
         _physical_start_offset = physicalStartOffset;
-        initUserReader(system, catalog);
+        _catalog = catalog;
+        _lstFactory = lstFactory;
     }
 
-    protected IonReaderTextUserX(IonSystem system, IonCatalog catalog,
+    protected IonReaderTextUserX(IonCatalog catalog,
+                                 PrivateLocalSymbolTableFactory lstFactory,
                                  UnifiedInputStreamX uis) {
-        super(system, uis);
-        _physical_start_offset = 0;
-        initUserReader(system, catalog);
-    }
-
-    private void initUserReader(IonSystem system, IonCatalog catalog) {
-        if (system == null) {
-            throw new IllegalArgumentException();
-        }
-        _system = system;
-        if (catalog != null) {
-            _catalog = catalog;
-        }
-        else {
-            _catalog = system.getCatalog();
-        }
-        // not needed, getSymbolTable will force this when necessary
-        //  _symbols = system.getSystemSymbolTable();
-    }
-
-    @Override
-    public IonSystem getSystem()
-    {
-        return _system;
+        this(catalog, lstFactory, uis, 0);
     }
 
     /**
@@ -148,21 +129,12 @@ class IonReaderTextUserX
             if (_value_type != null && !isNullValue() && IonType.DATAGRAM.equals(getContainerType())) {
                 switch (_value_type) {
                 case STRUCT:
-                    if (_annotation_count > 0) {
-                        for (int ii=0; ii<_annotation_count; ii++) {
-                            SymbolToken a = _annotations[ii];
-                            // TODO SID only?
-                            if (ION_SYMBOL_TABLE.equals(a.getText())) {
-                                _symbols = newLocalSymtab(_system,
-                                                          _system.getSystemSymbolTable(),
-                                                          _catalog,
-                                                          this,
-                                                          true);
-                                push_symbol_table(_symbols);
-                                _has_next_called = false;
-                                break;
-                            }
-                        }
+                    if (_annotation_count > 0 && ION_SYMBOL_TABLE.equals(_annotations[0].getText())) {
+                        _symbols = _lstFactory.newLocalSymtab(_catalog,
+                                                              this,
+                                                              true);
+                        push_symbol_table(_symbols);
+                        _has_next_called = false;
                     }
                     break;
                 case SYMBOL:
@@ -175,7 +147,7 @@ class IonReaderTextUserX
                             if (ION_1_0.equals(version))
                             {
                                 symbol_table_reset();
-                                push_symbol_table(_system.getSystemSymbolTable());
+                                push_symbol_table(_system_symtab);
                                 _has_next_called = false;
                             }
                             else
@@ -202,18 +174,44 @@ class IonReaderTextUserX
     {
         IonType t = next();
         assert( IonType.SYMBOL.equals(t) );
-        _symbols = null; // was: _symbols.getSystemSymbolTable(); - the null is fixed in getSymbolTable()
+        _symbols = _system_symtab;
         return;
     }
 
+    private void validateSymbolToken(SymbolToken symbol) {
+        if (symbol != null) {
+            if (symbol.getText() == null && symbol.getSid() > getSymbolTable().getMaxId()) {
+                throw new UnknownSymbolException(symbol.getSid());
+            }
+        }
+    }
+
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols() {
+        SymbolToken[] annotations = super.getTypeAnnotationSymbols();
+        for (SymbolToken annotation : annotations) {
+            validateSymbolToken(annotation);
+        }
+        return annotations;
+    }
+
+    @Override
+    public final SymbolToken getFieldNameSymbol() {
+        SymbolToken fieldName = super.getFieldNameSymbol();
+        validateSymbolToken(fieldName);
+        return fieldName;
+    }
+
+    @Override
+    public final SymbolToken symbolValue() {
+        SymbolToken symbol = super.symbolValue();
+        validateSymbolToken(symbol);
+        return symbol;
+    }
 
     @Override
     public SymbolTable getSymbolTable()
     {
-        if (_symbols == null) {
-            SymbolTable system_symbols = _system.getSystemSymbolTable();
-            _symbols = newLocalSymtab(_system, system_symbols);
-        }
         return _symbols;
     }
 

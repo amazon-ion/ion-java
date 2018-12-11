@@ -286,7 +286,8 @@ public class IonSystemBuilder
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
 
-        return newLiteSystem(twb, bwb);
+        IonReaderBuilder rb = IonReaderBuilder.standard().withCatalog(catalog);
+        return newLiteSystem(twb, bwb, rb);
     }
 
     //=========================================================================

@@ -124,8 +124,12 @@ public abstract class PrivateIonWriterBase
     //========================================================================
     // Annotations
 
-
-    abstract boolean has_annotation(String name, int id);
+    /**
+     * Returns the given annotation's index in the value's annotations list, or -1 if not present.
+     * @param name the annotation to find.
+     * @return the index or -1.
+     */
+    abstract int findAnnotation(String name);
 
 
     /**
@@ -161,9 +165,8 @@ public abstract class PrivateIonWriterBase
     abstract int[] getTypeAnnotationIds();
 
     /**
-     * Write symbolId out as an IonSymbol value.  The value does not
-     * have to be valid in the symbol table, unless the output is
-     * text, in which case it does.
+     * Write symbolId out as an IonSymbol value.  The value must
+     * be valid in the symbol table.
      *
      * @param symbolId symbol table id to write
      */
@@ -213,6 +216,13 @@ public abstract class PrivateIonWriterBase
         writeNull(IonType.NULL);
     }
 
+    final void validateSymbolId(int sid) {
+        if (sid > getSymbolTable().getMaxId()) {
+            // There is no slot for this symbol ID in the symbol table,
+            // so an error would be raised on read. Fail early on write.
+            throw new UnknownSymbolException(sid);
+        }
+    }
 
     public final void writeSymbolToken(SymbolToken tok)
         throws IOException
@@ -230,6 +240,7 @@ public abstract class PrivateIonWriterBase
         else
         {
             int sid = tok.getSid();
+            validateSymbolId(sid);
             writeSymbol(sid);
         }
     }

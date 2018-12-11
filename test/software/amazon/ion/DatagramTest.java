@@ -15,11 +15,11 @@
 package software.amazon.ion;
 
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static software.amazon.ion.Symtabs.FRED_MAX_IDS;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static software.amazon.ion.SystemSymbols.SYMBOLS;
+import static software.amazon.ion.impl.Symtabs.FRED_MAX_IDS;
 import static software.amazon.ion.junit.IonAssert.assertIonEquals;
 
 import java.io.ByteArrayOutputStream;
@@ -45,6 +45,7 @@ import software.amazon.ion.ReadOnlyValueException;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.impl.PrivateIonSystem;
 import software.amazon.ion.impl.PrivateIonValue;
+import software.amazon.ion.impl.Symtabs;
 
 
 public class DatagramTest

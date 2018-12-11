@@ -60,6 +60,13 @@ public interface PrivateIonValue
     public SymbolToken[] getTypeAnnotationSymbols(SymbolTableProvider symbolTableProvider);
 
     /**
+     * Returns the given annotation's index in the value's annotations list, or -1 if not present.
+     * @param annotation the annotation to find.
+     * @return the index or -1.
+     */
+    int findTypeAnnotation(String annotation);
+
+    /**
      * Makes this symbol table current for this value.
      * This may directly apply to this IonValue if this
      * value is either loose or a top level datagram

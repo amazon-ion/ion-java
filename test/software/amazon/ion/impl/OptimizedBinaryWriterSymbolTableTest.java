@@ -14,9 +14,9 @@
 
 package software.amazon.ion.impl;
 
-import static software.amazon.ion.Symtabs.printLocalSymtab;
 import static software.amazon.ion.impl.PrivateUtils.isNonSymbolScalar;
 import static software.amazon.ion.impl.PrivateUtils.symtabExtends;
+import static software.amazon.ion.impl.Symtabs.printLocalSymtab;
 import static software.amazon.ion.junit.IonAssert.assertIonEquals;
 import static software.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
@@ -24,7 +24,6 @@ import org.junit.Test;
 import software.amazon.ion.IonDatagram;
 import software.amazon.ion.IonType;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.impl.PrivateUtils;
 
 /**

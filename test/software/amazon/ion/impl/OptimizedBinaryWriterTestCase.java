@@ -15,8 +15,8 @@
 package software.amazon.ion.impl;
 
 import static java.lang.reflect.Proxy.newProxyInstance;
-import static software.amazon.ion.Symtabs.makeLocalSymtab;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static software.amazon.ion.impl.Symtabs.makeLocalSymtab;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

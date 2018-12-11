@@ -15,7 +15,7 @@
 package software.amazon.ion;
 
 import static junit.framework.Assert.assertSame;
-import static software.amazon.ion.Symtabs.sharedSymtabStruct;
+import static software.amazon.ion.impl.Symtabs.sharedSymtabStruct;
 
 import software.amazon.ion.IonReader;
 import software.amazon.ion.IonStruct;

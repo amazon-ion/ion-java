@@ -165,7 +165,7 @@ public class SymbolTest
     @Test
     public void testSyntheticSymbols()
     {
-        String symText = "$324";
+        String symText = "$ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id: 315}]} $324";
         IonSymbol value = (IonSymbol) oneValue(symText);
         checkUnknownSymbol(324, value);
 

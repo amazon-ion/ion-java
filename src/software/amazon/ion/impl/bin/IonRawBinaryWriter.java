@@ -1432,6 +1432,10 @@ import software.amazon.ion.Timestamp;
 
     public void finish() throws IOException
     {
+        if (closed)
+        {
+            return;
+        }
         if (!containers.isEmpty())
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
@@ -1478,7 +1482,6 @@ import software.amazon.ion.Timestamp;
         {
             return;
         }
-        closed = true;
         try
         {
             try
@@ -1497,6 +1500,7 @@ import software.amazon.ion.Timestamp;
         }
         finally
         {
+            closed = true;
             if (streamCloseMode == StreamCloseMode.CLOSE)
             {
                 // release the stream

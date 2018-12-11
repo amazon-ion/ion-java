@@ -21,25 +21,20 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static software.amazon.ion.TestUtils.symbolTableEquals;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Test;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.impl.PrivateIonBinaryWriterBuilder;
 import software.amazon.ion.impl.PrivateIonWriter;
 import software.amazon.ion.impl.PrivateUtils;
-import software.amazon.ion.system.IonBinaryWriterBuilder;
-import software.amazon.ion.system.IonSystemBuilder;
-import software.amazon.ion.system.SimpleCatalog;
+import software.amazon.ion.impl.Symtabs;
 
 public class IonBinaryWriterBuilderTest
 {
@@ -240,11 +235,9 @@ public class IonBinaryWriterBuilderTest
     public void testInitialSymtab()
         throws IOException
     {
-        IonSystem system = IonSystemBuilder.standard().build();
         SymbolTable sst = PrivateUtils.systemSymtab(1);
 
-        SymbolTable lst0 = newLocalSymtab(system, sst,
-                                          Collections.<String>emptyList());
+        SymbolTable lst0 = Symtabs.localSymbolTableFactory().newLocalSymtab(sst);
         lst0.intern("hello");
 
         PrivateIonBinaryWriterBuilder b =
@@ -284,12 +277,10 @@ public class IonBinaryWriterBuilderTest
     @Test
     public void testImmutableInitialSymtab()
     {
-        IonSystem system = IonSystemBuilder.standard().build();
         SymbolTable sst = PrivateUtils.systemSymtab(1);
 
         // Immutable local symtabs shouldn't get copied.
-        SymbolTable lst = newLocalSymtab(system, sst,
-                                         Collections.<String>emptyList());
+        SymbolTable lst = Symtabs.localSymbolTableFactory().newLocalSymtab(sst);
         lst.intern("hello");
         lst.makeReadOnly();
 

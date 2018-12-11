@@ -24,7 +24,6 @@ import java.util.Date;
 import java.util.Iterator;
 import software.amazon.ion.Decimal;
 import software.amazon.ion.IntegerSize;
-import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.NullValueException;
 import software.amazon.ion.SymbolTable;
@@ -38,16 +37,14 @@ class IonReaderBinarySystemX
     extends IonReaderBinaryRawX
     implements PrivateReaderWriter
 {
-    IonSystem _system;
     SymbolTable _symbols;
-    // ValueVariant _v; actually owned by the raw reader so it can be cleared at appropriate times
 
-    IonReaderBinarySystemX(IonSystem system, UnifiedInputStreamX in)
+    IonReaderBinarySystemX(UnifiedInputStreamX in)
     {
         super();
         init_raw(in);
-        _system = system;
-        _symbols = system.getSystemSymbolTable();
+        // TODO check IVM to determine version: amznlabs/ion-java#19, amznlabs/ion-java#24
+        _symbols = SharedSymbolTable.getSystemSymbolTable(1);
     }
 
 
@@ -183,14 +180,19 @@ class IonReaderBinarySystemX
             _v.setAuthoritativeType(AS_TYPE.boolean_value);
             break;
         case INT:
+            boolean is_negative = _value_tid == PrivateIonConstants.tidNegInt;
+
             if (_value_len == 0) {
+                if (is_negative) {
+                    throwIllegalNegativeZeroException();
+                }
+
                 int v = 0;
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.int_value);
             }
             else if (_value_len <= Long.BYTES) {
                 long v = readULong(_value_len);
-                boolean is_negative = _value_tid == PrivateIonConstants.tidNegInt;
 
                 if (v < 0) {
                     // we probably can't fit this magnitude properly into a Java long
@@ -208,6 +210,9 @@ class IonReaderBinarySystemX
                 }
                 else {
                     if (is_negative) {
+                        if(v == 0) {
+                            throwIllegalNegativeZeroException();
+                        }
                         v = -v;
                     }
                     if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
@@ -220,7 +225,6 @@ class IonReaderBinarySystemX
                 }
             }
             else {
-                boolean is_negative = (_value_tid == PrivateIonConstants.tidNegInt);
                 BigInteger v = readBigInteger(_value_len, is_negative);
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
@@ -406,7 +410,7 @@ class IonReaderBinarySystemX
         return _v.getString();
     }
 
-    public final SymbolToken symbolValue()
+    public SymbolToken symbolValue()
     {
         if (_value_type != SYMBOL) throw new IllegalStateException();
         if (_value_is_null) return null;
@@ -442,7 +446,7 @@ class IonReaderBinarySystemX
         return name;
     }
 
-    public final SymbolToken getFieldNameSymbol()
+    public SymbolToken getFieldNameSymbol()
     {
         if (_value_field_id == SymbolTable.UNKNOWN_SYMBOL_ID) return null;
         int sid = _value_field_id;
@@ -484,5 +488,9 @@ class IonReaderBinarySystemX
     public SymbolTable pop_passed_symbol_table()
     {
         return null;
+    }
+
+    private void throwIllegalNegativeZeroException() {
+        throw newErrorAt("negative zero is illegal in the binary format");
     }
 }

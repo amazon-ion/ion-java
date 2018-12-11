@@ -29,10 +29,17 @@ public class UnknownSymbolException
     private static final long serialVersionUID = 1L;
 
     private final int mySid;
+    private final String myText;
 
     public UnknownSymbolException(int sid)
     {
         mySid = sid;
+        myText = null;
+    }
+    public UnknownSymbolException(String message)
+    {
+        myText = message;
+        mySid = 0;
     }
 
     public int getSid()
@@ -43,6 +50,10 @@ public class UnknownSymbolException
     @Override
     public String getMessage()
     {
-        return "Unknown symbol text for $" + mySid;
+        if(myText == null) {
+            return "Unknown symbol text for $" + mySid;
+        } else {
+            return myText;
+        }
     }
 }

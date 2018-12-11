@@ -12,14 +12,13 @@
  * language governing permissions and limitations under the License.
  */
 
-package software.amazon.ion;
+package software.amazon.ion.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 import static software.amazon.ion.util.IonTextUtils.printString;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.ValueFactory;
 import software.amazon.ion.impl.PrivateIonSystem;
+import software.amazon.ion.impl.PrivateLocalSymbolTableFactory;
 import software.amazon.ion.system.IonSystemBuilder;
 import software.amazon.ion.system.SimpleCatalog;
 
@@ -203,24 +203,6 @@ public class Symtabs
         return s.toString();
     }
 
-
-    /**
-     * Creates a local symtab with local symbols but no imports.
-     *
-     * @param system
-     * @param localSymbols
-     *          the array (var-args) of local symbols that the resulting
-     *          local symtab to contain; may be {@code null} to indicate no
-     *          local symbols; elements may be {@code null} to indicate a gap
-     */
-    public static SymbolTable makeLocalSymtab(IonSystem system,
-                                              String... localSymbols)
-    {
-        return newLocalSymtab(system, system.getSystemSymbolTable(),
-                              Arrays.asList(localSymbols));
-    }
-
-
     /**
      * Creates a local symtab with local symbols and imports.
      */
@@ -232,9 +214,27 @@ public class Symtabs
 
         for (String localSymbol : localSymbols)
         {
-            localSymtab.intern(localSymbol);
+            if (localSymbol == null)
+            {
+                // This injects a gap.
+                ((LocalSymbolTable)localSymtab).putSymbol(null);
+            }
+            else
+            {
+                localSymtab.intern(localSymbol);
+            }
         }
 
         return localSymtab;
     }
+
+    /**
+     * Trampoline to {@link LocalSymbolTable#DEFAULT_LST_FACTORY}
+     * @return the {@link LocalSymbolTable.Factory} singleton.
+     */
+    public static PrivateLocalSymbolTableFactory localSymbolTableFactory()
+    {
+        return LocalSymbolTable.DEFAULT_LST_FACTORY;
+    }
+
 }

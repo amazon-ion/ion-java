@@ -28,7 +28,9 @@ import software.amazon.ion.IonType;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.Timestamp;
-import software.amazon.ion.ValueFactory;
+import software.amazon.ion.impl.PrivateLocalSymbolTableFactory;
+import software.amazon.ion.impl.PrivateUtils;
+import software.amazon.ion.impl.PrivateValueFactory;
 
 /**
  *  This class handles all of the IonValueLite
@@ -36,9 +38,15 @@ import software.amazon.ion.ValueFactory;
  *
  */
 abstract class ValueFactoryLite
-    implements ValueFactory
+    implements PrivateValueFactory
 {
+    protected final PrivateLocalSymbolTableFactory _lstFactory;
     private ContainerlessContext _context;
+
+    ValueFactoryLite()
+    {
+        _lstFactory = PrivateUtils.newLocalSymbolTableAsStructFactory(this);
+    }
 
     protected void set_system(IonSystemLite system) {
         _context = ContainerlessContext.wrap(system);
@@ -435,5 +443,11 @@ abstract class ValueFactoryLite
         }
 
         return e;
+    }
+
+    @Override
+    public PrivateLocalSymbolTableFactory getLstFactory()
+    {
+        return _lstFactory;
     }
 }

@@ -15,12 +15,12 @@
 package software.amazon.ion;
 
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static software.amazon.ion.Symtabs.LocalSymbolTablePrefix;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE;
 import static software.amazon.ion.SystemSymbols.ION_SHARED_SYMBOL_TABLE_SID;
 import static software.amazon.ion.TestUtils.FERMATA;
+import static software.amazon.ion.impl.Symtabs.LocalSymbolTablePrefix;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,6 +29,7 @@ import software.amazon.ion.IonType;
 import software.amazon.ion.SymbolTable;
 import software.amazon.ion.Timestamp;
 import software.amazon.ion.impl.SymbolTableTest;
+import software.amazon.ion.impl.Symtabs;
 import software.amazon.ion.system.SimpleCatalog;
 
 
@@ -402,7 +403,7 @@ public abstract class SystemProcessingTestCase
             "            max_id:" + Symtabs.FRED_MAX_IDS[2] + "}]," +
             "}\n" +
             "local1 local2 fred_1 fred_2 fred_3 $12 " +
-            "fred_3::$99 [{fred_3:local2}]";
+            "fred_3::$10 [{fred_3:local2}]";
         // TODO { $12:something }
         // TODO $12::something
         // Nesting flushed out a bug at one point
@@ -449,7 +450,7 @@ public abstract class SystemProcessingTestCase
 // TODO checkAbsentSidLiteral("fred_3", fred3id);
 
         nextValue();
-        checkSymbol(null, 99);
+        checkSymbol("fred_1", fred1id);
         checkMissingAnnotation("fred_3", fred3id);
 
         nextValue();
@@ -834,6 +835,7 @@ public abstract class SystemProcessingTestCase
         throws Exception
     {
         startIteration(ION_1_0 +
+                       " $ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id: 10}]}" +
                        " { $10:10, $11:11, $12:12, $13:13, $14:14," +
                        "   $15:15, $16:16, $17:17, $18:18, $19:19 }");
         nextValue();
@@ -851,7 +853,7 @@ public abstract class SystemProcessingTestCase
     public void testUnknownFieldNames()
         throws Exception
     {
-        startIteration(ION_1_0 + " $10 { $11:$11, $12:$12 } ");
+        startIteration(ION_1_0 + " $ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id: 3}]} $10 { $11:$11, $12:$12 } ");
 
         nextValue();
         checkSymbol(null, 10);
@@ -876,7 +878,7 @@ public abstract class SystemProcessingTestCase
     public void testUnknownAnnotations()
         throws Exception
     {
-        startIteration(ION_1_0 + " $10::$10 $11::[ $12::$12 ]");
+        startIteration(ION_1_0 + " $ion_symbol_table::{imports:[{name:\"foo\", version: 1, max_id: 3}]} $10::$10 $11::[ $12::$12 ]");
 
         nextValue();
         checkSymbol(null, 10);
@@ -1120,12 +1122,12 @@ public abstract class SystemProcessingTestCase
     public void testIvmWithAnnotationSid()
         throws Exception
     {
-        startIteration("$99::" + ION_1_0 + " 123");
+        startIteration("$0::" + ION_1_0 + " 123");
 
-        // $99::$ion_1_0 is not an IVM, but an annotated user-value symbol
+        // $0::$ion_1_0 is not an IVM, but an annotated user-value symbol
         nextValue();
         checkSymbol(ION_1_0);
-        checkAnnotation(null, 99);
+        checkAnnotation(null, 0);
 
         nextValue();
         checkInt(123);

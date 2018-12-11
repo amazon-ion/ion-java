@@ -112,7 +112,7 @@ public class SeekableReaderTest
     @Test
     public void testHoistingWithinContainers()
     {
-        read("{f:v,g:[c, (d), e], /* h */ $99:null} s");
+        read("{f:v,g:[c, (d), e], /* h */ $0:null} s");
 
         in.next();
         in.stepIn();

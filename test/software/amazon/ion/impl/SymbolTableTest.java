@@ -14,11 +14,7 @@
 
 package software.amazon.ion.impl;
 
-import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import software.amazon.ion.SymbolToken;
-import static software.amazon.ion.Symtabs.printLocalSymtab;
 import static software.amazon.ion.SystemSymbols.ION;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
@@ -30,6 +26,7 @@ import static software.amazon.ion.SystemSymbols.SYMBOLS;
 import static software.amazon.ion.impl.PrivateUtils.EMPTY_STRING_ARRAY;
 import static software.amazon.ion.impl.PrivateUtils.stringIterator;
 import static software.amazon.ion.impl.PrivateUtils.symtabTree;
+import static software.amazon.ion.impl.Symtabs.printLocalSymtab;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -56,7 +53,7 @@ import software.amazon.ion.IonValue;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.ReadOnlyValueException;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
+import software.amazon.ion.SymbolToken;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.Timestamp;
 import software.amazon.ion.system.SimpleCatalog;
@@ -939,11 +936,12 @@ public class SymbolTableTest
     @Test
     public void testSymtabImageMaintenance()
     {
-        SymbolTable st = system().newLocalSymbolTable();
+        IonSystem system = system();
+        SymbolTable st = ((PrivateValueFactory)system).getLstFactory().newLocalSymtab(system.getSystemSymbolTable());
         st.intern("foo");
-        IonStruct image = symtabTree(system(), st);
+        IonStruct image = symtabTree(st);
         st.intern("bar");
-        image = symtabTree(system(), st);
+        image = symtabTree(st);
         IonList symbols = (IonList) image.get(SYMBOLS);
         assertEquals("[\"foo\",\"bar\"]", symbols.toString());
     }
@@ -1212,9 +1210,6 @@ public class SymbolTableTest
         throws IOException
     {
         IonStruct stStruct = writeIonRep(st);
-        checkFirstImport(name, version, expectedSymbols, stStruct);
-
-        stStruct = PrivateUtils.symtabTree(system(), st);
         checkFirstImport(name, version, expectedSymbols, stStruct);
 
         SymbolTable importedTable = st.getImportedTables()[0];

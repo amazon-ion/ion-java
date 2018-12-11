@@ -16,17 +16,17 @@ package software.amazon.ion.impl;
 
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
-import static software.amazon.ion.impl.PrivateUtils.newLocalSymtab;
 
 import java.io.IOException;
 import software.amazon.ion.IonCatalog;
-import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonType;
 import software.amazon.ion.OffsetSpan;
 import software.amazon.ion.SeekableReader;
 import software.amazon.ion.Span;
 import software.amazon.ion.SpanProvider;
 import software.amazon.ion.SymbolTable;
+import software.amazon.ion.SymbolToken;
+import software.amazon.ion.UnknownSymbolException;
 import software.amazon.ion.impl.PrivateScalarConversions.AS_TYPE;
 import software.amazon.ion.impl.UnifiedInputStreamX.FromByteArray;
 import software.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
@@ -41,6 +41,7 @@ final class IonReaderBinaryUserX
      * {@link OffsetSpan}s.
      */
     private final int _physical_start_offset;
+    private final PrivateLocalSymbolTableFactory _lstFactory;
 
     IonCatalog  _catalog;
 
@@ -63,29 +64,22 @@ final class IonReaderBinaryUserX
         }
     }
 
-    public IonReaderBinaryUserX(IonSystem system,
-                                IonCatalog catalog,
+    public IonReaderBinaryUserX(IonCatalog catalog,
+                                PrivateLocalSymbolTableFactory lstFactory,
                                 UnifiedInputStreamX userBytes,
                                 int physicalStartOffset)
     {
-        super(system, userBytes);
+        super(userBytes);
         _physical_start_offset = physicalStartOffset;
         init_user(catalog);
-    }
-
-    public IonReaderBinaryUserX(IonSystem system,
-                                IonCatalog catalog,
-                                UnifiedInputStreamX userBytes)
-    {
-        super(system, userBytes);
-        _physical_start_offset = 0;
-        init_user(catalog);
+        _lstFactory = lstFactory;
     }
 
     //FIXME: PERF_TEST was :private
     final void init_user(IonCatalog catalog)
     {
-        _symbols = _system.getSystemSymbolTable();
+        // TODO check IVM to determine version: amzn/ion-java#19, amzn/ion-java#24
+        _symbols = SharedSymbolTable.getSystemSymbolTable(1);
         _catalog = catalog;
     }
 
@@ -214,7 +208,7 @@ final class IonReaderBinaryUserX
                     load_cached_value(AS_TYPE.int_value);
                     int sid = _v.getInt();
                     if (sid == ION_1_0_SID) {
-                        _symbols = _system.getSystemSymbolTable();
+                        _symbols = SharedSymbolTable.getSystemSymbolTable(1);
                         push_symbol_table(_symbols);
                         _has_next_needed = true;
                     }
@@ -222,25 +216,47 @@ final class IonReaderBinaryUserX
             }
             else if (_value_tid == PrivateIonConstants.tidStruct) {
                 int count = load_annotations();
-                for(int ii=0; ii<count; ii++) {
-                    if (_annotation_ids[ii] == ION_SYMBOL_TABLE_SID) {
-                        _symbols =
-                            newLocalSymtab(_system,
-                                           // TODO should be current symtab:
-                                           _system.getSystemSymbolTable(),
-                                           _catalog,
-                                           this,
-                                           false);
-                        push_symbol_table(_symbols);
-                        _has_next_needed = true;
-                        break;
-                    }
+                if (count > 0 && _annotation_ids[0] == ION_SYMBOL_TABLE_SID) {
+                    _symbols = _lstFactory.newLocalSymtab(_catalog, this, false);
+                    push_symbol_table(_symbols);
+                    _has_next_needed = true;
                 }
             }
             else {
                 assert (_value_tid != PrivateIonConstants.tidTypedecl);
             }
         }
+    }
+
+    private void validateSymbolToken(SymbolToken symbol) {
+        if (symbol != null) {
+            if (symbol.getText() == null && symbol.getSid() > getSymbolTable().getMaxId()) {
+                throw new UnknownSymbolException(symbol.getSid());
+            }
+        }
+    }
+
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols() {
+        SymbolToken[] annotations = super.getTypeAnnotationSymbols();
+        for (SymbolToken annotation : annotations) {
+            validateSymbolToken(annotation);
+        }
+        return annotations;
+    }
+
+    @Override
+    public final SymbolToken getFieldNameSymbol() {
+        SymbolToken fieldName = super.getFieldNameSymbol();
+        validateSymbolToken(fieldName);
+        return fieldName;
+    }
+
+    @Override
+    public final SymbolToken symbolValue() {
+        SymbolToken symbol = super.symbolValue();
+        validateSymbolToken(symbol);
+        return symbol;
     }
 
     //

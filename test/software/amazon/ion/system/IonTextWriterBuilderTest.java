@@ -36,8 +36,8 @@ import org.junit.Test;
 import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonWriter;
 import software.amazon.ion.SymbolTable;
-import software.amazon.ion.Symtabs;
 import software.amazon.ion.impl.PrivateIonWriter;
+import software.amazon.ion.impl.Symtabs;
 import software.amazon.ion.system.IonTextWriterBuilder;
 import software.amazon.ion.system.SimpleCatalog;
 
