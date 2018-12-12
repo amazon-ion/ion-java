@@ -329,7 +329,6 @@ public class ReaderTest
           "'''c}}b'''",
           "'''c\\'''ob'''",
 
-          "",
           "Zm9v",
     };
 
