@@ -944,7 +944,7 @@ abstract class IonReaderTextRawX
             case ACTION_LOAD_SCALAR:
                 if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER) {
                     sb = token_contents_load(t);
-                    int _value_keyword = IonTokenConstsX.keyword(sb, 0, sb.length());
+                    _value_keyword = IonTokenConstsX.keyword(sb, 0, sb.length());
                     switch (_value_keyword) {
                     case IonTokenConstsX.KEYWORD_NULL:
                     {
