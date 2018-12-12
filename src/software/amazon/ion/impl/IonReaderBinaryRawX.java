@@ -494,6 +494,9 @@ abstract class IonReaderBinaryRawX
                 // special case of an ordered struct, it gets the
                 // otherwise impossible to have length of 1
                 len = readVarUInt();
+                if (len == 0) {
+                    throwErrorAt("Structs flagged as having ordered keys must contain at least one key/value pair.");
+                }
                 start_of_value = _input.getPosition();
             }
         }
