@@ -139,7 +139,6 @@ public class TestUtils
             , "bad/utf8/surrogate_2.ion"                    // TODO amzn/ion-java#105
             , "bad/utf8/surrogate_4.ion"                    // TODO amzn/ion-java#105
             , "equivs/paddedInts.10n"                       // TODO amzn/ion-java#54
-            , "equivs/nonIVMNoOps.ion"                      // TODO amzn/ion-java#114
             , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
             , "good/utf16.ion"                              // TODO amzn/ion-java#61
             , "good/utf32.ion"                              // TODO amzn/ion-java#61
