@@ -183,7 +183,7 @@ abstract class IonReaderTextRawX
         // now patch up the differences between these 4 states handling of tokens vs before_annotation_datagram
         actions[STATE_BEFORE_ANNOTATION_CONTAINED][IonTokenConstsX.TOKEN_EOF]            = 0;
         actions[STATE_BEFORE_ANNOTATION_CONTAINED][IonTokenConstsX.TOKEN_CLOSE_PAREN]    = ACTION_FINISH_CONTAINER;
-        actions[STATE_BEFORE_ANNOTATION_CONTAINED][IonTokenConstsX.TOKEN_CLOSE_BRACE]    = ACTION_FINISH_CONTAINER;
+        actions[STATE_BEFORE_ANNOTATION_CONTAINED][IonTokenConstsX.TOKEN_CLOSE_BRACE]    = 0;
         actions[STATE_BEFORE_ANNOTATION_CONTAINED][IonTokenConstsX.TOKEN_CLOSE_SQUARE]   = ACTION_FINISH_CONTAINER;
 
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_EOF]                 = 0;

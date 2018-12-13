@@ -131,7 +131,6 @@ public class TestUtils
         new FileIsNot(
              "bad/clobWithNullCharacter.ion"                // TODO amzn/ion-java#43
             , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
-            , "bad/structOrderedEmpty.10n"                  // TODO amzn/ion-java#100
             , "bad/emptyAnnotatedInt.10n"                   // TODO amzn/ion-java#55
             , "bad/timestamp/timestampNegativeFraction.10n" // TODO amzn/ion-java#102
             , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
