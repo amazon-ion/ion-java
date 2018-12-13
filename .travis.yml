@@ -13,7 +13,21 @@ jdk:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) # codecov 
+  - mvn site # build all reports for GH_PAGES
 
 env:
   global:
     secure: r42euNVriBmoVVom+IXvKLJTGaDD0nWcX1h2iOGHfgEa/vQUVIXF1xAEDWCrS3HYTXNElY4c+FLQSWo6M65Pnp+H2HoZfWxkm5qFuo2SEm+pYsYB7ddlLBSFrlqZvCbj+tvwxmEEvF8Ae+3FhbEeSSzcfFM7BVzvONGdCtKPod3GWzIvwl6YEfkWZk8n7Y5UXD9pBrLdONERneV1g4LyIdqs6QSdGfswCBybFR71pGWKq5Lz9qGJgHPjiBAKsQVwfXHcJ6YN6GmFb5NTkRxxoQ0BDE1/I0nyzYuP1RyvmH3sn4RKwu8KyI4tk4B1qak+WrCJgorKOaqF1ndYdZMl8KZQ5myMyLqSd/kYkSAOGJPyOPtNmlg+sgtRDK1IdVFNtQv8twe0Qod+CiBvkC+3uz97nEps7IEmYWcy7sqY0sKzZdOrKecNRN9z4zKuvIz7y8NMjwf+cp6ltbzlKu/k94qaYnf//PNeHoeIQ+5cnUvyNw3R8FABEQ8TOC5pMyIrCsABD7aCovNatEqNRBOqCr4Hw+euhoomRhh4Gr/OoLfx+8ivOxlvAtQSdLlKsuIkGW3JevIn31nQt/VWaIXAXGKiv0ilp1HBXn4us8k7yzMEmdg7m8viw3TeJ2h6s0TD30DDwSry/CEb+m5HPj0R9dLZNAyeG6hO5WylDIVkeyM=
+
+# GITHUB PAGES 
+deploy:
+  provider: pages
+  local-dir: ./target/site/
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN  
+  keep-history: true
+  on:
+    branch: master
+    jdk: openjdk11
+    
+
