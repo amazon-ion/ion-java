@@ -1,5 +1,4 @@
-sudo: false # claims to be faster
-
+sudo: false
 language: java
 jdk:
 - openjdk8
@@ -9,25 +8,18 @@ jdk:
 - oraclejdk8
 - oraclejdk9
 - oraclejdk11
-
-
 after_success:
-  - bash <(curl -s https://codecov.io/bash) # codecov 
-  - mvn site # build all reports for GH_PAGES
-
+- bash <(curl -s https://codecov.io/bash)
+- mvn site
 env:
-  global:
-    secure: r42euNVriBmoVVom+IXvKLJTGaDD0nWcX1h2iOGHfgEa/vQUVIXF1xAEDWCrS3HYTXNElY4c+FLQSWo6M65Pnp+H2HoZfWxkm5qFuo2SEm+pYsYB7ddlLBSFrlqZvCbj+tvwxmEEvF8Ae+3FhbEeSSzcfFM7BVzvONGdCtKPod3GWzIvwl6YEfkWZk8n7Y5UXD9pBrLdONERneV1g4LyIdqs6QSdGfswCBybFR71pGWKq5Lz9qGJgHPjiBAKsQVwfXHcJ6YN6GmFb5NTkRxxoQ0BDE1/I0nyzYuP1RyvmH3sn4RKwu8KyI4tk4B1qak+WrCJgorKOaqF1ndYdZMl8KZQ5myMyLqSd/kYkSAOGJPyOPtNmlg+sgtRDK1IdVFNtQv8twe0Qod+CiBvkC+3uz97nEps7IEmYWcy7sqY0sKzZdOrKecNRN9z4zKuvIz7y8NMjwf+cp6ltbzlKu/k94qaYnf//PNeHoeIQ+5cnUvyNw3R8FABEQ8TOC5pMyIrCsABD7aCovNatEqNRBOqCr4Hw+euhoomRhh4Gr/OoLfx+8ivOxlvAtQSdLlKsuIkGW3JevIn31nQt/VWaIXAXGKiv0ilp1HBXn4us8k7yzMEmdg7m8viw3TeJ2h6s0TD30DDwSry/CEb+m5HPj0R9dLZNAyeG6hO5WylDIVkeyM=
-
-# GITHUB PAGES 
+  matrix:
+    secure: XXvNELlTKKyRols7C1skCmNqKIvS96TP6+/ZvWFL/4JgaJ0ZSd6iRyMcaZaaTVYqoe2AaKDvnvILftCDOYt8KwJ7GejpUYHOcmuYzVXlaXB1lHmI51nPfo5F0FtmV4KBGi7hipSej0WKifsFxPpMDjluwXX23y0IK93gV25Ao6QOZcU+00ajGb0iT9xh5/l8Uwjj5cl3Xqd8vnzZpmBBLr+0bMlquYmNEk15DlMvx/CrfTnepgREja75mOVM5CA07Y4Leivn0taxf+vQ7pKBKFXI4v4p/4mArWCA9NJ9QpAcS/WbCo0zBsQn0JQRq88EeZNe+SMnMj5/XDxNaJWuTjURjOFquA6LOlm5b0jMK+RiP1jC6swPBKZHlDecv33mMfNQG4JWXyChp/3bvl5QPXKvk8i4GxwRHeL6FkE0GRQ87J+h37BvzUAE4m79zcx4UOAZCwZrC6rqFEgPjTRRaUDF52Wy6WaVbyyewfWOjgMxXeXZoPF0yZecu3bT6cbJBsO8dXNxxmKGzJ0jLx2FR/Uumm7ZiW3XxB8IX5iFrqJ5nJcmcP71ZHhKj7Fi35iM6ecU8GyujEqO+sN0Rf0hKOIpzXfngmtjIceIvtZoj8kcOea/mvyLnov/7t5w0uKEaBIuEtZRCvVg56V676wW0iHcvFohZUex8m5RQ+G7FRs=
 deploy:
   provider: pages
-  local-dir: ./target/site/
+  local-dir: "./target/site/"
   skip-cleanup: true
-  github-token: $GITHUB_TOKEN  
+  github-token: "$GITHUB_TOKEN"
   keep-history: true
   on:
     branch: master
     jdk: openjdk11
-    
-
