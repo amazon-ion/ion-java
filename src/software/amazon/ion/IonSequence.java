@@ -393,13 +393,18 @@ public interface IonSequence
 
 
     /**
-     * This inherited method is not yet supported.
      * <p>
-     * Vote for issue amzn/ion-java#52 if you need this.
+     * Returns a view of the portion of this list according to {@link List#subList(int, int)}
+     * contract.
+     * </p>
      *
-     * @throws UnsupportedOperationException at every call.
+     * <p>
+     * Sublist methods will throw a {@link java.util.ConcurrentModificationException} if
+     * its parent list, i.e. this list, had any changes that affect its size after sublist
+     * was created.
+     * </p>
      *
-     * @see <a href="https://github.com/amzn/ion-java/issues/52">amzn/ion-java#52</a>
+     * @see List#subList(int, int)
      */
     public List<IonValue> subList(int fromIndex, int toIndex);
 
