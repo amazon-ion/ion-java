@@ -1,9 +1,23 @@
+sudo: false
 language: java
 jdk:
-  - openjdk8
-  - openjdk9
-  - openjdk10
-  - openjdk11
-  - oraclejdk8
-  - oraclejdk9
-  - oraclejdk11
+- openjdk8
+- openjdk9
+- openjdk10
+- openjdk11
+- oraclejdk8
+- oraclejdk9
+- oraclejdk11
+after_success:
+    # enable once we get authorization with codecov.io sorted out
+    # - bash <(curl -s https://codecov.io/bash) 
+- mvn site
+deploy:
+  provider: pages
+  local-dir: "./target/site/"
+  skip-cleanup: true
+  github-token: "$GITHUB_TOKEN"
+  keep-history: true # keeps commit history of gh-pages branch
+  on:
+    branch: master
+    jdk: openjdk11
