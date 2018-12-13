@@ -319,17 +319,18 @@ public class ReaderTest
 
 
     private String[] LOB_DATA = {
-          "\"\"",
-          "\"clob\"",
+          "{{\"\"}}",
+          "{{\"clob\"}}",
 
-          "''''''",
-          "''' '''",
-          "'''clob'''",
-          "'''c}ob'''",
-          "'''c}}b'''",
-          "'''c\\'''ob'''",
+          "{{''''''}}",
+          "{{''' '''}}",
+          "{{'''clob'''}}",
+          "{{'''c}ob'''}}",
+          "{{'''c}}b'''}}",
+          "{{'''c\\'''ob'''}}",
 
-          "Zm9v",
+          "{{}}",
+          "{{Zm9v}}",
     };
 
     private void testSkippingLob(String containerPrefix,
