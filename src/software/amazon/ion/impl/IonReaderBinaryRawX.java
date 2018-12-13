@@ -1115,12 +1115,12 @@ abstract class IonReaderBinaryRawX
         year  = readVarUInt();
         Precision p = Precision.YEAR; // our lowest significant option
 
-        // now we look for hours and minutes
+        // now we look for months
         if (_local_remaining > 0) {
             month = readVarUInt();
             p = Precision.MONTH;
 
-            // now we look for hours and minutes
+            // now we look for days
             if (_local_remaining > 0) {
                 day   = readVarUInt();
                 p = Precision.DAY; // our lowest significant option
@@ -1136,6 +1136,12 @@ abstract class IonReaderBinaryRawX
                         if (_local_remaining > 0) {
                             // now we read in our actual "milliseconds since the epoch"
                             frac = readDecimal(_local_remaining);
+                            if (frac.compareTo(BigDecimal.ZERO) < 0 || frac.compareTo(BigDecimal.ONE) >= 0) {
+                                throwErrorAt(
+                                    "The fractional seconds value in a timestamp must be greater than or "
+                                        + "equal to zero and less than one."
+                                );
+                            }
                         }
                     }
                 }
