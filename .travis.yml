@@ -11,9 +11,6 @@ jdk:
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 - mvn site
-env:
-  matrix:
-    secure: XXvNELlTKKyRols7C1skCmNqKIvS96TP6+/ZvWFL/4JgaJ0ZSd6iRyMcaZaaTVYqoe2AaKDvnvILftCDOYt8KwJ7GejpUYHOcmuYzVXlaXB1lHmI51nPfo5F0FtmV4KBGi7hipSej0WKifsFxPpMDjluwXX23y0IK93gV25Ao6QOZcU+00ajGb0iT9xh5/l8Uwjj5cl3Xqd8vnzZpmBBLr+0bMlquYmNEk15DlMvx/CrfTnepgREja75mOVM5CA07Y4Leivn0taxf+vQ7pKBKFXI4v4p/4mArWCA9NJ9QpAcS/WbCo0zBsQn0JQRq88EeZNe+SMnMj5/XDxNaJWuTjURjOFquA6LOlm5b0jMK+RiP1jC6swPBKZHlDecv33mMfNQG4JWXyChp/3bvl5QPXKvk8i4GxwRHeL6FkE0GRQ87J+h37BvzUAE4m79zcx4UOAZCwZrC6rqFEgPjTRRaUDF52Wy6WaVbyyewfWOjgMxXeXZoPF0yZecu3bT6cbJBsO8dXNxxmKGzJ0jLx2FR/Uumm7ZiW3XxB8IX5iFrqJ5nJcmcP71ZHhKj7Fi35iM6ecU8GyujEqO+sN0Rf0hKOIpzXfngmtjIceIvtZoj8kcOea/mvyLnov/7t5w0uKEaBIuEtZRCvVg56V676wW0iHcvFohZUex8m5RQ+G7FRs=
 deploy:
   provider: pages
   local-dir: "./target/site/"
