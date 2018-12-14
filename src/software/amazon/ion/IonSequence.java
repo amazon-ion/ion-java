@@ -286,10 +286,15 @@ public interface IonSequence
      * Returns the index in the sequence of the specified element,
      * or -1 if this sequence doesn't contain the element.
      * <p>
-     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * <b>
+     * Due to the reference-equality-based semantics of Ion sequences,
      * this method does not use {@link Object#equals} as specified by the
      * contract of {@link java.util.List}. Instead it uses reference
-     * equality ({@code ==} operator) to find the instance.</b>
+     * equality ({@code ==} operator) to find the instance.
+     *
+     * And since IonSequences do not allow for duplicates this method behaves
+     * in the same way as {@link IonSequence#indexOf(Object)}
+     * </b>
      *
      * @param o the element to search for.
      * @return the index in this sequence of the element,
