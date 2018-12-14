@@ -488,6 +488,15 @@ public abstract class BaseIonSequenceLiteSublistTestCase {
     }
 
     @Test(expected = ConcurrentModificationException.class)
+    public void sublistAddAllWithIndexConcurrentModification() {
+        final IonSequence sequence = newSequence();
+        final List<IonValue> sublist = sequence.subList(2, 5);
+        sequence.remove(0);
+
+        sublist.addAll(0, Arrays.asList(SYSTEM.newInt(100), SYSTEM.newInt(101)));
+    }
+
+    @Test(expected = ConcurrentModificationException.class)
     public void sublistRetainAllConcurrentModification() {
         final IonSequence sequence = newSequence();
         final List<IonValue> sublist = sequence.subList(2, 5);
