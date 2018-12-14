@@ -382,6 +382,20 @@ public abstract class BaseIonSequenceLiteTestCase {
         assertEquals(5, parent.size());
     }
 
+    @Test
+    public void sublistRetainAllWithDuplicates() {
+        final IonList parent = SYSTEM.newList(new int[]{0, 1, 2, 3, 4, 5, 6});
+        final List<IonValue> sublist = parent.subList(2, 5);
+
+        final List<IonValue> toRetain = Arrays.asList(sublist.get(0), sublist.get(0));
+
+        assertTrue(sublist.retainAll(toRetain));
+
+        assertEquals(1, sublist.size());
+        assertTrue(sublist.contains(toRetain.get(0)));
+        assertEquals(5, parent.size());
+    }
+
     @Test(expected = ConcurrentModificationException.class)
     public void sublistRetainAllConcurrentModification() {
         final IonList parent = SYSTEM.newList(new int[]{0, 1, 2, 3, 4, 5, 6});
