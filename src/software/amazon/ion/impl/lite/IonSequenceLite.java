@@ -428,15 +428,15 @@ abstract class IonSequenceLite
         }
 
         public IonValue get(final int index) {
-            rangeCheck(index);
             checkForParentModification();
+            rangeCheck(index);
 
             return parent.get(toParentIndex(index));
         }
 
         public IonValue set(final int index, final IonValue element) {
-            rangeCheck(index);
             checkForParentModification();
+            rangeCheck(index);
 
             return parent.set(toParentIndex(index), element);
         }
@@ -525,8 +525,8 @@ abstract class IonSequenceLite
         }
 
         public void add(final int index, final IonValue ionValue) {
-            rangeCheck(index);
             checkForParentModification();
+            rangeCheck(index);
 
             parent.add(toParentIndex(index), ionValue);
 
@@ -594,8 +594,8 @@ abstract class IonSequenceLite
         }
 
         public IonValue remove(final int index) {
-            rangeCheck(index);
             checkForParentModification();
+            rangeCheck(index);
 
             final IonValue removed = parent.remove(toParentIndex(index));
 
