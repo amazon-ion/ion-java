@@ -378,6 +378,7 @@ public abstract class BaseIonSequenceLiteTestCase {
         assertTrue(sublist.retainAll(toRetain));
 
         assertEquals(1, sublist.size());
+        assertTrue(sublist.contains(toRetain.get(0)));
         assertEquals(5, parent.size());
     }
 
