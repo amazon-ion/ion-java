@@ -555,12 +555,11 @@ abstract class IonSequenceLite
         public void clear() {
             checkForParentModification();
 
-            final List<IonValue> toRemove = new ArrayList<IonValue>(size);
+            // remove the first element size times to remove all elements
+            int parentIndex = toParentIndex(0);
             for (int i = 0; i < size; i++) {
-                toRemove.add(get(i));
+                IonSequenceLite.this.remove(parentIndex);
             }
-
-            IonSequenceLite.this.removeAll(toRemove);
 
             size = 0;
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
