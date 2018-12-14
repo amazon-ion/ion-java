@@ -286,10 +286,15 @@ public interface IonSequence
      * Returns the index in the sequence of the specified element,
      * or -1 if this sequence doesn't contain the element.
      * <p>
-     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * <b>
+     * Due to the reference-equality-based semantics of Ion sequences,
      * this method does not use {@link Object#equals} as specified by the
      * contract of {@link java.util.List}. Instead it uses reference
-     * equality ({@code ==} operator) to find the instance.</b>
+     * equality ({@code ==} operator) to find the instance.
+     *
+     * And since IonSequences do not allow for duplicates this method behaves
+     * in the same way as {@link IonSequence#indexOf(Object)}
+     * </b>
      *
      * @param o the element to search for.
      * @return the index in this sequence of the element,
@@ -393,13 +398,18 @@ public interface IonSequence
 
 
     /**
-     * This inherited method is not yet supported.
      * <p>
-     * Vote for issue amzn/ion-java#52 if you need this.
+     * Returns a view of the portion of this list according to {@link List#subList(int, int)}
+     * contract.
+     * </p>
      *
-     * @throws UnsupportedOperationException at every call.
+     * <p>
+     * Sublist methods will throw a {@link java.util.ConcurrentModificationException} if
+     * its parent list, i.e. this list, had any changes that affect its size the after sublist
+     * was created.
+     * </p>
      *
-     * @see <a href="https://github.com/amzn/ion-java/issues/52">amzn/ion-java#52</a>
+     * @see List#subList(int, int)
      */
     public List<IonValue> subList(int fromIndex, int toIndex);
 

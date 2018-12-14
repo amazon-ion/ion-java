@@ -6,17 +6,25 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import org.junit.Test;
+import software.amazon.ion.ContainedValueException;
+import software.amazon.ion.IonInt;
+import software.amazon.ion.IonList;
 import software.amazon.ion.IonSequence;
 import software.amazon.ion.IonSystem;
 import software.amazon.ion.IonValue;
 import software.amazon.ion.ReadOnlyValueException;
 import software.amazon.ion.system.IonSystemBuilder;
 
-public abstract class BaseIonSequenceLiteTest {
+public abstract class BaseIonSequenceLiteTestCase {
 
-    protected static final IonSystem SYSTEM = IonSystemBuilder.standard().build();
+    static final IonSystem SYSTEM = IonSystemBuilder.standard().build();
 
     protected abstract IonSequence newEmptySequence();
 

@@ -16,10 +16,14 @@ package software.amazon.ion.impl.lite;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import software.amazon.ion.ContainedValueException;
 import software.amazon.ion.IonSequence;
 import software.amazon.ion.IonType;
@@ -334,8 +338,7 @@ abstract class IonSequenceLite
 
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
-        // TODO amzn/ion-java#52
-        throw new UnsupportedOperationException("issue amzn/ion-java#52");
+        return new SubListView(this, fromIndex, toIndex);
     }
 
     public IonValue[] toArray()
@@ -396,6 +399,329 @@ abstract class IonSequenceLite
             writer.stepIn(type);
             writeChildren(writer, this, symbolTableProvider);
             writer.stepOut();
+        }
+    }
+
+    /**
+     * SubListView throws a {@link ConcurrentModificationException} if the parent list has any
+     * structural modifications, i.e. any operation that cause its size to change. To determine if
+     * a parent structural modification happened it keeps track of the structural modification count
+     * to compare against the parent
+     *
+     * Structural modifications from the sublist itself are allowed.
+     */
+    private class SubListView implements List<IonValue> {
+
+        /**
+         * index in top level IonSequenceLite that marks the start of this sublist view. For nested
+         * sublists fromIndex will be in relation to the root parent which must be a IonSequenceLite
+         */
+        private final int fromIndex;
+        private int size;
+        private int structuralModificationCount;
+
+        private SubListView(final List<IonValue> parent,
+                            final int fromIndex,
+                            final int toIndex) {
+            this.fromIndex = toTopLevelFromIndex(parent, fromIndex);
+            this.size = toIndex - fromIndex;
+            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+        }
+
+        public int size() {
+            checkForParentModification();
+            return size;
+        }
+
+        public boolean isEmpty() {
+            checkForParentModification();
+            return size == 0;
+        }
+
+        public IonValue get(final int index) {
+            checkForParentModification();
+            rangeCheck(index);
+
+            return IonSequenceLite.this.get(toParentIndex(index));
+        }
+
+        public IonValue set(final int index, final IonValue element) {
+            checkForParentModification();
+            rangeCheck(index);
+
+            return IonSequenceLite.this.set(toParentIndex(index), element);
+        }
+
+        public boolean contains(final Object o) {
+            checkForParentModification();
+            return indexOf(o) != -1;
+        }
+
+        public boolean containsAll(final Collection<?> c) {
+            for (Object o : c) {
+                if (!contains(o)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public IonValue[] toArray() {
+            checkForParentModification();
+
+            if (size < 1) {
+                return EMPTY_VALUE_ARRAY;
+            }
+
+            return toArray(new IonValue[size]);
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T[] toArray(T[] array) {
+            checkForParentModification();
+
+            if (array.length < size) {
+                final Class<?> type = array.getClass().getComponentType();
+                // generates unchecked warning
+                array = (T[]) Array.newInstance(type, size);
+            }
+
+            if (size > 0) {
+                System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
+            }
+
+            if (size < array.length) {
+                // See IonSequence#toArray and ArrayList#toArray
+                array[size] = null;
+            }
+
+            return array;
+        }
+
+        public boolean add(final IonValue ionValue) {
+            checkForParentModification();
+
+            int parentIndex = toParentIndex(size);
+
+            // adds at end of parent list
+            if (parentIndex == IonSequenceLite.this.size()) {
+                IonSequenceLite.this.add(ionValue);
+            } else {
+                IonSequenceLite.this.add(parentIndex, ionValue);
+            }
+
+            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            size++;
+
+            return true;
+        }
+
+        public void add(final int index, final IonValue ionValue) {
+            checkForParentModification();
+            rangeCheck(index);
+
+            IonSequenceLite.this.add(toParentIndex(index), ionValue);
+
+            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            size++;
+        }
+
+        public boolean addAll(final Collection<? extends IonValue> c) {
+            for (IonValue ionValue : c) {
+                add(ionValue);
+            }
+
+            return true;
+        }
+
+        public boolean addAll(final int index, final Collection<? extends IonValue> c) {
+            int i = index;
+
+            for (IonValue ionValue : c) {
+                add(i, ionValue);
+                i++;
+            }
+
+            return true;
+        }
+
+        public boolean retainAll(final Collection<?> c) {
+            if (size < 1) {
+                return false;
+            }
+
+            final Map<Object,Object> toRetain = new IdentityHashMap<Object,Object>();
+            for (Object o : c) {
+                toRetain.put(o, null);
+            }
+
+            final List<IonValue> toRemove = new ArrayList<IonValue>(size - c.size());
+            for (int i = 0; i < size; i++) {
+                final IonValue ionValue = get(i);
+
+                if (!toRetain.containsKey(ionValue)) {
+                    toRemove.add(ionValue);
+                }
+            }
+
+            return removeAll(toRemove);
+        }
+
+        public void clear() {
+            checkForParentModification();
+
+            // remove the first element size times to remove all elements
+            int parentIndex = toParentIndex(0);
+            for (int i = 0; i < size; i++) {
+                IonSequenceLite.this.remove(parentIndex);
+            }
+
+            size = 0;
+            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+        }
+
+        public IonValue remove(final int index) {
+            checkForParentModification();
+            rangeCheck(index);
+
+            final IonValue removed = IonSequenceLite.this.remove(toParentIndex(index));
+
+            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            size--;
+
+            return removed;
+        }
+
+        public boolean remove(final Object o) {
+            int index = indexOf(o);
+            if (index < 0) {
+                return false;
+            }
+
+            remove(index);
+            return true;
+        }
+
+        public boolean removeAll(final Collection<?> c) {
+            boolean changed = false;
+            for (Object o : c) {
+                if (remove(o)) {
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        public int indexOf(final Object o) {
+            checkForParentModification();
+
+            final int parentIndex = IonSequenceLite.this.indexOf(o);
+            final int index = fromParentIndex(parentIndex);
+
+            // not found
+            if (parentIndex < 0 || index < 0 || index >= size) {
+                return -1;
+            }
+
+            return index;
+        }
+
+        public int lastIndexOf(final Object o) {
+            return indexOf(o);
+        }
+
+        public Iterator<IonValue> iterator() {
+            return listIterator(0);
+        }
+
+        public ListIterator<IonValue> listIterator() {
+            return listIterator(0);
+        }
+
+        public ListIterator<IonValue> listIterator(final int index) {
+            checkForParentModification();
+
+            return new ListIterator<IonValue>() {
+                private int lastReturnedIndex = index;
+                private int nextIndex = index;
+
+                public boolean hasNext() {
+                    return nextIndex < SubListView.this.size();
+                }
+
+                public IonValue next() {
+                    lastReturnedIndex = nextIndex++;
+                    return SubListView.this.get(lastReturnedIndex);
+                }
+
+                public boolean hasPrevious() {
+                    return nextIndex > 0;
+                }
+
+                public IonValue previous() {
+                    lastReturnedIndex = --nextIndex;
+                    return SubListView.this.get(lastReturnedIndex);
+                }
+
+                public int nextIndex() {
+                    return nextIndex;
+                }
+
+                public int previousIndex() {
+                    return nextIndex - 1;
+                }
+
+                public void remove() {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void set(final IonValue ionValue) {
+                    SubListView.this.set(lastReturnedIndex, ionValue);
+                }
+
+                public void add(final IonValue ionValue) {
+                    SubListView.this.add(lastReturnedIndex, ionValue);
+                }
+            };
+        }
+
+        public List<IonValue> subList(final int fromIndex, final int toIndex) {
+            checkForParentModification();
+            return new SubListView(this, fromIndex, toIndex);
+        }
+
+        private void rangeCheck(int index) {
+            if (index < 0 || index >= size) {
+                throw new IndexOutOfBoundsException(String.valueOf(index));
+            }
+        }
+
+        private int toParentIndex(int index) {
+            return index + fromIndex;
+        }
+
+        private int fromParentIndex(int index) {
+            return index - fromIndex;
+        }
+
+        /**
+         * Calculates fromIndex based on the top level parent which must be an {@link IonSequenceLite}. With this
+         * nested sublists are able to directly call the top level parent instead of delegating up the parent chain
+         */
+        private int toTopLevelFromIndex(final List<IonValue> parent, int fromIndex) {
+            if (parent instanceof SubListView) {
+                return fromIndex + ((SubListView) parent).fromIndex;
+            }
+
+            return fromIndex;
+        }
+
+        private void checkForParentModification() {
+            if (this.structuralModificationCount != IonSequenceLite.this.structuralModificationCount) {
+                throw new ConcurrentModificationException();
+            }
         }
     }
 }

@@ -38,6 +38,7 @@ abstract class IonContainerLite
 
     protected int            _child_count;
     protected IonValueLite[] _children;
+    protected int            structuralModificationCount;
 
     protected IonContainerLite(ContainerlessContext context, boolean isNull)
     {
@@ -100,6 +101,7 @@ abstract class IonContainerLite
         {
             detachAllChildren();
             _child_count = 0;
+            structuralModificationCount++;
         }
     }
 
@@ -655,6 +657,7 @@ abstract class IonContainerLite
         }
         _child_count++;
         _children[idx] = child;
+        structuralModificationCount++;
 
         child._elementid(idx);
         return idx;
@@ -681,6 +684,7 @@ abstract class IonContainerLite
         }
         _child_count--;
         _children[_child_count] = null;
+        structuralModificationCount++;
     }
 
     public final void patch_elements_helper(int lowest_bad_idx)
