@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import org.junit.Test;
+import software.amazon.ion.ContainedValueException;
 import software.amazon.ion.IonInt;
 import software.amazon.ion.IonList;
 import software.amazon.ion.IonSequence;
@@ -275,15 +276,13 @@ public abstract class BaseIonSequenceLiteTestCase {
         assertEquals(value, sublist.get(3));
     }
 
-    @Test
+    @Test(expected = ContainedValueException.class)
     public void sublistAddSame() {
         final IonList parent = SYSTEM.newList(new int[]{0, 1, 2, 3, 4, 5, 6});
         final List<IonValue> sublist = parent.subList(2, 5);
 
-        final IonInt value = SYSTEM.newInt(0);
+        final IonValue value = parent.get(0);
         sublist.add(value);
-        assertEquals(4, sublist.size());
-        assertEquals(value, sublist.get(3));
     }
 
     @Test(expected = ConcurrentModificationException.class)
