@@ -448,7 +448,7 @@ abstract class IonSequenceLite
 
         public boolean containsAll(final Collection<?> c) {
             for (Object o : c) {
-                if (indexOf(o) < 0) {
+                if (!contains(o)) {
                     return false;
                 }
             }
