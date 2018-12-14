@@ -402,8 +402,6 @@ abstract class IonSequenceLite
     }
 
     private class SubListView implements List<IonValue> {
-
-        private final List<IonValue> parent;
         private final int fromIndex;
         private int size;
         private int structuralModificationCount;
@@ -411,8 +409,7 @@ abstract class IonSequenceLite
         private SubListView(final List<IonValue> parent,
                             final int fromIndex,
                             final int toIndex) {
-            this.parent = parent;
-            this.fromIndex = fromIndex;
+            this.fromIndex = toTopLevelFromIndex(parent, fromIndex);
             this.size = toIndex - fromIndex;
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
         }
@@ -431,14 +428,14 @@ abstract class IonSequenceLite
             checkForParentModification();
             rangeCheck(index);
 
-            return parent.get(toParentIndex(index));
+            return IonSequenceLite.this.get(toParentIndex(index));
         }
 
         public IonValue set(final int index, final IonValue element) {
             checkForParentModification();
             rangeCheck(index);
 
-            return parent.set(toParentIndex(index), element);
+            return IonSequenceLite.this.set(toParentIndex(index), element);
         }
 
         public boolean contains(final Object o) {
@@ -464,15 +461,7 @@ abstract class IonSequenceLite
             }
 
             IonValue[] array = new IonValue[size];
-
-            if (parent instanceof IonSequenceLite) {
-                System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
-            } else {
-                // sublist of sublist
-                for (int i = 0; i < size; i++) {
-                    array[i] = get(i);
-                }
-            }
+            System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
 
             return array;
         }
@@ -488,14 +477,7 @@ abstract class IonSequenceLite
             }
 
             if (size > 0) {
-                if (parent instanceof IonSequenceLite) {
-                    System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
-                } else {
-                    // sublist of sublist
-                    for (int i = 0; i < size; i++) {
-                        array[i] = (T) get(i);
-                    }
-                }
+                System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
             }
 
             if (size < array.length) {
@@ -512,10 +494,10 @@ abstract class IonSequenceLite
             int parentIndex = toParentIndex(size);
 
             // adds at end of parent list
-            if (parentIndex == parent.size()) {
-                parent.add(ionValue);
+            if (parentIndex == IonSequenceLite.this.size()) {
+                IonSequenceLite.this.add(ionValue);
             } else {
-                parent.add(parentIndex, ionValue);
+                IonSequenceLite.this.add(parentIndex, ionValue);
             }
 
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
@@ -528,7 +510,7 @@ abstract class IonSequenceLite
             checkForParentModification();
             rangeCheck(index);
 
-            parent.add(toParentIndex(index), ionValue);
+            IonSequenceLite.this.add(toParentIndex(index), ionValue);
 
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
             size++;
@@ -578,7 +560,7 @@ abstract class IonSequenceLite
                 toRemove.add(get(i));
             }
 
-            parent.removeAll(toRemove);
+            IonSequenceLite.this.removeAll(toRemove);
 
             size = 0;
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
@@ -588,7 +570,7 @@ abstract class IonSequenceLite
             checkForParentModification();
             rangeCheck(index);
 
-            final IonValue removed = parent.remove(toParentIndex(index));
+            final IonValue removed = IonSequenceLite.this.remove(toParentIndex(index));
 
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
             size--;
@@ -620,7 +602,7 @@ abstract class IonSequenceLite
         public int indexOf(final Object o) {
             checkForParentModification();
 
-            final int parentIndex = parent.indexOf(o);
+            final int parentIndex = IonSequenceLite.this.indexOf(o);
             final int index = fromParentIndex(parentIndex);
 
             // not found
@@ -707,6 +689,18 @@ abstract class IonSequenceLite
 
         private int fromParentIndex(int index) {
             return index - fromIndex;
+        }
+
+        /**
+         * Calculates fromIndex based on the top level parent which must be an {@link IonSequenceLite}. With this
+         * nested sublists are able to directly call the top level parent instead of delegating up the parent chain
+         */
+        private int toTopLevelFromIndex(final List<IonValue> parent, int fromIndex) {
+            if (parent instanceof SubListView) {
+                return fromIndex + ((SubListView) parent).fromIndex;
+            }
+
+            return fromIndex;
         }
 
         private void checkForParentModification() {
