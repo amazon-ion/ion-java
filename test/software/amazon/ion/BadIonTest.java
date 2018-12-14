@@ -18,10 +18,12 @@ import static software.amazon.ion.TestUtils.GLOBAL_SKIP_LIST;
 import static software.amazon.ion.TestUtils.testdataFiles;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
 import org.junit.Test;
-import software.amazon.ion.IonDatagram;
-import software.amazon.ion.IonException;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.junit.Injected.Inject;
 
@@ -75,7 +77,15 @@ public class BadIonTest
             }
             catch (IonException e)
             {
-                assert myTestFile.getPath().contains("bad/utf8") || myTestFile.getPath().contains("bad\\utf8");
+                // checks that test failed because of bad UTF-8 data
+                final CharBuffer buffer = CharBuffer.allocate(1204);
+                final CharsetEncoder utf8Encoder = Charset.forName("UTF-8").newEncoder();
+
+                final FileReader fileReader = new FileReader(myTestFile);
+                while(fileReader.read(buffer) != -1){
+                    assert utf8Encoder.canEncode(buffer);
+                }
+
                 return;
             }
 
