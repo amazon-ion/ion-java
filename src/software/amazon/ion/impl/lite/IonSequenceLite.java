@@ -401,7 +401,20 @@ abstract class IonSequenceLite
         }
     }
 
+    /**
+     * SubListView throws a {@link ConcurrentModificationException} if the parent list has any
+     * structural modifications, i.e. any operation that cause its size to change. To determine if
+     * a parent structural modification happened it keeps track of the structural modification count
+     * to compare against the parent
+     *
+     * Structural modifications from the sublist itself are allowed.
+     */
     private class SubListView implements List<IonValue> {
+
+        /**
+         * index in top level IonSequenceLite that marks the start of this sublist view. For nested
+         * sublists fromIndex will be in relation to the root parent which must be a IonSequenceLite
+         */
         private final int fromIndex;
         private int size;
         private int structuralModificationCount;
