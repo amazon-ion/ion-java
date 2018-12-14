@@ -130,7 +130,6 @@ public class TestUtils
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
              "bad/clobWithNullCharacter.ion"                // TODO amzn/ion-java#43
-            , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
             , "bad/emptyAnnotatedInt.10n"                   // TODO amzn/ion-java#55
             , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
             , "bad/utf8/surrogate_1.ion"                    // TODO amzn/ion-java#105
