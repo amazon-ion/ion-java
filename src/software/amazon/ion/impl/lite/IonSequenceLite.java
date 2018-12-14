@@ -402,6 +402,7 @@ abstract class IonSequenceLite
     }
 
     private class SubListView implements List<IonValue> {
+
         private final List<IonValue> parent;
         private final int fromIndex;
         private int size;
@@ -423,7 +424,6 @@ abstract class IonSequenceLite
 
         public boolean isEmpty() {
             checkForParentModification();
-
             return size == 0;
         }
 
@@ -448,7 +448,7 @@ abstract class IonSequenceLite
 
         public boolean containsAll(final Collection<?> c) {
             for (Object o : c) {
-                if(indexOf(o) < 0) {
+                if (indexOf(o) < 0) {
                     return false;
                 }
             }
@@ -459,16 +459,17 @@ abstract class IonSequenceLite
         public IonValue[] toArray() {
             checkForParentModification();
 
-            if (size < 1) return EMPTY_VALUE_ARRAY;
+            if (size < 1) {
+                return EMPTY_VALUE_ARRAY;
+            }
 
             IonValue[] array = new IonValue[size];
 
-            if(parent instanceof IonSequenceLite) {
+            if (parent instanceof IonSequenceLite) {
                 System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
-            }
-            else {
+            } else {
                 // sublist of sublist
-                for(int i = 0; i < size; i++) {
+                for (int i = 0; i < size; i++) {
                     array[i] = get(i);
                 }
             }
@@ -477,24 +478,21 @@ abstract class IonSequenceLite
         }
 
         @SuppressWarnings("unchecked")
-        public <T> T[] toArray(T[] array)
-        {
+        public <T> T[] toArray(T[] array) {
             checkForParentModification();
 
-            if (array.length < size)
-            {
+            if (array.length < size) {
                 final Class<?> type = array.getClass().getComponentType();
                 // generates unchecked warning
                 array = (T[]) Array.newInstance(type, size);
             }
 
             if (size > 0) {
-                if(parent instanceof IonSequenceLite) {
+                if (parent instanceof IonSequenceLite) {
                     System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
-                }
-                else {
+                } else {
                     // sublist of sublist
-                    for(int i = 0; i < size; i++) {
+                    for (int i = 0; i < size; i++) {
                         array[i] = (T) get(i);
                     }
                 }
@@ -514,10 +512,9 @@ abstract class IonSequenceLite
             int parentIndex = toParentIndex(size);
 
             // adds at end of parent list
-            if(parentIndex == parent.size()) {
+            if (parentIndex == parent.size()) {
                 parent.add(ionValue);
-            }
-            else {
+            } else {
                 parent.add(parentIndex, ionValue);
             }
 
@@ -538,7 +535,7 @@ abstract class IonSequenceLite
         }
 
         public boolean addAll(final Collection<? extends IonValue> c) {
-            for (IonValue ionValue : c){
+            for (IonValue ionValue : c) {
                 add(ionValue);
             }
 
@@ -548,7 +545,7 @@ abstract class IonSequenceLite
         public boolean addAll(final int index, final Collection<? extends IonValue> c) {
             int i = index;
 
-            for (IonValue ionValue : c){
+            for (IonValue ionValue : c) {
                 add(i, ionValue);
                 i++;
             }
@@ -574,7 +571,7 @@ abstract class IonSequenceLite
             }
 
             for (int i = 0; i < size; i++) {
-                if(!toKeep.containsKey(get(i))) {
+                if (!toKeep.containsKey(get(i))) {
                     remove(i);
                 }
             }
@@ -586,7 +583,7 @@ abstract class IonSequenceLite
             checkForParentModification();
 
             final List<IonValue> toRemove = new ArrayList<IonValue>(size);
-            for(int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++) {
                 toRemove.add(get(i));
             }
 
@@ -610,7 +607,7 @@ abstract class IonSequenceLite
 
         public boolean remove(final Object o) {
             int index = indexOf(o);
-            if(index < 0) {
+            if (index < 0) {
                 return false;
             }
 
@@ -636,7 +633,7 @@ abstract class IonSequenceLite
             final int index = fromParentIndex(parentIndex);
 
             // not found
-            if(parentIndex < 0 || index < 0 || index >= size) {
+            if (parentIndex < 0 || index < 0 || index >= size) {
                 return -1;
             }
 
@@ -722,8 +719,9 @@ abstract class IonSequenceLite
         }
 
         private void checkForParentModification() {
-            if (this.structuralModificationCount != IonSequenceLite.this.structuralModificationCount)
+            if (this.structuralModificationCount != IonSequenceLite.this.structuralModificationCount) {
                 throw new ConcurrentModificationException();
+            }
         }
     }
 }
