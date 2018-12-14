@@ -60,7 +60,7 @@ public abstract class BaseIonSequenceLiteSublistTestCase {
         final IonSequence sequence = newSequence();
         final List<IonValue> sublist = sequence.subList(2, 5);
 
-        sublist.get(5);
+        sublist.get(4);
     }
 
     @Test
