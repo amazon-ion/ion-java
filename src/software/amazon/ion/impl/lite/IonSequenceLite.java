@@ -23,6 +23,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import software.amazon.ion.ContainedValueException;
 import software.amazon.ion.IonSequence;
 import software.amazon.ion.IonType;
@@ -550,11 +551,16 @@ abstract class IonSequenceLite
                 return false;
             }
 
-            final List<IonValue> toRemove = new ArrayList<IonValue>();
+            final Map<Object,Object> toRetain = new IdentityHashMap<Object,Object>();
+            for (Object o : c) {
+                toRetain.put(o, null);
+            }
+
+            final List<IonValue> toRemove = new ArrayList<IonValue>(size - c.size());
             for (int i = 0; i < size; i++) {
                 final IonValue ionValue = get(i);
 
-                if (!c.contains(ionValue)) {
+                if (!toRetain.containsKey(ionValue)) {
                     toRemove.add(ionValue);
                 }
             }
