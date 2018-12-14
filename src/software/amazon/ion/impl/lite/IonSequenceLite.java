@@ -558,25 +558,16 @@ abstract class IonSequenceLite
                 return false;
             }
 
-            final IdentityHashMap<Object, Object> toKeep = new IdentityHashMap<Object, Object>();
-
-            for (Object o : c) {
-                if (indexOf(o) > 0) {
-                    toKeep.put(o, o);
-                }
-            }
-
-            if (toKeep.size() == size) {
-                return false;
-            }
-
+            final List<IonValue> toRemove = new ArrayList<IonValue>();
             for (int i = 0; i < size; i++) {
-                if (!toKeep.containsKey(get(i))) {
-                    remove(i);
+                final IonValue ionValue = get(i);
+
+                if (!c.contains(ionValue)) {
+                    toRemove.add(ionValue);
                 }
             }
 
-            return true;
+            return removeAll(toRemove);
         }
 
         public void clear() {
