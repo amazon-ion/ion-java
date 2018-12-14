@@ -400,7 +400,7 @@ public interface IonSequence
      *
      * <p>
      * Sublist methods will throw a {@link java.util.ConcurrentModificationException} if
-     * its parent list, i.e. this list, had any changes that affect its size after sublist
+     * its parent list, i.e. this list, had any changes that affect its size the after sublist
      * was created.
      * </p>
      *
