@@ -473,10 +473,7 @@ abstract class IonSequenceLite
                 return EMPTY_VALUE_ARRAY;
             }
 
-            IonValue[] array = new IonValue[size];
-            System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
-
-            return array;
+            return toArray(new IonValue[size]);
         }
 
         @SuppressWarnings("unchecked")
