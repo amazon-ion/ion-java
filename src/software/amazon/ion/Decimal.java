@@ -68,16 +68,14 @@ public class Decimal
         public float floatValue()
         {
             float v = super.floatValue();
-            if (Float.compare(0f, v) <= 0) v = -1 * v;
-            return v;
+            return Float.compare(0f, v) <= 0 ? -1 * v : v;
         }
 
         @Override
         public double doubleValue()
         {
             double v = super.doubleValue();
-            if (Double.compare(0d, v) <= 0) v = -1 * v;
-            return v;
+            return Double.compare(0d, v) <= 0 ? -1 * v : v;
         }
 
 
@@ -159,12 +157,8 @@ public class Decimal
      */
     public static BigDecimal bigDecimalValue(BigDecimal val)
     {
-        if (val == null
-            || val.getClass() == BigDecimal.class)
-        {
-            return val;
-        }
-        return new BigDecimal(val.unscaledValue(), val.scale());
+        return val == null || val.getClass() == BigDecimal.class ?
+            val : new BigDecimal(val.unscaledValue(), val.scale());
     }
 
     /**
@@ -269,17 +263,12 @@ public class Decimal
 
     public static Decimal valueOf(double val, MathContext mc)
     {
-        if (Double.compare(val, -0d) == 0)
-        {
-            return new NegativeZero(1, mc);
-        }
-        return new Decimal(Double.toString(val), mc);
+        return Double.compare(val, -0d) == 0 ? new NegativeZero(1, mc) : new Decimal(Double.toString(val), mc);
     }
 
     public static Decimal valueOf(BigDecimal val)
     {
-        if (val == null || val instanceof Decimal) return (Decimal) val;
-        return new Decimal(val.unscaledValue(), val.scale());
+        return val == null || val instanceof Decimal ? (Decimal) val : new Decimal(val.unscaledValue(), val.scale());
     }
 
     public static Decimal valueOf(BigDecimal val, MathContext mc)
@@ -421,7 +410,6 @@ public class Decimal
      */
     public final BigDecimal bigDecimalValue()
     {
-
         return new BigDecimal(unscaledValue(), scale());
     }
 }
