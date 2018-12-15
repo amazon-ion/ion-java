@@ -1935,6 +1935,7 @@ final class IonReaderTextRawTokensX
         throws IOException
     {
         int c;
+        boolean expectLowSurrogate = false;
 
         for (;;) {
             c = read_string_char(ProhibitedCharacters.NONE);
@@ -1945,6 +1946,9 @@ final class IonReaderTextRawTokensX
                 continue;
             case -1:
             case '\'':
+                if (!is_clob) {
+                    check_for_low_surrogate(c, expectLowSurrogate);
+                }
                 return c;
             // new line normalization and counting is handled in read_char
             case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
@@ -1962,11 +1966,16 @@ final class IonReaderTextRawTokensX
                     c = read_large_char_sequence(c);
                 }
             }
-
+            // if this isn't a clob we need to decode UTF8 and
+            // handle surrogate encoding (otherwise we don't care)
             if (!is_clob) {
+                expectLowSurrogate = check_for_low_surrogate(c, expectLowSurrogate);
+
                 if (IonUTF8.needsSurrogateEncoding(c)) {
                     sb.append(IonUTF8.highSurrogate(c));
                     c = IonUTF8.lowSurrogate(c);
+                } else {
+                    expectLowSurrogate = IonUTF8.isHighSurrogate(c);
                 }
             }
             else if (IonTokenConstsX.is8bitValue(c)) {
@@ -2010,6 +2019,7 @@ final class IonReaderTextRawTokensX
         throws IOException
     {
         int c;
+        boolean expectLowSurrogate = false;
 
         for (;;) {
             c = read_string_char(ProhibitedCharacters.SHORT_CHAR);
@@ -2020,6 +2030,9 @@ final class IonReaderTextRawTokensX
                 continue;
             case -1:
             case '"':
+                if (!is_clob) {
+                    check_for_low_surrogate(c, expectLowSurrogate);
+                }
                 return c;
             // new line normalization and counting is handled in read_char
             case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
@@ -2035,15 +2048,34 @@ final class IonReaderTextRawTokensX
                 }
                 break;
             }
-
+            // if this isn't a clob we need to decode UTF8 and
+            // handle surrogate encoding (otherwise we don't care)
             if (!is_clob) {
+                expectLowSurrogate = check_for_low_surrogate(c, expectLowSurrogate);
+
                 if (IonUTF8.needsSurrogateEncoding(c)) {
                     sb.append(IonUTF8.highSurrogate(c));
                     c = IonUTF8.lowSurrogate(c);
+                } else {
+                    expectLowSurrogate = IonUTF8.isHighSurrogate(c);
                 }
             }
             sb.append((char)c);
         }
+    }
+
+    private boolean check_for_low_surrogate(int c, boolean expectLowSurrogate) throws IonException
+    {
+        if (IonUTF8.isLowSurrogate(c)) {
+            if (expectLowSurrogate) {
+                return false;
+            } else {
+                error("unexpected low surrogate " + printCodePointAsString(c));
+            }
+        } else if (expectLowSurrogate) {
+            expected_but_found("a low surrogate", c);
+        }
+        return false;
     }
 
     protected int read_double_quoted_char(boolean is_clob) throws IOException
@@ -2132,12 +2164,16 @@ final class IonReaderTextRawTokensX
         throws IOException
     {
         int c;
+        boolean expectLowSurrogate = false;
 
         for (;;) {
             c = read_triple_quoted_char(is_clob);
             switch(c) {
             case CharacterSequence.CHAR_SEQ_STRING_TERMINATOR:
             case CharacterSequence.CHAR_SEQ_EOF: // was EOF
+                if (!is_clob) {
+                    check_for_low_surrogate(c, expectLowSurrogate);
+                }
                 return c;
             // new line normalization and counting is handled in read_char
             case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
@@ -2154,7 +2190,11 @@ final class IonReaderTextRawTokensX
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+                continue;
             case CharacterSequence.CHAR_SEQ_STRING_NON_TERMINATOR:
+                if (!is_clob) {
+                    expectLowSurrogate = check_for_low_surrogate(c, expectLowSurrogate);
+                }
                 continue;
             default:
                 break;
@@ -2162,9 +2202,13 @@ final class IonReaderTextRawTokensX
             // if this isn't a clob we need to decode UTF8 and
             // handle surrogate encoding (otherwise we don't care)
             if (!is_clob) {
+                expectLowSurrogate = check_for_low_surrogate(c, expectLowSurrogate);
+
                 if (IonUTF8.needsSurrogateEncoding(c)) {
                     sb.append(IonUTF8.highSurrogate(c));
                     c = IonUTF8.lowSurrogate(c);
+                } else {
+                    expectLowSurrogate = IonUTF8.isHighSurrogate(c);
                 }
             }
             sb.append((char)c);
