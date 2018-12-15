@@ -9,8 +9,7 @@ jdk:
 - oraclejdk9
 - oraclejdk11
 after_success:
-    # enable once we get authorization with codecov.io sorted out
-    # - bash <(curl -s https://codecov.io/bash) 
+- bash <(curl -s https://codecov.io/bash) 
 - mvn site
 deploy:
   provider: pages
