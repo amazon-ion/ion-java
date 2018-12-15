@@ -16,6 +16,8 @@ package software.amazon.ion;
 
 import static software.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static software.amazon.ion.Decimal.negativeZero;
+import static software.amazon.ion.Timestamp.FRACTIONAL_MILLIS_UPPER_BOUND;
+import static software.amazon.ion.Timestamp.MINIMUM_ALLOWED_FRACTIONAL_MILLIS;
 import static software.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static software.amazon.ion.Timestamp.UTC_OFFSET;
 import static software.amazon.ion.Timestamp.createFromUtcFields;
@@ -26,19 +28,17 @@ import static software.amazon.ion.Timestamp.Precision.SECOND;
 import static software.amazon.ion.Timestamp.Precision.YEAR;
 import static software.amazon.ion.impl.PrivateUtils.UTC;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import org.junit.Ignore;
 import org.junit.Test;
-import software.amazon.ion.Decimal;
-import software.amazon.ion.IonTimestamp;
-import software.amazon.ion.IonType;
-import software.amazon.ion.IonValue;
-import software.amazon.ion.NullValueException;
-import software.amazon.ion.Timestamp;
 import software.amazon.ion.Timestamp.Precision;
 
 /**
@@ -781,12 +781,54 @@ public class TimestampTest
         assertEquals("2012-01-01T12:12:30.555123Z", ts.toZString());
     }
 
+    @Test
+    public void testForMillisWithNegativeMilli()
+    {
+        Timestamp ts = Timestamp.forMillis(BigDecimal.valueOf(-1), 0);
+        assertEquals("1969-12-31T23:59:59.999Z", ts.toZString());
+    }
 
-    @SuppressWarnings("unused")
-    @Test (expected = NullPointerException.class)
+    @Test
+    @Ignore // see https://github.com/amzn/ion-java/issues/160
+    public void testNewTimestampFromMinimumAllowedMillis()
+    {
+        Timestamp ts = Timestamp.forMillis(MINIMUM_ALLOWED_FRACTIONAL_MILLIS, PST_OFFSET);
+        assertEquals("0001-01-01T00:00:00.000Z", ts.toZString());
+    }
+
+    @Test
+    public void testNewTimestampFromBigDecimalWithMaximumAllowedMillis()
+    {
+        Timestamp ts = Timestamp.forMillis(FRACTIONAL_MILLIS_UPPER_BOUND.add(BigDecimal.ONE.negate()), PST_OFFSET);
+        checkFields(9999, 12, 31, 15, 59, 59, new BigDecimal("0.999"), PST_OFFSET, SECOND, ts);
+        assertEquals("9999-12-31T15:59:59.999-08:00", ts.toString());
+        assertEquals("9999-12-31T23:59:59.999Z", ts.toZString());
+    }
+
+    @Test(expected = NullPointerException.class)
     public void testNewTimestampFromBigDecimalWithNull()
     {
-        Timestamp ts = Timestamp.forMillis(null, PST_OFFSET);
+        Timestamp.forMillis(null, PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithMillisTooSmall()
+    {
+        // MIN - 1
+        Timestamp.forMillis(MINIMUM_ALLOWED_FRACTIONAL_MILLIS.add(BigDecimal.ONE.negate()), PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithMillisTooBig()
+    {
+        // Max
+        Timestamp.forMillis(FRACTIONAL_MILLIS_UPPER_BOUND, PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromBigDecimalWithScaleTooBigPositive()
+    {
+        Timestamp.forMillis(new BigDecimal("1e100000"), PST_OFFSET);
     }
 
     /**
@@ -858,6 +900,58 @@ public class TimestampTest
         checkFields(2010, 2, 1, 10, 11, 12, new BigDecimal("0.340"), null, SECOND, ts);
         assertEquals("2010-02-01T10:11:12.340-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.340Z", ts.toZString());
+    }
+
+    /**
+     * Regression test for https://github.com/amzn/ion-java/issues/160
+     */
+    @Test
+    public void testNewTimestampFromYearOneRegressionBug()
+    {
+        // This is the same as the private field Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
+        final long MINIMUM_TIMESTAMP_MILLIS = -62135769600000L;
+        // This is the minimum timestamp instantiating by parsing a timestamp string,
+        // which is not effected by the `java.util.Date` bug.
+        final Timestamp MINIMUM_TIMESTAMP = Timestamp.valueOf("0001-01-01T00:00:00.000Z");
+        // Save the original timezone since we modify it below.
+        final TimeZone originalTimeZone = TimeZone.getDefault();
+
+        try {
+            // The `java.util.Date` bug has a different range of times depending on the local offset, so
+            // let's test against all time zones.
+            for (final String tzId : TimeZone.getAvailableIDs()) {
+                final TimeZone tz = TimeZone.getTimeZone(tzId);
+                TimeZone.setDefault(tz);
+
+                // The Timestamps under test must be instantiated *after* the the call to TimeZone.setDefault()
+                // since `java.util.Date` references the default TimeZone when calculating the values for its
+                // date field accessor methods (i.e. Date.get*()).
+                Timestamp minimumTimestampFromMillis = Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS, 0);
+                assertEquals(MINIMUM_TIMESTAMP, minimumTimestampFromMillis);
+
+                // Only perform further assertions on timezones with negative offsets because positive
+                // offsets create millisecond values that are less than Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
+                if (tz.getRawOffset() < 0) {
+                    // This will be the latest millisecond in which the bug with `java.util.Date` can happen
+                    Timestamp maximumTimestampWithBug =
+                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset(), 0);
+                    assertEquals(1, maximumTimestampWithBug.getYear());
+
+                    // Test one millisecond after, just to be sure.
+                    Timestamp timestampPlusOne =
+                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() + 1, 0);
+                    assertEquals(1, timestampPlusOne.getYear());
+
+                    // Also test one milliscond before, just to be sure.
+                    Timestamp timestampMinusOne =
+                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() - 1L, 0);
+                    assertEquals(1, timestampMinusOne.getYear());
+                }
+            }
+        } finally {
+            // Have to set the TimeZone back to its original value so as not to effect other tests.
+            TimeZone.setDefault(originalTimeZone);
+        }
     }
 
     /**
@@ -2254,5 +2348,22 @@ public class TimestampTest
 
         Timestamp t = Timestamp.forCalendar(cal);
         assertEquals(year, t.getYear());
+    }
+
+    // High scale timeout tests
+
+    // max scale permitted by BigDecimal from the String constructor
+    private static BigDecimal LARGE_SCALE_DECIMAL = new BigDecimal("1e-1000000000");
+
+    @Test(timeout = 50L)
+    public void testForMillisWithLargeScaleBigDecimal()
+    {
+        Timestamp ts = Timestamp.forMillis(LARGE_SCALE_DECIMAL, PST_OFFSET);
+    }
+
+    @Test(timeout = 50L)
+    public void testGetMillisWithLargeScaleBigDecimal()
+    {
+        Timestamp.forMillis(LARGE_SCALE_DECIMAL, PST_OFFSET).getMillis();
     }
 }

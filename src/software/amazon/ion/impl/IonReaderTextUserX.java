@@ -146,8 +146,11 @@ class IonReaderTextUserX
                         {
                             if (ION_1_0.equals(version))
                             {
-                                symbol_table_reset();
-                                push_symbol_table(_system_symtab);
+                                if (_value_keyword != IonTokenConstsX.KEYWORD_sid)
+                                {
+                                    symbol_table_reset();
+                                    push_symbol_table(_system_symtab);
+                                }
                                 _has_next_called = false;
                             }
                             else

@@ -180,14 +180,19 @@ class IonReaderBinarySystemX
             _v.setAuthoritativeType(AS_TYPE.boolean_value);
             break;
         case INT:
+            boolean is_negative = _value_tid == PrivateIonConstants.tidNegInt;
+
             if (_value_len == 0) {
+                if (is_negative) {
+                    throwIllegalNegativeZeroException();
+                }
+
                 int v = 0;
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.int_value);
             }
             else if (_value_len <= Long.BYTES) {
                 long v = readULong(_value_len);
-                boolean is_negative = _value_tid == PrivateIonConstants.tidNegInt;
 
                 if (v < 0) {
                     // we probably can't fit this magnitude properly into a Java long
@@ -205,6 +210,9 @@ class IonReaderBinarySystemX
                 }
                 else {
                     if (is_negative) {
+                        if(v == 0) {
+                            throwIllegalNegativeZeroException();
+                        }
                         v = -v;
                     }
                     if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
@@ -217,7 +225,6 @@ class IonReaderBinarySystemX
                 }
             }
             else {
-                boolean is_negative = (_value_tid == PrivateIonConstants.tidNegInt);
                 BigInteger v = readBigInteger(_value_len, is_negative);
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
@@ -481,5 +488,9 @@ class IonReaderBinarySystemX
     public SymbolTable pop_passed_symbol_table()
     {
         return null;
+    }
+
+    private void throwIllegalNegativeZeroException() {
+        throw newErrorAt("negative zero is illegal in the binary format");
     }
 }

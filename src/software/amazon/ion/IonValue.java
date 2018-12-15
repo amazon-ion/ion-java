@@ -434,10 +434,10 @@ public interface IonValue
      * {@link IonString} or {@link IonSymbol}!
      * Use {@link IonText#stringValue()} for that purpose.
      * <pre>
-     *    ionSystem.newString("Levi's").toString()     =>  "\"Levi's\""
-     *    ionSystem.newString("Levi's").stringValue()  =>  "Levi's"
-     *    ionSystem.newSymbol("Levi's").toString()     =>  "'Levi\\'s'"
-     *    ionSystem.newSymbol("Levi's").stringValue()  =>  "Levi's"
+     *    ionSystem.newString("Levi's").toString()     =&gt;  "\"Levi's\""
+     *    ionSystem.newString("Levi's").stringValue()  =&gt;  "Levi's"
+     *    ionSystem.newSymbol("Levi's").toString()     =&gt;  "'Levi\\'s'"
+     *    ionSystem.newSymbol("Levi's").stringValue()  =&gt;  "Levi's"
      * </pre>
      *
      * @return Ion text data equivalent to this value.

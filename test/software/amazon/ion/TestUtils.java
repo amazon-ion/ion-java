@@ -131,21 +131,16 @@ public class TestUtils
         new FileIsNot(
              "bad/clobWithNullCharacter.ion"                // TODO amzn/ion-java#43
             , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
-            , "bad/structOrderedEmpty.10n"                  // TODO amzn/ion-java#100
             , "bad/emptyAnnotatedInt.10n"                   // TODO amzn/ion-java#55
-            , "bad/timestamp/timestampNegativeFraction.10n" // TODO amzn/ion-java#102
             , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
             , "bad/utf8/surrogate_1.ion"                    // TODO amzn/ion-java#105
             , "bad/utf8/surrogate_2.ion"                    // TODO amzn/ion-java#105
             , "bad/utf8/surrogate_4.ion"                    // TODO amzn/ion-java#105
             , "equivs/paddedInts.10n"                       // TODO amzn/ion-java#54
-            , "equivs/nonIVMNoOps.ion"                      // TODO amzn/ion-java#114
             , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
             , "good/utf16.ion"                              // TODO amzn/ion-java#61
             , "good/utf32.ion"                              // TODO amzn/ion-java#61
             , "good/whitespace.ion"                         // TODO amzn/ion-java#104
-            , "bad/negativeIntZero.10n"                     // TODO amzn/ion-java#138
-            , "bad/negativeIntZeroLn.10n"                   // TODO amzn/ion-java#138
             , "good/item1.10n"                              // TODO amzn/ion-java#126 (roundtrip symbols with unknown text)
         );
 

@@ -60,7 +60,7 @@ public interface IonSequence
      * @return the element at the given index; not <code>null</code>.
      * @throws NullValueException if {@link #isNullValue()}.
      * @throws IndexOutOfBoundsException if the index is out of range
-     * (<code>index < 0 || index >= size()</code>).
+     * (<code>index &lt; 0 || index &gt;= size()</code>).
      */
     public IonValue get(int index)
         throws NullValueException, IndexOutOfBoundsException;
@@ -113,7 +113,7 @@ public interface IonSequence
      * @throws IllegalArgumentException
      *   if {@code child} is an {@link IonDatagram}.
      * @throws IndexOutOfBoundsException if the index is out of range
-     * (index < 0 || index > size()).
+     * (index &lt; 0 || index &gt; size()).
      */
     public void add(int index, IonValue child)
         throws ContainedValueException, NullPointerException;
@@ -169,7 +169,7 @@ public interface IonSequence
      * @return the element previously at the specified position.
      *
      * @throws IndexOutOfBoundsException if the index is out of range
-     * (index < 0 || index >= size()).
+     * (index &lt; 0 || index &gt;= size()).
      */
     public IonValue remove(int index);
 
@@ -286,10 +286,15 @@ public interface IonSequence
      * Returns the index in the sequence of the specified element,
      * or -1 if this sequence doesn't contain the element.
      * <p>
-     * <b>Due to the reference-equality-based semantics of Ion sequences,
+     * <b>
+     * Due to the reference-equality-based semantics of Ion sequences,
      * this method does not use {@link Object#equals} as specified by the
      * contract of {@link java.util.List}. Instead it uses reference
-     * equality ({@code ==} operator) to find the instance.</b>
+     * equality ({@code ==} operator) to find the instance.
+     *
+     * And since IonSequences do not allow for duplicates this method behaves
+     * in the same way as {@link IonSequence#indexOf(Object)}
+     * </b>
      *
      * @param o the element to search for.
      * @return the index in this sequence of the element,
@@ -357,7 +362,7 @@ public interface IonSequence
      * @throws ContainedValueException
      * if one of the elements is already contained by an {@link IonContainer}.
      * @throws IndexOutOfBoundsException
-     * if the index is out of range (index < 0 || index > size()).
+     * if the index is out of range (index &lt; 0 || index &gt; size()).
      */
     public boolean addAll(int index, Collection<? extends IonValue> c);
 
@@ -393,13 +398,18 @@ public interface IonSequence
 
 
     /**
-     * This inherited method is not yet supported.
      * <p>
-     * Vote for issue amzn/ion-java#52 if you need this.
+     * Returns a view of the portion of this list according to {@link List#subList(int, int)}
+     * contract.
+     * </p>
      *
-     * @throws UnsupportedOperationException at every call.
+     * <p>
+     * Sublist methods will throw a {@link java.util.ConcurrentModificationException} if
+     * its parent list, i.e. this list, had any changes that affect its size the after sublist
+     * was created.
+     * </p>
      *
-     * @see <a href="https://github.com/amzn/ion-java/issues/52">amzn/ion-java#52</a>
+     * @see List#subList(int, int)
      */
     public List<IonValue> subList(int fromIndex, int toIndex);
 

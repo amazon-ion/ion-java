@@ -3,7 +3,7 @@ A Java implementation of the [Ion data notation](http://amzn.github.io/ion-docs)
 
 [![Build Status](https://travis-ci.org/amzn/ion-java.svg?branch=master)](https://travis-ci.org/amzn/ion-java)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java)
-[![Javadoc](https://javadoc-emblem.rhcloud.com/doc/software.amazon.ion/ion-java/badge.svg)](http://www.javadoc.io/doc/software.amazon.ion/ion-java)
+[![Javadoc](https://javadoc-badge.appspot.com/software.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/software.amazon.ion/ion-java)
 
 ## Setup
 This repository contains a [git submodule](https://git-scm.com/docs/git-submodule)

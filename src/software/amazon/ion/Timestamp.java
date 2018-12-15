@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.util.IonTextUtils;
 
@@ -39,7 +40,7 @@ import software.amazon.ion.util.IonTextUtils;
  * as the start of the new year/month/day.
  *
  *
- * <h4>Equality and Comparison</h4>
+ * <h3>Equality and Comparison</h3>
  *
  * As with {@link IonValue} classes, the {@link #equals equals} methods on this class
  * perform a strict equivalence that observes the precision and local offset
@@ -82,6 +83,15 @@ public final class Timestamp
     private static final int NO_MINUTES = 0;
     private static final int NO_SECONDS = 0;
     private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
+
+    // 0001-01-01T00:00:00.0Z in millis
+    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
+
+    // 0001-01-01T00:00:00.0Z in millis
+    static final BigDecimal MINIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal(MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS);
+
+    // 10000T in millis, upper bound exclusive
+    static final BigDecimal FRACTIONAL_MILLIS_UPPER_BOUND = new BigDecimal(253402300800000L);
 
     /**
      * Unknown local offset from UTC.
@@ -265,9 +275,6 @@ public final class Timestamp
         }
     }
 
-    // 0001-01-01T00:00:00.0Z in millis
-    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
-
     /**
      * This method uses deprecated methods from {@link java.util.Date}
      * instead of {@link Calendar} so that this code can be used (more easily)
@@ -276,14 +283,27 @@ public final class Timestamp
     @SuppressWarnings("deprecation")
     private void set_fields_from_millis(long millis)
     {
-        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS){
+        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS) {
             throw new IllegalArgumentException("year is less than 1");
         }
 
         Date date = new Date(millis);
 
-        // These fields are in the system timezone!
-        this._year    = checkAndCastYear(date.getYear() + 1900);
+        // https://github.com/amzn/ion-java/issues/160
+        // The java.util.Date(long) constructor expects an epoch time in milliseconds, and getYear(), getMonth(),
+        // getHour() on the resulting Date are supposed to return values adjusted to the default timezone.
+        // In Pacific Standard Time (offset -08:00), for a Date constructed with an epoch time equivalent to
+        // 0001-01-01T00:00:00.000Z, the Date.get*() methods should return values for
+        // 0000-12-31T16:00:00.000Z;  however, Date.getYear() incorrectly returns a value for year 1 (-1899)
+        // in this scenario. The following if/else block compensates for this bug:
+        int currentRawOffset = TimeZone.getDefault().getRawOffset();
+        if(currentRawOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentRawOffset > millis) {
+            this._year = 0;
+        } else {
+            this._year = checkAndCastYear(date.getYear() + 1900);
+        }
+
+        // Note: date.get*() return values are in the local timezone!
         this._month   = checkAndCastMonth(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
         this._day     = checkAndCastDay(date.getDate(), _year, _month);
         this._hour    = checkAndCastHour(date.getHours());
@@ -524,7 +544,7 @@ public final class Timestamp
      *</pre>
      * Note: All of these resulting Timestamps have the similar value (in UTC) 2012-02-03T04:05:06.007Z.
      *
-     * <h4>Precision "Narrowing"</h4>
+     * <h3>Precision "Narrowing"</h3>
      *
      * <p>
      * Any time component that is more precise
@@ -690,7 +710,22 @@ public final class Timestamp
     {
         if (millis == null) throw new NullPointerException("millis is null");
 
-        long ms = millis.longValue();
+        // check bounds to avoid hanging when calling longValue() on decimals with large positive exponents,
+        // e.g. 1e10000000
+        if(millis.compareTo(MINIMUM_ALLOWED_FRACTIONAL_MILLIS) < 0 ||
+            FRACTIONAL_MILLIS_UPPER_BOUND.compareTo(millis) < 0) {
+            throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
+                + MINIMUM_ALLOWED_FRACTIONAL_MILLIS
+                + " (0001T)"
+                + ", inclusive, to "
+                + FRACTIONAL_MILLIS_UPPER_BOUND
+                + " (10000T)"
+                + " , exclusive");
+        }
+
+        // quick handle integral zero
+        long ms = isIntegralZero(millis) ? 0 : millis.longValue();
+
         set_fields_from_millis(ms);
 
         this._precision = Precision.SECOND;
@@ -700,10 +735,23 @@ public final class Timestamp
         }
         else {
             BigDecimal secs = millis.movePointLeft(3);
-            BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
+            BigDecimal secsDown = fastRoundZeroFloor(secs);
             this._fraction = secs.subtract(secsDown);
         }
         this._offset = localOffset;
+    }
+
+    private BigDecimal fastRoundZeroFloor(final BigDecimal decimal) {
+        BigDecimal fastValue = decimal.signum() < 0 ? BigDecimal.ONE.negate() : BigDecimal.ZERO;
+
+        return isIntegralZero(decimal) ? fastValue : decimal.setScale(0, RoundingMode.FLOOR);
+    }
+
+    private boolean isIntegralZero(final BigDecimal decimal) {
+        // zero || no low-order bits || < 1.0
+        return  decimal.signum() == 0
+            || decimal.scale() < -63
+            || (decimal.precision() - decimal.scale() <= 0);
     }
 
     /**
@@ -1404,7 +1452,8 @@ public final class Timestamp
         //                                        month is 0 based for Date
         long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
         if (this._fraction != null) {
-            int frac = this._fraction.movePointRight(3).intValue();
+            BigDecimal fracAsDecimal = this._fraction.movePointRight(3);
+            int frac = isIntegralZero(fracAsDecimal) ? 0 : fracAsDecimal.intValue();
             millis += frac;
         }
         return millis;
@@ -1802,7 +1851,6 @@ public final class Timestamp
         return buffer.toString();
     }
 
-
     /**
      * Returns the string representation (in Ion format) of this Timestamp
      * in UTC.
@@ -1820,11 +1868,10 @@ public final class Timestamp
         catch (IOException e)
         {
             throw new RuntimeException("Exception printing to StringBuilder",
-                                       e);
+                e);
         }
         return buffer.toString();
     }
-
 
     /**
      * Prints to an {@code Appendable} the string representation (in Ion format)
@@ -1853,7 +1900,6 @@ public final class Timestamp
 
         print(out, adjusted);
     }
-
 
     /**
      * Prints to an {@code Appendable} the string representation (in Ion format)
@@ -1891,7 +1937,6 @@ public final class Timestamp
             }
         }
     }
-
 
     /**
      * helper for print(out) and printZ(out) so that printZ can create
@@ -2011,7 +2056,7 @@ public final class Timestamp
      * Returns a timestamp relative to this one by the given number of
      * milliseconds.
      *
-     * @param amount a (positive or negative) number of milliseconds.
+     * @param amount a number of milliseconds.
      */
     public final Timestamp addMillis(long amount)
     {
@@ -2038,7 +2083,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of seconds.
      *
-     * @param amount a (positive or negative) number of seconds.
+     * @param amount a number of seconds.
      */
     public final Timestamp addSecond(int amount)
     {
@@ -2050,7 +2095,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of minutes.
      *
-     * @param amount a (positive or negative) number of minutes.
+     * @param amount a number of minutes.
      */
     public final Timestamp addMinute(int amount)
     {
@@ -2062,7 +2107,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of hours.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of hours.
      */
     public final Timestamp addHour(int amount)
     {
@@ -2074,7 +2119,7 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of days.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of days.
      */
     public final Timestamp addDay(int amount)
     {
@@ -2093,7 +2138,7 @@ public final class Timestamp
      * leap days.  For example, adding one month to {@code 2011-01-31}
      * results in {@code 2011-02-28}.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of months.
      */
     public final Timestamp addMonth(int amount)
     {
@@ -2110,7 +2155,7 @@ public final class Timestamp
      * The day field may be adjusted to account for leap days.  For example,
      * adding one year to {@code 2012-02-29} results in {@code 2013-02-28}.
      *
-     * @param amount a (positive or negative) number of hours.
+     * @param amount a number of years.
      */
     public final Timestamp addYear(int amount)
     {
@@ -2181,10 +2226,10 @@ public final class Timestamp
      *
      * <p>
      * This method is provided in preference to individual methods for each of
-     * the six boolean comparison operators (<, ==, >, >=, !=, <=).
+     * the six boolean comparison operators (&lt;, ==, &gt;, &gt;=, !=, &lt;=).
      * The suggested idiom for performing these comparisons is:
-     * {@code (x.compareTo(y)}<em>&lt;op></em>{@code 0)},
-     * where <em>&lt;op></em> is one of the six comparison operators.
+     * {@code (x.compareTo(y)}<em>&lt;op&gt;</em>{@code 0)},
+     * where <em>&lt;op&gt;</em> is one of the six comparison operators.
      *
      * <p>
      * For example, the pairs below will return a {@code 0} result:

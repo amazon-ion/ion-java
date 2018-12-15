@@ -180,6 +180,15 @@ public class IonRawBinaryWriterTest extends Assert
     };
 
     @Test
+    public void testFinishOnClose() throws IOException
+    {
+        // verify data is flushed if a writer is closed prior to calling finish()
+        writer.writeNull();
+        writer.close();
+        assertValue("null.null");
+    }
+
+    @Test
     public void testNullNull() throws Exception
     {
         writer.writeNull();

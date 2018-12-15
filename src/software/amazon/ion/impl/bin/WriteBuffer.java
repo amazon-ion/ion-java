@@ -1071,9 +1071,10 @@ import java.util.List;
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
     {
-        for (final Block block : blocks)
+        for (int i = 0; i <= index; i++)
         {
-            out.write(block.data, 0, block.limit);
+	    Block block = blocks.get(i);
+	    out.write(block.data, 0, block.limit);
         }
     }
 
