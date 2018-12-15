@@ -223,7 +223,6 @@ public final class Timestamp
     private static Calendar calendarFromMillis(long millis, Integer localOffset) {
         Calendar calendar = new GregorianCalendar(PrivateUtils.UTC);
         calendar.clear();
-        calendar.setLenient(false);
         calendar.setTimeInMillis(millis);
         if (localOffset != null) {
             calendar.set(Calendar.ZONE_OFFSET, localOffset * 60 * 1000);
@@ -379,7 +378,6 @@ public final class Timestamp
     {
         _calendar = new GregorianCalendar(PrivateUtils.UTC);
         _calendar.clear();
-        _calendar.setLenient(false);
         boolean dayPrecision = false;
 
         switch (p) {
@@ -527,7 +525,6 @@ public final class Timestamp
             throw new IllegalArgumentException("Calendar has no fields set");
         }
         _calendar = (Calendar) cal.clone();
-        _calendar.setLenient(false);
         setFieldsFromCalendar(precision, true, APPLY_OFFSET_YES);
     }
 
