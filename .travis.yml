@@ -8,15 +8,21 @@ jdk:
 - oraclejdk8
 - oraclejdk9
 - oraclejdk11
-after_success:
-- bash <(curl -s https://codecov.io/bash) 
-- mvn site
-deploy:
-  provider: pages
-  local-dir: "./target/site/"
-  skip-cleanup: true
-  github-token: "$GITHUB_TOKEN"
-  keep-history: true # keeps commit history of gh-pages branch
-  on:
-    branch: master
-    jdk: openjdk11
+
+script: mvn test 
+
+jobs: 
+  include: 
+    stage: report generation 
+    jdk: openjdk11 
+    script: mvn test site 
+    after_success:
+      - bash <(curl -s https://codecov.io/bash) 
+    deploy: 
+      provider: pages
+      local-dir: "./target/site/"
+      skip-cleanup: true
+      github-token: "$GITHUB_TOKEN"
+      keep-history: true # keeps commit history of gh-pages branch
+      on:
+        branch: master
