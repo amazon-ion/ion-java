@@ -1095,12 +1095,13 @@ public final class Timestamp
      * Returns a Timestamp that represents the point in time that is
      * {@code millis} milliseconds from the epoch, with a given local offset.
      * A default {@link GregorianCalendar} will be used to perform any
-     * arithmetic operations on the resulting Timestamp. NOTE: this means
-     * that providing a number of milliseconds that was produced using a
-     * different calendar system may result in a Timestamp that represents a
-     * different point in time than the one that originally produced the
-     * milliseconds. In this case, {@link #forCalendar(Calendar)} should be
-     * used instead.
+     * arithmetic operations on the resulting Timestamp.
+     * <p>
+     * <strong>NOTE:</strong> this means that providing a number of milliseconds
+     * that was produced using a different calendar system may result in a Timestamp
+     * that represents a different point in time than the one that originally
+     * produced the milliseconds. In this case, {@link #forCalendar(Calendar)} should
+     * be used instead.
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
@@ -1122,13 +1123,13 @@ public final class Timestamp
      * {@code millis} milliseconds (including any fractional
      * milliseconds) from the epoch, with a given local offset.
      * A default {@link GregorianCalendar} will be used to perform any
-     * arithmetic operations on the resulting Timestamp. NOTE: this means
-     * that providing a number of milliseconds that was produced using a
-     * different calendar system may result in a Timestamp that represents a
-     * different point in time than the one that originally produced the
-     * milliseconds. In this case, {@link #forCalendar(Calendar)} should be
-     * used instead.
-     *
+     * arithmetic operations on the resulting Timestamp.
+     * <p>
+     * <strong>NOTE:</strong> this means that providing a number of milliseconds
+     * that was produced using a different calendar system may result in a Timestamp
+     * that represents a different point in time than the one that originally
+     * produced the milliseconds. In this case, {@link #forCalendar(Calendar)} should
+     * be used instead.
      * <p>
      * The resulting Timestamp will be precise to the second if {@code millis}
      * doesn't contain information that is more granular than seconds.
@@ -1948,19 +1949,7 @@ public final class Timestamp
         } else {
             newFraction = millis;
         }
-        Timestamp ts = this;
-        do {
-            int incrementalSeconds;
-            if (seconds > Integer.MAX_VALUE) {
-                incrementalSeconds = Integer.MAX_VALUE;
-            } else if (seconds < Integer.MIN_VALUE) {
-                incrementalSeconds = Integer.MIN_VALUE;
-            } else {
-                incrementalSeconds = (int)seconds;
-            }
-            ts = ts.addSecond(incrementalSeconds);
-            seconds -= incrementalSeconds;
-        } while (seconds != 0);
+        Timestamp ts = addSecond(seconds);
         ts._fraction = newFraction;
         return ts;
     }
@@ -1983,6 +1972,29 @@ public final class Timestamp
         }
         timestamp._precision = _precision.includes(precision) ? timestamp._precision : precision;
         return timestamp;
+    }
+
+    /**
+     * Returns a timestamp relative to this one by the given number of seconds.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     *
+     * @param seconds a number of seconds.
+     */
+    private final Timestamp addSecond(long seconds) {
+        Timestamp ts = this;
+        do {
+            int incrementalSeconds;
+            if (seconds > Integer.MAX_VALUE) {
+                incrementalSeconds = Integer.MAX_VALUE;
+            } else if (seconds < Integer.MIN_VALUE) {
+                incrementalSeconds = Integer.MIN_VALUE;
+            } else {
+                incrementalSeconds = (int)seconds;
+            }
+            ts = ts.addSecond(incrementalSeconds);
+            seconds -= incrementalSeconds;
+        } while (seconds != 0);
+        return ts;
     }
 
     /**
