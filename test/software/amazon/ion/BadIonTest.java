@@ -78,7 +78,7 @@ public class BadIonTest
             catch (IonException e)
             {
                 // checks that test failed because of bad UTF-8 data
-                final CharBuffer buffer = CharBuffer.allocate(1204);
+                final CharBuffer buffer = CharBuffer.allocate(1024);
                 final CharsetEncoder utf8Encoder = Charset.forName("UTF-8").newEncoder();
 
                 final FileReader fileReader = new FileReader(myTestFile);
