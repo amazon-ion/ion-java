@@ -2049,6 +2049,9 @@ final class IonReaderTextRawTokensX
     protected int read_double_quoted_char(boolean is_clob) throws IOException
     {
         int c = read_char();
+        if(is_clob && c > 127) {
+            throw new IonReaderTextTokenException("non ASCII character in clob: " + c);
+        }
 
         switch (c) {
         case '"':
@@ -2174,6 +2177,10 @@ final class IonReaderTextRawTokensX
     protected int read_triple_quoted_char(boolean is_clob) throws IOException
     {
         int c = read_string_char(ProhibitedCharacters.LONG_CHAR);
+        if(is_clob && c > 127) {
+            throw new IonReaderTextTokenException("non ASCII character in clob: " + c);
+        }
+
         switch (c) {
         case '\'':
             if (is_2_single_quotes_helper()) {

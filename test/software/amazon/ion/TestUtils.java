@@ -130,12 +130,16 @@ public class TestUtils
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new FileIsNot(
              "bad/clobWithNullCharacter.ion"                // TODO amzn/ion-java#43
-            , "bad/clobWithNonAsciiCharacter.ion"           // TODO amzn/ion-java#99
             , "bad/emptyAnnotatedInt.10n"                   // TODO amzn/ion-java#55
-            , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
             , "bad/utf8/surrogate_1.ion"                    // TODO amzn/ion-java#105
             , "bad/utf8/surrogate_2.ion"                    // TODO amzn/ion-java#105
             , "bad/utf8/surrogate_4.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_5.ion"                    // TODO amzn/ion-java#60
+            , "bad/utf8/surrogate_6.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_7.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_8.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_9.ion"                    // TODO amzn/ion-java#105
+            , "bad/utf8/surrogate_10.ion"                   // TODO amzn/ion-java#105
             , "equivs/paddedInts.10n"                       // TODO amzn/ion-java#54
             , "good/subfieldVarUInt32bit.ion"               // TODO amzn/ion-java#62
             , "good/utf16.ion"                              // TODO amzn/ion-java#61

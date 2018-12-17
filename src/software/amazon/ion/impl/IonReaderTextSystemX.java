@@ -849,6 +849,7 @@ class IonReaderTextSystemX
         int c = -1;
 
         switch (_lob_token) {
+        // BLOB
         case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
             while (len-- > 0) {
                 c = _scanner.read_base64_byte();
@@ -856,6 +857,7 @@ class IonReaderTextSystemX
                 buffer[offset++] = (byte)c;
             }
             break;
+        // CLOB
         case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
             while (len-- > 0) {
                 c = _scanner.read_double_quoted_char(true);
@@ -868,10 +870,11 @@ class IonReaderTextSystemX
                     }
                     break;
                 }
-                assert(c >= 0 && c <= UNSIGNED_BYTE_MAX_VALUE);
+                assert(c <= UNSIGNED_BYTE_MAX_VALUE);
                 buffer[offset++] = (byte)c;
             }
             break;
+        // CLOB 
         case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
             while (len-- > 0) {
                 c = _scanner.read_triple_quoted_char(true);
