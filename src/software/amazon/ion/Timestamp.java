@@ -23,7 +23,7 @@ import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.TimeZone;
+
 import software.amazon.ion.impl.PrivateUtils;
 import software.amazon.ion.util.IonTextUtils;
 
@@ -68,6 +68,16 @@ import software.amazon.ion.util.IonTextUtils;
  *   <li>{@code 2009-01-01T00:00:00.000Z} <em>etc.</em></li>
  * </ul>
  *
+ *
+ * <h4>Date Arithmetic and Leap Years</h4>
+ * Date arithmetic is performed according to the logic provided by
+ * {@link Calendar#add(int, int)}. When constructed by {@link Timestamp#forCalendar(Calendar)}
+ * the new Timestamp and any other Timestamps that spawn from it (e.g. through
+ * {@link #clone()}, {@link #addDay(int)}, etc.) will use the given Calendar's date arithmetic
+ * rules, including its rules for determining leap years. When constructed without a
+ * Calendar, a default GregorianCalendar (as constructed by
+ * <code>new GregorianCalendar(TimeZone.getTimeZone("UTC"))</code> will be used.
+ *
  * @see #equals(Timestamp)
  * @see #compareTo(Timestamp)
  */
@@ -83,15 +93,6 @@ public final class Timestamp
     private static final int NO_MINUTES = 0;
     private static final int NO_SECONDS = 0;
     private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
-
-    // 0001-01-01T00:00:00.0Z in millis
-    private static final long MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS = -62135769600000L;
-
-    // 0001-01-01T00:00:00.0Z in millis
-    static final BigDecimal MINIMUM_ALLOWED_FRACTIONAL_MILLIS = new BigDecimal(MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS);
-
-    // 10000T in millis, upper bound exclusive
-    static final BigDecimal FRACTIONAL_MILLIS_UPPER_BOUND = new BigDecimal(253402300800000L);
 
     /**
      * Unknown local offset from UTC.
@@ -162,18 +163,16 @@ public final class Timestamp
      */
     private Precision   _precision;
 
-    // These are the time field values for the Timestamp.
-    // _month and _day are 1-based (0 is an invalid value for
-    // these in a non-null Timestamp).
-    // TODO amzn/ion-java#28 - Represent internal time field values in its local time,
-    // instead of UTC. This makes it much less confusing.
-    private short       _year;
-    private byte        _month = 1; // Initialized to valid default
-    private byte        _day   = 1; // Initialized to valid default
-    private byte        _hour;
-    private byte        _minute;
-    private byte        _second;
-    private BigDecimal  _fraction;  // fractional seconds, must be within range [0, 1)
+    /**
+     * Calendar to hold the Timestamp's year, month, day, hour, minute, second, and calendar system. Fractional
+     * seconds are left to {@link #_fraction}, while local offset is left to {@link #_offset}.
+     */
+    private final Calendar _calendar;
+
+    /**
+     * Fractional seconds. Must be within range [0, 1).
+     */
+    private BigDecimal  _fraction;
 
     /**
      * Minutes offset from UTC; zero means UTC proper,
@@ -181,39 +180,18 @@ public final class Timestamp
      */
     private Integer     _offset;
 
-                                                      //   jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
-                                                      // the first 0 is to make these arrays 1 based (since month values are 1-12)
-    private static final int[] LEAP_DAYS_IN_MONTH   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
-    private static final int[] NORMAL_DAYS_IN_MONTH = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
+    // Minimum millis under the calendar system provided by the default GregorianCalendar implementation.
+    private static final long MINIMUM_TIMESTAMP_IN_MILLIS = Timestamp.valueOf("0001-01-01T00:00:00.000Z").getMillis();
+    static final BigDecimal MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL = new BigDecimal(MINIMUM_TIMESTAMP_IN_MILLIS);
 
-    private static int last_day_in_month(int year, int month) {
-        boolean is_leap;
-        if ((year % 4) == 0) {
-            // divisible by 4 (lower 2 bits are zero) - may be a leap year
-            if ((year % 100) == 0) {
-                // and divisible by 100 - not a leap year
-                if ((year % 400) == 0) {
-                    // but divisible by 400 - then it is a leap year
-                    is_leap = true;
-                }
-                else {
-                    is_leap = false;
-                }
-            }
-            else {
-                is_leap = true;
-            }
-        }
-        else {
-            is_leap = false;
-        }
-        return is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month];
-    }
+    // 10000T in millis, upper bound exclusive, under the calendar system provided by the default GregorianCalendar implementation.
+    private static final long UPPER_BOUND_TIMESTAMP_IN_MILLIS = Timestamp.valueOf("9999-12-31T23:59:59.999-00:00").getMillis() + 1;
+    static final BigDecimal UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL = new BigDecimal(UPPER_BOUND_TIMESTAMP_IN_MILLIS);
 
     /**
      * Applies the local time zone offset from UTC to the applicable time field
      * values. Depending on the local time zone offset, adjustments
-     * (i.e. rollover) will be made to the Year, Day, Hour, Minute time field
+     * (i.e. rollover) will be made to the calendar's year, day, hour, and minute
      * values.
      *
      * @param offset the local offset, in minutes from UTC.
@@ -228,164 +206,80 @@ public final class Timestamp
         offset = -offset;
         int hour_offset = offset / 60;
         int min_offset = offset - (hour_offset * 60);
-        if (offset < 0) {
-            _minute += min_offset;  // lower the minute value by adding a negative offset
-            _hour += hour_offset;
-            if (_minute < 0) {
-                _minute += 60;
-                _hour -= 1;
-            }
-            if (_hour >= 0) return;  // hour is 0-23
-            _hour += 24;
-            _day -= 1;
-            if (_day >= 1) return;  // day is 1-31
-            // we can't do this until we've figured out the month and year: _day += last_day_in_month(_year, _month);
-            _month -= 1;
-            if (_month >= 1) {
-                _day += last_day_in_month(_year, _month);  // now we know (when the year doesn't change
-                assert(_day == last_day_in_month(_year, _month));
-                return;  // 1-12
-            }
-            _month += 12;
-            _year -= 1;
-            if (_year < 1) throw new IllegalArgumentException("year is less than 1");
-            _day += last_day_in_month(_year, _month);  // and now we know, even if the year did change
-            assert(_day == last_day_in_month(_year, _month));
-        }
-        else {
-            _minute += min_offset;  // lower the minute value by adding a negative offset
-            _hour += hour_offset;
-            if (_minute > 59) {
-                _minute -= 60;
-                _hour += 1;
-            }
-            if (_hour < 24) return;  // hour is 0-23
-            _hour -= 24;
-            _day += 1;
-            if (_day <= last_day_in_month(_year, _month)) return;  // day is 1-31
-            // we can't do this until we figure out the final month and year: _day -= last_day_in_month(_year, _month);
-            _day = 1; // this is always the case
-            _month += 1;
-            if (_month <= 12) {
-                return;  // 1-12
-            }
-            _month -= 12;
-            _year += 1;
-            if (_year > 9999) throw new IllegalArgumentException("year exceeds 9999");
-        }
+        // First, clear the offsets that are already set. Otherwise, the 'add' calls will add them in, which will
+        // result in a double add.
+        _calendar.clear(Calendar.ZONE_OFFSET);
+        _calendar.clear(Calendar.DST_OFFSET);
+        _calendar.add(Calendar.MINUTE, min_offset);
+        _calendar.add(Calendar.HOUR_OF_DAY, hour_offset);
     }
 
     /**
-     * This method uses deprecated methods from {@link java.util.Date}
-     * instead of {@link Calendar} so that this code can be used (more easily)
-     * on the mobile Java platform (which has Date but does not have Calendar).
+     * Create a Calendar from a number of milliseconds and the given local offset.
+     * @param millis a number of epoch milliseconds.
+     * @param localOffset a local offset in minutes.
+     * @return a new Calendar.
      */
-    @SuppressWarnings("deprecation")
-    private void set_fields_from_millis(long millis)
-    {
-        if(millis < MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS) {
-            throw new IllegalArgumentException("year is less than 1");
+    private static Calendar calendarFromMillis(long millis, Integer localOffset) {
+        Calendar calendar = new GregorianCalendar(PrivateUtils.UTC);
+        calendar.clear();
+        calendar.setTimeInMillis(millis);
+        if (localOffset != null) {
+            calendar.set(Calendar.ZONE_OFFSET, localOffset * 60 * 1000);
         }
-
-        Date date = new Date(millis);
-
-        // https://github.com/amzn/ion-java/issues/160
-        // The java.util.Date(long) constructor expects an epoch time in milliseconds, and getYear(), getMonth(),
-        // getHour() on the resulting Date are supposed to return values adjusted to the default timezone.
-        // In Pacific Standard Time (offset -08:00), for a Date constructed with an epoch time equivalent to
-        // 0001-01-01T00:00:00.000Z, the Date.get*() methods should return values for
-        // 0000-12-31T16:00:00.000Z;  however, Date.getYear() incorrectly returns a value for year 1 (-1899)
-        // in this scenario. The following if/else block compensates for this bug:
-        int currentRawOffset = TimeZone.getDefault().getRawOffset();
-        if(currentRawOffset < 0 && MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS - currentRawOffset > millis) {
-            this._year = 0;
-        } else {
-            this._year = checkAndCastYear(date.getYear() + 1900);
-        }
-
-        // Note: date.get*() return values are in the local timezone!
-        this._month   = checkAndCastMonth(date.getMonth() + 1);  // calendar months are 0 based, timestamp months are 1 based
-        this._day     = checkAndCastDay(date.getDate(), _year, _month);
-        this._hour    = checkAndCastHour(date.getHours());
-        this._minute  = checkAndCastMinute(date.getMinutes());
-        this._second  = checkAndCastSecond(date.getSeconds());
-
-        // this is done because the y-m-d values are in the local timezone
-        // so this adjusts the value back to zulu time (UTC)
-        // Note that the sign on this is opposite of Ion (and Calendar) offset.
-        // Example: PST = 480 here but Ion/Calendar use -480 = -08:00 = UTC-8
-        int offset = date.getTimezoneOffset();
-        this.apply_offset(-offset);
+        return calendar;
     }
 
     /**
      * Copies data from a {@link Calendar} into this timestamp.
      * Must only be called during construction due to timestamp immutabliity.
      *
-     * @param cal must have at least one field set.
+     * @param setLocalOffset if true and the given calendar has its ZONE_OFFSET set, sets the timestamp's _offset field.
+     * @param applyLocalOffset if true and _offset has been set to a known offset, applies the local offset to the
+     *                         timestamp's fields to convert them from local time to UTC. This should be false whenever
+     *                         the given calendar is already in UTC (such as when it was constructed from millis).
      *
      * @throws IllegalArgumentException if the calendar has no fields set.
      */
-    private void set_fields_from_calendar(Calendar cal,
-                                          Precision precision,
-                                          boolean setLocalOffset)
+    private void setFieldsFromCalendar(Precision precision,
+                                       boolean setLocalOffset,
+                                       boolean applyLocalOffset)
     {
         _precision = precision;
         _offset = UNKNOWN_OFFSET;
-        boolean dayPrecision = false;
-        boolean calendarHasMilliseconds = cal.isSet(Calendar.MILLISECOND);
+        boolean calendarHasMilliseconds = _calendar.isSet(Calendar.MILLISECOND);
 
         switch (this._precision) {
             case SECOND:
-                this._second = checkAndCastSecond(cal.get(Calendar.SECOND));
                 if (calendarHasMilliseconds) {
-                    BigDecimal millis = BigDecimal.valueOf(cal.get(Calendar.MILLISECOND));
+                    BigDecimal millis = BigDecimal.valueOf(_calendar.get(Calendar.MILLISECOND));
                     this._fraction = millis.movePointLeft(3); // convert to fraction
+                    checkFraction(precision, this._fraction);
                 }
             case MINUTE:
             {
-                this._hour   = checkAndCastHour(cal.get(Calendar.HOUR_OF_DAY));
-                this._minute = checkAndCastMinute(cal.get(Calendar.MINUTE));
-
-                // If this test is made before calling get(), it will return
-                // false even when Calendar.setTimeZone() was called.
-                if (setLocalOffset && cal.isSet(Calendar.ZONE_OFFSET))
+                int offset = _calendar.get(Calendar.ZONE_OFFSET);
+                if (setLocalOffset)
                 {
-                    int offset = cal.get(Calendar.ZONE_OFFSET);
-                    if (cal.isSet(Calendar.DST_OFFSET)) {
-                        offset += cal.get(Calendar.DST_OFFSET);
+                    if (_calendar.isSet(Calendar.DST_OFFSET)) {
+                        offset += _calendar.get(Calendar.DST_OFFSET);
                     }
-
                     // convert ms to minutes
                     _offset = offset / (1000*60);
                 }
             }
             case DAY:
-                dayPrecision = true;
             case MONTH:
-                // Calendar months are 0 based, Timestamp months are 1 based
-                this._month  = checkAndCastMonth((cal.get(Calendar.MONTH) + 1));
             case YEAR:
-                int year;
-                if(cal.get(Calendar.ERA) == GregorianCalendar.AD) {
-                    year = cal.get(Calendar.YEAR);
-                }
-                else {
-                    year = -cal.get(Calendar.YEAR);
-                }
-
-                this._year = checkAndCastYear(year);
         }
 
-        if (dayPrecision)
-        {
-            this._day = checkAndCastDay(cal.get(Calendar.DAY_OF_MONTH), _year, _month);
-        }
-
-        if (_offset != UNKNOWN_OFFSET) {
+        if (_offset != UNKNOWN_OFFSET && applyLocalOffset) {
             // Transform our members from local time to Zulu
             this.apply_offset(_offset);
         }
+        // fractional seconds are ONLY tracked by the _fraction field.
+        _calendar.clear(Calendar.MILLISECOND);
+        checkCalendarYear(_calendar);
     }
 
     /**
@@ -482,6 +376,8 @@ public final class Timestamp
                       int zhour, int zminute, int zsecond, BigDecimal frac,
                       Integer offset, boolean shouldApplyOffset)
     {
+        _calendar = new GregorianCalendar(PrivateUtils.UTC);
+        _calendar.clear();
         boolean dayPrecision = false;
 
         switch (p) {
@@ -496,22 +392,23 @@ public final class Timestamp
             {
                 _fraction = frac.abs();
             }
-            _second = checkAndCastSecond(zsecond);
+            _calendar.set(Calendar.SECOND, checkAndCastSecond(zsecond));
         case MINUTE:
-            _minute = checkAndCastMinute(zminute);
-            _hour   = checkAndCastHour(zhour);
+            _calendar.set(Calendar.MINUTE, checkAndCastMinute(zminute));
+            _calendar.set(Calendar.HOUR_OF_DAY, checkAndCastHour(zhour));
             _offset = offset;      // offset must be null for years/months/days
         case DAY:
              dayPrecision = true;
         case MONTH:
-            _month  = checkAndCastMonth(zmonth);
+            _calendar.set(Calendar.MONTH, checkAndCastMonth(zmonth) - 1);
         case YEAR:
-            _year   = checkAndCastYear(zyear);
+            _calendar.set(Calendar.YEAR, checkAndCastYear(zyear));
         }
 
         if (dayPrecision)
         {
-            _day    = checkAndCastDay(zday, zyear, zmonth);
+            checkCalendarDay(zday);
+            _calendar.set(Calendar.DAY_OF_MONTH, zday);
         }
 
         _precision = checkFraction(p, _fraction);
@@ -528,8 +425,10 @@ public final class Timestamp
      * applied</em> to the time components.
      * As such, if the given {@code offset} is non-null or zero, the resulting
      * Timestamp will have time values that <em>DO NOT</em> match the time
-     * parameters. This method also has a behavior of precision "narrowing",
-     * detailed in the sub-section below.
+     * parameters. A default {@link GregorianCalendar} will be used to
+     * perform any arithmetic operations on the resulting Timestamp. This
+     * method also has a behavior of precision "narrowing", detailed in the
+     * sub-section below.
      *
      * <p>
      * For example, the following method calls will return Timestamps with
@@ -625,51 +524,62 @@ public final class Timestamp
         else {
             throw new IllegalArgumentException("Calendar has no fields set");
         }
-
-        set_fields_from_calendar(cal, precision, true);
+        _calendar = (Calendar) cal.clone();
+        setFieldsFromCalendar(precision, true, APPLY_OFFSET_YES);
     }
 
 
     private Timestamp(Calendar cal, Precision precision, BigDecimal fraction,
                       Integer offset)
     {
-        set_fields_from_calendar(cal, precision, false);
+        this._calendar = cal;
+        setFieldsFromCalendar(precision, false, APPLY_OFFSET_NO);
         _fraction = fraction;
         if (offset != null)
         {
             _offset = offset;
-            apply_offset(offset);
         }
     }
 
+    private static void throwTimestampOutOfRangeError(Number millis) {
+        throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
+                + MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL
+                + " (0001T)"
+                + ", inclusive, to "
+                + UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL
+                + " (10000T)"
+                + " , exclusive");
+    }
 
     private Timestamp(BigDecimal millis, Precision precision, Integer localOffset)
     {
-        long ms = millis.longValue();
-        set_fields_from_millis(ms);
+        if (millis == null) throw new NullPointerException("millis is null");
 
-        switch (precision)
-        {
-            case YEAR:
-                _month  = 1;
-            case MONTH:
-                _day    = 1;
-            case DAY:
-                _hour   = 0;
-                _minute = 0;
-            case MINUTE:
-                _second = 0;
-                _fraction = null;
-                break;
-            case SECOND:
-                BigDecimal secs = millis.movePointLeft(3);
-                BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
-                _fraction = secs.subtract(secsDown);
+        // check bounds to avoid hanging when calling longValue() on decimals with large positive exponents,
+        // e.g. 1e10000000
+        if(millis.compareTo(MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL) < 0 ||
+                UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL.compareTo(millis) <= 0) {
+            throwTimestampOutOfRangeError(millis);
         }
 
-        _precision = checkFraction(precision, _fraction);
+        // quick handle integral zero
+        long ms = isIntegralZero(millis) ? 0 : millis.longValue();
 
-        _offset = localOffset;
+        _calendar = calendarFromMillis(ms, localOffset);
+        setFieldsFromCalendar(precision, localOffset != null, APPLY_OFFSET_NO);
+
+        // The given BigDecimal may contain greater than milliseconds precision, which is the maximum precision that
+        // a Calendar can handle. Set the _fraction here so that extra precision (if any) is not lost.
+        // However, don't set the fraction if the given BigDecimal does not have precision at least to the tenth of
+        // a second.
+        if (precision == Precision.SECOND && millis.scale() > -3) {
+            BigDecimal secs = millis.movePointLeft(3);
+            BigDecimal secsDown = fastRoundZeroFloor(secs);
+            _fraction = secs.subtract(secsDown);
+        } else {
+            _fraction = null;
+        }
+        checkFraction(precision, _fraction);
     }
 
 
@@ -708,37 +618,7 @@ public final class Timestamp
     @Deprecated
     private Timestamp(BigDecimal millis, Integer localOffset)
     {
-        if (millis == null) throw new NullPointerException("millis is null");
-
-        // check bounds to avoid hanging when calling longValue() on decimals with large positive exponents,
-        // e.g. 1e10000000
-        if(millis.compareTo(MINIMUM_ALLOWED_FRACTIONAL_MILLIS) < 0 ||
-            FRACTIONAL_MILLIS_UPPER_BOUND.compareTo(millis) < 0) {
-            throw new IllegalArgumentException("millis: " + millis + " is outside of valid the range: from "
-                + MINIMUM_ALLOWED_FRACTIONAL_MILLIS
-                + " (0001T)"
-                + ", inclusive, to "
-                + FRACTIONAL_MILLIS_UPPER_BOUND
-                + " (10000T)"
-                + " , exclusive");
-        }
-
-        // quick handle integral zero
-        long ms = isIntegralZero(millis) ? 0 : millis.longValue();
-
-        set_fields_from_millis(ms);
-
-        this._precision = Precision.SECOND;
-        int scale = millis.scale();
-        if (scale <= -3) {
-            this._fraction = null;
-        }
-        else {
-            BigDecimal secs = millis.movePointLeft(3);
-            BigDecimal secsDown = fastRoundZeroFloor(secs);
-            this._fraction = secs.subtract(secsDown);
-        }
-        this._offset = localOffset;
+        this(millis, Precision.SECOND, localOffset);
     }
 
     private BigDecimal fastRoundZeroFloor(final BigDecimal decimal) {
@@ -769,15 +649,11 @@ public final class Timestamp
     @Deprecated
     private Timestamp(long millis, Integer localOffset)
     {
-        this.set_fields_from_millis(millis);
-
-        // fractional seconds portion
-        BigDecimal secs = BigDecimal.valueOf(millis).movePointLeft(3);
-        BigDecimal secsDown = secs.setScale(0, RoundingMode.FLOOR);
-        this._fraction = secs.subtract(secsDown);
-        this._precision = checkFraction(Precision.SECOND, _fraction);
-
-        this._offset = localOffset;
+        if(millis < MINIMUM_TIMESTAMP_IN_MILLIS || millis >= UPPER_BOUND_TIMESTAMP_IN_MILLIS) {
+            throwTimestampOutOfRangeError(millis);
+        }
+        this._calendar = calendarFromMillis(millis, localOffset);
+        setFieldsFromCalendar(Precision.SECOND, localOffset != null, APPLY_OFFSET_NO);
     }
 
 
@@ -806,6 +682,8 @@ public final class Timestamp
     /**
      * Returns a new Timestamp that represents the point in time, precision
      * and local offset defined in Ion format by the {@link CharSequence}.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      *
      * @param ionFormattedTimestamp
      *          a sequence of characters that is the Ion representation of a
@@ -1069,27 +947,15 @@ public final class Timestamp
 
     /**
      * Creates a copy of this Timestamp. The resulting Timestamp will
-     * represent the same point in time and has the same precision and local
-     * offset.
+     * represent the same point in time, have the same precision and local
+     * offset, and use the same calendar system for date arithmetic.
      * <p>
      * {@inheritDoc}
      */
     @Override
     public Timestamp clone()
     {
-        // The Copy-Constructor we're using here already expects the time field
-        // values to be in UTC, and that is already what we have for this
-        // Timestamp -- no adjustment necessary to make it local time.
-        return new Timestamp(_precision,
-                             _year,
-                             _month,
-                             _day,
-                             _hour,
-                             _minute,
-                             _second,
-                             _fraction,
-                             _offset,
-                             APPLY_OFFSET_NO);
+        return new Timestamp((Calendar) _calendar.clone(), _precision, _fraction, _offset);
     }
 
     /**
@@ -1105,22 +971,7 @@ public final class Timestamp
             ? _offset.intValue()
             : 0;
 
-        // We use a Copy-Constructor that expects the time parameters to be in
-        // UTC, as that's what we're supposed to have.
-        // As this Copy-Constructor doesn't apply local offset to the time
-        // field values (it assumes that the local offset is already applied to
-        // them), we explicitly apply the local offset to the time field values
-        // after we obtain the new Timestamp instance.
-        Timestamp localtime = new Timestamp(_precision,
-                                            _year,
-                                            _month,
-                                            _day,
-                                            _hour,
-                                            _minute,
-                                            _second,
-                                            _fraction,
-                                            _offset,
-                                            APPLY_OFFSET_NO);
+        Timestamp localtime = clone();
         // explicitly apply the local offset to the time field values
         localtime.apply_offset(-offset);
 
@@ -1131,6 +982,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the year, with unknown local offset.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYYT}.
      */
@@ -1141,6 +994,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the month, with unknown local offset.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MMT}.
      */
@@ -1151,6 +1006,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the day, with unknown local offset.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      * <p>
      * This is equivalent to the corresponding Ion value {@code YYYY-MM-DD}.
      *
@@ -1163,7 +1020,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the minute, with a given local
-     * offset.
+     * offset. A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      * <p>
      * This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm+-oo:oo}, where {@code oo:oo} represents the
@@ -1184,6 +1042,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the second, with a given local offset.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      * <p>
      * This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm:ss+-oo:oo}, where {@code oo:oo} represents the
@@ -1204,6 +1064,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the second, with a given local offset.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
      * <p>
      * This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm:ss.sss+-oo:oo}, where {@code oo:oo} represents
@@ -1232,6 +1094,14 @@ public final class Timestamp
     /**
      * Returns a Timestamp that represents the point in time that is
      * {@code millis} milliseconds from the epoch, with a given local offset.
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
+     * <p>
+     * <strong>NOTE:</strong> this means that providing a number of milliseconds
+     * that was produced using a different calendar system may result in a Timestamp
+     * that represents a different point in time than the one that originally
+     * produced the milliseconds. In this case, {@link #forCalendar(Calendar)} should
+     * be used instead.
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
@@ -1252,7 +1122,14 @@ public final class Timestamp
      * Returns a Timestamp that represents the point in time that is
      * {@code millis} milliseconds (including any fractional
      * milliseconds) from the epoch, with a given local offset.
-     *
+     * A default {@link GregorianCalendar} will be used to perform any
+     * arithmetic operations on the resulting Timestamp.
+     * <p>
+     * <strong>NOTE:</strong> this means that providing a number of milliseconds
+     * that was produced using a different calendar system may result in a Timestamp
+     * that represents a different point in time than the one that originally
+     * produced the milliseconds. In this case, {@link #forCalendar(Calendar)} should
+     * be used instead.
      * <p>
      * The resulting Timestamp will be precise to the second if {@code millis}
      * doesn't contain information that is more granular than seconds.
@@ -1290,7 +1167,8 @@ public final class Timestamp
     /**
      * Converts a {@link Calendar} to a Timestamp, preserving the calendar's
      * time zone as the equivalent local offset when it has at least minutes
-     * precision.
+     * precision. The given Calendar will be used to perform any arithmetic
+     * operations on the resulting Timestamp.
      *
      * @return a Timestamp instance, with precision determined by the smallest
      *   field set in the {@code Calendar};
@@ -1306,7 +1184,8 @@ public final class Timestamp
 
     /**
      * Converts a {@link Date} to a Timestamp in UTC representing the same
-     * point in time.
+     * point in time. A default {@link GregorianCalendar} will be used to perform
+     * any arithmetic operations on the resulting Timestamp.
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
@@ -1325,7 +1204,8 @@ public final class Timestamp
 
     /**
      * Converts a {@link java.sql.Timestamp} to a Timestamp in UTC representing
-     * the same point in time.
+     * the same point in time. A default {@link GregorianCalendar} will be used to perform
+     * any arithmetic operations on the resulting Timestamp.
      * <p>
      * The resulting Timestamp will be precise to the nanosecond.
      *
@@ -1352,7 +1232,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp representing the current time (based on the JVM
-     * clock), with an unknown local offset.
+     * clock), with an unknown local offset. A default {@link GregorianCalendar}
+     * will be used to perform any arithmetic operations on the resulting Timestamp.
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
@@ -1367,7 +1248,8 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp in UTC representing the current time (based on the
-     * the JVM clock).
+     * the JVM clock). A default {@link GregorianCalendar} will be used to perform
+     * any arithmetic operations on the resulting Timestamp.
      * <p>
      * The resulting Timestamp will be precise to the millisecond.
      *
@@ -1401,10 +1283,11 @@ public final class Timestamp
         return new Date(millis);
     }
 
-
     /**
      * Converts the value of this Timestamp as a {@link Calendar}, in its
-     * local time.
+     * local time. The resulting Calendar will have its fields set up to
+     * this Timestamp's precision. The maximum fractional precision supported
+     * by Calendar is milliseconds; any additional precision will be truncated.
      * <p>
      * Because {@link Calendar} instances are mutable, this method returns a
      * new instance from each call.
@@ -1414,22 +1297,26 @@ public final class Timestamp
      */
     public Calendar calendarValue()
     {
-        Calendar cal = new GregorianCalendar(PrivateUtils.UTC);
-
-        long millis = getMillis();
-        Integer offset = _offset;
-        if (offset != null && offset != 0)
+        Calendar cal = (Calendar) _calendar.clone();
+        if (_precision.includes(Precision.SECOND)) {
+            if (this._fraction != null)
+            {
+                int fractionalMillis = this._fraction.movePointRight(3).intValue();
+                cal.set(Calendar.MILLISECOND, fractionalMillis);
+            }
+        }
+        if (_precision.includes(Precision.MINUTE) && _offset != null && _offset != 0)
         {
-            int offsetMillis = offset * 60 * 1000;
-            millis += offsetMillis;
-            cal.setTimeInMillis(millis);                // Resets the offset!
+            int offsetMillis = _offset * 60 * 1000;
+            cal.add(Calendar.MILLISECOND, offsetMillis);
             cal.set(Calendar.ZONE_OFFSET, offsetMillis);
         }
-        else
-        {
-            cal.setTimeInMillis(millis);
+        if (!_precision.includes(Precision.SECOND)) {
+            cal.clear(Calendar.SECOND);
         }
-
+        if (_fraction == null) {
+            cal.clear(Calendar.MILLISECOND);
+        }
         return cal;
     }
 
@@ -1437,7 +1324,7 @@ public final class Timestamp
     /**
      * Returns a number representing the Timestamp's point in time that is
      * the number of milliseconds (<em>ignoring</em> any fractional milliseconds)
-     * from the epoch.
+     * from the epoch, using this Timestamp's configured Calendar.
      * <p>
      * This method will return the same result for all Timestamps representing
      * the same point in time, regardless of the local offset.
@@ -1446,11 +1333,9 @@ public final class Timestamp
      *          number of milliseconds (<em>ignoring</em> any fractional
      *          milliseconds) from the epoch (1970-01-01T00:00:00.000Z)
      */
-    @SuppressWarnings("deprecation")
     public long getMillis()
     {
-        //                                        month is 0 based for Date
-        long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+        long millis = _calendar.getTimeInMillis();
         if (this._fraction != null) {
             BigDecimal fracAsDecimal = this._fraction.movePointRight(3);
             int frac = isIntegralZero(fracAsDecimal) ? 0 : fracAsDecimal.intValue();
@@ -1463,7 +1348,7 @@ public final class Timestamp
     /**
      * Returns a BigDecimal representing the Timestamp's point in time that is
      * the number of milliseconds (<em>including</em> any fractional milliseconds)
-     * from the epoch.
+     * from the epoch, using this Timestamp's configured Calendar.
      * <p>
      * This method will return the same result for all Timestamps representing
      * the same point in time, regardless of the local offset.
@@ -1472,20 +1357,16 @@ public final class Timestamp
      *          number of milliseconds (<em>including</em> any fractional
      *          milliseconds) from the epoch (1970-01-01T00:00:00.000Z)
      */
-    @SuppressWarnings("deprecation")
     public BigDecimal getDecimalMillis()
     {
-        long       millis;
-        BigDecimal dec;
-
         switch (this._precision) {
         case YEAR:
         case MONTH:
         case DAY:
         case MINUTE:
         case SECOND:
-            millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
-            dec = BigDecimal.valueOf(millis);
+            long millis = _calendar.getTimeInMillis();
+            BigDecimal dec = BigDecimal.valueOf(millis);
             if (_fraction != null) {
                 dec = dec.add(this._fraction.movePointRight(3));
             }
@@ -1540,7 +1421,7 @@ public final class Timestamp
                 adjusted = make_localtime();
             }
         }
-        return adjusted._year;
+        return adjusted.getZYear();
     }
 
 
@@ -1562,7 +1443,7 @@ public final class Timestamp
                 adjusted = make_localtime();
             }
         }
-        return adjusted._month;
+        return adjusted.getZMonth();
     }
 
 
@@ -1582,7 +1463,7 @@ public final class Timestamp
                 adjusted = make_localtime();
             }
         }
-        return adjusted._day;
+        return adjusted.getZDay();
     }
 
 
@@ -1602,7 +1483,7 @@ public final class Timestamp
                 adjusted = make_localtime();
             }
         }
-        return adjusted._hour;
+        return adjusted.getZHour();
     }
 
 
@@ -1622,7 +1503,7 @@ public final class Timestamp
                 adjusted = make_localtime();
             }
         }
-        return adjusted._minute;
+        return adjusted.getZMinute();
     }
 
 
@@ -1640,7 +1521,7 @@ public final class Timestamp
      */
     public int getSecond()
     {
-        return this._second;
+        return this.getZSecond();
     }
 
 
@@ -1659,7 +1540,7 @@ public final class Timestamp
      */
     public BigDecimal getDecimalSecond()
     {
-        BigDecimal sec = BigDecimal.valueOf(_second);
+        BigDecimal sec = BigDecimal.valueOf(getSecond());
         if (_fraction != null)
         {
             sec = sec.add(_fraction);
@@ -1676,7 +1557,7 @@ public final class Timestamp
      */
     public int getZYear()
     {
-        return this._year;
+        return this._calendar.get(Calendar.YEAR);
     }
 
 
@@ -1691,7 +1572,7 @@ public final class Timestamp
      */
     public int getZMonth()
     {
-        return this._month;
+        return this._calendar.get(Calendar.MONTH) + 1;
     }
 
 
@@ -1705,7 +1586,7 @@ public final class Timestamp
      */
     public int getZDay()
     {
-        return this._day;
+        return this._calendar.get(Calendar.DAY_OF_MONTH);
     }
 
 
@@ -1719,7 +1600,7 @@ public final class Timestamp
      */
     public int getZHour()
     {
-        return this._hour;
+        return this._calendar.get(Calendar.HOUR_OF_DAY);
     }
 
 
@@ -1733,7 +1614,7 @@ public final class Timestamp
      */
     public int getZMinute()
     {
-        return this._minute;
+        return this._calendar.get(Calendar.MINUTE);
     }
 
 
@@ -1751,7 +1632,7 @@ public final class Timestamp
      */
     public int getZSecond()
     {
-        return this._second;
+        return this._calendar.get(Calendar.SECOND);
     }
 
 
@@ -1811,17 +1692,7 @@ public final class Timestamp
         {
             return this;
         }
-
-        Timestamp ts = createFromUtcFields(precision,
-                                           getZYear(),
-                                           getZMonth(),
-                                           getZDay(),
-                                           getZHour(),
-                                           getZMinute(),
-                                           getZSecond(),
-                                           getZFractionalSecond(),
-                                           offset);
-        return ts;
+        return new Timestamp((Calendar) _calendar.clone(), precision, _fraction, offset);
     }
 
 
@@ -1958,7 +1829,7 @@ public final class Timestamp
 
         // so we have a real value - we'll start with the date portion
         // which we always have
-        print_digits(out, adjusted._year, 4);
+        print_digits(out, adjusted.getZYear(), 4);
         if (adjusted._precision == Precision.YEAR) {
             assert adjusted._offset == UNKNOWN_OFFSET;
             out.append("T");
@@ -1966,7 +1837,7 @@ public final class Timestamp
         }
 
         out.append("-");
-        print_digits(out, adjusted._month, 2);  // convert calendar months to a base 1 value
+        print_digits(out, adjusted.getZMonth(), 2);  // convert calendar months to a base 1 value
         if (adjusted._precision == Precision.MONTH) {
             assert adjusted._offset == UNKNOWN_OFFSET;
             out.append("T");
@@ -1974,7 +1845,7 @@ public final class Timestamp
         }
 
         out.append("-");
-        print_digits(out, adjusted._day, 2);
+        print_digits(out, adjusted.getZDay(), 2);
         if (adjusted._precision == Precision.DAY) {
             assert adjusted._offset == UNKNOWN_OFFSET;
             // out.append("T");
@@ -1982,13 +1853,13 @@ public final class Timestamp
         }
 
         out.append("T");
-        print_digits(out, adjusted._hour, 2);
+        print_digits(out, adjusted.getZHour(), 2);
         out.append(":");
-        print_digits(out, adjusted._minute, 2);
+        print_digits(out, adjusted.getZMinute(), 2);
         // ok, so how much time do we have ?
         if (adjusted._precision == Precision.SECOND) {
             out.append(":");
-            print_digits(out, adjusted._second, 2);
+            print_digits(out, adjusted.getZSecond(), 2);
             if (adjusted._fraction != null) {
                 print_fractional_digits(out, adjusted._fraction);
             }
@@ -2051,119 +1922,155 @@ public final class Timestamp
     //=========================================================================
     // Timestamp arithmetic
 
-
     /**
      * Returns a timestamp relative to this one by the given number of
-     * milliseconds.
+     * milliseconds. Uses this Timestamp's configured Calendar to perform the
+     * arithmetic.
      *
      * @param amount a number of milliseconds.
      */
-    public final Timestamp addMillis(long amount)
-    {
-        if (amount == 0) return this;
-
-        // This strips off the local offset, expressing our fields as if they
-        // were UTC.
-        BigDecimal millis = make_localtime().getDecimalMillis();
-        millis = millis.add(BigDecimal.valueOf(amount));
-
-        Timestamp ts = new Timestamp(millis, _precision, _offset);
-
-        // Anything with courser-than-millis precision will have been extended
-        // to 3 decimal places due to use of getDecimalMillis().  Fix that.
-        ts._fraction = _fraction;
-        if (_offset != null && _offset != 0)
-        {
-            ts.apply_offset(_offset);
+    public final Timestamp addMillis(long amount) {
+        if (amount == 0 && _precision == Precision.SECOND && _fraction != null && _fraction.scale() >= 3) {
+            // Zero milliseconds are to be added, and the precision does not need to be increased.
+            return this;
         }
+        long seconds = amount / 1000;
+        BigDecimal millis = BigDecimal.valueOf(amount % 1000).movePointLeft(3);
+        if (_fraction != null) {
+            millis = _fraction.add(millis);
+        }
+        BigDecimal newFraction;
+        if (BigDecimal.ONE.compareTo(millis) <= 0) {
+            newFraction = millis.subtract(BigDecimal.ONE);
+            seconds += 1;
+        } else if (BigDecimal.ZERO.compareTo(millis) > 0) {
+            newFraction = BigDecimal.ONE.add(millis);
+            seconds -= 1;
+        } else {
+            newFraction = millis;
+        }
+        Timestamp ts = addSecond(seconds);
+        ts._fraction = newFraction;
         return ts;
     }
 
+    /**
+     * Adds the given amount to the given {@link Calendar} field and returns a new Timestamp.
+     * @param field the field.
+     * @param amount an amount.
+     * @param precision the precision corresponding to the given field.
+     * @return a new Timestamp instance.
+     */
+    private Timestamp calendarAdd(int field, int amount, Precision precision) {
+        if (amount == 0 && _precision == precision) return this;
+        Timestamp timestamp = make_localtime();
+        timestamp._calendar.add(field, amount);
+        checkCalendarYear(timestamp._calendar);
+        if (_offset != null) {
+            timestamp.apply_offset(_offset);
+            timestamp._offset = _offset;
+        }
+        timestamp._precision = _precision.includes(precision) ? timestamp._precision : precision;
+        return timestamp;
+    }
 
     /**
      * Returns a timestamp relative to this one by the given number of seconds.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     *
+     * @param seconds a number of seconds.
+     */
+    private final Timestamp addSecond(long seconds) {
+        Timestamp ts = this;
+        do {
+            int incrementalSeconds;
+            if (seconds > Integer.MAX_VALUE) {
+                incrementalSeconds = Integer.MAX_VALUE;
+            } else if (seconds < Integer.MIN_VALUE) {
+                incrementalSeconds = Integer.MIN_VALUE;
+            } else {
+                incrementalSeconds = (int)seconds;
+            }
+            ts = ts.addSecond(incrementalSeconds);
+            seconds -= incrementalSeconds;
+        } while (seconds != 0);
+        return ts;
+    }
+
+    /**
+     * Returns a timestamp relative to this one by the given number of seconds.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
      *
      * @param amount a number of seconds.
      */
     public final Timestamp addSecond(int amount)
     {
-        long delta = (long) amount * 1000;
-        return addMillis(delta);
+        return calendarAdd(Calendar.SECOND, amount, Precision.SECOND);
     }
 
 
     /**
      * Returns a timestamp relative to this one by the given number of minutes.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
      *
      * @param amount a number of minutes.
      */
     public final Timestamp addMinute(int amount)
     {
-        long delta = (long) amount * 60 * 1000;
-        return addMillis(delta);
+        return calendarAdd(Calendar.MINUTE, amount, Precision.MINUTE);
     }
 
 
     /**
      * Returns a timestamp relative to this one by the given number of hours.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
      *
      * @param amount a number of hours.
      */
     public final Timestamp addHour(int amount)
     {
-        long delta = (long) amount * 60 * 60 * 1000;
-        return addMillis(delta);
+        return calendarAdd(Calendar.HOUR_OF_DAY, amount, Precision.MINUTE);
     }
 
 
     /**
      * Returns a timestamp relative to this one by the given number of days.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
      *
      * @param amount a number of days.
      */
     public final Timestamp addDay(int amount)
     {
-        long delta = (long) amount * 24 * 60 * 60 * 1000;
-        return addMillis(delta);
+        return calendarAdd(Calendar.DAY_OF_MONTH, amount, Precision.DAY);
     }
-
-
-    // Shifting month and year are more complicated since the length of a month
-    // varies and we want the day-of-month to stay the same when possible.
-    // We rely on Calendar for the logic.
 
     /**
      * Returns a timestamp relative to this one by the given number of months.
      * The day field may be adjusted to account for different month length and
-     * leap days.  For example, adding one month to {@code 2011-01-31}
-     * results in {@code 2011-02-28}.
+     * leap days, as required by the configured Calendar's rules. For example,
+     * using the default {@link GregorianCalendar}, adding one month to
+     * {@code 2011-01-31} results in {@code 2011-02-28}.
      *
      * @param amount a number of months.
      */
     public final Timestamp addMonth(int amount)
     {
-        if (amount == 0) return this;
-
-        Calendar cal = calendarValue();
-        cal.add(Calendar.MONTH, amount);
-        return new Timestamp(cal, _precision, _fraction, _offset);
+        return calendarAdd(Calendar.MONTH, amount, Precision.MONTH);
     }
 
 
     /**
      * Returns a timestamp relative to this one by the given number of years.
-     * The day field may be adjusted to account for leap days.  For example,
-     * adding one year to {@code 2012-02-29} results in {@code 2013-02-28}.
+     * The day field may be adjusted to account for leap days, as required by
+     * the configured Calendar's rules. For example, using the default
+     * {@link GregorianCalendar}, adding one year to {@code 2012-02-29} results
+     * in {@code 2013-02-28}.
      *
      * @param amount a number of years.
      */
     public final Timestamp addYear(int amount)
     {
-        if (amount == 0) return this;
-
-        Calendar cal = calendarValue();
-        cal.add(Calendar.YEAR, amount);
-        return new Timestamp(cal, _precision, _fraction, _offset);
+        return calendarAdd(Calendar.YEAR, amount, Precision.YEAR);
     }
 
 
@@ -2190,12 +2097,12 @@ public final class Timestamp
 
         result ^= (result << 19) ^ (result >> 13);
 
-        result = prime * result + this._year;
-        result = prime * result + this._month;
-        result = prime * result + this._day;
-        result = prime * result + this._hour;
-        result = prime * result + this._minute;
-        result = prime * result + this._second;
+        result = prime * result + this.getZYear();
+        result = prime * result + this.getZMonth();
+        result = prime * result + this.getZDay();
+        result = prime * result + this.getZHour();
+        result = prime * result + this.getZMinute();
+        result = prime * result + this.getZSecond();
 
         result ^= (result << 19) ^ (result >> 13);
 
@@ -2355,12 +2262,12 @@ public final class Timestamp
         }
 
         // so now we check the actual time value
-        if (this._year   != t._year)    return false;
-        if (this._month  != t._month)   return false;
-        if (this._day    != t._day)     return false;
-        if (this._hour   != t._hour)    return false;
-        if (this._minute != t._minute)  return false;
-        if (this._second != t._second)  return false;
+        if (this.getZYear()   != t.getZYear())    return false;
+        if (this.getZMonth()  != t.getZMonth())   return false;
+        if (this.getZDay()    != t.getZDay())     return false;
+        if (this.getZHour()   != t.getZHour())    return false;
+        if (this.getZMinute() != t.getZMinute())  return false;
+        if (this.getZSecond() != t.getZSecond())  return false;
 
         // and if we have a local offset, check the value here
         if (this._offset != null) {
@@ -2379,6 +2286,14 @@ public final class Timestamp
             return true;
         }
         return this._fraction.equals(t._fraction);
+    }
+
+    private static void checkCalendarYear(Calendar calendar) {
+        int year = calendar.get(Calendar.YEAR);
+        if (calendar.get(Calendar.ERA) == GregorianCalendar.BC) {
+            year *= -1;
+        }
+        checkAndCastYear(year);
     }
 
     private static short checkAndCastYear(int year)
@@ -2401,14 +2316,11 @@ public final class Timestamp
         return (byte) month;
     }
 
-    private static byte checkAndCastDay(int day, int year, int month)
-    {
-        int lastDayInMonth = last_day_in_month(year, month);
-        if (day < 1 || day > lastDayInMonth) {
-            throw new IllegalArgumentException(String.format("Day %s for year %s and month %s must be between 1 and %s inclusive", day, year, month, lastDayInMonth));
+    private void checkCalendarDay(int day) {
+        int lastDayInMonth = _calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
+        if (day > lastDayInMonth || day < _calendar.getActualMinimum(Calendar.DAY_OF_MONTH)) {
+            throw new IllegalArgumentException(String.format("Day %s for year %s and month %s must be between 1 and %s inclusive", day, getZYear(), getZMonth(), lastDayInMonth));
         }
-
-        return (byte) day;
     }
 
     private static byte checkAndCastHour(int hour)

@@ -16,8 +16,8 @@ package software.amazon.ion;
 
 import static software.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static software.amazon.ion.Decimal.negativeZero;
-import static software.amazon.ion.Timestamp.FRACTIONAL_MILLIS_UPPER_BOUND;
-import static software.amazon.ion.Timestamp.MINIMUM_ALLOWED_FRACTIONAL_MILLIS;
+import static software.amazon.ion.Timestamp.UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL;
+import static software.amazon.ion.Timestamp.MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL;
 import static software.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static software.amazon.ion.Timestamp.UTC_OFFSET;
 import static software.amazon.ion.Timestamp.createFromUtcFields;
@@ -28,16 +28,16 @@ import static software.amazon.ion.Timestamp.Precision.SECOND;
 import static software.amazon.ion.Timestamp.Precision.YEAR;
 import static software.amazon.ion.impl.PrivateUtils.UTC;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.Time;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.TimeZone;
-import org.junit.Ignore;
+
 import org.junit.Test;
 import software.amazon.ion.Timestamp.Precision;
 
@@ -789,17 +789,23 @@ public class TimestampTest
     }
 
     @Test
-    @Ignore // see https://github.com/amzn/ion-java/issues/160
     public void testNewTimestampFromMinimumAllowedMillis()
     {
-        Timestamp ts = Timestamp.forMillis(MINIMUM_ALLOWED_FRACTIONAL_MILLIS, PST_OFFSET);
+        Timestamp ts = Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL, PST_OFFSET);
         assertEquals("0001-01-01T00:00:00.000Z", ts.toZString());
+    }
+
+    @Test
+    public void testNewMinimumTimestampFromStringAndMillisIsSame() {
+        Timestamp t1 = Timestamp.valueOf("0001-01-01T00:00:00.000Z");
+        Timestamp t2 = Timestamp.forMillis(t1.getMillis(), 0);
+        assertEquals(t1, t2);
     }
 
     @Test
     public void testNewTimestampFromBigDecimalWithMaximumAllowedMillis()
     {
-        Timestamp ts = Timestamp.forMillis(FRACTIONAL_MILLIS_UPPER_BOUND.add(BigDecimal.ONE.negate()), PST_OFFSET);
+        Timestamp ts = Timestamp.forMillis(UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL.add(BigDecimal.ONE.negate()), PST_OFFSET);
         checkFields(9999, 12, 31, 15, 59, 59, new BigDecimal("0.999"), PST_OFFSET, SECOND, ts);
         assertEquals("9999-12-31T15:59:59.999-08:00", ts.toString());
         assertEquals("9999-12-31T23:59:59.999Z", ts.toZString());
@@ -815,14 +821,26 @@ public class TimestampTest
     public void testNewTimestampFromBigDecimalWithMillisTooSmall()
     {
         // MIN - 1
-        Timestamp.forMillis(MINIMUM_ALLOWED_FRACTIONAL_MILLIS.add(BigDecimal.ONE.negate()), PST_OFFSET);
+        Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL.add(BigDecimal.ONE.negate()), PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromLongWithMillisTooSmall()
+    {
+        Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL.longValue() - 1, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromBigDecimalWithMillisTooBig()
     {
         // Max
-        Timestamp.forMillis(FRACTIONAL_MILLIS_UPPER_BOUND, PST_OFFSET);
+        Timestamp.forMillis(UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL, PST_OFFSET);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNewTimestampFromLongWithMillisTooBig()
+    {
+        Timestamp.forMillis(UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL.longValue(), PST_OFFSET);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -900,58 +918,6 @@ public class TimestampTest
         checkFields(2010, 2, 1, 10, 11, 12, new BigDecimal("0.340"), null, SECOND, ts);
         assertEquals("2010-02-01T10:11:12.340-00:00", ts.toString());
         assertEquals("2010-02-01T10:11:12.340Z", ts.toZString());
-    }
-
-    /**
-     * Regression test for https://github.com/amzn/ion-java/issues/160
-     */
-    @Test
-    public void testNewTimestampFromYearOneRegressionBug()
-    {
-        // This is the same as the private field Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
-        final long MINIMUM_TIMESTAMP_MILLIS = -62135769600000L;
-        // This is the minimum timestamp instantiating by parsing a timestamp string,
-        // which is not effected by the `java.util.Date` bug.
-        final Timestamp MINIMUM_TIMESTAMP = Timestamp.valueOf("0001-01-01T00:00:00.000Z");
-        // Save the original timezone since we modify it below.
-        final TimeZone originalTimeZone = TimeZone.getDefault();
-
-        try {
-            // The `java.util.Date` bug has a different range of times depending on the local offset, so
-            // let's test against all time zones.
-            for (final String tzId : TimeZone.getAvailableIDs()) {
-                final TimeZone tz = TimeZone.getTimeZone(tzId);
-                TimeZone.setDefault(tz);
-
-                // The Timestamps under test must be instantiated *after* the the call to TimeZone.setDefault()
-                // since `java.util.Date` references the default TimeZone when calculating the values for its
-                // date field accessor methods (i.e. Date.get*()).
-                Timestamp minimumTimestampFromMillis = Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS, 0);
-                assertEquals(MINIMUM_TIMESTAMP, minimumTimestampFromMillis);
-
-                // Only perform further assertions on timezones with negative offsets because positive
-                // offsets create millisecond values that are less than Timestamp.MINIMUM_ALLOWED_TIMESTAMP_IN_MILLIS
-                if (tz.getRawOffset() < 0) {
-                    // This will be the latest millisecond in which the bug with `java.util.Date` can happen
-                    Timestamp maximumTimestampWithBug =
-                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset(), 0);
-                    assertEquals(1, maximumTimestampWithBug.getYear());
-
-                    // Test one millisecond after, just to be sure.
-                    Timestamp timestampPlusOne =
-                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() + 1, 0);
-                    assertEquals(1, timestampPlusOne.getYear());
-
-                    // Also test one milliscond before, just to be sure.
-                    Timestamp timestampMinusOne =
-                        Timestamp.forMillis(MINIMUM_TIMESTAMP_MILLIS - tz.getRawOffset() - 1L, 0);
-                    assertEquals(1, timestampMinusOne.getYear());
-                }
-            }
-        } finally {
-            // Have to set the TimeZone back to its original value so as not to effect other tests.
-            TimeZone.setDefault(originalTimeZone);
-        }
     }
 
     /**
@@ -1768,9 +1734,9 @@ public class TimestampTest
     @Test
     public void testAddMonth()
     {
-        // TODO Is it reasonable to add months to TSs that aren't that precise?
-        addMonth("2012T",    -1, "2011T");
-        addMonth("2012T",     1, "2012T");
+        // Adding more precise amounts extends the precision.
+        addMonth("2012T",    -1, "2011-12T");
+        addMonth("2012T",     1, "2012-02T");
 
         addMonth("2012-04T", -4, "2011-12T");
         addMonth("2012-04T", -1, "2012-03T");
@@ -1851,17 +1817,18 @@ public class TimestampTest
     @Test
     public void testAddDay()
     {
-        // TODO Is it reasonable to add days to TSs that aren't that precise?
-        addDay("2012T",     1, "2012T");
-        addDay("2012T",    -1, "2011T");
+        // Adding more precise amounts extends the precision.
+        addDay("2012T",     1, "2012-01-02");
+        addDay("2012T",     0, "2012-01-01");
+        addDay("2012T",    -1, "2011-12-31");
 
-        addDay("2012-04T",-32, "2012-02T");
-        addDay("2012-04T",-31, "2012-03T");
-        addDay("2012-04T", -1, "2012-03T");
-        addDay("2012-04T",  1, "2012-04T");
-        addDay("2012-04T",  9, "2012-04T");
-        addDay("2012-04T", 30, "2012-05T");
-        addDay("2012-04T", 31, "2012-05T");
+        addDay("2012-04T",-32, "2012-02-29");
+        addDay("2012-04T",-31, "2012-03-01");
+        addDay("2012-04T", -1, "2012-03-31");
+        addDay("2012-04T",  1, "2012-04-02");
+        addDay("2012-04T",  9, "2012-04-10");
+        addDay("2012-04T", 30, "2012-05-01");
+        addDay("2012-04T", 31, "2012-05-02");
 
         addDayWithMins("2011-01-31",-31, "2010-12-31");
         addDayWithMins("2011-01-31",-30, "2011-01-01");
@@ -1931,34 +1898,34 @@ public class TimestampTest
     @Test
     public void testAddHour()
     {
-        // TODO Is it reasonable to add hours to TSs that aren't that precise?
-        addHour("2012T",    -1, "2011T");
-        addHour("2012T",     0, "2012T");
-        addHour("2012T",     1, "2012T");
+        // Adding more precise amounts extends the precision.
+        addHour("2012T",    -1, "2011-12-31T23:00-00:00");
+        addHour("2012T",     0, "2012-01-01T00:00-00:00");
+        addHour("2012T",     1, "2012-01-01T01:00-00:00");
 
-        addHour("2012-04T", -31 * 24 - 1, "2012-02T");
-        addHour("2012-04T", -31 * 24    , "2012-03T");
-        addHour("2012-04T",           -1, "2012-03T");
-        addHour("2012-04T",            0, "2012-04T");
-        addHour("2012-04T",            1, "2012-04T");
-        addHour("2012-04T",  30 * 24 - 1, "2012-04T");
-        addHour("2012-04T",  30 * 24    , "2012-05T");
+        addHour("2012-04T", -31 * 24 - 1, "2012-02-29T23:00-00:00");
+        addHour("2012-04T", -31 * 24    , "2012-03-01T00:00-00:00");
+        addHour("2012-04T",           -1, "2012-03-31T23:00-00:00");
+        addHour("2012-04T",            0, "2012-04-01T00:00-00:00");
+        addHour("2012-04T",            1, "2012-04-01T01:00-00:00");
+        addHour("2012-04T",  30 * 24 - 1, "2012-04-30T23:00-00:00");
+        addHour("2012-04T",  30 * 24    , "2012-05-01T00:00-00:00");
 
-        addHour("2011-02-28",  -1, "2011-02-27");
-        addHour("2011-02-28",   0, "2011-02-28");
-        addHour("2011-02-28",   1, "2011-02-28");
-        addHour("2011-02-28",  24, "2011-03-01");
-        addHour("2011-03-01", -24, "2011-02-28");
-        addHour("2012-02-28",  24, "2012-02-29");
-        addHour("2012-02-29", -24, "2012-02-28");
-        addHour("2012-02-29",  24, "2012-03-01");
+        addHour("2011-02-28",  -1, "2011-02-27T23:00-00:00");
+        addHour("2011-02-28",   0, "2011-02-28T00:00-00:00");
+        addHour("2011-02-28",   1, "2011-02-28T01:00-00:00");
+        addHour("2011-02-28",  24, "2011-03-01T00:00-00:00");
+        addHour("2011-03-01", -24, "2011-02-28T00:00-00:00");
+        addHour("2012-02-28",  24, "2012-02-29T00:00-00:00");
+        addHour("2012-02-29", -24, "2012-02-28T00:00-00:00");
+        addHour("2012-02-29",  24, "2012-03-01T00:00-00:00");
 
-        addHour("2012-10-04",-48, "2012-10-02");
-        addHour("2012-10-04",-24, "2012-10-03");
-        addHour("2012-10-04", -1, "2012-10-03");
-        addHour("2012-10-04",  1, "2012-10-04");
-        addHour("2012-10-04", 24, "2012-10-05");
-        addHour("2012-10-04", 48, "2012-10-06");
+        addHour("2012-10-04",-48, "2012-10-02T00:00-00:00");
+        addHour("2012-10-04",-24, "2012-10-03T00:00-00:00");
+        addHour("2012-10-04", -1, "2012-10-03T23:00-00:00");
+        addHour("2012-10-04",  1, "2012-10-04T01:00-00:00");
+        addHour("2012-10-04", 24, "2012-10-05T00:00-00:00");
+        addHour("2012-10-04", 48, "2012-10-06T00:00-00:00");
 
         addHourWithMins("2011-01-31T12",  0, "2011-01-31T12");
         addHourWithMins("2011-01-31T12", 12, "2011-02-01T00");
@@ -2025,34 +1992,34 @@ public class TimestampTest
     @Test
     public void testAddMinute()
     {
-        // TODO Is it reasonable to add minutes to TSs that aren't that precise?
-        addMinute("2012T",    -1, "2011T");
-        addMinute("2012T",     0, "2012T");
-        addMinute("2012T",     1, "2012T");
+        // Adding more precise amounts extends the precision.
+        addMinute("2012T",    -1, "2011-12-31T23:59-00:00");
+        addMinute("2012T",     0, "2012-01-01T00:00-00:00");
+        addMinute("2012T",     1, "2012-01-01T00:01-00:00");
 
-        addMinute("2012-04T", -31 * 24 * 60 - 1, "2012-02T");
-        addMinute("2012-04T", -31 * 24 * 60    , "2012-03T");
-        addMinute("2012-04T",                -1, "2012-03T");
-        addMinute("2012-04T",                 0, "2012-04T");
-        addMinute("2012-04T",                 1, "2012-04T");
-        addMinute("2012-04T",  30 * 24 * 60 - 1, "2012-04T");
-        addMinute("2012-04T",  30 * 24 * 60    , "2012-05T");
+        addMinute("2012-04T", -31 * 24 * 60 - 1, "2012-02-29T23:59-00:00");
+        addMinute("2012-04T", -31 * 24 * 60    , "2012-03-01T00:00-00:00");
+        addMinute("2012-04T",                -1, "2012-03-31T23:59-00:00");
+        addMinute("2012-04T",                 0, "2012-04-01T00:00-00:00");
+        addMinute("2012-04T",                 1, "2012-04-01T00:01-00:00");
+        addMinute("2012-04T",  30 * 24 * 60 - 1, "2012-04-30T23:59-00:00");
+        addMinute("2012-04T",  30 * 24 * 60    , "2012-05-01T00:00-00:00");
 
-        addMinute("2011-02-28",       -1, "2011-02-27");
-        addMinute("2011-02-28",        0, "2011-02-28");
-        addMinute("2011-02-28",        1, "2011-02-28");
-        addMinute("2011-02-28",  24 * 60, "2011-03-01");
-        addMinute("2011-03-01", -24 * 60, "2011-02-28");
-        addMinute("2012-02-28",  24 * 60, "2012-02-29");
-        addMinute("2012-02-29", -24 * 60, "2012-02-28");
-        addMinute("2012-02-29",  24 * 60, "2012-03-01");
+        addMinute("2011-02-28",       -1, "2011-02-27T23:59-00:00");
+        addMinute("2011-02-28",        0, "2011-02-28T00:00-00:00");
+        addMinute("2011-02-28",        1, "2011-02-28T00:01-00:00");
+        addMinute("2011-02-28",  24 * 60, "2011-03-01T00:00-00:00");
+        addMinute("2011-03-01", -24 * 60, "2011-02-28T00:00-00:00");
+        addMinute("2012-02-28",  24 * 60, "2012-02-29T00:00-00:00");
+        addMinute("2012-02-29", -24 * 60, "2012-02-28T00:00-00:00");
+        addMinute("2012-02-29",  24 * 60, "2012-03-01T00:00-00:00");
 
-        addMinute("2012-10-04", -48 * 60, "2012-10-02");
-        addMinute("2012-10-04", -24 * 60, "2012-10-03");
-        addMinute("2012-10-04",       -1, "2012-10-03");
-        addMinute("2012-10-04",        1, "2012-10-04");
-        addMinute("2012-10-04",  24 * 60, "2012-10-05");
-        addMinute("2012-10-04",  48 * 60, "2012-10-06");
+        addMinute("2012-10-04", -48 * 60, "2012-10-02T00:00-00:00");
+        addMinute("2012-10-04", -24 * 60, "2012-10-03T00:00-00:00");
+        addMinute("2012-10-04",       -1, "2012-10-03T23:59-00:00");
+        addMinute("2012-10-04",        1, "2012-10-04T00:01-00:00");
+        addMinute("2012-10-04",  24 * 60, "2012-10-05T00:00-00:00");
+        addMinute("2012-10-04",  48 * 60, "2012-10-06T00:00-00:00");
 
         addMinuteWithsSecs("2011-01-31T12:03",  -60, "2011-01-31T11:03");
         addMinuteWithsSecs("2011-01-31T12:03",    0, "2011-01-31T12:03");
@@ -2120,35 +2087,35 @@ public class TimestampTest
     @Test
     public void testAddSecond()
     {
-        // TODO Is it reasonable to add seconds to TSs that aren't that precise?
-        addSecond("2012T",    -1, "2011T");
-        addSecond("2012T",     0, "2012T");
-        addSecond("2012T",     1, "2012T");
+        // Adding more precise amounts extends the precision.
+        addSecond("2012T",    -1, "2011-12-31T23:59:59-00:00");
+        addSecond("2012T",     0, "2012-01-01T00:00:00-00:00");
+        addSecond("2012T",     1, "2012-01-01T00:00:01-00:00");
 
-        addSecond("2012-04T", -31 * 24 * 60 * 60 - 1, "2012-02T");
-        addSecond("2012-04T", -31 * 24 * 60 * 60    , "2012-03T");
-        addSecond("2012-04T",                     -1, "2012-03T");
-        addSecond("2012-04T",                      0, "2012-04T");
-        addSecond("2012-04T",                      1, "2012-04T");
-        addSecond("2012-04T",  30 * 24 * 60 * 60 - 1, "2012-04T");
-        addSecond("2012-04T",  30 * 24 * 60 * 60    , "2012-05T");
+        addSecond("2012-04T", -31 * 24 * 60 * 60 - 1, "2012-02-29T23:59:59-00:00");
+        addSecond("2012-04T", -31 * 24 * 60 * 60    , "2012-03-01T00:00:00-00:00");
+        addSecond("2012-04T",                     -1, "2012-03-31T23:59:59-00:00");
+        addSecond("2012-04T",                      0, "2012-04-01T00:00:00-00:00");
+        addSecond("2012-04T",                      1, "2012-04-01T00:00:01-00:00");
+        addSecond("2012-04T",  30 * 24 * 60 * 60 - 1, "2012-04-30T23:59:59-00:00");
+        addSecond("2012-04T",  30 * 24 * 60 * 60    , "2012-05-01T00:00:00-00:00");
 
 
-        addSecond("2011-02-28",            -1, "2011-02-27");
-        addSecond("2011-02-28",             0, "2011-02-28");
-        addSecond("2011-02-28",             1, "2011-02-28");
-        addSecond("2011-02-28",  24 * 60 * 60, "2011-03-01");
-        addSecond("2011-03-01", -24 * 60 * 60, "2011-02-28");
-        addSecond("2012-02-28",  24 * 60 * 60, "2012-02-29");
-        addSecond("2012-02-29", -24 * 60 * 60, "2012-02-28");
-        addSecond("2012-02-29",  24 * 60 * 60, "2012-03-01");
+        addSecond("2011-02-28",            -1, "2011-02-27T23:59:59-00:00");
+        addSecond("2011-02-28",             0, "2011-02-28T00:00:00-00:00");
+        addSecond("2011-02-28",             1, "2011-02-28T00:00:01-00:00");
+        addSecond("2011-02-28",  24 * 60 * 60, "2011-03-01T00:00:00-00:00");
+        addSecond("2011-03-01", -24 * 60 * 60, "2011-02-28T00:00:00-00:00");
+        addSecond("2012-02-28",  24 * 60 * 60, "2012-02-29T00:00:00-00:00");
+        addSecond("2012-02-29", -24 * 60 * 60, "2012-02-28T00:00:00-00:00");
+        addSecond("2012-02-29",  24 * 60 * 60, "2012-03-01T00:00:00-00:00");
 
-        addSecond("2012-10-04", -24 * 60 * 60 - 1, "2012-10-02");
-        addSecond("2012-10-04", -24 * 60 * 60    , "2012-10-03");
-        addSecond("2012-10-04",                -1, "2012-10-03");
-        addSecond("2012-10-04",                 1, "2012-10-04");
-        addSecond("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05");
-        addSecond("2012-10-04",  48 * 60 * 60    , "2012-10-06");
+        addSecond("2012-10-04", -24 * 60 * 60 - 1, "2012-10-02T23:59:59-00:00");
+        addSecond("2012-10-04", -24 * 60 * 60    , "2012-10-03T00:00:00-00:00");
+        addSecond("2012-10-04",                -1, "2012-10-03T23:59:59-00:00");
+        addSecond("2012-10-04",                 1, "2012-10-04T00:00:01-00:00");
+        addSecond("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05T23:59:59-00:00");
+        addSecond("2012-10-04",  48 * 60 * 60    , "2012-10-06T00:00:00-00:00");
 
         addSecondWithsFrac("2011-01-31T12:03:23",  -60 * 60, "2011-01-31T11:03:23");
         addSecondWithsFrac("2011-01-31T12:03:23",         0, "2011-01-31T12:03:23");
@@ -2160,6 +2127,221 @@ public class TimestampTest
 
         addSecondWithsFrac("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23");
         addSecondWithsFrac("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23");
+    }
+
+    private void addMillisecond(String orig, long amount, String expected)
+    {
+        Timestamp ts1 = Timestamp.valueOf(orig);
+        Timestamp ts2 = ts1.addMillis(amount);
+        checkTimestamp(expected, ts2);
+    }
+
+    private void addMillisecond(String orig, long amount, String expected, String suffix)
+    {
+        addMillisecond(orig + suffix, amount, expected + suffix);
+    }
+
+    private void addMillisecondWithOffsets(String orig, long amount, String expected) {
+        addMillisecond(orig, amount, expected, "-00:00");
+        addMillisecond(orig, amount, expected, "Z");
+        addMillisecond(orig, amount, expected, "+01:23");
+        addMillisecond(orig, amount, expected, "-01:23");
+        addMillisecond(orig, amount, expected, "+23:59");
+        addMillisecond(orig, amount, expected, "-23:59");
+    }
+
+    private void addMillisecondWithFrac(String orig, long amount, String expected)
+    {
+        // If the timestamp has less than milliseconds precision, always expand its precision to milliseconds.
+        addMillisecondWithOffsets(orig, amount, expected + ".000");
+        addMillisecondWithOffsets(orig + ".0", amount, expected + ".000");
+        addMillisecondWithOffsets(orig + ".00", amount, expected + ".000");
+        addMillisecondWithOffsets(orig + ".000", amount, expected +".000");
+        addMillisecondWithOffsets(orig + ".456", amount, expected + ".456");
+        // If the Timestamp has greater than milliseconds precision, don't reduce the precision.
+        addMillisecondWithOffsets(orig + ".0000", amount, expected + ".0000");
+        addMillisecondWithOffsets(orig + ".45678", amount, expected +".45678");
+    }
+
+    @Test
+    public void testAddMillisecond()
+    {
+        addMillisecond("2012T",    -1, "2011-12-31T23:59:59.999-00:00");
+        addMillisecond("2012T",     0, "2012-01-01T00:00:00.000-00:00");
+        addMillisecond("2012T",     1, "2012-01-01T00:00:00.001-00:00");
+
+        addMillisecond("2012-04T", -31L * 24 * 60 * 60 * 1000 - 1, "2012-02-29T23:59:59.999-00:00");
+        addMillisecond("2012-04T", -31L * 24 * 60 * 60 * 1000    , "2012-03-01T00:00:00.000-00:00");
+        addMillisecond("2012-04T",                             -1, "2012-03-31T23:59:59.999-00:00");
+        addMillisecond("2012-04T",                              0, "2012-04-01T00:00:00.000-00:00");
+        addMillisecond("2012-04T",                              1, "2012-04-01T00:00:00.001-00:00");
+        addMillisecond("2012-04T",  30L * 24 * 60 * 60 * 1000 - 1, "2012-04-30T23:59:59.999-00:00");
+        addMillisecond("2012-04T",  30L * 24 * 60 * 60 * 1000    , "2012-05-01T00:00:00.000-00:00");
+
+
+        addMillisecond("2011-02-28",                   -1, "2011-02-27T23:59:59.999-00:00");
+        addMillisecond("2011-02-28",                    0, "2011-02-28T00:00:00.000-00:00");
+        addMillisecond("2011-02-28",                    1, "2011-02-28T00:00:00.001-00:00");
+        addMillisecond("2011-02-28",  24 * 60 * 60 * 1000, "2011-03-01T00:00:00.000-00:00");
+        addMillisecond("2011-03-01", -24 * 60 * 60 * 1000, "2011-02-28T00:00:00.000-00:00");
+        addMillisecond("2012-02-28",  24 * 60 * 60 * 1000, "2012-02-29T00:00:00.000-00:00");
+        addMillisecond("2012-02-29", -24 * 60 * 60 * 1000, "2012-02-28T00:00:00.000-00:00");
+        addMillisecond("2012-02-29",  24 * 60 * 60 * 1000, "2012-03-01T00:00:00.000-00:00");
+
+        addMillisecond("2012-10-04", -24 * 60 * 60 * 1000 - 1, "2012-10-02T23:59:59.999-00:00");
+        addMillisecond("2012-10-04", -24 * 60 * 60 * 1000    , "2012-10-03T00:00:00.000-00:00");
+        addMillisecond("2012-10-04",                       -1, "2012-10-03T23:59:59.999-00:00");
+        addMillisecond("2012-10-04",                        1, "2012-10-04T00:00:00.001-00:00");
+        addMillisecond("2012-10-04",  48 * 60 * 60 * 1000 - 1, "2012-10-05T23:59:59.999-00:00");
+        addMillisecond("2012-10-04",  48 * 60 * 60 * 1000    , "2012-10-06T00:00:00.000-00:00");
+
+        addMillisecondWithFrac("2011-01-31T12:03:23",  -60 * 60 * 1000, "2011-01-31T11:03:23");
+        addMillisecondWithFrac("2011-01-31T12:03:23",                0, "2011-01-31T12:03:23");
+        addMillisecondWithFrac("2011-01-31T12:03:23",   60 * 60 * 1000, "2011-01-31T13:03:23");
+        addMillisecondWithFrac("2011-01-31T23:03:23",   57 * 60 * 1000, "2011-02-01T00:00:23");
+
+        addMillisecondWithFrac("2011-02-28T02:03:23", 25 * 60 * 60 * 1000, "2011-03-01T03:03:23");
+        addMillisecondWithFrac("2012-02-28T02:03:23", 25 * 60 * 60 * 1000, "2012-02-29T03:03:23");
+
+        addMillisecondWithFrac("2011-03-01T02:35:23", -4 * 60 * 60 * 1000, "2011-02-28T22:35:23");
+        addMillisecondWithFrac("2012-03-01T02:35:23", -4 * 60 * 60 * 1000, "2012-02-29T22:35:23");
+
+        addMillisecondWithOffsets("2011-01-31T23:59:59.999", 1, "2011-02-01T00:00:00.000");
+        addMillisecondWithOffsets("2011-02-01T00:00:00.000", -1, "2011-01-31T23:59:59.999");
+        addMillisecondWithOffsets("2011-01-31T23:59:59.999123", 1, "2011-02-01T00:00:00.000123");
+        addMillisecondWithOffsets("2011-02-01T00:00:00.000123", -1, "2011-01-31T23:59:59.999123");
+
+    }
+
+    @Test
+    public void addLargeNumberOfMilliseconds() {
+        // Internally, the value is divided by 1000, then added as seconds. Multiply by more than 1000 to make sure
+        // more seconds than can fit in an integer can be added.
+        long largeAmountToAdd = (Integer.MAX_VALUE + 1L) * 1000;
+        Timestamp ts1 = Timestamp.forMillis(0, 0);
+        Timestamp ts2 = ts1.addMillis(largeAmountToAdd);
+        assertEquals(Timestamp.forMillis(largeAmountToAdd, 0), ts2);
+        long largeAmountToSubtract = -(Integer.MIN_VALUE - 1L) * 1000;
+        Timestamp ts3 = Timestamp.forMillis(largeAmountToSubtract, 0);
+        assertEquals(ts1, ts3.addMillis(-largeAmountToSubtract));
+    }
+
+    @Test
+    public void testSubtractDayNonLeapYear()
+    {
+        // See: ion-java#163. Previously, this failed because the Timestamp arithmetic was performed using
+        // java.util.Date, which returns its components in the system's local time.
+        Timestamp timestamp = Timestamp.valueOf("1500-03-02T00:00:00.000Z");
+        Timestamp result = timestamp.addDay(-1);
+        assertEquals(Timestamp.valueOf("1500-03-01T00:00:00.000Z"), result);
+    }
+
+    @Test
+    public void testCalendarValueRoundtrip() {
+        Timestamp timestamp = Timestamp.valueOf("2014T");
+        assertEquals(timestamp, Timestamp.forCalendar(timestamp.calendarValue()));
+        timestamp = Timestamp.valueOf("2014-06T");
+        assertEquals(timestamp, Timestamp.forCalendar(timestamp.calendarValue()));
+        timestamp = Timestamp.valueOf("2014-06-02T");
+        assertEquals(timestamp, Timestamp.forCalendar(timestamp.calendarValue()));
+        timestamp = Timestamp.valueOf("2014-06-02T08:00-07:00");
+        assertEquals(timestamp, Timestamp.forCalendar(timestamp.calendarValue()));
+        timestamp = Timestamp.valueOf("2014-06-02T08:00:01-07:00");
+        assertEquals(timestamp, Timestamp.forCalendar(timestamp.calendarValue()));
+        // Calendar can represent up to milliseconds precision, but not more.
+        timestamp = Timestamp.valueOf("2014-06-02T08:00:01.987-07:00");
+        assertEquals(timestamp, Timestamp.forCalendar(timestamp.calendarValue()));
+        Timestamp timestampTooPrecise = Timestamp.valueOf("2014-06-02T08:00:01.9876-07:00");
+        assertEquals(timestamp, Timestamp.forCalendar(timestampTooPrecise.calendarValue()));
+    }
+
+    @Test
+    public void testGregorianCalendarNonLeapYear() {
+        GregorianCalendar calendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        calendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar.
+        calendar.set(1800, Calendar.FEBRUARY, 28);
+        Timestamp timestamp1 = Timestamp.forCalendar(calendar);
+        Timestamp timestamp2 = timestamp1.addDay(1);
+        assertEquals("1800-03-01", timestamp2.toString());
+    }
+
+    @Test
+    public void testConstructCustomCalendarWithValidLeapYear() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1800, Calendar.FEBRUARY, 29, 0, 0);
+        Timestamp timestamp = Timestamp.forCalendar(julianCalendar);
+        assertEquals("1800-02-29T00:00Z", timestamp.toString());
+    }
+
+    @Test
+    public void testCustomCalendarLeapYear() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1800, Calendar.FEBRUARY, 28);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = timestamp1.addDay(1);
+        assertEquals("1800-02-29", timestamp2.toString());
+    }
+
+    @Test
+    public void testCustomCalendarLeapYearAfterClone() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1800, Calendar.MARCH, 1, 0, 0);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = timestamp1.clone().addHour(-1);
+        assertEquals("1800-02-29T23:00Z", timestamp2.toString());
+    }
+
+    @Test
+    public void testCustomCalendarLeapYearAfterCalendarValue() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1800, Calendar.MARCH, 1, 0, 0);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = Timestamp.forCalendar(timestamp1.calendarValue()).addMinute(-1);
+        assertEquals("1800-02-29T23:59Z", timestamp2.toString());
+    }
+
+    @Test
+    public void testCustomCalendarLeapYearAfterWithLocalOffset() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1800, Calendar.FEBRUARY, 28, 23, 59, 59);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = timestamp1.withLocalOffset(0).addSecond(1);
+        assertEquals("1800-02-29T00:00:00Z", timestamp2.toString());
+    }
+
+    @Test
+    public void testCustomCalendarLeapYearWithChainedArithmetic() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1799, Calendar.JANUARY, 27, 22, 58, 58);
+        julianCalendar.set(Calendar.MILLISECOND, 999);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = timestamp1.addYear(1).addMonth(1).addDay(1).addHour(1).addMinute(1).addSecond(1).addMillis(1);
+        assertEquals("1800-02-29T00:00:00.000Z", timestamp2.toString());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -2365,5 +2547,28 @@ public class TimestampTest
     public void testGetMillisWithLargeScaleBigDecimal()
     {
         Timestamp.forMillis(LARGE_SCALE_DECIMAL, PST_OFFSET).getMillis();
+    }
+
+    @Test
+    public void testInstantVsTimestampMillis() {
+        // addresses: https://github.com/amzn/ion-java/issues/165
+        String tsText = "0001-01-01T00:00:00.000Z";
+        // Instant extends the Gregorian calendar system all the way back to the beginning, whereas Timestamp uses
+        // the default GregorianCalendar implementation, which transitions from Julian to Gregorian in 1582. As a
+        // result, the two map from milliseconds to date differently before 1582, as demonstrated below.
+        long millisFromInstant = Instant.parse(tsText).toEpochMilli();
+        long millisFromTimestamp = Timestamp.valueOf(tsText).getMillis();
+        assertNotEquals(millisFromInstant, millisFromTimestamp);
+        // However, the discrepancy can be avoided by using Timestamp.forCalendar, which always respects the given
+        // Calendar's method for determining leap years.
+        Timestamp ts1 = Timestamp.forCalendar(GregorianCalendar.from(Instant.parse(tsText).atZone(ZoneId.of("UTC"))));
+        Timestamp ts2 = Timestamp.valueOf(tsText);
+        assertEquals(tsText, ts1.toString());
+        assertEquals(tsText, ts2.toString());
+        assertEquals(ts1, ts2);
+        // Because Timestamp always uses the configured Calendar for determining leap years, the original milliseconds
+        // values are roundtripped unchanged.
+        assertEquals(millisFromInstant, ts1.getMillis());
+        assertEquals(millisFromTimestamp, ts2.getMillis());
     }
 }
