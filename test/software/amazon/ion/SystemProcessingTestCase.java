@@ -804,9 +804,6 @@ public abstract class SystemProcessingTestCase
 
                 ionData = "'''" + high + low + "'''";
                 checkString(FERMATA, "\"\\U0001d110\"", ionData);
-
-                ionData = "'''" + high + "''' '''" + low + "'''";
-                checkString(FERMATA, "\"\\U0001d110\"", ionData);
             }
         }
     }
