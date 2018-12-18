@@ -572,7 +572,7 @@ public final class Timestamp
         // a Calendar can handle. Set the _fraction here so that extra precision (if any) is not lost.
         // However, don't set the fraction if the given BigDecimal does not have precision at least to the tenth of
         // a second.
-        if (precision == Precision.SECOND && millis.scale() > -3) {
+        if (precision.includes(Precision.SECOND) && millis.scale() > -3) {
             BigDecimal secs = millis.movePointLeft(3);
             BigDecimal secsDown = fastRoundZeroFloor(secs);
             _fraction = secs.subtract(secsDown);
@@ -1857,7 +1857,7 @@ public final class Timestamp
         out.append(":");
         print_digits(out, adjusted.getZMinute(), 2);
         // ok, so how much time do we have ?
-        if (adjusted._precision == Precision.SECOND) {
+        if (adjusted._precision.includes(Precision.SECOND)) {
             out.append(":");
             print_digits(out, adjusted.getZSecond(), 2);
             if (adjusted._fraction != null) {
@@ -1930,7 +1930,7 @@ public final class Timestamp
      * @param amount a number of milliseconds.
      */
     public final Timestamp addMillis(long amount) {
-        if (amount == 0 && _precision == Precision.SECOND && _fraction != null && _fraction.scale() >= 3) {
+        if (amount == 0 && _precision.includes(Precision.SECOND) && _fraction != null && _fraction.scale() >= 3) {
             // Zero milliseconds are to be added, and the precision does not need to be increased.
             return this;
         }
@@ -2355,7 +2355,7 @@ public final class Timestamp
 
     private static Precision checkFraction(Precision precision, BigDecimal fraction)
     {
-        if (precision == Precision.SECOND) {
+        if (precision.includes(Precision.SECOND)) {
             if (fraction != null && (fraction.signum() == -1 || BigDecimal.ONE.compareTo(fraction) != 1)) {
                 throw new IllegalArgumentException(String.format("Fractional seconds %s must be greater than or equal to 0 and less than 1", fraction));
             }
