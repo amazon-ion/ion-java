@@ -1926,6 +1926,48 @@ public final class Timestamp
      * Returns a timestamp relative to this one by the given number of
      * milliseconds. Uses this Timestamp's configured Calendar to perform the
      * arithmetic.
+     * <p>
+     * This method always returns a Timestamp with the same precision as
+     * the original. After performing the arithmetic, the resulting Timestamp's
+     * seconds value will be truncated to the same fractional precision as the
+     * original. For example, adjusting {@code 2012-04-01T00:00:00Z} by one
+     * millisecond results in {@code 2012-04-01T00:00:00Z}; adjusting
+     * {@code 2012-04-01T00:00:00.0010Z} by -1 millisecond results in
+     * {@code 2012-04-01T00:00:00.0000Z}. To extend the precision when the
+     * original Timestamp has coarser than SECOND precision and to avoid
+     * truncation of the seconds value, use {@link #addSecond(int)}.
+     *
+     * @param amount a number of milliseconds.
+     */
+    public final Timestamp adjustMillis(long amount) {
+        if (amount == 0) return this;
+        Timestamp ts = addMillis(amount);
+        ts._precision = _precision;
+        ts.clearUnusedPrecision();
+        if (_precision.includes(Precision.SECOND)) {
+            // Maintain the same amount of fractional precision.
+            if (_fraction == null) {
+                ts._fraction = null;
+            } else {
+                // Truncate the result only if it exceeds the fractional precision of the original.
+                if (ts._fraction.scale() > _fraction.scale()) {
+                    ts._fraction = ts._fraction.setScale(_fraction.scale(), RoundingMode.FLOOR);
+                }
+            }
+        }
+        return ts;
+    }
+
+    /**
+     * Returns a timestamp relative to this one by the given number of
+     * milliseconds. Uses this Timestamp's configured Calendar to perform the
+     * arithmetic.
+     * <p>
+     * This method always returns a Timestamp with SECOND precision and a seconds
+     * value precise at least to the millisecond. For example, adding one millisecond
+     * to {@code 2011T} results in {@code 2011-01-01T00:00:00.001-00:00}. To receive
+     * a Timestamp that always maintains the same precision as the original, use
+     * {@link #adjustMillis(long)}.
      *
      * @param amount a number of milliseconds.
      */
@@ -1950,12 +1992,19 @@ public final class Timestamp
             newFraction = millis;
         }
         Timestamp ts = addSecond(seconds);
+        if (ts == this) {
+            // When the precision does not need to be extended and there are no seconds to add,
+            // addSecond returns the same reference unchanged. Clone it to ensure it is not
+            // mutated.
+            ts = clone();
+        }
         ts._fraction = newFraction;
         return ts;
     }
 
     /**
-     * Adds the given amount to the given {@link Calendar} field and returns a new Timestamp.
+     * Adds the given amount to the given {@link Calendar} field and returns a new Timestamp
+     * with precision set to the maximum of the current precision and the given precision.
      * @param field the field.
      * @param amount an amount.
      * @param precision the precision corresponding to the given field.
@@ -1975,12 +2024,45 @@ public final class Timestamp
     }
 
     /**
+     * Clears any fields more precise than this Timestamp's precision supports.
+     */
+    private void clearUnusedPrecision() {
+        switch (_precision) {
+            case YEAR:
+                _calendar.set(Calendar.MONTH, 0);
+            case MONTH:
+                _calendar.set(Calendar.DAY_OF_MONTH, 1);
+            case DAY:
+                _calendar.set(Calendar.HOUR_OF_DAY, 0);
+                _calendar.set(Calendar.MINUTE, 0);
+            case MINUTE:
+                _calendar.set(Calendar.SECOND, 0);
+                _fraction = null;
+            case SECOND:
+        }
+    }
+
+    /**
+     * Adds the given amount to the given {@link Calendar} field and returns a new Timestamp
+     * with the same precision as the original Timestamp.
+     * @param field the field.
+     * @param amount an amount.
+     * @return a new Timestamp instance.
+     */
+    private Timestamp calendarAdjust(int field, int amount) {
+        if (amount == 0) return this;
+        Timestamp ts = calendarAdd(field, amount, _precision);
+        ts.clearUnusedPrecision();
+        return ts;
+    }
+
+    /**
      * Returns a timestamp relative to this one by the given number of seconds.
      * Uses this Timestamp's configured Calendar to perform the arithmetic.
      *
      * @param seconds a number of seconds.
      */
-    private final Timestamp addSecond(long seconds) {
+    private Timestamp addSecond(long seconds) {
         Timestamp ts = this;
         do {
             int incrementalSeconds;
@@ -2000,6 +2082,29 @@ public final class Timestamp
     /**
      * Returns a timestamp relative to this one by the given number of seconds.
      * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with the same precision as
+     * the original. For example, adjusting {@code 2012-04-01T00:00Z} by one
+     * second results in {@code 2012-04-01T00:00Z}; adjusting
+     * {@code 2012-04-01T00:00:00Z} by -1 second results in
+     * {@code 2012-03-31T23:59:59Z}. To extend the precision when the original
+     * Timestamp has coarser than SECOND precision, use {@link #addSecond(int)}.
+     *
+     * @param amount a number of seconds.
+     */
+    public final Timestamp adjustSecond(int amount)
+    {
+        return calendarAdjust(Calendar.SECOND, amount);
+    }
+
+    /**
+     * Returns a timestamp relative to this one by the given number of seconds.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with SECOND precision.
+     * For example, adding one second to {@code 2011T} results in
+     * {@code 2011-01-01T00:00:01-00:00}. To receive a Timestamp that always
+     * maintains the same precision as the original, use {@link #adjustSecond(int)}.
      *
      * @param amount a number of seconds.
      */
@@ -2008,10 +2113,32 @@ public final class Timestamp
         return calendarAdd(Calendar.SECOND, amount, Precision.SECOND);
     }
 
+    /**
+     * Returns a timestamp relative to this one by the given number of minutes.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with the same precision as
+     * the original. For example, adjusting {@code 2012-04-01T} by one minute
+     * results in {@code 2012-04-01T}; adjusting {@code 2012-04-01T00:00-00:00}
+     * by -1 minute results in {@code 2012-03-31T23:59-00:00}. To extend the
+     * precision when the original Timestamp has coarser than MINUTE precision,
+     * use {@link #addMinute(int)}.
+     *
+     * @param amount a number of minutes.
+     */
+    public final Timestamp adjustMinute(int amount)
+    {
+        return calendarAdjust(Calendar.MINUTE, amount);
+    }
 
     /**
      * Returns a timestamp relative to this one by the given number of minutes.
      * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with at least MINUTE precision.
+     * For example, adding one minute to {@code 2011T} results in
+     * {@code 2011-01-01T00:01-00:00}. To receive a Timestamp that always
+     * maintains the same precision as the original, use {@link #adjustMinute(int)}.
      *
      * @param amount a number of minutes.
      */
@@ -2020,10 +2147,32 @@ public final class Timestamp
         return calendarAdd(Calendar.MINUTE, amount, Precision.MINUTE);
     }
 
+    /**
+     * Returns a timestamp relative to this one by the given number of hours.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with the same precision as
+     * the original. For example, adjusting {@code 2012-04-01T} by one hour
+     * results in {@code 2012-04-01T}; adjusting {@code 2012-04-01T00:00-00:00}
+     * by -1 hour results in {@code 2012-03-31T23:00-00:00}. To extend the
+     * precision when the original Timestamp has coarser than MINUTE precision,
+     * use {@link #addHour(int)}.
+     *
+     * @param amount a number of hours.
+     */
+    public final Timestamp adjustHour(int amount)
+    {
+        return calendarAdjust(Calendar.HOUR_OF_DAY, amount);
+    }
 
     /**
      * Returns a timestamp relative to this one by the given number of hours.
      * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with at least MINUTE precision.
+     * For example, adding one hour to {@code 2011T} results in
+     * {@code 2011-01-01T01:00-00:00}. To receive a Timestamp that always
+     * maintains the same precision as the original, use {@link #adjustHour(int)}.
      *
      * @param amount a number of hours.
      */
@@ -2032,10 +2181,31 @@ public final class Timestamp
         return calendarAdd(Calendar.HOUR_OF_DAY, amount, Precision.MINUTE);
     }
 
+    /**
+     * Returns a timestamp relative to this one by the given number of days.
+     * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with the same precision as
+     * the original. For example, adjusting {@code 2012-04T} by one day results
+     * in {@code 2012-04T}; adjusting {@code 2012-04-01T} by -1 days results in
+     * {@code 2012-03-31T}. To extend the precision when the original Timestamp
+     * has coarser than DAY precision, use {@link #addDay(int)}.
+     *
+     * @param amount a number of days.
+     */
+    public final Timestamp adjustDay(int amount)
+    {
+        return calendarAdjust(Calendar.DAY_OF_MONTH, amount);
+    }
 
     /**
      * Returns a timestamp relative to this one by the given number of days.
      * Uses this Timestamp's configured Calendar to perform the arithmetic.
+     * <p>
+     * This method always returns a Timestamp with at least DAY precision.
+     * For example, adding one day to {@code 2011T} results in {@code 2011-01-02T}.
+     * To receive a Timestamp that always maintains the same precision as the
+     * original, use {@link #adjustDay(int)}.
      *
      * @param amount a number of days.
      */
@@ -2048,8 +2218,33 @@ public final class Timestamp
      * Returns a timestamp relative to this one by the given number of months.
      * The day field may be adjusted to account for different month length and
      * leap days, as required by the configured Calendar's rules. For example,
+     * using the default {@link GregorianCalendar}, adjusting {@code 2011-01-31}
+     * by one month results in {@code 2011-02-28}.
+     * <p>
+     * This method always returns a Timestamp with the same precision as the
+     * original. For example, adjusting {@code 2011T} by one month results in
+     * {@code 2011T}; adding 12 months to {@code 2011T} results in {@code 2012T}.
+     * To extend the precision when the original Timestamp has coarser than MONTH
+     * precision, use {@link #addMonth(int)}.
+     *
+     * @param amount a number of months.
+     */
+    public final Timestamp adjustMonth(int amount)
+    {
+        return calendarAdjust(Calendar.MONTH, amount);
+    }
+
+    /**
+     * Returns a timestamp relative to this one by the given number of months.
+     * The day field may be adjusted to account for different month length and
+     * leap days, as required by the configured Calendar's rules. For example,
      * using the default {@link GregorianCalendar}, adding one month to
      * {@code 2011-01-31} results in {@code 2011-02-28}.
+     * <p>
+     * This method always returns a Timestamp with at least MONTH precision.
+     * For example, adding one month to {@code 2011T} results in {@code 2011-02T}.
+     * To receive a Timestamp that always maintains the same precision as the
+     * original, use {@link #adjustMonth(int)}.
      *
      * @param amount a number of months.
      */
@@ -2058,6 +2253,22 @@ public final class Timestamp
         return calendarAdd(Calendar.MONTH, amount, Precision.MONTH);
     }
 
+    /**
+     * Returns a timestamp relative to this one by the given number of years.
+     * The day field may be adjusted to account for leap days, as required by
+     * the configured Calendar's rules. For example, using the default
+     * {@link GregorianCalendar}, adjusting {@code 2012-02-29} by one year
+     * results in {@code 2013-02-28}.
+     * <p>
+     * Because YEAR is the coarsest precision possible, this method always
+     * returns a Timestamp with the same precision as the original and
+     * behaves identically to {@link #addYear(int)}.
+     *
+     * @param amount a number of years.
+     */
+    public final Timestamp adjustYear(int amount) {
+        return addYear(amount);
+    }
 
     /**
      * Returns a timestamp relative to this one by the given number of years.
@@ -2065,6 +2276,9 @@ public final class Timestamp
      * the configured Calendar's rules. For example, using the default
      * {@link GregorianCalendar}, adding one year to {@code 2012-02-29} results
      * in {@code 2013-02-28}.
+     * <p>
+     * This method always returns a Timestamp with the same precision as
+     * the original. See also: {@link #adjustYear(int)}.
      *
      * @param amount a number of years.
      */

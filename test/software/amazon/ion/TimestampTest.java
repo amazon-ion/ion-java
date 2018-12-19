@@ -1617,64 +1617,86 @@ public class TimestampTest
     //=========================================================================
     // Timestamp arithmetic
 
+    private interface TimestampArithmeticInvoker {
+        Timestamp invoke(Timestamp input, Number amount);
+    }
 
-    private void addYear(String orig, int amount, String expected)
+    private void addAndCompare(String orig, Number amount, String expected, TimestampArithmeticInvoker invoker)
     {
         Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addYear(amount);
+        Timestamp ts2 = invoker.invoke(ts1, amount);
         checkTimestamp(expected, ts2);
+        checkTimestamp(orig, ts1); // Make sure the arithmetic does not mutate the original timestamp.
     }
 
-    private void addYear(String orig, int amount, String expected,
-                         String suffix)
+    private void addAndCompare(String orig, Number amount, String expected,
+                               String suffix, TimestampArithmeticInvoker invoker)
     {
-        addYear(orig + suffix, amount, expected + suffix);
+        addAndCompare(orig + suffix, amount, expected + suffix, invoker);
     }
 
-    private void addYearWithOffsets(String orig, int amount, String expected,
-                                    String suffix)
+    private void addAndCompareWithOffsets(String orig, Number amount, String expected,
+                                          String suffix, TimestampArithmeticInvoker invoker)
     {
-        addYear(orig, amount, expected, suffix + "-00:00");
-        addYear(orig, amount, expected, suffix + "Z");
-        addYear(orig, amount, expected, suffix + "+01:23");
-        addYear(orig, amount, expected, suffix + "-01:23");
-        addYear(orig, amount, expected, suffix + "+23:59");
-        addYear(orig, amount, expected, suffix + "-23:59");
+        addAndCompare(orig, amount, expected, suffix + "-00:00", invoker);
+        addAndCompare(orig, amount, expected, suffix + "Z", invoker);
+        addAndCompare(orig, amount, expected, suffix + "+01:23", invoker);
+        addAndCompare(orig, amount, expected, suffix + "-01:23", invoker);
+        addAndCompare(orig, amount, expected, suffix + "+23:59", invoker);
+        addAndCompare(orig, amount, expected, suffix + "-23:59", invoker);
     }
 
-    private void addYearWithMins(String orig, int amount, String expected)
+    private void addAndCompareWithFullPrecision(String orig, Number amount, String expected, TimestampArithmeticInvoker invoker)
     {
-        addYear(orig, amount, expected);
+        addAndCompare(orig, amount, expected, invoker);
 
-        addYearWithOffsets(orig, amount, expected, "T19:03");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23.0");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23.00");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23.000");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23.456");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23.0000");
-        addYearWithOffsets(orig, amount, expected, "T19:03:23.45678");
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23.0", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23.00", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23.000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23.456", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23.0000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, "T19:03:23.45678", invoker);
+    }
+
+    private void testYearArithmetic(TimestampArithmeticInvoker invoker) {
+        addAndCompare("2012T",     1, "2013T", invoker);
+        addAndCompare("2012T",    -1, "2011T", invoker);
+
+        addAndCompare("2012-04T",  1, "2013-04T", invoker);
+        addAndCompare("2012-04T", -1, "2011-04T", invoker);
+
+        addAndCompareWithFullPrecision("2012-04-23",  1, "2013-04-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23", -1, "2011-04-23", invoker);
+
+        // Leap-year handling
+        addAndCompareWithFullPrecision("2012-02-29", -5, "2007-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", -4, "2008-02-29", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", -1, "2011-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29",  1, "2013-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29",  4, "2016-02-29", invoker);
+        addAndCompareWithFullPrecision("2012-02-29",  5, "2017-02-28", invoker);
     }
 
     @Test
     public void testAddYear()
     {
-        addYear("2012T",     1, "2013T");
-        addYear("2012T",    -1, "2011T");
+        testYearArithmetic(new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addYear(amount.intValue());
+            }
+        });
+    }
 
-        addYear("2012-04T",  1, "2013-04T");
-        addYear("2012-04T", -1, "2011-04T");
-
-        addYearWithMins("2012-04-23",  1, "2013-04-23");
-        addYearWithMins("2012-04-23", -1, "2011-04-23");
-
-        // Leap-year handling
-        addYearWithMins("2012-02-29", -5, "2007-02-28");
-        addYearWithMins("2012-02-29", -4, "2008-02-29");
-        addYearWithMins("2012-02-29", -1, "2011-02-28");
-        addYearWithMins("2012-02-29",  1, "2013-02-28");
-        addYearWithMins("2012-02-29",  4, "2016-02-29");
-        addYearWithMins("2012-02-29",  5, "2017-02-28");
+    @Test
+    public void testAdjustYear()
+    {
+        testYearArithmetic(new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustYear(amount.intValue());
+            }
+        });
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -1691,156 +1713,187 @@ public class TimestampTest
         ts1.addYear(-2000);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustYearOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustYear(10000);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustYearOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustYear(-2000);
+    }
+
     //-------------------------------------------------------------------------
-
-    private void addMonth(String orig, int amount, String expected)
-    {
-        Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addMonth(amount);
-        checkTimestamp(expected, ts2);
-    }
-
-    private void addMonth(String orig, int amount, String expected,
-                          String suffix)
-    {
-        addMonth(orig + suffix, amount, expected + suffix);
-    }
-
-    private void addMonthWithOffsets(String orig, int amount, String expected,
-                                     String suffix)
-    {
-        addMonth(orig, amount, expected, suffix + "-00:00");
-        addMonth(orig, amount, expected, suffix + "Z");
-        addMonth(orig, amount, expected, suffix + "+01:23");
-        addMonth(orig, amount, expected, suffix + "-01:23");
-        addMonth(orig, amount, expected, suffix + "+23:59");
-        addMonth(orig, amount, expected, suffix + "-23:59");
-    }
-
-    private void addMonthWithMins(String orig, int amount, String expected)
-    {
-        addMonth(orig, amount, expected);
-
-        addMonthWithOffsets(orig, amount, expected, "T19:03");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23.0");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23.00");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23.000");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23.456");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23.0000");
-        addMonthWithOffsets(orig, amount, expected, "T19:03:23.45678");
-    }
 
     @Test
     public void testAddMonth()
     {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            @Override
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addMonth(amount.intValue());
+            }
+        };
         // Adding more precise amounts extends the precision.
-        addMonth("2012T",    -1, "2011-12T");
-        addMonth("2012T",     1, "2012-02T");
+        addAndCompare("2012T",    -1, "2011-12T", invoker);
+        addAndCompare("2012T",     1, "2012-02T", invoker);
 
-        addMonth("2012-04T", -4, "2011-12T");
-        addMonth("2012-04T", -1, "2012-03T");
-        addMonth("2012-04T",  1, "2012-05T");
-        addMonth("2012-04T",  9, "2013-01T");
+        addAndCompare("2012-04T", -4, "2011-12T", invoker);
+        addAndCompare("2012-04T", -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",  1, "2012-05T", invoker);
+        addAndCompare("2012-04T",  9, "2013-01T", invoker);
 
-        addMonthWithMins("2012-04-23", -4, "2011-12-23");
-        addMonthWithMins("2012-04-23", -1, "2012-03-23");
-        addMonthWithMins("2012-04-23",  1, "2012-05-23");
-        addMonthWithMins("2012-04-23",  9, "2013-01-23");
+        addAndCompareWithFullPrecision("2012-04-23", -4, "2011-12-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23", -1, "2012-03-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23",  1, "2012-05-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23",  9, "2013-01-23", invoker);
 
-        addMonthWithMins("2011-01-31",  1, "2011-02-28");
-        addMonthWithMins("2011-02-28", 12, "2012-02-28");
-        addMonthWithMins("2012-01-31",  1, "2012-02-29");
-        addMonthWithMins("2012-01-31",  2, "2012-03-31");
-        addMonthWithMins("2012-01-31",  3, "2012-04-30");
-        addMonthWithMins("2012-02-29", -1, "2012-01-29");
-        addMonthWithMins("2012-02-29", 12, "2013-02-28");
-        addMonthWithMins("2012-02-29", 24, "2014-02-28");
-        addMonthWithMins("2012-02-29", 48, "2016-02-29");
-        addMonthWithMins("2013-01-31",-11, "2012-02-29");
+        addAndCompareWithFullPrecision("2011-01-31",  1, "2011-02-28", invoker);
+        addAndCompareWithFullPrecision("2011-02-28", 12, "2012-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  1, "2012-02-29", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  2, "2012-03-31", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  3, "2012-04-30", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", -1, "2012-01-29", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", 12, "2013-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", 24, "2014-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", 48, "2016-02-29", invoker);
+        addAndCompareWithFullPrecision("2013-01-31",-11, "2012-02-29", invoker);
+    }
+
+    @Test
+    public void testAdjustMonth()
+    {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            @Override
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustMonth(amount.intValue());
+            }
+        };
+        // Adding more precise amounts does not extend the precision.
+        addAndCompare("2012T",    -1, "2011T", invoker);
+        addAndCompare("2012T",     1, "2012T", invoker);
+
+        addAndCompare("2012-04T", -4, "2011-12T", invoker);
+        addAndCompare("2012-04T", -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",  1, "2012-05T", invoker);
+        addAndCompare("2012-04T",  9, "2013-01T", invoker);
+
+        addAndCompareWithFullPrecision("2012-04-23", -4, "2011-12-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23", -1, "2012-03-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23",  1, "2012-05-23", invoker);
+        addAndCompareWithFullPrecision("2012-04-23",  9, "2013-01-23", invoker);
+
+        addAndCompareWithFullPrecision("2011-01-31",  1, "2011-02-28", invoker);
+        addAndCompareWithFullPrecision("2011-02-28", 12, "2012-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  1, "2012-02-29", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  2, "2012-03-31", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  3, "2012-04-30", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", -1, "2012-01-29", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", 12, "2013-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", 24, "2014-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-02-29", 48, "2016-02-29", invoker);
+        addAndCompareWithFullPrecision("2013-01-31",-11, "2012-02-29", invoker);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testAddMonthOutsideMaxRange()
     {
         Timestamp ts1 = Timestamp.valueOf("1000T");
-        ts1.addYear(10000*12);
+        ts1.addMonth(10000*12);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testAddMonthOutsideMinRange()
     {
         Timestamp ts1 = Timestamp.valueOf("1000T");
-        ts1.addYear(-2000*12);
+        ts1.addMonth(-2000*12);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustMonthOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustMonth(10000*12);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustMonthOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustMonth(-2000*12);
     }
 
     //-------------------------------------------------------------------------
 
-    private void addDay(String orig, int amount, String expected)
-    {
-        Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addDay(amount);
-        checkTimestamp(expected, ts2);
-    }
-
-    private void addDay(String orig, int amount, String expected,
-                          String suffix)
-    {
-        addDay(orig + suffix, amount, expected + suffix);
-    }
-
-    private void addDayWithOffsets(String orig, int amount, String expected,
-                                     String suffix)
-    {
-        addDay(orig, amount, expected, suffix + "-00:00");
-        addDay(orig, amount, expected, suffix + "Z");
-        addDay(orig, amount, expected, suffix + "+01:23");
-        addDay(orig, amount, expected, suffix + "-01:23");
-        addDay(orig, amount, expected, suffix + "+23:59");
-        addDay(orig, amount, expected, suffix + "-23:59");
-    }
-
-    private void addDayWithMins(String orig, int amount, String expected)
-    {
-        addDay(orig, amount, expected);
-
-        addDayWithOffsets(orig, amount, expected, "T19:03");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23.0");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23.00");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23.000");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23.456");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23.0000");
-        addDayWithOffsets(orig, amount, expected, "T19:03:23.45678");
-    }
-
     @Test
     public void testAddDay()
     {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addDay(amount.intValue());
+            }
+        };
         // Adding more precise amounts extends the precision.
-        addDay("2012T",     1, "2012-01-02");
-        addDay("2012T",     0, "2012-01-01");
-        addDay("2012T",    -1, "2011-12-31");
+        addAndCompare("2012T",     1, "2012-01-02", invoker);
+        addAndCompare("2012T",     0, "2012-01-01", invoker);
+        addAndCompare("2012T",    -1, "2011-12-31", invoker);
 
-        addDay("2012-04T",-32, "2012-02-29");
-        addDay("2012-04T",-31, "2012-03-01");
-        addDay("2012-04T", -1, "2012-03-31");
-        addDay("2012-04T",  1, "2012-04-02");
-        addDay("2012-04T",  9, "2012-04-10");
-        addDay("2012-04T", 30, "2012-05-01");
-        addDay("2012-04T", 31, "2012-05-02");
+        addAndCompare("2012-04T",-32, "2012-02-29", invoker);
+        addAndCompare("2012-04T",-31, "2012-03-01", invoker);
+        addAndCompare("2012-04T", -1, "2012-03-31", invoker);
+        addAndCompare("2012-04T",  1, "2012-04-02", invoker);
+        addAndCompare("2012-04T",  9, "2012-04-10", invoker);
+        addAndCompare("2012-04T", 30, "2012-05-01", invoker);
+        addAndCompare("2012-04T", 31, "2012-05-02", invoker);
 
-        addDayWithMins("2011-01-31",-31, "2010-12-31");
-        addDayWithMins("2011-01-31",-30, "2011-01-01");
-        addDayWithMins("2011-01-31",  1, "2011-02-01");
-        addDayWithMins("2011-01-31", 28, "2011-02-28");
-        addDayWithMins("2011-01-31", 29, "2011-03-01");
-        addDayWithMins("2011-01-31", 30, "2011-03-02");
-        addDayWithMins("2012-01-31",  1, "2012-02-01");
-        addDayWithMins("2012-01-31", 28, "2012-02-28");
-        addDayWithMins("2012-01-31", 29, "2012-02-29");
-        addDayWithMins("2012-01-31", 30, "2012-03-01");
-        addDayWithMins("2012-03-01",-30, "2012-01-31");
+        addAndCompareWithFullPrecision("2011-01-31",-31, "2010-12-31", invoker);
+        addAndCompareWithFullPrecision("2011-01-31",-30, "2011-01-01", invoker);
+        addAndCompareWithFullPrecision("2011-01-31",  1, "2011-02-01", invoker);
+        addAndCompareWithFullPrecision("2011-01-31", 28, "2011-02-28", invoker);
+        addAndCompareWithFullPrecision("2011-01-31", 29, "2011-03-01", invoker);
+        addAndCompareWithFullPrecision("2011-01-31", 30, "2011-03-02", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  1, "2012-02-01", invoker);
+        addAndCompareWithFullPrecision("2012-01-31", 28, "2012-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-01-31", 29, "2012-02-29", invoker);
+        addAndCompareWithFullPrecision("2012-01-31", 30, "2012-03-01", invoker);
+        addAndCompareWithFullPrecision("2012-03-01",-30, "2012-01-31", invoker);
+    }
+
+    @Test
+    public void testAdjustDay()
+    {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustDay(amount.intValue());
+            }
+        };
+        // Adding more precise amounts does not extend the precision.
+        addAndCompare("2012T",     1, "2012T", invoker);
+        addAndCompare("2012T",    -1, "2011T", invoker);
+
+        addAndCompare("2012-04T",-32, "2012-02T", invoker);
+        addAndCompare("2012-04T",-31, "2012-03T", invoker);
+        addAndCompare("2012-04T", -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",  1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  9, "2012-04T", invoker);
+        addAndCompare("2012-04T", 30, "2012-05T", invoker);
+        addAndCompare("2012-04T", 31, "2012-05T", invoker);
+
+        addAndCompareWithFullPrecision("2011-01-31",-31, "2010-12-31", invoker);
+        addAndCompareWithFullPrecision("2011-01-31",-30, "2011-01-01", invoker);
+        addAndCompareWithFullPrecision("2011-01-31",  1, "2011-02-01", invoker);
+        addAndCompareWithFullPrecision("2011-01-31", 28, "2011-02-28", invoker);
+        addAndCompareWithFullPrecision("2011-01-31", 29, "2011-03-01", invoker);
+        addAndCompareWithFullPrecision("2011-01-31", 30, "2011-03-02", invoker);
+        addAndCompareWithFullPrecision("2012-01-31",  1, "2012-02-01", invoker);
+        addAndCompareWithFullPrecision("2012-01-31", 28, "2012-02-28", invoker);
+        addAndCompareWithFullPrecision("2012-01-31", 29, "2012-02-29", invoker);
+        addAndCompareWithFullPrecision("2012-01-31", 30, "2012-03-01", invoker);
+        addAndCompareWithFullPrecision("2012-03-01",-30, "2012-01-31", invoker);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -1857,84 +1910,126 @@ public class TimestampTest
         ts1.addDay(-2000*12*35);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustDayOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustDay(10000*12*35);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustDayOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustDay(-2000*12*35);
+    }
+
     //-------------------------------------------------------------------------
 
-    private void addHour(String orig, int amount, String expected)
+    private void addAndCompareHourWithFullPrecision(String orig, int amount, String expected, TimestampArithmeticInvoker invoker)
     {
-        Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addHour(amount);
-        checkTimestamp(expected, ts2);
-    }
-
-    private void addHour(String orig, int amount, String expected,
-                         String suffix)
-    {
-        addHour(orig + suffix, amount, expected + suffix);
-    }
-
-    private void addHourWithOffsets(String orig, int amount, String expected,
-                                    String suffix)
-    {
-        addHour(orig, amount, expected, suffix + "-00:00");
-        addHour(orig, amount, expected, suffix + "Z");
-        addHour(orig, amount, expected, suffix + "+01:23");
-        addHour(orig, amount, expected, suffix + "-01:23");
-        addHour(orig, amount, expected, suffix + "+23:59");
-        addHour(orig, amount, expected, suffix + "-23:59");
-    }
-
-    private void addHourWithMins(String orig, int amount, String expected)
-    {
-        addHourWithOffsets(orig, amount, expected, ":03");
-        addHourWithOffsets(orig, amount, expected, ":03:23");
-        addHourWithOffsets(orig, amount, expected, ":03:23.0");
-        addHourWithOffsets(orig, amount, expected, ":03:23.00");
-        addHourWithOffsets(orig, amount, expected, ":03:23.000");
-        addHourWithOffsets(orig, amount, expected, ":03:23.456");
-        addHourWithOffsets(orig, amount, expected, ":03:23.0000");
-        addHourWithOffsets(orig, amount, expected, ":03:23.45678");
+        addAndCompareWithOffsets(orig, amount, expected, ":03", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23.0", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23.00", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23.000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23.456", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23.0000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":03:23.45678", invoker);
     }
 
     @Test
     public void testAddHour()
     {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addHour(amount.intValue());
+            }
+        };
         // Adding more precise amounts extends the precision.
-        addHour("2012T",    -1, "2011-12-31T23:00-00:00");
-        addHour("2012T",     0, "2012-01-01T00:00-00:00");
-        addHour("2012T",     1, "2012-01-01T01:00-00:00");
+        addAndCompare("2012T",    -1, "2011-12-31T23:00-00:00", invoker);
+        addAndCompare("2012T",     0, "2012-01-01T00:00-00:00", invoker);
+        addAndCompare("2012T",     1, "2012-01-01T01:00-00:00", invoker);
 
-        addHour("2012-04T", -31 * 24 - 1, "2012-02-29T23:00-00:00");
-        addHour("2012-04T", -31 * 24    , "2012-03-01T00:00-00:00");
-        addHour("2012-04T",           -1, "2012-03-31T23:00-00:00");
-        addHour("2012-04T",            0, "2012-04-01T00:00-00:00");
-        addHour("2012-04T",            1, "2012-04-01T01:00-00:00");
-        addHour("2012-04T",  30 * 24 - 1, "2012-04-30T23:00-00:00");
-        addHour("2012-04T",  30 * 24    , "2012-05-01T00:00-00:00");
+        addAndCompare("2012-04T", -31 * 24 - 1, "2012-02-29T23:00-00:00", invoker);
+        addAndCompare("2012-04T", -31 * 24    , "2012-03-01T00:00-00:00", invoker);
+        addAndCompare("2012-04T",           -1, "2012-03-31T23:00-00:00", invoker);
+        addAndCompare("2012-04T",            0, "2012-04-01T00:00-00:00", invoker);
+        addAndCompare("2012-04T",            1, "2012-04-01T01:00-00:00", invoker);
+        addAndCompare("2012-04T",  30 * 24 - 1, "2012-04-30T23:00-00:00", invoker);
+        addAndCompare("2012-04T",  30 * 24    , "2012-05-01T00:00-00:00", invoker);
 
-        addHour("2011-02-28",  -1, "2011-02-27T23:00-00:00");
-        addHour("2011-02-28",   0, "2011-02-28T00:00-00:00");
-        addHour("2011-02-28",   1, "2011-02-28T01:00-00:00");
-        addHour("2011-02-28",  24, "2011-03-01T00:00-00:00");
-        addHour("2011-03-01", -24, "2011-02-28T00:00-00:00");
-        addHour("2012-02-28",  24, "2012-02-29T00:00-00:00");
-        addHour("2012-02-29", -24, "2012-02-28T00:00-00:00");
-        addHour("2012-02-29",  24, "2012-03-01T00:00-00:00");
+        addAndCompare("2011-02-28",  -1, "2011-02-27T23:00-00:00", invoker);
+        addAndCompare("2011-02-28",   0, "2011-02-28T00:00-00:00", invoker);
+        addAndCompare("2011-02-28",   1, "2011-02-28T01:00-00:00", invoker);
+        addAndCompare("2011-02-28",  24, "2011-03-01T00:00-00:00", invoker);
+        addAndCompare("2011-03-01", -24, "2011-02-28T00:00-00:00", invoker);
+        addAndCompare("2012-02-28",  24, "2012-02-29T00:00-00:00", invoker);
+        addAndCompare("2012-02-29", -24, "2012-02-28T00:00-00:00", invoker);
+        addAndCompare("2012-02-29",  24, "2012-03-01T00:00-00:00", invoker);
 
-        addHour("2012-10-04",-48, "2012-10-02T00:00-00:00");
-        addHour("2012-10-04",-24, "2012-10-03T00:00-00:00");
-        addHour("2012-10-04", -1, "2012-10-03T23:00-00:00");
-        addHour("2012-10-04",  1, "2012-10-04T01:00-00:00");
-        addHour("2012-10-04", 24, "2012-10-05T00:00-00:00");
-        addHour("2012-10-04", 48, "2012-10-06T00:00-00:00");
+        addAndCompare("2012-10-04",-48, "2012-10-02T00:00-00:00", invoker);
+        addAndCompare("2012-10-04",-24, "2012-10-03T00:00-00:00", invoker);
+        addAndCompare("2012-10-04", -1, "2012-10-03T23:00-00:00", invoker);
+        addAndCompare("2012-10-04",  1, "2012-10-04T01:00-00:00", invoker);
+        addAndCompare("2012-10-04", 24, "2012-10-05T00:00-00:00", invoker);
+        addAndCompare("2012-10-04", 48, "2012-10-06T00:00-00:00", invoker);
 
-        addHourWithMins("2011-01-31T12",  0, "2011-01-31T12");
-        addHourWithMins("2011-01-31T12", 12, "2011-02-01T00");
+        addAndCompareHourWithFullPrecision("2011-01-31T12",  0, "2011-01-31T12", invoker);
+        addAndCompareHourWithFullPrecision("2011-01-31T12", 12, "2011-02-01T00", invoker);
 
-        addHourWithMins("2011-02-28T02", 25, "2011-03-01T03");
-        addHourWithMins("2012-02-28T02", 25, "2012-02-29T03");
+        addAndCompareHourWithFullPrecision("2011-02-28T02", 25, "2011-03-01T03", invoker);
+        addAndCompareHourWithFullPrecision("2012-02-28T02", 25, "2012-02-29T03", invoker);
 
-        addHourWithMins("2011-03-01T02", -4, "2011-02-28T22");
-        addHourWithMins("2012-03-01T02", -4, "2012-02-29T22");
+        addAndCompareHourWithFullPrecision("2011-03-01T02", -4, "2011-02-28T22", invoker);
+        addAndCompareHourWithFullPrecision("2012-03-01T02", -4, "2012-02-29T22", invoker);
+    }
+
+    @Test
+    public void testAdjustHour()
+    {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustHour(amount.intValue());
+            }
+        };
+        // Adding more precise amounts does not extend the precision.
+        addAndCompare("2012T",    -1, "2011T", invoker);
+        addAndCompare("2012T",     0, "2012T", invoker);
+        addAndCompare("2012T",     1, "2012T", invoker);
+
+        addAndCompare("2012-04T", -31 * 24 - 1, "2012-02T", invoker);
+        addAndCompare("2012-04T", -31 * 24    , "2012-03T", invoker);
+        addAndCompare("2012-04T",           -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",            0, "2012-04T", invoker);
+        addAndCompare("2012-04T",            1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30 * 24 - 1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30 * 24    , "2012-05T", invoker);
+
+        addAndCompare("2011-02-28",  -1, "2011-02-27", invoker);
+        addAndCompare("2011-02-28",   0, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",   1, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",  24, "2011-03-01", invoker);
+        addAndCompare("2011-03-01", -24, "2011-02-28", invoker);
+        addAndCompare("2012-02-28",  24, "2012-02-29", invoker);
+        addAndCompare("2012-02-29", -24, "2012-02-28", invoker);
+        addAndCompare("2012-02-29",  24, "2012-03-01", invoker);
+
+        addAndCompare("2012-10-04",-48, "2012-10-02", invoker);
+        addAndCompare("2012-10-04",-24, "2012-10-03", invoker);
+        addAndCompare("2012-10-04", -1, "2012-10-03", invoker);
+        addAndCompare("2012-10-04",  1, "2012-10-04", invoker);
+        addAndCompare("2012-10-04", 24, "2012-10-05", invoker);
+        addAndCompare("2012-10-04", 48, "2012-10-06", invoker);
+
+        addAndCompareHourWithFullPrecision("2011-01-31T12",  0, "2011-01-31T12", invoker);
+        addAndCompareHourWithFullPrecision("2011-01-31T12", 12, "2011-02-01T00", invoker);
+
+        addAndCompareHourWithFullPrecision("2011-02-28T02", 25, "2011-03-01T03", invoker);
+        addAndCompareHourWithFullPrecision("2012-02-28T02", 25, "2012-02-29T03", invoker);
+
+        addAndCompareHourWithFullPrecision("2011-03-01T02", -4, "2011-02-28T22", invoker);
+        addAndCompareHourWithFullPrecision("2012-03-01T02", -4, "2012-02-29T22", invoker);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -1951,86 +2046,130 @@ public class TimestampTest
         ts1.addHour(-2000*12*35*24);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustHourOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustHour(10000*12*35*24);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustHourOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("1000T");
+        ts1.adjustHour(-2000*12*35*24);
+    }
+
     //-------------------------------------------------------------------------
 
-    private void addMinute(String orig, int amount, String expected)
+    private void addAndCompareMinuteWithFullPrecision(String orig, int amount, String expected, TimestampArithmeticInvoker invoker)
     {
-        Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addMinute(amount);
-        checkTimestamp(expected, ts2);
-    }
-
-    private void addMinute(String orig, int amount, String expected,
-                           String suffix)
-    {
-        addMinute(orig + suffix, amount, expected + suffix);
-    }
-
-    private void addMinuteWithOffsets(String orig, int amount, String expected,
-                                      String suffix)
-    {
-        addMinute(orig, amount, expected, suffix + "-00:00");
-        addMinute(orig, amount, expected, suffix + "Z");
-        addMinute(orig, amount, expected, suffix + "+01:23");
-        addMinute(orig, amount, expected, suffix + "-01:23");
-        addMinute(orig, amount, expected, suffix + "+23:59");
-        addMinute(orig, amount, expected, suffix + "-23:59");
-    }
-
-    private void addMinuteWithsSecs(String orig, int amount, String expected)
-    {
-        addMinuteWithOffsets(orig, amount, expected, "");
-        addMinuteWithOffsets(orig, amount, expected, ":23");
-        addMinuteWithOffsets(orig, amount, expected, ":23.0");
-        addMinuteWithOffsets(orig, amount, expected, ":23.00");
-        addMinuteWithOffsets(orig, amount, expected, ":23.000");
-        addMinuteWithOffsets(orig, amount, expected, ":23.456");
-        addMinuteWithOffsets(orig, amount, expected, ":23.0000");
-        addMinuteWithOffsets(orig, amount, expected, ":23.45678");
+        addAndCompareWithOffsets(orig, amount, expected, "", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23.0", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23.00", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23.000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23.456", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23.0000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ":23.45678", invoker);
     }
 
     @Test
     public void testAddMinute()
     {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addMinute(amount.intValue());
+            }
+        };
         // Adding more precise amounts extends the precision.
-        addMinute("2012T",    -1, "2011-12-31T23:59-00:00");
-        addMinute("2012T",     0, "2012-01-01T00:00-00:00");
-        addMinute("2012T",     1, "2012-01-01T00:01-00:00");
+        addAndCompare("2012T",    -1, "2011-12-31T23:59-00:00", invoker);
+        addAndCompare("2012T",     0, "2012-01-01T00:00-00:00", invoker);
+        addAndCompare("2012T",     1, "2012-01-01T00:01-00:00", invoker);
 
-        addMinute("2012-04T", -31 * 24 * 60 - 1, "2012-02-29T23:59-00:00");
-        addMinute("2012-04T", -31 * 24 * 60    , "2012-03-01T00:00-00:00");
-        addMinute("2012-04T",                -1, "2012-03-31T23:59-00:00");
-        addMinute("2012-04T",                 0, "2012-04-01T00:00-00:00");
-        addMinute("2012-04T",                 1, "2012-04-01T00:01-00:00");
-        addMinute("2012-04T",  30 * 24 * 60 - 1, "2012-04-30T23:59-00:00");
-        addMinute("2012-04T",  30 * 24 * 60    , "2012-05-01T00:00-00:00");
+        addAndCompare("2012-04T", -31 * 24 * 60 - 1, "2012-02-29T23:59-00:00", invoker);
+        addAndCompare("2012-04T", -31 * 24 * 60    , "2012-03-01T00:00-00:00", invoker);
+        addAndCompare("2012-04T",                -1, "2012-03-31T23:59-00:00", invoker);
+        addAndCompare("2012-04T",                 0, "2012-04-01T00:00-00:00", invoker);
+        addAndCompare("2012-04T",                 1, "2012-04-01T00:01-00:00", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60 - 1, "2012-04-30T23:59-00:00", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60    , "2012-05-01T00:00-00:00", invoker);
 
-        addMinute("2011-02-28",       -1, "2011-02-27T23:59-00:00");
-        addMinute("2011-02-28",        0, "2011-02-28T00:00-00:00");
-        addMinute("2011-02-28",        1, "2011-02-28T00:01-00:00");
-        addMinute("2011-02-28",  24 * 60, "2011-03-01T00:00-00:00");
-        addMinute("2011-03-01", -24 * 60, "2011-02-28T00:00-00:00");
-        addMinute("2012-02-28",  24 * 60, "2012-02-29T00:00-00:00");
-        addMinute("2012-02-29", -24 * 60, "2012-02-28T00:00-00:00");
-        addMinute("2012-02-29",  24 * 60, "2012-03-01T00:00-00:00");
+        addAndCompare("2011-02-28",       -1, "2011-02-27T23:59-00:00", invoker);
+        addAndCompare("2011-02-28",        0, "2011-02-28T00:00-00:00", invoker);
+        addAndCompare("2011-02-28",        1, "2011-02-28T00:01-00:00", invoker);
+        addAndCompare("2011-02-28",  24 * 60, "2011-03-01T00:00-00:00", invoker);
+        addAndCompare("2011-03-01", -24 * 60, "2011-02-28T00:00-00:00", invoker);
+        addAndCompare("2012-02-28",  24 * 60, "2012-02-29T00:00-00:00", invoker);
+        addAndCompare("2012-02-29", -24 * 60, "2012-02-28T00:00-00:00", invoker);
+        addAndCompare("2012-02-29",  24 * 60, "2012-03-01T00:00-00:00", invoker);
 
-        addMinute("2012-10-04", -48 * 60, "2012-10-02T00:00-00:00");
-        addMinute("2012-10-04", -24 * 60, "2012-10-03T00:00-00:00");
-        addMinute("2012-10-04",       -1, "2012-10-03T23:59-00:00");
-        addMinute("2012-10-04",        1, "2012-10-04T00:01-00:00");
-        addMinute("2012-10-04",  24 * 60, "2012-10-05T00:00-00:00");
-        addMinute("2012-10-04",  48 * 60, "2012-10-06T00:00-00:00");
+        addAndCompare("2012-10-04", -48 * 60, "2012-10-02T00:00-00:00", invoker);
+        addAndCompare("2012-10-04", -24 * 60, "2012-10-03T00:00-00:00", invoker);
+        addAndCompare("2012-10-04",       -1, "2012-10-03T23:59-00:00", invoker);
+        addAndCompare("2012-10-04",        1, "2012-10-04T00:01-00:00", invoker);
+        addAndCompare("2012-10-04",  24 * 60, "2012-10-05T00:00-00:00", invoker);
+        addAndCompare("2012-10-04",  48 * 60, "2012-10-06T00:00-00:00", invoker);
 
-        addMinuteWithsSecs("2011-01-31T12:03",  -60, "2011-01-31T11:03");
-        addMinuteWithsSecs("2011-01-31T12:03",    0, "2011-01-31T12:03");
-        addMinuteWithsSecs("2011-01-31T12:03",   60, "2011-01-31T13:03");
-        addMinuteWithsSecs("2011-01-31T23:03",   57, "2011-02-01T00:00");
+        addAndCompareMinuteWithFullPrecision("2011-01-31T12:03",  -60, "2011-01-31T11:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2011-01-31T12:03",    0, "2011-01-31T12:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2011-01-31T12:03",   60, "2011-01-31T13:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2011-01-31T23:03",   57, "2011-02-01T00:00", invoker);
 
-        addMinuteWithsSecs("2011-02-28T02:03", 25 * 60, "2011-03-01T03:03");
-        addMinuteWithsSecs("2012-02-28T02:03", 25 * 60, "2012-02-29T03:03");
+        addAndCompareMinuteWithFullPrecision("2011-02-28T02:03", 25 * 60, "2011-03-01T03:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2012-02-28T02:03", 25 * 60, "2012-02-29T03:03", invoker);
 
-        addMinuteWithsSecs("2011-03-01T02:35", -4 * 60, "2011-02-28T22:35");
-        addMinuteWithsSecs("2012-03-01T02:35", -4 * 60, "2012-02-29T22:35");
+        addAndCompareMinuteWithFullPrecision("2011-03-01T02:35", -4 * 60, "2011-02-28T22:35", invoker);
+        addAndCompareMinuteWithFullPrecision("2012-03-01T02:35", -4 * 60, "2012-02-29T22:35", invoker);
+    }
+
+    @Test
+    public void testAdjustMinute()
+    {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustMinute(amount.intValue());
+            }
+        };
+        // Adding more precise amounts does not extend the precision.
+        addAndCompare("2012T",    -1, "2011T", invoker);
+        addAndCompare("2012T",     0, "2012T", invoker);
+        addAndCompare("2012T",     1, "2012T", invoker);
+
+        addAndCompare("2012-04T", -31 * 24 * 60 - 1, "2012-02T", invoker);
+        addAndCompare("2012-04T", -31 * 24 * 60    , "2012-03T", invoker);
+        addAndCompare("2012-04T",                -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",                 0, "2012-04T", invoker);
+        addAndCompare("2012-04T",                 1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60 - 1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60    , "2012-05T", invoker);
+
+        addAndCompare("2011-02-28",       -1, "2011-02-27", invoker);
+        addAndCompare("2011-02-28",        0, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",        1, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",  24 * 60, "2011-03-01", invoker);
+        addAndCompare("2011-03-01", -24 * 60, "2011-02-28", invoker);
+        addAndCompare("2012-02-28",  24 * 60, "2012-02-29", invoker);
+        addAndCompare("2012-02-29", -24 * 60, "2012-02-28", invoker);
+        addAndCompare("2012-02-29",  24 * 60, "2012-03-01", invoker);
+
+        addAndCompare("2012-10-04", -48 * 60, "2012-10-02", invoker);
+        addAndCompare("2012-10-04", -24 * 60, "2012-10-03", invoker);
+        addAndCompare("2012-10-04",       -1, "2012-10-03", invoker);
+        addAndCompare("2012-10-04",        1, "2012-10-04", invoker);
+        addAndCompare("2012-10-04",  24 * 60, "2012-10-05", invoker);
+        addAndCompare("2012-10-04",  48 * 60, "2012-10-06", invoker);
+
+        addAndCompareMinuteWithFullPrecision("2011-01-31T12:03",  -60, "2011-01-31T11:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2011-01-31T12:03",    0, "2011-01-31T12:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2011-01-31T12:03",   60, "2011-01-31T13:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2011-01-31T23:03",   57, "2011-02-01T00:00", invoker);
+
+        addAndCompareMinuteWithFullPrecision("2011-02-28T02:03", 25 * 60, "2011-03-01T03:03", invoker);
+        addAndCompareMinuteWithFullPrecision("2012-02-28T02:03", 25 * 60, "2012-02-29T03:03", invoker);
+
+        addAndCompareMinuteWithFullPrecision("2011-03-01T02:35", -4 * 60, "2011-02-28T22:35", invoker);
+        addAndCompareMinuteWithFullPrecision("2012-03-01T02:35", -4 * 60, "2012-02-29T22:35", invoker);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -2047,170 +2186,340 @@ public class TimestampTest
         ts1.addMinute(-2*12*35*24*60);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustMinuteOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.adjustMinute(2*12*35*24*60);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustMinuteOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.adjustMinute(-2*12*35*24*60);
+    }
+
     //-------------------------------------------------------------------------
 
-    private void addSecond(String orig, int amount, String expected)
+    private void addAndCompareSecondWithFullPrecision(String orig, int amount, String expected, TimestampArithmeticInvoker invoker)
     {
-        Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addSecond(amount);
-        checkTimestamp(expected, ts2);
-    }
-
-    private void addSecond(String orig, int amount, String expected,
-                           String suffix)
-    {
-        addSecond(orig + suffix, amount, expected + suffix);
-    }
-
-    private void addSecondWithOffsets(String orig, int amount, String expected,
-                                      String suffix)
-    {
-        addSecond(orig, amount, expected, suffix + "-00:00");
-        addSecond(orig, amount, expected, suffix + "Z");
-        addSecond(orig, amount, expected, suffix + "+01:23");
-        addSecond(orig, amount, expected, suffix + "-01:23");
-        addSecond(orig, amount, expected, suffix + "+23:59");
-        addSecond(orig, amount, expected, suffix + "-23:59");
-    }
-
-    private void addSecondWithsFrac(String orig, int amount, String expected)
-    {
-        addSecondWithOffsets(orig, amount, expected, "");
-        addSecondWithOffsets(orig, amount, expected, ".0");
-        addSecondWithOffsets(orig, amount, expected, ".00");
-        addSecondWithOffsets(orig, amount, expected, ".000");
-        addSecondWithOffsets(orig, amount, expected, ".456");
-        addSecondWithOffsets(orig, amount, expected, ".0000");
-        addSecondWithOffsets(orig, amount, expected, ".45678");
+        addAndCompareWithOffsets(orig, amount, expected, "", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ".0", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ".00", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ".000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ".456", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ".0000", invoker);
+        addAndCompareWithOffsets(orig, amount, expected, ".45678", invoker);
     }
 
     @Test
     public void testAddSecond()
     {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addSecond(amount.intValue());
+            }
+        };
         // Adding more precise amounts extends the precision.
-        addSecond("2012T",    -1, "2011-12-31T23:59:59-00:00");
-        addSecond("2012T",     0, "2012-01-01T00:00:00-00:00");
-        addSecond("2012T",     1, "2012-01-01T00:00:01-00:00");
+        addAndCompare("2012T",    -1, "2011-12-31T23:59:59-00:00", invoker);
+        addAndCompare("2012T",     0, "2012-01-01T00:00:00-00:00", invoker);
+        addAndCompare("2012T",     1, "2012-01-01T00:00:01-00:00", invoker);
 
-        addSecond("2012-04T", -31 * 24 * 60 * 60 - 1, "2012-02-29T23:59:59-00:00");
-        addSecond("2012-04T", -31 * 24 * 60 * 60    , "2012-03-01T00:00:00-00:00");
-        addSecond("2012-04T",                     -1, "2012-03-31T23:59:59-00:00");
-        addSecond("2012-04T",                      0, "2012-04-01T00:00:00-00:00");
-        addSecond("2012-04T",                      1, "2012-04-01T00:00:01-00:00");
-        addSecond("2012-04T",  30 * 24 * 60 * 60 - 1, "2012-04-30T23:59:59-00:00");
-        addSecond("2012-04T",  30 * 24 * 60 * 60    , "2012-05-01T00:00:00-00:00");
+        addAndCompare("2012-04T", -31 * 24 * 60 * 60 - 1, "2012-02-29T23:59:59-00:00", invoker);
+        addAndCompare("2012-04T", -31 * 24 * 60 * 60    , "2012-03-01T00:00:00-00:00", invoker);
+        addAndCompare("2012-04T",                     -1, "2012-03-31T23:59:59-00:00", invoker);
+        addAndCompare("2012-04T",                      0, "2012-04-01T00:00:00-00:00", invoker);
+        addAndCompare("2012-04T",                      1, "2012-04-01T00:00:01-00:00", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60 * 60 - 1, "2012-04-30T23:59:59-00:00", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60 * 60    , "2012-05-01T00:00:00-00:00", invoker);
 
 
-        addSecond("2011-02-28",            -1, "2011-02-27T23:59:59-00:00");
-        addSecond("2011-02-28",             0, "2011-02-28T00:00:00-00:00");
-        addSecond("2011-02-28",             1, "2011-02-28T00:00:01-00:00");
-        addSecond("2011-02-28",  24 * 60 * 60, "2011-03-01T00:00:00-00:00");
-        addSecond("2011-03-01", -24 * 60 * 60, "2011-02-28T00:00:00-00:00");
-        addSecond("2012-02-28",  24 * 60 * 60, "2012-02-29T00:00:00-00:00");
-        addSecond("2012-02-29", -24 * 60 * 60, "2012-02-28T00:00:00-00:00");
-        addSecond("2012-02-29",  24 * 60 * 60, "2012-03-01T00:00:00-00:00");
+        addAndCompare("2011-02-28",            -1, "2011-02-27T23:59:59-00:00", invoker);
+        addAndCompare("2011-02-28",             0, "2011-02-28T00:00:00-00:00", invoker);
+        addAndCompare("2011-02-28",             1, "2011-02-28T00:00:01-00:00", invoker);
+        addAndCompare("2011-02-28",  24 * 60 * 60, "2011-03-01T00:00:00-00:00", invoker);
+        addAndCompare("2011-03-01", -24 * 60 * 60, "2011-02-28T00:00:00-00:00", invoker);
+        addAndCompare("2012-02-28",  24 * 60 * 60, "2012-02-29T00:00:00-00:00", invoker);
+        addAndCompare("2012-02-29", -24 * 60 * 60, "2012-02-28T00:00:00-00:00", invoker);
+        addAndCompare("2012-02-29",  24 * 60 * 60, "2012-03-01T00:00:00-00:00", invoker);
 
-        addSecond("2012-10-04", -24 * 60 * 60 - 1, "2012-10-02T23:59:59-00:00");
-        addSecond("2012-10-04", -24 * 60 * 60    , "2012-10-03T00:00:00-00:00");
-        addSecond("2012-10-04",                -1, "2012-10-03T23:59:59-00:00");
-        addSecond("2012-10-04",                 1, "2012-10-04T00:00:01-00:00");
-        addSecond("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05T23:59:59-00:00");
-        addSecond("2012-10-04",  48 * 60 * 60    , "2012-10-06T00:00:00-00:00");
+        addAndCompare("2012-10-04", -24 * 60 * 60 - 1, "2012-10-02T23:59:59-00:00", invoker);
+        addAndCompare("2012-10-04", -24 * 60 * 60    , "2012-10-03T00:00:00-00:00", invoker);
+        addAndCompare("2012-10-04",                -1, "2012-10-03T23:59:59-00:00", invoker);
+        addAndCompare("2012-10-04",                 1, "2012-10-04T00:00:01-00:00", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05T23:59:59-00:00", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60    , "2012-10-06T00:00:00-00:00", invoker);
 
-        addSecondWithsFrac("2011-01-31T12:03:23",  -60 * 60, "2011-01-31T11:03:23");
-        addSecondWithsFrac("2011-01-31T12:03:23",         0, "2011-01-31T12:03:23");
-        addSecondWithsFrac("2011-01-31T12:03:23",   60 * 60, "2011-01-31T13:03:23");
-        addSecondWithsFrac("2011-01-31T23:03:23",   57 * 60, "2011-02-01T00:00:23");
+        addAndCompareSecondWithFullPrecision("2011-01-31T12:03:23",  -60 * 60, "2011-01-31T11:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2011-01-31T12:03:23",         0, "2011-01-31T12:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2011-01-31T12:03:23",   60 * 60, "2011-01-31T13:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2011-01-31T23:03:23",   57 * 60, "2011-02-01T00:00:23", invoker);
 
-        addSecondWithsFrac("2011-02-28T02:03:23", 25 * 60 * 60, "2011-03-01T03:03:23");
-        addSecondWithsFrac("2012-02-28T02:03:23", 25 * 60 * 60, "2012-02-29T03:03:23");
+        addAndCompareSecondWithFullPrecision("2011-02-28T02:03:23", 25 * 60 * 60, "2011-03-01T03:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2012-02-28T02:03:23", 25 * 60 * 60, "2012-02-29T03:03:23", invoker);
 
-        addSecondWithsFrac("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23");
-        addSecondWithsFrac("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23");
-    }
-
-    private void addMillisecond(String orig, long amount, String expected)
-    {
-        Timestamp ts1 = Timestamp.valueOf(orig);
-        Timestamp ts2 = ts1.addMillis(amount);
-        checkTimestamp(expected, ts2);
-    }
-
-    private void addMillisecond(String orig, long amount, String expected, String suffix)
-    {
-        addMillisecond(orig + suffix, amount, expected + suffix);
-    }
-
-    private void addMillisecondWithOffsets(String orig, long amount, String expected) {
-        addMillisecond(orig, amount, expected, "-00:00");
-        addMillisecond(orig, amount, expected, "Z");
-        addMillisecond(orig, amount, expected, "+01:23");
-        addMillisecond(orig, amount, expected, "-01:23");
-        addMillisecond(orig, amount, expected, "+23:59");
-        addMillisecond(orig, amount, expected, "-23:59");
-    }
-
-    private void addMillisecondWithFrac(String orig, long amount, String expected)
-    {
-        // If the timestamp has less than milliseconds precision, always expand its precision to milliseconds.
-        addMillisecondWithOffsets(orig, amount, expected + ".000");
-        addMillisecondWithOffsets(orig + ".0", amount, expected + ".000");
-        addMillisecondWithOffsets(orig + ".00", amount, expected + ".000");
-        addMillisecondWithOffsets(orig + ".000", amount, expected +".000");
-        addMillisecondWithOffsets(orig + ".456", amount, expected + ".456");
-        // If the Timestamp has greater than milliseconds precision, don't reduce the precision.
-        addMillisecondWithOffsets(orig + ".0000", amount, expected + ".0000");
-        addMillisecondWithOffsets(orig + ".45678", amount, expected +".45678");
+        addAndCompareSecondWithFullPrecision("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23", invoker);
+        addAndCompareSecondWithFullPrecision("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23", invoker);
     }
 
     @Test
-    public void testAddMillisecond()
+    public void testAdjustSecond()
     {
-        addMillisecond("2012T",    -1, "2011-12-31T23:59:59.999-00:00");
-        addMillisecond("2012T",     0, "2012-01-01T00:00:00.000-00:00");
-        addMillisecond("2012T",     1, "2012-01-01T00:00:00.001-00:00");
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustSecond(amount.intValue());
+            }
+        };
+        // Adding more precise amounts does not extend the precision.
+        addAndCompare("2012T",    -1, "2011T", invoker);
+        addAndCompare("2012T",     0, "2012T", invoker);
+        addAndCompare("2012T",     1, "2012T", invoker);
 
-        addMillisecond("2012-04T", -31L * 24 * 60 * 60 * 1000 - 1, "2012-02-29T23:59:59.999-00:00");
-        addMillisecond("2012-04T", -31L * 24 * 60 * 60 * 1000    , "2012-03-01T00:00:00.000-00:00");
-        addMillisecond("2012-04T",                             -1, "2012-03-31T23:59:59.999-00:00");
-        addMillisecond("2012-04T",                              0, "2012-04-01T00:00:00.000-00:00");
-        addMillisecond("2012-04T",                              1, "2012-04-01T00:00:00.001-00:00");
-        addMillisecond("2012-04T",  30L * 24 * 60 * 60 * 1000 - 1, "2012-04-30T23:59:59.999-00:00");
-        addMillisecond("2012-04T",  30L * 24 * 60 * 60 * 1000    , "2012-05-01T00:00:00.000-00:00");
+        addAndCompare("2012-04T", -31 * 24 * 60 * 60 - 1, "2012-02T", invoker);
+        addAndCompare("2012-04T", -31 * 24 * 60 * 60    , "2012-03T", invoker);
+        addAndCompare("2012-04T",                     -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",                      0, "2012-04T", invoker);
+        addAndCompare("2012-04T",                      1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60 * 60 - 1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30 * 24 * 60 * 60    , "2012-05T", invoker);
 
 
-        addMillisecond("2011-02-28",                   -1, "2011-02-27T23:59:59.999-00:00");
-        addMillisecond("2011-02-28",                    0, "2011-02-28T00:00:00.000-00:00");
-        addMillisecond("2011-02-28",                    1, "2011-02-28T00:00:00.001-00:00");
-        addMillisecond("2011-02-28",  24 * 60 * 60 * 1000, "2011-03-01T00:00:00.000-00:00");
-        addMillisecond("2011-03-01", -24 * 60 * 60 * 1000, "2011-02-28T00:00:00.000-00:00");
-        addMillisecond("2012-02-28",  24 * 60 * 60 * 1000, "2012-02-29T00:00:00.000-00:00");
-        addMillisecond("2012-02-29", -24 * 60 * 60 * 1000, "2012-02-28T00:00:00.000-00:00");
-        addMillisecond("2012-02-29",  24 * 60 * 60 * 1000, "2012-03-01T00:00:00.000-00:00");
+        addAndCompare("2011-02-28",            -1, "2011-02-27", invoker);
+        addAndCompare("2011-02-28",             0, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",             1, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",  24 * 60 * 60, "2011-03-01", invoker);
+        addAndCompare("2011-03-01", -24 * 60 * 60, "2011-02-28", invoker);
+        addAndCompare("2012-02-28",  24 * 60 * 60, "2012-02-29", invoker);
+        addAndCompare("2012-02-29", -24 * 60 * 60, "2012-02-28", invoker);
+        addAndCompare("2012-02-29",  24 * 60 * 60, "2012-03-01", invoker);
 
-        addMillisecond("2012-10-04", -24 * 60 * 60 * 1000 - 1, "2012-10-02T23:59:59.999-00:00");
-        addMillisecond("2012-10-04", -24 * 60 * 60 * 1000    , "2012-10-03T00:00:00.000-00:00");
-        addMillisecond("2012-10-04",                       -1, "2012-10-03T23:59:59.999-00:00");
-        addMillisecond("2012-10-04",                        1, "2012-10-04T00:00:00.001-00:00");
-        addMillisecond("2012-10-04",  48 * 60 * 60 * 1000 - 1, "2012-10-05T23:59:59.999-00:00");
-        addMillisecond("2012-10-04",  48 * 60 * 60 * 1000    , "2012-10-06T00:00:00.000-00:00");
+        addAndCompare("2012-10-04", -24 * 60 * 60 - 1, "2012-10-02", invoker);
+        addAndCompare("2012-10-04", -24 * 60 * 60    , "2012-10-03", invoker);
+        addAndCompare("2012-10-04",                -1, "2012-10-03", invoker);
+        addAndCompare("2012-10-04",                 1, "2012-10-04", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60 - 1, "2012-10-05", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60    , "2012-10-06", invoker);
 
-        addMillisecondWithFrac("2011-01-31T12:03:23",  -60 * 60 * 1000, "2011-01-31T11:03:23");
-        addMillisecondWithFrac("2011-01-31T12:03:23",                0, "2011-01-31T12:03:23");
-        addMillisecondWithFrac("2011-01-31T12:03:23",   60 * 60 * 1000, "2011-01-31T13:03:23");
-        addMillisecondWithFrac("2011-01-31T23:03:23",   57 * 60 * 1000, "2011-02-01T00:00:23");
+        addAndCompareSecondWithFullPrecision("2011-01-31T12:03:23",  -60 * 60, "2011-01-31T11:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2011-01-31T12:03:23",         0, "2011-01-31T12:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2011-01-31T12:03:23",   60 * 60, "2011-01-31T13:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2011-01-31T23:03:23",   57 * 60, "2011-02-01T00:00:23", invoker);
 
-        addMillisecondWithFrac("2011-02-28T02:03:23", 25 * 60 * 60 * 1000, "2011-03-01T03:03:23");
-        addMillisecondWithFrac("2012-02-28T02:03:23", 25 * 60 * 60 * 1000, "2012-02-29T03:03:23");
+        addAndCompareSecondWithFullPrecision("2011-02-28T02:03:23", 25 * 60 * 60, "2011-03-01T03:03:23", invoker);
+        addAndCompareSecondWithFullPrecision("2012-02-28T02:03:23", 25 * 60 * 60, "2012-02-29T03:03:23", invoker);
 
-        addMillisecondWithFrac("2011-03-01T02:35:23", -4 * 60 * 60 * 1000, "2011-02-28T22:35:23");
-        addMillisecondWithFrac("2012-03-01T02:35:23", -4 * 60 * 60 * 1000, "2012-02-29T22:35:23");
+        addAndCompareSecondWithFullPrecision("2011-03-01T02:35:23", -4 * 60 * 60, "2011-02-28T22:35:23", invoker);
+        addAndCompareSecondWithFullPrecision("2012-03-01T02:35:23", -4 * 60 * 60, "2012-02-29T22:35:23", invoker);
+    }
 
-        addMillisecondWithOffsets("2011-01-31T23:59:59.999", 1, "2011-02-01T00:00:00.000");
-        addMillisecondWithOffsets("2011-02-01T00:00:00.000", -1, "2011-01-31T23:59:59.999");
-        addMillisecondWithOffsets("2011-01-31T23:59:59.999123", 1, "2011-02-01T00:00:00.000123");
-        addMillisecondWithOffsets("2011-02-01T00:00:00.000123", -1, "2011-01-31T23:59:59.999123");
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddSecondOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.addSecond(2*12*35*24*60*60);
+    }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddSecondOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.addSecond(-1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustSecondOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.adjustSecond(2*12*35*24*60*60);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustSecondOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.adjustSecond(-1);
+    }
+
+    //-------------------------------------------------------------------------
+
+    private void addAndCompareMillisWithOffsets(String orig, long amount, String expected, TimestampArithmeticInvoker invoker) {
+        addAndCompare(orig, amount, expected, "-00:00", invoker);
+        addAndCompare(orig, amount, expected, "Z", invoker);
+        addAndCompare(orig, amount, expected, "+01:23", invoker);
+        addAndCompare(orig, amount, expected, "-01:23", invoker);
+        addAndCompare(orig, amount, expected, "+23:59", invoker);
+        addAndCompare(orig, amount, expected, "-23:59", invoker);
+    }
+
+    private void addAndCompareMillisWithFullPrecision(String orig, long amount, String expected, TimestampArithmeticInvoker invoker)
+    {
+        // If the timestamp has less than milliseconds precision, always expand its precision to milliseconds.
+        addAndCompareMillisWithOffsets(orig, amount, expected + ".000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".0", amount, expected + ".000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".00", amount, expected + ".000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".000", amount, expected +".000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".456", amount, expected + ".456", invoker);
+        // If the Timestamp has greater than milliseconds precision, don't reduce the precision.
+        addAndCompareMillisWithOffsets(orig + ".0000", amount, expected + ".0000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".45678", amount, expected +".45678", invoker);
+    }
+
+    @Test
+    public void testAddMillis()
+    {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.addMillis(amount.longValue());
+            }
+        };
+        // Adding more precise amounts extends the precision.
+        addAndCompare("2012T",    -1, "2011-12-31T23:59:59.999-00:00", invoker);
+        addAndCompare("2012T",     0, "2012-01-01T00:00:00.000-00:00", invoker);
+        addAndCompare("2012T",     1, "2012-01-01T00:00:00.001-00:00", invoker);
+
+        addAndCompare("2012-04T", -31L * 24 * 60 * 60 * 1000 - 1, "2012-02-29T23:59:59.999-00:00", invoker);
+        addAndCompare("2012-04T", -31L * 24 * 60 * 60 * 1000    , "2012-03-01T00:00:00.000-00:00", invoker);
+        addAndCompare("2012-04T",                             -1, "2012-03-31T23:59:59.999-00:00", invoker);
+        addAndCompare("2012-04T",                              0, "2012-04-01T00:00:00.000-00:00", invoker);
+        addAndCompare("2012-04T",                              1, "2012-04-01T00:00:00.001-00:00", invoker);
+        addAndCompare("2012-04T",  30L * 24 * 60 * 60 * 1000 - 1, "2012-04-30T23:59:59.999-00:00", invoker);
+        addAndCompare("2012-04T",  30L * 24 * 60 * 60 * 1000    , "2012-05-01T00:00:00.000-00:00", invoker);
+
+
+        addAndCompare("2011-02-28",                   -1, "2011-02-27T23:59:59.999-00:00", invoker);
+        addAndCompare("2011-02-28",                    0, "2011-02-28T00:00:00.000-00:00", invoker);
+        addAndCompare("2011-02-28",                    1, "2011-02-28T00:00:00.001-00:00", invoker);
+        addAndCompare("2011-02-28",  24 * 60 * 60 * 1000, "2011-03-01T00:00:00.000-00:00", invoker);
+        addAndCompare("2011-03-01", -24 * 60 * 60 * 1000, "2011-02-28T00:00:00.000-00:00", invoker);
+        addAndCompare("2012-02-28",  24 * 60 * 60 * 1000, "2012-02-29T00:00:00.000-00:00", invoker);
+        addAndCompare("2012-02-29", -24 * 60 * 60 * 1000, "2012-02-28T00:00:00.000-00:00", invoker);
+        addAndCompare("2012-02-29",  24 * 60 * 60 * 1000, "2012-03-01T00:00:00.000-00:00", invoker);
+
+        addAndCompare("2012-10-04", -24 * 60 * 60 * 1000 - 1, "2012-10-02T23:59:59.999-00:00", invoker);
+        addAndCompare("2012-10-04", -24 * 60 * 60 * 1000    , "2012-10-03T00:00:00.000-00:00", invoker);
+        addAndCompare("2012-10-04",                       -1, "2012-10-03T23:59:59.999-00:00", invoker);
+        addAndCompare("2012-10-04",                        1, "2012-10-04T00:00:00.001-00:00", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60 * 1000 - 1, "2012-10-05T23:59:59.999-00:00", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60 * 1000    , "2012-10-06T00:00:00.000-00:00", invoker);
+
+        addAndCompareMillisWithFullPrecision("2011-01-31T12:03:23",  -60 * 60 * 1000, "2011-01-31T11:03:23", invoker);
+        addAndCompareMillisWithFullPrecision("2011-01-31T12:03:23",                0, "2011-01-31T12:03:23", invoker);
+        addAndCompareMillisWithFullPrecision("2011-01-31T12:03:23",   60 * 60 * 1000, "2011-01-31T13:03:23", invoker);
+        addAndCompareMillisWithFullPrecision("2011-01-31T23:03:23",   57 * 60 * 1000, "2011-02-01T00:00:23", invoker);
+
+        addAndCompareMillisWithFullPrecision("2011-02-28T02:03:23", 25 * 60 * 60 * 1000, "2011-03-01T03:03:23", invoker);
+        addAndCompareMillisWithFullPrecision("2012-02-28T02:03:23", 25 * 60 * 60 * 1000, "2012-02-29T03:03:23", invoker);
+
+        addAndCompareMillisWithFullPrecision("2011-03-01T02:35:23", -4 * 60 * 60 * 1000, "2011-02-28T22:35:23", invoker);
+        addAndCompareMillisWithFullPrecision("2012-03-01T02:35:23", -4 * 60 * 60 * 1000, "2012-02-29T22:35:23", invoker);
+
+        addAndCompareMillisWithOffsets("2011-01-31T23:59:59.999", 1, "2011-02-01T00:00:00.000", invoker);
+        addAndCompareMillisWithOffsets("2011-02-01T00:00:00.000", -1, "2011-01-31T23:59:59.999", invoker);
+        addAndCompareMillisWithOffsets("2011-01-31T23:59:59.999123", 1, "2011-02-01T00:00:00.000123", invoker);
+        addAndCompareMillisWithOffsets("2011-02-01T00:00:00.000123", -1, "2011-01-31T23:59:59.999123", invoker);
+
+    }
+
+    private void adjustMillisecondWithFrac(String orig, long amount, String expected, TimestampArithmeticInvoker invoker)
+    {
+        // If the timestamp has less than milliseconds precision, maintain the original precision.
+        addAndCompareMillisWithOffsets(orig, amount, expected, invoker);
+        addAndCompareMillisWithOffsets(orig + ".0", amount, expected + ".0", invoker);
+        addAndCompareMillisWithOffsets(orig + ".00", amount, expected + ".00", invoker);
+        addAndCompareMillisWithOffsets(orig + ".000", amount, expected +".000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".456", amount, expected + ".456", invoker);
+        // If the Timestamp has greater than milliseconds precision, don't reduce the precision.
+        addAndCompareMillisWithOffsets(orig + ".0000", amount, expected + ".0000", invoker);
+        addAndCompareMillisWithOffsets(orig + ".45678", amount, expected +".45678", invoker);
+    }
+
+    @Test
+    public void testAdjustMillis()
+    {
+        TimestampArithmeticInvoker invoker = new TimestampArithmeticInvoker() {
+            public Timestamp invoke(Timestamp input, Number amount) {
+                return input.adjustMillis(amount.longValue());
+            }
+        };
+        // Adding more precise amounts extends the precision.
+        addAndCompare("2012T",    -1, "2011T", invoker);
+        addAndCompare("2012T",     0, "2012T", invoker);
+        addAndCompare("2012T",     1, "2012T", invoker);
+
+        addAndCompare("2012-04T", -31L * 24 * 60 * 60 * 1000 - 1, "2012-02T", invoker);
+        addAndCompare("2012-04T", -31L * 24 * 60 * 60 * 1000    , "2012-03T", invoker);
+        addAndCompare("2012-04T",                             -1, "2012-03T", invoker);
+        addAndCompare("2012-04T",                              0, "2012-04T", invoker);
+        addAndCompare("2012-04T",                              1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30L * 24 * 60 * 60 * 1000 - 1, "2012-04T", invoker);
+        addAndCompare("2012-04T",  30L * 24 * 60 * 60 * 1000    , "2012-05T", invoker);
+
+
+        addAndCompare("2011-02-28",                   -1, "2011-02-27", invoker);
+        addAndCompare("2011-02-28",                    0, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",                    1, "2011-02-28", invoker);
+        addAndCompare("2011-02-28",  24 * 60 * 60 * 1000, "2011-03-01", invoker);
+        addAndCompare("2011-03-01", -24 * 60 * 60 * 1000, "2011-02-28", invoker);
+        addAndCompare("2012-02-28",  24 * 60 * 60 * 1000, "2012-02-29", invoker);
+        addAndCompare("2012-02-29", -24 * 60 * 60 * 1000, "2012-02-28", invoker);
+        addAndCompare("2012-02-29",  24 * 60 * 60 * 1000, "2012-03-01", invoker);
+
+        addAndCompare("2012-10-04", -24 * 60 * 60 * 1000 - 1, "2012-10-02", invoker);
+        addAndCompare("2012-10-04", -24 * 60 * 60 * 1000    , "2012-10-03", invoker);
+        addAndCompare("2012-10-04",                       -1, "2012-10-03", invoker);
+        addAndCompare("2012-10-04",                        1, "2012-10-04", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60 * 1000 - 1, "2012-10-05", invoker);
+        addAndCompare("2012-10-04",  48 * 60 * 60 * 1000    , "2012-10-06", invoker);
+
+        adjustMillisecondWithFrac("2011-01-31T12:03:23",  -60 * 60 * 1000, "2011-01-31T11:03:23", invoker);
+        adjustMillisecondWithFrac("2011-01-31T12:03:23",                0, "2011-01-31T12:03:23", invoker);
+        adjustMillisecondWithFrac("2011-01-31T12:03:23",   60 * 60 * 1000, "2011-01-31T13:03:23", invoker);
+        adjustMillisecondWithFrac("2011-01-31T23:03:23",   57 * 60 * 1000, "2011-02-01T00:00:23", invoker);
+
+        adjustMillisecondWithFrac("2011-02-28T02:03:23", 25 * 60 * 60 * 1000, "2011-03-01T03:03:23", invoker);
+        adjustMillisecondWithFrac("2012-02-28T02:03:23", 25 * 60 * 60 * 1000, "2012-02-29T03:03:23", invoker);
+
+        adjustMillisecondWithFrac("2011-03-01T02:35:23", -4 * 60 * 60 * 1000, "2011-02-28T22:35:23", invoker);
+        adjustMillisecondWithFrac("2012-03-01T02:35:23", -4 * 60 * 60 * 1000, "2012-02-29T22:35:23", invoker);
+
+        addAndCompareMillisWithOffsets("2011-01-31T23:59:59.999", 1, "2011-02-01T00:00:00.000", invoker);
+        addAndCompareMillisWithOffsets("2011-02-01T00:00:00.000", -1, "2011-01-31T23:59:59.999", invoker);
+        addAndCompareMillisWithOffsets("2011-01-31T23:59:59.999123", 1, "2011-02-01T00:00:00.000123", invoker);
+        addAndCompareMillisWithOffsets("2011-02-01T00:00:00.000123", -1, "2011-01-31T23:59:59.999123", invoker);
+
+        // Additional fractional precision is truncated.
+        addAndCompareMillisWithOffsets("2011-01-31T23:59:59.99", 9, "2011-01-31T23:59:59.99", invoker);
+        addAndCompareMillisWithOffsets("2011-02-01T00:00:00.00", -1, "2011-01-31T23:59:59.99", invoker);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddMillisOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.addMillis(2*12*35*24*60*60*1000L);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddMillisOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.addMillis(-1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustMillisOutsideMaxRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("9998T");
+        ts1.adjustMillis(2*12*35*24*60*60*1000L);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAdjustMillisOutsideMinRange()
+    {
+        Timestamp ts1 = Timestamp.valueOf("0001T");
+        ts1.adjustMillis(-1);
     }
 
     @Test
@@ -2331,7 +2640,7 @@ public class TimestampTest
     }
 
     @Test
-    public void testCustomCalendarLeapYearWithChainedArithmetic() {
+    public void testCustomCalendarLeapYearWithChainedAdd() {
         // Create a purely Julian calendar, where leap years were every four years.
         GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
         julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
@@ -2344,18 +2653,30 @@ public class TimestampTest
         assertEquals("1800-02-29T00:00:00.000Z", timestamp2.toString());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testAddSecondOutsideMaxRange()
-    {
-        Timestamp ts1 = Timestamp.valueOf("9998T");
-        ts1.addSecond(2*12*35*24*60*60);
+    @Test
+    public void testCustomCalendarLeapYearWithChainedAdjust() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        // 1800 is not a leap year under the Gregorian calendar, but it is under the Julian calendar.
+        julianCalendar.set(1799, Calendar.JANUARY, 27, 22, 58, 58);
+        julianCalendar.set(Calendar.MILLISECOND, 999);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = timestamp1.adjustYear(1).adjustMonth(1).adjustDay(1).adjustHour(1).adjustMinute(1).adjustSecond(1).adjustMillis(1);
+        assertEquals("1800-02-29T00:00:00.000Z", timestamp2.toString());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testAddSecondOutsideMinRange()
-    {
-        Timestamp ts1 = Timestamp.valueOf("0001T");
-        ts1.addSecond(-1);
+    @Test
+    public void testCustomCalendarLeapYearWithChainedAdjustLessPrecise() {
+        // Create a purely Julian calendar, where leap years were every four years.
+        GregorianCalendar julianCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        julianCalendar.setGregorianChange(new Date(Long.MAX_VALUE));
+        julianCalendar.clear();
+        julianCalendar.set(1799, Calendar.JANUARY, 28);
+        Timestamp timestamp1 = Timestamp.forCalendar(julianCalendar);
+        Timestamp timestamp2 = timestamp1.adjustYear(1).adjustMonth(1).adjustDay(1).adjustHour(1).adjustMinute(1).adjustSecond(1).adjustMillis(1);
+        assertEquals("1800-02-29", timestamp2.toString());
     }
 
     @Test
