@@ -32,11 +32,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import org.junit.Ignore;
 import org.junit.Test;
+import software.amazon.ion.IonCatalog;
 import software.amazon.ion.IonDatagram;
 import software.amazon.ion.IonException;
 import software.amazon.ion.IonInt;
@@ -56,6 +59,9 @@ import software.amazon.ion.SymbolTable;
 import software.amazon.ion.SymbolToken;
 import software.amazon.ion.SystemSymbols;
 import software.amazon.ion.Timestamp;
+import software.amazon.ion.system.IonBinaryWriterBuilder;
+import software.amazon.ion.system.IonSystemBuilder;
+import software.amazon.ion.system.IonTextWriterBuilder;
 import software.amazon.ion.system.SimpleCatalog;
 
 /**
@@ -176,26 +182,6 @@ public class SymbolTableTest
     }
 
     @Test
-    public void testLocalSymbolTableAppendThroughDom()
-    {
-        SymbolTable base = system().newLocalSymbolTable();
-        base.intern("beforeDerivedCreation");
-
-        SymbolTable derived = system().newLocalSymbolTable(base);
-        derived.intern("onDerived");
-
-        base.intern("afterDerivedCreation");
-
-        checkSymbol("beforeDerivedCreation", systemMaxId() + 1, derived);
-        checkSymbol("onDerived", systemMaxId() + 2, derived);
-
-        // derived only see symbols that were added in base before derived creation
-        // so "afterDerivedCreation" is unknown to derived
-        checkUnknownSymbol("afterDerivedCreation", UNKNOWN_SYMBOL_ID, derived);
-        checkSymbol("afterDerivedCreation", systemMaxId() + 2, base);
-    }
-
-    @Test
     public void testLocalSymbolTableMultiAppend()
     {
         String text =
@@ -295,6 +281,50 @@ public class SymbolTableTest
         // new symbols in `original` are not accessible from `appended` after import
         assertNull(original.find("a1"));
         assertNull(appended.find("o1"));
+    }
+
+    @Test
+    public void testMutateDomAfterLocalSymbolTableAppend() throws IOException {
+        String text =
+                LocalSymbolTablePrefix +
+                "{" +
+                "   imports:[{name:\"foo\", version:1, max_id:1}], " +
+                "   symbols:[\"s1\", \"s2\"]" +
+                "}\n" +
+                "$10\n" + // Symbol with unknown text from "foo"
+                "$11\n" + // s1
+                LocalSymbolTablePrefix +
+                "{" +
+                "   imports:" + ION_SYMBOL_TABLE + "," +
+                "   symbols:[\"s3\"]" +
+                "}\n" +
+                "$12"; // s2
+        IonDatagram datagram = loader().load(text);
+        datagram.add(1, system().newSymbol("abc"));
+        datagram.add(system().newSymbol(new SymbolTokenImpl(null, 13))); // s3
+        datagram.add(system().newSymbol(new SymbolTokenImpl(null, 10))); // Symbol with unknown text from "foo"
+        ByteArrayOutputStream textOutput = new ByteArrayOutputStream();
+        ByteArrayOutputStream binaryOutput = new ByteArrayOutputStream();
+        List<String> fooSymbols = Collections.singletonList("bar");
+        SymbolTable fooTable = system().newSharedSymbolTable("foo", 1, fooSymbols.iterator());
+        IonWriter textWriter = IonTextWriterBuilder.standard().withImports(fooTable).build(textOutput);
+        datagram.writeTo(textWriter);
+        textWriter.close();
+        IonWriter binaryWriter = IonBinaryWriterBuilder.standard().withImports(fooTable).build(binaryOutput);
+        datagram.writeTo(binaryWriter);
+        binaryWriter.close();
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(fooTable);
+        IonSystem system = IonSystemBuilder.standard().withCatalog(catalog).build();
+        IonDatagram textRoundtrip = system.getLoader().load(textOutput.toByteArray());
+        IonDatagram binaryRoundtrip = system.getLoader().load(binaryOutput.toByteArray());
+        assertEquals(textRoundtrip, binaryRoundtrip);
+        assertEquals("bar", ((IonSymbol)textRoundtrip.get(0)).stringValue());
+        assertEquals("abc", ((IonSymbol)textRoundtrip.get(1)).stringValue());
+        assertEquals("s1", ((IonSymbol)textRoundtrip.get(2)).stringValue());
+        assertEquals("s2", ((IonSymbol)textRoundtrip.get(3)).stringValue());
+        assertEquals("s3", ((IonSymbol)textRoundtrip.get(4)).stringValue());
+        assertEquals("bar", ((IonSymbol)textRoundtrip.get(0)).stringValue());
     }
 
     @Test
@@ -491,7 +521,7 @@ public class SymbolTableTest
     }
 
 
-    @Test @Ignore
+    @Test
     public void testInjectingMaxIdIntoImport() // TODO implement
     {
         SymbolTable importedTable = registerImportedV1();
@@ -713,8 +743,7 @@ public class SymbolTableTest
         checkSymbol("imported 2", 13, /* dupe */ true, symbolTable);
     }
 
-    // amzn/ion-java#46
-    @Test @Ignore
+    @Test
     public void testDupLocalSymbolOnDatagram() throws Exception {
         final IonSystem ion1 = system();
         final SymbolTable st = ion1.newSharedSymbolTable("foobar", 1, Arrays.asList("s1").iterator());
