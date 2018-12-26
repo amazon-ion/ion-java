@@ -28,6 +28,7 @@ import static software.amazon.ion.impl.PrivateUtils.safeEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -219,6 +220,10 @@ class LocalSymbolTable
 
         List<SymbolTable> importsList = new ArrayList<SymbolTable>();
         importsList.add(reader.getSymbolTable().getSystemSymbolTable());
+        // Isolate the newly-declared symbols because they must be added after any symbols declared
+        // by the previous symbol table if this is an appending local symbol table, but the 'imports' and
+        // 'symbols' declarations can occur in any order.
+        List<String> newSymbols = new ArrayList<String>();
 
         IonType fieldType;
         boolean foundImportList = false;
@@ -267,7 +272,7 @@ class LocalSymbolTable
                                 text = null;
                             }
 
-                            symbolsListOut.add(text);
+                            newSymbols.add(text);
                         }
                         reader.stepOut();
                     }
@@ -288,7 +293,12 @@ class LocalSymbolTable
                         // trying to import the current table
                         if(reader.getSymbolTable().isLocalTable() && ION_SYMBOL_TABLE.equals(reader.stringValue()))
                         {
-                            importsList.add(reader.getSymbolTable());
+                            SymbolTable currentSymbolTable = reader.getSymbolTable();
+                            importsList.addAll(Arrays.asList(currentSymbolTable.getImportedTables()));
+                            Iterator<String> currentSymbols = currentSymbolTable.iterateDeclaredSymbolNames();
+                            while (currentSymbols.hasNext()) {
+                                symbolsListOut.add(currentSymbols.next());
+                            }
                         }
                     }
                     break;
@@ -302,7 +312,7 @@ class LocalSymbolTable
         }
 
         reader.stepOut();
-
+        symbolsListOut.addAll(newSymbols);
         return new LocalSymbolTableImports(importsList);
     }
 

@@ -410,11 +410,18 @@ final class IonDatagramLite
     @Override
     public final void writeTo(IonWriter writer)
     {
-        try
-        {
-            writer.writeSymbol(SystemSymbols.ION_1_0);  // TODO amzn/ion-java#8 ???
-        } catch (IOException ioe) {
-            throw new IonException(ioe);
+        if (writer.getSymbolTable().isSystemTable()) {
+            // If the writer was configured with a non-default symbol table, writing an IVM here will
+            // reset that symbol table. If the datagram contains any symbols with unknown text that
+            // refer to slots in shared symbol table imports declared by the discarded table, an
+            // error will be raised unnecessarily. To avoid that, only write an IVM when the writer's
+            // symbol table is already the system symbol table.
+            // TODO evaluate whether an IVM should ever be written here. amzn/ion-java#200
+            try {
+                writer.writeSymbol(SystemSymbols.ION_1_0);
+            } catch (IOException ioe) {
+                throw new IonException(ioe);
+            }
         }
         for (IonValue iv : this) {
             iv.writeTo(writer);
