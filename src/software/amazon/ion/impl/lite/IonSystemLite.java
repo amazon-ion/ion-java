@@ -170,28 +170,28 @@ final class IonSystemLite
         return getSystemSymbolTable();
     }
 
-    public Iterator<IonValue> iterate(Reader ionText)
+    public ReaderIterator iterate(Reader ionText)
     {
         IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public Iterator<IonValue> iterate(InputStream ionData)
+    public ReaderIterator iterate(InputStream ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public Iterator<IonValue> iterate(String ionText)
+    public ReaderIterator iterate(String ionText)
     {
         IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public Iterator<IonValue> iterate(byte[] ionData)
+    public ReaderIterator iterate(byte[] ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
@@ -471,31 +471,38 @@ final class IonSystemLite
         return writer;
     }
 
-    private IonValue singleValue(Iterator<IonValue> it)
+    private IonValue singleValue(ReaderIterator it)
     {
-        IonValue value;
         try {
-            value = it.next();
+            IonValue value = it.next();
+            if (it.hasNext()) {
+                throw new IonException("not a single value");
+            }
+            return value;
         }
         catch (NoSuchElementException e) {
             throw new UnexpectedEofException("no value found on input stream");
         }
-        if (it.hasNext()) {
-            throw new IonException("not a single value");
+        finally {
+            try {
+                it.close();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
         }
-        return value;
     }
 
     public IonValue singleValue(String ionText)
     {
-        Iterator<IonValue> it = iterate(ionText);
+        ReaderIterator it = iterate(ionText);
         return singleValue(it);
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        Iterator<IonValue> it = iterate(ionData);
-        return singleValue(it);
+        ReaderIterator iterator = iterate(ionData);
+        return singleValue(iterator);
     }
 
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
@@ -508,69 +515,6 @@ final class IonSystemLite
 
         return ivm;
     }
-
-    static class ReaderIterator
-        implements Iterator<IonValue>, Closeable
-    {
-        private final IonReader        _reader;
-        private final IonSystemLite    _system;
-        private       IonType          _next;
-
-
-        // TODO: do we need catalog, import support for this?
-        //       we are creating ion values which might want
-        //       a local symbol table in some cases.
-        protected ReaderIterator(IonSystemLite system, IonReader reader)
-        {
-            _reader = reader;
-            _system = system;
-        }
-
-        public boolean hasNext()
-        {
-            if (_next == null) {
-                _next = _reader.next();
-            }
-            return (_next != null);
-        }
-
-        public IonValue next()
-        {
-            if (!hasNext()) {
-                // IterationTest.testSimpleIteration() wants this
-                throw new NoSuchElementException();
-                // LoaderTest.testSingleValue is expecting null so
-                // IonSystemLite.singleValue can throw an IonException - or
-                // should we change testSingleValue ??
-                // return null;
-            }
-
-            SymbolTable symtab = _reader.getSymbolTable();
-
-            // make an ion value from our reader
-            // We called _reader.next() inside hasNext() above
-            IonValueLite value = _system.newValue(_reader);
-
-            // we've used up the value now, force a _reader._next() the next time through
-            _next = null;
-
-            value.setSymbolTable(symtab);
-
-            return value;
-        }
-
-
-        public void remove()
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        public void close() throws IOException
-        {
-            // TODO _reader.close();
-        }
-    }
-
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)
     {
