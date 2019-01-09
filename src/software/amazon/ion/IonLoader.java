@@ -111,8 +111,9 @@ public interface IonLoader
      * </p>
      *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong> this feature is
-     * deprecated and will be removed in subsequent releases.
+     * This method will auto-detect and decompress GZIPped Ion data.
+     * <strong>WARNING:</strong> this feature is deprecated and will
+     * be removed in subsequent releases.
      *</p>
      *
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
@@ -125,8 +126,8 @@ public interface IonLoader
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
      *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data will be removed in subsequent releases. Use
-     * {@link IonLoader#load(InputStream)} with a {@link java.util.zip.GZIPInputStream} instead for GZIP data
+     * @deprecated auto-detecting of and decompression GZIPped Ion data will
+     * be removed in subsequent releases.
      */
     public IonDatagram load(byte[] ionData)
         throws IonException;
@@ -140,8 +141,9 @@ public interface IonLoader
      * </p>
      *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong> this feature is
-     * deprecated and will be removed in subsequent releases.
+     * This method will auto-detect and decompress GZIPped Ion data.
+     * <strong>WARNING:</strong> this feature is deprecated and will be
+     * removed in subsequent releases.
      * </p>
      *
      * <p>
@@ -159,8 +161,9 @@ public interface IonLoader
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
      *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data will be removed in subsequent releases. Use a
-     * {@link java.util.zip.GZIPInputStream} to process GZIPped Ion data
+     * @deprecated auto-detecting of and decompression GZIPped Ion data will
+     * be removed in subsequent releases. Use a {@link java.util.zip.GZIPInputStream}
+     * to process GZIPped Ion data.
      */
     public IonDatagram load(InputStream ionData)
         throws IonException, IOException;
