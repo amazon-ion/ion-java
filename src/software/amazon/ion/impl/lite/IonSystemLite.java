@@ -14,6 +14,7 @@
 
 package software.amazon.ion.impl.lite;
 
+import software.amazon.ion.CloseableIterator;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
@@ -170,28 +171,28 @@ final class IonSystemLite
         return getSystemSymbolTable();
     }
 
-    public ReaderIterator iterate(Reader ionText)
+    public CloseableIterator<IonValue> iterate(Reader ionText)
     {
         IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public ReaderIterator iterate(InputStream ionData)
+    public CloseableIterator<IonValue> iterate(InputStream ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public ReaderIterator iterate(String ionText)
+    public CloseableIterator<IonValue> iterate(String ionText)
     {
         IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public ReaderIterator iterate(byte[] ionData)
+    public CloseableIterator<IonValue> iterate(byte[] ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
@@ -471,7 +472,7 @@ final class IonSystemLite
         return writer;
     }
 
-    private IonValue singleValue(ReaderIterator it)
+    private IonValue singleValue(CloseableIterator<IonValue> it)
     {
         try {
             IonValue value = it.next();
@@ -495,13 +496,13 @@ final class IonSystemLite
 
     public IonValue singleValue(String ionText)
     {
-        ReaderIterator it = iterate(ionText);
+        CloseableIterator<IonValue> it = iterate(ionText);
         return singleValue(it);
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        ReaderIterator iterator = iterate(ionData);
+        CloseableIterator<IonValue> iterator = iterate(ionData);
         return singleValue(iterator);
     }
 
@@ -514,6 +515,79 @@ final class IonSystemLite
         ivm.setIsIonVersionMarker(true);
 
         return ivm;
+    }
+
+    static class ReaderIterator
+        implements CloseableIterator<IonValue>
+    {
+        private final IonReader        _reader;
+        private final IonSystemLite    _system;
+        private       IonType          _next;
+
+
+        // TODO: do we need catalog, import support for this?
+        //       we are creating ion values which might want
+        //       a local symbol table in some cases.
+        protected ReaderIterator(IonSystemLite system, IonReader reader)
+        {
+            _reader = reader;
+            _system = system;
+        }
+
+        public boolean hasNext()
+        {
+            if (_next == null) {
+                _next = _reader.next();
+            }
+            boolean hasNext = _next != null;
+
+            if (!hasNext) {
+                try {
+                    close();
+                }
+                catch (IOException e) {
+                    throw new IonException(e);
+                }
+            }
+
+            return hasNext;
+        }
+
+        public IonValue next()
+        {
+            if (!hasNext()) {
+                // IterationTest.testSimpleIteration() wants this
+                throw new NoSuchElementException();
+                // LoaderTest.testSingleValue is expecting null so
+                // IonSystemLite.singleValue can throw an IonException - or
+                // should we change testSingleValue ??
+                // return null;
+            }
+
+            SymbolTable symtab = _reader.getSymbolTable();
+
+            // make an ion value from our reader
+            // We called _reader.next() inside hasNext() above
+            IonValueLite value = _system.newValue(_reader);
+
+            // we've used up the value now, force a _reader._next() the next time through
+            _next = null;
+
+            value.setSymbolTable(symtab);
+
+            return value;
+        }
+
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public void close() throws IOException
+        {
+            _reader.close();
+        }
     }
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)

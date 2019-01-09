@@ -20,7 +20,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.util.Date;
 import java.util.Iterator;
-import software.amazon.ion.impl.lite.ReaderIterator;
 import software.amazon.ion.system.IonSystemBuilder;
 import software.amazon.ion.system.IonTextWriterBuilder;
 
@@ -237,16 +236,17 @@ public interface IonSystem
      * you avoid adding additional buffering to the given stream.
      * </p>
      *
-     * @param ionText a stream of Ion text data.  The caller is responsible for
+     * @param ionText a stream of Ion text data. The caller is responsible for
      * closing the Reader after iteration is complete.
      *
-     * @return a new iterator instance.
+     * @return a new iterator instance. Closing this iterator
+     * will close ionText Reader. The iterator automatically closes when
+     * there are no more values to return.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if the source throws {@link IOException}.
      */
-    public ReaderIterator iterate(Reader ionText);
-
+    public CloseableIterator<IonValue> iterate(Reader ionText);
 
     /**
      * <p>
@@ -284,8 +284,11 @@ public interface IonSystem
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
      *
-     * @return a new ReaderIterator instance. <strong>WARNING:</strong> This instance
-     * must be closed by the client to avoid memory leaks when dealing with GZIPped Ion data.
+     * @return a new CloseableIterator<IonValue> instance. Closing this iterator
+     * will close ionData InputStream. The iterator automatically closes when
+     * there are no more values to return. <strong>WARNING:</strong> This instance
+     * must be closed by the client to avoid memory leaks when dealing with
+     * GZIPped Ion data.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if the source throws {@link IOException}.
@@ -293,7 +296,7 @@ public interface IonSystem
      * @deprecated auto-detecting of and decompression GZIPped Ion data
      * will be removed in subsequent releases.
      */
-    public ReaderIterator iterate(InputStream ionData);
+    public CloseableIterator<IonValue> iterate(InputStream ionData);
 
 
     /**
@@ -305,11 +308,14 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      *
-     * @return a new iterator instance.
+     * @return a new iterator instance. Closing this iterator will
+     * close the underlying {@link IonReader} created to read ionText.
+     * The iterator automatically closes when there are no more values
+     * to return.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    public ReaderIterator iterate(String ionText);
+    public CloseableIterator<IonValue> iterate(String ionText);
 
 
     /**
@@ -331,15 +337,18 @@ public interface IonSystem
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
-     * @return a new ReaderIterator instance. <strong>WARNING:</strong> This instance
-     * must be closed by the client to avoid memory leaks when dealing with GZIPped Ion data.
+     * @return a new CloseableIterator<IonValue> instance. Closing this iterator will
+     * close the underlying {@link IonReader} created to read ionData. The iterator
+     * automatically closes when there are no more values to return.
+     * <strong>WARNING:</strong> This instance must be closed by the client
+     * to avoid memory leaks when dealing with GZIPped Ion data.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      *
      * @deprecated auto-detecting of and decompression GZIPped Ion data
      * will be removed in subsequent releases.
      */
-    public ReaderIterator iterate(byte[] ionData);
+    public CloseableIterator<IonValue> iterate(byte[] ionData);
 
 
     /**
