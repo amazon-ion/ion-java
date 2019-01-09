@@ -14,6 +14,7 @@
 
 package software.amazon.ion.impl.lite;
 
+import software.amazon.ion.CloseableIterator;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
@@ -170,28 +171,28 @@ final class IonSystemLite
         return getSystemSymbolTable();
     }
 
-    public Iterator<IonValue> iterate(Reader ionText)
+    public CloseableIterator<IonValue> iterate(Reader ionText)
     {
         IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public Iterator<IonValue> iterate(InputStream ionData)
+    public CloseableIterator<IonValue> iterate(InputStream ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public Iterator<IonValue> iterate(String ionText)
+    public CloseableIterator<IonValue> iterate(String ionText)
     {
         IonReader reader = makeReader(_catalog, ionText, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
 
-    public Iterator<IonValue> iterate(byte[] ionData)
+    public CloseableIterator<IonValue> iterate(byte[] ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         ReaderIterator iterator = new ReaderIterator(this, reader);
@@ -471,31 +472,38 @@ final class IonSystemLite
         return writer;
     }
 
-    private IonValue singleValue(Iterator<IonValue> it)
+    private IonValue singleValue(CloseableIterator<IonValue> it)
     {
-        IonValue value;
         try {
-            value = it.next();
+            IonValue value = it.next();
+            if (it.hasNext()) {
+                throw new IonException("not a single value");
+            }
+            return value;
         }
         catch (NoSuchElementException e) {
             throw new UnexpectedEofException("no value found on input stream");
         }
-        if (it.hasNext()) {
-            throw new IonException("not a single value");
+        finally {
+            try {
+                it.close();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
         }
-        return value;
     }
 
     public IonValue singleValue(String ionText)
     {
-        Iterator<IonValue> it = iterate(ionText);
+        CloseableIterator<IonValue> it = iterate(ionText);
         return singleValue(it);
     }
 
     public IonValue singleValue(byte[] ionData)
     {
-        Iterator<IonValue> it = iterate(ionData);
-        return singleValue(it);
+        CloseableIterator<IonValue> iterator = iterate(ionData);
+        return singleValue(iterator);
     }
 
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
@@ -510,7 +518,7 @@ final class IonSystemLite
     }
 
     static class ReaderIterator
-        implements Iterator<IonValue>, Closeable
+        implements CloseableIterator<IonValue>
     {
         private final IonReader        _reader;
         private final IonSystemLite    _system;
@@ -531,7 +539,18 @@ final class IonSystemLite
             if (_next == null) {
                 _next = _reader.next();
             }
-            return (_next != null);
+            boolean hasNext = _next != null;
+
+            if (!hasNext) {
+                try {
+                    close();
+                }
+                catch (IOException e) {
+                    throw new IonException(e);
+                }
+            }
+
+            return hasNext;
         }
 
         public IonValue next()
@@ -567,10 +586,9 @@ final class IonSystemLite
 
         public void close() throws IOException
         {
-            // TODO _reader.close();
+            _reader.close();
         }
     }
-
 
     public IonTimestamp newUtcTimestampFromMillis(long millis)
     {
