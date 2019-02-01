@@ -252,11 +252,6 @@ public interface ValueFactory
 
     /**
      * Constructs a new {@code list} with the given child.
-     * <p>
-     * <b>This method is temporary</b> until {@link #newList(Collection)} is
-     * removed.  It's sole purpose is to avoid the doomed attempt to add all
-     * of the parameter's children to the new list; that will always throw
-     * {@link ContainedValueException}.
      *
      * @param child the initial child of the new list.
      *
