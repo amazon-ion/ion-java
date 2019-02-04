@@ -650,8 +650,8 @@ public interface IonSystem
 
     /**
      * Creates a new datagram, bootstrapped with imported symbol tables.
-     * Generally an application will use this to aquire a datagram, then adds
-     * values to it, then calls {@link IonDatagram#getBytes(byte[])}
+     * Generally an application will use this to acquire a datagram, then adds
+     * values to it, then calls {@link IonDatagram#getBytes()}
      * (or similar) to extract binary data.
      *
      * @param imports the set of shared symbol tables to import.
