@@ -252,13 +252,13 @@ public interface ValueFactory
 
     /**
      * Constructs a new {@code list} with the given child.
+     *
+     * @param child the initial child of the new list.
      * <p>
-     * <b>This method is temporary</b> until {@link #newList(Collection)} is
+     * <b>This method is temporary</b> until "newList(Collection)" is
      * removed.  It's sole purpose is to avoid the doomed attempt to add all
      * of the parameter's children to the new list; that will always throw
      * {@link ContainedValueException}.
-     *
-     * @param child the initial child of the new list.
      *
      * @throws NullPointerException if {@code child} is null.
      * @throws IllegalArgumentException if {@code child} is an {@link IonDatagram}.
@@ -360,7 +360,7 @@ public interface ValueFactory
     /**
      * Constructs a new {@code sexp} with the given child.
      * <p>
-     * <b>This method is temporary</b> until {@link #newSexp(Collection)} is
+     * <b>This method is temporary</b> until "newSexp(Collection)" is
      * removed.  It's sole purpose is to avoid the doomed attempt to add all
      * of the parameter's children to the new sequence; that will always throw
      * {@link ContainedValueException}.
