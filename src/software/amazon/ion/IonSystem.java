@@ -204,99 +204,66 @@ public interface IonSystem
 
 
     /**
-     * <p>
      * Creates an iterator over a stream of Ion text data.
      * Values returned by the iterator have no container.
-     * </p>
-     *
      * <p>
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
-     * </p>
-     *
      * <p>
      * If the input source throws an {@link IOException} during iteration, it
      * will be wrapped in an {@link IonException}. See documentation there for
      * tips on how to recover the cause.
-     * </p>
-     *
      * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
-     * </p>
-     *
      * <p>
      * Applications should generally use {@link #iterate(InputStream)}
      * whenever possible, since this library has much faster UTF-8 decoding
      * than the Java IO framework.
-     * </p>
-     *
      * <p>
      * Because this library performs its own buffering, it's recommended that
      * you avoid adding additional buffering to the given stream.
-     * </p>
      *
-     * @param ionText a stream of Ion text data. The caller is responsible for
+     * @param ionText a stream of Ion text data.  The caller is responsible for
      * closing the Reader after iteration is complete.
      *
-     * @return a new iterator instance. Closing this iterator
-     * will close ionText Reader. The iterator automatically closes when
-     * there are no more values to return.
+     * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      * @throws IonException if the source throws {@link IOException}.
      */
-    public CloseableIterator<IonValue> iterate(Reader ionText);
+    public Iterator<IonValue> iterate(Reader ionText);
+
 
     /**
-     * <p>
      * Creates an iterator over a stream of Ion data,
      * detecting whether it's text or binary data.
      * Values returned by the iterator have no container.
-     * </p>
-     *
      * <p>
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
-     * </p>
-     *
      * <p>
      * If the input source throws an {@link IOException} during iteration, it
      * will be wrapped in an {@link IonException}. See documentation there for
      * tips on how to recover the cause.
-     * </p>
-     *
      * <p>
      * This method is suitable for use over unbounded streams with a reasonable
      * schema.
-     * </p>
-     *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
-     * </p>
-     *
+     * This method will auto-detect and uncompress GZIPped Ion data.
      * <p>
      * Because this library performs its own buffering, it's recommended that
      * you avoid adding additional buffering to the given stream.
-     * </p>
      *
      * @param ionData a stream of Ion data.  The caller is responsible for
      * closing the InputStream after iteration is complete.
      *
-     * @return a new CloseableIterator<IonValue> instance. Closing this iterator
-     * will close ionData InputStream. The iterator automatically closes when
-     * there are no more values to return. <strong>WARNING:</strong> This instance
-     * must be closed by the client to avoid memory leaks when dealing with
-     * GZIPped Ion data.
+     * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if the source throws {@link IOException}.
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data
-     * will be removed in subsequent releases.
      */
-    public CloseableIterator<IonValue> iterate(InputStream ionData);
+    public Iterator<IonValue> iterate(InputStream ionData);
 
 
     /**
@@ -308,47 +275,32 @@ public interface IonSystem
      *
      * @param ionText must not be null.
      *
-     * @return a new iterator instance. Closing this iterator will
-     * close the underlying {@link IonReader} created to read ionText.
-     * The iterator automatically closes when there are no more values
-     * to return.
+     * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionText</code> is null.
      */
-    public CloseableIterator<IonValue> iterate(String ionText);
+    public Iterator<IonValue> iterate(String ionText);
 
 
     /**
-     * <p>
      * Creates an iterator over Ion data.
      * Values returned by the iterator have no container.
-     * </p>
      * <p>
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
-     * </p>
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
-     * </p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData may be either Ion binary data or (UTF-8) Ion text, or
      * GZIPped Ion data.
      * <em>This method assumes ownership of the array</em> and may modify it at
      * will.
      *
-     * @return a new CloseableIterator<IonValue> instance. Closing this iterator will
-     * close the underlying {@link IonReader} created to read ionData. The iterator
-     * automatically closes when there are no more values to return.
-     * <strong>WARNING:</strong> This instance must be closed by the client
-     * to avoid memory leaks when dealing with GZIPped Ion data.
+     * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data
-     * will be removed in subsequent releases.
      */
-    public CloseableIterator<IonValue> iterate(byte[] ionData);
+    public Iterator<IonValue> iterate(byte[] ionData);
 
 
     /**
@@ -368,14 +320,9 @@ public interface IonSystem
 
 
     /**
-     * <p>
      * Extracts a single value from Ion text or binary data.
-     * </p>
-     *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
-     * </p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData may be either Ion binary data or (UTF-8) Ion text, or
      * GZIPped Ion data.
@@ -389,9 +336,6 @@ public interface IonSystem
      * values.
      * @throws IonException if the data does not contain exactly one user
      * value.
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data
-     * will be removed in subsequent releases.
      */
     public IonValue singleValue(byte[] ionData);
 
@@ -420,35 +364,22 @@ public interface IonSystem
     public IonReader newReader(String ionText);
 
     /**
-     * <p>
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.
-     * </p>
-     *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
-     * </p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData may be either Ion binary data, or UTF-8 Ion text.
      * The reader retains a reference to the array, so its data must not be
      * modified while the reader is active.
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data
-     * will be removed in subsequent releases.
      */
     public IonReader newReader(byte[] ionData);
 
     /**
-     * <p>
      * Creates an new {@link IonReader} instance over a block of Ion data,
      * detecting whether it's text or binary data.
-     * </p>
-     *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
-     * </p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData is used only within the range of bytes starting at
      * {@code offset} for {@code len} bytes.
@@ -458,26 +389,17 @@ public interface IonSystem
      * @param offset must be non-negative and less than {@code ionData.length}.
      * @param len must be non-negative and {@code offset+len} must not exceed
      * {@code ionData.length}.
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data
-     * will be removed in subsequent releases.
      */
     public IonReader newReader(byte[] ionData, int offset, int len);
 
     /**
-     * <p>
      * Creates a new {@link IonReader} instance over a stream of Ion data,
      * detecting whether it's text or binary data.
-     *
      * <p>
-     * This method will auto-detect and decompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
-     * </p>
-     *
+     * This method will auto-detect and uncompress GZIPped Ion data.
      * <p>
      * Because this library performs its own buffering, it's recommended that
      * you avoid adding additional buffering to the given stream.
-     * </p>
      *
      * @param ionData must not be null.
      *
@@ -485,9 +407,6 @@ public interface IonSystem
      * Callers must call {@link IonReader#close()} when finished with it.
      *
      * @throws IonException if the source throws {@link IOException}.
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data
-     * will be removed in subsequent releases.
      */
     public IonReader newReader(InputStream ionData);
 
