@@ -2886,6 +2886,12 @@ public class TimestampTest
         cal2.setTime(date);
         Timestamp t2 = Timestamp.forCalendar(cal2);
 
+        assertEquals(t1.getMillis(), date.getTime());
+        assertEquals(t2.getMillis(), date.getTime());
+
+        assertEquals(BigDecimal.valueOf(t1.getMillis()), t1.getDecimalMillis());
+        assertEquals(BigDecimal.valueOf(t2.getMillis()), t2.getDecimalMillis());
+
         assertEquals(t1.getMillis(), t2.getMillis());
         assertEquals(t1.getDecimalMillis(), t2.getDecimalMillis());
     }
