@@ -166,6 +166,9 @@ public final class Timestamp
     /**
      * Calendar to hold the Timestamp's year, month, day, hour, minute, second, and calendar system. Fractional
      * seconds are left to {@link #_fraction}, while local offset is left to {@link #_offset}.
+     * <p>
+     * This calendar instance is adjusted such that it is always in UTC;  see _calendarCompensationOffsetMs
+     * if the original "instant" millis is needed.
      */
     private final Calendar _calendar;
 
@@ -179,6 +182,12 @@ public final class Timestamp
      * <code>null</code> means that the offset is unknown.
      */
     private Integer     _offset;
+
+    /**
+     * Number of milliseconds _calendar has been adjusted so that it is in UTC.
+     * Allows getMillis() and getDecimalMillis() to return the correct response.
+     */
+    private int _calendarCompensationOffsetMs;
 
     // Minimum millis under the calendar system provided by the default GregorianCalendar implementation.
     private static final long MINIMUM_TIMESTAMP_IN_MILLIS = Timestamp.valueOf("0001-01-01T00:00:00.000Z").getMillis();
@@ -206,12 +215,20 @@ public final class Timestamp
         offset = -offset;
         int hour_offset = offset / 60;
         int min_offset = offset - (hour_offset * 60);
+
+        // When we add hour_offset and min_offset to _calendar below, the underlying millis "instant"
+        // is changed.  To compensate, we set _calendarCompensationOffsetMs here and use it to
+        // recalculate the correct millis if/when needed
+        if (_calendar.isSet(Calendar.ZONE_OFFSET) || _calendar.isSet(Calendar.DST_OFFSET)) {
+            _calendarCompensationOffsetMs = -offset * 60 * 1000;
+        }
+
         // First, clear the offsets that are already set. Otherwise, the 'add' calls will add them in, which will
         // result in a double add.
         _calendar.clear(Calendar.ZONE_OFFSET);
         _calendar.clear(Calendar.DST_OFFSET);
-        _calendar.add(Calendar.MINUTE, min_offset);
         _calendar.add(Calendar.HOUR_OF_DAY, hour_offset);
+        _calendar.add(Calendar.MINUTE, min_offset);
     }
 
     /**
@@ -1341,7 +1358,7 @@ public final class Timestamp
             int frac = isIntegralZero(fracAsDecimal) ? 0 : fracAsDecimal.intValue();
             millis += frac;
         }
-        return millis;
+        return millis + _calendarCompensationOffsetMs;
 
     }
 
@@ -1365,7 +1382,7 @@ public final class Timestamp
         case DAY:
         case MINUTE:
         case SECOND:
-            long millis = _calendar.getTimeInMillis();
+            long millis = _calendar.getTimeInMillis() + _calendarCompensationOffsetMs;
             BigDecimal dec = BigDecimal.valueOf(millis);
             if (_fraction != null) {
                 dec = dec.add(this._fraction.movePointRight(3));
