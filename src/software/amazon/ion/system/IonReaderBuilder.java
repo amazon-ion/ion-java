@@ -160,8 +160,7 @@ public class IonReaderBuilder
      * instance over the given block of Ion data, detecting whether it's text or
      * binary data.
      * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data. <strong>WARNING:</strong>
-     *      * this feature is deprecated and will be removed in subsequent releases.
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData the source of the Ion data, which may be either Ion binary
      * data or UTF-8 Ion text. The reader retains a reference to the array, so
@@ -171,9 +170,6 @@ public class IonReaderBuilder
      * @return a new {@link IonReader} instance; not {@code null}.
      *
      * @see IonSystem#newReader(byte[])
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data will be
-     * removed in subsequent releases.
      */
     public IonReader build(byte[] ionData)
     {
@@ -185,8 +181,7 @@ public class IonReaderBuilder
      * instance over the given block of Ion data, detecting whether it's text or
      * binary data.
      * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
+     * This method will auto-detect and uncompress GZIPped Ion data.
      *
      * @param ionData the source of the Ion data, which is used only within the
      * range of bytes starting at {@code offset} for {@code len} bytes.
@@ -198,9 +193,6 @@ public class IonReaderBuilder
      * exceed {@code ionData.length}.
      *
      * @see IonSystem#newReader(byte[], int, int)
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data will be
-     * removed in subsequent releases.
      */
     public IonReader build(byte[] ionData, int offset, int length)
     {
@@ -212,8 +204,7 @@ public class IonReaderBuilder
      * instance over the given stream of Ion data, detecting whether it's text or
      * binary data.
      * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data. <strong>WARNING:</strong>
-     * this feature is deprecated and will be removed in subsequent releases.
+     * This method will auto-detect and uncompress GZIPped Ion data.
      * <p>
      * Because this library performs its own buffering, it's recommended that
      * users avoid adding additional buffering to the given stream.
@@ -227,10 +218,6 @@ public class IonReaderBuilder
      * @throws IonException if the source throws {@link IOException}.
      *
      * @see IonSystem#newReader(InputStream)
-     *
-     * @deprecated auto-detecting of and decompression GZIPped Ion data will be
-     * removed in subsequent releases. Use a {@link java.util.zip.GZIPInputStream}
-     * to process GZIPped Ion data.
      */
     public IonReader build(InputStream ionData)
     {

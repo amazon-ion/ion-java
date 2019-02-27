@@ -30,6 +30,7 @@ import static software.amazon.ion.impl.PrivateUtils.UTC;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -2868,6 +2869,31 @@ public class TimestampTest
     public void testGetMillisWithLargeScaleBigDecimal()
     {
         Timestamp.forMillis(LARGE_SCALE_DECIMAL, PST_OFFSET).getMillis();
+    }
+
+    @Test
+    public void testMillisIsIndepedentOfOffset() throws ParseException {
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+        Date date = format.parse("2010-06-29T23:20:00+0000");
+
+        Calendar cal1 = Calendar.getInstance();
+        cal1.setTimeZone(TimeZone.getTimeZone("GMT+00:00"));
+        cal1.setTime(date);
+        Timestamp t1 = Timestamp.forCalendar(cal1);
+
+        Calendar cal2 = Calendar.getInstance();
+        cal2.setTimeZone(TimeZone.getTimeZone("GMT+02:00"));
+        cal2.setTime(date);
+        Timestamp t2 = Timestamp.forCalendar(cal2);
+
+        assertEquals(t1.getMillis(), date.getTime());
+        assertEquals(t2.getMillis(), date.getTime());
+
+        assertEquals(BigDecimal.valueOf(t1.getMillis()), t1.getDecimalMillis());
+        assertEquals(BigDecimal.valueOf(t2.getMillis()), t2.getDecimalMillis());
+
+        assertEquals(t1.getMillis(), t2.getMillis());
+        assertEquals(t1.getDecimalMillis(), t2.getDecimalMillis());
     }
 
     @Test
