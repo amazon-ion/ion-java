@@ -16,7 +16,8 @@ package software.amazon.ion;
 
 import static software.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static software.amazon.ion.Decimal.negativeZero;
-import static software.amazon.ion.Timestamp.UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL;
+import static software.amazon.ion.Timestamp.MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL;
+import static software.amazon.ion.Timestamp.MINIMUM_TIMESTAMP_IN_MILLIS;
 import static software.amazon.ion.Timestamp.MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL;
 import static software.amazon.ion.Timestamp.UNKNOWN_OFFSET;
 import static software.amazon.ion.Timestamp.UTC_OFFSET;
@@ -39,6 +40,7 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import software.amazon.ion.Timestamp.Precision;
 
@@ -792,7 +794,7 @@ public class TimestampTest
     @Test
     public void testNewTimestampFromMinimumAllowedMillis()
     {
-        Timestamp ts = Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL, PST_OFFSET);
+        Timestamp ts = Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS, PST_OFFSET);
         assertEquals("0001-01-01T00:00:00.000Z", ts.toZString());
     }
 
@@ -806,7 +808,7 @@ public class TimestampTest
     @Test
     public void testNewTimestampFromBigDecimalWithMaximumAllowedMillis()
     {
-        Timestamp ts = Timestamp.forMillis(UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL.add(BigDecimal.ONE.negate()), PST_OFFSET);
+        Timestamp ts = Timestamp.forMillis(MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL.add(BigDecimal.ONE.negate()), PST_OFFSET);
         checkFields(9999, 12, 31, 15, 59, 59, new BigDecimal("0.999"), PST_OFFSET, SECOND, ts);
         assertEquals("9999-12-31T15:59:59.999-08:00", ts.toString());
         assertEquals("9999-12-31T23:59:59.999Z", ts.toZString());
@@ -828,20 +830,20 @@ public class TimestampTest
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromLongWithMillisTooSmall()
     {
-        Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL.longValue() - 1, 0);
+        Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS - 1, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromBigDecimalWithMillisTooBig()
     {
         // Max
-        Timestamp.forMillis(UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL, PST_OFFSET);
+        Timestamp.forMillis(MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL, PST_OFFSET);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testNewTimestampFromLongWithMillisTooBig()
     {
-        Timestamp.forMillis(UPPER_BOUND_TIMESTAMP_IN_MILLIS_DECIMAL.longValue(), PST_OFFSET);
+        Timestamp.forMillis(MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL.longValue(), PST_OFFSET);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -2576,6 +2578,7 @@ public class TimestampTest
         assertEquals("1800-03-01", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testConstructCustomCalendarWithValidLeapYear() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2588,6 +2591,7 @@ public class TimestampTest
         assertEquals("1800-02-29T00:00Z", timestamp.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYear() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2601,6 +2605,7 @@ public class TimestampTest
         assertEquals("1800-02-29", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYearAfterClone() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2614,6 +2619,7 @@ public class TimestampTest
         assertEquals("1800-02-29T23:00Z", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYearAfterCalendarValue() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2627,6 +2633,7 @@ public class TimestampTest
         assertEquals("1800-02-29T23:59Z", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYearAfterWithLocalOffset() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2640,6 +2647,7 @@ public class TimestampTest
         assertEquals("1800-02-29T00:00:00Z", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYearWithChainedAdd() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2654,6 +2662,7 @@ public class TimestampTest
         assertEquals("1800-02-29T00:00:00.000Z", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYearWithChainedAdjust() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2668,6 +2677,7 @@ public class TimestampTest
         assertEquals("1800-02-29T00:00:00.000Z", timestamp2.toString());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testCustomCalendarLeapYearWithChainedAdjustLessPrecise() {
         // Create a purely Julian calendar, where leap years were every four years.
@@ -2896,6 +2906,7 @@ public class TimestampTest
         assertEquals(t1.getDecimalMillis(), t2.getDecimalMillis());
     }
 
+    @Ignore // TODO ion-java#165
     @Test
     public void testInstantVsTimestampMillis() {
         // addresses: https://github.com/amzn/ion-java/issues/165
@@ -2905,7 +2916,7 @@ public class TimestampTest
         // result, the two map from milliseconds to date differently before 1582, as demonstrated below.
         long millisFromInstant = Instant.parse(tsText).toEpochMilli();
         long millisFromTimestamp = Timestamp.valueOf(tsText).getMillis();
-        assertNotEquals(millisFromInstant, millisFromTimestamp);
+        assertTrue(millisFromInstant != millisFromTimestamp);
         // However, the discrepancy can be avoided by using Timestamp.forCalendar, which always respects the given
         // Calendar's method for determining leap years.
         Timestamp ts1 = Timestamp.forCalendar(GregorianCalendar.from(Instant.parse(tsText).atZone(ZoneId.of("UTC"))));
