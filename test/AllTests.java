@@ -198,6 +198,15 @@ import software.amazon.ion.util.TextTest;
     // Hash code tests
     HashCodeCorrectnessTest.class,
     HashCodeDistributionTest.class,
+    HashCodeDeltaCollisionTest.class,
+
+    IonRawWriterBasicTest.class,
+    IonRawWriterSymbolsTest.class,
+    RawValueSpanReaderBasicTest.class,
+    RawValueSpanReaderTest.class,
+
+    // DOM Lifecycle / mode tests
+    SIDPresentLifecycleTest.class
     HashCodeDeltaCollisionTest.class
 })
 public class AllTests
