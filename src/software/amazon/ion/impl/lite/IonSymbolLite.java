@@ -14,17 +14,12 @@
 
 package software.amazon.ion.impl.lite;
 
+import software.amazon.ion.*;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import java.io.IOException;
-import software.amazon.ion.IonType;
-import software.amazon.ion.IonWriter;
-import software.amazon.ion.SymbolTable;
-import software.amazon.ion.SymbolToken;
-import software.amazon.ion.UnknownSymbolException;
-import software.amazon.ion.ValueVisitor;
 import software.amazon.ion.impl.PrivateIonSymbol;
 import software.amazon.ion.impl.PrivateUtils;
 
@@ -128,57 +123,6 @@ final class IonSymbolLite
         return IonType.SYMBOL;
     }
 
-    @Deprecated
-    public int getSymbolId()
-        throws NullValueException
-    {
-        return getSymbolId(null);
-    }
-
-    private int getSymbolId(SymbolTableProvider symbolTableProvider)
-        throws NullValueException
-    {
-        validateThisNotNull();
-
-        if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
-            return _sid;
-        }
-
-        SymbolTable symtab =
-                symbolTableProvider != null ? symbolTableProvider.getSymbolTable()
-                                            : getSymbolTable();
-        if (symtab == null) {
-            symtab = getSystem().getSystemSymbolTable();
-        }
-        assert(symtab != null);
-
-        String name = _get_value();
-        // TODO [ION-320] - needs consistent handling, when to retain SID's vs ignore (here memoizing SID on read)
-        if (!symtab.isLocalTable())
-        {
-            setSID(symtab.findSymbol(name));
-            if (_sid > 0 || isReadOnly()) {
-                return _sid;
-            }
-        }
-        SymbolToken tok = symtab.find(name);
-        if (tok != null)
-        {
-            setSID(tok.getSid());
-            _set_value(tok.getText()); // Use the interned instance of the text
-        }
-        return _sid;
-    }
-
-    private void setSID(int sid)
-    {
-        _sid = sid;
-        if (_sid > 0)
-        {
-            cascadeSIDPresentToContextRoot();
-        }
-    }
-
 
     /**
      * Get's the text of this NON-NULL symbol, finding it from our symbol
@@ -223,22 +167,26 @@ final class IonSymbolLite
 
     private int resolveSymbolId(SymbolTableProvider symbolTableProvider)
     {
+
         validateThisNotNull();
 
         if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
             return _sid;
         }
 
-        SymbolTable symtab = symbolTableProvider.getSymbolTable();
+        SymbolTable symtab =
+            symbolTableProvider != null ? symbolTableProvider.getSymbolTable()
+                : getSymbolTable();
         if (symtab == null) {
             symtab = getSystem().getSystemSymbolTable();
         }
         assert(symtab != null);
 
         String name = _get_value();
+        // TODO [ION-320] - needs consistent handling, when to retain SID's vs ignore (here memoizing SID on read)
         if (!symtab.isLocalTable())
         {
-            _sid = symtab.findSymbol(name);
+            setSID(symtab.findSymbol(name));
             if (_sid > 0 || isReadOnly()) {
                 return _sid;
             }
@@ -246,10 +194,19 @@ final class IonSymbolLite
         SymbolToken tok = symtab.find(name);
         if (tok != null)
         {
-            _sid = tok.getSid();
+            setSID(tok.getSid());
             _set_value(tok.getText()); // Use the interned instance of the text
         }
         return _sid;
+    }
+
+    private void setSID(int sid)
+    {
+        _sid = sid;
+        if (_sid > 0)
+        {
+            cascadeSIDPresentToContextRoot();
+        }
     }
 
     public SymbolToken symbolValue(SymbolTableProvider symbolTableProvider)
@@ -308,7 +265,6 @@ final class IonSymbolLite
 
         _sid = ION_1_0_SID;
     }
-
 
     @Override
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)

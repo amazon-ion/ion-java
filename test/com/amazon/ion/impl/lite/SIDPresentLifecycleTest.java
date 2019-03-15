@@ -1,10 +1,10 @@
-package com.amazon.ion.impl.lite;
+package software.amazon.ion.impl.lite;
 
-import com.amazon.ion.IonTestCase;
-import com.amazon.ion.IonValue;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.UnknownSymbolException;
-import com.amazon.ion.impl._Private_Utils;
+import software.amazon.ion.IonTestCase;
+import software.amazon.ion.IonValue;
+import software.amazon.ion.SymbolTable;
+import software.amazon.ion.UnknownSymbolException;
+import software.amazon.ion.impl.PrivateUtils;
 import org.junit.Test;
 
 /**
@@ -31,7 +31,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         IonStringLite value = (IonStringLite) system().newString("Test Value");
         // a new value should create without SID presence as it has no annotations
         assertFalse(value._isSymbolIdPresent());
-        value.setFieldNameSymbol(_Private_Utils.newSymbolToken("Symbol-With-Sid", 12));
+        value.setFieldNameSymbol(PrivateUtils.newSymbolToken("Symbol-With-Sid", 12));
         // setting a field with a SID means that SID Present now must be true
         assertTrue(value._isSymbolIdPresent());
 
@@ -43,11 +43,11 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         assertFalse(value._isSymbolIdPresent());
 
         //verify that detaching still retains symbols - as SID is still present
-        value.setFieldNameSymbol(_Private_Utils.newSymbolToken(13));
+        value.setFieldNameSymbol(PrivateUtils.newSymbolToken(13));
         assertTrue(value._isSymbolIdPresent());
         value.clearSymbolIDValues();
         // NOTE: SID is still present as clearSymbolIDValues doesn't clear SID-only tokens
-        assertEquals(13, value.getFieldId());
+        assertEquals(13, value.getFieldNameSymbol().getSid());
         assertTrue(value._isSymbolIdPresent());
     }
 
@@ -57,8 +57,8 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         // a new value should create without any SID's as it has no annotations
         assertFalse(value._isSymbolIdPresent());
         value.setTypeAnnotationSymbols(
-                _Private_Utils.newSymbolToken("Symbol-Without-SID", -1),
-                _Private_Utils.newSymbolToken("Symbol-With-SID", 99));
+            PrivateUtils.newSymbolToken("Symbol-Without-SID", -1),
+            PrivateUtils.newSymbolToken("Symbol-With-SID", 99));
         // setting an annotation with a SID means that SID present now must be true
         assertTrue(value._isSymbolIdPresent());
 
@@ -67,7 +67,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
 
         // ensure that setting annotations that don't have SIDs doesn't change the SID present status (need to wait for
         // an explicit action such as detatch from container or clone).
-        value.setTypeAnnotationSymbols(_Private_Utils.newSymbolToken("Symbol-Without-Sid", -1));
+        value.setTypeAnnotationSymbols(PrivateUtils.newSymbolToken("Symbol-Without-Sid", -1));
         assertTrue(value._isSymbolIdPresent());
 
         // verify detaching from the container clears the SID Present flag
@@ -76,7 +76,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
 
         // verify that where SID context preserves through the clone due to SID context not being known (believed a bug)
         // that the SID present flag is *retained*
-        value.setTypeAnnotationSymbols(_Private_Utils.newSymbolToken(101));
+        value.setTypeAnnotationSymbols(PrivateUtils.newSymbolToken(101));
         assertTrue(value.clone()._isSymbolIdPresent());
     }
 
@@ -87,21 +87,21 @@ public class SIDPresentLifecycleTest extends IonTestCase {
 
         // 1. test addition of child by field WITHOUT SID causes no propagation
         IonStringLite keyValue1 = (IonStringLite) system().newString("Foo");
-        struct.add(_Private_Utils.newSymbolToken("field_1", -1), keyValue1);
+        struct.add(PrivateUtils.newSymbolToken("field_1", -1), keyValue1);
         assertFalse(struct._isSymbolIdPresent());
         assertFalse(keyValue1._isSymbolIdPresent());
 
         // 2. test addition of child by field WITH SID but also with field text causes no propagation
         // (struct only takes field name if present and strips SID)
         IonStringLite keyValue2 = (IonStringLite) system().newString("Bar");
-        struct.add(_Private_Utils.newSymbolToken("field_2", 87), keyValue2);
+        struct.add(PrivateUtils.newSymbolToken("field_2", 87), keyValue2);
         assertFalse(struct._isSymbolIdPresent());
         assertFalse(keyValue1._isSymbolIdPresent());
         assertFalse(keyValue2._isSymbolIdPresent());
 
         // 3. test addition of child by field with SID ONLY causes propagation due to retention of field SID
         IonStringLite keyValue3 = (IonStringLite) system().newString("Car");
-        struct.add(_Private_Utils.newSymbolToken(76), keyValue3);
+        struct.add(PrivateUtils.newSymbolToken(76), keyValue3);
         assertTrue(struct._isSymbolIdPresent());
         assertFalse(keyValue1._isSymbolIdPresent());
         assertFalse(keyValue2._isSymbolIdPresent());
@@ -111,7 +111,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         IonStructLite struct2 = (IonStructLite) system().newEmptyStruct();
         IonStringLite keyValue4 = (IonStringLite) system().newString("But");
         struct2.add("field_1", keyValue4);
-        keyValue4.setTypeAnnotationSymbols(_Private_Utils.newSymbolToken("Lah", 13));
+        keyValue4.setTypeAnnotationSymbols(PrivateUtils.newSymbolToken("Lah", 13));
         assertTrue(struct2._isSymbolIdPresent());
 
         // 5. test clone propagates clearing of status. NOTE - clone with an unresolvable SID for a field ID fails
@@ -133,7 +133,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
 
         // 6. ensure clearing symbols propogates from root to impacted leaves
         // add back in field ID (SID) only child before clearing to test SID retained
-        struct.add(_Private_Utils.newSymbolToken(76), keyValue3);
+        struct.add(PrivateUtils.newSymbolToken(76), keyValue3);
         struct.clearSymbolIDValues();
         assertTrue(struct._isSymbolIdPresent());
         assertFalse(keyValue1._isSymbolIdPresent());
@@ -147,7 +147,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         middle.add(inner);
         outer.put("foo", middle);
         // now add a SID only annotation to inner
-        inner.setTypeAnnotationSymbols(_Private_Utils.newSymbolToken(99));
+        inner.setTypeAnnotationSymbols(PrivateUtils.newSymbolToken(99));
         // verify that all components are signaling SID present
         assertTrue(outer._isSymbolIdPresent());
         assertTrue(middle._isSymbolIdPresent());
@@ -163,14 +163,14 @@ public class SIDPresentLifecycleTest extends IonTestCase {
     @Test
     public void testSymbolValueLifecyle() {
         // test creation from SymbolToken
-        IonSymbolLite symbolLite = (IonSymbolLite) system().newSymbol(_Private_Utils.newSymbolToken("version", 5));
+        IonSymbolLite symbolLite = (IonSymbolLite) system().newSymbol(PrivateUtils.newSymbolToken("version", 5));
         // SID isn't present as it is stripped if there is text present
         assertFalse(symbolLite._isSymbolIdPresent());
 
         IonListLite container1 = (IonListLite) system().newEmptyList();
         container1.add(symbolLite);
         // test propagation of context when symbol context is added
-        assertEquals(5, symbolLite.getSymbolId());
+        assertEquals(5, symbolLite.symbolValue().getSid());
         // as the getSymbolId memoizes SID into the entity SID present must be set
         assertTrue(symbolLite._isSymbolIdPresent());
         // check memoization propagates to container
@@ -179,7 +179,7 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         assertFalse(container1._isSymbolIdPresent());
         assertFalse(symbolLite._isSymbolIdPresent());
 
-        IonSymbolLite symbolSIDOnly = (IonSymbolLite) system().newSymbol(_Private_Utils.newSymbolToken(321));
+        IonSymbolLite symbolSIDOnly = (IonSymbolLite) system().newSymbol(PrivateUtils.newSymbolToken(321));
         // SID Present is preserved when only SID is present
         assertTrue(symbolSIDOnly._isSymbolIdPresent());
         IonListLite container2 = (IonListLite) system().newEmptyList();
@@ -198,9 +198,9 @@ public class SIDPresentLifecycleTest extends IonTestCase {
         IonStructLite outer = (IonStructLite) system().newEmptyStruct();
         IonListLite middle = (IonListLite) system().newEmptyList();
         IonStringLite inner = (IonStringLite) system().newString("A");
-        outer.add(_Private_Utils.newSymbolToken(321), middle);
+        outer.add(PrivateUtils.newSymbolToken(321), middle);
         middle.add(inner);
-        inner.setTypeAnnotationSymbols(_Private_Utils.newSymbolToken("B", 123));
+        inner.setTypeAnnotationSymbols(PrivateUtils.newSymbolToken("B", 123));
         assertTrue(outer._isSymbolIdPresent());
         assertTrue(middle._isSymbolIdPresent());
         assertTrue(inner._isSymbolIdPresent());
@@ -211,12 +211,12 @@ public class SIDPresentLifecycleTest extends IonTestCase {
 
         // field ID's can be retained on IonSymbolLite - so ensure these are retained as well.
         IonStructLite container = (IonStructLite) system().newEmptyStruct();
-        IonSymbolLite symbol = (IonSymbolLite) system().newSymbol(_Private_Utils.newSymbolToken("Foo", 123));
-        container.add(_Private_Utils.newSymbolToken(321), symbol);
+        IonSymbolLite symbol = (IonSymbolLite) system().newSymbol(PrivateUtils.newSymbolToken("Foo", 123));
+        container.add(PrivateUtils.newSymbolToken(321), symbol);
         container.clearSymbolIDValues();
-        assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, symbol.getSymbolId());
+        assertEquals(SymbolTable.UNKNOWN_SYMBOL_ID, symbol.symbolValue().getSid());
         assertEquals("Foo", symbol.stringValue());
-        assertEquals(321, symbol.getFieldId());
+        assertEquals(321, symbol.getFieldNameSymbol().getSid());
         assertTrue(symbol._isSymbolIdPresent());
 
         assertTrue(container._isSymbolIdPresent());
