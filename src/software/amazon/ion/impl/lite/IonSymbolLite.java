@@ -14,12 +14,17 @@
 
 package software.amazon.ion.impl.lite;
 
-import software.amazon.ion.*;
+import software.amazon.ion.IonType;
+import software.amazon.ion.IonWriter;
+import software.amazon.ion.SymbolTable;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import software.amazon.ion.SymbolToken;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import java.io.IOException;
+import software.amazon.ion.UnknownSymbolException;
+import software.amazon.ion.ValueVisitor;
 import software.amazon.ion.impl.PrivateIonSymbol;
 import software.amazon.ion.impl.PrivateUtils;
 
