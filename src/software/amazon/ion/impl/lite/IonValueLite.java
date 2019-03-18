@@ -71,6 +71,16 @@ abstract class IonValueLite
     protected static final int IS_IVM             = 0x10;
     protected static final int IS_AUTO_CREATED    = 0x20;
     protected static final int IS_SYMBOL_PRESENT  = 0x40;
+    /**
+     * Symbol ID present refers to there being the <i>possibility</i> that the IonValueLite, or it's contained sub graph
+     * <i>(e.g. if it is a {@link IonContainerLite} based sub type)</i> contains one or more defined
+     * Symbol ID's (SID)'s. This flag is used to track lifecycle, such that operations that require SID's are purged
+     * from the IonValueLite and it's contained sub-DOM can conduct a fast evaluation rather than having to do a full
+     * contained graph traversal on each and every invocation. For more detail on impact see
+     * <a href="https://issues.amazon.com/issues/IONPT-8">IONPT-8</a>
+     */
+    protected static final int IS_SYMBOL_ID_PRESENT = 0x80;
+
     private   static final int ELEMENT_MASK       = 0xff;
     protected static final int ELEMENT_SHIFT      = 8; // low 8 bits is flag, upper 24 (or 48 is element id)
 
@@ -200,6 +210,17 @@ abstract class IonValueLite
         return flag;
     }
 
+    protected final boolean _isSymbolIdPresent() { return is_true(IS_SYMBOL_ID_PRESENT); }
+    protected final boolean _isSymbolIdPresent(boolean flag) {
+        if (flag) {
+            set_flag(IS_SYMBOL_ID_PRESENT);
+        }
+        else {
+            clear_flag(IS_SYMBOL_ID_PRESENT);
+        }
+        return flag;
+    }
+
     /**
      * Lazy memoized symtab provider. Should be used when a call path
      * conditionally needs access to a value's symbol table. This provider
@@ -283,6 +304,7 @@ abstract class IonValueLite
      */
     IonValueLite(IonValueLite existing, IonContext context) {
         // Symbols are *immutable* therefore a shallow copy is sufficient
+        boolean hasSIDsRetained = false;
         if (null == existing._annotations) {
             this._annotations = null;
         } else {
@@ -296,9 +318,9 @@ abstract class IonValueLite
                         this._annotations[i] =
                             PrivateUtils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     } else {
-                        // TODO - this is clearly wrong; however was the existing behavior as
-                        // existing under #getAnnotationTypeSymbols();
+                        // TODO - IONJAVA-579 needs consistent handling, should attempt to resolve and if it cant; fail
                         this._annotations[i] = existing._annotations[i];
+                        hasSIDsRetained |= this._annotations[i].getSid() > UNKNOWN_SYMBOL_ID;
                     }
                 }
             }
@@ -310,6 +332,10 @@ abstract class IonValueLite
         // as IonValue.clone() mandates that the returned value is mutable, regardless of the
         // existing 'read only' flag - we force the deep-copy back to being mutable
         clear_flag(IS_LOCKED);
+        // whilst the clone *should* guarantee symbol context is purged, the annotation behavior existing above
+        // under the TO DO for IONJAVA-579 does mean that SID context can be propogated through a clone, therefore
+        // the encoding flag has to reflect this reality
+        _isSymbolIdPresent(hasSIDsRetained);
     }
 
     public abstract void accept(ValueVisitor visitor) throws Exception;
@@ -359,6 +385,10 @@ abstract class IonValueLite
                 _annotations[ii] = null;
             }
         }
+
+        // although annotations have been removed from the node, which *may* mean the sub-graph from this Node is
+        // now without encodings... the check is expensive for container types (need to check all immediate children)
+        // and so we will opt to clear down encoding present in a lazy fashion (e.g. when something actually needs it)
     }
 
     /**
@@ -475,15 +505,41 @@ abstract class IonValueLite
         return token;
     }
 
+    final boolean clearSymbolIDValues()
+    {
+        // short circuit exit - no SID's present to remove - so can exit immediately
+        if (!_isSymbolIdPresent())
+        {
+            return true;
+        }
+
+        boolean allSIDsRemoved = attemptClearSymbolIDValues();
+        // if all the SID's have been successfully removed - the SID Present flag can be set to false
+        if (allSIDsRemoved)
+        {
+            // clear the symbolID status flag
+            _isSymbolIdPresent(false);
+        }
+        return allSIDsRemoved;
+    }
+
     /**
      * Sets this value's symbol table to null, and erases any SIDs here and
      * recursively.
+     *
+     * @return true if all SID's have been successfully removed, otherwise false
      */
-    void clearSymbolIDValues()
+    boolean attemptClearSymbolIDValues()
     {
+        boolean sidsRemain = false;
         if (_fieldName != null)
         {
             _fieldId = UNKNOWN_SYMBOL_ID;
+        } else if (_fieldId > UNKNOWN_SYMBOL_ID)
+        {
+            // retaining the field SID, as it couldn't be cleared due to loss of context
+            // TODO - for SID handling consistency; this should attempt resolution first
+            sidsRemain = true;
         }
 
         if (_annotations != null)
@@ -496,6 +552,7 @@ abstract class IonValueLite
                 if (annotation == null) break;
 
                 String text = annotation.getText();
+                // TODO - for SID handling consistency; this should attempt resolution first, not just drop entry
                 if (text != null && annotation.getSid() != UNKNOWN_SYMBOL_ID)
                 {
                     _annotations[i] =
@@ -503,8 +560,20 @@ abstract class IonValueLite
                 }
             }
         }
+
+        return !sidsRemain;
     }
 
+    protected void cascadeSIDPresentToContextRoot() {
+        // start with self
+        IonValueLite node = this;
+        // iterate from leaf to context root setting encoding present until either context root is hit OR a node is
+        // encountered that already has encodings present (and so no further propogation is required).
+        while (null != node && !node._isSymbolIdPresent()) {
+            node._isSymbolIdPresent(true);
+            node = node.getContainer();
+        }
+    }
 
     final void setFieldName(String name)
     {
@@ -525,6 +594,12 @@ abstract class IonValueLite
         assert _fieldId == UNKNOWN_SYMBOL_ID && _fieldName == null;
         _fieldName = name.getText();
         _fieldId   = name.getSid();
+
+        // if a SID has been added by this operation to a previously SID-less node we have to mark upwards
+        // towards the context root that a SID is present
+        if (UNKNOWN_SYMBOL_ID != _fieldId && !_isSymbolIdPresent()) {
+            cascadeSIDPresentToContextRoot();
+        }
     }
 
     public final String getFieldName()
@@ -625,6 +700,19 @@ abstract class IonValueLite
         else
         {
             _annotations = annotations.clone();
+
+            // new annotations could have SID's - so if this node is not currently marked as SID
+            // present then the new annotations have to be interrogated to see if they contain SID's and if they
+            // do - the SID Present flag must be cascaded.
+            if (!_isSymbolIdPresent()) {
+                for (SymbolToken token : _annotations) {
+                    // upon finding first match of a symbol token containing a SID - cascade upwards and exit
+                    if (null != token && UNKNOWN_SYMBOL_ID != token.getSid()) {
+                        cascadeSIDPresentToContextRoot();
+                        break;
+                    }
+                }
+            }
         }
     }
 

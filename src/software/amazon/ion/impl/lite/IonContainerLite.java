@@ -49,6 +49,7 @@ abstract class IonContainerLite
 
     IonContainerLite(IonContainerLite existing, IonContext context, boolean isStruct) {
         super(existing, context);
+        boolean retainingSIDs = false;
         int childCount = existing._child_count;
         this._child_count = childCount;
         // when cloning the children we establish 'this' the cloned outer container as the context
@@ -76,7 +77,13 @@ abstract class IonContainerLite
                     }
                 }
                 this._children[i] = copy;
+                retainingSIDs |= copy._isSymbolIdPresent();
             }
+            // unfortunately due to the existing behavior in IonValueLite copy-constructor where annotation SID's are
+            // preserved across the copy-constructor IF they have no resolved text it means that encodings could have
+            // been preserved on the child - therefore the cloned children each have to be re-interrogated and the
+            // setting updated IF such a change has occurred.
+            _isSymbolIdPresent(retainingSIDs);
         }
     }
 
@@ -432,13 +439,19 @@ abstract class IonContainerLite
     }
 
     @Override
-    void clearSymbolIDValues()
+    boolean attemptClearSymbolIDValues()
     {
-        super.clearSymbolIDValues();
-        for (int ii=0; ii<get_child_count(); ii++) {
+        boolean symbolIDsAllCleared = super.attemptClearSymbolIDValues();
+
+        for (int ii = 0; ii < get_child_count(); ii++)
+        {
             IonValueLite child = get_child(ii);
-            child.clearSymbolIDValues();
+            // NOTE: recursion is done to #clearSymbolIDValues rather than #attemptClearSymbolIDValues in order to
+            // set the SYMBOL ID PRESENT status flag correctly.
+            symbolIDsAllCleared &= child.clearSymbolIDValues();
         }
+
+        return symbolIDsAllCleared;
     }
 
     /**
@@ -660,6 +673,12 @@ abstract class IonContainerLite
         structuralModificationCount++;
 
         child._elementid(idx);
+
+        if (!_isSymbolIdPresent() && child._isSymbolIdPresent())
+        {
+            cascadeSIDPresentToContextRoot();
+        }
+
         return idx;
     }
 

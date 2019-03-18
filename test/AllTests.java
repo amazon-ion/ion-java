@@ -71,6 +71,7 @@ import software.amazon.ion.impl.bin.IonRawBinaryWriterTest;
 import software.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
 import software.amazon.ion.impl.bin.WriteBufferTest;
 import software.amazon.ion.impl.lite.IonContextTest;
+import software.amazon.ion.impl.lite.SIDPresentLifecycleTest;
 import software.amazon.ion.streaming.BadIonStreamingTest;
 import software.amazon.ion.streaming.BinaryStreamingTest;
 import software.amazon.ion.streaming.GoodIonStreamingTest;
@@ -198,6 +199,10 @@ import software.amazon.ion.util.TextTest;
     // Hash code tests
     HashCodeCorrectnessTest.class,
     HashCodeDistributionTest.class,
+    HashCodeDeltaCollisionTest.class,
+
+    // DOM Lifecycle / mode tests
+    SIDPresentLifecycleTest.class,
     HashCodeDeltaCollisionTest.class
 })
 public class AllTests

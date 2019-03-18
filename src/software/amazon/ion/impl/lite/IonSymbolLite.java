@@ -14,15 +14,15 @@
 
 package software.amazon.ion.impl.lite;
 
+import software.amazon.ion.IonType;
+import software.amazon.ion.IonWriter;
+import software.amazon.ion.SymbolTable;
 import static software.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import software.amazon.ion.SymbolToken;
 import static software.amazon.ion.SystemSymbols.ION_1_0;
 import static software.amazon.ion.SystemSymbols.ION_1_0_SID;
 
 import java.io.IOException;
-import software.amazon.ion.IonType;
-import software.amazon.ion.IonWriter;
-import software.amazon.ion.SymbolTable;
-import software.amazon.ion.SymbolToken;
 import software.amazon.ion.UnknownSymbolException;
 import software.amazon.ion.ValueVisitor;
 import software.amazon.ion.impl.PrivateIonSymbol;
@@ -62,16 +62,14 @@ final class IonSymbolLite
             if (text != null)
             {
                 super.setValue(text);
-
-                // TODO why is the sid ignored in this case?
-                // Probably because we don't trust our ability to change the
-                // sid if this value gets recontextualized.
-                // BUT: we retain the sid on field names and annotations,
-                // so one or the other is buggy.
+                // TODO [ION-320] - needs consistent handling, when to retain SID's vs ignore
             }
             else
             {
+                // TODO [IONJAVA-579] - needs consistent handling, resolution against context symbol table
                 _sid = sid;
+                // there *is* an encoding present so we must update
+                _isSymbolIdPresent(true);
             }
         }
     }
@@ -130,6 +128,7 @@ final class IonSymbolLite
         return IonType.SYMBOL;
     }
 
+
     /**
      * Get's the text of this NON-NULL symbol, finding it from our symbol
      * table if it's not yet known (and caching the result if possible).
@@ -173,22 +172,26 @@ final class IonSymbolLite
 
     private int resolveSymbolId(SymbolTableProvider symbolTableProvider)
     {
+
         validateThisNotNull();
 
         if (_sid != UNKNOWN_SYMBOL_ID || isReadOnly()) {
             return _sid;
         }
 
-        SymbolTable symtab = symbolTableProvider.getSymbolTable();
+        SymbolTable symtab =
+            symbolTableProvider != null ? symbolTableProvider.getSymbolTable()
+                : getSymbolTable();
         if (symtab == null) {
             symtab = getSystem().getSystemSymbolTable();
         }
         assert(symtab != null);
 
         String name = _get_value();
+        // TODO [ION-320] - needs consistent handling, when to retain SID's vs ignore (here memoizing SID on read)
         if (!symtab.isLocalTable())
         {
-            _sid = symtab.findSymbol(name);
+            setSID(symtab.findSymbol(name));
             if (_sid > 0 || isReadOnly()) {
                 return _sid;
             }
@@ -196,10 +199,19 @@ final class IonSymbolLite
         SymbolToken tok = symtab.find(name);
         if (tok != null)
         {
-            _sid = tok.getSid();
+            setSID(tok.getSid());
             _set_value(tok.getText()); // Use the interned instance of the text
         }
         return _sid;
+    }
+
+    private void setSID(int sid)
+    {
+        _sid = sid;
+        if (_sid > 0)
+        {
+            cascadeSIDPresentToContextRoot();
+        }
     }
 
     public SymbolToken symbolValue(SymbolTableProvider symbolTableProvider)
@@ -224,15 +236,28 @@ final class IonSymbolLite
     }
 
     @Override
-    void clearSymbolIDValues()
+    boolean attemptClearSymbolIDValues()
     {
-        super.clearSymbolIDValues();
+        boolean allSymbolIDsCleared = super.attemptClearSymbolIDValues();
 
-        // Don't lose the sid if that's all we have!
-        if (! isNullValue() && _stringValue() != null)
+        // if there is no value, or there is already no SID - there is no clear action
+        if (isNullValue() || _sid == UNKNOWN_SYMBOL_ID)
+        {
+            // no behavior required - value has no SID value to clear
+        }
+        // if there is text, clear the SID
+        else if (_stringValue() != null)
         {
             _sid = UNKNOWN_SYMBOL_ID;
         }
+        else
+        {
+            // TODO [IONJAVA-579] - needs consistent handling, resolution against context symbol table
+            // there is not text, so we can't clear the SID.
+            allSymbolIDsCleared = false;
+        }
+
+        return allSymbolIDsCleared;
     }
 
     protected void setIsIonVersionMarker(boolean isIVM)
@@ -245,7 +270,6 @@ final class IonSymbolLite
 
         _sid = ION_1_0_SID;
     }
-
 
     @Override
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
