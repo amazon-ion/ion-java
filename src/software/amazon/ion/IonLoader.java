@@ -125,6 +125,11 @@ public interface IonLoader
 
 
     /**
+     * <p>
+     * <strong>WARNING: Will cause a memory leak when reading a gzipped stream, use
+     * {@link IonLoader#load(IonReader)} instead.</strong>
+     * </p>
+     *
      * Loads an entire stream of Ion data into a single datagram,
      * detecting whether it's text or binary data.
      * <p>
@@ -144,7 +149,33 @@ public interface IonLoader
      * @throws IonException if there's a syntax error in the Ion content.
      * @throws IOException if reading from the specified input stream results
      * in an <code>IOException</code>.
+     *
+     * @deprecated Will cause a memory leak when reading a gzipped stream.
+     * Use {@link IonLoader#load(IonReader)} instead.
      */
+    @Deprecated
     public IonDatagram load(InputStream ionData)
         throws IonException, IOException;
+
+
+    /**
+     * Loads an entire stream of Ion data into a single datagram,
+     * detecting whether it's text or binary data.
+     * <p>
+     * The specified reader remains open after this method returns.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
+     * <p>
+     *
+     * @param reader readers used to read either Ion binary, Ion text or GZIPped Ion data.
+     *
+     * @return a datagram containing all the values on the reader; not null.
+     *
+     * @throws NullPointerException if <code>ionData</code> is null.
+     * @throws IonException if there's a syntax error in the Ion content.
+     * @throws IOException if reading from the specified input stream results
+     * in an <code>IOException</code>.
+     */
+    public IonDatagram load(IonReader reader)
+            throws IonException, IOException;
 }

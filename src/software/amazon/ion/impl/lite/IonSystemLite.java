@@ -180,8 +180,7 @@ final class IonSystemLite
     public Iterator<IonValue> iterate(InputStream ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
-        ReaderIterator iterator = new ReaderIterator(this, reader);
-        return iterator;
+        return iterate(reader);
     }
 
     public Iterator<IonValue> iterate(String ionText)
@@ -194,6 +193,11 @@ final class IonSystemLite
     public Iterator<IonValue> iterate(byte[] ionData)
     {
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
+        return iterate(reader);
+    }
+
+    public Iterator<IonValue> iterate(IonReader reader)
+    {
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -494,8 +498,19 @@ final class IonSystemLite
 
     public IonValue singleValue(byte[] ionData)
     {
-        Iterator<IonValue> it = iterate(ionData);
-        return singleValue(it);
+        IonReader reader = newReader(ionData);
+        try {
+            Iterator<IonValue> it = iterate(reader);
+            return singleValue(it);
+        }
+        finally {
+            try {
+                reader.close();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+        }
     }
 
     protected IonSymbolLite newSystemIdSymbol(String ionVersionMarker)
@@ -756,16 +771,9 @@ final class IonSystemLite
         return PrivateUtils.iterate(this, ir);
     }
 
-    public Iterator<IonValue> systemIterate(InputStream ionData)
+    public Iterator<IonValue> systemIterate(IonReader reader)
     {
-        IonReader ir = newSystemReader(ionData);
-        return PrivateUtils.iterate(this, ir);
-    }
-
-    public Iterator<IonValue> systemIterate(byte[] ionData)
-    {
-        IonReader ir = newSystemReader(ionData);
-        return PrivateUtils.iterate(this, ir);
+        return PrivateUtils.iterate(this, reader);
     }
 
 
