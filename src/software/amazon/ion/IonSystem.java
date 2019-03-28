@@ -236,6 +236,11 @@ public interface IonSystem
 
 
     /**
+     * <p>
+     * <strong>WARNING: Will cause a memory leak when reading a gzipped stream, use
+     * {@link IonSystem#iterate(IonReader)} instead.</strong>
+     * </p>
+     *
      * Creates an iterator over a stream of Ion data,
      * detecting whether it's text or binary data.
      * Values returned by the iterator have no container.
@@ -262,9 +267,12 @@ public interface IonSystem
      *
      * @throws NullPointerException if <code>ionData</code> is null.
      * @throws IonException if the source throws {@link IOException}.
+     *
+     * @deprecated Will cause a memory leak when reading a gzipped stream.
+     * Use {@link IonSystem#iterate(IonReader)} instead.
      */
+    @Deprecated
     public Iterator<IonValue> iterate(InputStream ionData);
-
 
     /**
      * Creates an iterator over a string containing Ion text data.
@@ -281,8 +289,12 @@ public interface IonSystem
      */
     public Iterator<IonValue> iterate(String ionText);
 
-
     /**
+     * <p>
+     * <strong>WARNING: Will cause a memory leak when reading a gzipped byte[], use
+     * {@link IonSystem#iterate(IonReader)} instead.</strong>
+     * </p>
+     *
      * Creates an iterator over Ion data.
      * Values returned by the iterator have no container.
      * <p>
@@ -299,9 +311,30 @@ public interface IonSystem
      * @return a new iterator instance.
      *
      * @throws NullPointerException if <code>ionData</code> is null.
+     *
+     * @deprecated Will cause a memory leak when reading a gzipped byte[].
+     * Use {@link IonSystem#iterate(IonReader)} instead.
      */
+    @Deprecated
     public Iterator<IonValue> iterate(byte[] ionData);
 
+    /**
+     * <p>
+     * Creates an iterator over Ion data.
+     * Values returned by the iterator have no container.
+     * </p>
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
+     * </p>
+     *
+     * @param reader source of the Ion data to iterate over.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if <code>reader</code> is null.
+     */
+    public Iterator<IonValue> iterate(IonReader reader);
 
     /**
      * Extracts a single value from Ion text data.

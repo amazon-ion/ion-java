@@ -45,12 +45,7 @@ public interface PrivateIonSystem
      */
     public Iterator<IonValue> systemIterate(Reader ionText);
 
-    public Iterator<IonValue> systemIterate(byte[] ionData);
-
-    /**
-     * TODO Must correct amzn/ion-java#14 before exposing this or using from public API.
-     */
-    public Iterator<IonValue> systemIterate(InputStream ionData);
+    public Iterator<IonValue> systemIterate(IonReader reader);
 
     public IonReader newSystemReader(Reader ionText);
 

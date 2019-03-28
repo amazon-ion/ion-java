@@ -122,14 +122,19 @@ final class IonLoaderLite
 
     public IonDatagram load(byte[] ionData) throws IonException
     {
+        IonReader reader = makeReader(_catalog, ionData, 0, ionData.length, _lstFactory);
         try {
-            IonReader reader = makeReader(_catalog, ionData, 0, ionData.length, _lstFactory);
-            IonDatagramLite datagram = load_helper(reader);
-            return datagram;
+            return load(reader);
         }
-        catch (IOException e) {
-            throw new IonException(e);
+        finally {
+            try {
+                reader.close();
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
         }
+
     }
 
     public IonDatagram load(InputStream ionData)
@@ -137,8 +142,7 @@ final class IonLoaderLite
     {
         try {
             IonReader reader = makeReader(_catalog, ionData, _lstFactory);
-            IonDatagramLite datagram = load_helper(reader);
-            return datagram;
+            return load(reader);
         }
         catch (IonException e) {
             IOException io = e.causeOfType(IOException.class);
@@ -147,4 +151,14 @@ final class IonLoaderLite
         }
     }
 
+    public IonDatagram load(IonReader reader) throws IonException
+    {
+        try {
+            IonDatagramLite datagram = load_helper(reader);
+            return datagram;
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+    }
 }

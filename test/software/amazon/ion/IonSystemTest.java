@@ -341,4 +341,87 @@ public class IonSystemTest
         checkGzipDetection(binaryBytes);
         checkGzipDetection(gzipBinaryBytes);
     }
+
+    private byte[] toBinaryIon(String text) throws IOException
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonReader ionReader = system().newReader(text);
+        IonWriter ionWriter = system().newBinaryWriter(out);
+        ionWriter.writeValues(ionReader);
+        ionWriter.close();
+        ionReader.close();
+        return out.toByteArray();
+    }
+
+    @Test
+    public void singleValueTextGzip() throws IOException
+    {
+        String ionText = "1234";
+        byte[] textBytes = PrivateUtils.utf8(ionText);
+        byte[] gzipTextBytes = gzip(textBytes);
+        IonInt ionValue = (IonInt) system().singleValue(gzipTextBytes);
+
+        assertEquals(1234, ionValue.intValue());
+    }
+
+    @Test
+    public void singleValueBinaryGzip() throws IOException
+    {
+        String ionText = "1234";
+        byte[] binaryIon = toBinaryIon(ionText);
+        byte[] gzipBytes = gzip(binaryIon);
+        IonInt ionValue = (IonInt) system().singleValue(gzipBytes);
+
+        assertEquals(1234, ionValue.intValue());
+    }
+
+    @Test
+    public void iterateReader() throws IOException
+    {
+        String ionText = "1 2 3 4";
+        IonReader ionReader = system().newReader(ionText);
+
+        Iterator<IonValue> iterate = system().iterate(ionReader);
+
+        assertTrue(iterate.hasNext());
+        assertEquals(1, ((IonInt) iterate.next()).intValue());
+
+        assertTrue(iterate.hasNext());
+        assertEquals(2, ((IonInt) iterate.next()).intValue());
+
+        assertTrue(iterate.hasNext());
+        assertEquals(3, ((IonInt) iterate.next()).intValue());
+
+        assertTrue(iterate.hasNext());
+        assertEquals(4, ((IonInt) iterate.next()).intValue());
+
+        assertFalse(iterate.hasNext());
+
+        ionReader.close();
+    }
+
+    @Test
+    public void systemIterateReader() throws IOException
+    {
+        String ionText = "1 2 3 4";
+        IonReader ionReader = system().newSystemReader(ionText);
+
+        Iterator<IonValue> iterate = system().systemIterate(ionReader);
+
+        assertTrue(iterate.hasNext());
+        assertEquals(1, ((IonInt) iterate.next()).intValue());
+
+        assertTrue(iterate.hasNext());
+        assertEquals(2, ((IonInt) iterate.next()).intValue());
+
+        assertTrue(iterate.hasNext());
+        assertEquals(3, ((IonInt) iterate.next()).intValue());
+
+        assertTrue(iterate.hasNext());
+        assertEquals(4, ((IonInt) iterate.next()).intValue());
+
+        assertFalse(iterate.hasNext());
+
+        ionReader.close();
+    }
 }

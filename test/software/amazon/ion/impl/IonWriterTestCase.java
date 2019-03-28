@@ -810,7 +810,7 @@ public abstract class IonWriterTestCase
         throws Exception
     {
         byte[] data = outputByteArray();
-        Iterator<IonValue> it = system().systemIterate(data);
+        Iterator<IonValue> it = system().systemIterate(system().newSystemReader(data));
         return it;
     }
 

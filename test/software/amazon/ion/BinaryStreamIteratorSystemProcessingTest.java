@@ -45,6 +45,6 @@ public class BinaryStreamIteratorSystemProcessingTest
     @Override
     protected Iterator<IonValue> systemIterate()
     {
-        return system().systemIterate(myStream);
+        return system().systemIterate(system().newSystemReader(myStream));
     }
 }

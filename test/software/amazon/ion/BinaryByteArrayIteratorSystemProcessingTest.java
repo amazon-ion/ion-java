@@ -41,6 +41,6 @@ public class BinaryByteArrayIteratorSystemProcessingTest
     @Override
     protected Iterator<IonValue> systemIterate()
     {
-        return system().systemIterate(myBytes);
+        return system().systemIterate(system().newSystemReader(myBytes));
     }
 }
