@@ -179,6 +179,7 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(InputStream ionData)
     {
+        // This method causes a memory leak when reading a gzipped stream, see deprecation notice.
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         return iterate(reader);
     }
@@ -192,6 +193,7 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(byte[] ionData)
     {
+        // This method causes a memory leak when reading a gzipped stream, see deprecation notice.
         IonReader reader = makeReader(_catalog, ionData, _lstFactory);
         return iterate(reader);
     }

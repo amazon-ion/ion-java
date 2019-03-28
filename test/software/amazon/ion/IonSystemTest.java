@@ -349,6 +349,7 @@ public class IonSystemTest
         IonWriter ionWriter = system().newBinaryWriter(out);
         ionWriter.writeValues(ionReader);
         ionWriter.close();
+        ionReader.close();
         return out.toByteArray();
     }
 
@@ -369,14 +370,13 @@ public class IonSystemTest
         String ionText = "1234";
         byte[] binaryIon = toBinaryIon(ionText);
         byte[] gzipBytes = gzip(binaryIon);
-
         IonInt ionValue = (IonInt) system().singleValue(gzipBytes);
 
         assertEquals(1234, ionValue.intValue());
     }
 
     @Test
-    public void iterateReader()
+    public void iterateReader() throws IOException
     {
         String ionText = "1 2 3 4";
         IonReader ionReader = system().newReader(ionText);
@@ -396,10 +396,12 @@ public class IonSystemTest
         assertEquals(4, ((IonInt) iterate.next()).intValue());
 
         assertFalse(iterate.hasNext());
+
+        ionReader.close();
     }
 
     @Test
-    public void systemIterateReader()
+    public void systemIterateReader() throws IOException
     {
         String ionText = "1 2 3 4";
         IonReader ionReader = system().newSystemReader(ionText);
@@ -419,5 +421,7 @@ public class IonSystemTest
         assertEquals(4, ((IonInt) iterate.next()).intValue());
 
         assertFalse(iterate.hasNext());
+
+        ionReader.close();
     }
 }

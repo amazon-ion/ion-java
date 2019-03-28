@@ -163,19 +163,14 @@ public interface IonLoader
      * detecting whether it's text or binary data.
      * <p>
      * The specified reader remains open after this method returns.
-     * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data.
-     * <p>
+     * </p>
      *
-     * @param reader readers used to read either Ion binary, Ion text or GZIPped Ion data.
+     * @param reader @param reader source of the Ion data to load.
      *
      * @return a datagram containing all the values on the reader; not null.
      *
-     * @throws NullPointerException if <code>ionData</code> is null.
+     * @throws NullPointerException if <code>reader</code> is null.
      * @throws IonException if there's a syntax error in the Ion content.
-     * @throws IOException if reading from the specified input stream results
-     * in an <code>IOException</code>.
      */
-    public IonDatagram load(IonReader reader)
-            throws IonException, IOException;
+    public IonDatagram load(IonReader reader) throws IonException;
 }

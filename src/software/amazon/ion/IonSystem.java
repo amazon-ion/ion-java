@@ -327,11 +327,8 @@ public interface IonSystem
      * The iterator will automatically consume Ion system IDs and local symbol
      * tables; they will not be returned by the iterator.
      * </p>
-     * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data.
-     * </p>
      *
-     * @param reader readers used to read either Ion binary, Ion text or GZIPped Ion data.
+     * @param reader source of the Ion data to iterate over.
      *
      * @return a new iterator instance.
      *
