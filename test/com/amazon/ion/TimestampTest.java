@@ -2946,7 +2946,7 @@ public class TimestampTest
     @Ignore
     @Test
     public void testInstantVsTimestampMillis() {
-        /* If IonJava migrates to Java 8, which added Instant, this test becomes valid.
+        /* If ion-java migrates to Java 8, which added Instant, this test becomes valid.
         // addresses: https://github.com/amzn/ion-java/issues/165
         String tsText = "0001-01-01T00:00:00.000Z";
         // Instant extends the Gregorian calendar system all the way back to the beginning, whereas Timestamp uses

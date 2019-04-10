@@ -972,7 +972,7 @@ abstract class IonValueLite
         // IonContainerLite#iterator() return type as Iterator<IonValueLite> causes a compile-time
         // error under JDK5 as it doesn't understand this is an acceptable co-variant for
         // Iterator<IonValue> IonContainer#iterator(). This said we know the underlying data
-        // structure is IonValueLite[] - so we can conduct the cast within the loop. When IonJava is
+        // structure is IonValueLite[] - so we can conduct the cast within the loop. When ion-java is
         // moved to allow JDK6+ compile time dependency we can remove these crufty casts.
         for (IonValue iv : container) {
             IonValueLite vlite = (IonValueLite) iv;
@@ -1195,4 +1195,3 @@ private String[]         _annotations; // just realloc as needed
  *   private SymbolTable      _symbolTable;
  *
  */
-
