@@ -1,24 +1,24 @@
 sudo: false
 language: java
 jdk:
-- openjdk8
-- openjdk9
-- openjdk10
-- openjdk11
-- oraclejdk8
-- oraclejdk9
-- oraclejdk11
+  - openjdk8
+  - openjdk9
+  - openjdk10
+  - openjdk11
+  - oraclejdk8
+  - oraclejdk9
+  - oraclejdk11
 
-script: mvn test 
+script: mvn test
 
-jobs: 
-  include: 
-    stage: report generation 
-    jdk: openjdk11 
-    script: mvn test site 
+jobs:
+  include:
+    stage: report generation
+    jdk: openjdk11
+    script: mvn test site
     after_success:
-      - bash <(curl -s https://codecov.io/bash) 
-    deploy: 
+      - bash <(curl -s https://codecov.io/bash)
+    deploy:
       provider: pages
       local-dir: "./target/site/"
       skip-cleanup: true
