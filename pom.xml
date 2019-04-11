@@ -82,6 +82,15 @@
     <testSourceDirectory>test</testSourceDirectory>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
         <!--
         Since the format of maven.build.timestamp cannot be changed
         during the build, define the build.time property here.
