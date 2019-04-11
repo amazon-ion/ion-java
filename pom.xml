@@ -1,7 +1,22 @@
+<!--
+  ~ Copyright 2007 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License").
+  ~ You may not use this file except in compliance with the License.
+  ~ A copy of the License is located at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ or in the "license" file accompanying this file. This file is distributed
+  ~ on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+  ~ express or implied. See the License for the specific language governing
+  ~ permissions and limitations under the License.
+  -->
+
 <project>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>software.amazon.ion</groupId>
+  <groupId>com.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
   <version>1.3.1</version>
   <packaging>bundle</packaging>
@@ -20,13 +35,13 @@
   </licenses>
 
   <developers>
-     <developer>
-       <name>Amazon Ion Team</name>
-       <email>ion-team@amazon.com</email>
-       <organization>Amazon Labs</organization>
-       <organizationUrl>https://github.com/amzn</organizationUrl>
-     </developer>
-   </developers>
+    <developer>
+      <name>Amazon Ion Team</name>
+      <email>ion-team@amazon.com</email>
+      <organization>Amazon</organization>
+      <organizationUrl>https://github.com/amzn</organizationUrl>
+    </developer>
+  </developers>
 
   <scm>
     <connection>scm:git:git@github.com:amzn/ion-java.git</connection>
@@ -111,16 +126,16 @@
         <configuration>
           <instructions>
             <Export-Package>
-              !software.amazon.ion.apps.*,
-              !software.amazon.ion.impl.*,
-              software.amazon.ion.*,
+              !com.amazon.ion.apps.*,
+              !com.amazon.ion.impl.*,
+              com.amazon.ion.*,
             </Export-Package>
             <!-- This can be used to retrieve the compiled JarInfo. -->
-            <Main-Class>software.amazon.ion.impl.PrivateCommandLine</Main-Class>
+            <Main-Class>com.amazon.ion.impl.PrivateCommandLine</Main-Class>
             <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
             <Ion-Java-Build-Time>${build.time}</Ion-Java-Build-Time>
             <Ion-Java-Project-Version>${project.version}</Ion-Java-Project-Version>
-            <Automatic-Module-Name>software.amazon.ion</Automatic-Module-Name>
+            <Automatic-Module-Name>com.amazon.ion</Automatic-Module-Name>
           </instructions>
         </configuration>
       </plugin>
@@ -192,11 +207,11 @@
         <reportSets>
           <reportSet>
             <configuration>
-              <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
+              <excludePackageNames>com.amazon.ion.apps:com.amazon.ion.impl</excludePackageNames>
               <sourceFileExcludes>
                 <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
-              <overview>${project.basedir}/src/software/amazon/ion/overview.html</overview>
+              <overview>${project.basedir}/src/com/amazon/ion/overview.html</overview>
               <doctitle>Amazon Ion Java ${project.version} API Reference</doctitle>
               <windowtitle>Ion Java ${project.version}</windowtitle>
               <header>Amazon Ion Java ${project.version} API Reference</header>
@@ -262,11 +277,11 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>2.10.3</version>
             <configuration>
-              <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
+              <excludePackageNames>com.amazon.ion.apps:com.amazon.ion.impl</excludePackageNames>
               <sourceFileExcludes>
                 <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
-              <overview>${project.basedir}/src/software/amazon/ion/overview.html</overview>
+              <overview>${project.basedir}/src/com/amazon/ion/overview.html</overview>
               <doctitle>Amazon Ion Java ${project.version} API Reference</doctitle>
               <windowtitle>Ion Java ${project.version}</windowtitle>
               <header>Amazon Ion Java ${project.version} API Reference</header>

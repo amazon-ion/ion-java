@@ -2,8 +2,8 @@
 A Java implementation of the [Ion data notation](http://amzn.github.io/ion-docs).
 
 [![Build Status](https://travis-ci.org/amzn/ion-java.svg?branch=master)](https://travis-ci.org/amzn/ion-java)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java)
-[![Javadoc](https://javadoc-badge.appspot.com/software.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/software.amazon.ion/ion-java)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java)
+[![Javadoc](https://javadoc-badge.appspot.com/com.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/com.amazon.ion/ion-java)
 
 ## Setup
 This repository contains a [git submodule](https://git-scm.com/docs/git-submodule)
@@ -58,7 +58,7 @@ dependency into your project's `pom.xml`:
 
 ```
 <dependency>
-  <groupId>software.amazon.ion</groupId>
+  <groupId>com.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
   <version>1.3.1</version>
 </dependency>
@@ -66,5 +66,5 @@ dependency into your project's `pom.xml`:
 
 ## Using the Library
 A great way to get started is to use the [Ion cookbook](http://amzn.github.io/ion-docs/cookbook.html).
-The [API documentation](http://www.javadoc.io/doc/software.amazon.ion/ion-java) will give a lot
+The [API documentation](http://www.javadoc.io/doc/com.amazon.ion/ion-java) will give a lot
 of detailed information about how to use the library.
