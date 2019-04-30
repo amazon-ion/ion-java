@@ -64,6 +64,13 @@ dependency into your project's `pom.xml`:
 </dependency>
 ```
 
+#### Legacy group id
+
+Originally ion-java was published using the group id `software.amazon.ion`. Since 1.4.0 the
+official groupId was changed to `com.amazon.ion` to be consistent with other Amazon open
+source libraries. We still maintain the legacy group id but strongly encourage users to migrate
+to the official one.
+
 ## Using the Library
 A great way to get started is to use the [Ion cookbook](http://amzn.github.io/ion-docs/cookbook.html).
 The [API documentation](http://www.javadoc.io/doc/com.amazon.ion/ion-java) will give a lot
