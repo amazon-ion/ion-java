@@ -313,7 +313,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
             int maxId = lst.getMaxId();
             if (!flushed && (user.hasWrittenValuesSinceFinished() || isStreamCopyOptimized()))
                 symbols.writeIonVersionMarker();
-            if (newSymbols || (!flushed && isStreamCopyOptimized()) || lstRequired) {
+            if (newSymbols || (!flushed && (isStreamCopyOptimized() || lstRequired))) {
                 symbols.addTypeAnnotationSymbol(systemSymbol(ION_SYMBOL_TABLE_SID));
                 symbols.stepIn(STRUCT);
                 if (flushed) {//append
