@@ -60,7 +60,7 @@ import java.util.NoSuchElementException;
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
  */
 @SuppressWarnings("deprecation")
-/*package*/ final class IonRawBinaryWriter extends AbstractIonWriter implements _Private_IonRawWriter
+public final class IonRawBinaryWriter extends AbstractIonWriter implements _Private_IonRawWriter
 {
     /** short-hand for array of bytes--useful for static definitions. */
     private static byte[] bytes(int... vals) {
@@ -546,7 +546,7 @@ import java.util.NoSuchElementException;
         throw new UnsupportedOperationException("Cannot set annotations on a low-level binary writer via string");
     }
 
-    private void clearAnnotations()
+    void clearAnnotations()
     {
         currentAnnotationSids.clear();
         hasTopLevelSymbolTableAnnotation = false;
@@ -583,7 +583,7 @@ import java.util.NoSuchElementException;
 
     // Additional Current State Meta
 
-    /*package*/ void addTypeAnnotationSymbol(final SymbolToken annotation)
+    public void addTypeAnnotationSymbol(final SymbolToken annotation)
     {
         addTypeAnnotationSymbol(annotation.getSid());
 
@@ -591,10 +591,7 @@ import java.util.NoSuchElementException;
 
     public void addTypeAnnotationSymbol(int sid)
     {
-        if (depth == 0 && sid == ION_SYMBOL_TABLE_SID)
-        {
-            hasTopLevelSymbolTableAnnotation = true;
-        }
+        if (depth == 0 && currentAnnotationSids.isEmpty() && sid == ION_SYMBOL_TABLE_SID) hasTopLevelSymbolTableAnnotation = true;
         currentAnnotationSids.add(sid);
     }
 
@@ -1491,83 +1488,60 @@ import java.util.NoSuchElementException;
         }
     }
 
-    public void flush() throws IOException {}
+    public void flush() throws IOException {
+        if (!closed) {
+            if (!containers.isEmpty()) throw new IllegalStateException("Cannot flush within container: " + containers);
+            if (patchPoints.isEmpty()) {
+                // nothing to patch--write 'em out!
+                buffer.writeTo(out);
+            } else {
+                long bufferPosition = 0;
+                for (final PatchPoint patch : patchPoints) {
+                    // write up to the thing to be patched
+                    final long bufferLength = patch.oldPosition - bufferPosition;
+                    buffer.writeTo(out, bufferPosition, bufferLength);
 
-    public void finish() throws IOException
-    {
-        if (closed)
-        {
-            return;
-        }
-        if (!containers.isEmpty())
-        {
-            throw new IllegalStateException("Cannot finish within container: " + containers);
-        }
+                    // write out the patch
+                    patchBuffer.writeTo(out, patch.patchPosition, patch.patchLength);
 
-        if (patchPoints.isEmpty())
-        {
-            // nothing to patch--write 'em out!
-            buffer.writeTo(out);
-        }
-        else
-        {
-            long bufferPosition = 0;
-            for (final PatchPoint patch : patchPoints)
-            {
-                // write up to the thing to be patched
-                final long bufferLength = patch.oldPosition - bufferPosition;
-                buffer.writeTo(out, bufferPosition, bufferLength);
-
-                // write out the patch
-                patchBuffer.writeTo(out, patch.patchPosition, patch.patchLength);
-
-                // skip over the preallocated varuint field
-                bufferPosition = patch.oldPosition;
-                bufferPosition += patch.oldLength;
+                    // skip over the preallocated varuint field
+                    bufferPosition = patch.oldPosition;
+                    bufferPosition += patch.oldLength;
+                }
+                buffer.writeTo(out, bufferPosition, buffer.position() - bufferPosition);
             }
-            buffer.writeTo(out, bufferPosition, buffer.position() - bufferPosition);
+            patchPoints.clear();
+            patchBuffer.reset();
+            buffer.reset();
+            if (streamFlushMode == StreamFlushMode.FLUSH) out.flush();
         }
-        patchPoints.clear();
-        patchBuffer.reset();
-        buffer.reset();
-
-        if (streamFlushMode == StreamFlushMode.FLUSH)
-        {
-            out.flush();
-        }
-
-        hasWrittenValuesSinceFinished = false;
     }
 
-    public void close() throws IOException
-    {
-        if (closed)
-        {
-            return;
+    public void finish() throws IOException {
+        if (!closed) {
+            flush();
+            hasWrittenValuesSinceFinished = false;
         }
-        try
-        {
-            try
-            {
-                finish();
-            }
-            catch (final IllegalStateException e)
-            {
-                // callers don't expect this...
-            }
+    }
 
-            // release all of our blocks -- these should never throw
-            buffer.close();
-            patchBuffer.close();
-            allocator.close();
-        }
-        finally
-        {
-            closed = true;
-            if (streamCloseMode == StreamCloseMode.CLOSE)
-            {
-                // release the stream
-                out.close();
+    public void close() throws IOException {
+        if (!closed) {
+            try {
+                try {
+                    flush();
+                } catch (final IllegalStateException e) {
+                    // callers don't expect this...
+                }
+                // release all of our blocks -- these should never throw
+                buffer.close();
+                patchBuffer.close();
+                allocator.close();
+            } finally {
+                closed = true;
+                if (streamCloseMode == StreamCloseMode.CLOSE) {
+                    // release the stream
+                    out.close();
+                }
             }
         }
     }

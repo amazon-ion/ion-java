@@ -151,7 +151,7 @@ class LocalSymbolTable
      * @param imports           never null
      * @param symbolsList       may be null or empty
      */
-    protected LocalSymbolTable(LocalSymbolTableImports imports, List<String> symbolsList)
+    LocalSymbolTable(LocalSymbolTableImports imports, List<String> symbolsList)
     {
         if (symbolsList == null || symbolsList.isEmpty())
         {

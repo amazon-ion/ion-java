@@ -143,6 +143,8 @@ import java.util.Date;
         delegate.setTypeAnnotationSymbols(annotations);
     }
 
+    public void addTypeAnnotationSymbol(SymbolToken annotation) { delegate.setTypeAnnotationSymbols(annotation); }
+
     public void addTypeAnnotation(String annotation)
     {
         delegate.addTypeAnnotation(annotation);

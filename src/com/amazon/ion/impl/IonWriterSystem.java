@@ -582,11 +582,12 @@ abstract class IonWriterSystem
         }
     }
 
-    public final void addTypeAnnotation(String annotation)
-    {
-        SymbolToken is = newSymbolToken(getSymbolTable(), annotation);
+    public final void addTypeAnnotation(String annotation) {
+        addTypeAnnotationSymbol(newSymbolToken(getSymbolTable(), annotation));
+    }
+    public final void addTypeAnnotationSymbol(SymbolToken annotation) {
         ensureAnnotationCapacity(_annotation_count + 1);
-        _annotations[_annotation_count++] = is;
+        _annotations[_annotation_count++] = annotation;
     }
 
 

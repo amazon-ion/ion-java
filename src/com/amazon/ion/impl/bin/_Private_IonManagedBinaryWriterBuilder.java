@@ -15,8 +15,6 @@
 
 package com.amazon.ion.impl.bin;
 
-import static com.amazon.ion.impl.bin.IonManagedBinaryWriter.ONLY_SYSTEM_IMPORTS;
-
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -26,13 +24,12 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
-import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolContext;
-import com.amazon.ion.impl.bin.IonManagedBinaryWriter.ImportedSymbolResolverMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 // TODO unify this with the IonWriter builder APIs
@@ -73,7 +70,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
     /*package*/ volatile int                    symbolsBlockSize;
     /*package*/ volatile int                    userBlockSize;
     /*package*/ volatile PreallocationMode      preallocationMode;
-    /*package*/ volatile ImportedSymbolContext  imports;
+    /*package*/ volatile List<SymbolTable>      imports;
     /*package*/ volatile IonCatalog             catalog;
     /*package*/ volatile WriteValueOptimization optimization;
     /*package*/ volatile SymbolTable            initialSymbolTable;
@@ -84,7 +81,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
         this.provider = provider;
         this.symbolsBlockSize = DEFAULT_BLOCK_SIZE;
         this.userBlockSize = DEFAULT_BLOCK_SIZE;
-        this.imports = ONLY_SYSTEM_IMPORTS;
+        this.imports = new ArrayList<SymbolTable>();
         this.preallocationMode = PreallocationMode.PREALLOCATE_2;
         this.catalog = new SimpleCatalog();
         this.optimization = WriteValueOptimization.NONE;
@@ -142,30 +139,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
 
     public _Private_IonManagedBinaryWriterBuilder withImports(final List<SymbolTable> tables)
     {
-        return withImports(ImportedSymbolResolverMode.DELEGATE, tables);
-    }
-
-    /**
-     * Adds imports, flattening them to make lookup more efficient.  This is particularly useful
-     * when a builder instance is long lived.
-     */
-    public _Private_IonManagedBinaryWriterBuilder withFlatImports(final SymbolTable... tables)
-    {
-        if (tables != null)
-        {
-            return withFlatImports(Arrays.asList(tables));
-        }
-        return this;
-    }
-
-    /** @see #withFlatImports(SymbolTable...) */
-    public _Private_IonManagedBinaryWriterBuilder withFlatImports(final List<SymbolTable> tables)
-    {
-        return withImports(ImportedSymbolResolverMode.FLAT, tables);
-    }
-
-    /*package*/ _Private_IonManagedBinaryWriterBuilder withImports(final ImportedSymbolResolverMode mode, final List<SymbolTable> tables) {
-        imports = new ImportedSymbolContext(mode, tables);
+        imports = tables;
         return this;
     }
 

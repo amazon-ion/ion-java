@@ -36,6 +36,24 @@ public class TrBwBrProcessingTest
         myBytes = binaryWriter.getBytes();
     }
 
+    @Ignore
+    @Test
+    public void testTrivialLocalTableReplacement() throws Exception{
+
+    }
+
+    @Ignore
+    @Test
+    public void testLocalSymtabWithOpenContent() throws Exception {
+
+    }
+
+    @Ignore
+    @Test
+    public void testLocalTableReplacement() throws Exception {
+
+    }
+
     @Override
     @Ignore
     @Test

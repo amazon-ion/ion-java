@@ -261,6 +261,17 @@ public interface IonWriter
      */
     public void addTypeAnnotation(String annotation);
 
+    /**
+     * Adds a given symbolToken to the list of pending annotations.
+     * <p>
+     * The list of pending annotations is cleared when the current value is
+     * written via {@link #stepIn(IonType) stepIn()} or one of the
+     * {@code write*()} methods.
+     *
+     * @param annotation string annotation to append to the annotation list
+     */
+    public void addTypeAnnotationSymbol(SymbolToken annotation);
+
 
     //=========================================================================
     // Container navigation
