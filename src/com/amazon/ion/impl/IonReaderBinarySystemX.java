@@ -15,7 +15,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonSystem;
 import static com.amazon.ion.IonType.SYMBOL;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
@@ -296,14 +295,19 @@ class IonReaderBinarySystemX
         return _v.getDouble();
     }
 
-    public int intValue()
+    private void checkIsIntApplicableType()
     {
         if (_value_type != IonType.INT &&
-            _value_type != IonType.DECIMAL &&
-            _value_type != IonType.FLOAT)
+          _value_type != IonType.DECIMAL &&
+          _value_type != IonType.FLOAT)
         {
-            throw new IllegalStateException();
+          throw new IllegalStateException("Unexpected value type: " + _value_type);
         }
+    }
+
+    public int intValue()
+    {
+        checkIsIntApplicableType();
 
         prepare_value(AS_TYPE.int_value);
         return _v.getInt();
@@ -311,12 +315,7 @@ class IonReaderBinarySystemX
 
     public long longValue()
     {
-        if (_value_type != IonType.INT &&
-            _value_type != IonType.DECIMAL &&
-            _value_type != IonType.FLOAT)
-        {
-            throw new IllegalStateException();
-        }
+        checkIsIntApplicableType();
 
         prepare_value(AS_TYPE.long_value);
         return _v.getLong();
@@ -324,12 +323,7 @@ class IonReaderBinarySystemX
 
     public BigInteger bigIntegerValue()
     {
-        if (_value_type != IonType.INT &&
-            _value_type != IonType.DECIMAL &&
-            _value_type != IonType.FLOAT)
-        {
-            throw new IllegalStateException();
-        }
+        checkIsIntApplicableType();
 
         if (_value_is_null) {
             return null;
@@ -386,7 +380,7 @@ class IonReaderBinarySystemX
 
     public String stringValue()
     {
-        if (! IonType.isText(_value_type)) throw new IllegalStateException();
+        if (! IonType.isText(_value_type)) throw new IllegalStateException("Unexpected value type: " + _value_type);
         if (_value_is_null) return null;
 
         if (_value_type == SYMBOL) {
@@ -407,7 +401,7 @@ class IonReaderBinarySystemX
 
     public SymbolToken symbolValue()
     {
-        if (_value_type != SYMBOL) throw new IllegalStateException();
+        if (_value_type != SYMBOL) throw new IllegalStateException("Unexpected value type: " + _value_type);
         if (_value_is_null) return null;
 
         int sid = getSymbolId();
@@ -419,7 +413,7 @@ class IonReaderBinarySystemX
 
     int getSymbolId()
     {
-        if (_value_type != SYMBOL) throw new IllegalStateException();
+        if (_value_type != SYMBOL) throw new IllegalStateException("Unexpected value type: " + _value_type);
         if (_value_is_null) throw new NullValueException();
 
         prepare_value(AS_TYPE.int_value);
