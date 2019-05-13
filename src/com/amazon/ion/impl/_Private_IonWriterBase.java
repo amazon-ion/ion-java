@@ -431,7 +431,7 @@ public abstract class _Private_IonWriterBase
                 if (_debug_on) System.out.print(")");
                 break;
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("Unknown value type: " + type);
             }
         }
     }
