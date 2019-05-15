@@ -291,7 +291,7 @@ public class RoundTripTest
         FileInputStream fileIn = new FileInputStream(myTestFile);
         try
         {
-            IonReader r0 = system().newSystemReader(fileIn);
+            IonReader r0 = system().newReader(fileIn);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             IonWriter w = builder.build(out);
@@ -308,8 +308,8 @@ public class RoundTripTest
         fileIn = new FileInputStream(myTestFile);
         try
         {
-            IonReader r0 = system().newSystemReader(fileIn);
-            IonReader r1 = system().newSystemReader(outBytes);
+            IonReader r0 = system().newReader(fileIn);
+            IonReader r1 = system().newReader(outBytes);
 
             ReaderCompare.compare(r0, r1);
         }
