@@ -480,20 +480,33 @@ class IonReaderTextSystemX
         final int count = _annotation_count;
         if (count == 0) return SymbolToken.EMPTY_ARRAY;
 
-        SymbolTable symbols = getSymbolTable();
+        resolveAnnotationSymbols(count);
 
         SymbolToken[] result = new SymbolToken[count];
-        for (int i = 0; i < count; i++)
-        {
-            SymbolToken sym = _annotations[i];
-            SymbolToken updated = _Private_Utils.localize(symbols, sym);
-            if (updated != sym) _annotations[i] = updated;
-            result[i] = updated;
-        }
+        System.arraycopy(_annotations, 0, result, 0, count);
 
         return result;
     }
 
+    public String[] getTypeAnnotations()
+    {
+        resolveAnnotationSymbols(_annotation_count);
+        return _Private_Utils.toStrings(_annotations, _annotation_count);
+    }
+
+    /**
+     * Resolve annotations with the current symbol table.
+     */
+    private void resolveAnnotationSymbols(int count) {
+        SymbolTable symbols = getSymbolTable();
+        for (int i = 0; i < count; i++) {
+            SymbolToken sym = _annotations[i];
+            SymbolToken updated = _Private_Utils.localize(symbols, sym);
+            if (updated != sym) {
+                _annotations[i] = updated;
+            }
+        }
+    }
 
     public boolean isNullValue()
     {
