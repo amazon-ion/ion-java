@@ -1332,7 +1332,7 @@ if (depth == debugging_depth) {
         case SEXP:
             break;
         default:
-            throw new IllegalStateException();
+            throw new IllegalStateException("Unexpected value type: " + _value_type);
         }
 
         int new_state = get_state_at_container_start(_value_type);
@@ -1376,7 +1376,7 @@ if (depth == debugging_depth) {
             case DATAGRAM:
                 break;
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("Unexpected value type: " + _value_type);
             }
         }
         catch (IOException e) {

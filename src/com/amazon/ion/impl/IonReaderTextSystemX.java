@@ -525,14 +525,19 @@ class IonReaderTextSystemX
         return _v.getDouble();
     }
 
-    public int intValue()
+    private void checkIsIntApplicableType()
     {
         if (_value_type != IonType.INT &&
-            _value_type != IonType.DECIMAL &&
-            _value_type != IonType.FLOAT)
+          _value_type != IonType.DECIMAL &&
+          _value_type != IonType.FLOAT)
         {
-            throw new IllegalStateException();
+          throw new IllegalStateException("Unexpected value type: " + _value_type);
         }
+    }
+
+    public int intValue()
+    {
+        checkIsIntApplicableType();
 
         load_or_cast_cached_value(AS_TYPE.int_value);
         return _v.getInt();
@@ -540,12 +545,7 @@ class IonReaderTextSystemX
 
     public long longValue()
     {
-        if (_value_type != IonType.INT &&
-            _value_type != IonType.DECIMAL &&
-            _value_type != IonType.FLOAT)
-        {
-            throw new IllegalStateException();
-        }
+        checkIsIntApplicableType();
 
         load_or_cast_cached_value(AS_TYPE.long_value);
         return _v.getLong();
@@ -554,12 +554,7 @@ class IonReaderTextSystemX
     @Override
     public BigInteger bigIntegerValue()
     {
-        if (_value_type != IonType.INT &&
-            _value_type != IonType.DECIMAL &&
-            _value_type != IonType.FLOAT)
-        {
-            throw new IllegalStateException();
-        }
+        checkIsIntApplicableType();
 
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
         if (_v.isNull()) return null;
@@ -596,7 +591,7 @@ class IonReaderTextSystemX
 
     public final String stringValue()
     {
-        if (! IonType.isText(_value_type)) throw new IllegalStateException();
+        if (! IonType.isText(_value_type)) throw new IllegalStateException("Unexpected value type: " + _value_type);
         if (_v.isNull()) return null;
 
         load_or_cast_cached_value(AS_TYPE.string_value);
@@ -678,7 +673,7 @@ class IonReaderTextSystemX
 
     public SymbolToken symbolValue()
     {
-        if (_value_type != IonType.SYMBOL) throw new IllegalStateException();
+        if (_value_type != IonType.SYMBOL) throw new IllegalStateException("Unexpected value type: " + _value_type);
         if (_v.isNull()) return null;
 
         load_or_cast_cached_value(AS_TYPE.string_value);
