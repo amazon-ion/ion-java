@@ -91,10 +91,10 @@ public final class _Private_CommandLine
             }
         }
         if (arg.startsWith("--") && arg.length() > 2) {
-            if (arg.equals("help")) {
+            if (arg.equals("--help")) {
                 return argid_HELP;
             }
-            if (arg.equals("version")) {
+            if (arg.equals("--version")) {
                 return argid_VERSION;
             }
         }
