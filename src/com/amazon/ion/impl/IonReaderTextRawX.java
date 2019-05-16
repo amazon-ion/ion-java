@@ -1321,12 +1321,6 @@ if (depth == debugging_depth) {
         return _Private_Utils.stringIterator(getTypeAnnotations());
     }
 
-    public String[] getTypeAnnotations()
-    {
-        return _Private_Utils.toStrings(_annotations, _annotation_count);
-    }
-
-
     public void stepIn()
     {
         if (_value_type == null || _eof) {
