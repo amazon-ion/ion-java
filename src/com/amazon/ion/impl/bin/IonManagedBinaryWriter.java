@@ -96,7 +96,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         //someone is using a symboltable to populate our current context.
         if (builder.initialSymbolTable != null) {
             lstIndex = builder.initialSymbolTable.getImportedMaxId();
-            ArrayList temp = new ArrayList<String>();
+            ArrayList<String> temp = new ArrayList<String>();
             final Iterator<String> symbolIter = builder.initialSymbolTable.iterateDeclaredSymbolNames();
             while (symbolIter.hasNext()) {
                 temp.add(symbolIter.next());
