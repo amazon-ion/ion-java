@@ -24,7 +24,7 @@ public class _Private_LSTWriter implements _Private_IonWriter {
      * Enum for managing our state between API calls.
      * <p>
      * null: we are in an lst struct at depth 1.
-     * PreImp: setfield was called with the symbol 'imports' from null.
+     * preImp: setfield was called with the symbol 'imports' from null.
      * impList: either stepin(List) was called from PreImp, or stepOut from impDesc.
      * impDesc: StepIn(Struct) from impList was called or a field/value pair was written.
      * impMID: setfield was called with the symbol 'max_id' from impDesc.
@@ -84,7 +84,7 @@ public class _Private_LSTWriter implements _Private_IonWriter {
                 decImports.add(new SSTImportDescriptor());
                 break;
             case preSym:
-                //
+                //entering a symbol list.
                 if(containerType != IonType.LIST) throw new UnsupportedOperationException("Open content unsupported via the managed binary writer");
                 decSymbols = new LinkedList<String>();
                 state = State.sym;
