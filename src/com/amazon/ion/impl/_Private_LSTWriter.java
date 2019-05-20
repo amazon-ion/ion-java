@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.LinkedList;
-
+@Deprecated
 public class _Private_LSTWriter implements _Private_IonWriter {
     private int depth;
     private SymbolTable symbolTable;
