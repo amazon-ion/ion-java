@@ -18,20 +18,18 @@ package com.amazon.ion.impl.bin;
 import static com.amazon.ion.IonType.LIST;
 import static com.amazon.ion.IonType.STRUCT;
 import static com.amazon.ion.SystemSymbols.*;
-import static com.amazon.ion.impl.bin.Symbols.symbol;
 import static com.amazon.ion.impl.bin.Symbols.systemSymbol;
 
 
 import com.amazon.ion.*;
 import com.amazon.ion.impl._Private_IonWriter;
-import com.amazon.ion.impl.LSTWriter;
+import com.amazon.ion.impl._Private_LSTWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
-import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 
@@ -42,24 +40,33 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
     private final IonCatalog                    catalog;
     private final ArrayList<SymbolTable>        fallbackImports;
     private boolean                             closed = false, flushed = false, newSymbols = false, lstRequired = false;
-    private LSTWriter                           lstWriter;
+    private _Private_LSTWriter lstWriter;
     private IonRawBinaryWriter                  user;
     private IonRawBinaryWriter                  symbols;
     private _Private_IonWriter                  currentWriter;
     private SymbolTable                         lst;
     private int                                 lstIndex, maxSysId;
 
-
+    /**
+     * This class is surfaced to the user as BinaryWriter/IonWriter.
+     * It manages symboltable reconciliation for the user as well as system processing.
+     * It only guarantees data model fidelity, system processing of any kind may be absorbed.
+     * @param builder a builder supplied by the user to preconfigure writer context.
+     * @param out where the payload will be written to.
+     * @throws IOException
+     */
     /*package*/ IonManagedBinaryWriter(final _Private_IonManagedBinaryWriterBuilder builder,
                                        final OutputStream out)
             throws IOException
     {
         super(builder.optimization);
+        //this writer is used to serialize symboltables from LST objects.
+        //LST contexts are altered by user input and are thus dynamic during the lifetime of this writer.
         symbols = new IonRawBinaryWriter(
                 builder.provider,
                 builder.symbolsBlockSize,
                 out,
-                WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
+                WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer.
                 StreamCloseMode.NO_CLOSE,
                 StreamFlushMode.NO_FLUSH,
                 builder.preallocationMode,
@@ -69,22 +76,24 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
                 builder.provider,
                 builder.userBlockSize,
                 out,
-                WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
+                WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer.
                 StreamCloseMode.CLOSE,
                 StreamFlushMode.FLUSH,
                 builder.preallocationMode,
                 builder.isFloatBinary32Enabled
         );
 
+        //fallback imports are resupplied as the writer context after the user calls finish() and reuses the writer.
+        //local symbols are not automatically included in post finish() contexts.
         currentWriter = user;
         catalog = builder.catalog;
         if(builder.imports == null) {
             fallbackImports = new ArrayList<SymbolTable>();
         } else {
-            fallbackImports = new ArrayList(builder.imports);
+            fallbackImports = new ArrayList<SymbolTable>(builder.imports);
         }
 
-
+        //someone is using a symboltable to populate our current context.
         if (builder.initialSymbolTable != null) {
             lstIndex = builder.initialSymbolTable.getImportedMaxId();
             ArrayList temp = new ArrayList<String>();
@@ -92,16 +101,15 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
             while (symbolIter.hasNext()) {
                 temp.add(symbolIter.next());
             }
-            lstWriter = new LSTWriter(new ArrayList(Arrays.asList(builder.initialSymbolTable.getImportedTables())), temp, catalog);
+            lstWriter = new _Private_LSTWriter(new ArrayList(Arrays.asList(builder.initialSymbolTable.getImportedTables())), temp, catalog);
             lst = lstWriter.getSymbolTable();
             lstIndex = lst.getImportedMaxId();
         } else {
-            lstWriter = new LSTWriter(fallbackImports, new ArrayList<String>(), catalog);
+            lstWriter = new _Private_LSTWriter(fallbackImports, new ArrayList<String>(), catalog);
             lst = lstWriter.getSymbolTable();
             lstIndex = lst.getImportedMaxId();
         }
         maxSysId = lst.getSystemSymbolTable().getMaxId();
-
     }
 
     // Compatibility with Implementation Writer Interface
@@ -147,11 +155,11 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         return intern(text);
     }
 
+    //a symboltable reference is not guaranteed to reflect the context of the writer.
+    //user input can alter it or replace it entirely.
     public SymbolTable getSymbolTable() {
         return lst;
     }
-
-    // Current Value Meta
 
     public void setFieldName(final String name) {
         if (!isInStruct()) throw new IllegalStateException("IonWriter.setFieldName() must be called before writing a value into a struct.");
@@ -197,7 +205,6 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
     }
 
     // Container Manipulation
-
     public void stepIn(final IonType containerType) throws IOException
     {
         if(currentWriter.getDepth() == 0 && user.hasTopLevelSymbolTableAnnotation() && containerType == STRUCT){//only true when the user writer wrote the lst st.
@@ -211,7 +218,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
     public void stepOut() throws IOException
     {
         currentWriter.stepOut();
-        if(currentWriter == lstWriter && currentWriter.getDepth() == 0) {//depth should be 1 because we havent stepped out yet.
+        if(currentWriter == lstWriter && currentWriter.getDepth() == 0) {//depth should be 1 because we haven't stepped out yet.
             currentWriter = user;
             SymbolTable tempLST = lstWriter.getSymbolTable();
             if(lst != tempLST) {//we found imported tables and created a new lst object so the references dont match.
@@ -268,7 +275,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         token = intern(token);
         if (token != null && token.getSid() == ION_1_0_SID && user.getDepth() == 0 && !user.hasAnnotations()) {
             if (user.hasWrittenValuesSinceFinished()) {
-                // this explicitly translates SID 2 to an IVM and flushes out local symbol state
+                //this explicitly translates SID 2 to an IVM and flushes out local symbol state
                 finish();
             }
             return;
@@ -306,14 +313,15 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         user.writeBytes(data, off, len);
     }
 
-    // Stream Terminators
-
+    //this will write an original LST or if one has already been written it will write an LST-Append.
     public void flush() throws IOException {
         if (getDepth() == 0) {
+            //no op function if the user calls below the top level.
             int maxId = lst.getMaxId();
             if (!flushed && (user.hasWrittenValuesSinceFinished() || isStreamCopyOptimized()))
                 symbols.writeIonVersionMarker();
             if (newSymbols || (!flushed && (isStreamCopyOptimized() || lstRequired))) {
+                //we need to update our declared symbols to make symbols in the user payload resolveable.
                 symbols.addTypeAnnotationSymbol(systemSymbol(ION_SYMBOL_TABLE_SID));
                 symbols.stepIn(STRUCT);
                 if (flushed) {//append
@@ -338,6 +346,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
                     }
                 }
                 if (lstIndex < maxId) {
+                    //if our index of declared symbols is less than our context's maxId index then we have new local symbols.
                     symbols.setFieldNameSymbol(systemSymbol(SYMBOLS_SID));
                     symbols.stepIn(LIST);
                     for (int i = this.lstIndex + 1; i <= maxId; i++) {
@@ -356,9 +365,11 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
     }
 
     public void finish() throws IOException {
+        //resets the symbol context of the writer and finishes serializing payload.
+        //this allows for user to continue writing using the writer from a fresh symbol context as they see fit.
         if (getDepth() != 0) throw new IllegalStateException("IonWriter.finish() can only be called at top-level.");
         flush();
-        lstWriter = new LSTWriter(fallbackImports, new ArrayList<String>(), catalog);
+        lstWriter = new _Private_LSTWriter(fallbackImports, new ArrayList<String>(), catalog);
         lst = lstWriter.getSymbolTable();
         lstIndex = lst.getImportedMaxId();
         flushed = false;
