@@ -36,8 +36,6 @@ public class TrBwBrProcessingTest
         myBytes = binaryWriter.getBytes();
     }
 
-    @Override
-    @Ignore
     @Test
     public void testLocalSymtabWithMalformedSymbolEntries() throws Exception {
         // TODO amzn/ion-java#151 this test exercises null slots in the local symbol table. The reader should collapse
