@@ -1,39 +1,39 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.*;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-
-import com.amazon.ion.*;
-
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.LinkedList;
+
 @Deprecated
 public class _Private_LSTWriter implements _Private_IonWriter {
     private int depth;
     private SymbolTable symbolTable;
     private State state;
-    private LinkedList<SSTImportDescriptor> decImports;
-    private LinkedList<String> decSymbols;
-    private IonCatalog catalog;
+    private LinkedList<SSTImportDescriptor> declaredImports;
+    private LinkedList<String> declaredSymbols;
+    private final IonCatalog catalog;
     private boolean seenImports;
+    private boolean seenSymbols;
 
     /**
      * Enum for managing our state between API calls.
      * <p>
-     * null: we are in an lst struct at depth 1.
-     * preImp: setfield was called with the symbol 'imports' from null.
-     * impList: either stepin(List) was called from PreImp, or stepOut from impDesc.
-     * impDesc: StepIn(Struct) from impList was called or a field/value pair was written.
-     * impMID: setfield was called with the symbol 'max_id' from impDesc.
-     * impName: setfield was called with the symbol 'name' from impDesc.
-     * impVer: setfield was called with the symbol 'version' from impDesc.
-     * preSym: setfield was called with the symbol 'symbols' from null.
-     * sym: stepin(List) was called from PreSym.
+     * LST_STRUCT: we are in an lst struct at depth 1.
+     * PRE_IMPORT_LIST: setfield was called with the symbol 'imports' from LST_STRUCT.
+     * IMPORT_LIST: either stepin(List) was called from PRE_IMPORT_LIST, or stepOut from IMPORT_DESCRIPTOR.
+     * IMPORT_DESCRIPTOR: StepIn(Struct) from IMPORT_LIST was called or a field/value pair was written.
+     * IMPORT_MAX_ID: setfield was called with the symbol 'max_id' from IMPORT_DESCRIPTOR.
+     * IMPORT_NAME: setfield was called with the symbol 'name' from IMPORT_DESCRIPTOR.
+     * IMPORT_VERSION: setfield was called with the symbol 'version' from IMPORT_DESCRIPTOR.
+     * PRE_SYMBOL: setfield was called with the symbol 'symbols' from LST_STRUCT.
+     * SYMBOL_LIST: stepin(List) was called from PRE_SYMBOL_LIST.
      */
-    private enum State {preImp, impList, impDesc, impMID, impName, impVer,  preSym, sym}
+    private enum State {LST_STRUCT, PRE_IMPORT_LIST, IMPORT_LIST, IMPORT_DESCRIPTOR, IMPORT_MAX_ID, IMPORT_NAME, IMPORT_VERSION, PRE_SYMBOL_LIST, SYMBOL_LIST}
 
     /**
      * Holds import descriptor info between API calls.
@@ -53,9 +53,9 @@ public class _Private_LSTWriter implements _Private_IonWriter {
      * @param  symbols List<String>
      * @param  inCatalog IonCatalog
      */
-   public _Private_LSTWriter(ArrayList<SymbolTable> imports, List<String> symbols, IonCatalog inCatalog) {
+   public _Private_LSTWriter(List<SymbolTable> imports, List<String> symbols, IonCatalog inCatalog) {
         catalog = inCatalog;
-        decSymbols = new LinkedList<String>();
+        declaredSymbols = new LinkedList<String>();
         if(imports.isEmpty() || !imports.get(0).isSystemTable()){
             imports.add(0, _Private_Utils.systemSymtab(1));
         }
@@ -68,30 +68,38 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     }
 
     public void stepIn(IonType containerType) throws IOException {
+        if(state == null) {
+            if(depth == 0) {
+                state = State.LST_STRUCT;
+            } else {
+                throw new UnsupportedOperationException("$ion_symbol_table:: was not added to a struct.");
+            }
+        }
         depth++;
-        if(state == null) return;
         switch(state) {
-            case preImp:
-                //entering the decImports list.
-                state = State.impList;
-                decImports = new LinkedList<SSTImportDescriptor>();
+            case LST_STRUCT:
+                return;
+            case PRE_IMPORT_LIST:
+                //entering the declared Imports list.
+                state = State.IMPORT_LIST;
+                declaredImports = new LinkedList<SSTImportDescriptor>();
                 seenImports = true;
-                //we need to delete all context when we step out?
                 break;
-            case impList:
+            case IMPORT_LIST:
                 //entering an import struct.
-                state = State.impDesc;
-                decImports.add(new SSTImportDescriptor());
+                state = State.IMPORT_DESCRIPTOR;
+                declaredImports.add(new SSTImportDescriptor());
                 break;
-            case preSym:
+            case PRE_SYMBOL_LIST:
                 //entering a symbol list.
                 if(containerType != IonType.LIST) throw new UnsupportedOperationException("Open content unsupported via the managed binary writer");
-                decSymbols = new LinkedList<String>();
-                state = State.sym;
+                declaredSymbols = new LinkedList<String>();
+                state = State.SYMBOL_LIST;
+                seenSymbols = true;
                 break;
-            case impMID:
-            case impVer:
-            case impName:
+            case IMPORT_MAX_ID:
+            case IMPORT_VERSION:
+            case IMPORT_NAME:
                 throw new UnsupportedOperationException();
             default:
                 switch(containerType) {
@@ -105,16 +113,15 @@ public class _Private_LSTWriter implements _Private_IonWriter {
 
     public void stepOut() {
         depth--;
-        if(state == null) {
+        if(state == State.LST_STRUCT) {
+            state = null;
             //we're at depth 1 in an LST declaration.
             if(seenImports) {
                 //we've already absorbed an import declaration.
-                SSTImportDescriptor temp = decImports.getLast();
-                if(temp.maxID == 0 || temp.name == null || temp.version == 0) throw new UnsupportedOperationException("Illegal Shared Symbol Table Import declared in local symbol table." + temp.name + "." + temp.version);
                 LinkedList<SymbolTable> tempImports = new LinkedList<SymbolTable>();
                 tempImports.add(symbolTable.getSystemSymbolTable());
                 SymbolTable tempTable = null;
-                for(SSTImportDescriptor desc : decImports) {
+                for(SSTImportDescriptor desc : declaredImports) {
                     tempTable = catalog.getTable(desc.name, desc.version);
                     if(tempTable == null) {
                         tempTable = new SubstituteSymbolTable(desc.name, desc.version, desc.maxID);
@@ -123,50 +130,54 @@ public class _Private_LSTWriter implements _Private_IonWriter {
                     }
                     tempImports.add(tempTable);
                 }
-                symbolTable = new LocalSymbolTable(new LocalSymbolTableImports(tempImports), decSymbols);
+                symbolTable = new LocalSymbolTable(new LocalSymbolTableImports(tempImports), declaredSymbols);
                 seenImports = false;//do we need to refresh any other processing flags?
             } else {
                 //if we didnt step out of an import declaration were coming from a list of symbols.
-                for(String sym : decSymbols) {
+                for(String sym : declaredSymbols) {
                     symbolTable.intern(sym);
                 }
             }
         } else {//were inside of a value
             switch (state) {
-                case impDesc:
-                    state = State.impList;
+                case IMPORT_DESCRIPTOR:
+                    SSTImportDescriptor temp = declaredImports.getLast();
+                    if(temp.maxID == 0 || temp.name == null || temp.version == 0){
+                        throw new UnsupportedOperationException("Illegal Shared Symbol Table Import declared in local symbol table." + temp.name + "." + temp.version);
+                    }
+                    state = State.IMPORT_LIST;
                     break;
-                case impList:
-                case sym:
-                    state = null;
-                    break;//we need to intern decsymbols on exiting the entire lst declaration(might not have seen import context yet), so this is a no op.
-                case preSym:
-                case impMID:
-                case impVer:
-                case impName:
+                case IMPORT_LIST:
+                case SYMBOL_LIST:
+                    state = State.LST_STRUCT;
+                    break;//we need to intern declaredSymbols on exiting the entire lst declaration(might not have seen import context yet), so this is a no op.
+                case PRE_SYMBOL_LIST:
+                case IMPORT_MAX_ID:
+                case IMPORT_VERSION:
+                case IMPORT_NAME:
                     throw new UnsupportedOperationException();
             }
         }
     }
 
     public void setFieldName(String name) {
-        if(state == null) {
+        if(state == State.LST_STRUCT) {
             if (name.equals("imports")) {
                 if(seenImports) throw new UnsupportedOperationException("Two import declarations found.");
-                state = State.preImp;
+                state = State.PRE_IMPORT_LIST;
             } else if (name.equals("symbols")) {
-                if(decSymbols.size() > 0) throw new UnsupportedOperationException("Two symbol list declarations found.");
-                state = State.preSym;
+                if(seenSymbols) throw new UnsupportedOperationException("Two symbol list declarations found.");
+                state = State.PRE_SYMBOL_LIST;
             } else {
                 throw new UnsupportedOperationException();
             }
-        } else if(state == State.impDesc) {
+        } else if(state == State.IMPORT_DESCRIPTOR) {
             if(name.equals("name")) {
-                state = State.impName;
+                state = State.IMPORT_NAME;
             } else if(name.equals("version")) {
-                state = State.impVer;
+                state = State.IMPORT_VERSION;
             } else if(name.equals("max_id")) {
-                state = State.impMID;
+                state = State.IMPORT_MAX_ID;
             }
         } else {
             throw new UnsupportedOperationException();
@@ -174,14 +185,14 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     }
 
     public void writeString(String value) {
-        if(state == null) throw new UnsupportedOperationException("Open content unsupported via the managed binary writer");
+        if(state == State.LST_STRUCT) throw new UnsupportedOperationException("Open content unsupported via the managed binary writer");
         switch(state) {
-            case sym:
-                decSymbols.add(value);
+            case SYMBOL_LIST:
+                declaredSymbols.add(value);
                 break;
-            case impName:
-                decImports.getLast().name = value;
-                state = State.impDesc;
+            case IMPORT_NAME:
+                declaredImports.getLast().name = value;
+                state = State.IMPORT_DESCRIPTOR;
                 break;
             default:
                 throw new UnsupportedOperationException("Open content unsupported via the managed binary writer");
@@ -190,7 +201,7 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     }
 
     public void writeSymbol(String content){
-        if(state == State.preImp && content.equals("$ion_symbol_table")) {
+        if(state == State.PRE_IMPORT_LIST && content.equals("$ion_symbol_table")) {
             state = null;
         } else {
             throw new UnsupportedOperationException("Open content unsupported via the managed binary writer");
@@ -201,12 +212,12 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     }
 
     public void writeInt(long value) {
-        if(state == State.impVer) {
-            decImports.getLast().version = (int) value;
-            state = State.impDesc;
-        } else if(state == State.impMID) {
-            decImports.getLast().maxID = (int) value;
-            state = State.impDesc;
+        if(state == State.IMPORT_VERSION) {
+            declaredImports.getLast().version = (int) value;
+            state = State.IMPORT_DESCRIPTOR;
+        } else if(state == State.IMPORT_MAX_ID) {
+            declaredImports.getLast().maxID = (int) value;
+            state = State.IMPORT_DESCRIPTOR;
         } else {
             throw new UnsupportedOperationException("Open content is unsupported via these APIs.");
         }
@@ -227,10 +238,8 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     public void writeNull(IonType type) {
 
     }
-    //This isn't really fulfilling the contract, but we're destroying any open content anyway so screw'em.
-    public boolean isInStruct() {
-        return state == null || state == State.impDesc;
-    }
+
+
 
     public void addTypeAnnotation(String annotation) {
         throw new UnsupportedOperationException();
@@ -244,16 +253,17 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     public void setFieldNameSymbol(SymbolToken name) {
         setFieldName(name.getText());
     }
-    //we aren't really a writer
+
+    public boolean isInStruct() {
+       return state != State.SYMBOL_LIST && state != State.IMPORT_LIST;
+    }
     public IonCatalog getCatalog() {
         throw new UnsupportedOperationException();
     }
     public void setTypeAnnotations(String... annotations) {
         throw new UnsupportedOperationException();
     }
-    public void setTypeAnnotationSymbols(SymbolToken... annotations){
-        throw new UnsupportedOperationException();
-    }
+    public void setTypeAnnotationSymbols(SymbolToken... annotations) { throw new UnsupportedOperationException(); }
     public void flush() throws IOException { throw new UnsupportedOperationException(); }
     public void finish() throws IOException { throw new UnsupportedOperationException(); }
     public void close() throws IOException { throw new UnsupportedOperationException(); }

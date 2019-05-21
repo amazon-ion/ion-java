@@ -206,18 +206,4 @@ import java.util.Date;
         return null; // Consistent with readers' behavior when requested facet isn't supported
     }
 
-    /**
-     * Writes a portion of the byte array out as an IonString value.  This
-     * copies the portion of the byte array that is written.
-     *
-     * @param data bytes to be written.
-     * May be {@code null} to represent {@code null.string}.
-     * @param offset offset of the first byte in value to write
-     * @param length number of bytes to write from value
-     * @see IonWriter#writeClob(byte[], int, int)
-     * @see IonWriter#writeBlob(byte[], int, int)
-     */
-    public abstract void writeString(byte[] data, int offset, int length)
-        throws IOException;
-
 }

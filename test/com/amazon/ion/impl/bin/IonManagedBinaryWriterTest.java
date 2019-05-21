@@ -171,6 +171,7 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
         assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
         reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
         assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
     }
 
