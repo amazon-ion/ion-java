@@ -19,10 +19,17 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 
-import com.amazon.ion.*;
+import com.amazon.ion.IonContainer;
+import com.amazon.ion.IonMutableCatalog;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder.AllocatorMode;
-import com.amazon.ion.junit.Injected.Inject;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;

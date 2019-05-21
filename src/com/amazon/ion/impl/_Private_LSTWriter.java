@@ -1,6 +1,12 @@
 package com.amazon.ion.impl;
 
-import com.amazon.ion.*;
+import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.Timestamp;
 
 import java.io.IOException;
 import java.math.BigDecimal;

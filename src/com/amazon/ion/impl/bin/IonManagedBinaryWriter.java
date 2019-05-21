@@ -17,18 +17,33 @@ package com.amazon.ion.impl.bin;
 
 import static com.amazon.ion.IonType.LIST;
 import static com.amazon.ion.IonType.STRUCT;
-import static com.amazon.ion.SystemSymbols.*;
+import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
+import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
+import static com.amazon.ion.SystemSymbols.NAME_SID;
+import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
+import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl.bin.Symbols.systemSymbol;
 
-
-import com.amazon.ion.*;
+import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl._Private_IonWriter;
 import com.amazon.ion.impl._Private_LSTWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
 
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
@@ -37,8 +52,8 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 
 /** Wraps {@link IonRawBinaryWriter} with symbol table management. */
 /*package*/ final class IonManagedBinaryWriter extends AbstractIonWriter  implements _Private_IonManagedWriter {
-    private final IonCatalog                    catalog;
-    private final List<SymbolTable>             fallbackImports;
+    private final IonCatalog catalog;
+    private final List<SymbolTable> fallbackImports;
     private boolean                             closed = false;
     private boolean                             flushed = false;
     private boolean                             hasUnflushedLocalSymbols = false;
