@@ -316,8 +316,9 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         if (getDepth() == 0) {
             //no op function if the user calls below the top level.
             int maxId = lst.getMaxId();
-            if (!flushed && (user.hasWrittenValuesSinceFinished() || isStreamCopyOptimized()))
+            if (!flushed && (user.hasWrittenValuesSinceFinished() || isStreamCopyOptimized())) {
                 symbols.writeIonVersionMarker();
+            }
             if (hasUnflushedLocalSymbols || (!flushed && (isStreamCopyOptimized() || lstRequired))) {
                 //we need to update our declared symbols to make symbols in the user payload resolveable.
                 symbols.addTypeAnnotationSymbol(systemSymbol(ION_SYMBOL_TABLE_SID));
