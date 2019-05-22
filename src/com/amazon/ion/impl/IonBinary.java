@@ -515,7 +515,7 @@ final class IonBinary
     // TODO maybe add lenInt(int) to micro-optimize, or?
 
     public static int lenInt(long longVal) {
-        if (longVal != 0) {
+        if (longVal == 0) {
             return 0;
         }
         if (longVal < 0) longVal = -longVal;
@@ -526,7 +526,7 @@ final class IonBinary
         if (longVal < (1L << (8 * 5 - 1))) return 5;   // 39 bits
         if (longVal < (1L << (8 * 6 - 1))) return 6;   // 47 bits
         if (longVal < (1L << (8 * 7 - 1))) return 7;   // 55 bits
-        if (longVal == Long.MIN_VALUE) return 9;
+        if (longVal == Long.MAX_VALUE) return 9;
         return 8;
     }
 
