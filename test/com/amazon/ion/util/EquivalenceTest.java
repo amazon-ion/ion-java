@@ -16,6 +16,7 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.IonFloat;
+import com.amazon.ion.IonList;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonValue;
@@ -28,6 +29,9 @@ public class EquivalenceTest
     private static void assertIonEq(final IonValue left, final IonValue right) {
         assertTrue(Equivalence.ionEquals(left, right));
         assertTrue(Equivalence.ionEquals(right, left));
+        Equivalence equivalence = new Equivalence.Builder().build();
+        assertTrue(equivalence.ionValueEquals(left, right));
+        assertTrue(equivalence.ionValueEquals(right, left));
 
         // Redundancy check included here, in the case that IonValue#equals()
         // doesn't use Equivalence's implementation anymore.
@@ -40,6 +44,9 @@ public class EquivalenceTest
     private static void assertNotIonEq(final IonValue left, final IonValue right) {
         assertFalse(Equivalence.ionEquals(left, right));
         assertFalse(Equivalence.ionEquals(right, left));
+        Equivalence equivalence = new Equivalence.Builder().build();
+        assertFalse(equivalence.ionValueEquals(left, right));
+        assertFalse(equivalence.ionValueEquals(right, left));
 
         // Redundancy check included here, in the case that IonValue#equals()
         // doesn't use Equivalence's implementation anymore.
@@ -52,6 +59,9 @@ public class EquivalenceTest
     private static void assertIonEqForm(final IonValue left, final IonValue right) {
         assertTrue(Equivalence.ionEqualsByContent(left, right));
         assertTrue(Equivalence.ionEqualsByContent(right, left));
+        Equivalence equivalence = new Equivalence.Builder().withStrict(false).build();
+        assertTrue(equivalence.ionValueEquals(left, right));
+        assertTrue(equivalence.ionValueEquals(right, left));
     }
 
     private IonValue ion(final String raw) {
@@ -375,9 +385,10 @@ public class EquivalenceTest
 
         assertEquals(3, struct.size());
 
-        Equivalence.Field f1 = new Equivalence.Field(v1, true);
-        Equivalence.Field f2 = new Equivalence.Field(v2, true);
-        Equivalence.Field f3 = new Equivalence.Field(v3, true);
+        Equivalence.Configuration configuration = new Equivalence.Configuration(new Equivalence.Builder().withStrict(true));
+        Equivalence.Field f1 = new Equivalence.Field(v1, configuration);
+        Equivalence.Field f2 = new Equivalence.Field(v2, configuration);
+        Equivalence.Field f3 = new Equivalence.Field(v3, configuration);
 
         assertFalse(f1.equals(f2));
         assertFalse(f1.equals(f3));
@@ -407,9 +418,10 @@ public class EquivalenceTest
 
         assertEquals(3, struct.size());
 
-        Equivalence.Field f1 = new Equivalence.Field(v1, true);
-        Equivalence.Field f2 = new Equivalence.Field(v2, true);
-        Equivalence.Field f3 = new Equivalence.Field(v3, true);
+        Equivalence.Configuration configuration = new Equivalence.Configuration(new Equivalence.Builder().withStrict(true));
+        Equivalence.Field f1 = new Equivalence.Field(v1, configuration);
+        Equivalence.Field f2 = new Equivalence.Field(v2, configuration);
+        Equivalence.Field f3 = new Equivalence.Field(v3, configuration);
 
         assertEquals(f1, f2);
         assertEquals(f2, f1); // symmetric
@@ -419,5 +431,43 @@ public class EquivalenceTest
 
         assertEquals(f2, f3); // transitive
         assertEquals(f3, f2); // symmetric
+    }
+
+    @Test
+    public void builderWithoutEpsilon() {
+        Equivalence equivalence = new Equivalence.Builder().build();
+        IonFloat v1 = ionFloat(3.14);
+        IonFloat v2 = ionFloat(3.14 + 1e-7);
+        assertFalse(equivalence.ionValueEquals(v1, v2));
+        assertFalse(equivalence.ionValueEquals(v2, v1));
+        IonStruct struct1 = system().newEmptyStruct();
+        struct1.add("foo", v1.clone());
+        IonStruct struct2 = system().newEmptyStruct();
+        struct2.add("foo", v2.clone());
+        assertFalse(equivalence.ionValueEquals(struct1, struct2));
+        assertFalse(equivalence.ionValueEquals(struct2, struct1));
+        IonList list1 = system().newList(v1.clone());
+        IonList list2 = system().newList(v2.clone());
+        assertFalse(equivalence.ionValueEquals(list1, list2));
+        assertFalse(equivalence.ionValueEquals(list2, list1));
+    }
+
+    @Test
+    public void builderWithEpsilon() {
+        Equivalence equivalence = new Equivalence.Builder().withEpsilon(1e-6).build();
+        IonFloat v1 = ionFloat(3.14);
+        IonFloat v2 = ionFloat(3.14 + 1e-7);
+        assertTrue(equivalence.ionValueEquals(v1, v2));
+        assertTrue(equivalence.ionValueEquals(v2, v1));
+        IonStruct struct1 = system().newEmptyStruct();
+        struct1.add("foo", v1.clone());
+        IonStruct struct2 = system().newEmptyStruct();
+        struct2.add("foo", v2.clone());
+        assertTrue(equivalence.ionValueEquals(struct1, struct2));
+        assertTrue(equivalence.ionValueEquals(struct2, struct1));
+        IonList list1 = system().newList(v1.clone());
+        IonList list2 = system().newList(v2.clone());
+        assertTrue(equivalence.ionValueEquals(list1, list2));
+        assertTrue(equivalence.ionValueEquals(list2, list1));
     }
 }
