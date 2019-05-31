@@ -465,6 +465,8 @@ import java.util.NoSuchElementException;
         FLUSH
     }
 
+    private static final int SID_UNASSIGNED = -1;
+
     private final BlockAllocator                allocator;
     private final OutputStream                  out;
     private final StreamCloseMode               streamCloseMode;
@@ -480,7 +482,7 @@ import java.util.NoSuchElementException;
     private boolean                             hasWrittenValuesSinceFinished;
     private boolean                             hasWrittenValuesSinceConstructed;
 
-    private Integer                 currentFieldSid;
+    private int                     currentFieldSid;
     private final List<Integer>     currentAnnotationSids;
     // XXX this is for managed detection of TLV that is a LST--this is easier to track here than at the managed level
     private boolean                     hasTopLevelSymbolTableAnnotation;
@@ -518,7 +520,7 @@ import java.util.NoSuchElementException;
         this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
 
-        this.currentFieldSid                  = null;
+        this.currentFieldSid                  = SID_UNASSIGNED;
         this.currentAnnotationSids            = new ArrayList<Integer>();
         this.hasTopLevelSymbolTableAnnotation = false;
 
@@ -645,7 +647,7 @@ import java.util.NoSuchElementException;
 
     public boolean isFieldNameSet()
     {
-        return currentFieldSid != null;
+        return currentFieldSid > SID_UNASSIGNED;
     }
 
     public void writeIonVersionMarker() throws IOException
@@ -798,17 +800,17 @@ import java.util.NoSuchElementException;
     /** prepare to write values with field name and annotations. */
     private void prepareValue()
     {
-        if (isInStruct() && currentFieldSid == null)
+        if (isInStruct() && currentFieldSid <= SID_UNASSIGNED)
         {
             throw new IllegalStateException("IonWriter.setFieldName() must be called before writing a value into a struct.");
         }
-        if (currentFieldSid != null)
+        if (currentFieldSid > SID_UNASSIGNED)
         {
             checkSid(currentFieldSid);
             writeVarUInt(currentFieldSid);
 
             // clear out field name
-            currentFieldSid = null;
+            currentFieldSid = SID_UNASSIGNED;
         }
         if (!currentAnnotationSids.isEmpty())
         {
@@ -873,7 +875,7 @@ import java.util.NoSuchElementException;
 
     public void stepOut() throws IOException
     {
-        if (currentFieldSid != null)
+        if (currentFieldSid > SID_UNASSIGNED)
         {
             throw new IonException("Cannot step out with field name set");
         }
