@@ -61,6 +61,20 @@ import java.util.Set;
  *</pre>
  *
  * <p>
+ * Additional options are available by configuring an <code>Equivalence</code>
+ * instance using {@link Equivalence.Builder}. For example:
+ *
+ * <pre>
+ *     com.amazon.ion.util.Equivalence equivalence =
+ *         new com.amazon.ion.util.Equivalence.Builder()
+ *             .withEpsilon(1e-6)
+ *             .build();
+ *     IonValue v1 = ...;
+ *     IonValue v2 = ...;
+ *     equivalence.ionValueEquals( v1, v2 );
+ * </pre>
+ *
+ * <p>
  * <h3>Ion Equivalence</h3>
  * In order to make Ion a useful model to describe data, we must first define
  * the notion of equivalence for all values representable in Ion. Equivalence
@@ -104,7 +118,19 @@ import java.util.Set;
  * (A, V), where A is an ordered list of annotations, and V is an Ion Primitive
  * Data or Ion Complex Data value. The list of annotations, A is an tuple of Ion
  * Symbols (a specific type of Ion Primitive).
-
+ *
+ * <p>
+ * <h3>Terminology</h3>
+ * Within this class, <i>strict</i> equivalence refers to Ion data model
+ * equivalence as defined above and by the
+ * <a href="http://amzn.github.io/ion-docs/docs/spec.html">Ion
+ * Specification</a>. <i>Structural</i> or <i>non-strict</i> equivalence
+ * follows the same rules as strict equivalence, except that
+ * <ul>
+ *   <li>Annotations are not considered, and</li>
+ *   <li>Timestamps that represent the same instant in time are always
+ *   considered equivalent.</li>
+ * </ul>
  */
 public final class Equivalence {
 
@@ -115,7 +141,78 @@ public final class Equivalence {
      */
     private static final boolean PUBLIC_COMPARISON_API = false;
 
-    private Equivalence() {
+    /**
+     * Configuration that requires strict data equivalence.
+     * @see #ionEquals(IonValue, IonValue)
+     */
+    private static final Configuration STRICT_CONFIGURATION = new Configuration(new Builder().withStrict(true));
+
+    /**
+     * Configuration that requires structural equivalence without considering annotations.
+     * @see #ionEqualsByContent(IonValue, IonValue)
+     */
+    private static final Configuration NON_STRICT_CONFIGURATION = new Configuration(new Builder().withStrict(false));
+
+    /**
+     * Contains the configuration to use when comparing Ion values.
+     */
+    static final class Configuration {
+        private final boolean isStrict;
+        private final Double epsilon;
+
+        Configuration(Builder builder) {
+            this.isStrict = builder.isStrict;
+            this.epsilon = builder.epsilon;
+        }
+    }
+
+    /**
+     * Constructs {@link Equivalence} instances.
+     */
+    public static final class Builder {
+
+        private boolean isStrict = true;
+        private Double epsilon = null;
+
+        /**
+         * When true, checks for strict data equivalence over two Ion Values.
+         * When false, checks for structural data equivalence over two Ion
+         * Values. See {@link Equivalence} for discussion of the differences
+         * between the two.
+         * Default: true.
+         * @param isStrict the value.
+         * @return this builder.
+         */
+        public Builder withStrict(boolean isStrict) {
+            this.isStrict = isStrict;
+            return this;
+        }
+
+        /**
+         * The maximum absolute difference between two Ion float values for
+         * which the two values will be considered equivalent. Default: Ion
+         * float values will only be considered equivalent when
+         * <code>Double.compare(a, b) == 0</code>.
+         * @param epsilon the value.
+         * @return this builder.
+         */
+        public Builder withEpsilon(double epsilon) {
+            this.epsilon = epsilon;
+            return this;
+        }
+
+        /**
+         * @return a new Equivalence using this builder's configuration.
+         */
+        public Equivalence build() {
+            return new Equivalence(new Configuration(this));
+        }
+    }
+
+    private final Configuration configuration;
+
+    private Equivalence(Configuration configuration) {
+        this.configuration = configuration;
     }
 
 
@@ -166,13 +263,13 @@ public final class Equivalence {
      * and cannot contain duplicate elements, hence we cannot use it.
      */
     private static final Map<Field, Field>
-        convertToMultiSet(final IonStruct struct, final boolean strict) {
+        convertToMultiSet(final IonStruct struct, final Configuration configuration) {
 
         final Map<Field, Field> structMultiSet =
             new HashMap<Field, Field>();
 
         for (final IonValue val : struct) {
-            final Field item = new Field(val, strict);
+            final Field item = new Field(val, configuration);
             Field curr = structMultiSet.put(item, item);
             // curr will be non-null if the multi-set already contains the
             // name/value pair
@@ -193,7 +290,7 @@ public final class Equivalence {
 
     private static int compareStructs(final IonStruct s1,
                                       final IonStruct s2,
-                                      boolean strict)
+                                      final Configuration configuration)
     {
         int result = s1.size() - s2.size();
         if (result == 0) {
@@ -201,7 +298,7 @@ public final class Equivalence {
             // Map<Field, Field>). Refer to convertToMultiSet()'s
             // documentation for more info
             final Map<Field, Field> s1MultiSet
-                    = convertToMultiSet(s1, strict);
+                    = convertToMultiSet(s1, configuration);
 
             // Iterates through each name/value pair in IonStruct s2 and
             // determine if it also occurs in s1MultiSet.
@@ -209,7 +306,7 @@ public final class Equivalence {
             //          If it does, remove an occurrence from s1MultiSet
             //          If it doesn't, the two IonStructs aren't equal
             for (IonValue val : s2) {
-                Field field = new Field(val, strict);
+                Field field = new Field(val, configuration);
 
                 // Find an occurrence of the name/value pair in s1MultiSet
                 Field mappedValue = s1MultiSet.get(field);
@@ -231,7 +328,7 @@ public final class Equivalence {
 
     private static int compareSequences(final IonSequence s1,
                                         final IonSequence s2,
-                                        boolean strict)
+                                        final Configuration configuration)
     {
         int result = s1.size() - s2.size();
         if (result == 0) {
@@ -240,7 +337,7 @@ public final class Equivalence {
             while (iter1.hasNext()) {
                 result = ionCompareToImpl(iter1.next(),
                                           iter2.next(),
-                                          strict);
+                                          configuration);
                 if (result != 0) {
                     break;
                 }
@@ -315,7 +412,7 @@ public final class Equivalence {
      * a single {@code Field} -> {@code Field} with {@code occurrences} of 2.
      * <p>
      * Refer to
-     * {@link Equivalence#convertToMultiSet(IonStruct, boolean)} and
+     * {@link Equivalence#convertToMultiSet(IonStruct, Configuration)} and
      * {@link Field#equals(Object)} for more info.
      * <p>
      * NOTE: This class should only be instantiated for the sole purpose of
@@ -324,7 +421,7 @@ public final class Equivalence {
     static class Field {
         private final String    name; // aka field name
         private final IonValue  value;
-        private final boolean   strict;
+        private final Configuration configuration;
 
         /**
          * Number of times that this specific field (with the same name
@@ -332,7 +429,7 @@ public final class Equivalence {
          */
         private int occurrences;
 
-        Field(final IonValue value, final boolean strict)
+        Field(final IonValue value, final Configuration configuration)
         {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
@@ -342,7 +439,7 @@ public final class Equivalence {
             }
             this.name = name;
             this.value = value;
-            this.strict = strict;
+            this.configuration = configuration;
 
             // Occurrences of this name/value pair is 0 initially
             this.occurrences = 0;
@@ -371,20 +468,20 @@ public final class Equivalence {
             final Field sOther = (Field) other;
 
             return name.equals(sOther.name)
-                && ionEqualsImpl(value, ((Field) other).value, strict);
+                && ionEqualsImpl(value, ((Field) other).value, configuration);
         }
     }
 
     private static boolean ionEqualsImpl(final IonValue v1,
-                                               final IonValue v2,
-                                               final boolean strict)
+                                         final IonValue v2,
+                                         final Configuration configuration)
     {
-        return (ionCompareToImpl(v1, v2, strict) == 0);
+        return (ionCompareToImpl(v1, v2, configuration) == 0);
     }
 
     private static int ionCompareToImpl(final IonValue v1,
                                         final IonValue v2,
-                                        final boolean strict)
+                                        final Configuration configuration)
     {
         int result = 0;
 
@@ -431,8 +528,14 @@ public final class Equivalence {
                              ((IonInt) v2).bigIntegerValue());
                     break;
                 case FLOAT:
-                    result = Double.compare(((IonFloat) v1).doubleValue(),
-                                            ((IonFloat) v2).doubleValue());
+                    double double1 = ((IonFloat) v1).doubleValue();
+                    double double2 = ((IonFloat) v2).doubleValue();
+                    if (configuration.epsilon != null
+                            && (double1 == double2 || Math.abs(double1 - double2) <= configuration.epsilon)) {
+                        result = 0;
+                    } else {
+                        result = Double.compare(double1, double2);
+                    }
                     break;
                 case DECIMAL:
                     assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java/issues/26
@@ -441,7 +544,7 @@ public final class Equivalence {
                                             ? 0 : 1;
                     break;
                 case TIMESTAMP:
-                    if (strict) {
+                    if (configuration.isStrict) {
                         assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java/issues/26
                         result = (((IonTimestamp) v1).timestampValue().equals(
                                   ((IonTimestamp) v2).timestampValue())
@@ -473,14 +576,14 @@ public final class Equivalence {
                     assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java/issues/26
                     result = compareStructs((IonStruct) v1,
                                             (IonStruct) v2,
-                                            strict);
+                                            configuration);
                     break;
                 case LIST:
                 case SEXP:
                 case DATAGRAM:
                     result = compareSequences((IonSequence) v1,
                                               (IonSequence) v2,
-                                              strict);
+                                              configuration);
                     break;
                 }
             }
@@ -488,7 +591,7 @@ public final class Equivalence {
 
         // if the values are otherwise equal, but the caller wants strict
         // comparison, then we check the annotations
-        if ((result == 0) && strict) {
+        if ((result == 0) && configuration.isStrict) {
             // check tuple equality over the annotations
             // (which are symbol tokens)
             result = compareAnnotations(v1.getTypeAnnotationSymbols(),
@@ -511,7 +614,7 @@ public final class Equivalence {
     public static boolean ionEquals(final IonValue v1,
                                     final IonValue v2)
     {
-        return ionEqualsImpl(v1, v2, true);
+        return ionEqualsImpl(v1, v2, STRICT_CONFIGURATION);
     }
 
     /**
@@ -529,7 +632,24 @@ public final class Equivalence {
     public static boolean ionEqualsByContent(final IonValue v1,
                                              final IonValue v2)
     {
-        return ionEqualsImpl(v1, v2, false);
+        return ionEqualsImpl(v1, v2, NON_STRICT_CONFIGURATION);
+    }
+
+    /**
+     * Checks for data equivalence over two Ion values using this Equivalence's
+     * configuration
+     *
+     * @see Builder
+     *
+     * @param v1
+     *            The first Ion value to compare.
+     * @param v2
+     *            The second Ion value to compare.
+     *
+     * @return true if two Ion Values represent the same data.
+     */
+    public boolean ionValueEquals(final IonValue v1, final IonValue v2) {
+        return ionEqualsImpl(v1, v2, configuration);
     }
 
 }
