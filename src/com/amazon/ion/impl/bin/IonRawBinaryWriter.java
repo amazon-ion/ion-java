@@ -235,19 +235,20 @@ import java.util.NoSuchElementException;
     private static class ContainerInfo
     {
         /** Whether or not the container is a struct */
-        public final ContainerType type;
+        public ContainerType type;
         /** The location of the pre-allocated size descriptor in the buffer. */
-        public final long position;
+        public long position;
         /** The size of the current value. */
         public long length;
         /** The patchlist for this container. */
         public PatchList patches;
 
-        public ContainerInfo(final ContainerType type, final long offset)
+        public ContainerInfo()
         {
-            this.type = type;
-            this.position = offset;
-            this.patches = null;
+            type = null;
+            position = -1;
+            length = -1;
+            patches = null;
         }
 
         public void appendPatch(final PatchPoint patch)
@@ -269,6 +270,13 @@ import java.util.NoSuchElementException;
             {
                 patches.extend(newPatches);
             }
+        }
+
+        public void initialize(final ContainerType type, final long offset) {
+            this.type = type;
+            this.position = offset;
+            this.patches = null;
+            this.length = 0;
         }
 
         @Override
@@ -466,7 +474,8 @@ import java.util.NoSuchElementException;
     private final WriteBuffer                   buffer;
     private final WriteBuffer                   patchBuffer;
     private final PatchList                     patchPoints;
-    private final LinkedList<ContainerInfo>     containers;
+    private final List<ContainerInfo>           containers;
+    private int                                 currentContainerIndex;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
     private boolean                             hasWrittenValuesSinceConstructed;
@@ -501,8 +510,10 @@ import java.util.NoSuchElementException;
         this.buffer            = new WriteBuffer(allocator);
         this.patchBuffer       = new WriteBuffer(allocator);
         this.patchPoints       = new PatchList();
-        this.containers        = new LinkedList<ContainerInfo>();
-
+        this.containers        = new ArrayList<ContainerInfo>(10);
+        // Note: this is not the same as depth because ContainerInfo is used for annotations and certain scalars
+        // in addition to container types.
+        this.currentContainerIndex            = -1;
         this.depth                            = 0;
         this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
@@ -651,23 +662,31 @@ import java.util.NoSuchElementException;
 
     private void updateLength(long length)
     {
-        if (containers.isEmpty())
+        if (currentContainerIndex < 0)
         {
             return;
         }
 
-        containers.getLast().length += length;
+        containers.get(currentContainerIndex).length += length;
     }
 
     private void pushContainer(final ContainerType type)
     {
         // XXX we push before writing the type of container
-        containers.add(new ContainerInfo(type, buffer.position() + 1));
+        currentContainerIndex++;
+        ContainerInfo info;
+        if (currentContainerIndex >= containers.size()) {
+            info = new ContainerInfo();
+            containers.add(info);
+        }  else {
+            info = containers.get(currentContainerIndex);
+        }
+        info.initialize(type, buffer.position() + 1);
     }
 
     private ContainerInfo currentContainer()
     {
-        return containers.isEmpty() ? null : containers.getLast();
+        return currentContainerIndex < 0 ? null : containers.get(currentContainerIndex);
     }
 
     private void addPatchPoint(final long position, final int oldLength, final long value)
@@ -712,7 +731,7 @@ import java.util.NoSuchElementException;
         {
             throw new IllegalStateException("Tried to pop container state without said container");
         }
-        containers.removeLast();
+        currentContainerIndex--;
 
         // only patch for real containers and annotations -- we use VALUE for tracking only
         final long length = current.length;
@@ -876,7 +895,7 @@ import java.util.NoSuchElementException;
 
     public boolean isInStruct()
     {
-        return !containers.isEmpty() && currentContainer().type == ContainerType.STRUCT;
+        return currentContainerIndex >= 0 && currentContainer().type == ContainerType.STRUCT;
     }
 
     // Write Value Methods
@@ -1499,7 +1518,7 @@ import java.util.NoSuchElementException;
         {
             return;
         }
-        if (!containers.isEmpty())
+        if (currentContainerIndex >= 0 || depth > 0)
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
         }
