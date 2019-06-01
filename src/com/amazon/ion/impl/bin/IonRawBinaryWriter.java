@@ -52,7 +52,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -465,6 +464,90 @@ import java.util.NoSuchElementException;
         FLUSH
     }
 
+    /**
+     * A stack whose elements are recycled. This can be useful when the stack needs to grow and shrink
+     * frequently and has a predictable maximum depth.
+     * @param <T> the type of elements stored.
+     */
+    private static final class RecyclingStack<T> {
+
+        /**
+         * Factory for new stack elements.
+         * @param <T> the type of element.
+         */
+        public interface ElementFactory<T> {
+
+            /**
+             * @return a new instance.
+             */
+            T newElement();
+        }
+
+        private final List<T> elements;
+        private final ElementFactory<T> elementFactory;
+        private int currentIndex;
+        private T top;
+
+        /**
+         * @param initialCapacity the initial capacity of the underlying collection.
+         * @param elementFactory the factory used to create a new element on {@link #push()} when the stack has
+         *                       not previously grown to the new depth.
+         */
+        public RecyclingStack(int initialCapacity, ElementFactory<T> elementFactory) {
+            elements = new ArrayList<T>(initialCapacity);
+            this.elementFactory = elementFactory;
+            currentIndex = -1;
+            top = null;
+        }
+
+        /**
+         * Pushes an element onto the top of the stack, instantiating a new element only if the stack has not
+         * previously grown to the new depth.
+         * @return the element at the top of the stack after the push. This element must be initialized by the caller.
+         */
+        public T push() {
+            currentIndex++;
+            if (currentIndex >= elements.size()) {
+                top = elementFactory.newElement();
+                elements.add(top);
+            }  else {
+                top = elements.get(currentIndex);
+            }
+            return top;
+        }
+
+        /**
+         * @return the element at the top of the stack, or null if the stack is empty.
+         */
+        public T peek() {
+            return top;
+        }
+
+        /**
+         * Pops an element from the stack, retaining a reference to the element so that it can be reused the
+         * next time the stack grows to the element's depth.
+         * @return the element that was at the top of the stack before the pop, or null if the stack was empty.
+         */
+        public T pop() {
+            T popped = top;
+            currentIndex--;
+            if (currentIndex >= 0) {
+                top = elements.get(currentIndex);
+            } else {
+                top = null;
+                currentIndex = -1;
+            }
+            return popped;
+        }
+
+        /**
+         * @return true if the stack is empty; otherwise, false.
+         */
+        public boolean isEmpty() {
+            return top == null;
+        }
+    }
+
     private static final int SID_UNASSIGNED = -1;
 
     private final BlockAllocator                allocator;
@@ -476,8 +559,7 @@ import java.util.NoSuchElementException;
     private final WriteBuffer                   buffer;
     private final WriteBuffer                   patchBuffer;
     private final PatchList                     patchPoints;
-    private final List<ContainerInfo>           containers;
-    private int                                 currentContainerIndex;
+    private final RecyclingStack<ContainerInfo> containers;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
     private boolean                             hasWrittenValuesSinceConstructed;
@@ -512,10 +594,15 @@ import java.util.NoSuchElementException;
         this.buffer            = new WriteBuffer(allocator);
         this.patchBuffer       = new WriteBuffer(allocator);
         this.patchPoints       = new PatchList();
-        this.containers        = new ArrayList<ContainerInfo>(10);
-        // Note: this is not the same as depth because ContainerInfo is used for annotations and certain scalars
-        // in addition to container types.
-        this.currentContainerIndex            = -1;
+        this.containers        = new RecyclingStack<ContainerInfo>(
+            10,
+            new RecyclingStack.ElementFactory<ContainerInfo>() {
+                @Override
+                public ContainerInfo newElement() {
+                    return new ContainerInfo();
+                }
+            }
+        );
         this.depth                            = 0;
         this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
@@ -664,31 +751,18 @@ import java.util.NoSuchElementException;
 
     private void updateLength(long length)
     {
-        if (currentContainerIndex < 0)
+        if (containers.isEmpty())
         {
             return;
         }
 
-        containers.get(currentContainerIndex).length += length;
+        containers.peek().length += length;
     }
 
     private void pushContainer(final ContainerType type)
     {
         // XXX we push before writing the type of container
-        currentContainerIndex++;
-        ContainerInfo info;
-        if (currentContainerIndex >= containers.size()) {
-            info = new ContainerInfo();
-            containers.add(info);
-        }  else {
-            info = containers.get(currentContainerIndex);
-        }
-        info.initialize(type, buffer.position() + 1);
-    }
-
-    private ContainerInfo currentContainer()
-    {
-        return currentContainerIndex < 0 ? null : containers.get(currentContainerIndex);
+        containers.push().initialize(type, buffer.position() + 1);
     }
 
     private void addPatchPoint(final long position, final int oldLength, final long value)
@@ -697,8 +771,7 @@ import java.util.NoSuchElementException;
         final long patchPosition = patchBuffer.position();
         final int patchLength = patchBuffer.writeVarUInt(value);
         final PatchPoint patch = new PatchPoint(position, oldLength, patchPosition, patchLength);
-        final ContainerInfo container = currentContainer();
-        if (container == null)
+        if (containers.isEmpty())
         {
             // not nested, just append to the root list
             patchPoints.append(patch);
@@ -706,15 +779,14 @@ import java.util.NoSuchElementException;
         else
         {
             // nested, apply it to the current container
-            container.appendPatch(patch);
+            containers.peek().appendPatch(patch);
         }
         updateLength(patchLength - oldLength);
     }
 
     private void extendPatchPoints(final PatchList patches)
     {
-        final ContainerInfo container = currentContainer();
-        if (container == null)
+        if (containers.isEmpty())
         {
             // not nested, extend root list
             patchPoints.extend(patches);
@@ -722,18 +794,17 @@ import java.util.NoSuchElementException;
         else
         {
             // nested, apply it to the current container
-            container.extendPatches(patches);
+            containers.peek().extendPatches(patches);
         }
     }
 
     private ContainerInfo popContainer()
     {
-        final ContainerInfo current = currentContainer();
+        final ContainerInfo current = containers.pop();
         if (current == null)
         {
             throw new IllegalStateException("Tried to pop container state without said container");
         }
-        currentContainerIndex--;
 
         // only patch for real containers and annotations -- we use VALUE for tracking only
         final long length = current.length;
@@ -848,8 +919,7 @@ import java.util.NoSuchElementException;
     /** Closes out annotations. */
     private void finishValue()
     {
-        final ContainerInfo current = currentContainer();
-        if (current != null && current.type == ContainerType.ANNOTATION)
+        if (!containers.isEmpty() && containers.peek().type == ContainerType.ANNOTATION)
         {
             // close out and patch the length
             popContainer();
@@ -883,8 +953,7 @@ import java.util.NoSuchElementException;
         {
             throw new IonException("Cannot step out with field name set");
         }
-        final ContainerInfo container = currentContainer();
-        if (container == null || !container.type.allowedInStepOut)
+        if (containers.isEmpty() || !containers.peek().type.allowedInStepOut)
         {
             throw new IonException("Cannot step out when not in container");
         }
@@ -897,7 +966,7 @@ import java.util.NoSuchElementException;
 
     public boolean isInStruct()
     {
-        return currentContainerIndex >= 0 && currentContainer().type == ContainerType.STRUCT;
+        return !containers.isEmpty() && containers.peek().type == ContainerType.STRUCT;
     }
 
     // Write Value Methods
@@ -1520,7 +1589,7 @@ import java.util.NoSuchElementException;
         {
             return;
         }
-        if (currentContainerIndex >= 0 || depth > 0)
+        if (!containers.isEmpty() || depth > 0)
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
         }
