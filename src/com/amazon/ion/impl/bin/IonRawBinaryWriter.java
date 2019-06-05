@@ -597,7 +597,6 @@ import java.util.NoSuchElementException;
         this.containers        = new RecyclingStack<ContainerInfo>(
             10,
             new RecyclingStack.ElementFactory<ContainerInfo>() {
-                @Override
                 public ContainerInfo newElement() {
                     return new ContainerInfo();
                 }
