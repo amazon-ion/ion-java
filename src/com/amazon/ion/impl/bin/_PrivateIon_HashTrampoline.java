@@ -34,7 +34,7 @@ public class _PrivateIon_HashTrampoline
                 new PooledBlockAllocatorProvider(),
                 _Private_IonManagedBinaryWriterBuilder.DEFAULT_BLOCK_SIZE,
                 baos,
-                AbstractIonWriter.WriteValueOptimization.NONE,
+                _Private_AbstractIonWriter._Private_WriteValueOptimization.NONE,
                 IonRawBinaryWriter.StreamCloseMode.CLOSE,
                 IonRawBinaryWriter.StreamFlushMode.FLUSH,
                 IonRawBinaryWriter.PreallocationMode.PREALLOCATE_0,

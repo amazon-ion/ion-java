@@ -51,7 +51,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 
 
 /** Wraps {@link IonRawBinaryWriter} with symbol table management. */
-/*package*/ final class IonManagedBinaryWriter extends AbstractIonWriter  implements _Private_IonManagedWriter {
+/*package*/ final class IonManagedBinaryWriter extends _Private_AbstractIonWriter implements _Private_IonManagedWriter {
     private final IonCatalog catalog;
     private final List<SymbolTable> fallbackImports;
     private boolean                             closed = false;
@@ -61,7 +61,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
     private _Private_LSTWriter                  lstWriter;
     private IonRawBinaryWriter                  user;
     private IonRawBinaryWriter                  symbols;
-    private _Private_IonWriter                  currentWriter;
+    private _Private_AbstractIonWriter          currentWriter;
     private SymbolTable                         lst;
     private int                                 lstIndex;
     private final int                           maxSysId;
@@ -85,7 +85,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
             builder.provider,
             builder.symbolsBlockSize,
             out,
-            WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer.
+            _Private_WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer.
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             builder.preallocationMode,
@@ -95,7 +95,7 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
             builder.provider,
             builder.userBlockSize,
             out,
-            WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer.
+            _Private_WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer.
             StreamCloseMode.CLOSE,
             StreamFlushMode.FLUSH,
             builder.preallocationMode,
@@ -152,8 +152,6 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
         return currentWriter.getDepth();
     }
 
-
-    //these should be inverted so that calling intern x text results in a new symboltoken if none currently exist, thus we can support repeated symboltokens
     private SymbolToken intern(final String text) {
         if (text == null) return null;
         SymbolToken token = lst.intern(text);
@@ -323,7 +321,8 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
     }
 
     public void writeBytes(byte[] data, int off, int len) throws IOException {
-        user.writeBytes(data, off, len);
+
+        currentWriter.writeBytes(data, off, len);
     }
 
     //this will write an original LST or if one has already been written it will write an LST-Append.

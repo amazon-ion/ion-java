@@ -193,7 +193,7 @@ class LocalSymbolTable
         }
         else
         {
-            mySymbolsMap = new HashMap<String, Integer>(mySymbolsCount);
+            mySymbolsMap = new HashMap<String, Integer>(2 * mySymbolsCount);
             buildSymbolsMap();
         }
     }

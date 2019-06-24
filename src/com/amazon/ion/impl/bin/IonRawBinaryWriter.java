@@ -60,7 +60,7 @@ import java.util.NoSuchElementException;
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
  */
 @SuppressWarnings("deprecation")
-public final class IonRawBinaryWriter extends AbstractIonWriter implements _Private_IonRawWriter
+final class IonRawBinaryWriter extends _Private_AbstractIonWriter implements _Private_IonRawWriter
 {
     /** short-hand for array of bytes--useful for static definitions. */
     private static byte[] bytes(int... vals) {
@@ -481,7 +481,7 @@ public final class IonRawBinaryWriter extends AbstractIonWriter implements _Priv
     /*package*/ IonRawBinaryWriter(final BlockAllocatorProvider provider,
                                    final int blockSize,
                                    final OutputStream out,
-                                   final WriteValueOptimization optimization,
+                                   final _Private_WriteValueOptimization optimization,
                                    final StreamCloseMode streamCloseMode,
                                    final StreamFlushMode streamFlushMode,
                                    final PreallocationMode preallocationMode,

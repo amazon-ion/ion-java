@@ -33,9 +33,10 @@ import java.math.BigInteger;
 import java.util.Date;
 
 /** Common adapter for binary {@link IonWriter} implementations. */
-/*package*/ abstract class AbstractIonWriter implements _Private_IonWriter, _Private_ByteTransferSink
+public abstract class _Private_AbstractIonWriter implements _Private_IonWriter, _Private_ByteTransferSink
 {
-    /*package*/ enum WriteValueOptimization
+
+    public enum _Private_WriteValueOptimization
     {
         NONE,
         COPY_OPTIMIZED,
@@ -44,9 +45,9 @@ import java.util.Date;
     /** The cache for copy optimization checks--null if not copy optimized. */
     private final _Private_SymtabExtendsCache symtabExtendsCache;
 
-    /*package*/ AbstractIonWriter(final WriteValueOptimization optimization)
+    public _Private_AbstractIonWriter(final _Private_WriteValueOptimization optimization)
     {
-        this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
+        this.symtabExtendsCache = optimization == _Private_WriteValueOptimization.COPY_OPTIMIZED
             ? new _Private_SymtabExtendsCache() : null;
     }
 

@@ -22,7 +22,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SubstituteSymbolTableException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbols;
-import com.amazon.ion.impl.bin.AbstractIonWriter.WriteValueOptimization;
+import com.amazon.ion.impl.bin._Private_AbstractIonWriter._Private_WriteValueOptimization;
 import com.amazon.ion.impl.bin.IonBinaryWriterAdapter.Factory;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.PreallocationMode;
 import com.amazon.ion.system.SimpleCatalog;
@@ -72,7 +72,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
     /*package*/ volatile PreallocationMode      preallocationMode;
     /*package*/ volatile List<SymbolTable>      imports;
     /*package*/ volatile IonCatalog             catalog;
-    /*package*/ volatile WriteValueOptimization optimization;
+    /*package*/ volatile _Private_WriteValueOptimization optimization;
     /*package*/ volatile SymbolTable            initialSymbolTable;
     /*package*/ volatile boolean                isFloatBinary32Enabled;
 
@@ -84,7 +84,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
         this.imports = new ArrayList<SymbolTable>();
         this.preallocationMode = PreallocationMode.PREALLOCATE_2;
         this.catalog = new SimpleCatalog();
-        this.optimization = WriteValueOptimization.NONE;
+        this.optimization = _Private_WriteValueOptimization.NONE;
         this.isFloatBinary32Enabled = false;
     }
 
@@ -163,7 +163,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
 
     public _Private_IonManagedBinaryWriterBuilder withStreamCopyOptimization(boolean optimized)
     {
-        this.optimization = optimized ? WriteValueOptimization.COPY_OPTIMIZED : WriteValueOptimization.NONE;
+        this.optimization = optimized ? _Private_WriteValueOptimization.COPY_OPTIMIZED : _Private_WriteValueOptimization.NONE;
         return this;
     }
 

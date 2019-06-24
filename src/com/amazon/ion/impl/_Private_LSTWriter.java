@@ -1,22 +1,21 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.bin._Private_AbstractIonWriter;
+
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
 import java.util.List;
 import java.util.LinkedList;
 
 @Deprecated
-public class _Private_LSTWriter implements _Private_IonWriter {
+public class _Private_LSTWriter extends _Private_AbstractIonWriter {
     private int depth;
     private SymbolTable symbolTable;
     private State state;
@@ -60,7 +59,8 @@ public class _Private_LSTWriter implements _Private_IonWriter {
      * @param  inCatalog IonCatalog
      */
    public _Private_LSTWriter(List<SymbolTable> imports, List<String> symbols, IonCatalog inCatalog) {
-        catalog = inCatalog;
+       super(_Private_WriteValueOptimization.NONE);
+       catalog = inCatalog;
         declaredSymbols = new LinkedList<String>();
         if(imports.isEmpty() || !imports.get(0).isSystemTable()){
             imports.add(0, _Private_Utils.systemSymtab(1));
@@ -260,6 +260,11 @@ public class _Private_LSTWriter implements _Private_IonWriter {
         setFieldName(name.getText());
     }
 
+    @Override
+    public void writeBytes(byte[] data, int off, int len) throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
     public boolean isInStruct() {
        return state != State.SYMBOL_LIST && state != State.IMPORT_LIST;
     }
@@ -279,17 +284,10 @@ public class _Private_LSTWriter implements _Private_IonWriter {
     public void writeIonVersionMarker(){
         throw new UnsupportedOperationException();
     }
-    public boolean isStreamCopyOptimized(){
-        throw new UnsupportedOperationException();
-    }
-    public void writeValue(IonReader reader) throws IOException { throw new UnsupportedOperationException(); }
-    public void writeValues(IonReader reader) throws IOException { throw new UnsupportedOperationException(); }
     public void writeBool(boolean value) throws IOException { throw new UnsupportedOperationException(); }
     public void writeFloat(double value) throws IOException { throw new UnsupportedOperationException(); }
     public void writeDecimal(BigDecimal value) throws IOException { throw new UnsupportedOperationException(); }
     public void writeTimestamp(Timestamp value) throws IOException { throw new UnsupportedOperationException(); }
-    public void writeValue(IonValue value) throws IOException { throw new UnsupportedOperationException(); }
-    public void writeTimestampUTC(Date value) throws IOException { throw new UnsupportedOperationException(); }
     public <T> T asFacet(Class<T> facetType){ throw new UnsupportedOperationException(); }
 
 
