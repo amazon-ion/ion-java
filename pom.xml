@@ -16,7 +16,7 @@
 <project>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.amazon.ion</groupId>
+  <groupId>software.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
   <version>1.5.0</version>
   <packaging>bundle</packaging>
@@ -136,16 +136,16 @@
         <configuration>
           <instructions>
             <Export-Package>
-              !com.amazon.ion.apps.*,
-              !com.amazon.ion.impl.*,
-              com.amazon.ion.*,
+              !software.amazon.ion.apps.*,
+              !software.amazon.ion.impl.*,
+              software.amazon.ion.*,
             </Export-Package>
             <!-- This can be used to retrieve the compiled JarInfo. -->
-            <Main-Class>com.amazon.ion.impl._Private_CommandLine</Main-Class>
+            <Main-Class>software.amazon.ion.impl._Private_CommandLine</Main-Class>
             <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
             <Ion-Java-Build-Time>${build.time}</Ion-Java-Build-Time>
             <Ion-Java-Project-Version>${project.version}</Ion-Java-Project-Version>
-            <Automatic-Module-Name>com.amazon.ion</Automatic-Module-Name>
+            <Automatic-Module-Name>software.amazon.ion</Automatic-Module-Name>
           </instructions>
         </configuration>
       </plugin>
@@ -217,11 +217,11 @@
         <reportSets>
           <reportSet>
             <configuration>
-              <excludePackageNames>com.amazon.ion.apps:com.amazon.ion.impl</excludePackageNames>
+              <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
               <sourceFileExcludes>
                 <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
-              <overview>${project.basedir}/src/com/amazon/ion/overview.html</overview>
+              <overview>${project.basedir}/src/software.amazon.ion/overview.html</overview>
               <doctitle>Amazon Ion Java ${project.version} API Reference</doctitle>
               <windowtitle>Ion Java ${project.version}</windowtitle>
               <header>Amazon Ion Java ${project.version} API Reference</header>
@@ -290,11 +290,11 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>2.10.3</version>
             <configuration>
-              <excludePackageNames>com.amazon.ion.apps:com.amazon.ion.impl</excludePackageNames>
+              <excludePackageNames>software.amazon.ion.apps:software.amazon.ion.impl</excludePackageNames>
               <sourceFileExcludes>
                 <exclude>**/*Private*</exclude>
               </sourceFileExcludes>
-              <overview>${project.basedir}/src/com/amazon/ion/overview.html</overview>
+              <overview>${project.basedir}/src/software.amazon.ion/overview.html</overview>
               <doctitle>Amazon Ion Java ${project.version} API Reference</doctitle>
               <windowtitle>Ion Java ${project.version}</windowtitle>
               <header>Amazon Ion Java ${project.version} API Reference</header>
