@@ -32,6 +32,8 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Iterator;
+
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -391,6 +393,53 @@ public class LoaderTest
             fail("Expected IonException");
         }
         catch (IonException ie) { /* ok */ }
+    }
+
+    @Test
+    public void testSubBufferSingleValue()
+    {
+        IonSystem sys = system();
+
+        String image = "(this is a single sexp)";
+        byte[] bytes =  sys.newLoader().load(image).getBytes();
+
+        IonValue singleValue = sys.singleValue(bytes, 0, bytes.length);
+        assertEquals(singleValue.toString(), image);
+
+        byte[] padded = new byte[bytes.length + 20];
+        System.arraycopy(bytes, 0, padded, 10, bytes.length);
+
+        IonValue paddedValue = sys.singleValue(padded, 10, bytes.length);
+        assertEquals(paddedValue.toString(), image);
+
+        bytes = sys.newLoader().load("(two) (values)").getBytes();
+
+        try {
+            sys.singleValue(bytes, 0, bytes.length);
+            fail("Expected IonException");
+        }
+        catch (IonException ie) {
+            Assert.assertTrue(ie.getMessage().contains("not a single value"));
+        }
+
+        padded = new byte[bytes.length + 20];
+        System.arraycopy(bytes, 0, padded, 10, bytes.length);
+
+        try {
+            sys.singleValue(padded, 10, bytes.length);
+            fail("Expected IonException");
+        }
+        catch (IonException ie) {
+            Assert.assertTrue(ie.getMessage().contains("not a single value"));
+        }
+
+        try {
+            sys.singleValue(padded, 15, bytes.length);
+            fail("Expected IonException");
+        }
+        catch (IonException ie) {
+            Assert.assertTrue(ie.getMessage().contains("bad character"));
+        }
     }
 
     @Test
