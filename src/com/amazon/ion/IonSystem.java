@@ -373,6 +373,27 @@ public interface IonSystem
      */
     public IonValue singleValue(byte[] ionData);
 
+    /**
+     * Extracts a single value from Ion text or binary data.
+     * <p>
+     * This method will auto-detect and uncompress GZIPped Ion data.
+     *
+     * @param ionData is used only within the range of bytes starting at
+     * {@code offset} for {@code len} bytes.
+     * The data in that range may be either Ion binary data, or UTF-8 Ion text.
+     * @param offset must be non-negative and less than {@code ionData.length}.
+     * @param len must be non-negative and {@code offset+len} must not exceed
+     *
+     * @return the first (and only) user value in the data; not null.
+     *
+     * @throws NullPointerException if {@code ionData} is null.
+     * @throws UnexpectedEofException if the data doesn't contain any user
+     * values.
+     * @throws IonException if the data does not contain exactly one user
+     * value.
+     */
+    public IonValue singleValue(byte[] ionData, int offset, int len);
+
 
     //-------------------------------------------------------------------------
     // IonReader creation

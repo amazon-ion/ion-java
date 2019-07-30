@@ -523,7 +523,12 @@ final class IonSystemLite
 
     public IonValue singleValue(byte[] ionData)
     {
-        IonReader reader = newReader(ionData);
+        return singleValue(ionData, 0, ionData.length);
+    }
+
+    @Override
+    public IonValue singleValue(byte[] ionData, int offset, int len) {
+        IonReader reader = newReader(ionData, offset, len);
         try {
             Iterator<IonValue> it = iterate(reader);
             return singleValue(it);
