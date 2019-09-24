@@ -1064,7 +1064,10 @@ abstract class IonReaderBinaryRawX
         }
         else {
             // otherwise we to it the hard way ....
-            int  save_limit = _local_remaining - len;
+            int save_limit = NO_LIMIT;
+            if (_local_remaining != NO_LIMIT) {
+                save_limit = _local_remaining - len;
+            }
             _local_remaining = len;
             int  exponent = readVarInt();
             BigInteger value;
@@ -1114,7 +1117,10 @@ abstract class IonReaderBinaryRawX
 
         int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
         BigDecimal  frac = null;
-        int         save_limit = _local_remaining - len;
+        int         save_limit = NO_LIMIT;
+        if (_local_remaining != NO_LIMIT) {
+            save_limit = _local_remaining - len;
+        }
         _local_remaining = len;  // > 0
 
         // first up is the offset, which requires a special int reader
@@ -1182,7 +1188,10 @@ abstract class IonReaderBinaryRawX
         // the char array is way faster than using string buffer
         char[] chars = new char[len];
         int    c, ii = 0;
-        int    save_limit = _local_remaining - len;
+        int    save_limit = NO_LIMIT;
+        if (_local_remaining != NO_LIMIT) {
+            save_limit = _local_remaining - len;
+        }
         _local_remaining = len;
         while (!isEOF()) {
             c = readUnicodeScalar();
