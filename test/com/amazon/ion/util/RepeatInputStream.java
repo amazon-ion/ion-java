@@ -33,7 +33,9 @@ public final class RepeatInputStream
 
     /**
      * @param bytes the data to be repeated.
-     * @param times the number of times to repeat the data.
+     * @param times the number of times to repeat the data. NOTE: this is the number of times the bytes will be
+     *              repeated after the first time they are read. For example, providing a byte array with a single
+     *              byte 'a' and times=1 will allow 'a' to be read twice before the stream signals EOF.
      */
     public RepeatInputStream(byte[] bytes, long times)
     {
