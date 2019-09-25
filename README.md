@@ -2,8 +2,8 @@
 A Java implementation of the [Ion data notation](http://amzn.github.io/ion-docs).
 
 [![Build Status](https://travis-ci.org/amzn/ion-java.svg?branch=master)](https://travis-ci.org/amzn/ion-java)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java)
-[![Javadoc](https://javadoc-badge.appspot.com/com.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/com.amazon.ion/ion-java)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/software.amazon.ion/ion-java)
+[![Javadoc](https://javadoc-badge.appspot.com/software.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/software.amazon.ion/ion-java)
 
 ## Setup
 This repository contains a [git submodule](https://git-scm.com/docs/git-submodule)
@@ -58,7 +58,7 @@ dependency into your project's `pom.xml`:
 
 ```
 <dependency>
-  <groupId>com.amazon.ion</groupId>
+  <groupId>software.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
   <version>1.5.1</version>
 </dependency>
@@ -67,11 +67,11 @@ dependency into your project's `pom.xml`:
 #### Legacy group id
 
 Originally ion-java was published using the group id `software.amazon.ion`. Since 1.4.0 the
-official groupId was changed to `com.amazon.ion` to be consistent with other Amazon open
+official groupId was changed to `software.amazon.ion` to be consistent with other Amazon open
 source libraries. We still maintain the legacy group id but strongly encourage users to migrate
 to the official one.
 
 ## Using the Library
 A great way to get started is to use the [Ion cookbook](http://amzn.github.io/ion-docs/cookbook.html).
-The [API documentation](http://www.javadoc.io/doc/com.amazon.ion/ion-java) will give a lot
+The [API documentation](http://www.javadoc.io/doc/software.amazon.ion/ion-java) will give a lot
 of detailed information about how to use the library.
