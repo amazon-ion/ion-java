@@ -1,7 +1,8 @@
 # Amazon Ion Java
 A Java implementation of the [Ion data notation](http://amzn.github.io/ion-docs).
 
-[![Build Status](https://travis-ci.org/amzn/ion-java.svg?branch=master)](https://travis-ci.org/amzn/ion-java)
+[![Actions Status](https://github.com/raganhan/ion-java/workflows/Java CI/badge.svg)](https://github.com/raganhan/ion-java/actions)
+
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java)
 [![Javadoc](https://javadoc-badge.appspot.com/com.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/com.amazon.ion/ion-java)
 
