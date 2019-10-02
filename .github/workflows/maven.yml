@@ -7,7 +7,7 @@ jobs:
     name: Builds ion-java with ${{ matrix.java_version }}
     strategy: 
       matrix:
-        java_version: [1.8, 11]
+        java_version: [8, 9, 10, 11, 12]
 
     runs-on: ubuntu-latest
 
