@@ -1,11 +1,14 @@
-name: Java CI
+name: build_master
 
-on: [push]
+on:
+    push:
+        branches:
+        - master
 
 jobs:
   build:
     name: Builds ion-java with ${{ matrix.java_version }}
-    strategy: 
+    strategy:
       matrix:
         java_version: [8, 9, 10, 11]
 
@@ -22,6 +25,6 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: ${{ matrix.java_version }}
-     
+
     - name: Build with Maven
       run: mvn -B package --file pom.xml
