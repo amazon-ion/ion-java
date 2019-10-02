@@ -1,0 +1,24 @@
+name: Java CI
+
+on: 
+  push:
+    branches: 
+      - master
+  pull_request: 
+    types: [opened, edited, synchronize, reopend]
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        java_version: ['1.8', '10', '11', '12']
+    name: Set up JDK ${{ matrix.java_version }}
+    steps:
+      - uses: actions/checkout@v1 
+      - name: Setup Java
+      - uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java_version }}
+      - name: Build with Maven
+        run: mvn package --file pom.xml
