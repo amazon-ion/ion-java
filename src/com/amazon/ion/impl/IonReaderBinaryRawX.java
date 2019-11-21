@@ -1206,7 +1206,7 @@ abstract class IonReaderBinaryRawX
     {
         // If the string we're reading is small enough to fit in our reusable buffer, we can avoid the overhead
         // of looping and bounds checking.
-        if (numberOfBytes < utf8InputBuffer.array().length) {
+        if (numberOfBytes <= utf8InputBuffer.capacity()) {
             return readStringWithReusableBuffer(numberOfBytes);
         }
 
@@ -1296,7 +1296,7 @@ abstract class IonReaderBinaryRawX
         utf8CharsetDecoder.reset();
         CoderResult coderResult = utf8CharsetDecoder.decode(utf8InputBuffer, utf8DecodingBuffer, true);
         if (coderResult.isError()) {
-            throw new IonException("Illegal value encountered while validating UTF-8 data in input stream.");
+            throw new IonException("Illegal value encountered while validating UTF-8 data in input stream. " + coderResult.toString());
         }
         utf8DecodingBuffer.flip();
         return utf8DecodingBuffer.toString();
