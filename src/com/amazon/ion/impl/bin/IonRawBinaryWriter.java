@@ -126,13 +126,12 @@ import java.util.NoSuchElementException;
     private static final byte VARINT_NEG_ZERO   = (byte) 0xC0;
 
     // See IonRawBinaryWriter#writeString(String) for usage information.
-    static final int SMALL_STRING_SIZE = 64;
-    static final int MEDIUM_STRING_SIZE = 4 * 1024;
+    static final int SMALL_STRING_SIZE = 4 * 1024;
 
     // Reusable resources for encoding Strings as UTF-8 bytes
     final CharsetEncoder utf8Encoder = Charset.forName("UTF-8").newEncoder();
-    final ByteBuffer utf8EncodingBuffer = ByteBuffer.allocate((int) (MEDIUM_STRING_SIZE * utf8Encoder.maxBytesPerChar()));
-    final char[] charArray = new char[MEDIUM_STRING_SIZE];
+    final ByteBuffer utf8EncodingBuffer = ByteBuffer.allocate((int) (SMALL_STRING_SIZE * utf8Encoder.maxBytesPerChar()));
+    final char[] charArray = new char[SMALL_STRING_SIZE];
     final CharBuffer reusableCharBuffer = CharBuffer.wrap(charArray);
 
     private static final byte[] makeTypedPreallocatedBytes(final int typeDesc, final int length)
@@ -1458,27 +1457,16 @@ import java.util.NoSuchElementException;
          To minimize the overhead involved, the IonRawBinaryWriter will reuse previously initialized resources wherever
          possible. However, because CharBuffer and ByteBuffer each have a fixed length, we can only reuse them for
          Strings that are small enough to fit. This creates two kinds of input String to encode: those that are small
-         enough for us to reuse our buffers, and those which are not.
-
-         Further benchmarking shows that there is also a third kind: Strings which are small enough to enable additional
-         aggressive optimizations. The JIT can eliminate heap allocations for scalar arrays (e.g. byte[], char[])
-         that have no more than than a configurable number of elements (default: 64), opting to place them on the stack
-         instead. (This threshold be can be overridden with the -XX:EliminateAllocationArraySizeLimit=N JVM flag, but
-         this is neither common nor recommended.) When encoding small strings, requesting new buffers will cause those
-         buffers to be allocated on the stack instead of on the heap. And, because these buffers only exist for the
-         duration of the encoding method call (i.e. they are neither returned from the method nor stored in a member
-         field), the JIT is able to selectively eliminate costly superfluous steps like defensive array copying. For
-         more details, see the JDK's documentation on Escape Analysis[1].
+         enough for us to reuse our buffers ("small strings"), and those which are not ("large strings").
 
          The String#getBytes(Charset) method cannot be used for two reasons:
 
                1. It always allocates, so we cannot reuse any resources.
                2. If/when it encounters character data that cannot be encoded as UTF-8, it simply replaces that data
-                 with a substitute character[2]. (Sometimes seen in applications as a '?'.) In order
+                 with a substitute character[1]. (Sometimes seen in applications as a '?'.) In order
                  to surface invalid data to the user, the method must be able to detect these events at encoding time.
 
-            [1] https://docs.oracle.com/javase/8/docs/technotes/guides/vm/performance-enhancements-7.html#escapeAnalysis
-            [2] https://en.wikipedia.org/wiki/Substitute_character
+            [1] https://en.wikipedia.org/wiki/Substitute_character
         */
 
         CharBuffer stringData;
@@ -1496,20 +1484,19 @@ import java.util.NoSuchElementException;
         // to use String#getChars(int, int, char[], int) to copy the String's backing array and then call
         // CharBuffer#wrap(char[]) on the copy.
 
-        if (length <= SMALL_STRING_SIZE || length > MEDIUM_STRING_SIZE) {
-            // Small strings and large Strings both request fresh buffers.
+        if (length > SMALL_STRING_SIZE) {
+            // Allocate a new buffer for large strings
             encodingBuffer = ByteBuffer.allocate((int) (value.length() * utf8Encoder.maxBytesPerChar()));
             char[] chars = new char[value.length()];
             value.getChars(0, value.length(), chars, 0);
             stringData = CharBuffer.wrap(chars);
         } else {
-            // Medium-sized strings are encoded using our reusable buffers.
+            // Reuse our existing buffers for small strings
             encodingBuffer = utf8EncodingBuffer;
-            encodingBuffer.position(0);
-            encodingBuffer.limit(encodingBuffer.capacity());
+            encodingBuffer.clear();
             stringData = reusableCharBuffer;
             value.getChars(0, value.length(), charArray, 0);
-            reusableCharBuffer.position(0);
+            reusableCharBuffer.rewind();
             reusableCharBuffer.limit(value.length());
         }
 
