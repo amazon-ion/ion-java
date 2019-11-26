@@ -50,6 +50,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -119,6 +124,16 @@ import java.util.NoSuchElementException;
     private static final BigInteger BIG_INT_LONG_MIN_VALUE = BigInteger.valueOf(Long.MIN_VALUE);
 
     private static final byte VARINT_NEG_ZERO   = (byte) 0xC0;
+
+    // See IonRawBinaryWriter#writeString(String) for usage information.
+    static final int SMALL_STRING_SIZE = 64;
+    static final int MEDIUM_STRING_SIZE = 4 * 1024;
+
+    // Reusable resources for encoding Strings as UTF-8 bytes
+    final CharsetEncoder utf8Encoder = Charset.forName("UTF-8").newEncoder();
+    final ByteBuffer utf8EncodingBuffer = ByteBuffer.allocate((int) (MEDIUM_STRING_SIZE * utf8Encoder.maxBytesPerChar()));
+    final char[] charArray = new char[MEDIUM_STRING_SIZE];
+    final CharBuffer reusableCharBuffer = CharBuffer.wrap(charArray);
 
     private static final byte[] makeTypedPreallocatedBytes(final int typeDesc, final int length)
     {
@@ -1429,65 +1444,100 @@ import java.util.NoSuchElementException;
         }
         prepareValue();
 
-        // assume the string is ASCII and round up the sizing -- we should revisit this for CJK heavy use cases
-        int estUtf8Length = value.length();
-        int preallocatedLength = 1;
-        final long lengthPosition = buffer.position() + 1;
-        if (estUtf8Length <= 0xD)
-        {
-            // size fits in low nibble
-            estUtf8Length = 0xD;
-            buffer.writeUInt8(STRING_TYPE);
-        }
-        else
-        {
-            if (estUtf8Length <= 0x7F)
-            {
-                estUtf8Length = 0x7F;
-                preallocatedLength = 2;
-                buffer.writeBytes(STRING_TYPED_PREALLOCATED_2);
-            }
-            else
-            {
-                estUtf8Length = 0x3FFF;
-                preallocatedLength = 3;
-                buffer.writeBytes(STRING_TYPED_PREALLOCATED_3);
-            }
-            // TODO decide if it is worth preallocating for > 16KB strings
-        }
-        updateLength(preallocatedLength);
+        /*
+         This method relies on the standard CharsetEncoder class to encode each String's UTF-16 char[] data into
+         UTF-8 bytes. Strangely, CharsetEncoders cannot operate directly on instances of a String. The CharsetEncoder
+         API requires all inputs and outputs to be specified as instances of java.nio.ByteBuffer and
+         java.nio.CharBuffer, making some number of allocations mandatory. Specifically, for each encoding operation
+         we need to have:
 
-        // actually encode the string
-        final int utf8Length = buffer.writeUTF8(value);
-        if (utf8Length <= estUtf8Length)
-        {
-            // we fit!
-            if (utf8Length <= 0xD)
-            {
-                // special case for patching the type byte itself with the length
-                buffer.writeUInt8At(lengthPosition - 1, STRING_TYPE | utf8Length);
-            }
-            else if (utf8Length <= 0x7F)
-            {
-                buffer.writeVarUIntDirect1At(lengthPosition, utf8Length);
-            }
-            else
-            {
-                buffer.writeVarUIntDirect2At(lengthPosition, utf8Length);
-            }
-        }
-        else
-        {
-            // side patch
-            if (estUtf8Length == 0xD)
-            {
-                // we need to patch the type with the extended length
-                buffer.writeUInt8At(lengthPosition - 1, STRING_TYPE_EXTENDED_LENGTH);
-            }
-            addPatchPoint(lengthPosition, preallocatedLength - 1, utf8Length);
+            1. An instance of a UTF-8 CharsetEncoder.
+            2. A CharBuffer representation of the String's data.
+            3. A ByteBuffer into which the CharsetEncoder may write UTF-8 bytes.
+
+         To minimize the overhead involved, the IonRawBinaryWriter will reuse previously initialized resources wherever
+         possible. However, because CharBuffer and ByteBuffer each have a fixed length, we can only reuse them for
+         Strings that are small enough to fit. This creates two kinds of input String to encode: those that are small
+         enough for us to reuse our buffers, and those which are not.
+
+         Further benchmarking shows that there is also a third kind: Strings which are small enough to enable additional
+         aggressive optimizations. The JIT can eliminate heap allocations for scalar arrays (e.g. byte[], char[])
+         that have no more than than a configurable number of elements (default: 64), opting to place them on the stack
+         instead. (This threshold be can be overridden with the -XX:EliminateAllocationArraySizeLimit=N JVM flag, but
+         this is neither common nor recommended.) When encoding small strings, requesting new buffers will cause those
+         buffers to be allocated on the stack instead of on the heap. And, because these buffers only exist for the
+         duration of the encoding method call (i.e. they are neither returned from the method nor stored in a member
+         field), the JIT is able to selectively eliminate costly superfluous steps like defensive array copying. For
+         more details, see the JDK's documentation on Escape Analysis[1].
+
+         The String#getBytes(Charset) method cannot be used for two reasons:
+
+               1. It always allocates, so we cannot reuse any resources.
+               2. If/when it encounters character data that cannot be encoded as UTF-8, it simply replaces that data
+                 with a substitute character[2]. (Sometimes seen in applications as a '?'.) In order
+                 to surface invalid data to the user, the method must be able to detect these events at encoding time.
+
+            [1] https://docs.oracle.com/javase/8/docs/technotes/guides/vm/performance-enhancements-7.html#escapeAnalysis
+            [2] https://en.wikipedia.org/wiki/Substitute_character
+        */
+
+        CharBuffer stringData;
+        ByteBuffer encodingBuffer;
+
+        int length = value.length();
+
+        // While it is possible to encode the Ion string using a fixed-size encodingBuffer, we need to be able to
+        // write the length of the complete UTF-8 string to the output stream before we write the string itself.
+        // For simplicity, we reuse or create an encodingBuffer that is large enough to hold the full string.
+
+        // In order to encode the input String, we need to pass it to CharsetEncoder as an implementation of CharBuffer.
+        // Surprisingly, the intuitive way to achieve this (the CharBuffer#wrap(CharSequence) method) adds a large
+        // amount of CPU overhead to the encoding process. Benchmarking shows that it's substantially faster
+        // to use String#getChars(int, int, char[], int) to copy the String's backing array and then call
+        // CharBuffer#wrap(char[]) on the copy.
+
+        if (length <= SMALL_STRING_SIZE || length > MEDIUM_STRING_SIZE) {
+            // Small strings and large Strings both request fresh buffers.
+            encodingBuffer = ByteBuffer.allocate((int) (value.length() * utf8Encoder.maxBytesPerChar()));
+            char[] chars = new char[value.length()];
+            value.getChars(0, value.length(), chars, 0);
+            stringData = CharBuffer.wrap(chars);
+        } else {
+            // Medium-sized strings are encoded using our reusable buffers.
+            encodingBuffer = utf8EncodingBuffer;
+            encodingBuffer.position(0);
+            encodingBuffer.limit(encodingBuffer.capacity());
+            stringData = reusableCharBuffer;
+            value.getChars(0, value.length(), charArray, 0);
+            reusableCharBuffer.position(0);
+            reusableCharBuffer.limit(value.length());
         }
 
-        updateLength(utf8Length);
+        // Because encodingBuffer is guaranteed to be large enough to hold the encoded string, we can
+        // perform the encoding in a single call to CharsetEncoder#encode(CharBuffer, ByteBuffer, boolean).
+        CoderResult coderResult = utf8Encoder.encode(stringData, encodingBuffer, true);
+
+        // 'Underflow' is the success state of a CoderResult.
+        if (!coderResult.isUnderflow()) {
+            throw new IllegalArgumentException("Could not encode string as UTF8 bytes: " + value);
+        }
+        encodingBuffer.flip();
+        int utf8Length = encodingBuffer.remaining();
+
+        // Write the type and length codes to the output stream.
+        long previousPosition = buffer.position();
+        if (utf8Length <= 0xD) {
+            buffer.writeUInt8(STRING_TYPE | utf8Length);
+        } else {
+            buffer.writeUInt8(STRING_TYPE | 0xE);
+            buffer.writeVarUInt(utf8Length);
+        }
+
+        // Write the encoded UTF-8 bytes to the output stream
+        buffer.writeBytes(encodingBuffer.array(), 0, utf8Length);
+
+        long bytesWritten = buffer.position() - previousPosition;
+        updateLength(bytesWritten);
 
         finishValue();
     }
