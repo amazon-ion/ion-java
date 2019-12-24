@@ -244,6 +244,74 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
     }
 
     @Test
+    public void testManuallyWriteLSTAppendWithImportsFirst() throws Exception
+    {
+        writer.writeSymbol("taco");
+        writer.addTypeAnnotation("$ion_symbol_table");
+        writer.stepIn(IonType.STRUCT);
+        writer.setFieldName("imports");
+        writer.writeSymbol("$ion_symbol_table");
+        writer.setFieldName("symbols");
+        writer.stepIn(IonType.LIST);
+        writer.writeString("burrito");
+        writer.stepOut();
+        writer.stepOut();
+        writer.writeSymbol("burrito");
+        writer.finish();
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        // Should be IVM SYMTAB taco SYMTAB burrito
+        assertEquals(5, dg.systemSize());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+        assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+
+        IonReader reader = system().newReader(writer.getBytes());
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
+        assertNull(reader.next());
+    }
+
+    @Test
+    public void testManuallyWriteLSTAppendWithSymbolsFirst() throws Exception
+    {
+        writer.writeSymbol("taco");
+        writer.addTypeAnnotation("$ion_symbol_table");
+        writer.stepIn(IonType.STRUCT);
+        writer.setFieldName("symbols");
+        writer.stepIn(IonType.LIST);
+        writer.writeString("burrito");
+        writer.stepOut();
+        writer.setFieldName("imports");
+        writer.writeSymbol("$ion_symbol_table");
+        writer.stepOut();
+        writer.writeSymbol("burrito");
+        writer.finish();
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        // Should be IVM SYMTAB taco SYMTAB burrito
+        assertEquals(5, dg.systemSize());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+        assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+
+        IonReader reader = system().newReader(writer.getBytes());
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
+        assertNull(reader.next());
+    }
+
+    @Test
     public void testUserFieldNames() throws Exception
     {
         writer.stepIn(IonType.STRUCT);
