@@ -368,12 +368,20 @@ import java.util.Map;
                     // since we don't know what's coming after (i.e. new local symbols)
                     self.user.truncate(self.userSymbolTablePosition);
 
-                    // flush out the pre-existing symbol and user content before the user provided symbol table
-                    self.finish();
+                    if (self.isUserLSTAppend)
+                    {
+                        self.flush();
+                    }
+                    else
+                    {
 
-                    // replace the symbol table context with the user provided one
-                    // TODO determine if the resolver mode should be configurable for this use case
-                    self.imports = new ImportedSymbolContext(ImportedSymbolResolverMode.DELEGATE, self.userImports);
+                        // flush out the pre-existing symbol and user content before the user provided symbol table
+                        self.finish();
+
+                        // replace the symbol table context with the user provided one
+                        // TODO determine if the resolver mode should be configurable for this use case
+                        self.imports = new ImportedSymbolContext(ImportedSymbolResolverMode.DELEGATE, self.userImports);
+                    }
 
                     // explicitly start the local symbol table with no version marker
                     // in case we need the previous symbols
@@ -392,8 +400,22 @@ import java.util.Map;
                     self.userCurrentImport.reset();
                     self.userImports.clear();
                     self.userSymbols.clear();
+                    self.isUserLSTAppend = false;
 
                     self.userState = NORMAL;
+                }
+            }
+
+            @Override
+            public void writeSymbolToken(final IonManagedBinaryWriter self, final SymbolToken value)
+            {
+                if (
+                    self.user.getDepth() == 1
+                    && self.user.getFieldId() == IMPORTS_SID
+                    && value.getSid() == ION_SYMBOL_TABLE_SID
+                ) {
+                    self.isUserLSTAppend = true;
+                    self.userState = LOCALS_AT_TOP;
                 }
             }
         },
@@ -515,6 +537,7 @@ import java.util.Map;
         public abstract void afterStepOut(final IonManagedBinaryWriter self) throws IOException;
 
         public void writeString(final IonManagedBinaryWriter self, final String value) throws IOException {}
+        public void writeSymbolToken(final IonManagedBinaryWriter self, final SymbolToken value) {}
         public void writeInt(final IonManagedBinaryWriter self, final long value) throws IOException {}
         public void writeInt(IonManagedBinaryWriter self, BigInteger value) throws IOException
         {
@@ -636,6 +659,7 @@ import java.util.Map;
     private final List<SymbolTable>             userImports;
     private final List<String>                  userSymbols;
     private final ImportDescriptor              userCurrentImport;
+    private boolean                             isUserLSTAppend;
 
     private boolean                             closed;
 
@@ -680,6 +704,7 @@ import java.util.Map;
         this.userImports = new ArrayList<SymbolTable>();
         this.userSymbols = new ArrayList<String>();
         this.userCurrentImport = new ImportDescriptor();
+        this.isUserLSTAppend = false;
 
         // TODO decide if initial LST should survive finish() and seed the next LST
         final SymbolTable lst = builder.initialSymbolTable;
@@ -1031,6 +1056,7 @@ import java.util.Map;
             return;
         }
         token = intern(token);
+        userState.writeSymbolToken(this, token);
         user.writeSymbolToken(token);
     }
 
