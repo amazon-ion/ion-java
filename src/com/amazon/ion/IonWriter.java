@@ -58,12 +58,12 @@ import java.util.Date;
  * <p>
  * Once all the top-level values have been written (and stepped-out back to
  * the starting level), the caller must {@link #close()} the writer
- * (or at least {@link #finish()} it) before accessing
+ * (or at least {@link #flush()} or {@link #finish()} it) before accessing
  * the data written to the underlying data sink
  * (for example, via {@link ByteArrayOutputStream#toByteArray()}).
- * The writer may have internal buffers and without closing or finishing it,
- * it may not have written everything to the underlying data sink. In addition,
- * {@link #flush()} isn't guaranteed to be sufficient for all implementations.
+ * The writer may have internal buffers and without closing, flushing, or
+ * finishing it, it may not have written everything to the underlying data
+ * sink.
  *
  * <h2>Exception Handling</h2>
  * {@code IonWriter} is a generic interface for generating Ion data, and it's
@@ -106,18 +106,19 @@ public interface IonWriter
 
     /**
      * Flushes this writer by writing any buffered output to the underlying
-     * output target.
+     * output target without finalizing the stream's local symbol table.
      * <p>
      * For some implementations this may have no effect even when some data is
      * buffered, because it's not always possible to fully write partial data.
      * In particular, when writing binary Ion data, Ion's length-prefixed
      * encoding requires a complete top-level value to be written at once.
      * <p>
-     * Furthermore, when writing binary Ion data, <em>nothing</em> can be
-     * flushed until the writer knows that no more local symbols can be
-     * encountered. This can be accomplished via {@link #finish()} or by
-     * making the {@linkplain #getSymbolTable() local symbol table}
-     * {@linkplain SymbolTable#makeReadOnly() read-only}.
+     * This feature can be used to flush buffered data before writing more
+     * values without subsequently having to redeclare the current local
+     * symbol table. Applications that produce long streams of binary Ion may
+     * wish to flush occasionally to relieve memory pressure, then continue
+     * writing data using the same local symbol table. The symbol table will
+     * be appended with newly-encountered symbols as necessary.
      *
      * @throws IOException if thrown by the underlying output target.
      *
@@ -144,13 +145,16 @@ public interface IonWriter
      * {@link com.amazon.ion.system.IonWriterBuilder.IvmMinimizing
      * IvmMinimizing}.)
      * <p>
-     * This feature can be used to flush reliably before writing more values.
-     * Think about a long-running stream of binary values: without finishing,
-     * all the values would continue to buffer since the encoder keeps
-     * expecting more local symbols (which must be written into the local
-     * symbol table that precedes all top-level values). Such an application
-     * can finish occasionally to flush the data out, then continue writing
-     * more data using a fresh local symbol table.
+     * This feature can be used to flush buffered data and reset the local
+     * symbol table before writing more values. Applications that produce long
+     * streams of binary Ion may wish to finish occasionally to relieve memory
+     * pressure, then continue writing data using a new local symbol table.
+     * This is particularly useful for streams that contain an ever-growing
+     * number of unique symbols to avoid unbounded growth of the symbol table,
+     * which may degrade performance and bloat the encoding. Applications that
+     * produce long streams with a limited number of unique symbols should
+     * use {@link #flush()} instead to avoid re-declaring the local symbol
+     * table unnecessarily.
      *
      * @throws IOException if thrown by the underlying output target.
      * @throws IllegalStateException when not between top-level values.
