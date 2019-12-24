@@ -47,6 +47,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
 import java.io.ByteArrayInputStream;
@@ -805,9 +806,24 @@ public abstract class IonWriterTestCase
         iw.writeSymbol("now");
         iw.close();
 
-        // Should have:  IVM SYMTAB hey now
         IonDatagram dg = reload();
-        assertEquals(4, dg.systemSize());
+        if (myOutputForm == OutputForm.BINARY && iw instanceof _Private_IonManagedWriter) {
+            // Note: LST append will only be implemented in the "new" binary writer (which implements
+            // _Private_IonMangedWriter)
+            // Should have:  IVM SYMTAB hey SYMTAB_APPEND now
+            assertEquals(5, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("hey", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+            assertEquals("now", ((IonSymbol) dg.systemGet(4)).stringValue());
+        }
+        else {
+            // Should have:  IVM SYMTAB hey SYMTAB_APPEND now
+            assertEquals(4, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("hey", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("now", ((IonSymbol) dg.systemGet(3)).stringValue());
+        }
     }
 
     Iterator<IonValue> systemIterateOutput()

@@ -20,7 +20,11 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 
 import com.amazon.ion.IonContainer;
+import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonInt;
 import com.amazon.ion.IonMutableCatalog;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -177,6 +181,66 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
     {
         writer.writeSymbol("name");
         assertValue("name");
+    }
+
+    @Test
+    public void testLocalSymbolTableAppend() throws Exception
+    {
+        writer.writeSymbol("taco");
+        writer.flush();
+        writer.writeSymbol("burrito");
+        writer.finish();
+        IonReader reader = system().newReader(writer.getBytes());
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
+        assertNull(reader.next());
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        // Should be IVM SYMTAB taco SYMTAB burrito
+        assertEquals(5, dg.systemSize());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+        assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+    }
+
+    @Test
+    public void testFlushImmediatelyAfterIVM() throws Exception
+    {
+        writer.flush();
+        writer.writeSymbol("burrito");
+        writer.finish();
+        IonReader reader = system().newReader(writer.getBytes());
+        reader.next();
+        assertEquals(reader.getSymbolTable().findSymbol("taco"), -1);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), 15);
+        assertNull(reader.next());
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        // Should be IVM SYMTAB burrito
+        assertEquals(3, dg.systemSize());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+        assertEquals("burrito", ((IonSymbol) dg.systemGet(2)).stringValue());
+    }
+
+    @Test
+    public void testNoNewSymbolsAfterFlush() throws Exception
+    {
+        writer.writeSymbol("taco");
+        writer.flush();
+        writer.writeInt(123);
+        writer.finish();
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        // Should be IVM SYMTAB taco 123
+        assertEquals(4, dg.systemSize());
+        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+        assertEquals(123, ((IonInt) dg.systemGet(3)).intValue());
     }
 
     @Test

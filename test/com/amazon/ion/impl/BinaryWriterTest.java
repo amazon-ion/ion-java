@@ -15,6 +15,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -26,6 +27,9 @@ import com.amazon.ion.junit.IonAssert;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -120,27 +124,36 @@ public class BinaryWriterTest
     throws Exception
     {
         iw = makeWriter();
-        iw.writeSymbol("force a local symtab"); // TODO amzn/ion-java/issues/8
+        iw.writeSymbol("force a local symtab");
         SymbolTable symtab = iw.getSymbolTable();
         symtab.intern("fred_1");
         symtab.intern("fred_2");
 
         iw.writeSymbol("fred_1");
+        // This would cause an appended LST to be written before the next value.
         iw.flush();
-        byte[] bytes = myOutputStream.toByteArray();
-        assertEquals(0, bytes.length);
+        IonReader reader = IonReaderBuilder.standard().build(myOutputStream.toByteArray());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("force a local symtab", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("fred_1", reader.stringValue());
+        assertNull(reader.next());
     }
 
     @Test
     public void testFlushingUnlockedSymtabWithImports()
     throws Exception
     {
-        SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
+        SimpleCatalog catalog = catalog();
+        SymbolTable fred1 = Symtabs.register("fred",   1, catalog);
         iw = makeWriter(fred1);
         iw.writeSymbol("fred_1");
+        // This would cause an appended LST to be written before the next value.
         iw.flush();
-        byte[] bytes = myOutputStream.toByteArray();
-        assertEquals(0, bytes.length);
+        IonReader reader = IonReaderBuilder.standard().withCatalog(catalog).build(myOutputStream.toByteArray());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("fred_1", reader.stringValue());
+        assertNull(reader.next());
     }
 
     @Test

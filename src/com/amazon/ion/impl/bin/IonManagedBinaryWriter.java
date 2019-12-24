@@ -740,16 +740,22 @@ import java.util.Map;
 
     private void startLocalSymbolTableIfNeeded(final boolean writeIVM) throws IOException
     {
-        if (symbolState == SymbolState.SYSTEM_SYMBOLS)
+        boolean isAppend = symbolState == SymbolState.LOCAL_SYMBOLS_FLUSHED;
+        if (symbolState == SymbolState.SYSTEM_SYMBOLS || isAppend)
         {
-            if (writeIVM)
+            if (writeIVM && !isAppend)
             {
                 symbols.writeIonVersionMarker();
             }
             symbols.addTypeAnnotationSymbol(systemSymbol(ION_SYMBOL_TABLE_SID));
             symbols.stepIn(STRUCT);
             {
-                if (imports.parents.size() > 0)
+                if (isAppend)
+                {
+                    symbols.setFieldNameSymbol(systemSymbol(IMPORTS_SID));
+                    symbols.writeSymbolToken(systemSymbol(ION_SYMBOL_TABLE_SID));
+                }
+                else if (imports.parents.size() > 0)
                 {
                     symbols.setFieldNameSymbol(systemSymbol(IMPORTS_SID));
                     symbols.stepIn(LIST);
@@ -1071,7 +1077,7 @@ import java.util.Map;
 
     public void flush() throws IOException
     {
-        if (getDepth() == 0 && localsLocked)
+        if (getDepth() == 0 && !user.hasAnnotations())
         {
             unsafeFlush();
         }
@@ -1083,10 +1089,9 @@ import java.util.Map;
         {
             // this implies that we have a local symbol table of some sort and the user locked it
             symbolState.closeTable(symbols);
+            // make sure that until the local symbol state changes we no-op the table closing routine
+            symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
         }
-
-        // make sure that until the local symbol state changes we no-op the table closing routine
-        symbolState = SymbolState.LOCAL_SYMBOLS_FLUSHED;
         // push the data out
         symbols.finish();
         user.finish();

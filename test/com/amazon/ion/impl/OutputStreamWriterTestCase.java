@@ -179,7 +179,6 @@ public abstract class OutputStreamWriterTestCase
         // Try flushing when there's just a pending annotation.
         iw.addTypeAnnotation("fred_1");
         iw.flush();
-        checkFlushed(true);
         myOutputStreamWrapper.flushed = false;
 
         bytes = myOutputStream.toByteArray();
