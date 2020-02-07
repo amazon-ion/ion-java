@@ -92,4 +92,21 @@ public class TreeReaderTest
         check().next().fieldName((String)null).type(IonType.NULL);
         assertTopLevel(in, /* inStruct */ false);
     }
+
+    @Test
+    public void testModificationDuringRead()
+    {
+        IonList list = system().newEmptyList();
+        list.add().newString("abc");
+        list.add().newString("def");
+        in = system().newReader(list);
+        assertEquals(IonType.LIST, in.next());
+        in.stepIn();
+        assertEquals(IonType.STRING, in.next());
+        // Violate the contract by modifying the value.
+        list.remove(0);
+        // Since the value was modified while it was being written, the result of the following is undefined. But
+        // one thing is for sure: it should not cause an infinite loop.
+        in.next();
+    }
 }

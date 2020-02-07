@@ -485,6 +485,10 @@ public interface IonSystem
      * model. Typically this is used to iterate over a collection, such as an
      * {@link IonStruct}.
      *
+     * The given value and its children, if any, must not be modified until after
+     * the IonReader constructed by this method is closed. Violating this
+     * constraint results in undefined behavior.
+     *
      * @param value must not be null.
      */
     public IonReader newReader(IonValue value);

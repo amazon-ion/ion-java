@@ -497,6 +497,7 @@ class IonReaderTreeSystem
                         _next_idx = ii+1;
                         break;
                     }
+                    ii++;
                 }
             }
             // if there anything left?
