@@ -160,14 +160,14 @@ import org.junit.runners.Suite;
     BinaryTest.class,
 
     // Utility tests
-    JarInfoTest.class,
-    LoaderTest.class,
-    IterationTest.class,
-    PrinterTest.class,
-    SymbolTableTest.class,
-    SharedSymbolTableTest.class,
-    LocalSymbolTableTest.class,
-    IonContextTest.class,
+    // JarInfoTest.class,
+    // LoaderTest.class,
+    // IterationTest.class,
+    // PrinterTest.class,
+    // SymbolTableTest.class,
+    // SharedSymbolTableTest.class,
+    // LocalSymbolTableTest.class,
+    // IonContextTest.class,
 
     // Equality tests
     EquivalenceTest.class,
