@@ -72,6 +72,8 @@ public abstract class IonWriterTestCase
 
     OutputForm myOutputForm;
 
+    boolean myLstAppendEnabled = false;
+
     protected IonWriter iw;
 
     @Rule
@@ -799,6 +801,21 @@ public abstract class IonWriterTestCase
     public void testFlushDoesNotReset()
     throws Exception
     {
+        flushDoesNotReset(false);
+    }
+
+    @Test
+    public void testFlushDoesNotResetWithLstAppend()
+    throws Exception
+    {
+        flushDoesNotReset(true);
+    }
+
+    private void flushDoesNotReset(boolean lstAppendEnabled)
+    throws Exception
+    {
+        myLstAppendEnabled = lstAppendEnabled;
+
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog());
         iw = makeWriter(fred1);
         iw.writeSymbol("hey");
@@ -807,7 +824,7 @@ public abstract class IonWriterTestCase
         iw.close();
 
         IonDatagram dg = reload();
-        if (myOutputForm == OutputForm.BINARY && iw instanceof _Private_IonManagedWriter) {
+        if (myOutputForm == OutputForm.BINARY && iw instanceof _Private_IonManagedWriter && myLstAppendEnabled) {
             // Note: LST append will only be implemented in the "new" binary writer (which implements
             // _Private_IonMangedWriter)
             // Should have:  IVM SYMTAB hey SYMTAB_APPEND now

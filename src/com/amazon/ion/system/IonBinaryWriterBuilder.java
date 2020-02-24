@@ -175,6 +175,27 @@ public abstract class IonBinaryWriterBuilder
 
 
     /**
+     * Enables or disables writing local symbol tables that append symbols
+     * to the current symbol table.  This functionality is disabled by default.
+     */
+    public abstract void setLocalSymbolTableAppendEnabled(boolean enabled);
+
+
+    /**
+     * Enables writing local symbol tables that append symbols to the current
+     * symbol table.  This functionality is disabled by default.
+     */
+    public abstract IonBinaryWriterBuilder withLocalSymbolTableAppendEnabled();
+
+
+    /**
+     * Disables writing local symbol tables that append symbols to the current
+     * symbol table.  This functionality is disabled by default.
+     */
+    public abstract IonBinaryWriterBuilder withLocalSymbolTableAppendDisabled();
+
+
+    /**
      * Enables or disables writing Binary32 (4-byte, single precision,
      * IEEE-754) values for floats when there would be no loss in precision.
      * By default Binary32 support is disabled to ensure the broadest

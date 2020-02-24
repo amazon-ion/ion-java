@@ -194,6 +194,36 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     @Override
+    public void setLocalSymbolTableAppendEnabled(boolean enabled)
+    {
+        mutationCheck();
+        if (enabled)
+        {
+            myBinaryWriterBuilder.withLocalSymbolTableAppendEnabled();
+        }
+        else
+        {
+            myBinaryWriterBuilder.withLocalSymbolTableAppendDisabled();
+        }
+    }
+
+    @Override
+    public _Private_IonBinaryWriterBuilder withLocalSymbolTableAppendEnabled()
+    {
+        _Private_IonBinaryWriterBuilder b = mutable();
+        b.setLocalSymbolTableAppendEnabled(true);
+        return b;
+    }
+
+    @Override
+    public _Private_IonBinaryWriterBuilder withLocalSymbolTableAppendDisabled()
+    {
+        _Private_IonBinaryWriterBuilder b = mutable();
+        b.setLocalSymbolTableAppendEnabled(false);
+        return b;
+    }
+
+    @Override
     public void setIsFloatBinary32Enabled(boolean enabled) {
         mutationCheck();
         if (enabled)
