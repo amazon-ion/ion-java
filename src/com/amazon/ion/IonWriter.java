@@ -155,7 +155,9 @@ public interface IonWriter
      * number of unique symbols to avoid unbounded growth of the symbol table,
      * which may degrade performance and bloat the encoding. Applications that
      * produce long streams with a limited number of unique symbols should
-     * use {@link #flush()} instead to avoid re-declaring the local symbol
+     * enable localSymbolTableAppend (see
+     * {@link com.amazon.ion.system.IonBinaryWriterBuilder#withLocalSymbolTableAppendEnabled})
+     * and {@link #flush()} instead to avoid re-declaring the local symbol
      * table unnecessarily.
      *
      * @throws IOException if thrown by the underlying output target.

@@ -1105,7 +1105,7 @@ import java.util.Map;
 
     public void flush() throws IOException
     {
-        if (getDepth() == 0 && (localsLocked || lstAppendEnabled))
+        if (getDepth() == 0 && !user.hasAnnotations() && (localsLocked || lstAppendEnabled))
         {
             unsafeFlush();
         }
