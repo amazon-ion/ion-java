@@ -1,11 +1,2 @@
 # https://docs.codecov.io/docs/
 # to validate this file: curl --data-binary @codecov.yml https://codecov.io/validate
-
-coverage:
-    status:
-        projects:
-            target: number
-            threshold: 0%
-
-comment:
-    layout: "diff, files"
