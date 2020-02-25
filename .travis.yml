@@ -12,7 +12,7 @@ jobs:
     jdk: openjdk11
     script: mvn test site
     after_success:
-      - bash <(curl -s https://codecov.io/bash)
+      - bash <(curl -s https://codecov.io/bash -y codecov.yml)
     deploy:
       provider: pages
       local-dir: "./target/site/"
