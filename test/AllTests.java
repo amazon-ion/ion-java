@@ -111,7 +111,6 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     // Low-level facilities.
-    AssertionsEnabledTest.class,
 
 })
 public class AllTests
