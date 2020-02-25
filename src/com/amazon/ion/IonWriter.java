@@ -113,7 +113,9 @@ public interface IonWriter
      * In particular, when writing binary Ion data, Ion's length-prefixed
      * encoding requires a complete top-level value to be written at once.
      * <p>
-     * This feature can be used to flush buffered data before writing more
+     * If localSymbolTableAppend is enabled (see
+     * {@link com.amazon.ion.system.IonBinaryWriterBuilder#withLocalSymbolTableAppendEnabled}),
+     * this feature can be used to flush buffered data before writing more
      * values without subsequently having to redeclare the current local
      * symbol table. Applications that produce long streams of binary Ion may
      * wish to flush occasionally to relieve memory pressure, then continue
@@ -153,7 +155,9 @@ public interface IonWriter
      * number of unique symbols to avoid unbounded growth of the symbol table,
      * which may degrade performance and bloat the encoding. Applications that
      * produce long streams with a limited number of unique symbols should
-     * use {@link #flush()} instead to avoid re-declaring the local symbol
+     * enable localSymbolTableAppend (see
+     * {@link com.amazon.ion.system.IonBinaryWriterBuilder#withLocalSymbolTableAppendEnabled})
+     * and {@link #flush()} instead to avoid re-declaring the local symbol
      * table unnecessarily.
      *
      * @throws IOException if thrown by the underlying output target.

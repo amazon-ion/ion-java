@@ -659,6 +659,7 @@ import java.util.Map;
     private final List<SymbolTable>             userImports;
     private final List<String>                  userSymbols;
     private final ImportDescriptor              userCurrentImport;
+    private final boolean                       lstAppendEnabled;
     private boolean                             isUserLSTAppend;
 
     private boolean                             closed;
@@ -704,6 +705,7 @@ import java.util.Map;
         this.userImports = new ArrayList<SymbolTable>();
         this.userSymbols = new ArrayList<String>();
         this.userCurrentImport = new ImportDescriptor();
+        this.lstAppendEnabled = builder.isLocalSymbolTableAppendEnabled;
         this.isUserLSTAppend = false;
 
         // TODO decide if initial LST should survive finish() and seed the next LST
@@ -765,7 +767,7 @@ import java.util.Map;
 
     private void startLocalSymbolTableIfNeeded(final boolean writeIVM) throws IOException
     {
-        boolean isAppend = symbolState == SymbolState.LOCAL_SYMBOLS_FLUSHED;
+        boolean isAppend = symbolState == SymbolState.LOCAL_SYMBOLS_FLUSHED && lstAppendEnabled;
         if (symbolState == SymbolState.SYSTEM_SYMBOLS || isAppend)
         {
             if (writeIVM && !isAppend)
@@ -1103,7 +1105,7 @@ import java.util.Map;
 
     public void flush() throws IOException
     {
-        if (getDepth() == 0 && !user.hasAnnotations())
+        if (getDepth() == 0 && !user.hasAnnotations() && (localsLocked || lstAppendEnabled))
         {
             unsafeFlush();
         }
