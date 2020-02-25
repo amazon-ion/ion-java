@@ -1,2 +1,10 @@
 # https://docs.codecov.io/docs/
-# to validate this file: curl --data-binary @codecov.yml https://codecov.io/validate
+
+coverage:
+  status:
+    project:
+        default:
+            target: number
+            threshold: 0% # set the threshold to zero so the overall project comment doesn't fail a PR.
+comment:
+  layout: "diff, files" # don't show the graph, only coverage diff and files.
