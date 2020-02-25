@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Assert;
@@ -41,7 +42,10 @@ public class BinaryWriterTest
         throws Exception
     {
         myOutputForm = OutputForm.BINARY;
-        return system().newBinaryWriter(out, imports);
+        IonBinaryWriterBuilder builder = IonBinaryWriterBuilder.standard()
+                .withImports(imports);
+        builder.setLocalSymbolTableAppendEnabled(myLstAppendEnabled);
+        return builder.build(out);
     }
 
     @Test
@@ -123,16 +127,18 @@ public class BinaryWriterTest
     public void testFlushingUnlockedSymtab()
     throws Exception
     {
-        iw = makeWriter();
-        iw.writeSymbol("force a local symtab");
-        SymbolTable symtab = iw.getSymbolTable();
-        symtab.intern("fred_1");
-        symtab.intern("fred_2");
+        byte[] bytes = flushUnlockedSymtab(false);
+        assertEquals(0, bytes.length);
+    }
 
-        iw.writeSymbol("fred_1");
-        // This would cause an appended LST to be written before the next value.
-        iw.flush();
-        IonReader reader = IonReaderBuilder.standard().build(myOutputStream.toByteArray());
+    @Test
+    public void testFlushingUnlockedSymtabWithLSTAppend()
+    throws Exception
+    {
+        byte[] bytes = flushUnlockedSymtab(true);
+
+        // iw.flush() should have caused an appended LST to be written before the next value.
+        IonReader reader = IonReaderBuilder.standard().build(bytes);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("force a local symtab", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -140,20 +146,54 @@ public class BinaryWriterTest
         assertNull(reader.next());
     }
 
+    private byte[] flushUnlockedSymtab(boolean lstAppendEnabled)
+    throws Exception
+    {
+        myLstAppendEnabled = lstAppendEnabled;
+        iw = makeWriter();
+        iw.writeSymbol("force a local symtab");
+        SymbolTable symtab = iw.getSymbolTable();
+        symtab.intern("fred_1");
+        symtab.intern("fred_2");
+
+        iw.writeSymbol("fred_1");
+        iw.flush();
+        return myOutputStream.toByteArray();
+    }
+
     @Test
     public void testFlushingUnlockedSymtabWithImports()
     throws Exception
     {
         SimpleCatalog catalog = catalog();
+        byte[] bytes = flushUnlockedSymtabWithImports(catalog, false);
+        assertEquals(0, bytes.length);
+    }
+
+    @Test
+    public void testFlushingUnlockedSymtabWithImportsWithLSTAppend()
+    throws Exception
+    {
+        SimpleCatalog catalog = catalog();
+        byte[] bytes = flushUnlockedSymtabWithImports(catalog, true);
+
+        IonReader reader = IonReaderBuilder.standard().withCatalog(catalog).build(bytes);
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("fred_1", reader.stringValue());
+        assertNull(reader.next());
+    }
+
+
+    private byte[] flushUnlockedSymtabWithImports(SimpleCatalog catalog, boolean lstAppendEnabled)
+    throws Exception
+    {
         SymbolTable fred1 = Symtabs.register("fred",   1, catalog);
+        myLstAppendEnabled = lstAppendEnabled;
         iw = makeWriter(fred1);
         iw.writeSymbol("fred_1");
         // This would cause an appended LST to be written before the next value.
         iw.flush();
-        IonReader reader = IonReaderBuilder.standard().withCatalog(catalog).build(myOutputStream.toByteArray());
-        assertEquals(IonType.SYMBOL, reader.next());
-        assertEquals("fred_1", reader.stringValue());
-        assertNull(reader.next());
+        return myOutputStream.toByteArray();
     }
 
     @Test

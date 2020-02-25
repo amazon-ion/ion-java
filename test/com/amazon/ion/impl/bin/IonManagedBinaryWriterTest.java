@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.junit.Test;
 
 @SuppressWarnings("deprecation")
@@ -79,6 +80,21 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
             }
         }
         SHARED_SYMBOL_LOCAL_SIDS = unmodifiableMap(sidMap);
+    }
+
+    private enum LSTAppendMode
+    {
+        LST_APPEND_DISABLED,
+        LST_APPEND_ENABLED;
+        public boolean isEnabled() { return this == LST_APPEND_ENABLED; }
+    }
+
+    @Inject("lstAppendMode")
+    public static final LSTAppendMode[] LST_APPEND_ENABLED_DIMENSIONS = LSTAppendMode.values();
+    private LSTAppendMode lstAppendMode;
+    public void setLstAppendMode(final LSTAppendMode mode)
+    {
+        this.lstAppendMode = mode;
     }
 
     private void checkSymbolTokenAgainstImport(final SymbolToken token)
@@ -139,12 +155,19 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
             catalog.putTable(table);
         }
 
-        final IonWriter writer = _Private_IonManagedBinaryWriterBuilder
+        final _Private_IonManagedBinaryWriterBuilder builder = _Private_IonManagedBinaryWriterBuilder
             .create(AllocatorMode.POOLED)
             .withImports(importedSymbolResolverMode, symbolTables)
             .withPreallocationMode(preallocationMode)
-            .withFloatBinary32Enabled()
-            .newWriter(out);
+            .withFloatBinary32Enabled();
+
+        if (lstAppendMode.isEnabled()) {
+            builder.withLocalSymbolTableAppendEnabled();
+        } else {
+            builder.withLocalSymbolTableAppendDisabled();
+        }
+
+        final IonWriter writer = builder.newWriter(out);
 
         final SymbolTable locals = writer.getSymbolTable();
         assertEquals(14, locals.getImportedMaxId());
@@ -190,22 +213,34 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         writer.flush();
         writer.writeSymbol("burrito");
         writer.finish();
+
         IonReader reader = system().newReader(writer.getBytes());
         reader.next();
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
-        assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), lstAppendMode.isEnabled() ? -1 : 16);
         reader.next();
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
         assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
         assertNull(reader.next());
 
         IonDatagram dg = system().getLoader().load(writer.getBytes());
-        // Should be IVM SYMTAB taco SYMTAB burrito
-        assertEquals(5, dg.systemSize());
-        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-        assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+        if (lstAppendMode.isEnabled())
+        {
+            // Should be IVM SYMTAB taco SYMTAB burrito
+            assertEquals(5, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+            assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+        }
+        else
+        {
+            // Should be IVM SYMTAB taco burrito
+            assertEquals(4, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("burrito", ((IonSymbol) dg.systemGet(3)).stringValue());
+        }
     }
 
     @Test
@@ -259,22 +294,33 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         writer.writeSymbol("burrito");
         writer.finish();
 
-        IonDatagram dg = system().getLoader().load(writer.getBytes());
-        // Should be IVM SYMTAB taco SYMTAB burrito
-        assertEquals(5, dg.systemSize());
-        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-        assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
-
         IonReader reader = system().newReader(writer.getBytes());
         reader.next();
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
-        assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), lstAppendMode.isEnabled() ? -1 : 16);
         reader.next();
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
         assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
         assertNull(reader.next());
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        if (lstAppendMode.isEnabled())
+        {
+            // Should be IVM SYMTAB taco SYMTAB burrito
+            assertEquals(5, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+            assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+        }
+        else
+        {
+            // Should be IVM SYMTAB taco burrito
+            assertEquals(4, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("burrito", ((IonSymbol) dg.systemGet(3)).stringValue());
+        }
     }
 
     @Test
@@ -293,22 +339,33 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         writer.writeSymbol("burrito");
         writer.finish();
 
-        IonDatagram dg = system().getLoader().load(writer.getBytes());
-        // Should be IVM SYMTAB taco SYMTAB burrito
-        assertEquals(5, dg.systemSize());
-        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-        assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-        assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-        assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
-
         IonReader reader = system().newReader(writer.getBytes());
         reader.next();
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
-        assertEquals(reader.getSymbolTable().findSymbol("burrito"), -1);
+        assertEquals(reader.getSymbolTable().findSymbol("burrito"), lstAppendMode.isEnabled() ? -1 : 16);
         reader.next();
         assertEquals(reader.getSymbolTable().findSymbol("taco"), 15);
         assertEquals(reader.getSymbolTable().findSymbol("burrito"), 16);
         assertNull(reader.next());
+
+        IonDatagram dg = system().getLoader().load(writer.getBytes());
+        if (lstAppendMode.isEnabled())
+        {
+            // Should be IVM SYMTAB taco SYMTAB burrito
+            assertEquals(5, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
+            assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
+        }
+        else
+        {
+            // Should be IVM SYMTAB taco burrito
+            assertEquals(4, dg.systemSize());
+            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
+            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
+            assertEquals("burrito", ((IonSymbol) dg.systemGet(3)).stringValue());
+        }
     }
 
     @Test
