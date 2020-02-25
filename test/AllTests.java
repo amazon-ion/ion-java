@@ -197,23 +197,7 @@ import org.junit.runners.Suite;
     RoundTripStreamingTest.class,
     ReaderDomCopyTest.class,
     ReaderSkippingTest.class,
-    ReaderIntegerSizeTest.class,
 
-    IonSystemTest.class,
-    ValueFactorySequenceTest.class,
-    IonSystemBuilderTest.class,
-    IonTextWriterBuilderTest.class,
-    IonBinaryWriterBuilderTest.class,
-    IonReaderToIonValueTest.class,
-    BinaryReaderWrappedValueLengthTest.class,
-    IonReaderBuilderTest.class,
-    IonReaderBinaryRawLargeStreamTest.class,
-
-    // experimental binary writer tests
-    PooledBlockAllocatorProviderTest.class,
-    WriteBufferTest.class,
-    IonRawBinaryWriterTest.class,
-    IonManagedBinaryWriterTest.class,
 })
 public class AllTests
 {
