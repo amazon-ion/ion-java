@@ -214,19 +214,6 @@ import org.junit.runners.Suite;
     WriteBufferTest.class,
     IonRawBinaryWriterTest.class,
     IonManagedBinaryWriterTest.class,
-
-    // Hash code tests
-    HashCodeCorrectnessTest.class,
-    HashCodeDistributionTest.class,
-    HashCodeDeltaCollisionTest.class,
-
-    IonRawWriterBasicTest.class,
-    IonRawWriterSymbolsTest.class,
-    RawValueSpanReaderBasicTest.class,
-    RawValueSpanReaderTest.class,
-
-    // DOM Lifecycle / mode tests
-    SIDPresentLifecycleTest.class
 })
 public class AllTests
 {
