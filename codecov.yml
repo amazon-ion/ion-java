@@ -3,8 +3,9 @@
 coverage:
   status:
     project:
-        default:
-            target: number
-            threshold: 0% # set the threshold to zero so the overall project comment doesn't fail a PR.
+      default:
+        target: number
+        threshold: 0%
+        base: auto
 comment:
-  layout: "diff, files" # don't show the graph, only coverage diff and files.
+  layout: "diff, files"
