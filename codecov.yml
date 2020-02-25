@@ -1,11 +1,10 @@
 # https://docs.codecov.io/docs/
 
 coverage:
-  status:
-    project:
-      default:
-        target: number
-        threshold: 0%
-        base: auto
+    status:
+        projects:
+            target: number
+            threshold: 0%
+
 comment:
-  layout: "diff, files"
+    layout: "diff, files"
