@@ -34,13 +34,15 @@ import java.util.concurrent.ConcurrentMap;
      */
     private final class PooledBlockAllocator extends BlockAllocator
     {
-        private final int blockSize;
+        private final int blockSize, blockLimit;
         private final ConcurrentLinkedQueue<Block> freeBlocks;
+        static final int FREE_CAPACITY = 1024 * 1024 * 64; // 64MB
 
         public PooledBlockAllocator(final int blockSize)
         {
             this.blockSize = blockSize;
             this.freeBlocks = new ConcurrentLinkedQueue<Block>();
+            this.blockLimit = FREE_CAPACITY / blockSize;
         }
 
         @Override
@@ -54,8 +56,10 @@ import java.util.concurrent.ConcurrentMap;
                     @Override
                     public void close()
                     {
-                        reset();
-                        freeBlocks.add(this);
+                        if (freeBlocks.size() < blockLimit) {
+                            reset();
+                            freeBlocks.add(this);
+                        }
                     }
                 };
             }
