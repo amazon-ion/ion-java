@@ -366,6 +366,9 @@ class IonWriterSystemText
             SymbolToken sym = assumeFieldNameSymbol();
             writeFieldNameToken(sym);
             _output.appendAscii(':');
+            if (_options.isPrettyPrintOn()) {
+                _output.appendAscii(' ');
+            }
             clearFieldName();
             followingLongString = false;
         }

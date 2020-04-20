@@ -287,14 +287,14 @@ public class TextWriterTest
                 "%n" +
                 "'''looong'''%n" +
                 "{%n" +
-                        "  a:'''looong''',%n" +
-                "  b:\"hello\",%n" +
-                "  c:'''hello\n" +
+                "  a: '''looong''',%n" +
+                "  b: \"hello\",%n" +
+                "  c: '''hello\n" +
                         "nurse''',%n" +
-                        "  d:'''what\\'s\n" +
+                "  d: '''what\\'s\n" +
                         "up\n" +
                         "doc'''%n" +
-                        "}"
+                "}"
             ),
             dg
         );

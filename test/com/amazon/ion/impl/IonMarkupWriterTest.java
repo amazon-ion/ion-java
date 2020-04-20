@@ -54,7 +54,7 @@ public class IonMarkupWriterTest extends IonTestCase {
             "%n<beforeAnnotations STRUCT><beforeEachAnnotation STRUCT>abcd" +
             "<afterEachAnnotation STRUCT>::<afterAnnotations STRUCT><beforeData" +
             " STRUCT>{<afterStepIn STRUCT>%n  <beforeFieldName SEXP>hello" +
-            "<afterFieldName SEXP>:<beforeData SEXP>(<afterStepIn SEXP>%n    " +
+            "<afterFieldName SEXP>: <beforeData SEXP>(<afterStepIn SEXP>%n    " +
             "<beforeData SYMBOL>sexp<afterData SYMBOL><beforeSeparator SEXP>" +
             "%n    <afterSeparator SEXP><beforeData INT>1<afterData INT>" +
             "<beforeSeparator SEXP>%n    <afterSeparator SEXP><beforeData INT>2" +
@@ -62,12 +62,12 @@ public class IonMarkupWriterTest extends IonTestCase {
             "<beforeData STRING>\"str\"<afterData STRING><beforeStepOut SEXP>%n  " +
             ")<afterData SEXP><beforeSeparator STRUCT>,%n  " +
             "<afterSeparator STRUCT><beforeFieldName LIST>list<afterFieldName " +
-            "LIST>:<beforeData LIST>[<afterStepIn LIST>%n    <beforeData " +
+            "LIST>: <beforeData LIST>[<afterStepIn LIST>%n    <beforeData " +
             "DECIMAL>3.2<afterData DECIMAL><beforeSeparator LIST>,%n    " +
             "<afterSeparator LIST><beforeData FLOAT>3.2e0<afterData FLOAT>" +
             "<beforeStepOut LIST>%n  ]<afterData LIST><beforeSeparator STRUCT>" +
             ",%n  <afterSeparator STRUCT><beforeFieldName BLOB>blob" +
-            "<afterFieldName BLOB>:<beforeAnnotations BLOB>" +
+            "<afterFieldName BLOB>: <beforeAnnotations BLOB>" +
             "<beforeEachAnnotation BLOB>annot<afterEachAnnotation BLOB>::" +
             "<afterAnnotations BLOB><beforeData BLOB>" +
             "{{ T25lIEJpZyBGYXQgVGVzdCBCbG9iIEZvciBZb3VyIFBsZWFzdXJl }}" +
