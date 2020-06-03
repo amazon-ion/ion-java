@@ -37,7 +37,7 @@ import java.lang.reflect.Method;
  *
  * @see IonSystemBuilder#withStreamCopyOptimized(boolean)
  */
-public class OptimizedBinaryWriterTestCase
+public abstract class OptimizedBinaryWriterTestCase
     extends IonTestCase
 {
     @Inject("copySpeed")
