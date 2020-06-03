@@ -15,28 +15,21 @@
 
 package com.amazon.ion;
 
-import static com.amazon.ion.IonType.DATAGRAM;
-
-import com.amazon.ion.impl._Private_Utils;
-import com.amazon.ion.junit.IonAssert;
-import java.io.File;
-import org.junit.Test;
-import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonSequence;
-import com.amazon.ion.IonString;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
+import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
 
-public class EquivsTestCase
+import static com.amazon.ion.IonType.DATAGRAM;
+
+public abstract class EquivsTestCase
     extends IonTestCase
 {
     /**
@@ -198,7 +191,7 @@ public class EquivsTestCase
         }
     }
 
-    public static IonDatagram[] roundTripDatagram(IonDatagram input) throws IOException {
+    protected static IonDatagram[] roundTripDatagram(IonDatagram input) throws IOException {
         IonSystem system = IonSystemBuilder.standard().build();
         IonLoader loader = system.getLoader();
         ByteArrayOutputStream textOutputStream = new ByteArrayOutputStream();
@@ -226,7 +219,7 @@ public class EquivsTestCase
         return data;
     }
 
-    public void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
+    protected void roundTripEquivalence(IonDatagram input, boolean myExpectedEquality) throws IOException {
         IonDatagram[] data = roundTripDatagram(input);
         for(int i = 0; i < data.length; i++){
             runEquivalenceChecks(data[i], myExpectedEquality);
