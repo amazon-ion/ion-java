@@ -340,7 +340,7 @@ abstract class IonSequenceLite
 
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
-        return new SubListView(this, fromIndex, toIndex);
+        return new SubListView(fromIndex, toIndex);
     }
 
     public IonValue[] toArray()
@@ -422,10 +422,8 @@ abstract class IonSequenceLite
         private int size;
         private int structuralModificationCount;
 
-        private SubListView(final List<IonValue> parent,
-                            final int fromIndex,
-                            final int toIndex) {
-            this.fromIndex = toTopLevelFromIndex(parent, fromIndex);
+        private SubListView(final int fromIndex, final int toIndex) {
+            this.fromIndex = fromIndex;
             this.size = toIndex - fromIndex;
             this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
         }
@@ -691,7 +689,7 @@ abstract class IonSequenceLite
 
         public List<IonValue> subList(final int fromIndex, final int toIndex) {
             checkForParentModification();
-            return new SubListView(this, fromIndex, toIndex);
+            return new SubListView(toParentIndex(fromIndex), toParentIndex(toIndex));
         }
 
         private void rangeCheck(int index) {
@@ -706,18 +704,6 @@ abstract class IonSequenceLite
 
         private int fromParentIndex(int index) {
             return index - fromIndex;
-        }
-
-        /**
-         * Calculates fromIndex based on the top level parent which must be an {@link IonSequenceLite}. With this
-         * nested sublists are able to directly call the top level parent instead of delegating up the parent chain
-         */
-        private int toTopLevelFromIndex(final List<IonValue> parent, int fromIndex) {
-            if (parent instanceof SubListView) {
-                return fromIndex + ((SubListView) parent).fromIndex;
-            }
-
-            return fromIndex;
         }
 
         private void checkForParentModification() {
