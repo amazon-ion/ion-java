@@ -44,6 +44,11 @@ public abstract class BaseIonSequenceLiteSublistTestCase {
 
     protected abstract IonSequence newSequence();
 
+    List<IonValue> newSubList() {
+        List<IonValue> seq = newSequence();
+        return seq.subList(0, seq.size());
+    }
+
     @Test
     public void sublistSize() {
         final IonSequence sequence = newSequence();
@@ -52,12 +57,47 @@ public abstract class BaseIonSequenceLiteSublistTestCase {
         assertEquals(3, actual.size());
     }
 
+
     @Test
     public void sublistIsEmpty() {
         IonSequence sequence = newSequence();
 
         assertTrue(sequence.subList(0, 0).isEmpty());
         assertFalse(sequence.subList(0, 1).isEmpty());
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void subListFromIndexLessThanZero() {
+        newSequence().subList(-1, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void subListToIndexLessThanFromIndex() {
+        newSequence().subList(2, 1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void subListToIndexExceedsSize() {
+        IonSequence seq = newSequence();
+        // toIndex is exclusive, hence the + 1
+        seq.subList(0, seq.size() + 1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void subListOfSubListFromIndexLessThanZero() {
+        newSubList().subList(-1, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void subListOfSubListToIndexLessThanFromIndex() {
+        newSubList().subList(2, 1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void subListOfSubListToIndexExceedsSize() {
+        List<IonValue> seq = newSubList();
+        // toIndex is exclusive, hence the + 1
+        seq.subList(0, seq.size() + 1);
     }
 
     @Test
