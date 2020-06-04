@@ -338,8 +338,25 @@ abstract class IonSequenceLite
         return indexOf(o);
     }
 
+    private static void checkSublistParameters(int size, int fromIndex, int toIndex)
+    {
+        if(fromIndex < 0)
+        {
+            throw new IndexOutOfBoundsException("fromIndex is less than zero");
+        }
+        if(toIndex < fromIndex)
+        {
+            throw new IllegalArgumentException("toIndex may not be less than fromIndex");
+        }
+        if(toIndex > size)
+        {
+            throw new IndexOutOfBoundsException("toIndex exceeds size");
+        }
+    }
+
     public List<IonValue> subList(int fromIndex, int toIndex)
     {
+        checkSublistParameters(this.size(), fromIndex, toIndex);
         return new SubListView(fromIndex, toIndex);
     }
 
@@ -688,6 +705,7 @@ abstract class IonSequenceLite
         }
 
         public List<IonValue> subList(final int fromIndex, final int toIndex) {
+            checkSublistParameters(this.size(), fromIndex, toIndex);
             checkForParentModification();
             return new SubListView(toParentIndex(fromIndex), toParentIndex(toIndex));
         }
