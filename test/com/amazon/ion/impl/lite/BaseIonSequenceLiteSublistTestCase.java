@@ -25,12 +25,13 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import org.junit.Test;
+
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
+import org.junit.Test;
 import com.amazon.ion.system.IonSystemBuilder;
 
 /**

@@ -410,6 +410,73 @@ public interface IonSequence
      * was created.
      * </p>
      *
+     * The implementation of {@link List<IonValue>} returned by this method implements {@link Object#equals(Object)}
+     * and {@link Object#hashCode()}, with some caveats to be aware of illustrated below.
+     *
+     * Given:
+     *
+     * <code>
+     * int[] ints = new int[] {1, 2, 3, 4};
+     * IonList list = SYSTEM.newList(ints);
+     * IonSexp sexp = SYSTEM.newSexp(ints)
+     * IonSexp dgrm = SYSTEM.newDatagram(ints)
+     * List<IonValue> listSubList = list.subList(0, ints.size())
+     * List<IonValue> sexpSubList = sexp.subList(0, ints.size())
+     * List<IonValue> dgrmSubList = sexp.subList(0, ints.size())
+     * List<IonValue> arrayList = new ArrayList<IonValue>();
+     * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
+     * </code>
+     *
+     * {@link IonSequence#equals(Object)} always returns false when presented with a non {@link IonSequence}
+     * instance of {@link List<IonValue>}.  Hence, the following invocations of {@link Object#equals(Object)}
+     * return false even if the contained elements are equivalent.  This means that {@link Object#equals(Object)}
+     * is not fully symmetric.  The reason for the asymmetry is historical:  {@link IonSequence} has long violated the
+     * contract outlined by the {@link List} documentation.  Unfortunately, this cannot be changed because customers
+     * now rely on this behavior.
+     *
+     * <code>
+     * list.equals(listSubList)     // false
+     * list.equals(sexpSubList)     // false
+     * list.equals(dgrm)            // false
+     * list.equals(arrayList)       // false
+     *
+     * sexp.equals(listSubList)     // false
+     * sexp.equals(sexpSubList)     // false
+     * sexp.equals(dgrm)            // false
+     * sexp.equals(arrayList)       // false
+     *
+     * dgrm.equals(listSubList)     // false
+     * dgrm.equals(sexpSubList)     // false
+     * dgrm.equals(dgrmSubList)     // false
+     * dgrm.equals(arrayList)       // false
+     *</code>
+     *
+     * However, {@link IonSequence#subList(int, int)} was implemented much later and faithfully implements
+     * {@link Object#equals(Object)} meaning the following cases all work as expected.
+     *
+     * <code>
+     * listSubList.equals(listSubList); // true
+     * listSubList.equals(sexpSubList); // true
+     * listSubList.equals(dgrmSubList); // true
+     * listSubList.equals(list);        // true
+     * listSubList.equals(sexp);        // true
+     * listSubList.equals(arrayList);   // true
+     *
+     * sexpSubList.equals(listSubList); // true
+     * sexpSubList.equals(sexpSubList); // true
+     * sexpSubList.equals(dgrmSubList); // true
+     * sexpSubList.equals(list);        // true
+     * sexpSubList.equals(sexp);        // true
+     * sexpSubList.equals(arrayList);   // true
+     *
+     * dgrmSubList.equals(listSubList); // true
+     * dgrmSubList.equals(sexpSubList); // true
+     * dgrmSubList.equals(dgrmSubList); // true
+     * dgrmSubList.equals(list);        // true
+     * dgrmSubList.equals(sexp);        // true
+     * dgrmSubList.equals(arrayList);   // true
+     * </code>
+     *
      * @see List#subList(int, int)
      */
     public List<IonValue> subList(int fromIndex, int toIndex);

@@ -25,6 +25,7 @@ import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonValue;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -429,7 +430,7 @@ abstract class IonSequenceLite
      *
      * Structural modifications from the sublist itself are allowed.
      */
-    private class SubListView implements List<IonValue> {
+    private class SubListView extends AbstractList<IonValue> {
 
         /**
          * index in top level IonSequenceLite that marks the start of this sublist view. For nested
