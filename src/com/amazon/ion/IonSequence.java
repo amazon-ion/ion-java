@@ -44,10 +44,24 @@ import java.util.ListIterator;
  *     non-Ion {@link Collection}s.
  *   </li>
  *   <li>
- *     The method {@link #subList(int, int)} is not implemented at all.
- *     We think it will be quite challenging to get correct, and decided that
- *     it was still valuable to extend {@link List} even with this contractual
- *     violation.
+ *     The implementations of {@link List#equals(Object)}} and
+ *     {@link List#hashCode()} does not conform to the specification of those
+ *     methods in order to conform with Ion's definition of equality which
+ *     takes into account the {@link IonSequence}'s {@link IonType} and its
+ *     annotations in addition to the contents of the collection.
+ *     <ul>
+ *       <li>
+ *         {@link List#equals(Object)} always returns <code>false</code>
+ *         for any non-{@link IonSequence} implementation of {@link List},
+ *         including the sub-list returned from
+ *         {@link IonSequence#subList(int, int)}.
+ *       </li>
+ *       <li>
+ *         {@link List#hashCode()} returns a different hash code than
+ *         other {@link List#hashCode()} implementations. including the
+ *         sub-list returned from {@link IonSequence#subList(int, int)}.
+ *       </li>
+ *     </ul>
  *   </li>
  * </ul>
  */
@@ -400,18 +414,23 @@ public interface IonSequence
 
     /**
      * <p>
-     * Returns a view of the portion of this list according to {@link List#subList(int, int)}
-     * contract.
+     * Returns a view of the portion of this list according to
+     * {@link List#subList(int, int)} contract.
      * </p>
      *
      * <p>
-     * Sublist methods will throw a {@link java.util.ConcurrentModificationException} if
-     * its parent list, i.e. this list, had any changes that affect its size the after sublist
+     * Sublist methods will throw a
+     * {@link java.util.ConcurrentModificationException} if its parent list,
+     * i.e. this list, had any changes that affect its size the after sublist
      * was created.
      * </p>
      *
-     * The implementation of {@link List<IonValue>} returned by this method implements {@link Object#equals(Object)}
-     * and {@link Object#hashCode()}, with some caveats to be aware of illustrated below.
+     * The implementation of {@link List<IonValue>} returned by this method
+     * implements {@link List#equals(Object)} and
+     * {@link List#equals(Object)} ()} per the specification of these methods.
+     * However, the existing implementation of {@link IonSequence} does not
+     * provide a specification compliant {@link List#equals} and
+     * {@link List#hashCode()}} which results to the following caveats:
      *
      * Given:
      *
@@ -427,12 +446,16 @@ public interface IonSequence
      * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
      * </code>
      *
-     * {@link IonSequence#equals(Object)} always returns false when presented with a non {@link IonSequence}
-     * instance of {@link List<IonValue>}.  Hence, the following invocations of {@link Object#equals(Object)}
-     * return false even if the contained elements are equivalent.  This means that {@link Object#equals(Object)}
-     * is not fully symmetric.  The reason for the asymmetry is historical:  {@link IonSequence} has long violated the
-     * contract outlined by the {@link List} documentation.  Unfortunately, this cannot be changed because customers
-     * now rely on this behavior.
+     * {@link IonSequence#equals(Object)} always returns false when presented
+     * with a non {@link IonSequence} instance of {@link List<IonValue>}.
+     * Hence, the following invocations of {@link Object#equals(Object)}
+     * return false even if the contained elements are equivalent.  This
+     * means that {@link Object#equals(Object)} is not symmetric in these
+     * cases.  The reason for the asymmetry is historical:
+     * {@link IonSequence} has long violated the contract outlined by the
+     * {@link List} documentation.  For the current major version of this
+     * library we maintain backwards compatibility and support this behaviour
+     * as-is.
      *
      * <code>
      * list.equals(listSubList)     // false
@@ -451,8 +474,14 @@ public interface IonSequence
      * dgrm.equals(arrayList)       // false
      *</code>
      *
-     * However, {@link IonSequence#subList(int, int)} was implemented much later and faithfully implements
-     * {@link Object#equals(Object)} meaning the following cases all work as expected.
+     * However, {@link IonSequence#subList(int, int)} was implemented much
+     * later and faithfully implements {@link List#equals(Object)} meaning
+     * the cases below all work as expected.  While {@link IonSequence}
+     * does not comply with the specification for {@link List#equals(Object)}
+     * because it has to comply with Ion's rules for equality, the same is
+     * not true for sub-lists.  Unlike {@link IonSequence}, sub-lists have
+     * no notion of an {@link IonType}, annotations or nullability which
+     * allows for compliance with the {@link List} specification.
      *
      * <code>
      * listSubList.equals(listSubList); // true

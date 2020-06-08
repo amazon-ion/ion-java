@@ -438,24 +438,26 @@ abstract class IonSequenceLite
          */
         private final int fromIndex;
         private int size;
-        private int structuralModificationCount;
 
         private SubListView(final int fromIndex, final int toIndex) {
             this.fromIndex = fromIndex;
             this.size = toIndex - fromIndex;
-            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            super.modCount = IonSequenceLite.this.structuralModificationCount;
         }
 
+        @Override
         public int size() {
             checkForParentModification();
             return size;
         }
 
+        @Override
         public boolean isEmpty() {
             checkForParentModification();
             return size == 0;
         }
 
+        @Override
         public IonValue get(final int index) {
             checkForParentModification();
             rangeCheck(index);
@@ -463,6 +465,7 @@ abstract class IonSequenceLite
             return IonSequenceLite.this.get(toParentIndex(index));
         }
 
+        @Override
         public IonValue set(final int index, final IonValue element) {
             checkForParentModification();
             rangeCheck(index);
@@ -470,53 +473,31 @@ abstract class IonSequenceLite
             return IonSequenceLite.this.set(toParentIndex(index), element);
         }
 
+        @Override
         public boolean contains(final Object o) {
             checkForParentModification();
-            return indexOf(o) != -1;
+            return super.contains(o);
         }
 
-        public boolean containsAll(final Collection<?> c) {
-            for (Object o : c) {
-                if (!contains(o)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        public IonValue[] toArray() {
+        @Override
+        public boolean containsAll(final Collection<?> collection) {
             checkForParentModification();
-
-            if (size < 1) {
-                return EMPTY_VALUE_ARRAY;
-            }
-
-            return toArray(new IonValue[size]);
+            return super.containsAll(collection);
         }
 
-        @SuppressWarnings("unchecked")
-        public <T> T[] toArray(T[] array) {
+        @Override
+        public Object[] toArray() {
             checkForParentModification();
-
-            if (array.length < size) {
-                final Class<?> type = array.getClass().getComponentType();
-                // generates unchecked warning
-                array = (T[]) Array.newInstance(type, size);
-            }
-
-            if (size > 0) {
-                System.arraycopy(IonSequenceLite.this._children, fromIndex, array, 0, size);
-            }
-
-            if (size < array.length) {
-                // See IonSequence#toArray and ArrayList#toArray
-                array[size] = null;
-            }
-
-            return array;
+            return super.toArray();
         }
 
+        @Override
+        public <T> T[] toArray(T[] ts) {
+            checkForParentModification();
+            return super.toArray(ts);
+        }
+
+        @Override
         public boolean add(final IonValue ionValue) {
             checkForParentModification();
 
@@ -529,42 +510,42 @@ abstract class IonSequenceLite
                 IonSequenceLite.this.add(parentIndex, ionValue);
             }
 
-            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            super.modCount = IonSequenceLite.this.structuralModificationCount;
             size++;
 
             return true;
         }
 
+        @Override
         public void add(final int index, final IonValue ionValue) {
             checkForParentModification();
             rangeCheck(index);
 
             IonSequenceLite.this.add(toParentIndex(index), ionValue);
 
-            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            super.modCount = IonSequenceLite.this.structuralModificationCount;
             size++;
         }
 
-        public boolean addAll(final Collection<? extends IonValue> c) {
-            for (IonValue ionValue : c) {
-                add(ionValue);
-            }
 
-            return true;
+        @Override
+        public boolean addAll(int i, Collection<? extends IonValue> collection) {
+            checkForParentModification();
+            return super.addAll(i, collection);
         }
 
-        public boolean addAll(final int index, final Collection<? extends IonValue> c) {
-            int i = index;
 
-            for (IonValue ionValue : c) {
-                add(i, ionValue);
-                i++;
-            }
-
-            return true;
+        @Override
+        public boolean addAll(Collection<? extends IonValue> collection) {
+            checkForParentModification();
+            return super.addAll(collection);
         }
 
+        // retainAll has no functionality that is specific to SubListView but
+        // needs to be implemented because the AbstractList<T>.retainAll() throws [UnsupportedOperationException].
+        @Override
         public boolean retainAll(final Collection<?> c) {
+            checkForParentModification();
             if (size < 1) {
                 return false;
             }
@@ -586,6 +567,7 @@ abstract class IonSequenceLite
             return removeAll(toRemove);
         }
 
+        @Override
         public void clear() {
             checkForParentModification();
 
@@ -596,22 +578,27 @@ abstract class IonSequenceLite
             }
 
             size = 0;
-            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            super.modCount = IonSequenceLite.this.structuralModificationCount;
         }
 
+        @Override
         public IonValue remove(final int index) {
             checkForParentModification();
             rangeCheck(index);
 
             final IonValue removed = IonSequenceLite.this.remove(toParentIndex(index));
 
-            this.structuralModificationCount = IonSequenceLite.this.structuralModificationCount;
+            super.modCount = IonSequenceLite.this.structuralModificationCount;
             size--;
 
             return removed;
         }
 
+        // remove(Object) contains no functionality that is specific to SubListView but
+        // needs to be implemented because the AbstractList<T>.remove(Object) throws [UnsupportedOperationException].
+        @Override
         public boolean remove(final Object o) {
+            checkForParentModification();
             int index = indexOf(o);
             if (index < 0) {
                 return false;
@@ -621,7 +608,11 @@ abstract class IonSequenceLite
             return true;
         }
 
+        // removeAll(Collection<?>) contains no functionality that is specific to SubListView but
+        // needs to be implemented because the AbstractList<T>.remove(Object) throws [UnsupportedOperationException].
+        @Override
         public boolean removeAll(final Collection<?> c) {
+            checkForParentModification();
             boolean changed = false;
             for (Object o : c) {
                 if (remove(o)) {
@@ -632,32 +623,36 @@ abstract class IonSequenceLite
             return changed;
         }
 
+        @Override
         public int indexOf(final Object o) {
             checkForParentModification();
-
-            final int parentIndex = IonSequenceLite.this.indexOf(o);
-            final int index = fromParentIndex(parentIndex);
-
-            // not found
-            if (parentIndex < 0 || index < 0 || index >= size) {
-                return -1;
-            }
-
-            return index;
+            return super.indexOf(o);
         }
 
-        public int lastIndexOf(final Object o) {
-            return indexOf(o);
+        @Override
+        public int lastIndexOf(Object o) {
+            checkForParentModification();
+            return super.lastIndexOf(o);
         }
 
+        @Override
+        protected void removeRange(int from, int to) {
+            checkForParentModification();
+            super.removeRange(from, to);
+        }
+
+
+        @Override
         public Iterator<IonValue> iterator() {
             return listIterator(0);
         }
 
+        @Override
         public ListIterator<IonValue> listIterator() {
             return listIterator(0);
         }
 
+        @Override
         public ListIterator<IonValue> listIterator(final int index) {
             checkForParentModification();
 
@@ -705,10 +700,29 @@ abstract class IonSequenceLite
             };
         }
 
+        @Override
         public List<IonValue> subList(final int fromIndex, final int toIndex) {
             checkSublistParameters(this.size(), fromIndex, toIndex);
             checkForParentModification();
             return new SubListView(toParentIndex(fromIndex), toParentIndex(toIndex));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            checkForParentModification();
+            return super.equals(o);
+        }
+
+        @Override
+        public int hashCode() {
+            checkForParentModification();
+            return super.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            checkForParentModification();
+            return super.toString();
         }
 
         private void rangeCheck(int index) {
@@ -721,12 +735,8 @@ abstract class IonSequenceLite
             return index + fromIndex;
         }
 
-        private int fromParentIndex(int index) {
-            return index - fromIndex;
-        }
-
         private void checkForParentModification() {
-            if (this.structuralModificationCount != IonSequenceLite.this.structuralModificationCount) {
+            if (super.modCount != IonSequenceLite.this.structuralModificationCount) {
                 throw new ConcurrentModificationException();
             }
         }
