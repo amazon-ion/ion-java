@@ -65,7 +65,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
     <build.year>${maven.build.timestamp}</build.year>
-    <jdkVersion>1.6</jdkVersion>
+    <jdkVersion>1.8</jdkVersion>
   </properties>
 
   <dependencies>
@@ -81,6 +81,17 @@
       <artifactId>JUnitParams</artifactId>
       <version>1.1.1</version>
       <scope>test</scope>
+    </dependency>
+    <!-- ion-java/tools/cli dependencies -->
+    <dependency>
+      <groupId>args4j</groupId>
+      <artifactId>args4j</artifactId>
+      <version>2.33</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+      <version>1.4.5-5</version>
     </dependency>
   </dependencies>
 
@@ -272,7 +283,7 @@
     <profile>
       <id>release</id>
       <properties>
-        <jdkVersion>1.5</jdkVersion>
+        <jdkVersion>1.8</jdkVersion>
       </properties>
       <build>
         <plugins>
