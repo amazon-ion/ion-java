@@ -95,9 +95,7 @@ public final class IonProcess {
     private static void process(IonWriter ionWriterForOutput,
                                 IonWriter ionWriterForErrorReport,
                                 IonReader ionReader) throws IOException {
-        while (ionReader.next() != null) {
-            ionWriterForOutput.writeValue(ionReader);
-        }
+        ionWriterForOutput.writeValues(ionReader);
     }
 
     private static void processFilesInEvents(IonWriter ionWriterForOutput,
