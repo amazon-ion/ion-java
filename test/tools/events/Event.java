@@ -48,7 +48,7 @@ public class Event {
         if (this.annotations != null && this.annotations.length > 0) {
             ionWriterForOutput.setFieldName("annotations");
             ionWriterForOutput.stepIn(IonType.LIST);
-            for (int i=0; i < this.annotations.length; i++) {
+            for (int i = 0; i < this.annotations.length; i++) {
                 ionWriterForOutput.stepIn(IonType.STRUCT);
                 ionWriterForOutput.setFieldName("text");
                 String text = this.annotations[i].getText();
@@ -78,14 +78,14 @@ public class Event {
         if (this.imports != null && this.imports.length > 0) {
             ionWriterForOutput.setFieldName("imports");
             ionWriterForOutput.stepIn(IonType.LIST);
-            for (int i=0; i < this.imports.length; i++) {
+            for (int i = 0; i < this.imports.length; i++) {
                 ionWriterForOutput.stepIn(IonType.STRUCT);
                 ionWriterForOutput.setFieldName("import_name");
-                ionWriterForOutput.writeString(this.imports[i].getImport_name());
+                ionWriterForOutput.writeString(this.imports[i].getImportName());
                 ionWriterForOutput.setFieldName("version");
                 ionWriterForOutput.writeInt(this.imports[i].getVersion());
                 ionWriterForOutput.setFieldName("max_id");
-                ionWriterForOutput.writeInt(this.imports[i].getMax_id());
+                ionWriterForOutput.writeInt(this.imports[i].getMaxId());
                 ionWriterForOutput.stepOut();
             }
             ionWriterForOutput.stepOut();

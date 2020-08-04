@@ -3,12 +3,8 @@ package tools.cli;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import org.kohsuke.args4j.CmdLineException;
 
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * Represents the different Ion output formats supported by the command line tools in this package.
@@ -17,7 +13,7 @@ public enum OutputFormat {
     /**
      * Nicely spaced, 'prettified' text Ion.
      */
-    PRETTY("pretty") {
+    PRETTY {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
             return IonTextWriterBuilder.pretty().build(outputStream);
@@ -26,7 +22,7 @@ public enum OutputFormat {
     /**
      * Minimally spaced text Ion.
      */
-    TEXT("text") {
+    TEXT {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
             return IonTextWriterBuilder.standard().build(outputStream);
@@ -35,13 +31,13 @@ public enum OutputFormat {
     /**
      * Compact, read-optimized binary Ion.
      */
-    BINARY("binary") {
+    BINARY {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
             return IonBinaryWriterBuilder.standard().build(outputStream);
         }
     },
-    EVENTS("events") {
+    EVENTS {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
             return IonTextWriterBuilder.pretty().build(outputStream);
@@ -49,23 +45,4 @@ public enum OutputFormat {
     };
 
     abstract IonWriter createIonWriter(OutputStream outputStream);
-
-    private String name;
-
-    OutputFormat(String name) {
-        this.name = name;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public static OutputFormat nameToOutputFormat(String name) throws CmdLineException {
-        for (OutputFormat o : OutputFormat.values()) {
-            if(o.getName().equals(name)){
-                return o;
-            }
-        }
-        throw new CmdLineException("Invalid option for --output-format -f: " + name);
-    }
 }

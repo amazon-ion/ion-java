@@ -1,6 +1,10 @@
 package tools.cli;
 
-import com.amazon.ion.*;
+import com.amazon.ion.IonWriter;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.SymbolTable;
+import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -12,8 +16,15 @@ import tools.events.Event;
 import tools.events.EventType;
 import tools.events.ImportDescriptor;
 
-
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
 
@@ -31,7 +42,6 @@ public final class IonProcess {
     private static final String SYSTEM_ERR_DEFAULT_VALUE = "err";
 
     public static void main(final String[] args) {
-
         IonProcess.ProcessArgs parsedArgs = new IonProcess.ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
         parser.getProperties().withUsageWidth(CONSOLE_WIDTH);
@@ -44,51 +54,54 @@ public final class IonProcess {
             outputFormat = parsedArgs.getOutputFormat();
             outputFileName = parsedArgs.getOutputFile();
             errorReportName = parsedArgs.getErrorReport();
-        } catch (CmdLineException e) {
-            System.err.println(e.getMessage() + "\n");
-            System.err.println("\"Process\" reads the input file(s) and re-write in the format specified by --output.\n");
-            System.err.println("Usage:\n");
-            System.err.println("ion process [--output <file>] [--error-report <file>] [--output-format \n"
-                    + "(text | pretty | binary | events | none)] [--catalog <file>]... [--imports <file>]... \n"
-                    + "[--perf-report <file>] [--filter <filter> | --traverse <file>]  [-] [<input_file>]...\n");
-            System.err.println("Options:\n");
-            parser.printUsage(System.err);
-            System.exit(USAGE_ERROR_EXIT_CODE);
+        } catch (CmdLineException | IllegalArgumentException e) {
+            printHelpTextAndExit(e.getMessage(), parser);
         }
 
-        //Initialize output stream (default value: STDOUT)
-        OutputStream  outputStream = initOutputStream(outputFileName, SYSTEM_OUT_DEFAULT_VALUE);
-        //Initialize error report (default value: STDERR)
-        OutputStream errorReportOutputStream = initOutputStream(errorReportName, SYSTEM_ERR_DEFAULT_VALUE);
+        try (
+                //Initialize output stream (default value: STDOUT)
+                OutputStream outputStream = initOutputStream(outputFileName, SYSTEM_OUT_DEFAULT_VALUE);
+                //Initialize error report (default value: STDERR)
+                OutputStream errorReportOutputStream = initOutputStream(errorReportName, SYSTEM_ERR_DEFAULT_VALUE);
 
-        try (IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
-             IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
+                IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
+                IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
         ) {
-            if (parsedArgs.getOutputFormatName() == "events") {
+            if (parsedArgs.getOutputFormat() == OutputFormat.EVENTS) {
                 processFilesInEvents(ionWriterForOutput, ionWriterForErrorReport, parsedArgs);
             } else {
                 processFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs);
             }
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            System.err.println(e.getMessage());
         }
+    }
+
+    private static void printHelpTextAndExit(String msg, CmdLineParser parser) {
+        System.err.println(msg + "\n");
+        System.err.println("\"Process\" reads the input file(s) and re-write in the format specified by --output.\n");
+        System.err.println("Usage:\n");
+        System.err.println("ion process [--output <file>] [--error-report <file>] [--output-format \n"
+                + "(text | pretty | binary | events | none)] [--catalog <file>]... [--imports <file>]... \n"
+                + "[--perf-report <file>] [--filter <filter> | --traverse <file>]  [-] [<input_file>]...\n");
+        System.err.println("Options:\n");
+        parser.printUsage(System.err);
+        System.exit(USAGE_ERROR_EXIT_CODE);
     }
 
     private static void processFiles(IonWriter ionWriterForOutput,
                                      IonWriter ionWriterForErrorReport,
-                                     IonProcess.ProcessArgs args) {
+                                     IonProcess.ProcessArgs args) throws IOException {
         for (String path : args.getInputFiles()) {
-            try (
-                    InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
-                    IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
-            ) {
-                process(ionWriterForOutput, ionWriterForErrorReport, ionReader);
+            InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
+            IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
 
-                ionWriterForOutput.finish();
-                ionWriterForErrorReport.finish();
-            } catch (IOException e) {
-                System.err.println("Could not process '" + path + "': " + e.getMessage());
-            }
+            process(ionWriterForOutput, ionWriterForErrorReport, ionReader);
+
+            ionWriterForOutput.finish();
+            ionWriterForErrorReport.finish();
         }
     }
 
@@ -100,7 +113,7 @@ public final class IonProcess {
 
     private static void processFilesInEvents(IonWriter ionWriterForOutput,
                                      IonWriter ionWriterForErrorReport,
-                                     IonProcess.ProcessArgs args) throws IOException {
+                                     IonProcess.ProcessArgs args) throws IOException, IllegalStateException {
         ionWriterForOutput.writeSymbol("$ion_event_stream");
 
         for (String path : args.getInputFiles()) {
@@ -116,26 +129,26 @@ public final class IonProcess {
 
     private static void processEvents(IonWriter ionWriterForOutput,
                                      IonWriter ionWriterForErrorReport,
-                                     IonReader ionReader) throws IOException {
+                                     IonReader ionReader) throws IOException, IllegalStateException {
         //curTable is used for checking if the symbol table changes during the processEvent function.
         SymbolTable curTable = ionReader.getSymbolTable();
 
         processEvent(ionWriterForOutput, ionWriterForErrorReport, ionReader, curTable);
         new Event(EventType.STREAM_END, null, null, null,
-                null, null, null, 0 )
+                null, null, null, 0)
                 .writeOutput(ionWriterForOutput, ionWriterForErrorReport);
     }
 
     private static void processEvent(IonWriter ionWriterForOutput,
-                                      IonWriter ionWriterForErrorReport,
-                                      IonReader ionReader,
-                                      SymbolTable curTable) throws IOException {
+                                     IonWriter ionWriterForErrorReport,
+                                     IonReader ionReader,
+                                     SymbolTable curTable) throws IOException, IllegalStateException {
         while (ionReader.next() != null) {
             if (!isSameSymbolTable(ionReader.getSymbolTable(), curTable)) {
                 curTable = ionReader.getSymbolTable();
                 ImportDescriptor imports[] = symbolTableToImports(curTable.getImportedTables());
                 new Event(EventType.SYMBOL_TABLE, null, null, null,
-                        null, null, imports, 0 )
+                        null, null, imports, 0)
                         .writeOutput(ionWriterForOutput, ionWriterForErrorReport);
             }
 
@@ -154,7 +167,7 @@ public final class IonProcess {
 
                 //write a Container_End event and step out
                 new Event(EventType.CONTAINER_END, curType, null, null,
-                         null, null, null, curDepth )
+                        null, null, null, curDepth)
                         .writeOutput(ionWriterForOutput, ionWriterForErrorReport);
                 ionReader.stepOut();
             } else {
@@ -167,27 +180,23 @@ public final class IonProcess {
      *  This function creates a new file for output stream with the fileName, If file name is empty or undefined,
      *  it will create a default output which are System.out or System.err.
      */
-    private static BufferedOutputStream initOutputStream(String fileName, String defaultValue) {
+    private static BufferedOutputStream initOutputStream(String fileName, String defaultValue) throws IOException {
         BufferedOutputStream outputStream = null;
-        try {
-            if (fileName != null && fileName.length() != 0) {
-                File myFile = new File(fileName);
-                FileOutputStream out = new FileOutputStream(myFile);
-                outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
-            } else {
-                switch (defaultValue){
-                    case SYSTEM_OUT_DEFAULT_VALUE:
-                        outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE);
-                        break;
-                    case SYSTEM_ERR_DEFAULT_VALUE:
-                        outputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
-                        break;
-                    default:
-                        break;
-                }
+        if (fileName != null && fileName.length() != 0) {
+            File myFile = new File(fileName);
+            FileOutputStream out = new FileOutputStream(myFile);
+            outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
+        } else {
+            switch (defaultValue) {
+                case SYSTEM_OUT_DEFAULT_VALUE:
+                    outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE);
+                    break;
+                case SYSTEM_ERR_DEFAULT_VALUE:
+                    outputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
+                    break;
+                default:
+                    break;
             }
-        } catch (IOException e ) {
-            System.err.println("Initialize Output Stream Error:" + e.getMessage());
         }
         return outputStream;
     }
@@ -229,13 +238,13 @@ public final class IonProcess {
         if (x.isSystemTable() && y.isSystemTable()) {
             return (x.getVersion() == y.getVersion());
         } else if (x.isSharedTable() && y.isSharedTable()) {
-            return (x.getName() == y.getName() & (x.getVersion()==y.getVersion()));
+            return (x.getName() == y.getName() & (x.getVersion() == y.getVersion()));
         } else if (x.isLocalTable() && y.isLocalTable()) {
             SymbolTable[] xTable = x.getImportedTables();
             SymbolTable[] yTable = y.getImportedTables();
             //compare imports
             if (xTable.length == yTable.length) {
-                for (int i=0; i < xTable.length; i++) {
+                for (int i = 0; i < xTable.length; i++) {
                     if (!isSameSymbolTable(xTable[i], yTable[i]))  return false;
                 }
             } else {
@@ -243,7 +252,7 @@ public final class IonProcess {
             }
             //compare symbols
             Iterator<String> xIterator = x.iterateDeclaredSymbolNames();
-            Iterator<String> yIterator = x.iterateDeclaredSymbolNames();
+            Iterator<String> yIterator = y.iterateDeclaredSymbolNames();
             while (xIterator.hasNext() && yIterator.hasNext()) {
                 if (!xIterator.next().equals(yIterator.next())) {
                     return false;
@@ -261,7 +270,7 @@ public final class IonProcess {
     private static ImportDescriptor[] symbolTableToImports(SymbolTable[] tables) {
         int size = tables.length;
         ImportDescriptor imports[] = new ImportDescriptor[size];
-        for (int i=0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             ImportDescriptor table = new ImportDescriptor(tables[i]);
             imports[i] = table;
         }
@@ -269,7 +278,7 @@ public final class IonProcess {
     }
 
     static class ProcessArgs {
-        private static final String DEFAULT_FORMAT_VALUE = OutputFormat.PRETTY.getName();
+        private static final String DEFAULT_FORMAT_VALUE = OutputFormat.PRETTY.toString();
 
         @Option(name = "--output",
                 aliases = {"-o"},
@@ -299,8 +308,8 @@ public final class IonProcess {
             return outputFormatName;
         }
 
-        public OutputFormat getOutputFormat() throws CmdLineException {
-            return OutputFormat.nameToOutputFormat(outputFormatName);
+        public OutputFormat getOutputFormat() throws IllegalArgumentException {
+            return OutputFormat.valueOf(outputFormatName.toUpperCase());
         }
 
         public List<String> getInputFiles() {

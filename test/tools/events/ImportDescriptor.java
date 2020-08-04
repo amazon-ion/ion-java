@@ -17,11 +17,11 @@ public class ImportDescriptor {
         return version;
     }
 
-    final int getMax_id() {
+    final int getMaxId() {
         return maxId;
     }
 
-    final String getImport_name() {
+    final String getImportName() {
         return importName;
     }
 }
