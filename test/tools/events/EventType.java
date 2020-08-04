@@ -6,5 +6,4 @@ public enum EventType {
     SCALAR,
     SYMBOL_TABLE,
     STREAM_END,
-    UNKNOWN
 }

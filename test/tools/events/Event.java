@@ -7,76 +7,78 @@ import com.amazon.ion.SymbolToken;
 import java.io.IOException;
 
 public class Event {
-    public EventType eventType;
-    public IonType ionType;
-    public SymbolToken field_name;
-    public SymbolToken[] annotations;
-    public String value_text;
-    public byte[] value_binary;
-    public ImportDescriptor[] imports;
-    public int depth;
+    private final EventType eventType;
+    private final IonType ionType;
+    private final SymbolToken fieldName;
+    private final SymbolToken[] annotations;
+    private final String valueText;
+    private final byte[] valueBinary;
+    private final ImportDescriptor[] imports;
+    private final int depth;
 
-    public Event(EventType eventType, IonType ionType, SymbolToken field_name, SymbolToken[] annotations,
-          String value_text, byte[] value_binary, ImportDescriptor[] imports, int depth) {
+    public Event(EventType eventType, IonType ionType, SymbolToken fieldName, SymbolToken[] annotations,
+                 String valueText, byte[] valueBinary, ImportDescriptor[] imports, int depth) {
         this.eventType = eventType;
         this.ionType = ionType;
-        this.field_name = field_name;
+        this.fieldName = fieldName;
         this.annotations = annotations;
-        this.value_text = value_text;
-        this.value_binary = value_binary;
+        this.valueText = valueText;
+        this.valueBinary = valueBinary;
         this.imports = imports;
         this.depth = depth;
     }
 
     public void writeOutput(IonWriter ionWriterForOutput, IonWriter ionWriterForErrorReport) throws IOException {
         ionWriterForOutput.stepIn(IonType.STRUCT);
-        if(this.eventType != null){
+        if (this.eventType != null) {
             ionWriterForOutput.setFieldName("event_type");
-            ionWriterForOutput.writeString(this.eventType.toString());
+            ionWriterForOutput.writeSymbol(this.eventType.toString());
         }
-        if(this.ionType != null){
+        if (this.ionType != null) {
             ionWriterForOutput.setFieldName("ion_type");
-            ionWriterForOutput.writeString(this.ionType.toString());
+            ionWriterForOutput.writeSymbol(this.ionType.toString());
         }
-        if(this.field_name != null) {
+        if (this.fieldName != null) {
             ionWriterForOutput.setFieldName("field_name");
             ionWriterForOutput.stepIn(IonType.STRUCT);
             ionWriterForOutput.setFieldName("text");
-            ionWriterForOutput.writeString(this.field_name.getText());
+            ionWriterForOutput.writeString(this.fieldName.getText());
             ionWriterForOutput.stepOut();
         }
-        if(this.annotations != null && this.annotations.length > 0) {
+        if (this.annotations != null && this.annotations.length > 0) {
             ionWriterForOutput.setFieldName("annotations");
             ionWriterForOutput.stepIn(IonType.LIST);
-            for(int i=0; i<this.annotations.length; i++) {
+            for (int i=0; i < this.annotations.length; i++) {
                 ionWriterForOutput.stepIn(IonType.STRUCT);
                 ionWriterForOutput.setFieldName("text");
                 String text = this.annotations[i].getText();
-                ionWriterForOutput.writeString(text);
-                if(text == null) {
+                if (text == null) {
+                    ionWriterForOutput.writeNull();
                     ionWriterForOutput.setFieldName("import_location");
-                    ionWriterForOutput.writeString(null);
+                    ionWriterForOutput.writeNull();
+                } else {
+                    ionWriterForOutput.writeString(text);
                 }
                 ionWriterForOutput.stepOut();
             }
             ionWriterForOutput.stepOut();
         }
-        if(this.value_text != null) {
+        if (this.valueText != null) {
             ionWriterForOutput.setFieldName("value_text");
-            ionWriterForOutput.writeString(this.value_text);
+            ionWriterForOutput.writeString(this.valueText);
         }
-        if(this.value_binary != null && this.value_binary.length>0) {
+        if (this.valueBinary != null && this.valueBinary.length > 0) {
             ionWriterForOutput.setFieldName("value_binary");
             ionWriterForOutput.stepIn(IonType.LIST);
-            for(int i=0; i<this.value_binary.length; i++){
-                ionWriterForOutput.writeInt(this.value_binary[i] & 0xff);
+            for (int i = 0; i < this.valueBinary.length; i++) {
+                ionWriterForOutput.writeInt(this.valueBinary[i] & 0xff);
             }
             ionWriterForOutput.stepOut();
         }
-        if(this.imports != null && this.imports.length > 0) {
+        if (this.imports != null && this.imports.length > 0) {
             ionWriterForOutput.setFieldName("imports");
             ionWriterForOutput.stepIn(IonType.LIST);
-            for(int i=0; i<this.imports.length; i++){
+            for (int i=0; i < this.imports.length; i++) {
                 ionWriterForOutput.stepIn(IonType.STRUCT);
                 ionWriterForOutput.setFieldName("import_name");
                 ionWriterForOutput.writeString(this.imports[i].getImport_name());

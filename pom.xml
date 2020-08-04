@@ -88,11 +88,6 @@
       <artifactId>args4j</artifactId>
       <version>2.33</version>
     </dependency>
-    <dependency>
-      <groupId>com.github.luben</groupId>
-      <artifactId>zstd-jni</artifactId>
-      <version>1.4.5-5</version>
-    </dependency>
   </dependencies>
 
   <build>
