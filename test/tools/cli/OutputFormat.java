@@ -42,6 +42,12 @@ public enum OutputFormat {
         public IonWriter createIonWriter(OutputStream outputStream) {
             return IonTextWriterBuilder.pretty().build(outputStream);
         }
+    },
+    NONE {
+        @Override
+        public IonWriter createIonWriter(OutputStream outputStream) {
+            return null;
+        }
     };
 
     abstract IonWriter createIonWriter(OutputStream outputStream);
