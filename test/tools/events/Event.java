@@ -4,6 +4,8 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
+import tools.cli.IonProcess;
+import tools.cli.IonProcess.CurrentInfo;
 import tools.errorReport.ErrorDescription;
 import tools.errorReport.ErrorType;
 
@@ -114,5 +116,14 @@ public class Event {
 
         //event index + 1 if we write OutputStream successfully.
         return eventIndex + 1;
+    }
+
+    public void writeOutput(IonWriter ionWriterForOutput,
+                           IonWriter ionWriterForErrorReport,
+                           CurrentInfo currentInfo) throws IOException {
+        int updatedEventIndex = writeOutput(ionWriterForOutput, ionWriterForErrorReport,
+                currentInfo.getFileName(),currentInfo.getEventIndex());
+        //event index + 1 if we write OutputStream successfully.
+        currentInfo.setEventIndex(updatedEventIndex);
     }
 }
