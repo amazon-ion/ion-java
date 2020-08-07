@@ -48,7 +48,10 @@ public final class IonProcess {
     private static String CURRENT_FILE = null;
     private static int EVENT_INDEX = 1;
 
-    public static void main(final String[] args) {
+    public static void main(String[] args) {
+
+        String[] b = {"-f","events","out.10n"};
+        args = b;
 
         IonProcess.ProcessArgs parsedArgs = new IonProcess.ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -96,9 +99,11 @@ public final class IonProcess {
                 InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
                 IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
 
+
                 if (args.getOutputFormat() == OutputFormat.EVENTS) {
                     processEvents(ionWriterForOutput, ionWriterForErrorReport, ionReader);
                 } else {
+                    if(isEventStream(ionReader))
                     process(ionWriterForOutput, ionWriterForErrorReport, ionReader);
                 }
 
@@ -293,6 +298,11 @@ public final class IonProcess {
         return new Event(eventType, ionType, fieldName, annotations, valueText, valueBinary, imports, depth);
     }
 
+    /**
+     * this function converts a Event struct to ion field
+     */
+    private static void EventToIonStream(IonReader ionReader){}
+
     private static boolean isSameSymbolTable(SymbolTable x, SymbolTable y) {
         if (x.isSystemTable() && y.isSystemTable()) {
             return (x.getVersion() == y.getVersion());
@@ -355,6 +365,11 @@ public final class IonProcess {
         parser.printUsage(System.err);
         System.exit(USAGE_ERROR_EXIT_CODE);
     }
+
+    private static boolean isEventStream(IonReader ionReader) {
+        return false;
+    }
+
 
     static class ProcessArgs {
         private static final String DEFAULT_FORMAT_VALUE = OutputFormat.PRETTY.toString();
