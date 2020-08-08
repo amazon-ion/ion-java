@@ -47,7 +47,7 @@ public final class IonProcess {
 
     public static void main(String[] args) {
 
-        String[] b = {"-f","pretty","embedded"};
+        String[] b = {"-f","events","embedded","-o","123"};
         args = b;
         IonProcess.ProcessArgs parsedArgs = new IonProcess.ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -135,7 +135,7 @@ public final class IonProcess {
                     try (
                             IonReader tempIonReader = IonReaderBuilder.standard().build(stream);
                             ByteArrayOutputStream text = new ByteArrayOutputStream();
-                            IonWriter tempIonWriter =  IonTextWriterBuilder.standard().build(text);
+                            IonWriter tempIonWriter =  args.getOutputFormat().createIonWriter(text);
                             ) {
                         while (tempIonReader.next() != null) {
                             tempIonWriter.writeValue(tempIonReader);
@@ -192,23 +192,20 @@ public final class IonProcess {
                 ionStreamToEvent(EventType.CONTAINER_START, ionReader)
                         .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
                 ionReader.stepIn();
-
                 while (ionReader.next() != null) {
                     String stream = ionReader.stringValue();
-                    try(IonReader tempIonReader = IonReaderBuilder.standard().build(stream)){
-                        while (tempIonReader.next() != null) {
-                            ionStreamToEvent(EventType.SCALAR, tempIonReader)
-                                    .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
-                        }
+                    try (IonReader tempIonReader = IonReaderBuilder.standard().build(stream)) {
+                        do {
+                            processEvent(ionWriterForOutput, ionWriterForErrorReport, tempIonReader,
+                                    curTable, currentInfo);
+                        } while (tempIonReader.next() != null);
                     } catch (IOException e) {
                         System.err.println(e.getMessage());
                     }
-
                     new Event(EventType.STREAM_END, null, null, null,
                             null, null, null, 0)
                             .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
                 }
-
                 //write a Container_End event and step out
                 new Event(EventType.CONTAINER_END, curType, null, null,
                         null, null, null, curDepth)
@@ -263,6 +260,10 @@ public final class IonProcess {
         return outputStream;
     }
 
+    private static void processEventEmbedded() {
+
+    }
+
     /**
      * this function is only used for CONTAINER_START and SCALAR eventType since other types don't need initial data.
      */
@@ -297,7 +298,10 @@ public final class IonProcess {
     }
 
     private static boolean isSameSymbolTable(SymbolTable x, SymbolTable y) {
-        if (x.isSystemTable() && y.isSystemTable()) {
+        if (x == null && y == null) return true;
+        else if (x != null && y == null) return false;
+        else if (x == null && y != null) return false;
+        else if (x.isSystemTable() && y.isSystemTable()) {
             return (x.getVersion() == y.getVersion());
         } else if (x.isSharedTable() && y.isSharedTable()) {
             return (x.getName() == y.getName() & (x.getVersion() == y.getVersion()));
@@ -317,7 +321,9 @@ public final class IonProcess {
     }
 
     private static ImportDescriptor[] symbolTableToImports(SymbolTable[] tables) {
+        if(tables == null || tables.length == 0) return null;
         int size = tables.length;
+
         ImportDescriptor imports[] = new ImportDescriptor[size];
         for (int i = 0; i < size; i++) {
             ImportDescriptor table = new ImportDescriptor(tables[i]);
@@ -328,6 +334,7 @@ public final class IonProcess {
 
     private static boolean isEmbeddedStream(IonReader ionReader) {
         String[] annotations = ionReader.getTypeAnnotations();
+
 
         return (ionReader.getType() == IonType.SEXP || ionReader.getType() == IonType.LIST)
                 && ionReader.getDepth() == 0
