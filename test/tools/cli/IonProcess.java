@@ -47,7 +47,7 @@ public final class IonProcess {
 
     public static void main(String[] args) {
 
-        String[] b = {"-f","events","test1", "bad","test1"};
+        String[] b = {"-f","pretty","embedded"};
         args = b;
         IonProcess.ProcessArgs parsedArgs = new IonProcess.ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -70,10 +70,9 @@ public final class IonProcess {
                 OutputStream outputStream = initOutputStream(outputFileName, SYSTEM_OUT_DEFAULT_VALUE);
                 //Initialize error report (default value: STDERR)
                 OutputStream errorReportOutputStream = initOutputStream(errorReportName, SYSTEM_ERR_DEFAULT_VALUE);
-
                 IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
-        ) {
+                ) {
             processFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs);
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
@@ -84,7 +83,7 @@ public final class IonProcess {
 
     private static void processFiles(IonWriter ionWriterForOutput,
                                      IonWriter ionWriterForErrorReport,
-                                     IonProcess.ProcessArgs args) throws IOException {
+                                     ProcessArgs args) throws IOException {
         if (args.getOutputFormat() == OutputFormat.EVENTS) {
             ionWriterForOutput.writeSymbol("$ion_event_stream");
         }
@@ -92,15 +91,17 @@ public final class IonProcess {
         CurrentInfo currentInfo = new CurrentInfo(null, 1);
 
         for (String path : args.getInputFiles()) {
-            try {
+            try (
+                    InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
+                    IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
+                    ) {
+
                 currentInfo.setFileName(path);
-                InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
-                IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
 
                 if (args.getOutputFormat() == OutputFormat.EVENTS) {
-                    processEvents(ionWriterForOutput, ionWriterForErrorReport, ionReader, currentInfo);
+                    processEvents(ionWriterForOutput, ionWriterForErrorReport, ionReader, currentInfo, args);
                 } else {
-                    process(ionWriterForOutput, ionWriterForErrorReport, ionReader);
+                    process(ionWriterForOutput, ionWriterForErrorReport, ionReader, args);
                 }
 
                 ionWriterForOutput.finish();
@@ -121,7 +122,8 @@ public final class IonProcess {
 
     private static void process(IonWriter ionWriterForOutput,
                                 IonWriter ionWriterForErrorReport,
-                                IonReader ionReader) throws IOException {
+                                IonReader ionReader,
+                                ProcessArgs args) throws IOException {
         while (ionReader.next() != null) {
             if (isEmbeddedStream(ionReader)) {
                 ionReader.stepIn();
@@ -129,21 +131,21 @@ public final class IonProcess {
                 ionWriterForOutput.stepIn(IonType.SEXP);
 
                 while (ionReader.next() != null) {
-                    //create a temporary ionReader and ionWriter
                     String stream = ionReader.stringValue();
-                    IonReader tempIonReader = IonReaderBuilder.standard().build(stream);
-                    ByteArrayOutputStream text = new ByteArrayOutputStream();
-                    IonWriter tempIonWriter = IonTextWriterBuilder.standard().build(text);
-
-                    //read each string
-                    while (tempIonReader.next() != null) {
-                        tempIonWriter.writeValue(tempIonReader);
+                    try (
+                            IonReader tempIonReader = IonReaderBuilder.standard().build(stream);
+                            ByteArrayOutputStream text = new ByteArrayOutputStream();
+                            IonWriter tempIonWriter =  IonTextWriterBuilder.standard().build(text);
+                            ) {
+                        while (tempIonReader.next() != null) {
+                            tempIonWriter.writeValue(tempIonReader);
+                        }
+                        ionWriterForOutput.writeString(text.toString("utf-8"));
+                        tempIonWriter.finish();
+                    } catch (IOException e) {
+                        System.err.println(e.getMessage());
                     }
 
-                    //close ionReader and ionWriter
-                    ionWriterForOutput.writeString(text.toString());
-                    tempIonWriter.finish();
-                    tempIonReader.close();
                 }
                 ionWriterForOutput.stepOut();
                 ionReader.stepOut();
@@ -156,7 +158,8 @@ public final class IonProcess {
     private static void processEvents(IonWriter ionWriterForOutput,
                                       IonWriter ionWriterForErrorReport,
                                       IonReader ionReader,
-                                      CurrentInfo currentInfo) throws IOException {
+                                      CurrentInfo currentInfo,
+                                      ProcessArgs args) throws IOException {
         //curTable is used for checking if the symbol table changes during the processEvent function.
         SymbolTable curTable = ionReader.getSymbolTable();
 
@@ -190,16 +193,16 @@ public final class IonProcess {
                         .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
                 ionReader.stepIn();
 
-                //for each string in embedded stream
                 while (ionReader.next() != null) {
                     String stream = ionReader.stringValue();
-                    IonReader tempIonReader = IonReaderBuilder.standard().build(stream);
-
-                    while (tempIonReader.next() != null) {
-                        ionStreamToEvent(EventType.SCALAR, tempIonReader)
-                                .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
+                    try(IonReader tempIonReader = IonReaderBuilder.standard().build(stream)){
+                        while (tempIonReader.next() != null) {
+                            ionStreamToEvent(EventType.SCALAR, tempIonReader)
+                                    .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
+                        }
+                    } catch (IOException e) {
+                        System.err.println(e.getMessage());
                     }
-                    tempIonReader.close();
 
                     new Event(EventType.STREAM_END, null, null, null,
                             null, null, null, 0)
@@ -279,7 +282,7 @@ public final class IonProcess {
             IonWriter textWriter = IonTextWriterBuilder.standard().build(textOut);
             textWriter.writeValue(ionReader);
             textWriter.finish();
-            valueText = textOut.toString();
+            valueText = textOut.toString("utf-8");
             //write binary
             ByteArrayOutputStream binaryOut = new ByteArrayOutputStream();
             IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOut);
@@ -324,11 +327,12 @@ public final class IonProcess {
     }
 
     private static boolean isEmbeddedStream(IonReader ionReader) {
+        String[] annotations = ionReader.getTypeAnnotations();
+
         return (ionReader.getType() == IonType.SEXP || ionReader.getType() == IonType.LIST)
                 && ionReader.getDepth() == 0
-                && ionReader.getTypeAnnotations() != null
-                && ionReader.getTypeAnnotations().length > 0
-                && ionReader.getTypeAnnotations()[0].equals(EMBEDDED_STREAM_ANNOTATION);
+                && annotations.length > 0
+                && annotations[0].equals(EMBEDDED_STREAM_ANNOTATION);
     }
 
     private static void printHelpTextAndExit(String msg, CmdLineParser parser) {

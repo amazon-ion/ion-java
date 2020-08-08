@@ -123,7 +123,7 @@ public class Event {
                            CurrentInfo currentInfo) throws IOException {
         int updatedEventIndex = writeOutput(ionWriterForOutput, ionWriterForErrorReport,
                 currentInfo.getFileName(),currentInfo.getEventIndex());
-        //event index + 1 if we write OutputStream successfully.
+
         currentInfo.setEventIndex(updatedEventIndex);
     }
 }
