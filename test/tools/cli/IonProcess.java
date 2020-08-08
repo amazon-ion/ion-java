@@ -47,7 +47,7 @@ public final class IonProcess {
 
     public static void main(String[] args) {
 
-        String[] b = {"-f","events","embedded","-o","123"};
+        String[] b = {"-f","events","embedded"};
         args = b;
         IonProcess.ProcessArgs parsedArgs = new IonProcess.ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -297,17 +297,21 @@ public final class IonProcess {
         return new Event(eventType, ionType, fieldName, annotations, valueText, valueBinary, imports, depth);
     }
 
-    private static boolean isSameSymbolTable(SymbolTable x, SymbolTable y) {
-        if (x == null && y == null) return true;
-        else if (x != null && y == null) return false;
-        else if (x == null && y != null) return false;
-        else if (x.isSystemTable() && y.isSystemTable()) {
-            return (x.getVersion() == y.getVersion());
-        } else if (x.isSharedTable() && y.isSharedTable()) {
-            return (x.getName() == y.getName() & (x.getVersion() == y.getVersion()));
-        } else if (x.isLocalTable() && y.isLocalTable()) {
-            SymbolTable[] xTable = x.getImportedTables();
-            SymbolTable[] yTable = y.getImportedTables();
+    private static boolean isSameSymbolTable(SymbolTable newTable, SymbolTable curTable) {
+        if (newTable == null && curTable == null) return true;
+        if (newTable != null && curTable == null) return false;
+        if (newTable == null && curTable != null) return false;
+
+        //if a local table just appended symbols, we treat them as same.
+        if (newTable.isLocalTable() && newTable.getImportedTables().length == 0) {
+            return true;
+        } else if (newTable.isSystemTable() && curTable.isSystemTable()) {
+            return (newTable.getVersion() == curTable.getVersion());
+        } else if (newTable.isSharedTable() && curTable.isSharedTable()) {
+            return ((newTable.getName() == curTable.getName()) & (newTable.getVersion() == curTable.getVersion()));
+        } else if (newTable.isLocalTable() && curTable.isLocalTable()) {
+            SymbolTable[] xTable = newTable.getImportedTables();
+            SymbolTable[] yTable = curTable.getImportedTables();
             //compare imports
             if (xTable.length == yTable.length) {
                 for (int i = 0; i < xTable.length; i++) {
