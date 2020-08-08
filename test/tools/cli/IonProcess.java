@@ -46,30 +46,26 @@ public final class IonProcess {
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
 
     public static void main(String[] args) {
-
-        String[] b = {"-f","events","embedded"};
+        String[] b = {"-f","none","bad"};
         args = b;
-        IonProcess.ProcessArgs parsedArgs = new IonProcess.ProcessArgs();
+
+        ProcessArgs parsedArgs = new ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
         parser.getProperties().withUsageWidth(CONSOLE_WIDTH);
         OutputFormat outputFormat = null;
-        String outputFileName = null;
-        String errorReportName = null;
 
         try {
             parser.parseArgument(args);
             outputFormat = parsedArgs.getOutputFormat();
-            outputFileName = parsedArgs.getOutputFile();
-            errorReportName = parsedArgs.getErrorReport();
         } catch (CmdLineException | IllegalArgumentException e) {
             printHelpTextAndExit(e.getMessage(), parser);
         }
 
         try (
                 //Initialize output stream (default value: STDOUT)
-                OutputStream outputStream = initOutputStream(outputFileName, SYSTEM_OUT_DEFAULT_VALUE);
+                OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
                 //Initialize error report (default value: STDERR)
-                OutputStream errorReportOutputStream = initOutputStream(errorReportName, SYSTEM_ERR_DEFAULT_VALUE);
+                OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
                 IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
                 ) {
@@ -78,6 +74,10 @@ public final class IonProcess {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
         } catch (IllegalStateException e) {
             System.err.println(e.getMessage());
+        } catch (NullPointerException e) {
+            System.err.println(e.getMessage());
+        } catch (Exception e) {
+            System.out.println("2");
         }
     }
 
@@ -111,6 +111,7 @@ public final class IonProcess {
                     new ErrorDescription(ErrorType.READ, e.getMessage(), currentInfo.getFileName(), currentInfo.getEventIndex())
                             .writeOutput(ionWriterForErrorReport);
                 } else {
+                    OutputStream errorReportOutputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
                     new ErrorDescription(ErrorType.READ, e.getMessage(), currentInfo.getFileName())
                             .writeOutput(ionWriterForErrorReport);
                 }
@@ -239,29 +240,38 @@ public final class IonProcess {
     /**
      *  This function creates a new file for output stream with the fileName, If file name is empty or undefined,
      *  it will create a default output which is System.out or System.err.
+     *
+     *  this function never return null
      */
-    private static BufferedOutputStream initOutputStream(String fileName, String defaultValue) throws IOException {
+    private static BufferedOutputStream initOutputStream(ProcessArgs args, String defaultValue) throws IOException {
         BufferedOutputStream outputStream = null;
-        if (fileName != null && fileName.length() != 0) {
-            File myFile = new File(fileName);
-            FileOutputStream out = new FileOutputStream(myFile);
-            outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
-        } else {
-            switch (defaultValue) {
-                case SYSTEM_OUT_DEFAULT_VALUE:
-                    outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE);
-                    break;
-                case SYSTEM_ERR_DEFAULT_VALUE:
+        switch (defaultValue) {
+            case SYSTEM_OUT_DEFAULT_VALUE:
+                if (args.getOutputFormat() == OutputFormat.NONE) {
+                    ByteArrayOutputStream trivialOut = new ByteArrayOutputStream();
+                    outputStream = new BufferedOutputStream(trivialOut, BUFFER_SIZE);
+                } else {
+                    String outputFile = args.getOutputFile();
+                    if (outputFile != null && outputFile.length() != 0) {
+                        File myFile = new File(outputFile);
+                        FileOutputStream out = new FileOutputStream(myFile);
+                        outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
+                    } else {
+                        outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE);
+                    }
+                }
+                break;
+            case SYSTEM_ERR_DEFAULT_VALUE:
+                String errorReport = args.getErrorReport();
+                if (errorReport != null && errorReport.length() != 0) {
+                    File myFile = new File(errorReport);
+                    FileOutputStream out = new FileOutputStream(myFile);
+                    outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
+                } else {
                     outputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
-                    break;
-                default:
-            }
+                }
         }
         return outputStream;
-    }
-
-    private static void processEventEmbedded() {
-
     }
 
     /**
@@ -338,8 +348,6 @@ public final class IonProcess {
 
     private static boolean isEmbeddedStream(IonReader ionReader) {
         String[] annotations = ionReader.getTypeAnnotations();
-
-
         return (ionReader.getType() == IonType.SEXP || ionReader.getType() == IonType.LIST)
                 && ionReader.getDepth() == 0
                 && annotations.length > 0
