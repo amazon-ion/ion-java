@@ -45,10 +45,7 @@ public final class IonProcess {
     private static final String SYSTEM_ERR_DEFAULT_VALUE = "err";
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
 
-    public static void main(String[] args) {
-        String[] b = {"-f","events","test1","bad"};
-        args = b;
-
+    public static void main(final String[] args) {
         ProcessArgs parsedArgs = new ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
         parser.getProperties().withUsageWidth(CONSOLE_WIDTH);
@@ -81,7 +78,6 @@ public final class IonProcess {
         if (args.getOutputFormat() == OutputFormat.EVENTS) {
             ionWriterForOutput.writeSymbol("$ion_event_stream");
         }
-
         CurrentInfo currentInfo = new CurrentInfo(null, 1);
 
         for (String path : args.getInputFiles()) {
@@ -269,6 +265,7 @@ public final class IonProcess {
                 } else {
                     outputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
                 }
+                break;
         }
         return outputStream;
     }
@@ -350,8 +347,9 @@ public final class IonProcess {
     }
 
     private static boolean isEmbeddedStream(IonReader ionReader) {
+        IonType ionType = ionReader.getType();
         String[] annotations = ionReader.getTypeAnnotations();
-        return (ionReader.getType() == IonType.SEXP || ionReader.getType() == IonType.LIST)
+        return (ionType == IonType.SEXP || ionType == IonType.LIST)
                 && ionReader.getDepth() == 0
                 && annotations.length > 0
                 && annotations[0].equals(EMBEDDED_STREAM_ANNOTATION);
@@ -394,7 +392,6 @@ public final class IonProcess {
             this.eventIndex = index;
         }
     }
-
 
     static class ProcessArgs {
         private static final String DEFAULT_FORMAT_VALUE = OutputFormat.PRETTY.toString();

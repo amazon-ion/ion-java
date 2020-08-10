@@ -12,7 +12,6 @@ import java.io.IOException;
 
 public class Event {
     private static final int IO_ERROR_EXIT_CODE = 2;
-
     private final EventType eventType;
     private final IonType ionType;
     private final SymbolToken fieldName;
