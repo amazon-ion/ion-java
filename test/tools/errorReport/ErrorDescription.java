@@ -39,12 +39,10 @@ public class ErrorDescription {
             ionWriterForErrorReport.setFieldName("location");
             ionWriterForErrorReport.writeString(this.location);
         }
-
-        if(this.eventIndex != -1) {
+        if (this.eventIndex != -1) {
             ionWriterForErrorReport.setFieldName("event_index");
             ionWriterForErrorReport.writeInt(this.eventIndex);
         }
-
         ionWriterForErrorReport.stepOut();
     }
 }

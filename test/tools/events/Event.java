@@ -1,10 +1,13 @@
 package tools.events;
 
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
-import tools.cli.IonProcess.CurrentInfo;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonWriter;
+
+import com.amazon.ion.system.IonReaderBuilder;
+import tools.cli.CurrentInfo;
 import tools.errorReport.ErrorDescription;
 import tools.errorReport.ErrorType;
 
@@ -12,14 +15,26 @@ import java.io.IOException;
 
 public class Event {
     private static final int IO_ERROR_EXIT_CODE = 2;
-    private final EventType eventType;
-    private final IonType ionType;
-    private final SymbolToken fieldName;
-    private final SymbolToken[] annotations;
-    private final String valueText;
-    private final byte[] valueBinary;
-    private final ImportDescriptor[] imports;
-    private final int depth;
+
+    private EventType eventType;
+    private IonType ionType;
+    private SymbolToken fieldName;
+    private SymbolToken[] annotations;
+    private String valueText;
+    private byte[] valueBinary;
+    private ImportDescriptor[] imports;
+    private int depth;
+
+    public Event() {
+        this.eventType = null;
+        this.ionType = null;
+        this.fieldName = null;
+        this.annotations = null;
+        this.valueText = null;
+        this.valueBinary = null;
+        this.imports = null;
+        this.depth = -1;
+    }
 
     public Event(EventType eventType, IonType ionType, SymbolToken fieldName, SymbolToken[] annotations,
                  String valueText, byte[] valueBinary, ImportDescriptor[] imports, int depth) {
@@ -33,6 +48,89 @@ public class Event {
         this.depth = depth;
     }
 
+    public void validate() throws IonException, IOException {
+        if (this.eventType == null) throw new IonException("event_type can't be null");
+        else if (this.ionType == null && this.eventType != EventType.STREAM_END)
+            throw new IonException("ion_type can't be null");
+
+        EventType eventType = this.eventType;
+        switch (eventType) {
+            case CONTAINER_START:
+                if (!IonType.isContainer(this.ionType)) {
+                    throw new IonException("Invalid event_type: not a container");
+                }
+                break;
+            case SCALAR:
+                String textValue = this.getValueText();
+                byte[] binaryValue = this.getValueBinary();
+                if (textValue == null && binaryValue == null) {
+                } else if (textValue != null && binaryValue != null) {
+                    try (
+                            IonReader ionReaderX = IonReaderBuilder.standard().build(textValue);
+                            IonReader ionReaderY = IonReaderBuilder.standard().build(binaryValue);
+                    ) {
+                        ionReaderX.next();
+                        ionReaderY.next();
+
+                        if (!validateTwoIonReaderValue(ionReaderX, ionReaderY)) {
+                            throw new IonException("invalid Event: Text value and Binary value are different");
+                        }
+                    }
+                } else {
+                    throw new IonException("invalid Event: Text value and Binary value are different");
+                }
+                break;
+            case SYMBOL_TABLE:
+            case CONTAINER_END:
+            case STREAM_END:
+                break;
+            default:
+                throw new IonException("Invalid event_type");
+        }
+    }
+
+    public boolean validateTwoIonReaderValue(IonReader x, IonReader y) {
+        if (x.getType() != y.getType()) return false;
+        IonType type = x.getType();
+
+        switch (type) {
+            case NULL:
+                return true;
+            case BOOL:
+                return x.booleanValue() == y.booleanValue();
+            case INT:
+                return x.intValue() == y.intValue();
+            case FLOAT:
+            case DECIMAL:
+                return x.doubleValue() == y.doubleValue();
+            case TIMESTAMP:
+                return x.timestampValue().equals(y.timestampValue());
+            case SYMBOL:
+                SymbolToken xSymbol = x.symbolValue();
+                SymbolToken ySymbol = y.symbolValue();
+                return xSymbol.getText().equals(ySymbol.getText());
+            case STRING:
+                return x.stringValue().equals(y.stringValue());
+            case CLOB:
+            case BLOB:
+                byte[] xByte = x.newBytes();
+                byte[] yByte = y.newBytes();
+                int xLength = xByte.length;
+                int yLength = yByte.length;
+
+                if (xLength == yLength) {
+                    for (int i = 0 ; i < xLength; i++) {
+                        if (xByte[i] != yByte[i]) return false;
+                    }
+                } else {
+                    return false;
+                }
+                return true;
+            default:
+                throw new IonException("invalid ion_type " + ionType.toString());
+        }
+    }
+
     public void writeOutput(IonWriter ionWriterForOutput,
                             IonWriter ionWriterForErrorReport,
                             CurrentInfo currentInfo) throws IOException {
@@ -43,7 +141,7 @@ public class Event {
     }
 
     /**
-     * write Event structure to Ion Stream and return the updated eventIndex.
+     * write Event structure to Event Stream and return the updated eventIndex.
      */
     public int writeOutput(IonWriter ionWriterForOutput,
                            IonWriter ionWriterForErrorReport,
@@ -63,16 +161,22 @@ public class Event {
                 ionWriterForOutput.setFieldName("field_name");
                 ionWriterForOutput.stepIn(IonType.STRUCT);
                 ionWriterForOutput.setFieldName("text");
-                ionWriterForOutput.writeString(this.fieldName.getText());
+                if (this.fieldName.getText() == null) {
+                    ionWriterForOutput.writeNull();
+                } else {
+                    ionWriterForOutput.writeString(this.fieldName.getText());
+                }
+                ionWriterForOutput.setFieldName("import_location");
+                ionWriterForOutput.writeNull();
                 ionWriterForOutput.stepOut();
             }
             if (this.annotations != null && this.annotations.length > 0) {
                 ionWriterForOutput.setFieldName("annotations");
                 ionWriterForOutput.stepIn(IonType.LIST);
-                for (int i = 0; i < this.annotations.length; i++) {
+                for (SymbolToken annotation : this.annotations) {
                     ionWriterForOutput.stepIn(IonType.STRUCT);
                     ionWriterForOutput.setFieldName("text");
-                    String text = this.annotations[i].getText();
+                    String text = annotation.getText();
                     if (text == null) {
                         ionWriterForOutput.writeNull();
                         ionWriterForOutput.setFieldName("import_location");
@@ -85,14 +189,14 @@ public class Event {
                 ionWriterForOutput.stepOut();
             }
 
-            if(this.valueText != null && this.valueBinary != null) {
+            if (this.valueText != null && this.valueBinary != null) {
                 ionWriterForOutput.setFieldName("value_text");
                 ionWriterForOutput.writeString(this.valueText);
 
                 ionWriterForOutput.setFieldName("value_binary");
                 ionWriterForOutput.stepIn(IonType.LIST);
-                for (int i = 0; i < this.valueBinary.length; i++) {
-                    ionWriterForOutput.writeInt(this.valueBinary[i] & 0xff);
+                for (byte b : this.valueBinary) {
+                    ionWriterForOutput.writeInt(b & 0xff);
                 }
                 ionWriterForOutput.stepOut();
             }
@@ -100,20 +204,22 @@ public class Event {
             if (this.imports != null && this.imports.length > 0) {
                 ionWriterForOutput.setFieldName("imports");
                 ionWriterForOutput.stepIn(IonType.LIST);
-                for (int i = 0; i < this.imports.length; i++) {
+                for (ImportDescriptor anImport : this.imports) {
                     ionWriterForOutput.stepIn(IonType.STRUCT);
                     ionWriterForOutput.setFieldName("import_name");
-                    ionWriterForOutput.writeString(this.imports[i].getImportName());
+                    ionWriterForOutput.writeString(anImport.getImportName());
                     ionWriterForOutput.setFieldName("version");
-                    ionWriterForOutput.writeInt(this.imports[i].getVersion());
+                    ionWriterForOutput.writeInt(anImport.getVersion());
                     ionWriterForOutput.setFieldName("max_id");
-                    ionWriterForOutput.writeInt(this.imports[i].getMaxId());
+                    ionWriterForOutput.writeInt(anImport.getMaxId());
                     ionWriterForOutput.stepOut();
                 }
                 ionWriterForOutput.stepOut();
             }
-            ionWriterForOutput.setFieldName("depth");
-            ionWriterForOutput.writeInt(this.depth);
+            if (this.depth != -1) {
+                ionWriterForOutput.setFieldName("depth");
+                ionWriterForOutput.writeInt(this.depth);
+            }
             ionWriterForOutput.stepOut();
         } catch (IonException e) {
             new ErrorDescription(ErrorType.WRITE, e.getMessage(), fileName, eventIndex)
@@ -123,5 +229,69 @@ public class Event {
 
         //event index + 1 if we write OutputStream successfully.
         return eventIndex + 1;
+    }
+
+    public EventType getEventType() {
+        return eventType;
+    }
+
+    public IonType getIonType() {
+        return ionType;
+    }
+
+    public SymbolToken getFieldName() {
+        return fieldName;
+    }
+
+    public SymbolToken[] getAnnotations() {
+        return annotations;
+    }
+
+    public String getValueText() {
+        return valueText;
+    }
+
+    public byte[] getValueBinary() {
+        return valueBinary;
+    }
+
+    public ImportDescriptor[] getImports() {
+        return imports;
+    }
+
+    public int getDepth() {
+        return depth;
+    }
+
+    public void setEventType(EventType eventType) {
+        this.eventType = eventType;
+    }
+
+    public void setIonType(IonType ionType) {
+        this.ionType = ionType;
+    }
+
+    public void setFieldName(SymbolToken fieldName) {
+        this.fieldName = fieldName;
+    }
+
+    public void setAnnotations(SymbolToken[] annotations) {
+        this.annotations = annotations;
+    }
+
+    public void setValueText(String valueText) {
+        this.valueText = valueText;
+    }
+
+    public void setValueBinary(byte[] valueBinary) {
+        this.valueBinary = valueBinary;
+    }
+
+    public void setImports(ImportDescriptor[] imports) {
+        this.imports = imports;
+    }
+
+    public void setDepth(int depth) {
+        this.depth = depth;
     }
 }

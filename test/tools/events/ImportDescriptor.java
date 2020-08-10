@@ -3,9 +3,15 @@ package tools.events;
 import com.amazon.ion.SymbolTable;
 
 public class ImportDescriptor {
-    private final String importName;
-    private final int maxId;
-    private final int version;
+    private String importName;
+    private int maxId;
+    private int version;
+
+    public ImportDescriptor() {
+        this.importName = null;
+        this.maxId = -1;
+        this.version = -1;
+    }
 
     public ImportDescriptor(SymbolTable symbolTable) {
         this.importName = symbolTable.getName();
@@ -13,15 +19,27 @@ public class ImportDescriptor {
         this.version = symbolTable.getVersion();
     }
 
-    final int getVersion() {
+    public int getVersion() {
         return version;
     }
 
-    final int getMaxId() {
+    public int getMaxId() {
         return maxId;
     }
 
-    final String getImportName() {
+    public String getImportName() {
         return importName;
+    }
+
+    public void setImportName(String importName) {
+        this.importName = importName;
+    }
+
+    public void setMaxId(int maxId) {
+        this.maxId = maxId;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 }
