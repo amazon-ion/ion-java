@@ -37,12 +37,18 @@ public enum OutputFormat {
             return IonBinaryWriterBuilder.standard().build(outputStream);
         }
     },
+    /**
+     * Event Stream
+     */
     EVENTS {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
             return IonTextWriterBuilder.pretty().build(outputStream);
         }
     },
+    /**
+     * None
+     */
     NONE {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {

@@ -22,7 +22,7 @@ public class ErrorDescription {
         this.errorType = errorType;
         this.message = message;
         this.location = location;
-        this.eventIndex = -99;
+        this.eventIndex = -1;
     }
 
     public void writeOutput(IonWriter ionWriterForErrorReport) throws IOException {
@@ -40,7 +40,7 @@ public class ErrorDescription {
             ionWriterForErrorReport.writeString(this.location);
         }
 
-        if(this.eventIndex != -99) {
+        if(this.eventIndex != -1) {
             ionWriterForErrorReport.setFieldName("event_index");
             ionWriterForErrorReport.writeInt(this.eventIndex);
         }

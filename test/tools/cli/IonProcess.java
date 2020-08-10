@@ -46,7 +46,7 @@ public final class IonProcess {
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
 
     public static void main(String[] args) {
-        String[] b = {"-f","none","bad"};
+        String[] b = {"-f","events","test1","bad"};
         args = b;
 
         ProcessArgs parsedArgs = new ProcessArgs();
@@ -72,12 +72,6 @@ public final class IonProcess {
             processFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs);
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
-        } catch (IllegalStateException e) {
-            System.err.println(e.getMessage());
-        } catch (NullPointerException e) {
-            System.err.println(e.getMessage());
-        } catch (Exception e) {
-            System.out.println("2");
         }
     }
 
@@ -95,7 +89,6 @@ public final class IonProcess {
                     InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
                     IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
                     ) {
-
                 currentInfo.setFileName(path);
 
                 if (args.getOutputFormat() == OutputFormat.EVENTS) {
@@ -108,16 +101,23 @@ public final class IonProcess {
                 ionWriterForErrorReport.finish();
             } catch (IonException e) {
                 if (args.getOutputFormat() == OutputFormat.EVENTS) {
-                    new ErrorDescription(ErrorType.READ, e.getMessage(), currentInfo.getFileName(), currentInfo.getEventIndex())
-                            .writeOutput(ionWriterForErrorReport);
+                    new ErrorDescription(ErrorType.READ, e.getMessage(), currentInfo.getFileName(),
+                            currentInfo.getEventIndex()).writeOutput(ionWriterForErrorReport);
                 } else {
-                    OutputStream errorReportOutputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
                     new ErrorDescription(ErrorType.READ, e.getMessage(), currentInfo.getFileName())
                             .writeOutput(ionWriterForErrorReport);
                 }
                 System.exit(IO_ERROR_EXIT_CODE);
+            }  catch (IllegalStateException e) {
+                if (args.getOutputFormat() == OutputFormat.EVENTS) {
+                    new ErrorDescription(ErrorType.STATE, e.getMessage(), currentInfo.getFileName(),
+                            currentInfo.getEventIndex()).writeOutput(ionWriterForErrorReport);
+                } else {
+                    new ErrorDescription(ErrorType.STATE, e.getMessage(), currentInfo.getFileName())
+                            .writeOutput(ionWriterForErrorReport);
+                }
+                System.exit(IO_ERROR_EXIT_CODE);
             }
-
         }
     }
 
@@ -141,12 +141,12 @@ public final class IonProcess {
                         while (tempIonReader.next() != null) {
                             tempIonWriter.writeValue(tempIonReader);
                         }
-                        ionWriterForOutput.writeString(text.toString("utf-8"));
-                        tempIonWriter.finish();
-                    } catch (IOException e) {
-                        System.err.println(e.getMessage());
-                    }
 
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.append(text);
+                        ionWriterForOutput.writeString(stringBuilder.toString());
+                        tempIonWriter.finish();
+                    }
                 }
                 ionWriterForOutput.stepOut();
                 ionReader.stepOut();
@@ -193,6 +193,7 @@ public final class IonProcess {
                 ionStreamToEvent(EventType.CONTAINER_START, ionReader)
                         .writeOutput(ionWriterForOutput, ionWriterForErrorReport, currentInfo);
                 ionReader.stepIn();
+
                 while (ionReader.next() != null) {
                     String stream = ionReader.stringValue();
                     try (IonReader tempIonReader = IonReaderBuilder.standard().build(stream)) {
@@ -200,8 +201,6 @@ public final class IonProcess {
                             processEvent(ionWriterForOutput, ionWriterForErrorReport, tempIonReader,
                                     curTable, currentInfo);
                         } while (tempIonReader.next() != null);
-                    } catch (IOException e) {
-                        System.err.println(e.getMessage());
                     }
                     new Event(EventType.STREAM_END, null, null, null,
                             null, null, null, 0)
@@ -288,18 +287,21 @@ public final class IonProcess {
         String valueText = null;
         byte[] valueBinary = null;
         if (eventType == EventType.SCALAR) {
-            //write Text
-            ByteArrayOutputStream textOut = new ByteArrayOutputStream();
-            IonWriter textWriter = IonTextWriterBuilder.standard().build(textOut);
-            textWriter.writeValue(ionReader);
-            textWriter.finish();
-            valueText = textOut.toString("utf-8");
-            //write binary
-            ByteArrayOutputStream binaryOut = new ByteArrayOutputStream();
-            IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOut);
-            binaryWriter.writeValue(ionReader);
-            binaryWriter.finish();
-            valueBinary = binaryOut.toByteArray();
+            try (
+                    ByteArrayOutputStream textOut = new ByteArrayOutputStream();
+                    IonWriter textWriter = IonTextWriterBuilder.standard().build(textOut);
+                    ByteArrayOutputStream binaryOut = new ByteArrayOutputStream();
+                    IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOut);
+                    ) {
+                //write Text
+                textWriter.writeValue(ionReader);
+                textWriter.finish();
+                valueText = textOut.toString("utf-8");
+                //write binary
+                binaryWriter.writeValue(ionReader);
+                binaryWriter.finish();
+                valueBinary = binaryOut.toByteArray();
+            }
         }
 
         ImportDescriptor[] imports = null;
@@ -309,16 +311,15 @@ public final class IonProcess {
 
     private static boolean isSameSymbolTable(SymbolTable newTable, SymbolTable curTable) {
         if (newTable == null && curTable == null) return true;
-        if (newTable != null && curTable == null) return false;
-        if (newTable == null && curTable != null) return false;
+        else if (newTable != null && curTable == null) return false;
+        else if (newTable == null && curTable != null) return false;
 
-        //if a local table just appended symbols, we treat them as same.
         if (newTable.isLocalTable() && newTable.getImportedTables().length == 0) {
             return true;
         } else if (newTable.isSystemTable() && curTable.isSystemTable()) {
-            return (newTable.getVersion() == curTable.getVersion());
+            return newTable.getVersion() == curTable.getVersion();
         } else if (newTable.isSharedTable() && curTable.isSharedTable()) {
-            return ((newTable.getName() == curTable.getName()) & (newTable.getVersion() == curTable.getVersion()));
+            return (newTable.getName() == curTable.getName()) & (newTable.getVersion() == curTable.getVersion());
         } else if (newTable.isLocalTable() && curTable.isLocalTable()) {
             SymbolTable[] xTable = newTable.getImportedTables();
             SymbolTable[] yTable = curTable.getImportedTables();
@@ -327,6 +328,8 @@ public final class IonProcess {
                 for (int i = 0; i < xTable.length; i++) {
                     if (!isSameSymbolTable(xTable[i], yTable[i]))  return false;
                 }
+            } else {
+                return false;
             }
             return true;
         } else {
@@ -335,7 +338,7 @@ public final class IonProcess {
     }
 
     private static ImportDescriptor[] symbolTableToImports(SymbolTable[] tables) {
-        if(tables == null || tables.length == 0) return null;
+        if (tables == null || tables.length == 0) return null;
         int size = tables.length;
 
         ImportDescriptor imports[] = new ImportDescriptor[size];
