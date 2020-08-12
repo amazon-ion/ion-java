@@ -1365,7 +1365,7 @@ public final class Timestamp
      * (1970-01-01T00:00:00.000Z), with the {@code nanoOffset} applied and time zone set to UTC.
      *
      * This function is intended to allow easy conversion to Timestamp from Java 8's {@code java.time.Instant}
-     * without having to port this library from Java 6.
+     * without having to port this library to Java 8.
      *
      * The following snippet will yield a Timestamp {@code ts} that equivalent to the {@code java.time.Instant}
      * {@code i}:
