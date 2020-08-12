@@ -84,19 +84,27 @@ public final class Timestamp
     private static final int NO_SECONDS = 0;
     private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
 
-    // 0001-01-01T00:00:00.0Z in millis
+    /** 0001-01-01T00:00:00.0Z in millis */
     static final long MINIMUM_TIMESTAMP_IN_MILLIS = -62135769600000L;
 
-    // 0001-01-01T00:00:00.0Z in millis
+    /** 0001-01-01T00:00:00.0Z in millis */
     static final BigDecimal MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL = new BigDecimal(MINIMUM_TIMESTAMP_IN_MILLIS);
 
-    // 10000T in millis, upper bound exclusive
+    /** 10000T in millis, upper bound exclusive */
     static final long MAXIMUM_TIMESTAMP_IN_MILLIS = 253402300800000L;
 
-    // 10000T in millis, upper bound exclusive
+    /** 10000T in millis, upper bound exclusive */
     static final BigDecimal MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL = new BigDecimal(MAXIMUM_TIMESTAMP_IN_MILLIS);
 
-    /**
+
+    /** 0001-01-01T00:00:00.0Z epoch seconds. */
+    static final long MINIMUM_TIMESTAMP_IN_EPOCH_SECONDS = MINIMUM_TIMESTAMP_IN_MILLIS / 1000;
+
+    /** 10000T in epoch seconds, upper bound exclusive. */
+    static final long MAXIMUM_TIMESTAMP_IN_EPOCH_SECONDS = MAXIMUM_TIMESTAMP_IN_MILLIS / 1000;
+
+
+    /**s
      * Unknown local offset from UTC.
      */
     public static final Integer UNKNOWN_OFFSET = null;
@@ -1360,6 +1368,7 @@ public final class Timestamp
      * @param nanoOffset The number of nanoseconds for the fractional component. Must be between 0 and 999,999,999.
      */
     public static Timestamp forEpochSecond(long seconds, int nanoOffset) {
+        // We do not validate seconds here because that is done by the forMillis static constructor.
         long millis = seconds * 1000L;
         Timestamp ts = forMillis(millis, 0);
         if(nanoOffset != 0) {

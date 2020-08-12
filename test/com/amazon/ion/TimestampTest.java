@@ -41,8 +41,10 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
-import org.junit.*;
-import org.junit.rules.*;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  * Validates Ion date parsing, specified as per W3C but with requiring
@@ -53,6 +55,9 @@ import org.junit.rules.*;
 public class TimestampTest
     extends IonTestCase
 {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     /**
      * Earliest Ion timestamp possible, that is, "0001-01-01".
      */
@@ -786,9 +791,6 @@ public class TimestampTest
         assertEquals("2010-02-01T18:11:12Z", ts.toZString());
     }
 
-    @Rule
-    public ExpectedException thrown= ExpectedException.none();
-
     @Test
     public void forEpochSecondTest() {
         // Unix epoch
@@ -809,12 +811,12 @@ public class TimestampTest
         // Maximum timestamp value (that can be created with forEpochSecond)
         assertEquals(
                 Timestamp.valueOf("9999-12-31T23:59:59.999999999Z"),
-                Timestamp.forEpochSecond(Timestamp.MAXIMUM_TIMESTAMP_IN_MILLIS/1000-1, 999999999));
+                Timestamp.forEpochSecond(Timestamp.MAXIMUM_TIMESTAMP_IN_EPOCH_SECONDS-1, 999999999));
 
         // Minimum timestamp value (that can be created with forEpochSecond)
         assertEquals(
                 Timestamp.valueOf("0001-01-01T00:00:00.000Z"),
-                Timestamp.forEpochSecond(Timestamp.MINIMUM_TIMESTAMP_IN_MILLIS/1000, 0));
+                Timestamp.forEpochSecond(Timestamp.MINIMUM_TIMESTAMP_IN_EPOCH_SECONDS, 0));
 
         // Without fractional component
         assertEquals(
@@ -835,6 +837,20 @@ public class TimestampTest
         assertEquals(
                 Timestamp.valueOf("2009-01-20T20:17:00.999999999Z"),
                 Timestamp.forEpochSecond(1232482620, 999999999));
+    }
+
+    @Test
+    public void forEpochSecondTestSecondsTooLow() {
+        thrown.expect(IllegalArgumentException.class);
+        // MINIMUM_TIMESTAMP_IN_EPOCH_SECONDS is inclusive
+        Timestamp.forEpochSecond(Timestamp.MINIMUM_TIMESTAMP_IN_EPOCH_SECONDS - 1, 0);
+    }
+
+    @Test
+    public void forEpochSecondTestSecondsTooHigh() {
+        thrown.expect(IllegalArgumentException.class);
+        // MAXIMUM_TIMESTAMP_IN_EPOCH_SECONDS is exclusive
+        Timestamp.forEpochSecond(Timestamp.MAXIMUM_TIMESTAMP_IN_EPOCH_SECONDS, 0);
     }
 
     @Test
