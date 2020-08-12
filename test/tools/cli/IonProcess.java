@@ -419,7 +419,7 @@ public final class IonProcess {
             if (field.getText() != null) {
                 ionWriter.setFieldNameSymbol(field);
             } else {
-                ionWriter.setFieldName("$0");
+                if (ionWriter.isInStruct()) ionWriter.setFieldName("$0");
             }
         } else {
             if (ionWriter.isInStruct()) ionWriter.setFieldName("$0");
