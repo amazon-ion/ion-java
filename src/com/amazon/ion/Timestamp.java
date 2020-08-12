@@ -1341,6 +1341,36 @@ public final class Timestamp
         return new Timestamp(millis, localOffset);
     }
 
+    /**
+     * Returns a Timestamp that represents the point in time that is {@code seconds} from the unix epoch
+     * (1970-01-01T00:00:00.000Z), with the {@code nanoOffset} applied and time zone set to UTC.
+     *
+     * This function is intended to allow easy conversion to Timestamp from Java 8's {@code java.time.Instant}
+     * without having to port this library from Java 6.
+     *
+     * The following snippet will yield a Timestamp {@code ts} that equivalent to the {@code java.time.Instant}
+     * {@code i}:
+     *
+     * <code>
+     *     Instant i = Instant.now();
+     *     Timestamp ts = Timestamp.forEpochSecond(i.getEpochSecond(), i.getNano());
+     * </code>
+     *
+     * @param seconds The number of seconds from the unix epoch (1970-01-01T00:00:00.000Z).
+     * @param nanoOffset The number of nanoseconds for the fractional component. Must be between 0 and 999,999,999.
+     */
+    public static Timestamp forEpochSecond(long seconds, int nanoOffset) {
+        long millis = seconds * 1000L;
+        Timestamp ts = forMillis(millis, 0);
+        if(nanoOffset != 0) {
+            if(nanoOffset < 0 || nanoOffset > 999999999) {
+                throw new IllegalArgumentException("nanoOffset must be between 0 and 999,999,999");
+            }
+            ts._fraction = ts._fraction.add(BigDecimal.valueOf(nanoOffset).movePointLeft(9)).stripTrailingZeros();
+        }
+        return ts;
+    }
+
 
     /**
      * Returns a Timestamp that represents the point in time that is
