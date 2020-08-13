@@ -68,7 +68,7 @@ public final class IonProcess {
                 OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
                 IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
-                ) {
+        ) {
             processFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs);
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
@@ -88,7 +88,7 @@ public final class IonProcess {
             try (
                     InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
                     IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
-                    ) {
+            ) {
 
                 currentInfo.setFileName(path);
 
@@ -638,7 +638,7 @@ public final class IonProcess {
                     IonWriter textWriter = IonTextWriterBuilder.standard().build(textOut);
                     ByteArrayOutputStream binaryOut = new ByteArrayOutputStream();
                     IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOut);
-                    ) {
+            ) {
                 //write Text
                 textWriter.writeValue(ionReader);
                 textWriter.finish();
