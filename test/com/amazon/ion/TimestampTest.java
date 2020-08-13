@@ -881,7 +881,21 @@ public class TimestampTest
         Timestamp.forEpochSecond(0, 1000000000, 0);
     }
 
-    // TODO:  2 more tests for invalid localOffset.
+    @Test
+    @Ignore("https://github.com/amzn/ion-java/issues/303")
+    public void forEpochSecondTesOffsetTooLow() {
+        thrown.expect(IllegalArgumentException.class);
+        Timestamp.forEpochSecond(0, 0, -24 * 60);
+    }
+
+    @Test
+    @Ignore("https://github.com/amzn/ion-java/issues/303")
+    public void forEpochSecondTestOffsetTooHigh() {
+        thrown.expect(IllegalArgumentException.class);
+        Timestamp.forEpochSecond(0, 0, 24 * 60);
+    }
+
+
 
     /** Test for {@link Timestamp#Timestamp(BigDecimal, Integer)} */
     @Test
