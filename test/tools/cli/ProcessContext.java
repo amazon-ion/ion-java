@@ -2,12 +2,12 @@ package tools.cli;
 
 import tools.events.EventType;
 
-public class CurrentInfo {
+public class ProcessContext {
     private String fileName;
     private int eventIndex;
     private EventType lastEventType;
 
-    public CurrentInfo(String file, int index, EventType lastEventType) {
+    public ProcessContext(String file, int index, EventType lastEventType) {
         this.fileName = file;
         this.eventIndex = index;
         this.lastEventType = lastEventType;

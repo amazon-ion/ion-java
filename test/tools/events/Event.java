@@ -7,7 +7,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 
 import com.amazon.ion.system.IonReaderBuilder;
-import tools.cli.CurrentInfo;
+import tools.cli.ProcessContext;
 import tools.errorReport.ErrorDescription;
 import tools.errorReport.ErrorType;
 
@@ -133,11 +133,11 @@ public class Event {
 
     public void writeOutput(IonWriter ionWriterForOutput,
                             IonWriter ionWriterForErrorReport,
-                            CurrentInfo currentInfo) throws IOException {
+                            ProcessContext processContext) throws IOException {
         int updatedEventIndex = writeOutput(ionWriterForOutput, ionWriterForErrorReport,
-                currentInfo.getFileName(),currentInfo.getEventIndex());
+                processContext.getFileName(),processContext.getEventIndex());
 
-        currentInfo.setEventIndex(updatedEventIndex);
+        processContext.setEventIndex(updatedEventIndex);
     }
 
     /**
