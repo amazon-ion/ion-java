@@ -1,16 +1,19 @@
 package tools.cli;
 
+import tools.errorReport.ErrorType;
 import tools.events.EventType;
 
 public class ProcessContext {
     private String fileName;
     private int eventIndex;
     private EventType lastEventType;
+    private ErrorType state;
 
-    public ProcessContext(String file, int index, EventType lastEventType) {
+    public ProcessContext(String file, int index, EventType lastEventType, ErrorType state) {
         this.fileName = file;
         this.eventIndex = index;
         this.lastEventType = lastEventType;
+        this.state = state;
     }
 
     public String getFileName() {
@@ -25,6 +28,10 @@ public class ProcessContext {
         return this.lastEventType;
     }
 
+    public ErrorType getState() {
+        return state;
+    }
+
     public void setFileName(String fileName) {
         this.fileName = fileName;
     }
@@ -35,6 +42,10 @@ public class ProcessContext {
 
     public void setLastEventType(EventType lastEventType) {
         this.lastEventType = lastEventType;
+    }
+
+    public void setState(ErrorType state) {
+        this.state = state;
     }
 
 }

@@ -1,12 +1,18 @@
 package tools.events;
 
+import com.amazon.ion.IonSymbol;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.system.IonSystemBuilder;
+import com.amazon.ion.util.Equivalence;
 import tools.cli.ProcessContext;
 import tools.errorReport.ErrorDescription;
 import tools.errorReport.ErrorType;
@@ -50,7 +56,9 @@ public class Event {
 
     public void validate() throws IonException, IOException {
         if (this.eventType == null) throw new IonException("event_type can't be null");
-        else if (this.ionType == null && this.eventType != EventType.STREAM_END)
+        else if (this.ionType == null
+                && (this.eventType != EventType.STREAM_END
+                    && this.eventType != EventType.SYMBOL_TABLE))
             throw new IonException("ion_type can't be null");
 
         EventType eventType = this.eventType;
@@ -65,16 +73,12 @@ public class Event {
                 byte[] binaryValue = this.getValueBinary();
                 if (textValue == null && binaryValue == null) {
                 } else if (textValue != null && binaryValue != null) {
-                    try (
-                            IonReader ionReaderX = IonReaderBuilder.standard().build(textValue);
-                            IonReader ionReaderY = IonReaderBuilder.standard().build(binaryValue);
-                    ) {
-                        ionReaderX.next();
-                        ionReaderY.next();
+                    IonSystem s = IonSystemBuilder.standard().build();
+                    IonValue text = s.singleValue(textValue);
+                    IonValue binary = s.singleValue(binaryValue);
 
-                        if (!validateTwoIonReaderValue(ionReaderX, ionReaderY)) {
-                            throw new IonException("invalid Event: Text value and Binary value are different");
-                        }
+                    if (!Equivalence.ionEquals(text, binary)) {
+                        throw new IonException("invalid Event: Text value and Binary value are different");
                     }
                 } else {
                     throw new IonException("invalid Event: Text value and Binary value are different");
@@ -86,48 +90,6 @@ public class Event {
                 break;
             default:
                 throw new IonException("Invalid event_type");
-        }
-    }
-
-    public boolean validateTwoIonReaderValue(IonReader x, IonReader y) {
-        if (x.getType() != y.getType()) return false;
-        IonType type = x.getType();
-
-        switch (type) {
-            case NULL:
-                return true;
-            case BOOL:
-                return x.booleanValue() == y.booleanValue();
-            case INT:
-                return x.intValue() == y.intValue();
-            case FLOAT:
-            case DECIMAL:
-                return x.doubleValue() == y.doubleValue();
-            case TIMESTAMP:
-                return x.timestampValue().equals(y.timestampValue());
-            case SYMBOL:
-                SymbolToken xSymbol = x.symbolValue();
-                SymbolToken ySymbol = y.symbolValue();
-                return xSymbol.getText().equals(ySymbol.getText());
-            case STRING:
-                return x.stringValue().equals(y.stringValue());
-            case CLOB:
-            case BLOB:
-                byte[] xByte = x.newBytes();
-                byte[] yByte = y.newBytes();
-                int xLength = xByte.length;
-                int yLength = yByte.length;
-
-                if (xLength == yLength) {
-                    for (int i = 0 ; i < xLength; i++) {
-                        if (xByte[i] != yByte[i]) return false;
-                    }
-                } else {
-                    return false;
-                }
-                return true;
-            default:
-                throw new IonException("invalid ion_type " + ionType.toString());
         }
     }
 
