@@ -1,22 +1,18 @@
 package tools.events;
 
-import com.amazon.ion.IonSymbol;
-import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.IonException;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 
-import com.amazon.ion.impl._Private_IonSystem;
-import com.amazon.ion.system.IonReaderBuilder;
-import com.amazon.ion.system.IonSystemBuilder;
-import com.amazon.ion.util.Equivalence;
+import com.amazon.ion.system.IonBinaryWriterBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import tools.cli.ProcessContext;
 import tools.errorReport.ErrorDescription;
 import tools.errorReport.ErrorType;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class Event {
@@ -26,8 +22,7 @@ public class Event {
     private IonType ionType;
     private SymbolToken fieldName;
     private SymbolToken[] annotations;
-    private String valueText;
-    private byte[] valueBinary;
+    private IonValue value;
     private ImportDescriptor[] imports;
     private int depth;
 
@@ -36,20 +31,18 @@ public class Event {
         this.ionType = null;
         this.fieldName = null;
         this.annotations = null;
-        this.valueText = null;
-        this.valueBinary = null;
+        this.value = null;
         this.imports = null;
         this.depth = -1;
     }
 
     public Event(EventType eventType, IonType ionType, SymbolToken fieldName, SymbolToken[] annotations,
-                 String valueText, byte[] valueBinary, ImportDescriptor[] imports, int depth) {
+                 IonValue value, ImportDescriptor[] imports, int depth) {
         this.eventType = eventType;
         this.ionType = ionType;
         this.fieldName = fieldName;
         this.annotations = annotations;
-        this.valueText = valueText;
-        this.valueBinary = valueBinary;
+        this.value = value;
         this.imports = imports;
         this.depth = depth;
     }
@@ -69,21 +62,6 @@ public class Event {
                 }
                 break;
             case SCALAR:
-                String textValue = this.getValueText();
-                byte[] binaryValue = this.getValueBinary();
-                if (textValue == null && binaryValue == null) {
-                } else if (textValue != null && binaryValue != null) {
-                    IonSystem s = IonSystemBuilder.standard().build();
-                    IonValue text = s.singleValue(textValue);
-                    IonValue binary = s.singleValue(binaryValue);
-
-                    if (!Equivalence.ionEquals(text, binary)) {
-                        throw new IonException("invalid Event: Text value and Binary value are different");
-                    }
-                } else {
-                    throw new IonException("invalid Event: Text value and Binary value are different");
-                }
-                break;
             case SYMBOL_TABLE:
             case CONTAINER_END:
             case STREAM_END:
@@ -151,17 +129,38 @@ public class Event {
                 ionWriterForOutput.stepOut();
             }
 
-            if (this.valueText != null && this.valueBinary != null) {
-                ionWriterForOutput.setFieldName("value_text");
-                ionWriterForOutput.writeString(this.valueText);
+            if (this.value != null) {
+                String valueText;
+                byte[] valueBinary;
+                try (
+                        ByteArrayOutputStream textOut = new ByteArrayOutputStream();
+                        IonWriter textWriter = IonTextWriterBuilder.standard().build(textOut);
+                        ByteArrayOutputStream binaryOut = new ByteArrayOutputStream();
+                        IonWriter binaryWriter = IonBinaryWriterBuilder.standard().build(binaryOut);
+                ) {
+                    //write Text
+                    this.value.writeTo(textWriter);
+                    textWriter.finish();
+                    valueText = textOut.toString("utf-8");
 
-                ionWriterForOutput.setFieldName("value_binary");
-                ionWriterForOutput.stepIn(IonType.LIST);
-                for (byte b : this.valueBinary) {
-                    ionWriterForOutput.writeInt(b & 0xff);
+                    ionWriterForOutput.setFieldName("value_text");
+                    ionWriterForOutput.writeString(valueText);
+
+
+                    //write binary
+                    this.value.writeTo(binaryWriter);
+                    binaryWriter.finish();
+                    valueBinary = binaryOut.toByteArray();
+
+                    ionWriterForOutput.setFieldName("value_binary");
+                    ionWriterForOutput.stepIn(IonType.LIST);
+                    for (byte b : valueBinary) {
+                        ionWriterForOutput.writeInt(b & 0xff);
+                    }
+                    ionWriterForOutput.stepOut();
                 }
-                ionWriterForOutput.stepOut();
             }
+
 
             if (this.imports != null && this.imports.length > 0) {
                 ionWriterForOutput.setFieldName("imports");
@@ -209,20 +208,16 @@ public class Event {
         return annotations;
     }
 
-    public String getValueText() {
-        return valueText;
-    }
-
-    public byte[] getValueBinary() {
-        return valueBinary;
-    }
-
     public ImportDescriptor[] getImports() {
         return imports;
     }
 
     public int getDepth() {
         return depth;
+    }
+
+    public IonValue getValue() {
+        return value;
     }
 
     public void setEventType(EventType eventType) {
@@ -241,12 +236,8 @@ public class Event {
         this.annotations = annotations;
     }
 
-    public void setValueText(String valueText) {
-        this.valueText = valueText;
-    }
-
-    public void setValueBinary(byte[] valueBinary) {
-        this.valueBinary = valueBinary;
+    public void setValue(IonValue value) {
+        this.value = value;
     }
 
     public void setImports(ImportDescriptor[] imports) {
