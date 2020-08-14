@@ -1356,7 +1356,7 @@ public final class Timestamp
      *
      * <p>{@code millis} is relative to UTC, regardless of the value supplied for {@code localOffset}.  This
      * varies from the {@link #forMinute} and {@link #forSecond} methods that assume the specified date and time
-     * values are relative to the local offset.  For example, the following two Timestamss represent
+     * values are relative to the local offset.  For example, the following two Timestamps represent
      * the same point in time:</p>
      *
      * <code>
