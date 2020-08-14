@@ -18,23 +18,13 @@ import java.io.IOException;
 public class Event {
     private static final int IO_ERROR_EXIT_CODE = 2;
 
-    private EventType eventType;
-    private IonType ionType;
-    private SymbolToken fieldName;
-    private SymbolToken[] annotations;
-    private IonValue value;
-    private ImportDescriptor[] imports;
-    private int depth;
-
-    public Event() {
-        this.eventType = null;
-        this.ionType = null;
-        this.fieldName = null;
-        this.annotations = null;
-        this.value = null;
-        this.imports = null;
-        this.depth = -1;
-    }
+    private final EventType eventType;
+    private final IonType ionType;
+    private final SymbolToken fieldName;
+    private final SymbolToken[] annotations;
+    private final IonValue value;
+    private final ImportDescriptor[] imports;
+    private final int depth;
 
     public Event(EventType eventType, IonType ionType, SymbolToken fieldName, SymbolToken[] annotations,
                  IonValue value, ImportDescriptor[] imports, int depth) {
@@ -49,20 +39,23 @@ public class Event {
 
     public void validate() throws IonException {
         if (this.eventType == null) throw new IonException("event_type can't be null");
-        else if (this.ionType == null
-                && (this.eventType != EventType.STREAM_END
-                    && this.eventType != EventType.SYMBOL_TABLE
-                    && this.eventType != EventType.CONTAINER_END))
-            throw new IonException("ion_type can't be null");
 
         EventType eventType = this.eventType;
         switch (eventType) {
             case CONTAINER_START:
-                if (!IonType.isContainer(this.ionType)) {
+                if (this.ionType == null || this.depth == -1) {
+                    throw new IonException("Invalid event_type: missing field(s)");
+                } else if (!IonType.isContainer(ionType)) {
                     throw new IonException("Invalid event_type: not a container");
                 }
                 break;
             case SCALAR:
+                if (this.ionType == null || this.value == null || this.depth == -1) {
+                    throw new IonException("Invalid event_type: missing field(s)");
+                } else if (IonType.isContainer(ionType)) {
+                    throw new IonException("Invalid event_type: ion_type error");
+                }
+                break;
             case SYMBOL_TABLE:
             case CONTAINER_END:
             case STREAM_END:
@@ -223,33 +216,5 @@ public class Event {
 
     public IonValue getValue() {
         return value;
-    }
-
-    public void setEventType(EventType eventType) {
-        this.eventType = eventType;
-    }
-
-    public void setIonType(IonType ionType) {
-        this.ionType = ionType;
-    }
-
-    public void setFieldName(SymbolToken fieldName) {
-        this.fieldName = fieldName;
-    }
-
-    public void setAnnotations(SymbolToken[] annotations) {
-        this.annotations = annotations;
-    }
-
-    public void setValue(IonValue value) {
-        this.value = value;
-    }
-
-    public void setImports(ImportDescriptor[] imports) {
-        this.imports = imports;
-    }
-
-    public void setDepth(int depth) {
-        this.depth = depth;
     }
 }

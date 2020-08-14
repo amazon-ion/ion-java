@@ -18,13 +18,6 @@ public class ErrorDescription {
         this.eventIndex = eventIndex;
     }
 
-    public ErrorDescription(ErrorType errorType, String message, String location) {
-        this.errorType = errorType;
-        this.message = message;
-        this.location = location;
-        this.eventIndex = -1;
-    }
-
     public void writeOutput(IonWriter ionWriterForErrorReport) throws IOException {
         ionWriterForErrorReport.stepIn(IonType.STRUCT);
         if (this.errorType != null) {
