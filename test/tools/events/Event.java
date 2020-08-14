@@ -167,7 +167,7 @@ public class Event {
                 ionWriterForOutput.stepIn(IonType.LIST);
                 for (ImportDescriptor anImport : this.imports) {
                     ionWriterForOutput.stepIn(IonType.STRUCT);
-                    ionWriterForOutput.setFieldName("import_name");
+                    ionWriterForOutput.setFieldName("name");
                     ionWriterForOutput.writeString(anImport.getImportName());
                     ionWriterForOutput.setFieldName("version");
                     ionWriterForOutput.writeInt(anImport.getVersion());
