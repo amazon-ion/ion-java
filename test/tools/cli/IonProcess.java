@@ -99,7 +99,7 @@ public final class IonProcess {
             ionWriterForOutput.writeSymbol(EVENT_STREAM);
         }
         //this object stores data for ErrorReport.
-        ProcessContext processContext = new ProcessContext(null, -1, null, null);
+        ProcessContext processContext = new ProcessContext(null, -1, null, null, null);
 
         for (String path : args.getInputFiles()) {
             try (

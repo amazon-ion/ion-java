@@ -1,5 +1,6 @@
 package tools.cli;
 
+import com.amazon.ion.IonWriter;
 import tools.errorReport.ErrorType;
 import tools.events.EventType;
 
@@ -8,12 +9,14 @@ public class ProcessContext {
     private int eventIndex;
     private EventType lastEventType;
     private ErrorType state;
+    private IonWriter ionWriter;
 
-    public ProcessContext(String file, int index, EventType lastEventType, ErrorType state) {
+    public ProcessContext(String file, int index, EventType lastEventType, ErrorType state, IonWriter ionWriter) {
         this.fileName = file;
         this.eventIndex = index;
         this.lastEventType = lastEventType;
         this.state = state;
+        this.ionWriter = ionWriter;
     }
 
     public String getFileName() {
@@ -48,4 +51,11 @@ public class ProcessContext {
         this.state = state;
     }
 
+    public IonWriter getIonWriter() {
+        return ionWriter;
+    }
+
+    public void setIonWriter(IonWriter ionWriter) {
+        this.ionWriter = ionWriter;
+    }
 }
