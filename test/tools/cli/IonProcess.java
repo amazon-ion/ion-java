@@ -436,7 +436,7 @@ public final class IonProcess {
                     break;
                 case "field_name":
                     ionReader.stepIn();
-                    String fieldText = null;
+                    String fieldText = "";
                     int fieldSid = -1;
                     while (ionReader.next() != null) {
                         switch (ionReader.getFieldName()) {
@@ -560,20 +560,13 @@ public final class IonProcess {
         BufferedOutputStream outputStream = null;
         switch (defaultValue) {
             case SYSTEM_OUT_DEFAULT_VALUE:
-                if (args.getOutputFormat() == OutputFormat.NONE) {
-                    try (NoOpOutputStream trivialOut = new NoOpOutputStream()) {
-                        outputStream = new BufferedOutputStream(trivialOut, BUFFER_SIZE);
-                    }
+                String outputFile = args.getOutputFile();
+                if (outputFile != null && outputFile.length() != 0) {
+                    File myFile = new File(outputFile);
+                    FileOutputStream out = new FileOutputStream(myFile);
+                    outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
                 } else {
-                    String outputFile = args.getOutputFile();
-                    if (outputFile != null && outputFile.length() != 0) {
-                        File myFile = new File(outputFile);
-                        FileOutputStream out = new FileOutputStream(myFile);
-                        outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
-                    } else {
-                        outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE);
-                    }
-                }
+                    outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE); }
                 break;
             case SYSTEM_ERR_DEFAULT_VALUE:
                 String errorReport = args.getErrorReport();

@@ -47,11 +47,12 @@ public class Event {
         this.depth = depth;
     }
 
-    public void validate() throws IonException, IOException {
+    public void validate() throws IonException {
         if (this.eventType == null) throw new IonException("event_type can't be null");
         else if (this.ionType == null
                 && (this.eventType != EventType.STREAM_END
-                    && this.eventType != EventType.SYMBOL_TABLE))
+                    && this.eventType != EventType.SYMBOL_TABLE
+                    && this.eventType != EventType.CONTAINER_END))
             throw new IonException("ion_type can't be null");
 
         EventType eventType = this.eventType;

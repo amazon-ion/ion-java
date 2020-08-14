@@ -77,7 +77,8 @@ public enum OutputFormat {
     NONE {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
-            return IonTextWriterBuilder.pretty().build(outputStream);
+            NoOpOutputStream out = new NoOpOutputStream();
+            return IonTextWriterBuilder.pretty().build(out);
         }
 
         @Override
