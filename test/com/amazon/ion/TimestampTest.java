@@ -30,7 +30,6 @@ import static com.amazon.ion.Timestamp.Precision.MONTH;
 import static com.amazon.ion.Timestamp.Precision.SECOND;
 import static com.amazon.ion.Timestamp.Precision.YEAR;
 import static com.amazon.ion.impl._Private_Utils.UTC;
-import static junit.framework.TestCase.assertEquals;
 
 import com.amazon.ion.Timestamp.Precision;
 import java.math.BigDecimal;
