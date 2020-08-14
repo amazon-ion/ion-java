@@ -46,14 +46,21 @@ public final class IonProcess {
     private static final int IO_ERROR_EXIT_CODE = 2;
     private static final int BUFFER_SIZE = 128 * 1024;
     private static final IonSystem ION_SYSTEM = IonSystemBuilder.standard().build();
+    private static final IonTextWriterBuilder ION_TEXT_WRITER_BUILDER = IonTextWriterBuilder.standard();
     private static final String SYSTEM_OUT_DEFAULT_VALUE = "out";
     private static final String SYSTEM_ERR_DEFAULT_VALUE = "err";
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
     private static final String EVENT_STREAM = "$ion_event_stream";
 
     public static void main(String[] args) {
-        String[] b = {"-f", "events", "2"};
-        args = b;
+        String[] a = {"-f", "pretty", "aaa"};
+        String[] b = {"-f", "events", "embedded"};
+        String[] c = {"-f", "events", "2"};
+        String[] d = {"-f", "events", "3"};
+        String[] f = {"-f", "events", "1"};
+        String[] g = {"-f", "pretty", "embeddedIon"};
+
+        args = c;
 
         ProcessArgs parsedArgs = new ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -155,7 +162,7 @@ public final class IonProcess {
                     StringBuilder out = new StringBuilder();
                     try (
                             IonReader tempIonReader = IonReaderBuilder.standard().build(stream);
-                            IonWriter tempIonWriter = IonTextWriterBuilder.standard().build(out);
+                            IonWriter tempIonWriter = ION_TEXT_WRITER_BUILDER.build(out);
                     ) {
                         while (tempIonReader.next() != null) {
                             tempIonWriter.writeValue(tempIonReader);
@@ -357,7 +364,7 @@ public final class IonProcess {
         while (ionReader.next() != null) {
             StringBuilder out = new StringBuilder();
             try (
-                    IonWriter tempWriter = IonTextWriterBuilder.standard().build(out);
+                    IonWriter tempWriter = ION_TEXT_WRITER_BUILDER.build(out);
             ) {
                 do {
                     processContext.setEventIndex(processContext.getEventIndex() + 1);
@@ -609,15 +616,15 @@ public final class IonProcess {
         SymbolToken[] annotations = ionReader.getTypeAnnotationSymbols();
 
         IonValue value = null;
+        StringBuilder textOut = new StringBuilder();
         if (eventType == EventType.SCALAR) {
             try (
-                    ByteArrayOutputStream textOut = new ByteArrayOutputStream();
-                    IonWriter tempWriter = IonTextWriterBuilder.standard().build(textOut);
+                    IonWriter tempWriter = ION_TEXT_WRITER_BUILDER.build(textOut);
             ) {
                 //write Text
                 tempWriter.writeValue(ionReader);
                 tempWriter.finish();
-                String valueText = textOut.toString("utf-8");
+                String valueText = textOut.toString();
                 String[] s = valueText.split("::");
                 value = ION_SYSTEM.singleValue(s[s.length -1]);
             }
@@ -632,9 +639,8 @@ public final class IonProcess {
         if (newTable == null && curTable == null) return true;
         else if (newTable != null && curTable == null) return false;
         else if (newTable == null) return false;
-        if (newTable.isSystemTable() && newTable.getName() == "$ion") {
-            return true;
-        } else if (newTable.isLocalTable() && newTable.getImportedTables().length == 0) {
+
+        if (newTable.isLocalTable() && newTable.getImportedTables().length == 0) {
             return true;
         } else if (newTable.isSystemTable() && curTable.isSystemTable()) {
             return newTable.getVersion() == curTable.getVersion();
