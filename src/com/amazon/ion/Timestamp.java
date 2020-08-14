@@ -1423,7 +1423,7 @@ public final class Timestamp
             if(nanoOffset < 0 || nanoOffset > 999999999) {
                 throw new IllegalArgumentException("nanoOffset must be between 0 and 999,999,999");
             }
-            ts._fraction = ts._fraction.add(BigDecimal.valueOf(nanoOffset).movePointLeft(9)).stripTrailingZeros();
+            ts._fraction = ts._fraction.add(BigDecimal.valueOf(nanoOffset).movePointLeft(9));
         }
         return ts;
     }

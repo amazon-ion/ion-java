@@ -826,7 +826,7 @@ public class TimestampTest
 
         // With fractional component (1/2 second)
         assertEquals(
-                Timestamp.valueOf("2009-01-20T20:17:00.5Z"),
+                Timestamp.valueOf("2009-01-20T20:17:00.500000000Z"),
                 Timestamp.forEpochSecond(1232482620, 500000000, 0));
 
         // With fractional component (one nanosecond)
