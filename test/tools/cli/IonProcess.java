@@ -44,6 +44,7 @@ public final class IonProcess {
     private static final int USAGE_ERROR_EXIT_CODE = 1;
     private static final int IO_ERROR_EXIT_CODE = 2;
     private static final int BUFFER_SIZE = 128 * 1024;
+    private static final IonSystem ION_SYSTEM = IonSystemBuilder.standard().build();
     private static final String SYSTEM_OUT_DEFAULT_VALUE = "out";
     private static final String SYSTEM_ERR_DEFAULT_VALUE = "err";
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
@@ -325,7 +326,7 @@ public final class IonProcess {
                 ImportDescriptor[] imports = event.getImports();
                 SymbolTable[] symbolTables = new SymbolTable[imports.length];
                 for (int i = 0; i < imports.length; i++) {
-                    SymbolTable symbolTable = IonSystemBuilder.standard().build().newSharedSymbolTable(
+                    SymbolTable symbolTable = ION_SYSTEM.newSharedSymbolTable(
                             imports[i].getImportName(), imports[i].getVersion(), null);
                     symbolTables[i] = symbolTable;
                 }
@@ -393,7 +394,7 @@ public final class IonProcess {
                         ImportDescriptor[] imports = event.getImports();
                         SymbolTable[] symbolTables = new SymbolTable[imports.length];
                         for (int i = 0; i < imports.length; i++) {
-                            SymbolTable symbolTable = IonSystemBuilder.standard().build().newSharedSymbolTable(
+                            SymbolTable symbolTable = ION_SYSTEM.newSharedSymbolTable(
                                     imports[i].getImportName(), imports[i].getVersion(), null);
                             symbolTables[i] = symbolTable;
                         }
@@ -436,7 +437,7 @@ public final class IonProcess {
                     break;
                 case "field_name":
                     ionReader.stepIn();
-                    String fieldText = "";
+                    String fieldText = null;
                     int fieldSid = -1;
                     while (ionReader.next() != null) {
                         switch (ionReader.getFieldName()) {
@@ -506,13 +507,12 @@ public final class IonProcess {
         }
         //compare text value and binary value
         if (textValue != null && binaryValue != null) {
-            IonSystem ionSystem = IonSystemBuilder.standard().build();
-            IonValue text = ionSystem.singleValue(textValue);
-            IonValue binary = ionSystem.singleValue(binaryValue);
+            IonValue text = ION_SYSTEM.singleValue(textValue);
+            IonValue binary = ION_SYSTEM.singleValue(binaryValue);
             if (!Equivalence.ionEquals(text, binary)) {
                 throw new IonException("invalid Event: Text value and Binary value are different");
             } else {
-                IonValue v = IonSystemBuilder.standard().build().singleValue(textValue);
+                IonValue v = text;
                 event.setValue(v);
             }
         }
@@ -604,7 +604,7 @@ public final class IonProcess {
                 tempWriter.finish();
                 String valueText = textOut.toString("utf-8");
                 String[] s = valueText.split("::");
-                value = IonSystemBuilder.standard().build().singleValue(s[s.length -1]);
+                value = ION_SYSTEM.singleValue(s[s.length -1]);
             }
         }
 
