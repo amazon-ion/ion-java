@@ -1,6 +1,5 @@
 package tools.cli;
 
-import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -8,10 +7,8 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.IonException;
 import com.amazon.ion.impl._Private_Utils;
-import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -53,7 +50,7 @@ public final class IonProcess {
     private static final String EVENT_STREAM = "$ion_event_stream";
 
     public static void main(String[] args) {
-        String[] b = {"-f", "none", "event1"};
+        String[] b = {"-f", "pretty", "event2"};
         args = b;
 
         ProcessArgs parsedArgs = new ProcessArgs();
@@ -68,20 +65,26 @@ public final class IonProcess {
             printHelpTextAndExit(e.getMessage(), parser);
         }
 
+        IonWriter ionWriterForOutput = null;
+
         try (
                 //Initialize output stream, never return null. (default value: STDOUT)
                 OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
                 //Initialize error report, never return null. (default value: STDERR)
                 OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
-                IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
+                IonWriter initIonWriterForOutput = outputFormat.createIonWriter(outputStream);
                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
         ) {
-/*            TODO ionWriterForOutput.writeString("aa");
+              ionWriterForOutput = initIonWriterForOutput;
+//            ionWriterForOutput.stepIn(IonType.LIST);
+//            ionWriterForOutput.writeString("aa");
+//            ionWriterForOutput.writeString("bb");
+//            ionWriterForOutput.stepOut();
 //            ionWriterForOutput.finish();
-//            OutputStream out = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
-//            IonWriter test = outputFormat.createIonWriter(out);
-//            test.writeString("bb");
-//            test.finish(); */
+//
+//            IonWriter test2 = outputFormat.createIonWriter(outputStream);
+//            test2.writeString("cc");
+//            test2.finish();
             processFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, outputStream);
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
@@ -331,12 +334,14 @@ public final class IonProcess {
                 writeIonByType(event, ionWriterForOutput);
             } else if (event.getEventType().equals(EventType.SYMBOL_TABLE)) {
                 ionWriterForOutput.finish();
-                ionWriterForOutput = args.getOutputFormat().createIonWriter(outputStream);
-                //IonWriter newIonWriterForOutput = args.getOutputFormat().createIonWriter(outputStream);
-                //TODO symbol table
-                // For SYMBOL_TABLE events, flush the writer's existing local symbol table and any buffered data,
-                // forcing the writer to create a new local symbol table that imports the list of symbol tables
-                // declared by the imports field of the Event. This ensures that symbol tokens with unknown text
+                ImportDescriptor[] imports = event.getImports();
+                SymbolTable[] symbolTables = new SymbolTable[imports.length];
+                for (int i = 0; i < imports.length; i++) {
+                    SymbolTable symbolTable = IonSystemBuilder.standard().build().newSharedSymbolTable(
+                            imports[i].getImportName(), imports[i].getVersion(), null, null);
+                    symbolTables[i] = symbolTable;
+                }
+                ionWriterForOutput = args.getOutputFormat().createIonWriterWithImports(outputStream, symbolTables);
                 // that occur in subsequent events in the stream can be written correctly
             } else if (event.getEventType().equals(EventType.STREAM_END)) {
                 ionWriterForOutput.finish();
