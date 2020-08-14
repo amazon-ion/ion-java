@@ -89,14 +89,17 @@ public class Event {
                            int eventIndex) throws IOException {
         try {
             ionWriterForOutput.stepIn(IonType.STRUCT);
+
             if (this.eventType != null) {
                 ionWriterForOutput.setFieldName("event_type");
                 ionWriterForOutput.writeSymbol(this.eventType.toString());
             }
+
             if (this.ionType != null) {
                 ionWriterForOutput.setFieldName("ion_type");
                 ionWriterForOutput.writeSymbol(this.ionType.toString());
             }
+
             if (this.fieldName != null) {
                 ionWriterForOutput.setFieldName("field_name");
                 ionWriterForOutput.stepIn(IonType.STRUCT);
@@ -110,6 +113,7 @@ public class Event {
                 ionWriterForOutput.writeNull();
                 ionWriterForOutput.stepOut();
             }
+
             if (this.annotations != null && this.annotations.length > 0) {
                 ionWriterForOutput.setFieldName("annotations");
                 ionWriterForOutput.stepIn(IonType.LIST);
@@ -146,7 +150,6 @@ public class Event {
                     ionWriterForOutput.setFieldName("value_text");
                     ionWriterForOutput.writeString(valueText);
 
-
                     //write binary
                     this.value.writeTo(binaryWriter);
                     binaryWriter.finish();
@@ -160,7 +163,6 @@ public class Event {
                     ionWriterForOutput.stepOut();
                 }
             }
-
 
             if (this.imports != null && this.imports.length > 0) {
                 ionWriterForOutput.setFieldName("imports");
@@ -177,10 +179,12 @@ public class Event {
                 }
                 ionWriterForOutput.stepOut();
             }
+
             if (this.depth != -1) {
                 ionWriterForOutput.setFieldName("depth");
                 ionWriterForOutput.writeInt(this.depth);
             }
+
             ionWriterForOutput.stepOut();
         } catch (IonException e) {
             new ErrorDescription(ErrorType.WRITE, e.getMessage(), fileName, eventIndex)
