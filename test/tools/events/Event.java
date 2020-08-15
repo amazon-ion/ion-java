@@ -39,8 +39,7 @@ public class Event {
 
     public void writeOutput(IonWriter ionWriterForErrorReport,
                             ProcessContext processContext) throws IOException {
-        int updatedEventIndex = writeOutput(processContext.getIonWriter(), ionWriterForErrorReport,
-                processContext.getFileName(),processContext.getEventIndex());
+        int updatedEventIndex = writeOutput(processContext.getIonWriter(),processContext.getEventIndex());
 
         processContext.setEventIndex(updatedEventIndex);
     }
@@ -49,10 +48,7 @@ public class Event {
      * write Event structure to Event Stream and return the updated eventIndex.
      */
     public int writeOutput(IonWriter ionWriterForOutput,
-                           IonWriter ionWriterForErrorReport,
-                           String fileName,
                            int eventIndex) throws IOException {
-        try {
             ionWriterForOutput.stepIn(IonType.STRUCT);
 
             if (this.eventType != null) {
@@ -151,11 +147,6 @@ public class Event {
             }
 
             ionWriterForOutput.stepOut();
-        } catch (IonException e) {
-            new ErrorDescription(ErrorType.WRITE, e.getMessage(), fileName, eventIndex)
-                    .writeOutput(ionWriterForErrorReport);
-            System.exit(IO_ERROR_EXIT_CODE);
-        }
 
         //event index + 1 if we write OutputStream successfully.
         return eventIndex + 1;

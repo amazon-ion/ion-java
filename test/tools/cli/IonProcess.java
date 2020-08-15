@@ -746,12 +746,6 @@ public final class IonProcess {
                 && annotations[0].equals(EMBEDDED_STREAM_ANNOTATION);
     }
 
-    private static boolean isEventStream(IonReader ionReader) {
-        return ionReader.next() != null
-                && ionReader.getType() == IonType.SYMBOL
-                && EVENT_STREAM.equals(ionReader.symbolValue().getText());
-    }
-
     private static boolean isEmbeddedEvent(Event event) {
         SymbolToken[] annotations = event.getAnnotations();
         return event.getEventType() == EventType.CONTAINER_START
@@ -760,6 +754,12 @@ public final class IonProcess {
                 && annotations.length != 0
                 && annotations[0].getText().equals(EMBEDDED_STREAM_ANNOTATION)
                 && event.getDepth() == 0;
+    }
+
+    public static boolean isEventStream(IonReader ionReader) {
+        return ionReader.next() != null
+                && ionReader.getType() == IonType.SYMBOL
+                && EVENT_STREAM.equals(ionReader.symbolValue().getText());
     }
 
     private static void printHelpTextAndExit(String msg, CmdLineParser parser) {
