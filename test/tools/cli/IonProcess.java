@@ -64,7 +64,8 @@ public final class IonProcess {
         }
 
         //this object stores data for ErrorReport.
-        ProcessContext processContext = new ProcessContext(null, -1, null, null, null);
+        ProcessContext processContext = new ProcessContext(null, -1,
+                null, null, null);
         try (
                 //Initialize output stream, never return null. (default value: STDOUT)
                 OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
