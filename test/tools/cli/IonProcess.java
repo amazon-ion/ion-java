@@ -406,7 +406,7 @@ public final class IonProcess {
     //  helper functions
     //
 
-    private static void writeIonByType(Event event, IonWriter ionWriter) throws IOException {
+    private static void writeIonByType(Event event, IonWriter ionWriter) {
         setAnnotationAndField(event, ionWriter);
         IonValue value = event.getValue();
         value.setTypeAnnotationSymbols(event.getAnnotations());
@@ -522,18 +522,17 @@ public final class IonProcess {
                     depth = ionReader.intValue();
                     break;
             }
-
         }
         ionReader.stepOut();
         //validate event
-        validateEvent(textValue, binaryValue, eventType,  ionType, imports, depth);
+        validateEvent(textValue, binaryValue, eventType, fieldName, ionType, imports, depth);
         if (textValue != null) eventValue = ION_SYSTEM.singleValue(textValue);
 
         return new Event(eventType, ionType, fieldName, annotations, eventValue, imports, depth);
     }
 
-    private static void validateEvent(String textValue, byte[] binaryValue, EventType eventType, IonType ionType,
-                                      ImportDescriptor[] imports, int depth) {
+    private static void validateEvent(String textValue, byte[] binaryValue, EventType eventType, SymbolToken fieldName,
+                                      IonType ionType, ImportDescriptor[] imports, int depth) {
         if (eventType == null) throw new IonException("event_type can't be null");
 
         switch (eventType) {
@@ -555,6 +554,9 @@ public final class IonProcess {
                     throw new IonException("Invalid SCALAR: missing field(s)");
                 } else if (IonType.isContainer(ionType)) {
                     throw new IonException("Invalid SCALAR: ion_type error");
+                } else if (imports != null) {
+                    throw new IonException("Invalid SCALAR: imports must only be present with SYMBOL_TABLE "
+                            + "events");
                 }
                 //compare text value and binary value
                 IonValue text = ION_SYSTEM.singleValue(textValue);
@@ -568,14 +570,29 @@ public final class IonProcess {
                     throw new IonException("Invalid SYMBOL_TABLE: missing depth");
                 } else if (imports == null ) {
                     throw new IonException("Invalid SYMBOL_TABLE: missing imports");
+                } else if (textValue != null && binaryValue != null) {
+                    throw new IonException("Invalid SYMBOL_TABLE: text_value and binary_value "
+                            + "are only applicable for SCALAR events");
+                } else if (fieldName != null && ionType != null) {
+                    throw new IonException("Invalid SYMBOL_TABLE: unnecessary fields");
                 }
             case CONTAINER_END:
                 if (depth == -1 || ionType == null) {
                     throw new IonException("Invalid CONTAINER_END: missing depth");
+                } else if (textValue != null && binaryValue != null) {
+                    throw new IonException("Invalid CONTAINER_END: text_value and binary_value "
+                            + "are only applicable for SCALAR events");
+                } else if (fieldName != null && imports != null) {
+                    throw new IonException("Invalid CONTAINER_END: unnecessary fields");
                 }
             case STREAM_END:
                 if (depth == -1) {
                     throw new IonException("Invalid STREAM_END: missing depth");
+                } else if (textValue != null && binaryValue != null) {
+                    throw new IonException("Invalid STREAM_END: text_value and binary_value "
+                            + "are only applicable for SCALAR events");
+                } else if (fieldName != null && ionType != null && imports != null) {
+                    throw new IonException("Invalid STREAM_END: unnecessary fields");
                 }
                 break;
             default:
