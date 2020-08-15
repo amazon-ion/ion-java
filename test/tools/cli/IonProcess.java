@@ -63,7 +63,6 @@ public final class IonProcess {
             printHelpTextAndExit(e.getMessage(), parser);
         }
 
-        //this object stores data for ErrorReport.
         ProcessContext processContext = new ProcessContext(null, -1,
                 null, null, null);
         try (
