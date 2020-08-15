@@ -54,13 +54,13 @@ public final class IonProcess {
 
     public static void main(String[] args) {
         String[] a = {"-f", "pretty", "aaa"};
-        String[] b = {"-f", "events", "embedded"};
+        String[] b = {"-f", "pretty", "embedded"};
         String[] c = {"-f", "events", "2"};
         String[] d = {"-f", "events", "3"};
         String[] f = {"-f", "events", "1"};
         String[] g = {"-f", "pretty", "embeddedIon"};
 
-        args = c;
+        args = g;
 
         ProcessArgs parsedArgs = new ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -74,32 +74,40 @@ public final class IonProcess {
             printHelpTextAndExit(e.getMessage(), parser);
         }
 
-        //Use this variable for symbol_table event which changes ionWriter
-        IonWriter ionWriterForOutput = null;
+        //this object stores data for ErrorReport.
+        ProcessContext processContext = new ProcessContext(null, -1, null, null, null);
         try (
                 //Initialize output stream, never return null. (default value: STDOUT)
                 OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
                 //Initialize error report, never return null. (default value: STDERR)
                 OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
-                IonWriter initIonWriterForOutput = outputFormat.createIonWriter(outputStream);
                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
+                IonWriter ionWriterForOutputStream = outputFormat.createIonWriter(outputStream);
         ) {
-            ionWriterForOutput = initIonWriterForOutput;
-            processFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, outputStream);
+            processContext.setIonWriter(ionWriterForOutputStream);
+
+            processFiles(ionWriterForErrorReport, parsedArgs, processContext, outputStream);
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
+        } finally {
+            IonWriter ionWriter = processContext.getIonWriter();
+            if (ionWriter != null) {
+                try {
+                    ionWriter.close();
+                } catch (IOException e) {
+                    System.err.println(e.getMessage());
+                }
+            }
         }
     }
 
-    private static void processFiles(IonWriter ionWriterForOutput,
-                                     IonWriter ionWriterForErrorReport,
+    private static void processFiles(IonWriter ionWriterForErrorReport,
                                      ProcessArgs args,
+                                     ProcessContext processContext,
                                      OutputStream outputStream) throws IOException {
         if (args.getOutputFormat() == OutputFormat.EVENTS) {
-            ionWriterForOutput.writeSymbol(EVENT_STREAM);
+            processContext.getIonWriter().writeSymbol(EVENT_STREAM);
         }
-        //this object stores data for ErrorReport.
-        ProcessContext processContext = new ProcessContext(null, -1, null, null, null);
 
         for (String path : args.getInputFiles()) {
             try (
@@ -109,13 +117,14 @@ public final class IonProcess {
                 processContext.setFileName(path);
                 if (isEventStream(ionReader)) {
                     processContext.setEventIndex(0);
-                    processFromEventStream(ionWriterForOutput, ionWriterForErrorReport,
+                    processFromEventStream(ionWriterForErrorReport,
                             ionReader, processContext, args, outputStream);
                 } else {
-                    processFromIonStream(ionWriterForOutput, ionWriterForErrorReport, ionReader, processContext, args);
+                    processFromIonStream(processContext.getIonWriter(), ionWriterForErrorReport,
+                            ionReader, processContext, args);
                 }
 
-                ionWriterForOutput.finish();
+                processContext.getIonWriter().finish();
                 ionWriterForErrorReport.finish();
             } catch (IonException e) {
                 new ErrorDescription(processContext.getState(), e.getMessage(), processContext.getFileName(),
@@ -190,7 +199,7 @@ public final class IonProcess {
         processToEventFromIonStream(ionWriterForOutput, ionWriterForErrorReport, ionReader, curTable, processContext);
         new Event(EventType.STREAM_END, null, null, null,
                 null, null, 0)
-                .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                .writeOutput(ionWriterForErrorReport, processContext);
     }
 
     private static void processToEventFromIonStream(IonWriter ionWriterForOutput,
@@ -204,7 +213,7 @@ public final class IonProcess {
                 ImportDescriptor[] imports = symbolTableToImports(curTable.getImportedTables());
                 new Event(EventType.SYMBOL_TABLE, null, null, null,
                         null, imports, 0)
-                        .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                        .writeOutput(ionWriterForErrorReport, processContext);
             }
 
             if (isEmbeddedStream(ionReader)) {
@@ -214,7 +223,7 @@ public final class IonProcess {
 
                 //write a Container_Start event and step in
                 ionStreamToEvent(EventType.CONTAINER_START, ionReader)
-                        .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                        .writeOutput(ionWriterForErrorReport, processContext);
                 ionReader.stepIn();
 
                 while (ionReader.next() != null) {
@@ -227,12 +236,12 @@ public final class IonProcess {
                     }
                     new Event(EventType.STREAM_END, null, null, null,
                             null, null, 0)
-                            .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                            .writeOutput(ionWriterForErrorReport, processContext);
                 }
                 //write a Container_End event and step out
                 new Event(EventType.CONTAINER_END, curType, null, null,
                         null, null, curDepth)
-                        .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                        .writeOutput(ionWriterForErrorReport, processContext);
                 ionReader.stepOut();
             } else if (IonType.isContainer(ionReader.getType())) {
                 //get current Ion type and depth
@@ -241,7 +250,7 @@ public final class IonProcess {
 
                 //write a Container_Start event and step in
                 ionStreamToEvent(EventType.CONTAINER_START, ionReader)
-                        .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                        .writeOutput(ionWriterForErrorReport, processContext);
                 ionReader.stepIn();
 
                 //recursive call
@@ -252,11 +261,11 @@ public final class IonProcess {
                 //write a Container_End event and step out
                 new Event(EventType.CONTAINER_END, curType, null, null,
                         null, null, curDepth)
-                        .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                        .writeOutput(ionWriterForErrorReport, processContext);
                 ionReader.stepOut();
             } else {
                 ionStreamToEvent(EventType.SCALAR, ionReader)
-                        .writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+                        .writeOutput(ionWriterForErrorReport, processContext);
             }
         } while (ionReader.next() != null);
     }
@@ -265,24 +274,22 @@ public final class IonProcess {
     //  functions for processing from EventStream
     //
 
-    private static void processFromEventStream(IonWriter ionWriterForOutput,
-                                               IonWriter ionWriterForErrorReport,
+    private static void processFromEventStream(IonWriter ionWriterForErrorReport,
                                                IonReader ionReader,
                                                ProcessContext processContext,
                                                ProcessArgs args,
                                                OutputStream outputStream) throws IOException {
         processContext.setState(ErrorType.WRITE);
         if (args.getOutputFormat() == OutputFormat.EVENTS) {
-            processToEventStreamFromEventStream(ionWriterForOutput, ionWriterForErrorReport,
+            processToEventStreamFromEventStream(ionWriterForErrorReport,
                     ionReader, processContext, args);
         } else {
-            processToNormalFromEventStream(ionWriterForOutput, ionWriterForErrorReport,
+            processToNormalFromEventStream(ionWriterForErrorReport,
                     ionReader, processContext, args, outputStream);
         }
     }
 
-    private static void processToEventStreamFromEventStream(IonWriter ionWriterForOutput,
-                                                            IonWriter ionWriterForErrorReport,
+    private static void processToEventStreamFromEventStream(IonWriter ionWriterForErrorReport,
                                                             IonReader ionReader,
                                                             ProcessContext processContext,
                                                             ProcessArgs args) throws IOException {
@@ -290,14 +297,13 @@ public final class IonProcess {
             Event event = eventStreamToEvent(ionReader);
             processContext.setLastEventType(event.getEventType());
 
-            event.writeOutput(ionWriterForOutput, ionWriterForErrorReport, processContext);
+            event.writeOutput(ionWriterForErrorReport, processContext);
             //update eventIndex
             processContext.setEventIndex(processContext.getEventIndex() + 1);
         }
     }
 
-    private static void processToNormalFromEventStream(IonWriter ionWriterForOutput,
-                                                       IonWriter ionWriterForErrorReport,
+    private static void processToNormalFromEventStream(IonWriter ionWriterForErrorReport,
                                                        IonReader ionReader,
                                                        ProcessContext processContext,
                                                        ProcessArgs args,
@@ -312,28 +318,20 @@ public final class IonProcess {
             if (event.getEventType() == EventType.CONTAINER_START) {
 
                 if (isEmbeddedEvent(event)) {
-                    embeddedEventToIon(ionReader, ionWriterForOutput, processContext, args, outputStream);
+                    embeddedEventToIon(ionReader,processContext, args, outputStream);
                 } else {
                     IonType type = event.getIonType();
-                    setAnnotationAndField(event, ionWriterForOutput);
-                    ionWriterForOutput.stepIn(type);
+                    setAnnotationAndField(event, processContext.getIonWriter());
+                    processContext.getIonWriter().stepIn(type);
                 }
             } else if (event.getEventType().equals(EventType.CONTAINER_END)) {
-                ionWriterForOutput.stepOut();
+                processContext.getIonWriter().stepOut();
             } else if (event.getEventType().equals(EventType.SCALAR)) {
-                writeIonByType(event, ionWriterForOutput);
+                writeIonByType(event, processContext.getIonWriter());
             } else if (event.getEventType().equals(EventType.SYMBOL_TABLE)) {
-                ionWriterForOutput.finish();
-                ImportDescriptor[] imports = event.getImports();
-                SymbolTable[] symbolTables = new SymbolTable[imports.length];
-                for (int i = 0; i < imports.length; i++) {
-                    SymbolTable symbolTable = ION_SYSTEM.newSharedSymbolTable(
-                            imports[i].getImportName(), imports[i].getVersion(), null);
-                    symbolTables[i] = symbolTable;
-                }
-                ionWriterForOutput = args.getOutputFormat().createIonWriterWithImports(outputStream, symbolTables);
+                handleSymbolTableEvent(processContext, event, outputStream, args);
             } else if (event.getEventType().equals(EventType.STREAM_END)) {
-                ionWriterForOutput.finish();
+                processContext.getIonWriter().finish();
             }
         }
         if (processContext.getLastEventType() != EventType.STREAM_END) {
@@ -353,19 +351,18 @@ public final class IonProcess {
     }
 
     private static void embeddedEventToIon(IonReader ionReader,
-                                           IonWriter ionWriterForOutput,
                                            ProcessContext processContext,
                                            ProcessArgs args,
                                            OutputStream outputStream) throws IOException {
-        ionWriterForOutput.addTypeAnnotation(EMBEDDED_STREAM_ANNOTATION);
-        ionWriterForOutput.stepIn(IonType.SEXP);
+        processContext.getIonWriter().addTypeAnnotation(EMBEDDED_STREAM_ANNOTATION);
+        processContext.getIonWriter().stepIn(IonType.SEXP);
         int depth = 0;
         boolean finish = false;
         while (ionReader.next() != null) {
             StringBuilder out = new StringBuilder();
-            try (
-                    IonWriter tempWriter = ION_TEXT_WRITER_BUILDER.build(out);
-            ) {
+            ProcessContext embeddedContext = new ProcessContext(null,0,null,
+                            null, ION_TEXT_WRITER_BUILDER.build(out));
+            try {
                 do {
                     processContext.setEventIndex(processContext.getEventIndex() + 1);
                     Event event = eventStreamToEvent(ionReader);
@@ -374,10 +371,10 @@ public final class IonProcess {
                     if (event.getEventType() == EventType.STREAM_END) {
                         break;
                     } else if (event.getEventType() == EventType.SCALAR) {
-                        writeIonByType(event, tempWriter);
+                        writeIonByType(event, embeddedContext.getIonWriter());
                     } else if (event.getEventType() == EventType.CONTAINER_START) {
                         depth++;
-                        tempWriter.stepIn(event.getIonType());
+                        embeddedContext.getIonWriter().stepIn(event.getIonType());
                     } else if (event.getEventType() == EventType.CONTAINER_END) {
                         if (depth == 0) {
                             if (event.getIonType() == IonType.SEXP) {
@@ -388,29 +385,46 @@ public final class IonProcess {
                             }
                         }
                         depth--;
-                        tempWriter.stepOut();
+                        embeddedContext.getIonWriter().stepOut();
                     } else if (event.getEventType() == EventType.SYMBOL_TABLE) {
-                        ionWriterForOutput.finish();
-                        ImportDescriptor[] imports = event.getImports();
-                        SymbolTable[] symbolTables = new SymbolTable[imports.length];
-                        for (int i = 0; i < imports.length; i++) {
-                            SymbolTable symbolTable = ION_SYSTEM.newSharedSymbolTable(
-                                    imports[i].getImportName(), imports[i].getVersion(), null);
-                            symbolTables[i] = symbolTable;
-                        }
-                        ionWriterForOutput = args.getOutputFormat()
-                                .createIonWriterWithImports(outputStream, symbolTables);
+                        handleSymbolTableEvent(embeddedContext, event, outputStream, args);
                     }
                 } while (ionReader.next() != null);
 
                 if (out.length() > 0) {
-                    tempWriter.finish();
-                    ionWriterForOutput.writeString(out.toString());
+                    embeddedContext.getIonWriter().finish();
+                    processContext.getIonWriter().writeString(out.toString());
+                }
+            } finally {
+                IonWriter ionWriter = embeddedContext.getIonWriter();
+                if (ionWriter != null) {
+                    try {
+                        ionWriter.close();
+                    } catch (IOException e) {
+                        System.err.println(e.getMessage());
+                    }
                 }
             }
             if (finish) break;
         }
-        ionWriterForOutput.stepOut();
+        processContext.getIonWriter().stepOut();
+    }
+
+    private static void handleSymbolTableEvent(ProcessContext processContext,
+                                               Event event,
+                                               OutputStream outputStream,
+                                               ProcessArgs args) throws IOException {
+        processContext.getIonWriter().finish();
+        processContext.getIonWriter().close();
+        ImportDescriptor[] imports = event.getImports();
+        SymbolTable[] symbolTables = new SymbolTable[imports.length];
+        for (int i = 0; i < imports.length; i++) {
+            SymbolTable symbolTable = ION_SYSTEM.newSharedSymbolTable(
+                    imports[i].getImportName(), imports[i].getVersion(), null);
+            symbolTables[i] = symbolTable;
+        }
+        processContext.setIonWriter(
+                args.getOutputFormat().createIonWriterWithImports(outputStream, symbolTables));
     }
 
     //

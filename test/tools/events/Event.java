@@ -65,10 +65,9 @@ public class Event {
         }
     }
 
-    public void writeOutput(IonWriter ionWriterForOutput,
-                            IonWriter ionWriterForErrorReport,
+    public void writeOutput(IonWriter ionWriterForErrorReport,
                             ProcessContext processContext) throws IOException {
-        int updatedEventIndex = writeOutput(ionWriterForOutput, ionWriterForErrorReport,
+        int updatedEventIndex = writeOutput(processContext.getIonWriter(), ionWriterForErrorReport,
                 processContext.getFileName(),processContext.getEventIndex());
 
         processContext.setEventIndex(updatedEventIndex);
