@@ -37,34 +37,6 @@ public class Event {
         this.depth = depth;
     }
 
-    public void validate() throws IonException {
-        if (this.eventType == null) throw new IonException("event_type can't be null");
-
-        EventType eventType = this.eventType;
-        switch (eventType) {
-            case CONTAINER_START:
-                if (this.ionType == null || this.depth == -1) {
-                    throw new IonException("Invalid event_type: missing field(s)");
-                } else if (!IonType.isContainer(ionType)) {
-                    throw new IonException("Invalid event_type: not a container");
-                }
-                break;
-            case SCALAR:
-                if (this.ionType == null || this.value == null || this.depth == -1) {
-                    throw new IonException("Invalid event_type: missing field(s)");
-                } else if (IonType.isContainer(ionType)) {
-                    throw new IonException("Invalid event_type: ion_type error");
-                }
-                break;
-            case SYMBOL_TABLE:
-            case CONTAINER_END:
-            case STREAM_END:
-                break;
-            default:
-                throw new IonException("Invalid event_type");
-        }
-    }
-
     public void writeOutput(IonWriter ionWriterForErrorReport,
                             ProcessContext processContext) throws IOException {
         int updatedEventIndex = writeOutput(processContext.getIonWriter(), ionWriterForErrorReport,

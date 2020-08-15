@@ -53,14 +53,8 @@ public final class IonProcess {
     private static final String EVENT_STREAM = "$ion_event_stream";
 
     public static void main(String[] args) {
-        String[] a = {"-f", "pretty", "aaa"};
-        String[] b = {"-f", "pretty", "embedded"};
-        String[] c = {"-f", "events", "2"};
-        String[] d = {"-f", "events", "3"};
-        String[] f = {"-f", "events", "1"};
-        String[] g = {"-f", "pretty", "embeddedIon"};
-
-        args = g;
+        String[] b = {"-f","pretty","aaa"};
+        args = b;
 
         ProcessArgs parsedArgs = new ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
@@ -82,9 +76,8 @@ public final class IonProcess {
                 //Initialize error report, never return null. (default value: STDERR)
                 OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
-                IonWriter ionWriterForOutputStream = outputFormat.createIonWriter(outputStream);
         ) {
-            processContext.setIonWriter(ionWriterForOutputStream);
+            processContext.setIonWriter(outputFormat.createIonWriter(outputStream));
 
             processFiles(ionWriterForErrorReport, parsedArgs, processContext, outputStream);
         } catch (IOException e) {
@@ -343,6 +336,7 @@ public final class IonProcess {
         SymbolToken field = event.getFieldName();
         SymbolToken[] annotations = event.getAnnotations();
         if (field != null) {
+            if (!ionWriter.isInStruct()) throw new IonException("invalid field_name, must inside STRUCT");
             ionWriter.setFieldNameSymbol(field);
         }
         if (annotations != null && annotations.length != 0) {
@@ -414,7 +408,6 @@ public final class IonProcess {
                                                Event event,
                                                OutputStream outputStream,
                                                ProcessArgs args) throws IOException {
-        processContext.getIonWriter().finish();
         processContext.getIonWriter().close();
         ImportDescriptor[] imports = event.getImports();
         SymbolTable[] symbolTables = new SymbolTable[imports.length];
@@ -457,12 +450,15 @@ public final class IonProcess {
         while (ionReader.next() != null) {
             switch (ionReader.getFieldName()) {
                 case "event_type":
+                    if (eventType != null) throw new IonException("invalid Event: repeat event_type");
                     eventType = EventType.valueOf(ionReader.stringValue().toUpperCase());
                     break;
                 case "ion_type":
+                    if (ionType != null) throw new IonException("invalid Event: repeat ion_type");
                     ionType = IonType.valueOf(ionReader.stringValue().toUpperCase());
                     break;
                 case "field_name":
+                    if (fieldName != null) throw new IonException("invalid Event: repeat field_name");
                     ionReader.stepIn();
                     String fieldText = null;
                     int fieldSid = 0;
@@ -480,6 +476,7 @@ public final class IonProcess {
                     ionReader.stepOut();
                     break;
                 case "annotations":
+                    if (annotations != null) throw new IonException("invalid Event: repeat annotations");
                     ArrayList<SymbolToken> annotationsList = new ArrayList<>();
                     ionReader.stepIn();
                     while (ionReader.next() != null) {
@@ -504,9 +501,11 @@ public final class IonProcess {
                     ionReader.stepOut();
                     break;
                 case "value_text":
+                    if (textValue != null) throw new IonException("invalid Event: repeat value_text");
                     textValue = ionReader.stringValue();
                     break;
                 case "value_binary":
+                    if (binaryValue != null) throw new IonException("invalid Event: repeat binary_value");
                     ArrayList<Integer> intArray = new ArrayList<>();
                     ionReader.stepIn();
                     while (ionReader.next() != null) {
@@ -521,35 +520,73 @@ public final class IonProcess {
                     ionReader.stepOut();
                     break;
                 case "imports":
+                    if (imports != null) throw new IonException("invalid Event: repeat imports");
                     imports = ionStreamToImportDescriptors(ionReader);
                     break;
                 case "depth":
+                    if (depth != -1) throw new IonException("invalid Event: repeat depth");
                     depth = ionReader.intValue();
                     break;
             }
 
         }
         ionReader.stepOut();
+        //validate event
+        validateEvent(textValue, binaryValue, eventType,  ionType, imports, depth);
+        if (textValue != null) eventValue = ION_SYSTEM.singleValue(textValue);
 
-        //compare text value and binary value
-        if (textValue != null && binaryValue != null) {
-            IonValue text = ION_SYSTEM.singleValue(textValue);
-            IonValue binary = ION_SYSTEM.singleValue(binaryValue);
-            if (!Equivalence.ionEquals(text, binary)) {
-                throw new IonException("invalid Event: Text value and Binary value are different");
-            } else {
-                eventValue = text;
-            }
-        } else if (textValue == null && binaryValue == null) {
-            if (eventType == EventType.SCALAR) {
-                throw new IonException("invalid Event: Text value and Binary value can't be null for SCALAR event");
-            }
-        } else {
-            throw new IonException("invalid Event: Missing Text value or Binary value");
+        return new Event(eventType, ionType, fieldName, annotations, eventValue, imports, depth);
+    }
+
+    private static void validateEvent(String textValue, byte[] binaryValue, EventType eventType, IonType ionType,
+                                      ImportDescriptor[] imports, int depth) {
+        if (eventType == null) throw new IonException("event_type can't be null");
+
+        switch (eventType) {
+            case CONTAINER_START:
+                if (ionType == null || depth == -1) {
+                    throw new IonException("Invalid CONTAINER_START: missing field(s)");
+                } else if (!IonType.isContainer(ionType)) {
+                    throw new IonException("Invalid CONTAINER_START: not a container");
+                } else if (textValue != null || binaryValue != null) {
+                    throw new IonException("Invalid CONTAINER_START: value_binary and value_text are only applicable"
+                            + " for SCALAR events");
+                } else if (imports != null) {
+                    throw new IonException("Invalid CONTAINER_START: imports must only be present with SYMBOL_TABLE "
+                            + "events");
+                }
+                break;
+            case SCALAR:
+                if (ionType == null || textValue == null || binaryValue == null || depth == -1) {
+                    throw new IonException("Invalid SCALAR: missing field(s)");
+                } else if (IonType.isContainer(ionType)) {
+                    throw new IonException("Invalid SCALAR: ion_type error");
+                }
+                //compare text value and binary value
+                IonValue text = ION_SYSTEM.singleValue(textValue);
+                IonValue binary = ION_SYSTEM.singleValue(binaryValue);
+                if (!Equivalence.ionEquals(text, binary)) {
+                    throw new IonException("invalid Event: Text value and Binary value are different");
+                }
+                break;
+            case SYMBOL_TABLE:
+                if (depth == -1) {
+                    throw new IonException("Invalid SYMBOL_TABLE: missing depth");
+                } else if (imports == null ) {
+                    throw new IonException("Invalid SYMBOL_TABLE: missing imports");
+                }
+            case CONTAINER_END:
+                if (depth == -1 || ionType == null) {
+                    throw new IonException("Invalid CONTAINER_END: missing depth");
+                }
+            case STREAM_END:
+                if (depth == -1) {
+                    throw new IonException("Invalid STREAM_END: missing depth");
+                }
+                break;
+            default:
+                throw new IonException("Invalid event_type");
         }
-        Event event = new Event(eventType, ionType, fieldName, annotations, eventValue, imports, depth);
-        event.validate();
-        return event;
     }
 
     private static ImportDescriptor[] ionStreamToImportDescriptors(IonReader ionReader) {
