@@ -1,6 +1,5 @@
 package tools.cli;
 
-import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -24,7 +23,6 @@ import tools.events.Event;
 import tools.events.EventType;
 import tools.events.ImportDescriptor;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -52,10 +50,7 @@ public final class IonProcess {
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
     private static final String EVENT_STREAM = "$ion_event_stream";
 
-    public static void main(String[] args) {
-        String[] b = {"-f","pretty","aaa"};
-        args = b;
-
+    public static void main(final String[] args) {
         ProcessArgs parsedArgs = new ProcessArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
         parser.getProperties().withUsageWidth(CONSOLE_WIDTH);
@@ -309,7 +304,6 @@ public final class IonProcess {
             processContext.setLastEventType(event.getEventType());
 
             if (event.getEventType() == EventType.CONTAINER_START) {
-
                 if (isEmbeddedEvent(event)) {
                     embeddedEventToIon(ionReader,processContext, args, outputStream);
                 } else {
@@ -329,18 +323,6 @@ public final class IonProcess {
         }
         if (processContext.getLastEventType() != EventType.STREAM_END) {
             throw new IonException("EventStream doesn't end with STREAM_END event");
-        }
-    }
-
-    private static void setAnnotationAndField(Event event, IonWriter ionWriter) {
-        SymbolToken field = event.getFieldName();
-        SymbolToken[] annotations = event.getAnnotations();
-        if (field != null) {
-            if (!ionWriter.isInStruct()) throw new IonException("invalid field_name, must inside STRUCT");
-            ionWriter.setFieldNameSymbol(field);
-        }
-        if (annotations != null && annotations.length != 0) {
-            ionWriter.setTypeAnnotationSymbols(annotations);
         }
     }
 
@@ -425,14 +407,26 @@ public final class IonProcess {
     //
 
     private static void writeIonByType(Event event, IonWriter ionWriter) throws IOException {
+        setAnnotationAndField(event, ionWriter);
+        IonValue value = event.getValue();
+        value.setTypeAnnotationSymbols(event.getAnnotations());
+        value.writeTo(ionWriter);
+    }
+
+    private static void setAnnotationAndField(Event event, IonWriter ionWriter) {
         SymbolToken field = event.getFieldName();
         SymbolToken[] annotations = event.getAnnotations();
         if (field != null) {
+            if (!ionWriter.isInStruct()) throw new IonException("invalid field_name inside STRUCT");
             ionWriter.setFieldNameSymbol(field);
+        } else if (ionWriter.isInStruct()) {
+            String s = null;
+            SymbolToken symbolToken = _Private_Utils.newSymbolToken(s, 0);
+            ionWriter.setFieldNameSymbol(symbolToken);
         }
-        IonValue value = event.getValue();
-        value.setTypeAnnotationSymbols(annotations);
-        value.writeTo(ionWriter);
+        if (annotations != null && annotations.length != 0) {
+            ionWriter.setTypeAnnotationSymbols(annotations);
+        }
     }
 
     private static Event eventStreamToEvent(IonReader ionReader) { ;
