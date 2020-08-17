@@ -192,16 +192,16 @@ public class IonCompare {
                         || (eventsSecond.get(j).getEventType() == EventType.CONTAINER_END
                         && eventsSecond.get(j).getIonType() == IonType.SEXP))) {
 
-                    int x_i = i;
+                    int xI = i;
                     while (eventsFirst.get(i).getEventType() != EventType.STREAM_END) {
                         i++;
                     }
-                    int x_j = j;
+                    int xJ = j;
                     while (eventsSecond.get(j).getEventType() != EventType.STREAM_END) {
                         j++;
                     }
 
-                    if (!compare(compareContext, true, x_i, i, x_j, j)) {
+                    if (!compare(compareContext, true, xI, i, xJ, j)) {
                         return false;
                     }
                     i++;
