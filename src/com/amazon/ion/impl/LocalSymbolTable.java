@@ -168,7 +168,10 @@ class LocalSymbolTable
         myFirstLocalSid = myImportsList.getMaxId() + 1;
 
         // Copy locally declared symbols to mySymbolsMap
-        mySymbolsMap = new HashMap<String, Integer>();
+        // The initial size is chosen so that resizing is avoided. The default load factor is 0.75. Resizing
+        // could also be avoided by setting the initial size to mySymbolsCount and setting the load factor to
+        // 1.0, but this would lead to more hash collisions.
+        mySymbolsMap = new HashMap<String, Integer>((int) Math.ceil(mySymbolsCount / 0.75));
         buildSymbolsMap();
     }
 
