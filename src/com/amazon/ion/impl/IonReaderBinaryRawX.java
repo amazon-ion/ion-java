@@ -878,7 +878,7 @@ abstract class IonReaderBinaryRawX
         int b;
         switch (len) {
         default:
-            throw new IonException("value too large for Java long");
+            throw new IonException("value too large for Java long(should be <=8)");
         case 8:
             if ((b = read()) < 0) throwUnexpectedEOFException();
             retvalue = (retvalue << 8) | b;
