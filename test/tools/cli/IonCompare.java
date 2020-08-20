@@ -1,7 +1,10 @@
 package tools.cli;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSexp;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
@@ -12,7 +15,6 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
-import com.sun.tools.javac.util.Pair;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -36,7 +38,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class IonCompare {
@@ -55,10 +56,12 @@ public class IonCompare {
         CmdLineParser parser = new CmdLineParser(parsedArgs);
         parser.getProperties().withUsageWidth(CONSOLE_WIDTH);
         ComparisonType comparisonType = parsedArgs.getComparisonType();
+        OutputFormat outputFormat = null;
 
         try {
             parser.parseArgument(args);
             comparisonType = parsedArgs.getComparisonType();
+            outputFormat = parsedArgs.getOutputFormat();
         } catch (CmdLineException | IllegalArgumentException e) {
             System.err.println(e.getMessage() + "\n");
             System.err.println("\"Compare\" Compare all inputs (which may contain Ion streams and/or EventStreams) \n"
@@ -76,16 +79,16 @@ public class IonCompare {
              OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
              //Initialize error report, never return null. (default value: STDERR)
              OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
-             IonWriter ionWriterForOutput = IonTextWriterBuilder.pretty().build(outputStream);
-             IonWriter ionWriterForErrorReport = IonTextWriterBuilder.pretty().build(errorReportOutputStream);
+             IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
+             IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
         ) {
-            CompareFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, comparisonType);
+            compareFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, comparisonType);
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
         }
     }
 
-    private static void CompareFiles(IonWriter ionWriterForOutput,
+    private static void compareFiles(IonWriter ionWriterForOutput,
                                      IonWriter ionWriterForErrorReport,
                                      CompareArgs args,
                                      ComparisonType comparisonType) throws IOException {
@@ -124,7 +127,7 @@ public class IonCompare {
                             //TODO will be in next commit
                         } else if (comparisonType == ComparisonType.NON_EQUIVS) {
                             //TODO will be in next commit
-                        } else if (comparisonType == ComparisonType.EQUIVSS_TIMELINE) {
+                        } else if (comparisonType == ComparisonType.EQUIVS_TIMELINE) {
                             //TODO will be in next commit
                         }
                     }
@@ -140,8 +143,8 @@ public class IonCompare {
     private static boolean compare(CompareContext compareContext,
                                    boolean writeReport,
                                    int startI, int endI, int startJ, int endJ) throws IOException {
-        ArrayList<Event> eventsFirst = compareContext.getEventStreamFirst();
-        ArrayList<Event> eventsSecond = compareContext.getEventStreamSecond();
+        ArrayList<Event> eventsFirst = (ArrayList<Event>) compareContext.getEventStreamFirst();
+        ArrayList<Event> eventsSecond = (ArrayList<Event>) compareContext.getEventStreamSecond();
         int i = startI;
         int j = startJ;
         while (i <= endI && j <= endJ && i < eventsFirst.size() && j < eventsSecond.size()) {
@@ -180,17 +183,14 @@ public class IonCompare {
                 }
                 return false;
             }
-            // following three branches for:
-            // 1. checking embedded stream equivalence
-            // 2. checking struct equivalence
-            // 3. checking SCALAR value equivalence
+
             if (isEmbeddedEvent(eventFirst)) {
                 i++;
                 j++;
                 while (!((eventsFirst.get(i).getEventType() == EventType.CONTAINER_END
                         && eventsFirst.get(i).getIonType() == IonType.SEXP)
                         || (eventsSecond.get(j).getEventType() == EventType.CONTAINER_END
-                        && eventsSecond.get(j).getIonType() == IonType.SEXP))) {
+                        && eventsSecond.get(j).getIonType() == IonType.LIST))) {
 
                     int xI = i;
                     while (eventsFirst.get(i).getEventType() != EventType.STREAM_END) {
@@ -213,14 +213,20 @@ public class IonCompare {
                 }
             } else if (eventTypeFirst == EventType.CONTAINER_START
                     && eventFirst.getIonType() == IonType.STRUCT) {
-                int iStart = i + 1;
-                int jStart = j + 1;
-                i = parseContainer(i, eventsFirst.size(), compareContext, true).snd;
-                j = parseContainer(j, eventsSecond.size(), compareContext, false).snd;
+                int iStart = i;
+                int jStart = j;
+                ContainerContext containerContextFirst = new ContainerContext(i);
+                IonStruct structFirst = parseStruct(containerContextFirst, compareContext, endI, true);
+                i = containerContextFirst.getIndex();
 
-                if (!isSameStruct(compareContext, iStart, i, jStart, j)) {
+                ContainerContext containerContextSecond = new ContainerContext(j);
+                IonStruct structSecond = parseStruct(containerContextSecond, compareContext, endJ, false);
+                j = containerContextSecond.getIndex();
+
+                if (!Equivalence.ionEquals(structFirst, structSecond)) {
                     if (writeReport) {
-                        setReportInfo(i, -1,"Doesn't match struct", compareContext);
+                        setReportInfo(iStart, jStart,
+                                "Different structs starting from the given index", compareContext);
                     }
                     return false;
                 }
@@ -238,83 +244,106 @@ public class IonCompare {
         return true;
     }
 
-    private static boolean isSameStruct(CompareContext compareContext,
-                                        int startI, int endI,
-                                        int startJ, int endJ) throws IOException {
-        HashMap<String, ArrayList<Pair<Integer,Integer>>> hashMap = new HashMap<>();
-        for (int i = startI; i < endI; i++) {
-            Pair<Integer, Integer> eachValue = new Pair<>(i, i);
-            Event event = compareContext.getEventStreamFirst().get(i);
-            String fieldName = event.getFieldName().getText();
-
-            if (IonType.isContainer(event.getIonType())) {
-                eachValue = parseContainer(i , endI, compareContext, true);
-                i = eachValue.snd;
-            }
-
-            if (hashMap.get(fieldName) != null) {
-                hashMap.get(fieldName).add(eachValue);
-            } else {
-                ArrayList<Pair<Integer, Integer>> mapList = new ArrayList<>();
-                mapList.add(eachValue);
-                hashMap.put(fieldName, mapList);
-            }
-        }
-
-        for (int j = startJ; j < endJ; j++) {
-            Pair<Integer, Integer> testEvents = new Pair<>(j,j);
-            Event event = compareContext.getEventStreamSecond().get(j);
-            String fieldName = event.getFieldName().getText();
-
-            if (IonType.isContainer(event.getIonType())) {
-                testEvents = parseContainer(j , endI, compareContext, false);
-                j = testEvents.snd;
-            }
-
-            ArrayList<Pair<Integer, Integer>> sameFieldEvents = hashMap.get(fieldName);
-            if (sameFieldEvents == null || sameFieldEvents.size() == 0) return false;
-            boolean find = false;
-
-            for (int k = 0; k < sameFieldEvents.size(); k++) {
-                Pair<Integer, Integer> aEventStream = sameFieldEvents.get(k);
-
-                if (compare(compareContext,false,
-                        aEventStream.fst, aEventStream.snd, testEvents.fst, testEvents.snd)) {
-                    hashMap.get(fieldName).remove(k);
-                    if (hashMap.get(fieldName).size() == 0) {
-                        hashMap.remove(fieldName);
-                    }
-                    find = true;
-                    break;
+    private static IonStruct parseStruct(ContainerContext containerContext,
+                                         CompareContext compareContext,
+                                         int end,
+                                         boolean isFirst) {
+        IonStruct ionStruct = ION_SYSTEM.newEmptyStruct();
+        while (containerContext.increaseIndex() < end) {
+            Event event = isFirst ?
+                    compareContext.getEventStreamFirst().get(containerContext.getIndex()) :
+                    compareContext.getEventStreamSecond().get(containerContext.getIndex());
+            EventType eventType = event.getEventType();
+            if (eventType == EventType.CONTAINER_START) {
+                switch (event.getIonType()) {
+                    case LIST:
+                        ionStruct.add(event.getFieldName(),
+                                parseList(containerContext, compareContext, end, isFirst));
+                        break;
+                    case STRUCT:
+                        ionStruct.add(event.getFieldName(),
+                                parseStruct(containerContext, compareContext, end, isFirst));
+                        break;
+                    case SEXP:
+                        ionStruct.add(event.getFieldName(),
+                                parseSexp(containerContext, compareContext, end, isFirst));
+                        break;
                 }
-            }
-            if (!find) {
-                setReportInfo(-1, j,null, compareContext);
-                return false;
-            }
-        }
-        return hashMap.size() == 0;
-    }
-
-    private static Pair<Integer, Integer> parseContainer(int count, int end,
-                                                         CompareContext compareContext, boolean first) {
-        int depth = 1;
-        int start = count;
-
-        while (count++ < end) {
-            Event aEvent;
-            if (first) aEvent = compareContext.getEventStreamFirst().get(count);
-            else aEvent = compareContext.getEventStreamSecond().get(count);
-
-            if (aEvent.getEventType() == EventType.CONTAINER_START) {
-                depth++;
-            } else if (aEvent.getEventType() == EventType.CONTAINER_END) {
-                if (--depth == 0) break;
+            } else if (eventType == EventType.CONTAINER_END) {
+                break;
+            } else if (eventType == EventType.STREAM_END) {
+                throw new IonException("Invalid struct: eventStream ends without CONTAINER_END");
+            } else {
+                ionStruct.add(event.getFieldName(), event.getValue());
             }
         }
-        return new Pair<>(start, count);
+        return ionStruct;
     }
 
+    private static IonList parseList(ContainerContext containerContext,
+                                               CompareContext compareContext,
+                                               int end,
+                                               boolean isFirst) {
+        IonList ionList = ION_SYSTEM.newEmptyList();
+        while (containerContext.increaseIndex() < end) {
+            Event event = isFirst ?
+                    compareContext.getEventStreamFirst().get(containerContext.getIndex()) :
+                    compareContext.getEventStreamSecond().get(containerContext.getIndex());
+            EventType eventType = event.getEventType();
+            if (eventType == EventType.CONTAINER_START) {
+                switch (event.getIonType()) {
+                    case LIST:
+                        ionList.add(parseList(containerContext, compareContext, end, isFirst));
+                        break;
+                    case STRUCT:
+                        ionList.add(parseStruct(containerContext, compareContext, end, isFirst));
+                        break;
+                    case SEXP:
+                        ionList.add(parseSexp(containerContext, compareContext, end, isFirst));
+                }
+            } else if (eventType == EventType.CONTAINER_END) {
+                break;
+            } else if (eventType == EventType.STREAM_END) {
+                throw new IonException("Invalid list: eventStream ends without CONTAINER_END");
+            } else {
+                ionList.add(event.getValue());
+            }
+        }
+        return ionList;
+    }
+
+    private static IonSexp parseSexp(ContainerContext containerContext,
+                                          CompareContext compareContext,
+                                          int end,
+                                          boolean isFirst) {
+        IonSexp ionSexp = ION_SYSTEM.newEmptySexp();
+        while (containerContext.increaseIndex() < end) {
+            Event event = isFirst ?
+                    compareContext.getEventStreamFirst().get(containerContext.getIndex()) :
+                    compareContext.getEventStreamSecond().get(containerContext.getIndex());
+            EventType eventType = event.getEventType();
+            if (eventType == EventType.CONTAINER_START) {
+                switch (event.getIonType()) {
+                    case LIST:
+                        ionSexp.add(parseList(containerContext, compareContext, end, isFirst));
+                        break;
+                    case STRUCT:
+                        ionSexp.add(parseStruct(containerContext, compareContext, end, isFirst));
+                        break;
+                    case SEXP:
+                        ionSexp.add(parseSexp(containerContext, compareContext, end, isFirst));
+                        break;
+                }
+            } else if (eventType == EventType.CONTAINER_END) {
+                break;
+            } else if (eventType == EventType.STREAM_END) {
+                throw new IonException("Invalid sexp: eventStream ends without CONTAINER_END");
+            } else {
+                ionSexp.add(event.getValue());
+            }
+        }
+        return ionSexp;
+    }
 
     private static boolean isSameSymbolToken(SymbolToken symbolTokenX, SymbolToken symbolTokenY) {
         if (symbolTokenX == null && symbolTokenY == null) return true;
@@ -715,6 +744,27 @@ public class IonCompare {
         return outputStream;
     }
 
+    static class ContainerContext {
+        int index;
+
+        ContainerContext(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
+        public void setIndex(int index) {
+            this.index = index;
+        }
+
+        public int increaseIndex() {
+            this.index = this.index + 1;
+            return this.index;
+        }
+    }
+
     static class CompareArgs {
         private static final String DEFAULT_FORMAT_VALUE = OutputFormat.PRETTY.toString();
         private static final String DEFAULT_COMPARISON_TYPE = ComparisonType.BASIC.toString();
@@ -761,6 +811,10 @@ public class IonCompare {
 
         public ComparisonType getComparisonType() throws IllegalArgumentException {
             return ComparisonType.valueOf(comparisonType.toUpperCase());
+        }
+
+        public OutputFormat getOutputFormat() throws IllegalArgumentException {
+            return OutputFormat.valueOf(outputFormatName.toUpperCase());
         }
 
         public List<String> getInputFiles() {

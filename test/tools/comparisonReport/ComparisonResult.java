@@ -30,27 +30,27 @@ public class ComparisonResult {
             ionWriter.writeString((message));
         }
         if (this.lhs != null) {
-            ionWriter.setFieldName("lhs");
-            ionWriter.stepIn(IonType.STRUCT);
-            ionWriter.setFieldName("location");
-            ionWriter.writeString(this.lhs.getLocation());
-            ionWriter.setFieldName("event");
-            this.lhs.getEvent().writeOutput(ionWriter, -1);
-            ionWriter.setFieldName("eventIndex");
-            ionWriter.writeInt(this.lhs.getEventIndex());
-            ionWriter.stepOut();
+            writeComparisonContext(ionWriter, true);
         }
         if (this.rhs != null) {
-            ionWriter.setFieldName("rhs");
-            ionWriter.stepIn(IonType.STRUCT);
-            ionWriter.setFieldName("location");
-            ionWriter.writeString(this.rhs.getLocation());
-            ionWriter.setFieldName("event");
-            this.rhs.getEvent().writeOutput(ionWriter, -1);
-            ionWriter.setFieldName("eventIndex");
-            ionWriter.writeInt(this.rhs.getEventIndex());
-            ionWriter.stepOut();
+            writeComparisonContext(ionWriter, false);
         }
+        ionWriter.stepOut();
+    }
+
+    private void writeComparisonContext(IonWriter ionWriter, boolean isLeft) throws IOException {
+        ionWriter.setFieldName(isLeft ? "lhs" : "rhs");
+        ionWriter.stepIn(IonType.STRUCT);
+        ionWriter.setFieldName("location");
+        ionWriter.writeString(isLeft ? this.lhs.getLocation() : this.rhs.getLocation());
+        ionWriter.setFieldName("event");
+        if (isLeft) {
+            this.lhs.getEvent().writeOutput(ionWriter, -1);
+        } else {
+            this.rhs.getEvent().writeOutput(ionWriter, -1);
+        }
+        ionWriter.setFieldName("eventIndex");
+        ionWriter.writeInt(isLeft ? this.lhs.getEventIndex() : this.rhs.getEventIndex());
         ionWriter.stepOut();
     }
 }

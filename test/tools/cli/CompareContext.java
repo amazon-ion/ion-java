@@ -2,20 +2,20 @@ package tools.cli;
 
 import tools.events.Event;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class CompareContext {
     String path;
     String compareToPath;
     int fileEventIndex;
     int compareToFileEventIndex;
-    ArrayList<Event> eventStreamFirst;
-    ArrayList<Event> eventStreamSecond;
+    List<Event> eventStreamFirst;
+    List<Event> eventStreamSecond;
     String message;
 
 
-    public CompareContext(ArrayList<Event> eventStreamFirst,
-                          ArrayList<Event> eventStreamSecond) {
+    public CompareContext(List<Event> eventStreamFirst,
+                          List<Event> eventStreamSecond) {
         this.path = null;
         this.compareToPath = null;
         this.eventStreamFirst = eventStreamFirst;
@@ -62,19 +62,19 @@ public class CompareContext {
         this.compareToFileEventIndex = compareToFileEventIndex;
     }
 
-    public ArrayList<Event> getEventStreamFirst() {
+    public List<Event> getEventStreamFirst() {
         return eventStreamFirst;
     }
 
-    public void setEventStreamFirst(ArrayList<Event> eventStreamFirst) {
+    public void setEventStreamFirst(List<Event> eventStreamFirst) {
         this.eventStreamFirst = eventStreamFirst;
     }
 
-    public ArrayList<Event> getEventStreamSecond() {
+    public List<Event> getEventStreamSecond() {
         return eventStreamSecond;
     }
 
-    public void setEventStreamSecond(ArrayList<Event> eventStreamSecond) {
+    public void setEventStreamSecond(List<Event> eventStreamSecond) {
         this.eventStreamSecond = eventStreamSecond;
     }
 
