@@ -296,7 +296,8 @@ public class IonCompare {
         return hashMap.size() == 0;
     }
 
-    private static Pair<Integer, Integer> parseContainer(int count, int end, CompareContext compareContext, boolean first) {
+    private static Pair<Integer, Integer> parseContainer(int count, int end,
+                                                         CompareContext compareContext, boolean first) {
         int depth = 1;
         int start = count;
 
