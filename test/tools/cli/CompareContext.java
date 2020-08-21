@@ -9,10 +9,9 @@ public class CompareContext {
     String compareToPath;
     int fileEventIndex;
     int compareToFileEventIndex;
+    String message;
     List<Event> eventStreamFirst;
     List<Event> eventStreamSecond;
-    String message;
-
 
     public CompareContext(List<Event> eventStreamFirst,
                           List<Event> eventStreamSecond) {
@@ -28,6 +27,9 @@ public class CompareContext {
         this.setCompareToFile(compareToFile);
         this.setFileEventIndex(1);
         this.setCompareToFileEventIndex(1);
+        this.message = null;
+        this.eventStreamFirst = null;
+        this.eventStreamSecond = null;
     }
 
     public String getFile() {

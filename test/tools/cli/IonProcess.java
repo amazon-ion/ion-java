@@ -217,6 +217,9 @@ public final class IonProcess {
                 ionReader.stepIn();
 
                 while (ionReader.next() != null) {
+                    if (ionReader.getType() != IonType.STRING) {
+                        throw new IonException("Elements of embedded streams sets must be strings.");
+                    }
                     String stream = ionReader.stringValue();
                     try (IonReader tempIonReader = IonReaderBuilder.standard().build(stream)) {
                         while (tempIonReader.next() != null) {
@@ -264,14 +267,29 @@ public final class IonProcess {
     //  functions for processing from EventStream
     //
 
+
+
     private static void processFromEventStream(IonWriter ionWriterForErrorReport,
                                                IonReader ionReader,
                                                ProcessContext processContext,
                                                ProcessArgs args) throws IOException {
         processContext.setState(ErrorType.WRITE);
+
+        ArrayList<Event> events = new ArrayList<>();
+        while (ionReader.next() != null) {
+            Event event = eventStreamToEvent(ionReader);
+            if (event.getEventType() == EventType.SYMBOL_TABLE) {
+                continue;
+            }
+            events.add(event);
+            processContext.setEventIndex(processContext.getEventIndex() + 1);
+            processContext.setLastEventType(event.getEventType());
+        }
+        validateEventStream(events);
+        processContext.setEventStream(events);
+
         if (args.getOutputFormat() == OutputFormat.EVENTS) {
-            processToEventStreamFromEventStream(ionWriterForErrorReport,
-                    ionReader, processContext, args);
+            processToEventStreamFromEventStream(ionWriterForErrorReport, processContext);
         } else {
             processToNormalFromEventStream(ionWriterForErrorReport,
                     ionReader, processContext, args);
@@ -279,16 +297,10 @@ public final class IonProcess {
     }
 
     private static void processToEventStreamFromEventStream(IonWriter ionWriterForErrorReport,
-                                                            IonReader ionReader,
-                                                            ProcessContext processContext,
-                                                            ProcessArgs args) throws IOException {
-        while (ionReader.next() != null) {
-            Event event = eventStreamToEvent(ionReader);
-            processContext.setLastEventType(event.getEventType());
+                                                            ProcessContext processContext) throws IOException {
 
+        for (Event event : processContext.getEventStream()) {
             event.writeOutput(ionWriterForErrorReport, processContext);
-            //update eventIndex
-            processContext.setEventIndex(processContext.getEventIndex() + 1);
         }
     }
 
@@ -312,7 +324,6 @@ public final class IonProcess {
                     processContext.getIonWriter().stepIn(type);
                 }
             } else if (event.getEventType().equals(EventType.CONTAINER_END)) {
-
                 processContext.getIonWriter().stepOut();
             } else if (event.getEventType().equals(EventType.SCALAR)) {
                 writeIonByType(event, processContext.getIonWriter());
@@ -388,6 +399,8 @@ public final class IonProcess {
         }
         processContext.getIonWriter().stepOut();
     }
+
+
 
     private static void handleSymbolTableEvent(ProcessContext processContext,
                                                Event event,
@@ -643,6 +656,60 @@ public final class IonProcess {
 
         ionReader.stepOut();
         return importsArray;
+    }
+
+    private static void validateEventStream(ArrayList<Event> events) {
+        if (events.get(events.size() - 1).getEventType() != EventType.STREAM_END) {
+            throw new IonException("Invalid event stream: event stream end without STREAM_END event");
+        }
+
+        int depth = 0;
+        int i = -1;
+        while (++i < events.size()) {
+            Event event = events.get(i);
+            EventType eventType = event.getEventType();
+
+            if (eventType == EventType.CONTAINER_START) {
+                depth++;
+            } else if (eventType == EventType.CONTAINER_END) {
+                if (--depth == 0) {
+                    throw new IonException("Invalid event stream: Invalid CONTAINER_END event");
+                }
+            }
+
+            if (isEmbeddedEvent(event)) {
+                while (i < events.size()) {
+                    if (events.get(++i).getEventType() == EventType.CONTAINER_END) {
+                        depth--;
+                        break;
+                    }
+                    while (i < events.size()) {
+                        Event aEvent = events.get(i);
+                        EventType aEventType = aEvent.getEventType();
+                        if (aEventType == EventType.CONTAINER_START) {
+                            depth++;
+                        } else if (aEventType == EventType.CONTAINER_END) {
+                            if (--depth == 0) {
+                                throw new IonException("Invalid EventStream: end without STREAM_END event");
+                            }
+                        } else if (aEventType == EventType.STREAM_END) {
+                            if (depth != 1) {
+                                throw new IonException("Invalid EventStream: " +
+                                        "CONTAINER_START and CONTAINER_END not match");
+                            }
+                            break;
+                        }
+                        i++;
+                    }
+                    if (i == events.size()) {
+                        throw new IonException("Invalid EventStream: end without CONTAINER_END event");
+                    }
+                }
+            }
+        }
+        if (depth != 0) {
+            throw new IonException("Invalid event stream: CONTAINER_START and CONTAINER_END events doesn't match");
+        }
     }
 
     /**

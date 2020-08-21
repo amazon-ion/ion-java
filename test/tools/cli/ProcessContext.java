@@ -2,9 +2,11 @@ package tools.cli;
 
 import com.amazon.ion.IonWriter;
 import tools.errorReport.ErrorType;
+import tools.events.Event;
 import tools.events.EventType;
 
 import java.io.File;
+import java.util.List;
 
 public class ProcessContext {
     private String fileName;
@@ -14,6 +16,7 @@ public class ProcessContext {
     private IonWriter ionWriter;
     private File file;
     private StringBuilder embeddedOut;
+    private List<Event> eventStream;
 
     public ProcessContext(String file, int index, EventType lastEventType, ErrorType state, IonWriter ionWriter) {
         this.fileName = file;
@@ -23,6 +26,7 @@ public class ProcessContext {
         this.ionWriter = ionWriter;
         this.file = null;
         this.embeddedOut = null;
+        this.eventStream = null;
     }
 
     public String getFileName() {
@@ -79,5 +83,13 @@ public class ProcessContext {
 
     public void setEmbeddedOut(StringBuilder embeddedOut) {
         this.embeddedOut = embeddedOut;
+    }
+
+    public List<Event> getEventStream() {
+        return eventStream;
+    }
+
+    public void setEventStream(List<Event> eventStream) {
+        this.eventStream = eventStream;
     }
 }

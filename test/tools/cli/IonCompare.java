@@ -15,6 +15,7 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
+import com.sun.tools.javac.util.Pair;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -92,49 +93,41 @@ public class IonCompare {
                                      IonWriter ionWriterForErrorReport,
                                      CompareArgs args,
                                      ComparisonType comparisonType) throws IOException {
-        CompareContext compareContext = new CompareContext(null, null);
         List<String> files = args.getInputFiles();
+        CompareContext compareContext = new CompareContext(null, null);
 
-        for (String compareToPath : files) {
-            for (String path : files) {
+        for (String path : files) {
+            for (String compareToPath : files) {
                 compareContext.reset(path, compareToPath);
                 try (InputStream inputFirst = new BufferedInputStream(new FileInputStream(path));
                      IonReader ionReaderFirst = IonReaderBuilder.standard().build(inputFirst);
                      InputStream inputSecond = new BufferedInputStream(new FileInputStream(compareToPath));
                      IonReader ionReaderSecond = IonReaderBuilder.standard().build(inputSecond);
                 ) {
-                    if (!path.equals(compareToPath)) {
-                        boolean isFirstEventStream = IonJavaTestUtil.isEventStream(ionReaderFirst);
-                        boolean isSecondEventStream = IonJavaTestUtil.isEventStream(ionReaderSecond);
-                        ArrayList<Event> eventsFirst = getEventStream(ionReaderFirst, isFirstEventStream);
-                        ArrayList<Event> eventsSecond = getEventStream(ionReaderSecond, isSecondEventStream);
-                        compareContext.setEventStreamFirst(eventsFirst);
-                        compareContext.setEventStreamSecond(eventsSecond);
+                    if (comparisonType == ComparisonType.BASIC) {
+                        if (path.equals(compareToPath)) continue;
+                    }
 
-                        if (comparisonType == ComparisonType.BASIC) {
-                            if (!compare(compareContext, true,
-                                    0, eventsFirst.size() - 1, 0, eventsSecond.size() - 1)) {
-                                new ComparisonResult(ComparisonResultType.NOT_EQUAL,
-                                        new ComparisonContext(compareContext.getFile(),
-                                                eventsFirst.get(compareContext.getFileEventIndex()),
-                                                compareContext.getFileEventIndex() + 1),
-                                        new ComparisonContext(compareContext.getCompareToFile(),
-                                                eventsSecond.get(compareContext.getCompareToFileEventIndex()),
-                                                compareContext.getCompareToFileEventIndex() + 1),
-                                        compareContext.getMessage()).writeOutput(ionWriterForOutput);
-                            }
-                        } else if (comparisonType == ComparisonType.EQUIVS) {
-                            //TODO will be in next commit
-                        } else if (comparisonType == ComparisonType.NON_EQUIVS) {
-                            //TODO will be in next commit
-                        } else if (comparisonType == ComparisonType.EQUIVS_TIMELINE) {
-                            //TODO will be in next commit
+                    boolean isFirstEventStream = IonJavaTestUtil.isEventStream(ionReaderFirst);
+                    boolean isSecondEventStream = IonJavaTestUtil.isEventStream(ionReaderSecond);
+                    ArrayList<Event> eventsFirst = getEventStream(ionReaderFirst, isFirstEventStream);
+                    ArrayList<Event> eventsSecond = getEventStream(ionReaderSecond, isSecondEventStream);
+                    compareContext.setEventStreamFirst(eventsFirst);
+                    compareContext.setEventStreamSecond(eventsSecond);
+
+                    if (comparisonType == ComparisonType.EQUIVS) {
+                        if (!compareEquivs(compareContext)) {
+                            writeReport(compareContext, ionWriterForOutput);
+                        }
+                    } else if (comparisonType == ComparisonType.BASIC) {
+                        if (!compare(compareContext, true,
+                                0, eventsFirst.size() - 1, 0, eventsSecond.size() - 1)) {
+                            writeReport(compareContext, ionWriterForOutput);
                         }
                     }
                 } catch (IonException e) {
                     new ErrorDescription(ErrorType.STATE, e.getMessage(), path+';'+compareToPath,
                             -1).writeOutput(ionWriterForErrorReport);
-                    System.exit(IO_ERROR_EXIT_CODE);
                 }
             }
         }
@@ -159,74 +152,46 @@ public class IonCompare {
 
             if (eventTypeFirst != eventTypeSecond) {
                 if (writeReport) {
-                    setReportInfo(i, j,"Doesn't match event_type", compareContext);
+                    setReportInfo(i, j,"Did't match event_type", compareContext);
                 }
                 return false;
             } else if (eventFirst.getDepth() != eventSecond.getDepth()) {
                 if (writeReport) {
-                    setReportInfo(i, j,"Doesn't match depth", compareContext);
+                    setReportInfo(i, j,"Did't match depth", compareContext);
                 }
                 return false;
             } else if (eventFirst.getIonType() != eventSecond.getIonType()) {
                 if (writeReport) {
-                    setReportInfo(i, j,"Doesn't match ion_type", compareContext);
+                    setReportInfo(i, j,"Did't match ion_type", compareContext);
                 }
                 return false;
             } else if (!isSameSymbolToken(fieldNameFirst, fieldNameSecond)) {
                 if (writeReport) {
-                    setReportInfo(i, j,"Doesn't match field_name", compareContext);
+                    setReportInfo(i, j,"Did't match field_name", compareContext);
                 }
                 return false;
             } else if (!isSameSymbolTokenArray(annotationFirst, annotationSecond)) {
                 if (writeReport) {
-                    setReportInfo(i, j,"Doesn't match annotation", compareContext);
+                    setReportInfo(i, j,"Did't match annotation", compareContext);
                 }
                 return false;
             }
 
-            if (isEmbeddedEvent(eventFirst)) {
-                i++;
-                j++;
-                while (!((eventsFirst.get(i).getEventType() == EventType.CONTAINER_END
-                        && eventsFirst.get(i).getIonType() == IonType.SEXP)
-                        || (eventsSecond.get(j).getEventType() == EventType.CONTAINER_END
-                        && eventsSecond.get(j).getIonType() == IonType.LIST))) {
-
-                    int xI = i;
-                    while (eventsFirst.get(i).getEventType() != EventType.STREAM_END) {
-                        i++;
-                    }
-                    int xJ = j;
-                    while (eventsSecond.get(j).getEventType() != EventType.STREAM_END) {
-                        j++;
-                    }
-
-                    if (!compare(compareContext, true, xI, i, xJ, j)) {
-                        return false;
-                    }
-                    i++;
-                    j++;
-                    if (eventsFirst.get(i).getEventType() != eventsSecond.get(j).getEventType()) {
-                        setReportInfo(i, j,"embedded stream has different size", compareContext);
-                        return false;
-                    }
-                }
-            } else if (eventTypeFirst == EventType.CONTAINER_START
+            if (eventTypeFirst == EventType.CONTAINER_START
                     && eventFirst.getIonType() == IonType.STRUCT) {
                 int iStart = i;
                 int jStart = j;
                 ContainerContext containerContextFirst = new ContainerContext(i);
                 IonStruct structFirst = parseStruct(containerContextFirst, compareContext, endI, true);
                 i = containerContextFirst.getIndex();
-
                 ContainerContext containerContextSecond = new ContainerContext(j);
                 IonStruct structSecond = parseStruct(containerContextSecond, compareContext, endJ, false);
                 j = containerContextSecond.getIndex();
-
                 if (!Equivalence.ionEquals(structFirst, structSecond)) {
                     if (writeReport) {
                         setReportInfo(iStart, jStart,
-                                "Different structs starting from the given index", compareContext);
+                                "Did not find matching field for " + structFirst.toString(),
+                                compareContext);
                     }
                     return false;
                 }
@@ -248,6 +213,13 @@ public class IonCompare {
                                          CompareContext compareContext,
                                          int end,
                                          boolean isFirst) {
+        Event initEvent = isFirst ?
+                compareContext.getEventStreamFirst().get(containerContext.getIndex()) :
+                compareContext.getEventStreamSecond().get(containerContext.getIndex());
+        if (initEvent.getEventType() != EventType.CONTAINER_START || initEvent.getIonType() != IonType.STRUCT) {
+            return null;
+        }
+
         IonStruct ionStruct = ION_SYSTEM.newEmptyStruct();
         while (containerContext.increaseIndex() < end) {
             Event event = isFirst ?
@@ -274,6 +246,7 @@ public class IonCompare {
             } else if (eventType == EventType.STREAM_END) {
                 throw new IonException("Invalid struct: eventStream ends without CONTAINER_END");
             } else {
+                event.getValue().removeFromContainer();
                 ionStruct.add(event.getFieldName(), event.getValue());
             }
         }
@@ -306,6 +279,7 @@ public class IonCompare {
             } else if (eventType == EventType.STREAM_END) {
                 throw new IonException("Invalid list: eventStream ends without CONTAINER_END");
             } else {
+                event.getValue().removeFromContainer();
                 ionList.add(event.getValue());
             }
         }
@@ -339,10 +313,154 @@ public class IonCompare {
             } else if (eventType == EventType.STREAM_END) {
                 throw new IonException("Invalid sexp: eventStream ends without CONTAINER_END");
             } else {
+                event.getValue().removeFromContainer();
                 ionSexp.add(event.getValue());
             }
         }
         return ionSexp;
+    }
+
+    private static void writeReport(CompareContext compareContext, IonWriter ionWriter) throws IOException {
+        new ComparisonResult(ComparisonResultType.NOT_EQUAL,
+                new ComparisonContext(compareContext.getFile(),
+                        compareContext.getEventStreamFirst().get(compareContext.getFileEventIndex()),
+                        compareContext.getFileEventIndex() + 1),
+                new ComparisonContext(compareContext.getCompareToFile(),
+                        compareContext.getEventStreamSecond().get(compareContext.getCompareToFileEventIndex()),
+                        compareContext.getCompareToFileEventIndex() + 1),
+                compareContext.getMessage()).writeOutput(ionWriter);
+    }
+
+    private static boolean compareEquivs(CompareContext compareContext) throws IOException {
+        int i = 0;
+        int j = 0;
+        ArrayList<Event> eventStreamFirst = (ArrayList<Event>) compareContext.getEventStreamFirst();
+        ArrayList<Event> eventStreamSecond = (ArrayList<Event>) compareContext.getEventStreamSecond();
+
+        while (i < eventStreamFirst.size() && j < eventStreamSecond.size()) {
+            Event eventFirst = eventStreamFirst.get(i);
+            Event eventSecond = eventStreamSecond.get(j);
+
+            if (eventFirst.getEventType() == EventType.STREAM_END
+                    && eventSecond.getEventType() == EventType.STREAM_END) {
+                break;
+            } else if (eventFirst.getEventType() == EventType.STREAM_END
+                    || eventSecond.getEventType() == EventType.STREAM_END) {
+                throw new IonException("The input streams had a different number of comparison sets.");
+            } else if (!(eventFirst.getIonType() == IonType.LIST || eventFirst.getIonType() == IonType.SEXP)
+                    || !(eventSecond.getIonType() == IonType.LIST || eventSecond.getIonType() == IonType.SEXP)) {
+                throw new IonException("Comparison sets must be lists or s-expressions.");
+            } else if (isEmbeddedEvent(eventFirst) ^ isEmbeddedEvent(eventSecond)) {
+                throw new IonException("Embedded streams set expected.");
+            }
+
+            ArrayList<Pair<Integer, Integer>> pairsFirst;
+            ArrayList<Pair<Integer, Integer>> pairsSecond;
+
+            if (isEmbeddedEvent(eventFirst) && isEmbeddedEvent(eventSecond)) {
+                pairsFirst = parseEmbeddedStream(eventStreamFirst, i);
+                pairsSecond = parseEmbeddedStream(eventStreamSecond, j);
+            } else {
+                pairsFirst = parseContainer(eventStreamFirst, i);
+                pairsSecond = parseContainer(eventStreamSecond, j);
+            }
+            i = pairsFirst.size() == 0 ? i + 1 : pairsFirst.get(pairsFirst.size() - 1).snd + 1;
+            j = pairsSecond.size() == 0 ? j + 1 : pairsSecond.get(pairsSecond.size() - 1).snd + 1;
+
+            for (Pair<Integer, Integer> pairFirst : pairsFirst) {
+                for (Pair<Integer, Integer> pairSecond : pairsSecond) {
+                    if (!compare(compareContext, true, pairFirst.fst, pairFirst.snd,
+                            pairSecond.fst, pairSecond.snd)) {
+                        return false;
+                    }
+                }
+            }
+            i++;
+            j++;
+        }
+        return true;
+    }
+
+    /**
+     *  This function will parse a embedded stream into pairs<int,int> that stores index range for
+     *  each string it includes.
+     *
+     *  Input value 'start' must be index of a CONTAINER_START event.
+     *
+     *  return List is never null. It will return a list with size zero if the embedded stream is empty.
+     */
+    private static ArrayList<Pair<Integer, Integer>> parseEmbeddedStream(ArrayList<Event> events,
+                                                                         int start) {
+        ArrayList<Pair<Integer, Integer>> parsedEvents = new ArrayList<>(0);
+        int count = start + 1;
+        int depth = 1;
+        while (++start < events.size()) {
+            EventType eventType = events.get(start).getEventType();
+
+            if (eventType == EventType.STREAM_END) {
+                parsedEvents.add(new Pair<>(count, start));
+                count = start + 1;
+            } else if (eventType == EventType.CONTAINER_END) {
+                if (--depth == 0) break;
+            } else if (eventType == EventType.CONTAINER_START) {
+                depth++;
+            }
+        }
+        return parsedEvents;
+    }
+
+    /**
+     *  This function will parse a container's values into pairs<int,int> that stores its index range.
+     *  1. For SCALAR event with index i, the pair will be (i, i)
+     *  2. For CONTAINER event, the pair will be (start, end) where start is the index of the CONTAINER_START event
+     *  and end is the index of the CONTAINER_END event.
+     *
+     *  Input value 'start' must be index of a CONTAINER_START event.
+     *
+     *  return List is never null. It will return a list with size zero if the container is empty.
+     */
+    private static ArrayList<Pair<Integer, Integer>> parseContainer(ArrayList<Event> events,
+                                                                    int start) {
+        ArrayList<Pair<Integer, Integer>> parsedEvents = new ArrayList<>(0);
+        while (++start < events.size()) {
+            EventType eventType = events.get(start).getEventType();
+
+            if (eventType == EventType.STREAM_END) {
+                throw new IonException("Invalid container: end without CONTAINER_END event");
+            } else if (eventType == EventType.CONTAINER_END) {
+                break;
+            } else if (eventType == EventType.SCALAR) {
+                parsedEvents.add(new Pair<>(start, start));
+            } else if (eventType == EventType.CONTAINER_START) {
+                int startCount = start;
+                int endCount = findNextContainer(events, start);
+                start = endCount;
+                parsedEvents.add(new Pair<>(startCount, endCount));
+            }
+        }
+        return parsedEvents;
+    }
+
+    /**
+     *  This function will move the count i from the CONTAINER_START event to its corresponding CONTAINER_END event
+     *
+     *  return int is the index of its corresponding CONTAINER_END event.
+     */
+    private static int findNextContainer(ArrayList<Event> eventStream, int i) {
+        if (!IonType.isContainer(eventStream.get(i).getIonType())) return i;
+        int depth = 1;
+        while (i++ < eventStream.size()) {
+            Event event = eventStream.get(i);
+            if (event.getEventType() == EventType.CONTAINER_START) {
+                depth++;
+            } else if (event.getEventType() == EventType.CONTAINER_END) {
+                if (--depth == 0) break;
+            }
+        }
+        if (i == eventStream.size()) {
+            throw new IonException("Invalid container, reach the end of the eventStream without CONTAINER_END event");
+        }
+        return i;
     }
 
     private static boolean isSameSymbolToken(SymbolToken symbolTokenX, SymbolToken symbolTokenY) {
@@ -390,25 +508,74 @@ public class IonCompare {
         ArrayList<Event> events = new ArrayList<>();
 
         if (isEventStream) {
-            int depth = 0;
             while (ionReader.next() != null) {
                 Event event = eventStreamToEvent(ionReader);
-                EventType type = event.getEventType();
                 if (event.getEventType() == EventType.SYMBOL_TABLE) {
                     continue;
                 }
                 events.add(event);
-
-                if (type == EventType.CONTAINER_START) depth++;
-                else if (type == EventType.CONTAINER_END) depth--;
             }
-            if (depth != 0) throw new IonException("Invalid number of CONTAINER_START/CONTAINER_END events.");
         } else {
             events = ionStreamToEventStream(ionReader);
             events.add(new Event(EventType.STREAM_END, null, null, null,
                     null, null, 0));
         }
+        validateEventStream(events);
         return events;
+    }
+
+    private static void validateEventStream(ArrayList<Event> events) {
+        if (events.get(events.size() - 1).getEventType() != EventType.STREAM_END) {
+            throw new IonException("Invalid event stream: event stream end without STREAM_END event");
+        }
+
+        int depth = 0;
+        int i = -1;
+        while (++i < events.size()) {
+            Event event = events.get(i);
+            EventType eventType = event.getEventType();
+
+            if (eventType == EventType.CONTAINER_START) {
+                depth++;
+            } else if (eventType == EventType.CONTAINER_END) {
+                if (--depth < 0) {
+                    throw new IonException("Invalid event stream: Invalid CONTAINER_END event");
+                }
+            }
+
+            if (isEmbeddedEvent(event)) {
+                while (i < events.size()) {
+                    if (events.get(++i).getEventType() == EventType.CONTAINER_END) {
+                        depth--;
+                        break;
+                    }
+                    while (i < events.size()) {
+                        Event aEvent = events.get(i);
+                        EventType aEventType = aEvent.getEventType();
+                        if (aEventType == EventType.CONTAINER_START) {
+                            depth++;
+                        } else if (aEventType == EventType.CONTAINER_END) {
+                           if (--depth == 0) {
+                               throw new IonException("Invalid EventStream: end without STREAM_END event");
+                           }
+                        } else if (aEventType == EventType.STREAM_END) {
+                            if (depth != 1) {
+                                throw new IonException("Invalid EventStream: " +
+                                        "CONTAINER_START and CONTAINER_END not match");
+                            }
+                            break;
+                        }
+                        i++;
+                    }
+                    if (i == events.size()) {
+                        throw new IonException("Invalid EventStream: end without CONTAINER_END event");
+                    }
+                }
+            }
+        }
+        if (depth != 0) {
+            throw new IonException("Invalid event stream: CONTAINER_START and CONTAINER_END events doesn't match");
+        }
     }
 
     private static ArrayList<Event> ionStreamToEventStream(IonReader ionReader) throws IOException {
@@ -426,6 +593,9 @@ public class IonCompare {
                 ionReader.stepIn();
 
                 while (ionReader.next() != null) {
+                    if (ionReader.getType() != IonType.STRING) {
+                        throw new IonException("Elements of embedded streams sets must be strings.");
+                    }
                     String stream = ionReader.stringValue();
                     try (IonReader tempIonReader = IonReaderBuilder.standard().build(stream)) {
                         while (tempIonReader.next() != null) {
