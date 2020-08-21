@@ -84,17 +84,36 @@ public final class Timestamp
     private static final int NO_SECONDS = 0;
     private static final BigDecimal NO_FRACTIONAL_SECONDS = null;
 
-    // 0001-01-01T00:00:00.0Z in millis
+    /**
+     * 0001-01-01T00:00:00.0Z in millis.
+     */
     static final long MINIMUM_TIMESTAMP_IN_MILLIS = -62135769600000L;
 
-    // 0001-01-01T00:00:00.0Z in millis
+    /**
+     * 0001-01-01T00:00:00.0Z in millis.
+     */
     static final BigDecimal MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL = new BigDecimal(MINIMUM_TIMESTAMP_IN_MILLIS);
 
-    // 10000T in millis, upper bound exclusive
+    /**
+     * 10000T in millis, upper bound exclusive.
+     */
     static final long MAXIMUM_TIMESTAMP_IN_MILLIS = 253402300800000L;
 
-    // 10000T in millis, upper bound exclusive
+    /**
+     * 10000T in millis, upper bound exclusive.
+     */
     static final BigDecimal MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL = new BigDecimal(MAXIMUM_TIMESTAMP_IN_MILLIS);
+
+
+    /**
+     * 0001-01-01T00:00:00.0Z epoch seconds.
+     */
+    static final long MINIMUM_TIMESTAMP_IN_EPOCH_SECONDS = MINIMUM_TIMESTAMP_IN_MILLIS / 1000;
+
+    /**
+     * 10000T in epoch seconds, upper bound exclusive.
+     */
+    static final long MAXIMUM_TIMESTAMP_IN_EPOCH_SECONDS = MAXIMUM_TIMESTAMP_IN_MILLIS / 1000;
 
     /**
      * Unknown local offset from UTC.
@@ -1254,16 +1273,19 @@ public final class Timestamp
     /**
      * Returns a Timestamp, precise to the minute, with a given local
      * offset.
-     * <p>
-     * This is equivalent to the corresponding Ion value
+     *
+     * <p>This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm+-oo:oo}, where {@code oo:oo} represents the
-     * hour and minutes of the local offset from UTC.
+     * hour and minutes of the local offset from UTC.</p>
+     *
+     * <p>The values of the {@code year}, {@code month}, {@code day},
+     * {@code hour}, and {@code minute} parameters are relative to the
+     * local {@code offset}.</p>
      *
      * @param offset
      *          the local offset from UTC, measured in minutes;
      *          may be {@code null} to represent an unknown local offset
      *
-
      */
     public static Timestamp forMinute(int year, int month, int day,
                                       int hour, int minute,
@@ -1275,10 +1297,14 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the second, with a given local offset.
-     * <p>
-     * This is equivalent to the corresponding Ion value
+     *
+     * <p>This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm:ss+-oo:oo}, where {@code oo:oo} represents the
-     * hour and minutes of the local offset from UTC.
+     * hour and minutes of the local offset from UTC.</p>
+     *
+     * <p>The values of the {@code year}, {@code month}, {@code day},
+     * {@code hour}, {@code minute} and {@code second} parameters are relative
+     * to the local {@code offset}.</p>
      *
      * @param offset
      *          the local offset from UTC, measured in minutes;
@@ -1296,19 +1322,19 @@ public final class Timestamp
 
     /**
      * Returns a Timestamp, precise to the second, with a given local offset.
-     * <p>
-     * This is equivalent to the corresponding Ion value
+     *
+     * <p>This is equivalent to the corresponding Ion value
      * {@code YYYY-MM-DDThh:mm:ss.sss+-oo:oo}, where {@code oo:oo} represents
-     * the hour and minutes of the local offset from UTC.
+     * the hour and minutes of the local offset from UTC.</p>
      *
-     * @param second must be at least zero and less than 60.
-     * Must not be null.
+     * <p>The values of the {@code year}, {@code month}, {@code day},
+     * {@code hour}, {@code minute} and {@code second} parameters are relative
+     * to the local {@code offset}.</p>
      *
-     * @param offset
-     *          the local offset from UTC, measured in minutes;
-     *          may be {@code null} to represent an unknown local offset
+     * @param second must be at least zero and less than 60. Must not be null.
+     * @param offset the local offset from UTC, measured in minutes;
+     *              may be {@code null} to represent an unknown local offset
      *
-
      */
     public static Timestamp forSecond(int year, int month, int day,
                                       int hour, int minute, BigDecimal second,
@@ -1323,46 +1349,33 @@ public final class Timestamp
 
 
     /**
-     * Returns a Timestamp that represents the point in time that is
-     * {@code millis} milliseconds from the epoch, with a given local offset.
-     * <p>
-     * The resulting Timestamp will be precise to the millisecond.
+     * Returns a Timestamp that represents the point in time that is {@code millis} milliseconds from the epoch,
+     * with a given local offset.
      *
-     * @param millis
-     * the number of milliseconds from the epoch (1970-01-01T00:00:00.000Z).
-     * @param localOffset
-     *          the local offset from UTC, measured in minutes;
-     *          may be {@code null} to represent an unknown local offset.
+     * <p>The resulting Timestamp will be precise to the millisecond.</p>
      *
-
+     * <p>{@code millis} is relative to UTC, regardless of the value supplied for {@code localOffset}.  This
+     * varies from the {@link #forMinute} and {@link #forSecond} methods that assume the specified date and time
+     * values are relative to the local offset.  For example, the following two Timestamps represent
+     * the same point in time:</p>
+     *
+     * <code>
+     * Timestamp theEpoch = Timestamp.forMillis(0, 0);
+     * Timestamp alsoTheEpoch = Timestamp.forSecond(1969, 12, 31, 23, 0, BigDecimal.ZERO, -60);
+     * </code>
+     *
+     * @param millis the number of milliseconds from the epoch (1970-01-01T00:00:00.000Z) in UTC.
+     * @param localOffset the local offset from UTC, measured in minutes;
+     *                    may be {@code null} to represent an unknown local offset.
      */
     public static Timestamp forMillis(long millis, Integer localOffset)
     {
         return new Timestamp(millis, localOffset);
     }
 
-
     /**
-     * Returns a Timestamp that represents the point in time that is
-     * {@code millis} milliseconds (including any fractional
-     * milliseconds) from the epoch, with a given local offset.
-     *
-     * <p>
-     * The resulting Timestamp will be precise to the second if {@code millis}
-     * doesn't contain information that is more granular than seconds.
-     * For example, a {@code BigDecimal} of
-     * value <tt>132541995e4 (132541995 &times; 10<sup>4</sup>)</tt>
-     * will return a Timestamp of {@code 2012-01-01T12:12:30Z},
-     * precise to the second.
-     *
-     * <p>
-     * The resulting Timestamp will be precise to the fractional second if
-     * {@code millis} contains information that is at least granular to
-     * milliseconds.
-     * For example, a {@code BigDecimal} of
-     * value <tt>1325419950555</tt>
-     * will return a Timestamp of {@code 2012-01-01T12:12:30.555Z},
-     * precise to the fractional second.
+     * The same as {@link #forMillis(long, Integer)} but the millisecond component is specified using a
+     * {@link BigDecimal} and therefore may include fractional milliseconds.
      *
      * @param millis
      *          number of milliseconds (including any fractional
@@ -1374,11 +1387,45 @@ public final class Timestamp
      *
      * @throws NullPointerException if {@code millis} is {@code null}
      *
-
      */
     public static Timestamp forMillis(BigDecimal millis, Integer localOffset)
     {
         return new Timestamp(millis, localOffset);
+    }
+
+
+    /**
+     * Returns a Timestamp that represents the point in time that is {@code seconds} from the unix epoch
+     * (1970-01-01T00:00:00.000Z), with the {@code nanoOffset} applied and a given local offset.
+     *
+     * <p>This function is intended to allow easy conversion to Timestamp from Java 8's {@code java.time.Instant}
+     * without having to port this library to Java 8.  The following snippet will yield a Timestamp {@code ts}
+     * that equivalent to the {@code java.time.Instant} {@code i}:</p>
+     *
+     * <code>
+     *     Instant i = Instant.now();
+     *     Timestamp ts = Timestamp.forEpochSecond(i.getEpochSecond(), i.getNano(), 0);
+     * </code>
+     *
+     * <p>Like {@link #forMillis}, {@code seconds} is relative to UTC, regardless of the value
+     * supplied for {@code localOffset}.</p>
+     *
+     * @param seconds The number of seconds from the unix epoch (1970-01-01T00:00:00.000Z) UTC.
+     * @param nanoOffset The number of nanoseconds for the fractional component. Must be between 0 and 999,999,999.
+     * @param localOffset the local offset from UTC, measured in minutes;
+     *                    may be {@code null} to represent an unknown local offset.
+     */
+    public static Timestamp forEpochSecond(long seconds, int nanoOffset, Integer localOffset) {
+        // We do not validate seconds here because that is done within the forMillis static constructor.
+        long millis = seconds * 1000L;
+        Timestamp ts = forMillis(millis, localOffset);
+        if(nanoOffset != 0) {
+            if(nanoOffset < 0 || nanoOffset > 999999999) {
+                throw new IllegalArgumentException("nanoOffset must be between 0 and 999,999,999");
+            }
+            ts._fraction = ts._fraction.add(BigDecimal.valueOf(nanoOffset).movePointLeft(9));
+        }
+        return ts;
     }
 
 
