@@ -876,36 +876,15 @@ abstract class IonReaderBinaryRawX
     {
         long    retvalue = 0;
         int b;
-        switch (len) {
-        default:
-            throw new IonException("value too large for Java long(should be <=8)");
-        case 8:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 7:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 6:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 5:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 4:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 3:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 2:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 1:
-            if ((b = read()) < 0) throwUnexpectedEOFException();
-            retvalue = (retvalue << 8) | b;
-        case 0:
-            // do nothing, it's just a 0 length is a 0 value
-        }
+        if(len == 0)
+            {
+                //do nothing its just 0[NULl]
+            }
+        else
+            {
+                if ((b = read()) < 0) throwUnexpectedEOFException();
+                retvalue = (retvalue << 8) | b;
+            }    
         return retvalue;
     }
     protected final BigInteger readBigInteger(int len, boolean is_negative) throws IOException
