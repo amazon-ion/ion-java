@@ -12,6 +12,7 @@ public class CompareContext {
     String message;
     List<Event> eventStreamFirst;
     List<Event> eventStreamSecond;
+    ComparisonType type;
 
     public CompareContext(List<Event> eventStreamFirst,
                           List<Event> eventStreamSecond) {
@@ -20,6 +21,7 @@ public class CompareContext {
         this.eventStreamFirst = eventStreamFirst;
         this.eventStreamSecond = eventStreamSecond;
         this.message = null;
+        this.type = null;
     }
 
     public void reset(String file, String compareToFile){
@@ -86,5 +88,13 @@ public class CompareContext {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public ComparisonType getType() {
+        return type;
+    }
+
+    public void setType(ComparisonType type) {
+        this.type = type;
     }
 }

@@ -34,8 +34,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.amazon.ion.SystemSymbols.ION;
-
 /**
  *  Read the input file(s) (optionally, specifying ReadInstructions or a filter) and re-write in the format
  *  specified by --output
@@ -759,18 +757,9 @@ public final class IonProcess {
         SymbolToken[] annotations = ionReader.getTypeAnnotationSymbols();
 
         IonValue value = null;
-        StringBuilder textOut = new StringBuilder();
         if (eventType == EventType.SCALAR) {
-            try (
-                    IonWriter tempWriter = ION_TEXT_WRITER_BUILDER.build(textOut);
-            ) {
-                //write Text
-                tempWriter.writeValue(ionReader);
-                tempWriter.finish();
-                String valueText = textOut.toString();
-                String[] s = valueText.split("::");
-                value = ION_SYSTEM.singleValue(s[s.length -1]);
-            }
+            value = ION_SYSTEM.newValue(ionReader);
+            value.clearTypeAnnotations();
         }
 
         ImportDescriptor[] imports = null;
