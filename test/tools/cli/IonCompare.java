@@ -11,11 +11,9 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
-import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
 import com.sun.tools.javac.util.Pair;
 import org.kohsuke.args4j.Argument;
@@ -46,12 +44,10 @@ import java.util.List;
 public class IonCompare {
     private static final int CONSOLE_WIDTH = 120; // Only used for formatting the USAGE message
     private static final int USAGE_ERROR_EXIT_CODE = 1;
-    private static final int IO_ERROR_EXIT_CODE = 2;
     private static final int BUFFER_SIZE = 128 * 1024;
     private static final String SYSTEM_OUT_DEFAULT_VALUE = "out";
     private static final String SYSTEM_ERR_DEFAULT_VALUE = "err";
     private static final IonSystem ION_SYSTEM = IonSystemBuilder.standard().build();
-    private static final IonTextWriterBuilder ION_TEXT_WRITER_BUILDER = IonTextWriterBuilder.standard();
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
 
     public static void main(final String[] args) {
@@ -128,12 +124,12 @@ public class IonCompare {
                             writeReport(compareContext, ionWriterForOutput, type);
                         }
                     } else if (comparisonType == ComparisonType.BASIC) {
-                        if (!compare(compareContext, true,
-                                0, eventsFirst.size() - 1, 0, eventsSecond.size() - 1)) {
+                        if (!compare(compareContext, 0, eventsFirst.size() - 1,
+                                0, eventsSecond.size() - 1)) {
                             writeReport(compareContext, ionWriterForOutput, ComparisonResultType.NOT_EQUAL);
                         }
                     }
-                } catch (IonException e) {
+                } catch (IonException | NullPointerException e) {
                     new ErrorDescription(ErrorType.STATE, e.getMessage(), path+';'+compareToPath,
                             -1).writeOutput(ionWriterForErrorReport);
                 }
@@ -142,7 +138,6 @@ public class IonCompare {
     }
 
     private static boolean compare(CompareContext compareContext,
-                                   boolean writeReport,
                                    int startI, int endI, int startJ, int endJ) throws IOException {
         ArrayList<Event> eventsFirst = (ArrayList<Event>) compareContext.getEventStreamFirst();
         ArrayList<Event> eventsSecond = (ArrayList<Event>) compareContext.getEventStreamSecond();
@@ -158,29 +153,19 @@ public class IonCompare {
             EventType eventTypeFirst = eventFirst.getEventType();
             EventType eventTypeSecond = eventSecond.getEventType();
             if (eventTypeFirst != eventTypeSecond) {
-                if (writeReport) {
-                    setReportInfo(i, j,"Did't match event_type", compareContext);
-                }
+                setReportInfo(i, j,"Did't match event_type", compareContext);
                 return false;
             } else if (eventFirst.getDepth() != eventSecond.getDepth()) {
-                if (writeReport) {
-                    setReportInfo(i, j,"Did't match depth", compareContext);
-                }
+                setReportInfo(i, j,"Did't match depth", compareContext);
                 return false;
             } else if (eventFirst.getIonType() != eventSecond.getIonType()) {
-                if (writeReport) {
-                    setReportInfo(i, j,"Did't match ion_type", compareContext);
-                }
+                setReportInfo(i, j,"Did't match ion_type", compareContext);
                 return false;
             } else if (!isSameSymbolToken(fieldNameFirst, fieldNameSecond)) {
-                if (writeReport) {
-                    setReportInfo(i, j,"Did't match field_name", compareContext);
-                }
+                setReportInfo(i, j,"Did't match field_name", compareContext);
                 return false;
             } else if (!isSameSymbolTokenArray(annotationFirst, annotationSecond)) {
-                if (writeReport) {
-                    setReportInfo(i, j,"Did't match annotation", compareContext);
-                }
+                setReportInfo(i, j,"Did't match annotation", compareContext);
                 return false;
             }
 
@@ -195,11 +180,9 @@ public class IonCompare {
                 IonStruct structSecond = parseStruct(containerContextSecond, compareContext, endJ, false);
                 j = containerContextSecond.getIndex();
                 if (!Equivalence.ionEquals(structFirst, structSecond)) {
-                    if (writeReport) {
-                        setReportInfo(iStart, jStart,
-                                "Did not find matching field for " + structFirst.toString(),
-                                compareContext);
-                    }
+                    setReportInfo(iStart, jStart,
+                            "Did not find matching field for " + structFirst.toString(),
+                            compareContext);
                     return false;
                 }
             } else if (eventTypeFirst == EventType.SCALAR) {
@@ -214,10 +197,8 @@ public class IonCompare {
                     compareResult = Equivalence.ionEquals(eventFirst.getValue(), eventSecond.getValue());
                 }
                 if (!compareResult) {
-                    if (writeReport) {
-                        setReportInfo(i, j, eventFirst.getValue() + " vs. "
-                                + eventSecond.getValue(), compareContext);
-                    }
+                    setReportInfo(i, j, eventFirst.getValue() + " vs. "
+                            + eventSecond.getValue(), compareContext);
                     return false;
                 }
             }
@@ -401,8 +382,7 @@ public class IonCompare {
                     if (m == n) continue;
                     Pair<Integer, Integer> pairFirst = pairsFirst.get(m);
                     Pair<Integer, Integer> pairSecond = pairsSecond.get(n);
-                    if (compare(compareContext, true, pairFirst.fst, pairFirst.snd,
-                            pairSecond.fst, pairSecond.snd) ^
+                    if (compare(compareContext, pairFirst.fst, pairFirst.snd, pairSecond.fst, pairSecond.snd) ^
                             (type == ComparisonType.EQUIVS || type == ComparisonType.EQUIVS_TIMELINE)) {
                         if (type == ComparisonType.NON_EQUIVS) {
                             setReportInfo(pairFirst.fst, pairSecond.fst,
@@ -426,8 +406,7 @@ public class IonCompare {
      *
      *  return List is never null. It will return a list with size zero if the embedded stream is empty.
      */
-    private static ArrayList<Pair<Integer, Integer>> parseEmbeddedStream(ArrayList<Event> events,
-                                                                         int start) {
+    private static ArrayList<Pair<Integer, Integer>> parseEmbeddedStream(ArrayList<Event> events, int start) {
         ArrayList<Pair<Integer, Integer>> parsedEvents = new ArrayList<>(0);
         int count = start + 1;
         int depth = 1;
@@ -456,8 +435,7 @@ public class IonCompare {
      *
      *  return List is never null. It will return a list with size zero if the container is empty.
      */
-    private static ArrayList<Pair<Integer, Integer>> parseContainer(ArrayList<Event> events,
-                                                                    int start) {
+    private static ArrayList<Pair<Integer, Integer>> parseContainer(ArrayList<Event> events, int start) {
         ArrayList<Pair<Integer, Integer>> parsedEvents = new ArrayList<>(0);
         while (++start < events.size()) {
             EventType eventType = events.get(start).getEventType();
@@ -684,7 +662,7 @@ public class IonCompare {
     /**
      * this function is only used for CONTAINER_START and SCALAR eventType since other types don't need initial data.
      */
-    private static Event ionStreamToEvent(IonReader ionReader) throws IOException, IllegalStateException {
+    private static Event ionStreamToEvent(IonReader ionReader) throws IllegalStateException {
         if (ionReader.getType() == null) throw new IllegalStateException("Can't convert ionReader null type to Event");
         IonType ionType = ionReader.getType();
         SymbolToken fieldName = ionReader.getFieldNameSymbol();
@@ -906,7 +884,7 @@ public class IonCompare {
             ImportDescriptor table = new ImportDescriptor(importName, maxId, version);
             imports.add(table);
         }
-        ImportDescriptor[] importsArray = imports.toArray(new ImportDescriptor[imports.size()]);
+        ImportDescriptor[] importsArray = imports.toArray(new ImportDescriptor[0]);
 
         ionReader.stepOut();
         return importsArray;

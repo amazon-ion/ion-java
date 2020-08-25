@@ -114,7 +114,7 @@ public final class IonProcess {
 
                 processContext.getIonWriter().finish();
                 ionWriterForErrorReport.finish();
-            } catch (IonException e) {
+            } catch (IonException | NullPointerException e) {
                 new ErrorDescription(processContext.getState(), e.getMessage(), processContext.getFileName(),
                         processContext.getEventIndex()).writeOutput(ionWriterForErrorReport);
                 System.exit(IO_ERROR_EXIT_CODE);
@@ -265,8 +265,6 @@ public final class IonProcess {
     //  functions for processing from EventStream
     //
 
-
-
     private static void processFromEventStream(IonWriter ionWriterForErrorReport,
                                                IonReader ionReader,
                                                ProcessContext processContext,
@@ -397,8 +395,6 @@ public final class IonProcess {
         }
         processContext.getIonWriter().stepOut();
     }
-
-
 
     private static void handleSymbolTableEvent(ProcessContext processContext,
                                                Event event,
