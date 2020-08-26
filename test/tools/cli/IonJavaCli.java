@@ -10,17 +10,18 @@ import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Equivalence;
 import com.sun.tools.javac.util.Pair;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
-
 import tools.comparisonReport.ComparisonContext;
 import tools.comparisonReport.ComparisonResult;
 import tools.comparisonReport.ComparisonResultType;
@@ -41,29 +42,119 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class IonCompare {
+public class IonJavaCli {
     private static final int CONSOLE_WIDTH = 120; // Only used for formatting the USAGE message
     private static final int USAGE_ERROR_EXIT_CODE = 1;
+    private static final int IO_ERROR_EXIT_CODE = 2;
     private static final int BUFFER_SIZE = 128 * 1024;
     private static final String SYSTEM_OUT_DEFAULT_VALUE = "out";
     private static final String SYSTEM_ERR_DEFAULT_VALUE = "err";
+    private static final IonTextWriterBuilder ION_TEXT_WRITER_BUILDER = IonTextWriterBuilder.standard();
     private static final IonSystem ION_SYSTEM = IonSystemBuilder.standard().build();
     private static final String EMBEDDED_STREAM_ANNOTATION = "embedded_documents";
     private static final String EVENT_STREAM = "$ion_event_stream";
 
     public static void main(final String[] args) {
-        CompareArgs parsedArgs = new CompareArgs();
+        CommandArgs parsedArgs = new CommandArgs();
         CmdLineParser parser = new CmdLineParser(parsedArgs);
         parser.getProperties().withUsageWidth(CONSOLE_WIDTH);
-        ComparisonType comparisonType = parsedArgs.getComparisonType();
+        ComparisonType comparisonType = null;
         OutputFormat outputFormat = null;
+        CommandType commandType = null;
 
         try {
+            //parse
             parser.parseArgument(args);
+            validateArgs(parsedArgs);
+            //get value
             comparisonType = parsedArgs.getComparisonType();
             outputFormat = parsedArgs.getOutputFormat();
+            commandType = parsedArgs.getCommand();
         } catch (CmdLineException | IllegalArgumentException e) {
-            System.err.println(e.getMessage() + "\n");
+            printHelpText(e.getMessage(), parser, parsedArgs);
+            System.exit(USAGE_ERROR_EXIT_CODE);
+        }
+
+        if (commandType == CommandType.COMPARE) {
+            try (//Initialize output stream, never return null. (default value: STDOUT)
+                 OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE, null);
+                 //Initialize error report, never return null. (default value: STDERR)
+                 OutputStream errorReportOutputStream =
+                         initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE, null);
+                 IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
+                 IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
+            ) {
+                compareFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, comparisonType);
+            } catch (IOException e) {
+                System.err.println("Failed to close OutputStream: " + e.getMessage());
+            }
+        } else if (commandType == CommandType.PROCESS) {
+            ProcessContext processContext = new ProcessContext(null, -1,
+                    null, null, null);
+            try (
+                    //Initialize output stream, never return null. (default value: STDOUT)
+                    OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE, processContext);
+                    //Initialize error report, never return null. (default value: STDERR)
+                    OutputStream errorReportOutputStream =
+                            initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE, processContext);
+                    IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
+            ) {
+                processContext.setIonWriter(outputFormat.createIonWriter(outputStream));
+                processFiles(ionWriterForErrorReport, parsedArgs, processContext);
+            } catch (IOException e) {
+                System.err.println("Failed to close OutputStream: " + e.getMessage());
+            } finally {
+                IonWriter ionWriter = processContext.getIonWriter();
+                if (ionWriter != null) {
+                    try {
+                        ionWriter.close();
+                    } catch (IOException e) {
+                        System.err.println(e.getMessage());
+                        System.exit(IO_ERROR_EXIT_CODE);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void validateArgs(CommandArgs parsedArgs) throws CmdLineException {
+        parsedArgs.setCommand();
+        CommandType type = parsedArgs.getCommand();
+        switch (type) {
+            case PROCESS:
+                if (parsedArgs.getComparisonType() != null) {
+                    throw new CmdLineException("PROCESS doesn't support option \"-y\"");
+                }
+                break;
+            case COMPARE:
+                if (parsedArgs.getOutputFormat() == OutputFormat.EVENTS) {
+                    throw new CmdLineException("COMPARE doesn't support option format \"-f events\"");
+                }
+                break;
+        }
+    }
+
+    private static void printHelpText(String msg, CmdLineParser parser, CommandArgs parsedArgs) {
+        CommandType commandType = parsedArgs.getCommand();
+
+        if (commandType == null) {
+            System.err.println(msg + "\n");
+            System.err.println("Usage : \n" +
+                    " [-h|--help] [-v|--version]\n" +
+                    "  -h, --help                print the help message and exit\n" +
+                    "  -v, --version             print the command's version number and exit");
+        } else if (commandType == CommandType.PROCESS) {
+            System.err.println(msg + "\n");
+            System.err.println("\"Process\" reads the input file(s) and re-write in the format specified by " +
+                    "--output.\n");
+            System.err.println("Usage:\n");
+            System.err.println("ion process [--output <file>] [--error-report <file>] [--output-format \n"
+                    + "(text | pretty | binary | events | none)] [--catalog <file>]... [--imports <file>]... \n"
+                    + "[--perf-report <file>] [--filter <filter> | --traverse <file>]  [-] [<input_file>]...\n");
+            System.err.println("Options:\n");
+            parser.printUsage(System.err);
+        } else if (commandType == CommandType.COMPARE) {
+            System.err.println(msg + "\n");
             System.err.println("\"Compare\" Compare all inputs (which may contain Ion streams and/or EventStreams) \n"
                     + "against all other inputs using the Ion data model's definition of equality. Write a \n"
                     + "ComparisonReport to the output.\n");
@@ -72,25 +163,166 @@ public class IonCompare {
                     + "pretty | binary | none)]  [--catalog <file>]... [--comparison-type (basic | equivs | \n"
                     + "non-equivs | equiv-timeline)] [-] [<input_file>]...\n");
             parser.printUsage(System.err);
-            System.exit(USAGE_ERROR_EXIT_CODE);
-        }
-
-        try (//Initialize output stream, never return null. (default value: STDOUT)
-             OutputStream outputStream = initOutputStream(parsedArgs, SYSTEM_OUT_DEFAULT_VALUE);
-             //Initialize error report, never return null. (default value: STDERR)
-             OutputStream errorReportOutputStream = initOutputStream(parsedArgs, SYSTEM_ERR_DEFAULT_VALUE);
-             IonWriter ionWriterForOutput = outputFormat.createIonWriter(outputStream);
-             IonWriter ionWriterForErrorReport = outputFormat.createIonWriter(errorReportOutputStream);
-        ) {
-            compareFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, comparisonType);
-        } catch (IOException e) {
-            System.err.println("Failed to close OutputStream: " + e.getMessage());
         }
     }
 
+    //
+    //
+    // functions for processing
+    //
+    //
+
+    private static void processFiles(IonWriter ionWriterForErrorReport,
+                                     CommandArgs args,
+                                     ProcessContext processContext) throws IOException {
+        if (args.getOutputFormat() == OutputFormat.EVENTS) {
+            processContext.getIonWriter().writeSymbol(EVENT_STREAM);
+        }
+
+        for (String path : args.getInputFiles()) {
+            try (
+                    InputStream inputStream = new BufferedInputStream(new FileInputStream(path));
+                    IonReader ionReader = IonReaderBuilder.standard().build(inputStream);
+            ) {
+                processContext.setFileName(path);
+
+                boolean isEventStream = isEventStream(ionReader);
+                ArrayList<Event> events = getEventStream(ionReader, isEventStream, CommandType.PROCESS);
+
+                processContext.setEventStream(events);
+                if (isEventStream) processContext.setEventIndex(0);
+                else processContext.setEventIndex(1);
+
+                if (args.getOutputFormat() == OutputFormat.EVENTS) {
+                    processToEventStream(ionWriterForErrorReport, processContext);
+                } else {
+                    processToIonStream(processContext, args);
+                }
+                processContext.getIonWriter().finish();
+                ionWriterForErrorReport.finish();
+            } catch (IonException | NullPointerException e) {
+                new ErrorDescription(processContext.getState(), e.getMessage(), processContext.getFileName(),
+                        processContext.getEventIndex()).writeOutput(ionWriterForErrorReport);
+                System.exit(IO_ERROR_EXIT_CODE);
+            } catch (Exception e) {
+                new ErrorDescription(ErrorType.STATE, e.getMessage(), processContext.getFileName(),
+                        processContext.getEventIndex()).writeOutput(ionWriterForErrorReport);
+                System.exit(IO_ERROR_EXIT_CODE);
+            }
+        }
+    }
+
+    private static void processToEventStream(IonWriter ionWriterForErrorReport,
+                                             ProcessContext processContext) throws IOException {
+        for (Event event : processContext.getEventStream()) {
+            event.writeOutput(ionWriterForErrorReport, processContext);
+        }
+    }
+
+    private static void processToIonStream(ProcessContext processContext,
+                                           CommandArgs args) throws IOException {
+        List<Event> events = processContext.getEventStream();
+        int count = 0;
+        while (count != events.size()) {
+            //update eventIndex
+            Event event = events.get(count);
+            processContext.setEventIndex(processContext.getEventIndex() + 1);
+            processContext.setLastEventType(event.getEventType());
+            if (event.getEventType() == EventType.CONTAINER_START) {
+                if (isEmbeddedEvent(event)) {
+                    count = embeddedEventToIon(processContext, args, event.getIonType());
+                } else {
+                    IonType type = event.getIonType();
+                    setFieldName(event, processContext.getIonWriter());
+                    setAnnotations(event, processContext.getIonWriter());
+                    processContext.getIonWriter().stepIn(type);
+                }
+            } else if (event.getEventType().equals(EventType.CONTAINER_END)) {
+                processContext.getIonWriter().stepOut();
+            } else if (event.getEventType().equals(EventType.SCALAR)) {
+                writeIonByType(event, processContext.getIonWriter());
+            } else if (event.getEventType().equals(EventType.SYMBOL_TABLE)) {
+                handleSymbolTableEvent(processContext, event, args, false);
+            } else if (event.getEventType().equals(EventType.STREAM_END)) {
+                processContext.getIonWriter().finish();
+            }
+            count++;
+        }
+    }
+
+    private static int embeddedEventToIon(ProcessContext processContext,
+                                           CommandArgs args,
+                                           IonType ionType) throws IOException {
+        processContext.getIonWriter().addTypeAnnotation(EMBEDDED_STREAM_ANNOTATION);
+        processContext.getIonWriter().stepIn(ionType);
+        ArrayList<Event> events = (ArrayList<Event>) processContext.getEventStream();
+        int depth = 1;
+        boolean finish = false;
+        int count = 0;
+        while (++count < events.size()) {
+            StringBuilder out = new StringBuilder();
+            ProcessContext embeddedContext = new ProcessContext(null,0,null, null,
+                    ION_TEXT_WRITER_BUILDER.withImports(_Private_Utils.systemSymtab(1)).build(out));
+            embeddedContext.setEmbeddedOut(out);
+            try {
+                do {
+                    Event event = events.get(count);
+                    processContext.setEventIndex(processContext.getEventIndex() + 1);
+                    processContext.setLastEventType(event.getEventType());
+                    if (event.getEventType() == EventType.STREAM_END) {
+
+                        break;
+                    } else if (event.getEventType() == EventType.SCALAR) {
+                        writeIonByType(event, embeddedContext.getIonWriter());
+                    } else if (event.getEventType() == EventType.CONTAINER_START) {
+                        depth++;
+                        embeddedContext.getIonWriter().stepIn(event.getIonType());
+                    } else if (event.getEventType() == EventType.CONTAINER_END) {
+                        depth--;
+                        if (depth == 0) {
+                            if (event.getIonType() == IonType.SEXP || event.getIonType() == IonType.LIST) {
+                                finish = true;
+                                break;
+                            } else {
+                                throw new IonException("invalid CONTAINER_END");
+                            }
+                        }
+                        embeddedContext.getIonWriter().stepOut();
+                    } else if (event.getEventType() == EventType.SYMBOL_TABLE) {
+                        handleSymbolTableEvent(embeddedContext, event, args, true);
+                    }
+                } while (++count < events.size());
+
+                if (!finish) {
+                    embeddedContext.getIonWriter().finish();
+                    processContext.getIonWriter().writeString(out.toString());
+                }
+            } finally {
+                IonWriter ionWriter = embeddedContext.getIonWriter();
+                if (ionWriter != null) {
+                    try {
+                        ionWriter.close();
+                    } catch (IOException e) {
+                        System.err.println(e.getMessage());
+                        System.exit(IO_ERROR_EXIT_CODE);
+                    }
+                }
+            }
+            if (finish) break;
+        }
+        processContext.getIonWriter().stepOut();
+        return count;
+    }
+
+    //
+    //
+    //  functions for comparing
+    //
+    //
+
     private static void compareFiles(IonWriter ionWriterForOutput,
                                      IonWriter ionWriterForErrorReport,
-                                     CompareArgs args,
+                                     CommandArgs args,
                                      ComparisonType comparisonType) throws IOException {
         List<String> files = args.getInputFiles();
         CompareContext compareContext = new CompareContext(null, null);
@@ -109,8 +341,8 @@ public class IonCompare {
 
                     boolean isFirstEventStream = isEventStream(ionReaderFirst);
                     boolean isSecondEventStream = isEventStream(ionReaderSecond);
-                    ArrayList<Event> eventsFirst = getEventStream(ionReaderFirst, isFirstEventStream);
-                    ArrayList<Event> eventsSecond = getEventStream(ionReaderSecond, isSecondEventStream);
+                    ArrayList<Event> eventsFirst = getEventStream(ionReaderFirst, isFirstEventStream, CommandType.COMPARE);
+                    ArrayList<Event> eventsSecond = getEventStream(ionReaderSecond, isSecondEventStream, CommandType.COMPARE);
                     compareContext.setEventStreamFirst(eventsFirst);
                     compareContext.setEventStreamSecond(eventsSecond);
 
@@ -137,13 +369,6 @@ public class IonCompare {
             }
         }
     }
-
-    public static boolean isEventStream(IonReader ionReader) {
-        return ionReader.next() != null
-                && ionReader.getType() == IonType.SYMBOL
-                && EVENT_STREAM.equals(ionReader.symbolValue().getText());
-    }
-
 
     private static boolean compare(CompareContext compareContext,
                                    int startI, int endI, int startJ, int endJ) throws IOException {
@@ -181,10 +406,10 @@ public class IonCompare {
                     && eventFirst.getIonType() == IonType.STRUCT) {
                 int iStart = i;
                 int jStart = j;
-                ContainerContext containerContextFirst = new ContainerContext(i);
+                IonCompare.ContainerContext containerContextFirst = new IonCompare.ContainerContext(i);
                 IonStruct structFirst = parseStruct(containerContextFirst, compareContext, endI, true);
                 i = containerContextFirst.getIndex();
-                ContainerContext containerContextSecond = new ContainerContext(j);
+                IonCompare.ContainerContext containerContextSecond = new IonCompare.ContainerContext(j);
                 IonStruct structSecond = parseStruct(containerContextSecond, compareContext, endJ, false);
                 j = containerContextSecond.getIndex();
                 if (!Equivalence.ionEquals(structFirst, structSecond)) {
@@ -216,7 +441,7 @@ public class IonCompare {
         return true;
     }
 
-    private static IonStruct parseStruct(ContainerContext containerContext,
+    private static IonStruct parseStruct(IonCompare.ContainerContext containerContext,
                                          CompareContext compareContext,
                                          int end,
                                          boolean isFirst) {
@@ -262,10 +487,10 @@ public class IonCompare {
         return ionStruct;
     }
 
-    private static IonList parseList(ContainerContext containerContext,
-                                               CompareContext compareContext,
-                                               int end,
-                                               boolean isFirst) {
+    private static IonList parseList(IonCompare.ContainerContext containerContext,
+                                     CompareContext compareContext,
+                                     int end,
+                                     boolean isFirst) {
         IonList ionList = ION_SYSTEM.newEmptyList();
         while (containerContext.increaseIndex() < end) {
             Event event = isFirst ?
@@ -297,10 +522,10 @@ public class IonCompare {
         return ionList;
     }
 
-    private static IonSexp parseSexp(ContainerContext containerContext,
-                                          CompareContext compareContext,
-                                          int end,
-                                          boolean isFirst) {
+    private static IonSexp parseSexp(IonCompare.ContainerContext containerContext,
+                                     CompareContext compareContext,
+                                     int end,
+                                     boolean isFirst) {
         IonSexp ionSexp = ION_SYSTEM.newEmptySexp();
         while (containerContext.increaseIndex() < end) {
             Event event = isFirst ?
@@ -331,19 +556,6 @@ public class IonCompare {
             }
         }
         return ionSexp;
-    }
-
-    private static void writeReport(CompareContext compareContext,
-                                    IonWriter ionWriter,
-                                    ComparisonResultType type) throws IOException {
-        new ComparisonResult(type,
-                new ComparisonContext(compareContext.getFile(),
-                        compareContext.getEventStreamFirst().get(compareContext.getFileEventIndex()),
-                        compareContext.getFileEventIndex() + 1),
-                new ComparisonContext(compareContext.getCompareToFile(),
-                        compareContext.getEventStreamSecond().get(compareContext.getCompareToFileEventIndex()),
-                        compareContext.getCompareToFileEventIndex() + 1),
-                compareContext.getMessage()).writeOutput(ionWriter);
     }
 
     private static boolean compareEquivs(CompareContext compareContext) throws IOException {
@@ -407,8 +619,8 @@ public class IonCompare {
     }
 
     /**
-     *  This function will parse a embedded stream into pairs<int,int> that stores index range for
-     *  each string it includes.
+     *  This function parses an embedded stream into pairs<int,int> that stores index range for
+     *  each string the embedded stream includes.
      *
      *  Input value 'start' must be index of a CONTAINER_START event.
      *
@@ -434,8 +646,8 @@ public class IonCompare {
     }
 
     /**
-     *  This function will parse a container's values into pairs<int,int> that stores its index range.
-     *  1. For SCALAR event with index i, the pair will be (i, i)
+     *  This function parses a container's values into pairs<int,int> that stores its index range.
+     *  1. For SCALAR event with index i, the pair will be (i, i).
      *  2. For CONTAINER event, the pair will be (start, end) where start is the index of the CONTAINER_START event
      *  and end is the index of the CONTAINER_END event.
      *
@@ -465,9 +677,11 @@ public class IonCompare {
     }
 
     /**
-     *  This function will move the count i from the CONTAINER_START event to its corresponding CONTAINER_END event
+     *  This function will move the count i from the CONTAINER_START event to its corresponding CONTAINER_END event.
      *
-     *  return int is the index of its corresponding CONTAINER_END event.
+     *  return the index of its corresponding CONTAINER_END event.
+     *
+     *  throw IonException if CONTAINER_END event doesn't exist.
      */
     private static int findNextContainer(ArrayList<Event> eventStream, int i) {
         if (!IonType.isContainer(eventStream.get(i).getIonType())) return i;
@@ -484,6 +698,59 @@ public class IonCompare {
             throw new IonException("Invalid container, reach the end of the eventStream without CONTAINER_END event");
         }
         return i;
+    }
+
+    //
+    //
+    // helper functions
+    //
+    //
+
+    private static void handleSymbolTableEvent(ProcessContext processContext,
+                                               Event event,
+                                               CommandArgs args,
+                                               boolean isEmbedded) throws IOException {
+        processContext.getIonWriter().close();
+        ImportDescriptor[] imports = event.getImports();
+        SymbolTable[] symbolTables = new SymbolTable[imports.length];
+        for (int i = 0; i < imports.length; i++) {
+            SymbolTable symbolTable = ION_SYSTEM.newSharedSymbolTable(
+                    imports[i].getImportName(), imports[i].getVersion(), null);
+            symbolTables[i] = symbolTable;
+        }
+        if (!isEmbedded) {
+            processContext.setIonWriter(args.getOutputFormat().
+                    createIonWriterWithImports(new FileOutputStream(processContext.getFile(), true), symbolTables));
+        } else {
+            processContext.getEmbeddedOut().append(" ");
+            processContext.setIonWriter(ION_TEXT_WRITER_BUILDER.withImports(symbolTables)
+                    .build(processContext.getEmbeddedOut()));
+        }
+    }
+
+    private static void writeIonByType(Event event, IonWriter ionWriter) {
+        setFieldName(event, ionWriter);
+        IonValue value = event.getValue();
+        value.setTypeAnnotationSymbols(event.getAnnotations());
+        value.writeTo(ionWriter);
+    }
+
+    private static void setFieldName(Event event, IonWriter ionWriter) {
+        SymbolToken field = event.getFieldName();
+        if (field != null) {
+            if (!ionWriter.isInStruct()) throw new IonException("invalid field_name inside STRUCT");
+            ionWriter.setFieldNameSymbol(field);
+        } else if (ionWriter.isInStruct()) {
+            SymbolToken symbolToken = _Private_Utils.newSymbolToken((String) null, 0);
+            ionWriter.setFieldNameSymbol(symbolToken);
+        }
+    }
+
+    private static void setAnnotations(Event event, IonWriter ionWriter) {
+        SymbolToken[] annotations = event.getAnnotations();
+        if (annotations != null && annotations.length != 0) {
+            ionWriter.setTypeAnnotationSymbols(annotations);
+        }
     }
 
     private static boolean isSameSymbolToken(SymbolToken symbolTokenX, SymbolToken symbolTokenY) {
@@ -530,13 +797,40 @@ public class IonCompare {
                 && annotations[0].getText().equals(EMBEDDED_STREAM_ANNOTATION);
     }
 
-    private static ArrayList<Event> getEventStream(IonReader ionReader, boolean isEventStream) throws IOException {
+    public static boolean isEventStream(IonReader ionReader) {
+        return ionReader.next() != null
+                && ionReader.getType() == IonType.SYMBOL
+                && EVENT_STREAM.equals(ionReader.symbolValue().getText());
+    }
+
+    private static void setReportInfo(int i, int j, String message, CompareContext compareContext) {
+        if (i != -1) compareContext.setFileEventIndex(i);
+        if (j != -1) compareContext.setCompareToFileEventIndex(j);
+        if (message != null) compareContext.setMessage(message);
+    }
+
+    private static void writeReport(CompareContext compareContext,
+                                    IonWriter ionWriter,
+                                    ComparisonResultType type) throws IOException {
+        new ComparisonResult(type,
+                new ComparisonContext(compareContext.getFile(),
+                        compareContext.getEventStreamFirst().get(compareContext.getFileEventIndex()),
+                        compareContext.getFileEventIndex() + 1),
+                new ComparisonContext(compareContext.getCompareToFile(),
+                        compareContext.getEventStreamSecond().get(compareContext.getCompareToFileEventIndex()),
+                        compareContext.getCompareToFileEventIndex() + 1),
+                compareContext.getMessage()).writeOutput(ionWriter);
+    }
+
+    private static ArrayList<Event> getEventStream(IonReader ionReader,
+                                                   boolean isEventStream,
+                                                   CommandType commandType) throws IOException {
         ArrayList<Event> events = new ArrayList<>();
 
         if (isEventStream) {
             while (ionReader.next() != null) {
                 Event event = eventStreamToEvent(ionReader);
-                if (event.getEventType() == EventType.SYMBOL_TABLE) {
+                if (event.getEventType() == EventType.SYMBOL_TABLE && commandType == CommandType.COMPARE) {
                     continue;
                 }
                 events.add(event);
@@ -581,9 +875,9 @@ public class IonCompare {
                         if (aEventType == EventType.CONTAINER_START) {
                             depth++;
                         } else if (aEventType == EventType.CONTAINER_END) {
-                           if (--depth == 0) {
-                               throw new IonException("Invalid EventStream: end without STREAM_END event");
-                           }
+                            if (--depth == 0) {
+                                throw new IonException("Invalid EventStream: end without STREAM_END event");
+                            }
                         } else if (aEventType == EventType.STREAM_END) {
                             if (depth != 1) {
                                 throw new IonException("Invalid EventStream: " +
@@ -607,8 +901,16 @@ public class IonCompare {
     private static ArrayList<Event> ionStreamToEventStream(IonReader ionReader) throws IOException {
         ArrayList<Event> events = new ArrayList<>();
         if (ionReader.getType() == null ) return events;
+        SymbolTable curTable = ionReader.getSymbolTable();
 
         do {
+            if (!isSameSymbolTable(ionReader.getSymbolTable(), curTable)) {
+                curTable = ionReader.getSymbolTable();
+                ImportDescriptor[] imports = symbolTableToImports(curTable.getImportedTables());
+                events.add(new Event(EventType.SYMBOL_TABLE, null, null, null,
+                        null, imports, 0));
+            }
+
             if (isEmbeddedStream(ionReader)) {
                 //get current Ion type and depth
                 IonType curType = ionReader.getType();
@@ -637,7 +939,6 @@ public class IonCompare {
                         null, null, curDepth));
                 ionReader.stepOut();
             } else if (IonType.isContainer(ionReader.getType())) {
-                System.err.println("a");
                 //get current Ion type and depth
                 IonType curType = ionReader.getType();
                 int curDepth = ionReader.getDepth();
@@ -662,15 +963,46 @@ public class IonCompare {
         return events;
     }
 
-    private static void setReportInfo(int i, int j, String message, CompareContext compareContext) {
-        if (i != -1) compareContext.setFileEventIndex(i);
-        if (j != -1) compareContext.setCompareToFileEventIndex(j);
-        if (message != null) compareContext.setMessage(message);
+    private static ImportDescriptor[] symbolTableToImports(SymbolTable[] tables) {
+        if (tables == null || tables.length == 0) return null;
+        int size = tables.length;
+
+        ImportDescriptor[] imports = new ImportDescriptor[size];
+        for (int i = 0; i < size; i++) {
+            ImportDescriptor table = new ImportDescriptor(tables[i]);
+            imports[i] = table;
+        }
+        return imports;
     }
 
-    /**
-     * this function is only used for CONTAINER_START and SCALAR eventType since other types don't need initial data.
-     */
+    private static boolean isSameSymbolTable(SymbolTable newTable, SymbolTable curTable) {
+        if (newTable == null && curTable == null) return true;
+        else if (newTable != null && curTable == null) return false;
+        else if (newTable == null) return false;
+
+        if (newTable.isLocalTable() && newTable.getImportedTables().length == 0) {
+            return true;
+        } else if (newTable.isSystemTable() && curTable.isSystemTable()) {
+            return newTable.getVersion() == curTable.getVersion();
+        } else if (newTable.isSharedTable() && curTable.isSharedTable()) {
+            return (newTable.getName().equals(curTable.getName())) & (newTable.getVersion() == curTable.getVersion());
+        } else if (newTable.isLocalTable() && curTable.isLocalTable()) {
+            SymbolTable[] xTable = newTable.getImportedTables();
+            SymbolTable[] yTable = curTable.getImportedTables();
+            //compare imports
+            if (xTable.length == yTable.length) {
+                for (int i = 0; i < xTable.length; i++) {
+                    if (!isSameSymbolTable(xTable[i], yTable[i]))  return false;
+                }
+            } else {
+                return false;
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     private static Event ionStreamToEvent(IonReader ionReader) throws IllegalStateException {
         if (ionReader.getType() == null) throw new IllegalStateException("Can't convert ionReader null type to Event");
         IonType ionType = ionReader.getType();
@@ -905,13 +1237,18 @@ public class IonCompare {
      *
      *  this function never return null
      */
-    private static BufferedOutputStream initOutputStream(CompareArgs args, String defaultValue) throws IOException {
+    private static BufferedOutputStream initOutputStream(CommandArgs args,
+                                                         String defaultValue,
+                                                         ProcessContext processContext) throws IOException {
         BufferedOutputStream outputStream = null;
         switch (defaultValue) {
             case SYSTEM_OUT_DEFAULT_VALUE:
                 String outputFile = args.getOutputFile();
                 if (outputFile != null && outputFile.length() != 0) {
                     File myFile = new File(outputFile);
+                    if (args.getCommand() == CommandType.PROCESS && processContext != null) {
+                        processContext.setFile(myFile);
+                    }
                     FileOutputStream out = new FileOutputStream(myFile);
                     outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
                 } else {
@@ -921,7 +1258,7 @@ public class IonCompare {
                 String errorReport = args.getErrorReport();
                 if (errorReport != null && errorReport.length() != 0) {
                     File myFile = new File(errorReport);
-                    FileOutputStream out = new FileOutputStream(myFile);
+                    FileOutputStream out = new FileOutputStream(myFile, true);
                     outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
                 } else {
                     outputStream = new BufferedOutputStream(System.err, BUFFER_SIZE);
@@ -931,28 +1268,7 @@ public class IonCompare {
         return outputStream;
     }
 
-    static class ContainerContext {
-        int index;
-
-        ContainerContext(int index) {
-            this.index = index;
-        }
-
-        public int getIndex() {
-            return index;
-        }
-
-        public void setIndex(int index) {
-            this.index = index;
-        }
-
-        public int increaseIndex() {
-            this.index = this.index + 1;
-            return this.index;
-        }
-    }
-
-    static class CompareArgs {
+    static class CommandArgs {
         private static final String DEFAULT_FORMAT_VALUE = OutputFormat.PRETTY.toString();
         private static final String DEFAULT_COMPARISON_TYPE = ComparisonType.BASIC.toString();
 
@@ -990,14 +1306,28 @@ public class IonCompare {
                         + " except that when top-level sequences contain timestamp values, they are considered \n"
                         + "equivalent if they represent the same instant regardless of whether they are considered \n"
                         + "equivalent by the Ion data model.")
-        private String comparisonType = DEFAULT_COMPARISON_TYPE;
+        private String comparisonType = null;
 
+        @Argument(required = true)
+        private List<String> inputs;
 
-       @Argument(metaVar = "FILES", required = true)
-        private List<String> inputFiles;
+        private CommandType commandType = null;
+
+        public String getOutputFormatName() {
+            return outputFormatName;
+        }
 
         public ComparisonType getComparisonType() throws IllegalArgumentException {
-            return ComparisonType.valueOf(comparisonType.replace('-','_').toUpperCase());
+            return comparisonType == null ?
+                  null : ComparisonType.valueOf(comparisonType.replace('-','_').toUpperCase());
+        }
+
+        public CommandType getCommand() {
+            return this.commandType;
+        }
+
+        public void setCommand() {
+            this.commandType = CommandType.valueOf(inputs.get(0).toUpperCase());
         }
 
         public OutputFormat getOutputFormat() throws IllegalArgumentException {
@@ -1005,7 +1335,9 @@ public class IonCompare {
         }
 
         public List<String> getInputFiles() {
-            return inputFiles;
+            int length = this.inputs.size();
+            List<String> files = this.inputs.subList(1, length);
+            return files;
         }
         public String getOutputFile() { return outputFile; }
         public String getErrorReport() { return errorReport; }
