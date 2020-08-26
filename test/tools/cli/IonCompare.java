@@ -637,7 +637,6 @@ public class IonCompare {
                         null, null, curDepth));
                 ionReader.stepOut();
             } else if (IonType.isContainer(ionReader.getType())) {
-                System.err.println("a");
                 //get current Ion type and depth
                 IonType curType = ionReader.getType();
                 int curDepth = ionReader.getDepth();
