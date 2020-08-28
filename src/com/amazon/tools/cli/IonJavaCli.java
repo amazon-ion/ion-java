@@ -668,8 +668,9 @@ public class IonJavaCli {
             symbolTables[i] = symbolTable;
         }
         if (!isEmbedded) {
-            processContext.setIonWriter(args.getOutputFormat().
-                    createIonWriterWithImports(new FileOutputStream(processContext.getFile(), true), symbolTables));
+            OutputStream out = args.getOutputFile() == null ?
+                    new NoCloseOutputStream(System.out) : new FileOutputStream(processContext.getFile(), true);
+            processContext.setIonWriter(args.getOutputFormat().createIonWriterWithImports(out, symbolTables));
         } else {
             processContext.getEmbeddedOut().append(" ");
             processContext.setIonWriter(ION_TEXT_WRITER_BUILDER.withImports(symbolTables)
@@ -1205,9 +1206,7 @@ public class IonJavaCli {
                     FileOutputStream out = new FileOutputStream(myFile);
                     outputStream = new BufferedOutputStream(out, BUFFER_SIZE);
                 } else {
-                    OutputStream out = new FilterOutputStream(System.out);
-                    out.close();
-                    outputStream = new BufferedOutputStream(System.out, BUFFER_SIZE);
+                    outputStream = new BufferedOutputStream(new NoCloseOutputStream(System.out), BUFFER_SIZE);
                 }
                 break;
             case SYSTEM_ERR_DEFAULT_VALUE:
