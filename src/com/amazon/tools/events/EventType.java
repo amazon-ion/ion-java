@@ -1,4 +1,4 @@
-package tools.events;
+package com.amazon.tools.events;
 
 public enum EventType {
     CONTAINER_START,

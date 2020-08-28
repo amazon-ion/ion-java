@@ -1,4 +1,4 @@
-package tools.cli;
+package com.amazon.tools.cli;
 
 import java.io.OutputStream;
 

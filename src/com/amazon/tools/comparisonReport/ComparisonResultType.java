@@ -1,4 +1,4 @@
-package tools.comparisonReport;
+package com.amazon.tools.comparisonReport;
 
 public enum ComparisonResultType {
     EQUAL,

@@ -1,9 +1,9 @@
-package tools.cli;
+package com.amazon.tools.cli;
 
 import com.amazon.ion.IonWriter;
-import tools.errorReport.ErrorType;
-import tools.events.Event;
-import tools.events.EventType;
+import com.amazon.tools.errorReport.ErrorType;
+import com.amazon.tools.events.Event;
+import com.amazon.tools.events.EventType;
 
 import java.io.File;
 import java.util.List;

@@ -1,4 +1,4 @@
-package tools.errorReport;
+package com.amazon.tools.errorReport;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;

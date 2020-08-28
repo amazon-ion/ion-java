@@ -1,4 +1,4 @@
-package tools.errorReport;
+package com.amazon.tools.errorReport;
 
 public enum ErrorType {
     READ,

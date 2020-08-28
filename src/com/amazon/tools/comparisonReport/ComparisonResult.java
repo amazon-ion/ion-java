@@ -1,4 +1,4 @@
-package tools.comparisonReport;
+package com.amazon.tools.comparisonReport;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;

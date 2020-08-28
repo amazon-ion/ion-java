@@ -1,4 +1,4 @@
-package tools.cli;
+package com.amazon.tools.cli;
 
 public enum ComparisonType {
     BASIC,

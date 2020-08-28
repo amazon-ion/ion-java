@@ -1,6 +1,6 @@
-package tools.comparisonReport;
+package com.amazon.tools.comparisonReport;
 
-import tools.events.Event;
+import com.amazon.tools.events.Event;
 
 public class ComparisonContext {
     private final String location;

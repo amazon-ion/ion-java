@@ -1,16 +1,13 @@
-package tools.events;
+package com.amazon.tools.events;
 
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonWriter;
 
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import tools.cli.ProcessContext;
-import tools.errorReport.ErrorDescription;
-import tools.errorReport.ErrorType;
+import com.amazon.tools.cli.ProcessContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package tools.events;
+package com.amazon.tools.events;
 
 import com.amazon.ion.SymbolTable;
 

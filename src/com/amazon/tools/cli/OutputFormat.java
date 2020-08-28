@@ -1,18 +1,14 @@
-package tools.cli;
+package com.amazon.tools.cli;
 
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.impl.SharedSymbolTableTest;
-import com.amazon.ion.impl._Private_IonValue;
-import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import tools.events.ImportDescriptor;
 
 import java.io.OutputStream;
 
 /**
- * Represents the different Ion output formats supported by the command line tools in this package.
+ * Represents the different Ion output formats supported by the command line com.amazon.tools in this package.
  */
 public enum OutputFormat {
     /**

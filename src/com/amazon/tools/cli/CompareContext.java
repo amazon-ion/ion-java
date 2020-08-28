@@ -1,6 +1,6 @@
-package tools.cli;
+package com.amazon.tools.cli;
 
-import tools.events.Event;
+import com.amazon.tools.events.Event;
 
 import java.util.List;
 
