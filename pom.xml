@@ -94,6 +94,43 @@
     <sourceDirectory>src</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <plugins>
+    <!--  used for building ion-java CLI jar-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <classDirectory>target/classes/</classDirectory>
+          <archive>
+            <manifest>
+              <mainClass>com.amazon.tools.cli.IonJavaCli</mainClass>
+              <useUniqueVersions>false</useUniqueVersions>
+              <addClasspath>true</addClasspath>
+              <classpathPrefix>lib/</classpathPrefix>
+            </manifest>
+            <manifestEntries>
+              <Class-Path>.</Class-Path>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-dependencies</id>
+            <phase>package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <type>jar</type>
+              <includeTypes>jar</includeTypes>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -153,7 +190,7 @@
               com.amazon.ion.*,
             </Export-Package>
             <!-- This can be used to retrieve the compiled JarInfo. -->
-            <Main-Class>com.amazon.ion.impl._Private_CommandLine</Main-Class>
+             <Main-Class>com.amazon.ion.impl._Private_CommandLine</Main-Class>
             <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
             <Ion-Java-Build-Time>${build.time}</Ion-Java-Build-Time>
             <Ion-Java-Project-Version>${project.version}</Ion-Java-Project-Version>

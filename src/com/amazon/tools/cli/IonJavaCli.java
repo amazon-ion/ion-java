@@ -34,7 +34,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -1321,8 +1320,7 @@ public class IonJavaCli {
 
         public List<String> getInputFiles() {
             int length = this.inputs.size();
-            List<String> files = this.inputs.subList(1, length);
-            return files;
+            return this.inputs.subList(1, length);
         }
         public String getOutputFile() { return outputFile; }
         public String getErrorReport() { return errorReport; }
