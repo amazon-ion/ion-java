@@ -824,23 +824,9 @@ public abstract class IonWriterTestCase
         iw.close();
 
         IonDatagram dg = reload();
-        if (myOutputForm == OutputForm.BINARY && iw instanceof _Private_IonManagedWriter && myLstAppendEnabled) {
-            // Note: LST append will only be implemented in the "new" binary writer (which implements
-            // _Private_IonMangedWriter)
-            // Should have:  IVM SYMTAB hey SYMTAB_APPEND now
-            assertEquals(5, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("hey", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-            assertEquals("now", ((IonSymbol) dg.systemGet(4)).stringValue());
-        }
-        else {
-            // Should have:  IVM SYMTAB hey SYMTAB_APPEND now
-            assertEquals(4, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("hey", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("now", ((IonSymbol) dg.systemGet(3)).stringValue());
-        }
+        assertEquals(2, dg.size());
+        assertEquals("hey", ((IonSymbol) dg.get(0)).stringValue());
+        assertEquals("now", ((IonSymbol) dg.get(1)).stringValue());
     }
 
     Iterator<IonValue> systemIterateOutput()

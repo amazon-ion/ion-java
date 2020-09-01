@@ -224,23 +224,9 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         assertNull(reader.next());
 
         IonDatagram dg = system().getLoader().load(writer.getBytes());
-        if (lstAppendMode.isEnabled())
-        {
-            // Should be IVM SYMTAB taco SYMTAB burrito
-            assertEquals(5, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-            assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
-        }
-        else
-        {
-            // Should be IVM SYMTAB taco burrito
-            assertEquals(4, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("burrito", ((IonSymbol) dg.systemGet(3)).stringValue());
-        }
+        assertEquals(2, dg.size());
+        assertEquals("taco", ((IonSymbol) dg.get(0)).stringValue());
+        assertEquals("burrito", ((IonSymbol) dg.get(1)).stringValue());
     }
 
     @Test
@@ -304,23 +290,9 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         assertNull(reader.next());
 
         IonDatagram dg = system().getLoader().load(writer.getBytes());
-        if (lstAppendMode.isEnabled())
-        {
-            // Should be IVM SYMTAB taco SYMTAB burrito
-            assertEquals(5, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-            assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
-        }
-        else
-        {
-            // Should be IVM SYMTAB taco burrito
-            assertEquals(4, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("burrito", ((IonSymbol) dg.systemGet(3)).stringValue());
-        }
+        assertEquals(2, dg.size());
+        assertEquals("taco", ((IonSymbol) dg.get(0)).stringValue());
+        assertEquals("burrito", ((IonSymbol) dg.get(1)).stringValue());
     }
 
     @Test
@@ -349,23 +321,9 @@ public class IonManagedBinaryWriterTest extends IonRawBinaryWriterTest
         assertNull(reader.next());
 
         IonDatagram dg = system().getLoader().load(writer.getBytes());
-        if (lstAppendMode.isEnabled())
-        {
-            // Should be IVM SYMTAB taco SYMTAB burrito
-            assertEquals(5, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(3)).getTypeAnnotations()[0]);
-            assertEquals("burrito", ((IonSymbol) dg.systemGet(4)).stringValue());
-        }
-        else
-        {
-            // Should be IVM SYMTAB taco burrito
-            assertEquals(4, dg.systemSize());
-            assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
-            assertEquals("taco", ((IonSymbol) dg.systemGet(2)).stringValue());
-            assertEquals("burrito", ((IonSymbol) dg.systemGet(3)).stringValue());
-        }
+        assertEquals(2, dg.size());
+        assertEquals("taco", ((IonSymbol) dg.get(0)).stringValue());
+        assertEquals("burrito", ((IonSymbol) dg.get(1)).stringValue());
     }
 
     @Test
