@@ -62,11 +62,16 @@ class LocalSymbolTableAsStruct
                                           boolean alreadyInStruct)
         {
             List<String> symbolsList = new ArrayList<String>();
+            SymbolTable currentSymbolTable = reader.getSymbolTable();
             LocalSymbolTableImports imports = readLocalSymbolTable(reader,
                                                                    catalog,
                                                                    alreadyInStruct,
                                                                    symbolsList,
-                                                                   reader.getSymbolTable());
+                                                                   currentSymbolTable);
+            if (imports == null) {
+                // This was an LST append, so the existing symbol table was updated.
+                return currentSymbolTable;
+            }
             return new LocalSymbolTableAsStruct(imageFactory, imports, symbolsList);
         }
 
