@@ -64,11 +64,16 @@ class LocalSymbolTable
                                           boolean alreadyInStruct)
         {
             List<String> symbolsList = new ArrayList<String>();
+            SymbolTable currentSymbolTable = reader.getSymbolTable();
             LocalSymbolTableImports imports = readLocalSymbolTable(reader,
                                                                    catalog,
                                                                    alreadyInStruct,
                                                                    symbolsList,
-                                                                   reader.getSymbolTable());
+                                                                   currentSymbolTable);
+            if (imports == null) {
+                // This was an LST append, so the existing symbol table was updated.
+                return currentSymbolTable;
+            }
             return new LocalSymbolTable(imports, symbolsList);
         }
 
@@ -168,7 +173,10 @@ class LocalSymbolTable
         myFirstLocalSid = myImportsList.getMaxId() + 1;
 
         // Copy locally declared symbols to mySymbolsMap
-        mySymbolsMap = new HashMap<String, Integer>();
+        // The initial size is chosen so that resizing is avoided. The default load factor is 0.75. Resizing
+        // could also be avoided by setting the initial size to mySymbolsCount and setting the load factor to
+        // 1.0, but this would lead to more hash collisions.
+        mySymbolsMap = new HashMap<String, Integer>((int) Math.ceil(mySymbolsCount / 0.75));
         buildSymbolsMap();
     }
 
@@ -198,11 +206,21 @@ class LocalSymbolTable
         }
     }
 
+    /**
+     * Parses the symbol table at the reader's current position.
+     * @param reader the reader from which to parse the symbol table.
+     * @param catalog the catalog from which to resolve shared symbol table imports.
+     * @param isOnStruct true if the reader is already positioned on the symbol table struct; otherwise, false.
+     * @param symbolsListOut list into which local symbols declared by the parsed symbol table will be deposited.
+     * @param currentSymbolTable the symbol table currently active in the stream.
+     * @return a new LocalSymbolTableImports instance, or null if this was an LST append. If null, `currentSymbolTable`
+     *   continues to be the active symbol table.
+     */
     protected static LocalSymbolTableImports readLocalSymbolTable(IonReader reader,
                                                                   IonCatalog catalog,
                                                                   boolean isOnStruct,
                                                                   List<String> symbolsListOut,
-                                                                  SymbolTable symbolTable)
+                                                                  SymbolTable currentSymbolTable)
     {
         if (! isOnStruct)
         {
@@ -220,14 +238,11 @@ class LocalSymbolTable
 
         List<SymbolTable> importsList = new ArrayList<SymbolTable>();
         importsList.add(reader.getSymbolTable().getSystemSymbolTable());
-        // Isolate the newly-declared symbols because they must be added after any symbols declared
-        // by the previous symbol table if this is an appending local symbol table, but the 'imports' and
-        // 'symbols' declarations can occur in any order.
-        List<String> newSymbols = new ArrayList<String>();
 
         IonType fieldType;
         boolean foundImportList = false;
         boolean foundLocalSymbolList = false;
+        boolean isAppend = false;
         while ((fieldType = reader.next()) != null)
         {
             if (reader.isNullValue()) continue;
@@ -272,7 +287,7 @@ class LocalSymbolTable
                                 text = null;
                             }
 
-                            newSymbols.add(text);
+                            symbolsListOut.add(text);
                         }
                         reader.stepOut();
                     }
@@ -288,18 +303,9 @@ class LocalSymbolTable
                     {
                         prepImportsList(importsList, reader, catalog);
                     }
-                    else if (fieldType == IonType.SYMBOL)
+                    else if (fieldType == IonType.SYMBOL && ION_SYMBOL_TABLE.equals(reader.stringValue()))
                     {
-                        // trying to import the current table
-                        if(symbolTable.isLocalTable() && ION_SYMBOL_TABLE.equals(reader.stringValue()))
-                        {
-                            SymbolTable currentSymbolTable = reader.getSymbolTable();
-                            importsList.addAll(Arrays.asList(currentSymbolTable.getImportedTables()));
-                            Iterator<String> currentSymbols = currentSymbolTable.iterateDeclaredSymbolNames();
-                            while (currentSymbols.hasNext()) {
-                                symbolsListOut.add(currentSymbols.next());
-                            }
-                        }
+                        isAppend = true;
                     }
                     break;
                 }
@@ -310,9 +316,16 @@ class LocalSymbolTable
                 }
             }
         }
-
         reader.stepOut();
-        symbolsListOut.addAll(newSymbols);
+        if (isAppend && currentSymbolTable.isLocalTable()) {
+            // Because the current symbol table is a local symbol table (i.e. not the system symbol table), it can
+            // be appended in-place.
+            LocalSymbolTable currentLocalSymbolTable = (LocalSymbolTable) currentSymbolTable;
+            for (String newSymbol : symbolsListOut) {
+                currentLocalSymbolTable.putSymbol(newSymbol);
+            }
+            return null;
+        }
         return new LocalSymbolTableImports(importsList);
     }
 

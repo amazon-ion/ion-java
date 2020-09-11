@@ -61,6 +61,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import com.amazon.ion.util.Equivalence;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -249,7 +251,7 @@ public class SymbolTableTest
     }
 
     @Test
-    public void testLocalSymbolTableAppendImportBoundary()
+    public void testLocalSymbolTableAppendImportBoundary() throws IOException
     {
         String text =
             LocalSymbolTablePrefix +
@@ -266,23 +268,23 @@ public class SymbolTableTest
 
         IonDatagram datagram = loader().load(text);
 
-        SymbolTable original = datagram.get(0).getSymbolTable();
-        original.intern("o1");
+        SymbolTable symbolTable = datagram.get(0).getSymbolTable();
+        assertSame(symbolTable, datagram.get(1).getSymbolTable());
+        symbolTable.intern("o1");
+        symbolTable.intern("a1");
 
-        SymbolTable appended = datagram.get(1).getSymbolTable();
-        appended.intern("a1");
+        // new symbols don't influence SIDs for existing symbols; they are appended
+        checkSymbol("s11", systemMaxId() + 1, symbolTable);
+        checkSymbol("s21", systemMaxId() + 2, symbolTable);
+        checkSymbol("o1", systemMaxId() + 3, symbolTable);
+        checkSymbol("a1", systemMaxId() + 4, symbolTable);
 
-        // new symbols in `original` don't influence SIDs for new symbols in `appended` after import
-        checkSymbol("s11", systemMaxId() + 1, appended);
-        checkSymbol("o1", systemMaxId() + 2, original);
-
-        checkSymbol("s11", systemMaxId() + 1, appended);
-        checkSymbol("s21", systemMaxId() + 2, appended);
-        checkSymbol("a1", systemMaxId() + 3, appended);
-
-        // new symbols in `original` are not accessible from `appended` after import
-        assertNull(original.find("a1"));
-        assertNull(appended.find("o1"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
+        datagram.writeTo(writer);
+        writer.close();
+        IonDatagram roundtripped = loader().load(out.toByteArray());
+        assertTrue(Equivalence.ionEquals(datagram, roundtripped));
     }
 
     @Test
