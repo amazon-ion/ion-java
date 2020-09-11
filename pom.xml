@@ -65,7 +65,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
     <build.year>${maven.build.timestamp}</build.year>
-    <jdkVersion>1.8</jdkVersion>
+    <jdkVersion>1.6</jdkVersion>
   </properties>
 
   <dependencies>
@@ -272,7 +272,7 @@
     <profile>
       <id>release</id>
       <properties>
-        <jdkVersion>1.8</jdkVersion>
+        <jdkVersion>1.6</jdkVersion>
       </properties>
       <build>
         <plugins>
