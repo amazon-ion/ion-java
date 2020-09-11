@@ -9,7 +9,10 @@ jdk:
   - oraclejdk8
   - oraclejdk9
 
-script: mvn test
+script:
+ - mvn test
+ - mvn package -f ion-java-cli/pom.xml
+ - java -jar ion-java-cli/target/ion-java-cli-1.0.jar version
 
 jobs:
   include:
