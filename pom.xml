@@ -272,7 +272,7 @@
     <profile>
       <id>release</id>
       <properties>
-        <jdkVersion>1.6</jdkVersion>
+        <jdkVersion>1.5</jdkVersion>
       </properties>
       <build>
         <plugins>
