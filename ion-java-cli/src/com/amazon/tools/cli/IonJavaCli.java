@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 public class IonJavaCli {
+    private static final String VERSION = "1.0";
     private static final int CONSOLE_WIDTH = 120; // Only used for formatting the USAGE message
     private static final int USAGE_ERROR_EXIT_CODE = 1;
     private static final int IO_ERROR_EXIT_CODE = 2;
@@ -73,6 +74,11 @@ public class IonJavaCli {
         } catch (CmdLineException | IllegalArgumentException e) {
             printHelpText(e.getMessage(), parser, parsedArgs);
             System.exit(USAGE_ERROR_EXIT_CODE);
+        }
+
+        if (commandType == CommandType.VERSION) {
+            System.err.println(VERSION);
+            System.exit(0);
         }
 
         ProcessContext processContext = commandType == CommandType.PROCESS ? new ProcessContext(null, -1,
