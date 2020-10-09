@@ -737,16 +737,12 @@ abstract class IonReaderBinaryRawX
         if (offset < 0 || len < 0) {
             throw new IllegalArgumentException();
         }
-        int value_len = byteSize(); // again validation
-        if (_value_lob_remaining > len) {
-            len = _value_lob_remaining;
-        }
         if (len < 1) {
             return 0;
         }
         int read_len;
         try {
-            read_len = read(buffer, offset, value_len);
+            read_len = read(buffer, offset, len);
             _value_lob_remaining -= read_len;
         }
         catch (IOException e) {

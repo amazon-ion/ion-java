@@ -372,6 +372,28 @@ public class ReaderTest
     }
 
     @Test
+    public void testReadLobUsingGetBytes() throws Exception
+    {
+        if (!myReaderMaker.sourceIsBinary()) {
+            // TODO text implements getBytes() differently: https://github.com/amzn/ion-java/issues/319
+            return;
+        }
+        String data = "{{\"abcdefghijklmnopqrstuvwxyz\"}}";
+        byte[] partialBuffer = new byte[10];
+        read(data);
+        assertEquals(IonType.CLOB, in.next());
+        int remaining = in.byteSize();
+        assertEquals(26, remaining);
+        StringBuilder value = new StringBuilder();
+        while (remaining > 0) {
+            int bytesRead = in.getBytes(partialBuffer, 0, partialBuffer.length);
+            remaining -= bytesRead;
+            value.append(new String(partialBuffer, 0, bytesRead, "UTF-8"));
+        }
+        assertEquals("abcdefghijklmnopqrstuvwxyz", value.toString());
+    }
+
+    @Test
     public void testGetSymbolTableBeforeFirstValue()
     {
         read("123");
