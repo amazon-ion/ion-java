@@ -1,0 +1,61 @@
+// << left shift
+
+package leftShiftOperator;
+
+import java.util.Scanner;
+
+public class LeftShift {
+
+	public static void main (String args[])
+	{
+		Scanner scan = new Scanner (System.in);
+		
+		System.out.print("enter any positive integer : ");
+		int num = scan.nextInt();
+		System.out.print("enter how many digit you want to shift it by : ");
+		int n= scan.nextInt();
+		System.out.println(num<<n);
+		
+	}
+
+}
+//increases the value as compare to given value
+//n*2^x == ?
+//here n is the given number and x is the number by which it should be shifted
+
+/*
+ * System.out.print(10<<1);  //40
+ * System.out.print(10<<3);  //80
+ * 
+ * System.out.print(20<<2);  //80
+ * System.out.print(20<<4);  //240
+ */
+ 
+
+//***************************************************************************************
+ 
+ // >> right shift
+ 
+package rightShiftOperator;
+
+import java.util.Scanner;
+
+public class SignedRightShift {
+	public static void main (String args[])
+	{
+		Scanner scan = new Scanner (System.in);
+		
+		System.out.print("enter any positive integer : ");
+		int num = scan.nextInt();
+		System.out.print("enter how many digit you want to shift it by : ");
+		int n= scan.nextInt();
+		System.out.println(num>>>n);
+		
+	}
+
+}
+//decreases the value as compare to given value
+//here n is the given number and x is the number by which it should be shifted
+//first bit represent wether the number is positive or negative
+//if 0 then +ve
+//if 1 then -ve
