@@ -1,0 +1,55 @@
+name: ion-test-driver
+
+on: [pull_request, issues]
+
+jobs:
+  ion-test-driver:
+    runs-on: macos-10.15
+    outputs:
+      report: ${{ steps.step1.outputs.test }}
+    steps:
+      - name: Checkout ion-test-driver
+        uses: actions/checkout@master
+        with:
+          repository: amzn/ion-test-driver
+          ref: master
+          path: ion-test-driver
+
+      - name: Set up python3 env
+        run: python3 -m venv ion-test-driver/venv && . ion-test-driver/venv/bin/activate
+
+      - name: Pip install
+        run: pip3 install -r ion-test-driver/requirements.txt && pip3 install -e ion-test-driver
+
+      - name: Run ion-test-driver
+        run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
+          -i ion-java,https://github.com/cheqianh/ion-java,${{ github.event.pull_request.head.sha }}
+
+      - name: analyze two implementations
+        continue-on-error: true
+        id: result-diff
+        run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -R
+          ion-java,https://github.com/amzn/ion-java,master
+          ion-java,https://github.com/cheqianh/ion-java,${{ github.event.pull_request.head.sha }}
+          output/results/ion-test-driver-results.ion
+
+      - name: analysis report
+        run: cat result.ion
+
+      - name: Check
+        if: ${{ steps.result-diff.outcome == 'failure' }}
+        run: echo 'Implementation behavior changed, Refer to the analysis report in the previous step for the reason.' && exit 1
+
+  open-issue:
+    runs-on: ubuntu-latest
+    needs: ion-test-driver
+    if: ${{ failure() }}
+    steps:
+      - uses: actions/checkout@master
+      - uses: cheqianh/create-an-issue@e6b4b19
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_WORKFLOW_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          assignees: ${{ github.event.sender.login }}
