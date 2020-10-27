@@ -28,10 +28,12 @@ import java.io.IOException;
 @Deprecated
 public class _PrivateIon_HashTrampoline
 {
+    private static final PooledBlockAllocatorProvider ALLOCATOR_PROVIDER = new PooledBlockAllocatorProvider();
+    
     public static IonWriter newIonWriter(ByteArrayOutputStream baos) throws IOException
     {
         return new IonRawBinaryWriter(
-                new PooledBlockAllocatorProvider(),
+                ALLOCATOR_PROVIDER,
                 _Private_IonManagedBinaryWriterBuilder.DEFAULT_BLOCK_SIZE,
                 baos,
                 AbstractIonWriter.WriteValueOptimization.NONE,
