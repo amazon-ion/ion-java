@@ -95,8 +95,9 @@ public class IonJavaCli {
             if (commandType == CommandType.COMPARE) {
                 compareFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, comparisonType);
             } else if (commandType == CommandType.PROCESS) {
-                processContext.setIonWriter(ionWriterForOutput);
-                processFiles(ionWriterForErrorReport, parsedArgs, processContext);
+                throw new CmdLineException("COMPARE doesn't support option format \"-f events\"");
+//                processContext.setIonWriter(ionWriterForOutput);
+//                processFiles(ionWriterForErrorReport, parsedArgs, processContext);
             }
         } catch (IOException e) {
             System.err.println("Failed to close OutputStream: " + e.getMessage());
