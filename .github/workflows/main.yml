@@ -25,6 +25,12 @@ jobs:
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
           -i ion-java,https://github.com/amzn/ion-java,${{ github.event.pull_request.head.sha }}
 
+      - name: upload result
+        uses: actions/upload-artifact@v2
+        with:
+          name: ion-test-driver-result.ion
+          path: output/results/ion-test-driver-results.ion
+
       - name: analyze two implementations
         continue-on-error: true
         id: result-diff
@@ -33,8 +39,11 @@ jobs:
           ion-java,https://github.com/amzn/ion-java,${{ github.event.pull_request.head.sha }}
           output/results/ion-test-driver-results.ion
 
-      - name: analysis report
-        run: cat result.ion
+      - name: upload analysis report
+        uses: actions/upload-artifact@v2
+        with:
+          name: analysis-report.ion
+          path: result.ion
 
       - name: Check
         if: ${{ steps.result-diff.outcome == 'failure' }}
