@@ -95,7 +95,7 @@ public class IonJavaCli {
             if (commandType == CommandType.COMPARE) {
                 compareFiles(ionWriterForOutput, ionWriterForErrorReport, parsedArgs, comparisonType);
             } else if (commandType == CommandType.PROCESS) {
-                throw new CmdLineException("COMPARE doesn't support option format \"-f events\"");
+                return;
 //                processContext.setIonWriter(ionWriterForOutput);
 //                processFiles(ionWriterForErrorReport, parsedArgs, processContext);
             }
