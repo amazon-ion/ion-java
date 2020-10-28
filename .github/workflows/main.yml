@@ -40,16 +40,17 @@ jobs:
         if: ${{ steps.result-diff.outcome == 'failure' }}
         run: echo 'Implementation behavior changed, Refer to the analysis report in the previous step for the reason.' && exit 1
 
-   open-issue:
-     runs-on: ubuntu-latest
-     needs: ion-test-driver
-     if: ${{ failure() }}
-     steps:
-       - uses: actions/checkout@master
-       - uses: cheqianh/create-an-issue@e6b4b19
-         env:
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-           GITHUB_WORKFLOW_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
-           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
-         with:
-           assignees: ${{ github.event.sender.login }}
+  open-issue:
+    runs-on: ubuntu-latest
+    needs: ion-test-driver
+    if: ${{ failure() }}
+    steps:
+      - uses: actions/checkout@master
+      - uses: cheqianh/create-an-issue@e6b4b19
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_WORKFLOW_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          assignees: ${{ github.event.sender.login }}
+
