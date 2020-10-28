@@ -1,6 +1,6 @@
 name: ion-test-driver
 
-on: [pull_request, issues]
+on: [pull_request]
 
 jobs:
   ion-test-driver:
@@ -8,6 +8,16 @@ jobs:
     outputs:
       report: ${{ steps.step1.outputs.test }}
     steps:
+      - name: Checkout ion-java
+        uses: actions/checkout@master
+        with:
+          repository: amzn/ion-java
+          ref: master
+          path: ion-java
+
+      - name: Get main branch HEAD sha
+        run: cd ion-java && echo "sha=`git rev-parse --short HEAD`" >> $GITHUB_ENV
+
       - name: Checkout ion-test-driver
         uses: actions/checkout@master
         with:
@@ -25,27 +35,27 @@ jobs:
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
           -i ion-java,https://github.com/amzn/ion-java,${{ github.event.pull_request.head.sha }}
 
-      - name: upload result
+      - name: Upload result
         uses: actions/upload-artifact@v2
         with:
           name: ion-test-driver-result.ion
           path: output/results/ion-test-driver-results.ion
 
-      - name: analyze two implementations
+      - name: Analyze two implementations
         continue-on-error: true
         id: result-diff
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -R
-          ion-java,https://github.com/amzn/ion-java,master
+          ion-java,https://github.com/amzn/ion-java,$sha
           ion-java,https://github.com/amzn/ion-java,${{ github.event.pull_request.head.sha }}
           output/results/ion-test-driver-results.ion
 
-      - name: upload analysis report
+      - name: Upload analysis report
         uses: actions/upload-artifact@v2
         with:
           name: analysis-report.ion
           path: result.ion
 
-      - name: Check
+      - name: Check if ion-test-driver fails
         if: ${{ steps.result-diff.outcome == 'failure' }}
         run: echo 'Implementation behavior changed, Refer to the analysis report in the previous step for the reason.' && exit 1
 
@@ -55,7 +65,8 @@ jobs:
     if: ${{ failure() }}
     steps:
       - uses: actions/checkout@master
-      - uses: cheqianh/create-an-issue@e6b4b19
+      - name: open an issue
+        uses: cheqianh/create-an-issue@e6b4b19
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_WORKFLOW_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
