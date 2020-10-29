@@ -39,6 +39,9 @@ jobs:
           name: ion-test-driver-result.ion
           path: output/results/ion-test-driver-results.ion
 
+      - name: showing result
+        run: cat output/results/ion-test-driver-results.ion
+
       - name: Analyze two implementations
         continue-on-error: true
         id: result-diff
@@ -53,6 +56,9 @@ jobs:
           name: analysis-report.ion
           path: result.ion
 
+      - name: showing report
+        run: cat result.ion
+
       - name: Check if ion-test-driver fails
         if: ${{ steps.result-diff.outcome == 'failure' }}
         run: echo 'Implementation behavior changed, Refer to the analysis report in the previous step for the reason.' && exit 1
@@ -64,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Open an issue
-        uses: cheqianh/create-an-issue@e6b4b19
+        uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_WORKFLOW_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
