@@ -5,8 +5,6 @@ on: [pull_request]
 jobs:
   ion-test-driver:
     runs-on: macos-10.15
-    outputs:
-      report: ${{ steps.step1.outputs.test }}
     steps:
       - name: Checkout ion-java
         uses: actions/checkout@master
@@ -65,7 +63,7 @@ jobs:
     if: ${{ failure() }}
     steps:
       - uses: actions/checkout@master
-      - name: open an issue
+      - name: Open an issue
         uses: cheqianh/create-an-issue@e6b4b19
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
