@@ -31,7 +31,7 @@ jobs:
 
       - name: Run ion-test-driver
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
-          -i ion-java,${{ github.event.pull_request.head.repo.full_name }},${{ github.event.pull_request.head.sha }}
+          -i ion-java,${{ github.event.pull_request.head.repo.html_url }},${{ github.event.pull_request.head.sha }}
 
       - name: Upload result
         uses: actions/upload-artifact@v2
@@ -44,7 +44,7 @@ jobs:
         id: result-diff
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -R
           ion-java,https://github.com/amzn/ion-java,$sha
-          ion-java,${{ github.event.pull_request.head.repo.full_name }},${{ github.event.pull_request.head.sha }}
+          ion-java,${{ github.event.pull_request.head.repo.html_url }},${{ github.event.pull_request.head.sha }}
           output/results/ion-test-driver-results.ion
 
       - name: Upload analysis report
