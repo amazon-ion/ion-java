@@ -13,9 +13,6 @@ jobs:
           ref: master
           path: ion-java
 
-      - name: Get main branch HEAD sha
-        run: cd ion-java && echo "sha=`git rev-parse --short HEAD`" >> $GITHUB_ENV
-
       - name: Checkout ion-test-driver
         uses: actions/checkout@master
         with:
@@ -28,6 +25,9 @@ jobs:
 
       - name: Pip install
         run: pip3 install -r ion-test-driver/requirements.txt && pip3 install -e ion-test-driver
+
+      - name: Get main branch HEAD sha
+        run: cd ion-java && echo `git rev-parse --short HEAD` && echo "sha=`git rev-parse --short HEAD`" >> $GITHUB_ENV
 
       - name: Run ion-test-driver
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
