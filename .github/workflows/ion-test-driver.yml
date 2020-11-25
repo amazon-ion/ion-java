@@ -27,7 +27,11 @@ jobs:
         run: pip3 install -r ion-test-driver/requirements.txt && pip3 install -e ion-test-driver
 
       - name: Get main branch HEAD sha
-        run: cd ion-java && echo `git rev-parse --short HEAD` && echo "sha=`git rev-parse --short HEAD`" >> $GITHUB_ENV
+        run: cd ion-java && echo `git rev-parse --short=7 HEAD` && echo "main=`git rev-parse --short=7 HEAD`" >> $GITHUB_ENV
+
+      - name: Get current commit sha
+        run: cd ion-java && echo `git rev-parse --short=7 ${{ github.event.pull_request.head.sha }}`
+          && echo "cur=`git rev-parse --short=7 ${{ github.event.pull_request.head.sha }}`" >> $GITHUB_ENV
 
       - name: Run ion-test-driver
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
@@ -46,9 +50,7 @@ jobs:
         continue-on-error: true
         id: result-diff
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -R
-          ion-java,https://github.com/amzn/ion-java,$sha
-          ion-java,${{ github.event.pull_request.head.repo.html_url }},${{ github.event.pull_request.head.sha }}
-          output/results/ion-test-driver-results.ion
+          ion-java,$main ion-java,$cur output/results/ion-test-driver-results.ion
 
       - name: Upload analysis report
         uses: actions/upload-artifact@v2
