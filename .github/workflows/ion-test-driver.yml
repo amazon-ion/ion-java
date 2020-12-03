@@ -36,6 +36,7 @@ jobs:
       - name: Run ion-test-driver
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
           -i ion-java,${{ github.event.pull_request.head.repo.html_url }},${{ github.event.pull_request.head.sha }}
+          --replace ion-java,https://github.com/amzn/ion-java.git,$main
 
       - name: Upload result
         uses: actions/upload-artifact@v2
