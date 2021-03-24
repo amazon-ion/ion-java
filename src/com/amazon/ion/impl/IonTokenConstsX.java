@@ -517,7 +517,7 @@ final class IonTokenConstsX
 
         try {
             return Integer.parseInt(digits);
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new UnknownSymbolException(digits);
         }
 
