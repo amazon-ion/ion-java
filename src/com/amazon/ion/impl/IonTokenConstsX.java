@@ -17,6 +17,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 
 
@@ -513,7 +514,13 @@ final class IonTokenConstsX
         assert length > 1;
 
         String digits = sidToken.subSequence(1, length).toString();
-        return Integer.parseInt(digits);
+
+        try {
+            return Integer.parseInt(digits);
+        } catch(Exception e) {
+            throw new UnknownSymbolException(digits);
+        }
+
     }
 
     static public int keyword(CharSequence word, int start_word, int end_word)
