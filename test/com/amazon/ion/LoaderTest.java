@@ -160,6 +160,17 @@ public class LoaderTest
         checkInt(123, value);
     }
 
+    @Test
+    public void testLargeSidSymbol()
+    {
+        String text = "$11111111111111";
+
+        // it's supposed to throw an IonException since sid is greater than INT_MAX.
+        try {
+            IonSymbol value = (IonSymbol) loadOneValue(text);
+            Assert.fail("Expected IonException to be thrown.");
+        } catch (IonException ignore) { /* expected to reach here */ }
+    }
 
     private static class FailingInputStream extends InputStream
     {
