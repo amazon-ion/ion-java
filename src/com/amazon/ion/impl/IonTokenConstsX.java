@@ -518,7 +518,7 @@ final class IonTokenConstsX
         try {
             return Integer.parseInt(digits);
         } catch (Exception e) {
-            throw new UnknownSymbolException(digits);
+            throw new IonException(String.format("Unable to parse SID %s", digits), e);
         }
 
     }
