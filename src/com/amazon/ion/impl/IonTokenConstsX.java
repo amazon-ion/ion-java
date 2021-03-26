@@ -17,7 +17,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
-import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 
 
