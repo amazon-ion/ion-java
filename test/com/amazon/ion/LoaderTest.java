@@ -168,9 +168,8 @@ public class LoaderTest
         // it's supposed to throw an IonException since sid is greater than INT_MAX.
         try {
             IonSymbol value = (IonSymbol) loadOneValue(text);
+            Assert.fail("Expected IonException to be thrown.");
         } catch (IonException ignore) { /* expected to reach here */ }
-
-        Assert.fail("Expected IonException to be thrown.");
     }
 
     private static class FailingInputStream extends InputStream
