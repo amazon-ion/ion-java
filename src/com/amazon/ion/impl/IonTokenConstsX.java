@@ -519,7 +519,6 @@ final class IonTokenConstsX
         } catch (Exception e) {
             throw new IonException(String.format("Unable to parse SID %s", digits), e);
         }
-
     }
 
     static public int keyword(CharSequence word, int start_word, int end_word)

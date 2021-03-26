@@ -171,7 +171,6 @@ public class LoaderTest
         } catch (IonException ignore) { /* expected to reach here */ }
     }
 
-
     private static class FailingInputStream extends InputStream
     {
         final int len;
