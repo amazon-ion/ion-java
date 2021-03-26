@@ -169,6 +169,8 @@ public class LoaderTest
         try {
             IonSymbol value = (IonSymbol) loadOneValue(text);
         } catch (IonException ignore) { /* expected to reach here */ }
+
+        Assert.fail("Expected IonException to be thrown.");
     }
 
     private static class FailingInputStream extends InputStream
