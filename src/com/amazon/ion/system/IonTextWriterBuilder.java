@@ -113,6 +113,38 @@ public abstract class IonTextWriterBuilder
      */
     public static final Charset UTF8 = _Private_Utils.UTF8_CHARSET;
 
+    /**
+     * Represents common new-line separators that are valid in Ion.
+     *
+     * Unicode defines several characters that can represent a new line, but only carriage return (CR) and linefeed (LF) are valid whitespace in Ion.
+     * Using other new-line characters (such as {@code NEL}) will result in printing invalid Ion.
+     */
+    public enum NewLineType {
+        /**
+         * A carriage return and linefeed ({@code U+000D} followed by {@code U+000A}).
+         */
+        CRLF("\r\n"),
+        /**
+         * A single linefeed ({@code U+000A}).
+         */
+        LF("\n"),
+        /**
+         * The new-line separator specified in the "line.separator" system property.
+         * Using this will result in writing invalid Ion if the platform uses anything other than CR and/or LF as the line separator
+         * <i>and</i> the IonTextWriter is configured to use pretty printing or to write each top-level value on a separate line.
+         */
+        PLATFORM_DEPENDENT(System.getProperty("line.separator"));
+
+        private final CharSequence charSequence;
+
+        NewLineType(CharSequence cs) {
+            this.charSequence = cs;
+        }
+
+        public CharSequence getCharSequence() {
+            return charSequence;
+        }
+    }
 
     /**
      * The standard builder of text {@link IonWriter}s, with all configuration
@@ -187,6 +219,8 @@ public abstract class IonTextWriterBuilder
     private IvmMinimizing myIvmMinimizing;
     private LstMinimizing myLstMinimizing;
     private int myLongStringThreshold;
+    private NewLineType myNewLineType;
+    private boolean myTopLevelValuesOnNewLines;
 
 
     /** NOT FOR APPLICATION USE! */
@@ -204,6 +238,8 @@ public abstract class IonTextWriterBuilder
         this.myIvmMinimizing        = that.myIvmMinimizing;
         this.myLstMinimizing        = that.myLstMinimizing;
         this.myLongStringThreshold  = that.myLongStringThreshold;
+        this.myNewLineType          = that.myNewLineType;
+        this.myTopLevelValuesOnNewLines = that.myTopLevelValuesOnNewLines;
     }
 
 
@@ -626,6 +662,107 @@ public abstract class IonTextWriterBuilder
 
     //=========================================================================
 
+    /**
+     * Gets the character sequence that will be written as a line separator.
+     * The default is {@link NewLineType#PLATFORM_DEPENDENT}
+     *
+     * @return the character sequence to be written between top-level values; null means the default should be used.
+     *
+     * @see #setNewLineType(NewLineType)
+     * @see #withNewLineType(NewLineType)
+     */
+    public final NewLineType getNewLineType()
+    {
+        return myNewLineType;
+    }
+
+    /**
+     * Sets the character sequence that will be written as a line separator.
+     * The default is {@link NewLineType#PLATFORM_DEPENDENT}
+     *
+     * @param newLineType the character sequence to be written between top-level values; null means the default should be used.
+     *
+     * @see #getNewLineType()
+     * @see #withNewLineType(NewLineType)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public void setNewLineType(NewLineType newLineType)
+    {
+        mutationCheck();
+        this.myNewLineType = newLineType;
+    }
+
+    /**
+     * Declares the character sequence that will be written as a line separator.
+     * The default is {@link NewLineType#PLATFORM_DEPENDENT}
+     *
+     * @param newLineType the character sequence to be written between top-level values; null means the default should be used.
+     *
+     * @see #getNewLineType()
+     * @see #setNewLineType(NewLineType)
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     */
+    public final IonTextWriterBuilder withNewLineType(NewLineType newLineType)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setNewLineType(newLineType);
+        return b;
+    }
+
+    //=========================================================================
+
+    /**
+     * Gets whether each top level value for standard printing should start on a new line. The default value is {@code false}.
+     * When false, the IonTextWriter will insert a single space character (U+0020) between top-level values.
+     * When pretty-printing, this setting is ignored; the pretty printer will always insert start top-level values on a new line.
+     *
+     * @return value indicating whether standard printing will insert a newline between top-level values
+     *
+     * @see #setWriteTopLevelValuesOnNewLines(boolean)
+     * @see #withWriteTopLevelValuesOnNewLines(boolean)
+     */
+    public final boolean getWriteTopLevelValuesOnNewLines()
+    {
+        return myTopLevelValuesOnNewLines;
+    }
+
+    /**
+     * Sets whether each top level value for standard printing should start on a new line. The default value is {@code false}.
+     * When false, the IonTextWriter will insert a single space character (U+0020) between top-level values.
+     * When pretty-printing, this setting is ignored; the pretty printer will always insert start top-level values on a new line.
+     *
+     * @param writeTopLevelValuesOnNewLines value indicating whether standard printing will insert a newline between top-level values
+     *
+     * @see #getWriteTopLevelValuesOnNewLines()
+     * @see #withWriteTopLevelValuesOnNewLines(boolean)
+     */
+    public void setWriteTopLevelValuesOnNewLines(boolean writeTopLevelValuesOnNewLines)
+    {
+        mutationCheck();
+        myTopLevelValuesOnNewLines = writeTopLevelValuesOnNewLines;
+    }
+
+    /**
+     * Declares whether each top level value for standard printing should start on a new line. The default value is {@code false}.
+     * When false, the IonTextWriter will insert a single space character (U+0020) between top-level values.
+     * When pretty-printing, this setting is ignored; the pretty printer will always insert start top-level values on a new line.
+     *
+     * @param writeTopLevelValuesOnNewLines value indicating whether standard printing will insert a newline between top-level values
+     *
+     * @see #getWriteTopLevelValuesOnNewLines()
+     * @see #setWriteTopLevelValuesOnNewLines(boolean)
+     */
+    public final IonTextWriterBuilder withWriteTopLevelValuesOnNewLines(boolean writeTopLevelValuesOnNewLines)
+    {
+        IonTextWriterBuilder b = mutable();
+        b.setWriteTopLevelValuesOnNewLines(writeTopLevelValuesOnNewLines);
+        return b;
+    }
+
+    //=========================================================================
 
     /**
      * Creates a new writer that will write text to the given output
