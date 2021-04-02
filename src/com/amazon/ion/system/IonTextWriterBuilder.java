@@ -717,7 +717,7 @@ public abstract class IonTextWriterBuilder
     /**
      * Gets whether each top level value for standard printing should start on a new line. The default value is {@code false}.
      * When false, the IonTextWriter will insert a single space character (U+0020) between top-level values.
-     * When pretty-printing, this setting is ignored; the pretty printer will always insert start top-level values on a new line.
+     * When pretty-printing, this setting is ignored; the pretty printer will always start top-level values on a new line.
      *
      * @return value indicating whether standard printing will insert a newline between top-level values
      *
@@ -732,7 +732,7 @@ public abstract class IonTextWriterBuilder
     /**
      * Sets whether each top level value for standard printing should start on a new line. The default value is {@code false}.
      * When false, the IonTextWriter will insert a single space character (U+0020) between top-level values.
-     * When pretty-printing, this setting is ignored; the pretty printer will always insert start top-level values on a new line.
+     * When pretty-printing, this setting is ignored; the pretty printer will always start top-level values on a new line.
      *
      * @param writeTopLevelValuesOnNewLines value indicating whether standard printing will insert a newline between top-level values
      *
@@ -748,7 +748,7 @@ public abstract class IonTextWriterBuilder
     /**
      * Declares whether each top level value for standard printing should start on a new line. The default value is {@code false}.
      * When false, the IonTextWriter will insert a single space character (U+0020) between top-level values.
-     * When pretty-printing, this setting is ignored; the pretty printer will always insert start top-level values on a new line.
+     * When pretty-printing, this setting is ignored; the pretty printer will always start top-level values on a new line.
      *
      * @param writeTopLevelValuesOnNewLines value indicating whether standard printing will insert a newline between top-level values
      *
