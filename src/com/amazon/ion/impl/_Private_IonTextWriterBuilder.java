@@ -34,10 +34,6 @@ public class _Private_IonTextWriterBuilder
     extends IonTextWriterBuilder
 {
     private final static CharSequence SPACE_CHARACTER = " ";
-    // TODO amzn/ion-java/issues/57 decide if this should be platform-specific
-    private final static CharSequence LINE_SEPARATOR =
-        System.getProperty("line.separator");
-
 
     public static _Private_IonTextWriterBuilder standard()
     {
@@ -148,13 +144,17 @@ public class _Private_IonTextWriterBuilder
     final CharSequence lineSeparator()
     {
         if (_pretty_print) {
-            return LINE_SEPARATOR;
+            return getNewLineType().getCharSequence();
         }
         else {
             return SPACE_CHARACTER;
         }
     }
 
+    final CharSequence topLevelSeparator()
+    {
+        return getWriteTopLevelValuesOnNewLines() ? getNewLineType().getCharSequence() : lineSeparator();
+    }
 
     //=========================================================================
 
@@ -171,6 +171,11 @@ public class _Private_IonTextWriterBuilder
         if (b.getCharset() == null)
         {
             b.setCharset(UTF8);
+        }
+
+        if (b.getNewLineType() == null)
+        {
+            b.setNewLineType(NewLineType.PLATFORM_DEPENDENT);
         }
 
         return (_Private_IonTextWriterBuilder) b.immutable();

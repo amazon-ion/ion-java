@@ -66,7 +66,7 @@ class IonWriterSystemText
      */
     private boolean _following_long_string;
 
-    int         _separator_character;
+    CharSequence _separator_character;
 
     int         _top;
     int []      _stack_parent_type = new int[10];
@@ -89,12 +89,7 @@ class IonWriterSystemText
                                                        options.getCharset());
         _options = options;
 
-        if (_options.isPrettyPrintOn()) {
-            _separator_character = '\n';
-        }
-        else {
-            _separator_character = ' ';
-        }
+        _separator_character = _options.topLevelSeparator();
 
         int threshold = _options.getLongStringThreshold();
         if (threshold < 1) threshold = Integer.MAX_VALUE;
@@ -151,14 +146,14 @@ class IonWriterSystemText
         _stack_pending_comma[_top] = _pending_separator;
         switch (typeid) {
         case _Private_IonConstants.tidSexp:
-            _separator_character = ' ';
+            _separator_character = " ";
             break;
         case _Private_IonConstants.tidList:
         case _Private_IonConstants.tidStruct:
-            _separator_character = ',';
+            _separator_character = ",";
             break;
         default:
-            _separator_character = _options.isPrettyPrintOn() ? '\n' : ' ';
+            _separator_character = _options.lineSeparator();
         break;
         }
         _top++;
@@ -182,21 +177,24 @@ class IonWriterSystemText
         int parentid = (_top > 0) ? _stack_parent_type[_top - 1] : -1;
         switch (parentid) {
         case -1:
+            _in_struct = false;
+            _separator_character = _options.topLevelSeparator();
+            break;
         case _Private_IonConstants.tidSexp:
             _in_struct = false;
-            _separator_character = ' ';
+            _separator_character = " ";
             break;
         case _Private_IonConstants.tidList:
             _in_struct = false;
-            _separator_character = ',';
+            _separator_character = ",";
             break;
         case _Private_IonConstants.tidStruct:
             _in_struct = true;
-            _separator_character = ',';
+            _separator_character = ",";
             break;
         default:
-            _separator_character = _options.isPrettyPrintOn() ? '\n' : ' ';
-        break;
+            _separator_character = _options.lineSeparator();
+            break;
         }
 
         return typeid;
@@ -337,17 +335,17 @@ class IonWriterSystemText
         throws IOException
     {
         if (_options.isPrettyPrintOn()) {
-            if (_pending_separator && _separator_character > ' ') {
+            if (_pending_separator && !IonTextUtils.isAllWhitespace(_separator_character)) {
                 // Only bother if the separator is non-whitespace.
-                _output.appendAscii((char)_separator_character);
+                _output.appendAscii(_separator_character);
                 followingLongString = false;
             }
             _output.appendAscii(_options.lineSeparator());
             printLeadingWhiteSpace();
         }
         else if (_pending_separator) {
-            _output.appendAscii((char)_separator_character);
-            if (_separator_character > ' ') followingLongString = false;
+            _output.appendAscii(_separator_character);
+            if (!IonTextUtils.isAllWhitespace(_separator_character)) followingLongString = false;
         }
         return followingLongString;
     }

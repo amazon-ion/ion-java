@@ -68,6 +68,27 @@ public class IonTextUtils
     }
 
     /**
+     * Ion whitespace is defined as one of the characters space, tab, newline,
+     * and carriage-return.  This matches the definition of whitespace used by
+     * JSON.
+     *
+     * @param charSequence the CharSequence to test.
+     * @return {@code true} if {@code charSequence} consists entirely of the four legal
+     * Ion whitespace characters.
+     *
+     * @see #isWhitespace(int)
+     * @see <a href="http://tools.ietf.org/html/rfc4627">RFC 4627</a>
+     */
+    public static boolean isAllWhitespace(CharSequence charSequence) {
+        for (int i = 0; i < charSequence.length(); i++) {
+            if (!IonTextUtils.isWhitespace(Character.codePointAt(charSequence, i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Determines whether a given code point is one of the valid Ion numeric
      * terminators.
      * <p>

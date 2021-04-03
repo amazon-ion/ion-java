@@ -335,6 +335,100 @@ public class TextWriterTest
     }
 
     @Test
+    public void testWritingTopLevelValuesOnNewLinesWithoutPrettyPrint()
+    {
+        IonTextWriterBuilder writerBuilder = IonTextWriterBuilder.standard()
+                .withInitialIvmHandling(SUPPRESS)
+                .withWriteTopLevelValuesOnNewLines(true)
+                .withNewLineType(IonTextWriterBuilder.NewLineType.LF);
+
+        IonDatagram dg = system().newDatagram();
+        dg.add().newString("Foo");
+        dg.add().newSymbol("Bar");
+        dg.add().newSexp(new int[]{1, 2, 3});
+        dg.add().newList(new int[]{4, 5, 6});
+        IonStruct struct = dg.add().newEmptyStruct();
+        struct.add("def").newInt(42);
+        struct.addTypeAnnotation("abc");
+
+        StringBuilder sb = new StringBuilder();
+        IonWriter writer = writerBuilder.build(sb);
+        dg.writeTo(writer);
+        assertEquals("\"Foo\"\nBar\n(1 2 3)\n[4,5,6]\nabc::{def:42}", sb.toString());
+    }
+
+    @Test
+    public void testWritingTopLevelValuesOnNewLinesShouldHaveNoEffectWithPrettyPrint()
+    {
+        // Setting top-level newlines to false should have no effect when pretty printing.
+        IonTextWriterBuilder writerBuilder = IonTextWriterBuilder.standard()
+                .withInitialIvmHandling(SUPPRESS)
+                .withWriteTopLevelValuesOnNewLines(false)
+                .withPrettyPrinting()
+                .withNewLineType(IonTextWriterBuilder.NewLineType.LF);
+
+        IonDatagram dg = system().newDatagram();
+        dg.add().newString("Foo");
+        dg.add().newSymbol("Bar");
+        dg.add().newSexp(new int[]{1, 2, 3});
+        dg.add().newList(new int[]{4, 5, 6});
+
+        StringBuilder sb = new StringBuilder();
+        IonWriter writer = writerBuilder.build(sb);
+        dg.writeTo(writer);
+        assertEquals("\n\"Foo\"\nBar\n(\n  1\n  2\n  3\n)\n[\n  4,\n  5,\n  6\n]", sb.toString());
+    }
+    
+    @Test
+    public void testNewLineTypesWithPrettyPrinting()
+    {
+        for (IonTextWriterBuilder.NewLineType nlt : IonTextWriterBuilder.NewLineType.values()) {
+            String expected = String.format("%s\"Foo\"%<sBar%<s(%<s  1%<s  2%<s  3%<s)%<s[%<s  4,%<s  5,%<s  6%<s]", nlt.getCharSequence());
+
+            IonTextWriterBuilder writerBuilder = IonTextWriterBuilder.standard()
+                    .withInitialIvmHandling(SUPPRESS)
+                    .withWriteTopLevelValuesOnNewLines(false)
+                    .withPrettyPrinting()
+                    .withNewLineType(nlt);
+
+            IonDatagram dg = system().newDatagram();
+            dg.add().newString("Foo");
+            dg.add().newSymbol("Bar");
+            dg.add().newSexp(new int[]{1, 2, 3});
+            dg.add().newList(new int[]{4, 5, 6});
+
+            StringBuilder sb = new StringBuilder();
+            IonWriter writer = writerBuilder.build(sb);
+            dg.writeTo(writer);
+            assertEquals(expected, sb.toString());
+        }
+    }
+
+    @Test
+    public void testNewLineTypesWithStandardPrinting()
+    {
+        for (IonTextWriterBuilder.NewLineType nlt : IonTextWriterBuilder.NewLineType.values()) {
+            String expected = String.format("\"Foo\"%sBar%<s(1 2 3)%<s[4,5,6]", nlt.getCharSequence());
+
+            IonTextWriterBuilder writerBuilder = IonTextWriterBuilder.standard()
+                    .withInitialIvmHandling(SUPPRESS)
+                    .withWriteTopLevelValuesOnNewLines(true)
+                    .withNewLineType(nlt);
+
+            IonDatagram dg = system().newDatagram();
+            dg.add().newString("Foo");
+            dg.add().newSymbol("Bar");
+            dg.add().newSexp(new int[]{1, 2, 3});
+            dg.add().newList(new int[]{4, 5, 6});
+
+            StringBuilder sb = new StringBuilder();
+            IonWriter writer = writerBuilder.build(sb);
+            dg.writeTo(writer);
+            assertEquals(expected, sb.toString());
+        }
+    }
+
+    @Test
     public void testWritingLongClobs()
         throws Exception
     {
