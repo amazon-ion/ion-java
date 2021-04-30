@@ -108,7 +108,6 @@ public class IonExceptionTest
     @Test
     public void testCauseOfWrongEncoding() {
         try {
-            // Wrong encoding
             byte[] bytes_input = new byte[]{
                     (byte) 0x27, (byte) 0x31, (byte) -0xB, (byte) 0x31, (byte) 0x31, (byte) 0x31, (byte) 0x27};
 
@@ -119,7 +118,6 @@ public class IonExceptionTest
             return;
         } catch (Exception ignore) {}
 
-        // Shouldn't reach here
         fail();
     }
 }
