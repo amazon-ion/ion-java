@@ -15,11 +15,15 @@
 
 package com.amazon.ion;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.Test;
 
 
@@ -99,5 +103,23 @@ public class IonExceptionTest
         ie1.initCause(ie2);
         IonException ion = new IonException(ie1);
         assertNull(ion.causeOfType(IOException.class));
+    }
+
+    @Test
+    public void testCauseOfWrongEncoding() {
+        try {
+            // Wrong encoding
+            byte[] bytes_input = new byte[]{
+                    (byte) 0x27, (byte) 0x31, (byte) -0xB, (byte) 0x31, (byte) 0x31, (byte) 0x31, (byte) 0x27};
+
+            IonSystemBuilder.standard().build().newLoader().load(bytes_input);
+        } catch (IonException e) {
+            // The exception should be caught here
+            assertEquals(e.getMessage(), "invalid unicodeScalar");
+            return;
+        } catch (Exception ignore) {}
+
+        // Shouldn't reach here
+        fail();
     }
 }

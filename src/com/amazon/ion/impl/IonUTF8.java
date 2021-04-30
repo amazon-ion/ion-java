@@ -381,8 +381,9 @@ class IonUTF8 {
         return (unicodeScalar > MAXIMUM_UTF16_1_CHAR_CODE_POINT);
     }
     public final static char highSurrogate(int unicodeScalar) {
-        assert(unicodeScalar > MAXIMUM_UTF16_1_CHAR_CODE_POINT);
-        assert(unicodeScalar <= Character.MAX_CODE_POINT);
+        if (!(unicodeScalar > MAXIMUM_UTF16_1_CHAR_CODE_POINT) || !(unicodeScalar <= Character.MAX_CODE_POINT)) {
+            throw new IonException("invalid unicodeScalar");
+        }
         int c = ((unicodeScalar - SURROGATE_OFFSET) >> 10);
         return (char)((c | HIGH_SURROGATE) & 0xffff);
     }
