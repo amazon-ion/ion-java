@@ -115,7 +115,7 @@ public class IonExceptionTest
             IonSystemBuilder.standard().build().newLoader().load(bytes_input);
         } catch (IonException e) {
             // The exception should be caught here
-            assertEquals(e.getMessage(), "invalid unicodeScalar");
+            assertEquals(e.getMessage(), "Invalid encoding: encountered non-Unicode character.");
             return;
         } catch (Exception ignore) {}
 

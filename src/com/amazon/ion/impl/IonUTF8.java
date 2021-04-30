@@ -378,12 +378,14 @@ class IonUTF8 {
     }
 
     public final static boolean needsSurrogateEncoding(int unicodeScalar) {
+        if (unicodeScalar > Character.MAX_CODE_POINT) {
+            throw new IonException("Invalid encoding: encountered non-Unicode character.");
+        }
         return (unicodeScalar > MAXIMUM_UTF16_1_CHAR_CODE_POINT);
     }
     public final static char highSurrogate(int unicodeScalar) {
-        if (!(unicodeScalar > MAXIMUM_UTF16_1_CHAR_CODE_POINT) || !(unicodeScalar <= Character.MAX_CODE_POINT)) {
-            throw new IonException("invalid unicodeScalar");
-        }
+        assert(unicodeScalar > MAXIMUM_UTF16_1_CHAR_CODE_POINT);
+        assert(unicodeScalar <= Character.MAX_CODE_POINT);
         int c = ((unicodeScalar - SURROGATE_OFFSET) >> 10);
         return (char)((c | HIGH_SURROGATE) & 0xffff);
     }
