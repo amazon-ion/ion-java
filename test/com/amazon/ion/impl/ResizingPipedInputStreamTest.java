@@ -606,7 +606,7 @@ public class ResizingPipedInputStreamTest {
         assertEquals(2, input.peek(1));
         assertEquals(3, input.peek(2));
         byte[] twoThree = new byte[2];
-        input.get(1, twoThree, 0, 2);
+        input.copyBytes(1, twoThree, 0, 2);
         assertArrayEquals(bytes(2, 3), twoThree);
         // The boundary has not been extended, so bytes are available through the InputStream interface.
         assertEquals(0, input.available());

@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
  *     <li>The buffer can grow. Piped streams use a fixed-size buffer that causes blocking when full. If
  *     used in a single-thread, this serves as a hard limit on the amount of data that can be written without
  *     a matching read. This can require arbitrary limits on data size to be imposed by the application. The
- *     NonBlockingCircularInputStream imposes no such limitation, but optionally allows for a maximum buffer
+ *     ResizingPipedInputStream imposes no such limitation, but optionally allows for a maximum buffer
  *     size to be configured to protect against unbounded growth.</li>
  * </ol>
  */
@@ -58,7 +58,7 @@ public class ResizingPipedInputStream extends InputStream {
 
     /**
      * The initial size of the buffer and the number of bytes by which the size of the buffer will increase
-     * each time it grows.
+     * each time it grows, unless it must grow by a smaller amount to fit within 'maximumBufferSize'.
      */
     private final int initialBufferSize;
 
@@ -164,8 +164,8 @@ public class ResizingPipedInputStream extends InputStream {
     }
 
     /**
-     * Moves all buffered (but not yet read) bytes from 'buffer' to the destination buffer. In total, 'size' bytes
-     * will be moved.
+     * Moves all buffered (but not yet read) bytes from 'buffer' to the destination buffer. In total, {@link #size()}
+     * bytes will be moved.
      * @param destinationBuffer the destination buffer, which may be 'buffer' itself or a new buffer.
      */
     private void moveBytesToStartOfBuffer(byte[] destinationBuffer) {
@@ -476,8 +476,7 @@ public class ResizingPipedInputStream extends InputStream {
     }
 
     /**
-     * @return the capacity of the buffer, which is always `initialBufferSize` multiplied by the number of
-     * times the buffer has grown.
+     * @return the capacity of the buffer, which is always less than or equal to 'maximumBufferSize'.
      */
     public int capacity() {
         return capacity;
@@ -524,7 +523,7 @@ public class ResizingPipedInputStream extends InputStream {
      * @param destinationOffset the offset of the buffer to copy into.
      * @param length the number of bytes to copy.
      */
-    void get(int position, byte[] destination, int destinationOffset, int length) {
+    void copyBytes(int position, byte[] destination, int destinationOffset, int length) {
         System.arraycopy(buffer, position, destination, destinationOffset, length);
     }
 

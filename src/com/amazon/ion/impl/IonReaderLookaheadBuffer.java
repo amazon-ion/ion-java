@@ -20,7 +20,7 @@ import java.util.List;
  * top-level value. Any such invalid data will be detected as normal by the IonReader. In the few cases where this
  * wrapper does detect an error (e.g. upon finding the illegal type 0xF), it will raise {@link IonException}.
  */
-public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
+public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<IonBufferEventHandler> {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -158,7 +158,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
 
         /**
          * @param startIndex index of the first byte of the symbol table struct's contents.
-         * @param length index of the first byte after the end of the symbol table.
+         * @param length the number of bytes that remain in the symbol table struct after 'startIndex'.
          */
         private SymbolTableMarker(final int startIndex, final int length) {
             this.startIndex = startIndex;
@@ -184,7 +184,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     /**
      * The symbol IDs of any annotations on the current value.
      */
-    private final List<Integer> annotationSids;
+    private final List<Integer> annotationSids = new ArrayList<Integer>(3);
 
     /**
      * The number of additional bytes that must be read from `input` and stored in `pipe` before
@@ -288,8 +288,6 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         valueTid = null;
         valueEndIndex = -1;
         annotationSids.clear();
-        // This is the start of a new top-level value. Mark the write index in case this value ends up exceeding
-        // the maximum size and needs to be truncated.
         valueStartAvailable = pipe.available();
         startNewValue();
     }
@@ -313,7 +311,6 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         );
         pageSize = configuration.getInitialBufferSize();
         inProgressVarUInt = new VarUInt();
-        annotationSids = new ArrayList<Integer>(3);
         reset();
     }
 
@@ -360,11 +357,11 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
                 return;
             }
             inProgressVarUInt.numberOfBytesRead++;
-            eventHandler.onData(1);
             inProgressVarUInt.value =
                     (inProgressVarUInt.value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
             if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
                 inProgressVarUInt.isComplete = true;
+                eventHandler.onData(inProgressVarUInt.numberOfBytesRead);
                 return;
             }
         }
@@ -406,7 +403,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     /**
      * Reads the type ID byte.
      * @param isUnannotated true if this type ID is not on a value within an annotation wrapper; false if it is.
-     * @return true if the type is STRUCT, false if it is any other type, or null if no byte was read.
+     * @return the result as a {@link ReadTypeIdResult}.
      * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
      */
     private ReadTypeIdResult readTypeID(final boolean isUnannotated) throws Exception {
@@ -613,7 +610,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
             if (isSystemValue) {
                 // Processing cannot continue after system values (symbol tables) are truncated because subsequent
                 // values may be unreadable. Notify the user.
-                ((IonBufferEventHandler) eventHandler).onOversizedSymbolTable();
+                eventHandler.onOversizedSymbolTable();
             } else {
                 // An oversized user value has been encountered. Notify the user so they can decide whether to continue
                 // or abort.
@@ -684,7 +681,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
                 if (result == ReadTypeIdResult.NO_DATA) {
                     return;
                 }
-                // When successful, peekValueHeader reads exactly one byte.
+                // When successful, readTypeID reads exactly one byte.
                 additionalBytesNeeded--;
                 if (result == ReadTypeIdResult.STRUCT) {
                     state = State.READING_SYMBOL_TABLE_LENGTH;

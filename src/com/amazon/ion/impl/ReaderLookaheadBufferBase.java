@@ -11,7 +11,7 @@ import java.io.InputStream;
 /**
  * Base class for lookahead buffers that enable incremental reading of streaming data.
  */
-abstract class ReaderLookaheadBufferBase implements ReaderLookaheadBuffer {
+abstract class ReaderLookaheadBufferBase<T extends BufferEventHandler> implements ReaderLookaheadBuffer {
 
     /**
      * An InputStream over binary Ion data.
@@ -31,7 +31,7 @@ abstract class ReaderLookaheadBufferBase implements ReaderLookaheadBuffer {
     /**
      * The handler that will be notified when the maximum buffer size is exceeded.
      */
-    protected final BufferEventHandler eventHandler;
+    protected final T eventHandler;
 
     /**
      * The current mark for the pipe's value of 'available'.
@@ -53,7 +53,7 @@ abstract class ReaderLookaheadBufferBase implements ReaderLookaheadBuffer {
      * @param configuration the buffer configuration.
      * @param inputStream an InputStream over Ion data.
      */
-    ReaderLookaheadBufferBase(final BufferConfiguration<?, ?> configuration, final InputStream inputStream) {
+    ReaderLookaheadBufferBase(final BufferConfiguration<T, ?> configuration, final InputStream inputStream) {
         input = inputStream;
         pipe = new ResizingPipedInputStream(
             configuration.getInitialBufferSize(),

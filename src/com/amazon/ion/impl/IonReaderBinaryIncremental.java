@@ -1375,7 +1375,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         }
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        buffer.get(startIndex, bytes, 0, bytes.length);
+        buffer.copyBytes(startIndex, bytes, 0, bytes.length);
         return bytes;
     }
 
@@ -1616,7 +1616,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         byte[] bytes = new byte[byteSize()];
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        buffer.get(valueStartPosition, bytes, 0, bytes.length);
+        buffer.copyBytes(valueStartPosition, bytes, 0, bytes.length);
         return bytes;
     }
 
@@ -1625,7 +1625,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         int length = Math.min(len, byteSize() - lobBytesRead);
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
-        buffer.get(valueStartPosition + lobBytesRead, bytes, offset, length);
+        buffer.copyBytes(valueStartPosition + lobBytesRead, bytes, offset, length);
         lobBytesRead += length;
         return length;
     }

@@ -71,7 +71,10 @@ public class IonReaderLookaheadBufferTest
     }
 
     @Override
-    ReaderLookaheadBufferBase build(IonBufferConfiguration.Builder configuration, InputStream inputStream) {
+    ReaderLookaheadBufferBase<IonBufferEventHandler> build(
+        IonBufferConfiguration.Builder configuration,
+        InputStream inputStream
+    ) {
         return new IonReaderLookaheadBuffer(configuration.build(), inputStream);
     }
 

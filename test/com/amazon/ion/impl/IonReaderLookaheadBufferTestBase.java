@@ -78,7 +78,7 @@ public abstract class IonReaderLookaheadBufferTestBase<
 
     abstract V createLookaheadWrapperBuilder();
 
-    abstract ReaderLookaheadBufferBase build(V builder, InputStream inputStream);
+    abstract ReaderLookaheadBufferBase<T> build(V builder, InputStream inputStream);
 
     abstract T createThrowingEventHandler();
     abstract T createCountingEventHandler(AtomicLong byteCount);
@@ -96,7 +96,7 @@ public abstract class IonReaderLookaheadBufferTestBase<
         if (eventHandler != null) {
             builder.withHandler(eventHandler);
         }
-        ReaderLookaheadBufferBase lookahead = build(builder, input);
+        ReaderLookaheadBufferBase<T> lookahead = build(builder, input);
         try {
             for (Value value : values) {
                 for (int i = -1; i < value.stream.length; i++) {
