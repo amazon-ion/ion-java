@@ -40,16 +40,25 @@ abstract class IonContainerLite
     protected int            _child_count;
     protected IonValueLite[] _children;
     protected int            structuralModificationCount;
+    // IonValueLite delegates calls to getSystem() to the parent context. If the value is deeply nested, the
+    // the parent will delegate the call to getSystem() to its own parent context. This delegation repeats until
+    // the top level is reached. This linear walk to the root of the DOM can be very expensive.
+    // As an optimization, each container holds a reference to its parent's IonSystem and overrides IonValueLite's
+    // implementation of getSystem(). Scalar IonValueLite implementations will continue to delegate to the parent
+    // context, but the parent context will always be able to provide the IonSystem without further delegation.
+    protected IonSystemLite  ionSystem;
 
     protected IonContainerLite(ContainerlessContext context, boolean isNull)
     {
         // we'll let IonValueLite handle this work as we always need to know
         // our context and if we should start out as a null value or not
         super(context, isNull);
+        this.ionSystem = context.getSystem();
     }
 
     IonContainerLite(IonContainerLite existing, IonContext context, boolean isStruct) {
         super(existing, context);
+        this.ionSystem = existing.getSystem();
         boolean retainingSIDs = false;
         int childCount = existing._child_count;
         this._child_count = childCount;
@@ -86,6 +95,12 @@ abstract class IonContainerLite
             // setting updated IF such a change has occurred.
             _isSymbolIdPresent(retainingSIDs);
         }
+    }
+
+    // See the comment on the `ionSystem` member field for more information.
+    @Override
+    public IonSystemLite getSystem() {
+        return ionSystem;
     }
 
     @Override
