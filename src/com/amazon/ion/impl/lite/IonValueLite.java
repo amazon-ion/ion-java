@@ -633,7 +633,7 @@ abstract class IonValueLite
         if (symbols != null) {
             return symbols;
         }
-        return _context.getSystem().getSystemSymbolTable();
+        return getSystem().getSystemSymbolTable();
     }
 
     public SymbolTable getAssignedSymbolTable()
@@ -651,7 +651,7 @@ abstract class IonValueLite
 
     public IonType getType()
     {
-        throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instanciated, there is not IonType associated with it");
+        throw new UnsupportedOperationException("this type "+this.getClass().getSimpleName()+" should not be instantiated, there is not IonType associated with it");
     }
 
     public SymbolToken[] getTypeAnnotationSymbols()
