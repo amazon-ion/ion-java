@@ -28,7 +28,7 @@ import java.io.IOException;
 @Deprecated
 public class _PrivateIon_HashTrampoline
 {
-    private static final PooledBlockAllocatorProvider ALLOCATOR_PROVIDER = new PooledBlockAllocatorProvider();
+    private static final PooledBlockAllocatorProvider ALLOCATOR_PROVIDER = PooledBlockAllocatorProvider.getInstance();
     
     public static IonWriter newIonWriter(ByteArrayOutputStream baos) throws IOException
     {
