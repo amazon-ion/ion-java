@@ -52,7 +52,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
             @Override
             BlockAllocatorProvider createAllocatorProvider()
             {
-                return new PooledBlockAllocatorProvider();
+                return PooledBlockAllocatorProvider.getInstance();
             }
         },
         BASIC
