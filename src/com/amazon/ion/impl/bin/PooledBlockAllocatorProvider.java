@@ -77,10 +77,10 @@ import java.util.concurrent.ConcurrentMap;
         public void close() {}
     }
 
-    // A globally shared instance of the PooledBlockAllocatorProvider that is lazily initialized.
+    // A globally shared instance of the PooledBlockAllocatorProvider.
     // This instance allows BlockAllocators to be re-used across instantiations of classes like
     // the binary Ion writer, thereby avoiding costly array initializations.
-    private static PooledBlockAllocatorProvider instance;
+    private static final PooledBlockAllocatorProvider INSTANCE = new PooledBlockAllocatorProvider();
     private final ConcurrentMap<Integer, BlockAllocator> allocators;
 
     private PooledBlockAllocatorProvider()
@@ -88,11 +88,8 @@ import java.util.concurrent.ConcurrentMap;
         allocators = new ConcurrentHashMap<Integer, BlockAllocator>();
     }
 
-    public static synchronized PooledBlockAllocatorProvider getInstance() {
-        if (instance == null) {
-            instance = new PooledBlockAllocatorProvider();
-        }
-        return instance;
+    public static PooledBlockAllocatorProvider getInstance() {
+        return INSTANCE;
     }
 
     @Override
