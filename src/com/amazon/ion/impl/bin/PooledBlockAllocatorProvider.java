@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
      * <p>
      * This implementation is thread-safe.
      */
-    private final class PooledBlockAllocator extends BlockAllocator
+    private static final class PooledBlockAllocator extends BlockAllocator
     {
         private final int blockSize, blockLimit;
         private final ConcurrentLinkedQueue<Block> freeBlocks;
