@@ -47,9 +47,12 @@ public class _Private_IonTextWriterBuilder
     //=========================================================================
 
     private boolean _pretty_print;
+
+    // These options control whether the IonTextWriter will write standard ion or ion that is down-converted json.
     public boolean _blob_as_string;
     public boolean _clob_as_string;
     public boolean _decimal_as_float;
+    public boolean _float_nan_and_inf_as_null;
     public boolean _sexp_as_list;
     public boolean _skip_annotations;
     public boolean _string_as_json;
@@ -57,6 +60,7 @@ public class _Private_IonTextWriterBuilder
     public boolean _timestamp_as_millis;
     public boolean _timestamp_as_string;
     public boolean _untyped_nulls;
+
     private _Private_CallbackBuilder _callback_builder;
 
 
@@ -73,6 +77,7 @@ public class _Private_IonTextWriterBuilder
         this._blob_as_string      = that._blob_as_string     ;
         this._clob_as_string      = that._clob_as_string     ;
         this._decimal_as_float    = that._decimal_as_float   ;
+        this._float_nan_and_inf_as_null = that._float_nan_and_inf_as_null;
         this._sexp_as_list        = that._sexp_as_list       ;
         this._skip_annotations    = that._skip_annotations   ;
         this._string_as_json      = that._string_as_json     ;
@@ -123,6 +128,7 @@ public class _Private_IonTextWriterBuilder
         _clob_as_string      = true;
         // datagramAsList    = true; // TODO
         _decimal_as_float    = true;
+        _float_nan_and_inf_as_null = true;
         _sexp_as_list        = true;
         _skip_annotations    = true;
         // skipSystemValues  = true; // TODO
