@@ -604,7 +604,7 @@ class IonWriterSystemText
         throws IOException
     {
         startValue();
-        _output.printFloat(value);
+        _output.printFloat(_options, value);
         closeValue();
     }
 

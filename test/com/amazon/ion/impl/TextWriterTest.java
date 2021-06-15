@@ -488,6 +488,57 @@ public class TextWriterTest
     }
 
     @Test
+    public void testWritingFloatNanToJson()
+            throws Exception
+    {
+        options = IonTextWriterBuilder.json();
+        options.setInitialIvmHandling(SUPPRESS);
+
+        IonDatagram dg = system().newDatagram();
+        dg.add().newFloat(Double.NaN);
+
+        iw = makeWriter();
+        dg.writeTo(iw);
+
+        String actual = outputString();
+        assertEquals("null", actual);
+    }
+
+    @Test
+    public void testWritingFloatPositiveInfinityToJson()
+            throws Exception
+    {
+        options = IonTextWriterBuilder.json();
+        options.setInitialIvmHandling(SUPPRESS);
+
+        IonDatagram dg = system().newDatagram();
+        dg.add().newFloat(Double.POSITIVE_INFINITY);
+
+        iw = makeWriter();
+        dg.writeTo(iw);
+
+        String actual = outputString();
+        assertEquals("null", actual);
+    }
+
+    @Test
+    public void testWritingFloatNegativeInfinityToJson()
+            throws Exception
+    {
+        options = IonTextWriterBuilder.json();
+        options.setInitialIvmHandling(SUPPRESS);
+
+        IonDatagram dg = system().newDatagram();
+        dg.add().newFloat(Double.NEGATIVE_INFINITY);
+
+        iw = makeWriter();
+        dg.writeTo(iw);
+
+        String actual = outputString();
+        assertEquals("null", actual);
+    }
+
+    @Test
     public void testSuppressInitialIvm()
         throws Exception
     {
