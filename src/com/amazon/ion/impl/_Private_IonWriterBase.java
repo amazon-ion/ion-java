@@ -44,10 +44,6 @@ public abstract class _Private_IonWriterBase
     static final String ERROR_FINISH_NOT_AT_TOP_LEVEL =
         "IonWriter.finish() can only be called at top-level.";
 
-    private static final boolean _debug_on = false;
-
-
-
     /**
      * Returns the current depth of containers the writer is at.  This is
      * 0 if the writer is at top-level.
@@ -329,7 +325,6 @@ public abstract class _Private_IonWriterBase
             }
 
             setFieldNameSymbol(tok);
-            if (_debug_on) System.out.print(":");
         }
     }
 
@@ -340,7 +335,6 @@ public abstract class _Private_IonWriterBase
         // because local symtab diversion leaves the $ion_symbol_table
         // dangling on the system writer!  TODO fix that, it's broken.
         setTypeAnnotationSymbols(a);
-        if (_debug_on) System.out.print(";");
     }
 
 
@@ -360,95 +354,127 @@ public abstract class _Private_IonWriterBase
     }
 
     /**
-     * Unoptimized copy. This must not recurse back to the public
-     * {@link #writeValue(IonReader)} method since that will cause the
-     * optimization test to happen repeatedly.
+     * Writes the provided IonReader's current value including any annotations. This function will not advance the
+     * IonReader beyond the end of the current value; users wishing to continue using the IonReader at the current
+     * depth will need to call {@link IonReader#next()} again.
+     *
+     * - If the IonReader is not positioned over a value (for example: because it is at the beginning or end of a
+     *   stream), then this function does nothing.
+     * - If the current value is a container, this function will visit all of its child values and write those too,
+     *   advancing the IonReader to the end of the container in the process.
+     * - If both this writer and the IonReader are in a struct, the writer will write the current value's field name.
+     * - If the writer is not in a struct but the reader is, the writer will ignore the current value's field name.
+     * - If the writer is in a struct but the IonReader is not, this function throws an IllegalStateException.
+     *
+     * @param reader       The IonReader that will provide a value to write.
+     * @throws IOException if the provided IonReader throws an IOException.
+     * @throws IllegalStateException if this writer is inside a struct but the IonReader is not.
      */
-    final void writeValueRecursively(IonType type, IonReader reader)
-        throws IOException
+    final void writeValueRecursively(IonType ionType, IonReader reader)
+            throws IOException
     {
-        write_value_field_name_helper(reader);
-        write_value_annotations_helper(reader);
+        // The IonReader does not need to be at the top level (getDepth()==0) when the function is called.
+        // We take note of its initial depth so we can avoid advancing the IonReader beyond the starting value.
+        int startingDepth = getDepth();
 
-        if (reader.isNullValue()) {
-            this.writeNull(type);
-        }
-        else {
+        // The IonReader will be at `startingDepth` when the function is first called and then again when we
+        // have finished traversing all of its children. This boolean tracks which of those two states we are
+        // in when `getDepth() == startingDepth`.
+        boolean alreadyProcessedTheStartingValue = false;
+
+        // The IonType of the IonReader's current value.
+        IonType type;
+
+        while (true) {
+            // Each time we reach the top of the loop we are in one of three states:
+            // 1. We have not yet begun processing the starting value.
+            // 2. We are currently traversing the starting value's children.
+            // 3. We have finished processing the starting value.
+            if (getDepth() == startingDepth) {
+                // The IonReader is at the starting depth. We're either beginning our traversal or finishing it.
+                if (alreadyProcessedTheStartingValue) {
+                    // We're finishing our traversal.
+                    break;
+                }
+                // We're beginning our traversal. Don't advance the cursor; instead, use the IonType that was
+                // passed in by the caller.
+                type = ionType;
+                // We've begun processing the starting value.
+                alreadyProcessedTheStartingValue = true;
+            } else {
+                // We're traversing the starting value's children (that is: values at greater depths). We need to
+                // advance the cursor by calling next().
+                type = reader.next();
+            }
+
+            if (type == null) {
+                // There are no more values at this level. If we're at the starting level, we're done.
+                if (getDepth() == startingDepth) {
+                    break;
+                }
+                // Otherwise, step out once and then try to move forward again.
+                reader.stepOut();
+                stepOut();
+                continue;
+            }
+
+            // We found a value. Write out its field ID and annotations, if any.
+            write_value_field_name_helper(reader);
+            write_value_annotations_helper(reader);
+
+            if (reader.isNullValue()) {
+                this.writeNull(type);
+                continue;
+            }
+
             switch (type) {
-            case NULL:
-                writeNull();
-                if (_debug_on) System.out.print("-");
-                break;
-            case BOOL:
-                writeBool(reader.booleanValue());
-                if (_debug_on) System.out.print("b");
-                break;
-            case INT:
-                writeInt(reader.bigIntegerValue());
-                if (_debug_on) System.out.print("i");
-                break;
-            case FLOAT:
-                writeFloat(reader.doubleValue());
-                if (_debug_on) System.out.print("f");
-                break;
-            case DECIMAL:
-                writeDecimal(reader.decimalValue());
-                if (_debug_on) System.out.print("d");
-                break;
-            case TIMESTAMP:
-                writeTimestamp(reader.timestampValue());
-                if (_debug_on) System.out.print("t");
-                break;
-            case STRING:
-                writeString(reader.stringValue());
-                if (_debug_on) System.out.print("$");
-                break;
-            case SYMBOL:
-                writeSymbolToken(reader.symbolValue());
-                if (_debug_on) System.out.print("y");
-                break;
-            case BLOB:
-                writeBlob(reader.newBytes());
-                if (_debug_on) System.out.print("B");
-                break;
-            case CLOB:
-                writeClob(reader.newBytes());
-                if (_debug_on) System.out.print("L");
-                break;
-            case STRUCT:
-                if (_debug_on) System.out.print("{");
-                writeContainerRecursively(IonType.STRUCT, reader);
-                if (_debug_on) System.out.print("}");
-                break;
-            case LIST:
-                if (_debug_on) System.out.print("[");
-                writeContainerRecursively(IonType.LIST, reader);
-                if (_debug_on) System.out.print("]");
-                break;
-            case SEXP:
-                if (_debug_on) System.out.print("(");
-                writeContainerRecursively(IonType.SEXP, reader);
-                if (_debug_on) System.out.print(")");
-                break;
-            default:
-                throw new IllegalStateException("Unknown value type: " + type);
+                case NULL:
+                    // The isNullValue() check above will handle this.
+                    throw new IllegalStateException("isNullValue() was false but IonType was NULL.");
+                case BOOL:
+                    writeBool(reader.booleanValue());
+                    break;
+                case INT:
+                    writeInt(reader.bigIntegerValue());
+                    break;
+                case FLOAT:
+                    writeFloat(reader.doubleValue());
+                    break;
+                case DECIMAL:
+                    writeDecimal(reader.decimalValue());
+                    break;
+                case TIMESTAMP:
+                    writeTimestamp(reader.timestampValue());
+                    break;
+                case STRING:
+                    writeString(reader.stringValue());
+                    break;
+                case SYMBOL:
+                    writeSymbolToken(reader.symbolValue());
+                    break;
+                case BLOB:
+                    writeBlob(reader.newBytes());
+                    break;
+                case CLOB:
+                    writeClob(reader.newBytes());
+                    break;
+                case STRUCT:
+                    reader.stepIn();
+                    stepIn(IonType.STRUCT);
+                    break;
+                case LIST:
+                    reader.stepIn();
+                    stepIn(IonType.LIST);
+                    break;
+                case SEXP:
+                    reader.stepIn();
+                    stepIn(IonType.SEXP);
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown value type: " + type);
             }
         }
     }
-
-    private void writeContainerRecursively(IonType type, IonReader reader)
-        throws IOException
-    {
-        stepIn(type);
-        reader.stepIn();
-        while ((type = reader.next()) != null)
-        {
-            writeValueRecursively(type, reader);
-        }
-        reader.stepOut();
-        stepOut();
-    }
-
 
     //
     //  This code handles the skipped symbol table
