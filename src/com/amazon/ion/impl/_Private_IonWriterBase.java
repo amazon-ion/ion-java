@@ -395,8 +395,8 @@ public abstract class _Private_IonWriterBase
                     // We're finishing our traversal.
                     break;
                 }
-                // We're beginning our traversal. Don't advance the cursor; instead, use the IonType that was
-                // passed in by the caller.
+                // We're beginning our traversal. Don't advance the cursor; instead, use the current
+                // value's IonType.
                 type = reader.getType();
                 // We've begun processing the starting value.
                 alreadyProcessedTheStartingValue = true;
