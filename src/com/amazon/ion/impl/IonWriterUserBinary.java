@@ -105,7 +105,7 @@ class IonWriterUserBinary
 
         // From here on, we won't call back into this method, so we won't
         // bother doing all those checks again.
-        writeValueRecursively(type, reader);
+        writeValueRecursively(reader);
     }
 
 
