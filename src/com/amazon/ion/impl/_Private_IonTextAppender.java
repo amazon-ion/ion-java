@@ -798,7 +798,7 @@ public final class _Private_IonTextAppender
     }
 
 
-    public void printFloat(double value)
+    public void printFloat(_Private_IonTextWriterBuilder _options, double value)
         throws IOException
     {
         // shortcut zero cases
@@ -815,15 +815,27 @@ public final class _Private_IonTextAppender
         }
         else if (Double.isNaN(value))
         {
-            appendAscii("nan");
+            if (_options._float_nan_and_inf_as_null) {
+                appendAscii("null");
+            } else {
+                appendAscii("nan");
+            }
         }
         else if (value == Double.POSITIVE_INFINITY)
         {
-            appendAscii("+inf");
+            if (_options._float_nan_and_inf_as_null) {
+                appendAscii("null");
+            } else {
+                appendAscii("+inf");
+            }
         }
         else if (value == Double.NEGATIVE_INFINITY)
         {
-            appendAscii("-inf");
+            if (_options._float_nan_and_inf_as_null) {
+                appendAscii("null");
+            } else {
+                appendAscii("-inf");
+            }
         }
         else
         {
@@ -846,7 +858,7 @@ public final class _Private_IonTextAppender
         }
     }
 
-    public void printFloat(Double value)
+    public void printFloat(_Private_IonTextWriterBuilder _options, Double value)
         throws IOException
     {
         if (value == null)
@@ -855,7 +867,7 @@ public final class _Private_IonTextAppender
         }
         else
         {
-            printFloat(value.doubleValue());
+            printFloat(_options, value.doubleValue());
         }
     }
 

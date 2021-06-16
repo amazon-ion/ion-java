@@ -876,7 +876,7 @@ public class IonTextUtils
     {
         _Private_IonTextAppender appender =
             _Private_IonTextAppender.forAppendable(out);
-        appender.printFloat(value);
+        appender.printFloat(STANDARD, value);
     }
 
     public static String printFloat(double value)
@@ -900,7 +900,7 @@ public class IonTextUtils
     {
         _Private_IonTextAppender appender =
             _Private_IonTextAppender.forAppendable(out);
-        appender.printFloat(value);
+        appender.printFloat(STANDARD, value);
     }
 
     public static String printFloat(Double value)
