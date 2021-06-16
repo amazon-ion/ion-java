@@ -349,8 +349,7 @@ public abstract class _Private_IonWriterBase
     public void writeValue(IonReader reader) throws IOException
     {
         // TODO this should do symtab optimization as per writeValues()
-        IonType type = reader.getType();
-        writeValueRecursively(type, reader);
+        writeValueRecursively(reader);
     }
 
     /**
@@ -367,11 +366,11 @@ public abstract class _Private_IonWriterBase
      * - If the writer is in a struct but the IonReader is not, this function throws an IllegalStateException.
      *
      * @param reader       The IonReader that will provide a value to write.
-     * @throws IOException if the provided IonReader throws an IOException.
+     * @throws IOException if either the provided IonReader or this writer's underlying OutputStream throw an
+     *                     IOException.
      * @throws IllegalStateException if this writer is inside a struct but the IonReader is not.
      */
-    final void writeValueRecursively(IonType ionType, IonReader reader)
-            throws IOException
+    final void writeValueRecursively(IonReader reader) throws IOException
     {
         // The IonReader does not need to be at the top level (getDepth()==0) when the function is called.
         // We take note of its initial depth so we can avoid advancing the IonReader beyond the starting value.
@@ -398,7 +397,7 @@ public abstract class _Private_IonWriterBase
                 }
                 // We're beginning our traversal. Don't advance the cursor; instead, use the IonType that was
                 // passed in by the caller.
-                type = ionType;
+                type = reader.getType();
                 // We've begun processing the starting value.
                 alreadyProcessedTheStartingValue = true;
             } else {
@@ -418,7 +417,7 @@ public abstract class _Private_IonWriterBase
                 continue;
             }
 
-            // We found a value. Write out its field ID and annotations, if any.
+            // We found a value. Write out its field name and annotations, if any.
             write_value_field_name_helper(reader);
             write_value_annotations_helper(reader);
 
@@ -458,17 +457,11 @@ public abstract class _Private_IonWriterBase
                 case CLOB:
                     writeClob(reader.newBytes());
                     break;
-                case STRUCT:
-                    reader.stepIn();
-                    stepIn(IonType.STRUCT);
-                    break;
-                case LIST:
-                    reader.stepIn();
-                    stepIn(IonType.LIST);
-                    break;
+                case STRUCT: // Intentional fallthrough
+                case LIST:   // Intentional fallthrough
                 case SEXP:
                     reader.stepIn();
-                    stepIn(IonType.SEXP);
+                    stepIn(type);
                     break;
                 default:
                     throw new IllegalStateException("Unknown value type: " + type);
