@@ -1,5 +1,6 @@
 package com.amazon.ion.impl.bin.utf8;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -11,23 +12,32 @@ import java.nio.charset.CoderResult;
  * Encodes {@link String}s to UTF-8. Instances of this class are reusable but are NOT threadsafe.
  *
  * Users are strongly encouraged to get instances from {@link Utf8StringEncoderPool#getOrCreateUtf8Encoder()}.
+ * {@link #encode(String)} can be called any number of times. Users are expected to call {@link #close()} when
+ * the encoder is no longer needed.
  */
-public class Utf8StringEncoder {
+public class Utf8StringEncoder implements Closeable {
     // The longest String (as measured by {@link java.lang.String#length()}) that this instance can encode without
     // requiring additional allocations.
     private static final int SMALL_STRING_SIZE = 4 * 1024;
 
     // Reusable resources for encoding Strings as UTF-8 bytes
+    final Utf8StringEncoderPool utf8StringEncoderPool;
     final CharsetEncoder utf8Encoder;
     final ByteBuffer utf8EncodingBuffer;
     final char[] charArray;
     final CharBuffer charBuffer;
 
-    public Utf8StringEncoder() {
+    public Utf8StringEncoder(Utf8StringEncoderPool pool) {
+        utf8StringEncoderPool = pool;
         utf8Encoder = Charset.forName("UTF-8").newEncoder();
         utf8EncodingBuffer = ByteBuffer.allocate((int) (SMALL_STRING_SIZE * utf8Encoder.maxBytesPerChar()));
         charArray = new char[SMALL_STRING_SIZE];
         charBuffer = CharBuffer.wrap(charArray);
+    }
+
+    public Utf8StringEncoder() {
+        // This instance is not associated with a Utf8StringEncoderPool
+        this(null);
     }
 
     /**
@@ -116,11 +126,23 @@ public class Utf8StringEncoder {
     }
 
     /**
+     * Attempts to return this instance to the Utf8StringEncoderPool with which it is associated, if any.
+     *
+     * Do not continue to use this encoder after calling this method.
+     */
+    @Override
+    public void close() {
+        if (utf8StringEncoderPool != null) {
+            utf8StringEncoderPool.returnEncoderToPool(this);
+        }
+    }
+
+    /**
      * Represents the result of a {@link Utf8StringEncoder#encode(String)} operation.
      */
     public static class Result {
-        private byte[] buffer;
-        private int encodedLength;
+        final private byte[] buffer;
+        final private int encodedLength;
 
         public Result(int encodedLength, byte[] buffer) {
             this.encodedLength = encodedLength;

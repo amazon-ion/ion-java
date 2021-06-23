@@ -1616,8 +1616,7 @@ import java.util.NoSuchElementException;
             buffer.close();
             patchBuffer.close();
             allocator.close();
-            // We cannot use `utf8StringEncoder` again after returning it to the pool.
-            Utf8StringEncoderPool.getInstance().returnEncoderToPool(utf8StringEncoder);
+            utf8StringEncoder.close();
         }
         finally
         {

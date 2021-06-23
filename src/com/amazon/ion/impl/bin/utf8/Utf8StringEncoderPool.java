@@ -5,15 +5,15 @@ import java.util.concurrent.ArrayBlockingQueue;
 /**
  * A thread-safe shared pool of {@link Utf8StringEncoder}s that can be used for UTF8 encoding and decoding.
  */
-public class Utf8StringEncoderPool {
-    // The maximum number of Utf8Encoders that can be waiting in the queue before new ones will be discarded.
-    private static final int MAX_QUEUE_SIZE = 32;
+public enum Utf8StringEncoderPool {
+    // The only enum variant; a singleton instance.
+    INSTANCE;
 
-    // A singleton instance.
-    private static final Utf8StringEncoderPool INSTANCE = new Utf8StringEncoderPool();
+    // The maximum number of Utf8Encoders that can be waiting in the queue before new ones will be discarded.
+    private static final int MAX_QUEUE_SIZE = 128;
 
     // A queue of previously initialized encoders that can be loaned out.
-    ArrayBlockingQueue<Utf8StringEncoder> bufferQueue;
+    private final ArrayBlockingQueue<Utf8StringEncoder> bufferQueue;
 
     // Do not allow instantiation; all classes should share the singleton instance.
     private Utf8StringEncoderPool() {
@@ -38,7 +38,7 @@ public class Utf8StringEncoderPool {
         Utf8StringEncoder encoder = bufferQueue.poll();
         if (encoder == null) {
             // No buffers were available in the pool. Create a new one.
-            encoder = new Utf8StringEncoder();
+            encoder = new Utf8StringEncoder(this);
         }
         return encoder;
     }
