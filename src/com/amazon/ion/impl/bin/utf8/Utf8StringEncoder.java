@@ -32,7 +32,7 @@ public class Utf8StringEncoder {
 
     /**
      * Encodes the provided String's text to UTF-8. Unlike {@link String#getBytes(Charset)}, this method will not
-     * silently replace characters that cannot be encoded with a substitute characters. Instead, it will throw
+     * silently replace characters that cannot be encoded with a substitute character. Instead, it will throw
      * an {@link IllegalArgumentException}.
      *
      * Some resources in the returned {@link Result} may be reused across calls to this method. Consequently,
