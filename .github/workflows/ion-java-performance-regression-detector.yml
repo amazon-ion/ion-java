@@ -1,0 +1,72 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+name: Ion Jave performance regression detector
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  detetct-regression:
+    name: Detetct Regression
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Checkout ion-java repository from the current commit
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+          submodules: recursive
+      - run: git checkout HEAD^
+
+      - name: Build ion-java from the current commit
+        run: mvn clean install
+
+      - name: Build ion-java-benchmark-cli based on the current ion-java
+        uses: actions/checkout@v2
+        with:
+          repository: amzn/ion-java-benchmark-cli
+          ref: master
+      - run: mvn clean install
+
+      - name: Check the version of ion-java
+        run: java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar --version
+
+      - name: Generate test Ion Data
+        run: java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar generate -S 500 -T string -f ion_text testWorkflow.ion
+
+      - name: Test read preformance of the ion-java from the current commit
+        run: java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar read testWorkflow.ion -o readPerformanceCurrent.ion -r ion
+
+      - name: Clean maven dependency repository
+        run : rm -r /home/runner/.m2
+
+      - name: Checkout ion-java repository from the new commit
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Build ion-java from the new commit
+        run: mvn clean install
+
+      - name: Build ion-java-benchmark-cli based on the new ion-java
+        uses: actions/checkout@v2
+        with:
+          repository: amzn/ion-java-benchmark-cli
+          ref: master
+      - run: mvn clean install
+
+      - name: Check the version of ion-java
+        run: java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar --version
+
+      - name: Test read preformance of ion-java from the new commit
+        run: java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar read testWorkflow.ion -o readPerformanceNew.ion -r ion
