@@ -1,7 +1,5 @@
 package com.amazon.ion.impl.bin.utf8;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -11,33 +9,28 @@ import java.nio.charset.CoderResult;
 /**
  * Encodes {@link String}s to UTF-8. Instances of this class are reusable but are NOT threadsafe.
  *
- * Users are strongly encouraged to get instances from {@link Utf8StringEncoderPool#getOrCreateUtf8Encoder()}.
+ * Instances are vended by {@link Utf8StringEncoderPool#getOrCreate()}.
+ *
  * {@link #encode(String)} can be called any number of times. Users are expected to call {@link #close()} when
  * the encoder is no longer needed.
  */
-public class Utf8StringEncoder implements Closeable {
+public class Utf8StringEncoder extends Poolable<Utf8StringEncoder> {
     // The longest String (as measured by {@link java.lang.String#length()}) that this instance can encode without
     // requiring additional allocations.
     private static final int SMALL_STRING_SIZE = 4 * 1024;
 
     // Reusable resources for encoding Strings as UTF-8 bytes
-    final Utf8StringEncoderPool utf8StringEncoderPool;
     final CharsetEncoder utf8Encoder;
     final ByteBuffer utf8EncodingBuffer;
     final char[] charArray;
     final CharBuffer charBuffer;
 
-    public Utf8StringEncoder(Utf8StringEncoderPool pool) {
-        utf8StringEncoderPool = pool;
+    Utf8StringEncoder(Pool<Utf8StringEncoder> pool) {
+        super(pool);
         utf8Encoder = Charset.forName("UTF-8").newEncoder();
         utf8EncodingBuffer = ByteBuffer.allocate((int) (SMALL_STRING_SIZE * utf8Encoder.maxBytesPerChar()));
         charArray = new char[SMALL_STRING_SIZE];
         charBuffer = CharBuffer.wrap(charArray);
-    }
-
-    public Utf8StringEncoder() {
-        // This instance is not associated with a Utf8StringEncoderPool
-        this(null);
     }
 
     /**
@@ -123,18 +116,6 @@ public class Utf8StringEncoder implements Closeable {
 
         // In most usages, the JVM should be able to eliminate this allocation via an escape analysis of the caller.
         return new Result(utf8Length, encodingBuffer.array());
-    }
-
-    /**
-     * Attempts to return this instance to the Utf8StringEncoderPool with which it is associated, if any.
-     *
-     * Do not continue to use this encoder after calling this method.
-     */
-    @Override
-    public void close() {
-        if (utf8StringEncoderPool != null) {
-            utf8StringEncoderPool.returnEncoderToPool(this);
-        }
     }
 
     /**

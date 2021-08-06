@@ -16,6 +16,8 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
+import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.IOException;
@@ -23,11 +25,8 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 import java.util.Arrays;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -161,9 +160,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         private static final int MAX_ID_ID = 8;
     }
 
-    // The size of the reusable UTF-8 decoding buffer.
-    private static final int UTF8_BUFFER_SIZE_IN_BYTES = 4 * 1024;
-
     // The final byte of the binary IVM.
     private static final int IVM_FINAL_BYTE = 0xEA;
 
@@ -233,8 +229,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     // Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
     private final _Private_RecyclingStack<ContainerInfo> containerStack;
 
-    // UTF-8 string decoder.
-    private final CharsetDecoder utf8CharsetDecoder = Charset.forName("UTF-8").newDecoder();
+    private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
     // The symbol IDs for the annotations on the current value.
     private final List<Integer> annotationSids;
@@ -282,9 +277,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
 
     // The number of bytes of a lob value that the user has consumed, allowing for piecewise reads.
     private int lobBytesRead = 0;
-
-    // A reusable scratch space to hold decoded UTF-8 bytes.
-    private CharBuffer utf8DecodingBuffer = CharBuffer.allocate(UTF8_BUFFER_SIZE_IN_BYTES);
 
     // The type of value at which the reader is currently positioned.
     private IonType valueType = null;
@@ -1599,22 +1591,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      */
     private String readString(int valueStart, int valueEnd) {
         ByteBuffer utf8InputBuffer = buffer.getByteBuffer(valueStart, valueEnd);
-
         int numberOfBytes = valueEnd - valueStart;
-        if (numberOfBytes > utf8DecodingBuffer.capacity()) {
-            utf8DecodingBuffer = CharBuffer.allocate(numberOfBytes);
-        }
-
-        utf8DecodingBuffer.position(0);
-        utf8DecodingBuffer.limit(utf8DecodingBuffer.capacity());
-
-        utf8CharsetDecoder.reset();
-        CoderResult coderResult = utf8CharsetDecoder.decode(utf8InputBuffer, utf8DecodingBuffer, true);
-        if (coderResult.isError()) {
-            throw new IonException("Illegal value encountered while validating UTF-8 data in input stream. " + coderResult.toString());
-        }
-        utf8DecodingBuffer.flip();
-        return utf8DecodingBuffer.toString();
+        return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
     }
 
     @Override
@@ -1974,6 +1952,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     public void close() throws IOException {
         requireCompleteValue();
         inputStream.close();
+        utf8Decoder.close();
     }
 
 }

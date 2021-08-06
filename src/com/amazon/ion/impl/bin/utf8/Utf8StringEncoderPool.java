@@ -1,23 +1,20 @@
 package com.amazon.ion.impl.bin.utf8;
 
-import java.util.concurrent.ArrayBlockingQueue;
-
 /**
- * A thread-safe shared pool of {@link Utf8StringEncoder}s that can be used for UTF8 encoding and decoding.
+ * A thread-safe shared pool of {@link Utf8StringEncoder}s that can be used for UTF8 encoding.
  */
-public enum Utf8StringEncoderPool {
-    // The only enum variant; a singleton instance.
-    INSTANCE;
+public class Utf8StringEncoderPool extends Pool<Utf8StringEncoder> {
 
-    // The maximum number of Utf8Encoders that can be waiting in the queue before new ones will be discarded.
-    private static final int MAX_QUEUE_SIZE = 128;
-
-    // A queue of previously initialized encoders that can be loaned out.
-    private final ArrayBlockingQueue<Utf8StringEncoder> bufferQueue;
+    private static final Utf8StringEncoderPool INSTANCE = new Utf8StringEncoderPool();
 
     // Do not allow instantiation; all classes should share the singleton instance.
     private Utf8StringEncoderPool() {
-        bufferQueue = new ArrayBlockingQueue<Utf8StringEncoder>(MAX_QUEUE_SIZE);
+        super(new Allocator<Utf8StringEncoder>() {
+            @Override
+            public Utf8StringEncoder newInstance(Pool<Utf8StringEncoder> pool) {
+                return new Utf8StringEncoder(pool);
+            }
+        });
     }
 
     /**
@@ -25,36 +22,6 @@ public enum Utf8StringEncoderPool {
      */
     public static Utf8StringEncoderPool getInstance() {
         return INSTANCE;
-    }
-
-    /**
-     * If the pool is not empty, removes an instance of {@link Utf8StringEncoder} from the pool and returns it;
-     * otherwise, constructs a new instance.
-     *
-     * @return An instance of {@link Utf8StringEncoder}.
-     */
-    public Utf8StringEncoder getOrCreateUtf8Encoder() {
-        // The `poll` method does not block. If the queue is empty it returns `null` immediately.
-        Utf8StringEncoder encoder = bufferQueue.poll();
-        if (encoder == null) {
-            // No buffers were available in the pool. Create a new one.
-            encoder = new Utf8StringEncoder(this);
-        }
-        return encoder;
-    }
-
-    /**
-     * Adds the provided instance of {@link Utf8StringEncoder} to the pool. If the pool is full, the instance will
-     * be discarded.
-     *
-     * Callers MUST NOT use an encoder after returning it to the pool.
-     *
-     * @param encoder   A {@link Utf8StringEncoder} to add to the pool.
-     */
-    public void returnEncoderToPool(Utf8StringEncoder encoder) {
-        // The `offer` method does not block. If the queue is full, it returns `false` immediately.
-        // If the provided instance cannot be added to the pool, we discard it silently.
-        bufferQueue.offer(encoder);
     }
 
 }
