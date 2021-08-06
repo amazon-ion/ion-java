@@ -126,7 +126,7 @@ import java.util.NoSuchElementException;
 
     final Utf8StringEncoder utf8StringEncoder = Utf8StringEncoderPool
             .getInstance()
-            .getOrCreateUtf8Encoder();
+            .getOrCreate();
 
     private static final byte[] makeTypedPreallocatedBytes(final int typeDesc, final int length)
     {

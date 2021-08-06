@@ -27,16 +27,16 @@ import com.amazon.ion.Timestamp.Precision;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
+import com.amazon.ion.impl.bin.utf8.ByteBufferPool;
+import com.amazon.ion.impl.bin.utf8.PoolableByteBuffer;
+import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
+import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 
 
 /**
@@ -58,7 +58,6 @@ abstract class IonReaderBinaryRawX
     static final int DEFAULT_CONTAINER_STACK_SIZE = 12; // a multiple of 3
     static final int DEFAULT_ANNOTATION_SIZE = 10;
     static final int NO_LIMIT = Integer.MIN_VALUE;
-    static final int UTF8_BUFFER_SIZE_IN_BYTES = 4 * 1024;
 
     protected enum State {
         S_INVALID,
@@ -104,18 +103,13 @@ abstract class IonReaderBinaryRawX
     int                 _container_top;
     long[]              _container_stack; // triples of: position, type, local_end
 
-
-    // `StandardCharsets.UTF_8` wasn't introduced until Java 7, so we have to use Charset#forName(String) instead.
-    private static final Charset UTF8 = Charset.forName("UTF-8");
-    private CharsetDecoder utf8CharsetDecoder = UTF8.newDecoder();
+    // Pooled decoder for UTF-8 strings.
+    private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
     // Calling read() to pull in the next byte of a string requires an EOF check to be performed for each byte.
     // This reusable buffer allows us to call read(utf8InputBuffer) instead, letting us can pay the cost of an EOF check
     // once per buffer rather than once per byte.
-    private ByteBuffer utf8InputBuffer = ByteBuffer.allocate(UTF8_BUFFER_SIZE_IN_BYTES);
-
-    // A reusable scratch space to hold the decoded bytes as they're read from the utf8InputBuffer.
-    private CharBuffer utf8DecodingBuffer = CharBuffer.allocate(UTF8_BUFFER_SIZE_IN_BYTES);
+    private final PoolableByteBuffer pooledUtf8InputBuffer = ByteBufferPool.getInstance().getOrCreate();
 
     protected IonReaderBinaryRawX() {
     }
@@ -169,6 +163,8 @@ abstract class IonReaderBinaryRawX
         throws IOException
     {
         _input.close();
+        utf8Decoder.close();
+        pooledUtf8InputBuffer.close();
     }
 
     static private final int  POS_OFFSET        = 0;
@@ -1200,16 +1196,14 @@ abstract class IonReaderBinaryRawX
 
     protected final String readString(int numberOfBytes) throws IOException
     {
+        ByteBuffer utf8InputBuffer = pooledUtf8InputBuffer.getBuffer();
         // If the string we're reading is small enough to fit in our reusable buffer, we can avoid the overhead
         // of looping and bounds checking.
         if (numberOfBytes <= utf8InputBuffer.capacity()) {
-            return readStringWithReusableBuffer(numberOfBytes);
+            return readStringWithReusableBuffer(numberOfBytes, utf8InputBuffer);
         }
 
-        // Otherwise, allocate a one-off decoding buffer that's large enough to hold the string
-        // and prepare to decode the string in chunks.
-        CharBuffer decodingBuffer = CharBuffer.allocate(numberOfBytes);
-        utf8CharsetDecoder.reset();
+        utf8Decoder.prepareDecode(numberOfBytes);
 
         int save_limit = NO_LIMIT;
         if (_local_remaining != NO_LIMIT) {
@@ -1246,14 +1240,7 @@ abstract class IonReaderBinaryRawX
             utf8InputBuffer.position(0);
             utf8InputBuffer.limit(carryoverBytes + bytesRead);
 
-            CoderResult coderResult = utf8CharsetDecoder.decode(
-                    utf8InputBuffer,
-                    decodingBuffer,
-                    totalBytesRead >= numberOfBytes
-            );
-            if (coderResult.isError()) {
-                throw new IonException("Illegal value encountered while validating UTF-8 data in input stream. " + coderResult.toString());
-            }
+            utf8Decoder.partialDecode(utf8InputBuffer, totalBytesRead >= numberOfBytes);
 
             // Shift leftover partial character bytes (if any) to the beginning of the buffer
             carryoverBytes = utf8InputBuffer.remaining();
@@ -1270,11 +1257,10 @@ abstract class IonReaderBinaryRawX
 
         _local_remaining = save_limit;
 
-        decodingBuffer.flip();
-        return decodingBuffer.toString();
+        return utf8Decoder.finishDecode();
     }
 
-    private String readStringWithReusableBuffer(int numberOfBytes) throws IOException {
+    private String readStringWithReusableBuffer(int numberOfBytes, ByteBuffer utf8InputBuffer) throws IOException {
         int save_limit = NO_LIMIT;
         if (_local_remaining != NO_LIMIT) {
             save_limit = _local_remaining - numberOfBytes;
@@ -1286,16 +1272,7 @@ abstract class IonReaderBinaryRawX
         utf8InputBuffer.position(0);
         utf8InputBuffer.limit(numberOfBytes);
 
-        utf8DecodingBuffer.position(0);
-        utf8DecodingBuffer.limit(utf8DecodingBuffer.capacity());
-
-        utf8CharsetDecoder.reset();
-        CoderResult coderResult = utf8CharsetDecoder.decode(utf8InputBuffer, utf8DecodingBuffer, true);
-        if (coderResult.isError()) {
-            throw new IonException("Illegal value encountered while validating UTF-8 data in input stream. " + coderResult.toString());
-        }
-        utf8DecodingBuffer.flip();
-        return utf8DecodingBuffer.toString();
+        return utf8Decoder.decode(utf8InputBuffer, numberOfBytes);
     }
 
     private final void throwUnexpectedEOFException() throws IOException {
