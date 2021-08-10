@@ -3,9 +3,7 @@
 
 name: Ion Java performance regression detector
 
-on:
-  pull_request:
-    branches: [master]
+on: [pull_request]
 
 jobs:
   detect-regression:
