@@ -196,10 +196,11 @@ public class ResizingPipedInputStream extends InputStream {
      */
     private void ensureSpaceInBuffer(int minimumNumberOfBytesRequired) {
         if (size < 1 || freeSpaceAtEndOfBuffer() < minimumNumberOfBytesRequired) {
-            // Free up space by moving any unread bytes to the start of the buffer and resetting the indices.
-            moveBytesToStartOfBuffer(buffer);
-            int shortfall = minimumNumberOfBytesRequired - freeSpaceAtEndOfBuffer();
-            if (shortfall > 0) {
+            int shortfall = minimumNumberOfBytesRequired - freeSpaceAtEndOfBuffer() - readIndex;
+            if (shortfall <= 0) {
+                // Free up space by moving any unread bytes to the start of the buffer and resetting the indices.
+                moveBytesToStartOfBuffer(buffer);
+            } else {
                 // There is not enough space in the buffer even though all available bytes have already been
                 // moved to the start of the buffer. Growth is required.
                 int amountToGrow = Math.max(initialBufferSize, shortfall);
@@ -329,7 +330,7 @@ public class ResizingPipedInputStream extends InputStream {
 
     /**
      * Seeks the read index to the given position.
-     * @param index the index to which to seek.
+     * @param index the index to which to seek. Must not be negative.
      */
     void seekTo(int index) {
         int amount = index - readIndex;

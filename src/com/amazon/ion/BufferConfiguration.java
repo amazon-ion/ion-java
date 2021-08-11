@@ -38,13 +38,13 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
         private int maximumBufferSize = Integer.MAX_VALUE;
 
         /**
-         * The handler that will be notified when the maximum buffer size is exceeded.
+         * The handler that will be notified when events occur.
          */
         private T eventHandler = null;
 
         /**
          * Sets the initial size of the buffer that will be used to hold the data between top-level values. Default:
-         * 64KB.
+         * 32KB.
          *
          * @param initialBufferSizeInBytes the value.
          * @return this Builder.
@@ -62,10 +62,9 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
         }
 
         /**
-         * Sets the handler that will be notified when bytes are processed and when the maximum buffer size is exceeded
-         * (if applicable). If the maximum buffer size is finite (see {@link #withMaximumBufferSize(int)}, the handler
-         * is required to be non-null. Otherwise, the handler may be null, in which case the number of bytes processed
-         * will not be reported.
+         * Sets the handler that will be notified when events occur. If the maximum buffer size is finite (see
+         * {@link #withMaximumBufferSize(int)}, the handler is required to be non-null. Otherwise, the handler may be
+         * null, in which case the number of bytes processed will not be reported.
          *
          * @param handler the handler.
          * @return this builder.
@@ -76,7 +75,7 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
         }
 
         /**
-         * @return the handler that will be notified when the maximum buffer size is exceeded.
+         * @return the handler that will be notified when events occur.
          */
         public final T getHandler() {
             return eventHandler;
@@ -132,7 +131,7 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
     private final int maximumBufferSize;
 
     /**
-     * The handler that will be notified when the maximum buffer size is exceeded.
+     * The handler that will be notified when events occur.
      */
     private final T eventHandler;
 
@@ -178,7 +177,7 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
     }
 
     /**
-     * @return the handler that will be notified when the maximum buffer size is exceeded.
+     * @return the handler that will be notified when events occur.
      */
     public final T getHandler() {
         return eventHandler;

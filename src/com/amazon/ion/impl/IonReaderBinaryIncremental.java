@@ -24,6 +24,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -47,7 +48,14 @@ import java.util.TreeMap;
  * Although the incremental binary reader implementation provides performance superior to the non-incremental reader
  * implementation for both incremental and non-incremental use cases, there is one caveat: the incremental
  * implementation must be able to buffer an entire top-level value and any preceding system values (Ion version
- * marker(s) and symbol table(s)) in memory. This will not be a problem for the vast majority of Ion streams, as it is
+ * marker(s) and symbol table(s)) in memory. This means that each value and preceding system values must be no larger
+ * than any of the following:
+ * <ul>
+ * <li>The configured maximum buffer size of the {@link IonBufferConfiguration}.</li>
+ * <li>The memory available to the JVM.</li>
+ * <li>2GB, because the buffer is held in a Java {@code byte[]}, which is indexed by an {@code int}.</li>
+ * </ul>
+ * This will not be a problem for the vast majority of Ion streams, as it is
  * rare for a single top-level value or symbol table to exceed a few megabytes in size. However, if the size of the
  * stream's values risk exceeding the available memory, then this implementation must not be used.
  * </p>
@@ -112,39 +120,43 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     };
 
     // The Ion 1.0 system symbol table.
-    private static final List<String> SYSTEM_SYMBOLS_1_0 = Collections.unmodifiableList(new ArrayList<String>() {{
-        add(null);
-        add("$ion");
-        add("$ion_1_0");
-        add("$ion_symbol_table");
-        add("name");
-        add("version");
-        add("imports");
-        add("symbols");
-        add("max_id");
-        add("$ion_shared_symbol_table");
-    }});
+    private static final List<String> SYSTEM_SYMBOLS_1_0 = Collections.unmodifiableList(Arrays.asList(
+        null,
+        "$ion",
+        "$ion_1_0",
+        "$ion_symbol_table",
+        "name",
+        "version",
+        "imports",
+        "symbols",
+        "max_id",
+        "$ion_shared_symbol_table"
+    ));
 
     // The size of the Ion 1.0 system symbol table.
     private static final int SYSTEM_SYMBOLS_1_0_SIZE = SYSTEM_SYMBOLS_1_0.size();
 
-    // The system symbol table SID for the text "$ion_symbol_table".
-    private static final int ION_SYMBOL_TABLE_ID = 3;
+    // Symbol IDs for symbols contained in the system symbol table.
+    private static class SystemSymbolIDs {
 
-    // The system symbol table SID for the text "name".
-    private static final int NAME_ID = 4;
+        // The system symbol table SID for the text "$ion_symbol_table".
+        private static final int ION_SYMBOL_TABLE_ID = 3;
 
-    // The system symbol table SID for the text "version".
-    private static final int VERSION_ID = 5;
+        // The system symbol table SID for the text "name".
+        private static final int NAME_ID = 4;
 
-    // The system symbol table SID for the text "imports".
-    private static final int IMPORTS_ID = 6;
+        // The system symbol table SID for the text "version".
+        private static final int VERSION_ID = 5;
 
-    // The system symbol table SID for the text "symbols".
-    private static final int SYMBOLS_ID = 7;
+        // The system symbol table SID for the text "imports".
+        private static final int IMPORTS_ID = 6;
 
-    // The system symbol table SID for the text "max_id".
-    private static final int MAX_ID_ID = 8;
+        // The system symbol table SID for the text "symbols".
+        private static final int SYMBOLS_ID = 7;
+
+        // The system symbol table SID for the text "max_id".
+        private static final int MAX_ID_ID = 8;
+    }
 
     // The size of the reusable UTF-8 decoding buffer.
     private static final int UTF8_BUFFER_SIZE_IN_BYTES = 4 * 1024;
@@ -287,14 +299,14 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     // --- Byte position markers ---
     // Note: absolute positions/indexes can be used because the bytes that represent a single top-level value are
     // always handled in two sequential phases: first, the bytes are buffered, and then they are read. These operations
-    // will never be interleaved during the processing of a single value. As a result, the underlying circular buffer
+    // will never be interleaved during the processing of a single value. As a result, the underlying buffer
     // will always hold all of the bytes for a single top-level value in a contiguous sequence, even if the buffer
     // has to grow to hold all of the value's bytes.
 
-    // The buffer position of the first byte of the value.
+    // The buffer position of the first byte of the value representation (after the type ID and optional length field).
     private int valueStartPosition = -1;
 
-    // The buffer position of the last byte of the value.
+    // The buffer position of the byte after the last byte in the value representation.
     private int valueEndPosition = -1;
 
     // The buffer position of the first byte of the annotation wrapper for the current value.
@@ -487,11 +499,14 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         public String toString() {
             return String.format("SymbolToken::{text: %s, sid: %d, importLocation: %s}", text, sid, importLocation);
         }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof SymbolToken)) return false;
 
+            // NOTE: once ImportLocation is available via the SymbolToken interface, it should be compared here
+            // when text is null.
             SymbolToken other = (SymbolToken) o;
             if(getText() == null || other.getText() == null) {
                 return getText() == other.getText();
@@ -536,7 +551,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
             // It is not expected to grow.
             listView = new ArrayList<String>(symbols.subList(0, numberOfSymbols));
-            mapView = new HashMap<String, Integer>(numberOfSymbols, 1);
+            mapView = new HashMap<String, Integer>((int) Math.ceil(numberOfSymbols / 0.75), 0.75f);
             for (int i = 0; i < numberOfSymbols; i++) {
                 String symbol = listView.get(i);
                 if (symbol != null) {
@@ -888,12 +903,12 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             IonTypeID typeID = readTypeId();
             calculateEndPosition(typeID);
             int currentValueEndPosition = valueEndPosition;
-            if (fieldNameSid == IMPORTS_ID) {
+            if (fieldNameSid == SystemSymbolIDs.IMPORTS_ID) {
                 if (hasSeenImports) {
                     throw new IonException("Symbol table contained multiple imports fields.");
                 }
                 if (typeID.type == IonType.SYMBOL) {
-                    isAppend = readUInt(peekIndex, currentValueEndPosition) == ION_SYMBOL_TABLE_ID;
+                    isAppend = readUInt(peekIndex, currentValueEndPosition) == SystemSymbolIDs.ION_SYMBOL_TABLE_ID;
                     peekIndex = currentValueEndPosition;
                 } else if (typeID.type == IonType.LIST) {
                     resetImports();
@@ -908,15 +923,15 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
                             type = next();
                             while (type != null) {
                                 int fieldSid = getFieldId();
-                                if (fieldSid == NAME_ID) {
+                                if (fieldSid == SystemSymbolIDs.NAME_ID) {
                                     if (type == IonType.STRING) {
                                         name = stringValue();
                                     }
-                                } else if (fieldSid == VERSION_ID) {
+                                } else if (fieldSid == SystemSymbolIDs.VERSION_ID) {
                                     if (type == IonType.INT) {
                                         version = intValue();
                                     }
-                                } else if (fieldSid == MAX_ID_ID) {
+                                } else if (fieldSid == SystemSymbolIDs.MAX_ID_ID) {
                                     if (type == IonType.INT) {
                                         maxId = intValue();
                                     }
@@ -936,7 +951,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
                     addSymbolsFromImports();
                 }
                 hasSeenImports = true;
-            } else if (fieldNameSid == SYMBOLS_ID) {
+            } else if (fieldNameSid == SystemSymbolIDs.SYMBOLS_ID) {
                 if (hasSeenSymbols) {
                     throw new IonException("Symbol table contained multiple symbols fields.");
                 }
@@ -1019,8 +1034,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             valueType = valueTypeID.type;
         } else {
             hasAnnotations = true;
-            int b = buffer.peek(peekIndex++);
-            valueTypeID = IonTypeID.TYPE_IDS[b];
+            valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
             int wrappedValueLength = valueTypeID.length;
             if (valueTypeID.variableLength) {
                 wrappedValueLength = readVarUInt();

@@ -23,7 +23,7 @@ final class IonTypeID {
     // does not have a type ID, so we will use it to mean 'annotation wrapper' instead.
     static final IonType ION_TYPE_ANNOTATION_WRAPPER = IonType.DATAGRAM;
 
-    // Lookup table from type ID to IonType.
+    // Lookup table from type ID to IonType. See https://amzn.github.io/ion-docs/docs/binary.html#typed-value-formats
     static final IonType[] ION_TYPES = new IonType[] {
         IonType.NULL,
         IonType.BOOL,
