@@ -18,7 +18,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
-  <version>1.8.3</version>
+  <version>1.8.4-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
