@@ -26,6 +26,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -254,11 +255,9 @@ public final class _Private_IonReaderFactory
         return new IonReaderTreeSystem(value);
     }
 
-    public static final IonReader makeIncrementalReader(IonCatalog catalog,
-                                                        InputStream is,
-                                                        IonBufferConfiguration configuration)
+    public static final IonReader makeIncrementalReader(IonReaderBuilder builder, InputStream is)
     {
-        return new IonReaderBinaryIncremental(is, catalog, configuration);
+        return new IonReaderBinaryIncremental(builder, is);
     }
 
 

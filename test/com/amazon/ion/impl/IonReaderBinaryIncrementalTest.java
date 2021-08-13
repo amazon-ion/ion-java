@@ -16,6 +16,7 @@ import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
 import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 import com.amazon.ion.impl.bin._Private_IonRawWriter;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
+import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Assert;
@@ -40,11 +41,15 @@ import static com.amazon.ion.BitUtils.bytes;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class IonReaderBinaryIncrementalTest {
+
+    private static final IonReaderBuilder STANDARD_READER_BUILDER = IonReaderBuilder.standard()
+        .withIncrementalReadingEnabled(true);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -59,7 +64,7 @@ public class IonReaderBinaryIncrementalTest {
         }
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         for (int i = -(numberOfValues / 2); i < numberOfValues / 2; i++) {
             assertEquals(IonType.INT, reader.next());
             assertEquals(i, reader.intValue());
@@ -83,7 +88,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.LIST, reader.next());
         reader.stepIn();
         assertEquals(IonType.STRUCT, reader.next());
@@ -126,7 +131,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.INT, reader.next());
         List<String> annotations = new ArrayList<String>();
         drainAnnotations(reader, annotations);
@@ -152,7 +157,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.INT, reader.next());
         assertEquals(Arrays.asList("foo", "bar"), Arrays.asList(reader.getTypeAnnotations()));
         assertEquals(123, reader.intValue());
@@ -176,7 +181,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.LIST, reader.next());
         reader.stepIn();
         assertEquals(IonType.INT, reader.next());
@@ -203,7 +208,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.stepOut();
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.LIST, reader.next());
         reader.stepIn();
         assertEquals(IonType.INT, reader.next());
@@ -242,7 +247,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.stepOut();
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertNull(reader.getType());
         assertEquals(0, reader.getDepth());
         assertEquals(IonType.STRUCT, reader.next());
@@ -336,7 +341,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.LIST, reader.next());
         assertEquals(IonType.LIST, reader.getType());
         assertEquals(IonType.INT, reader.next());
@@ -380,7 +385,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         assertEquals(IonType.STRUCT, reader.getType());
         reader.stepIn();
@@ -416,7 +421,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.stepOut();
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.STRING, reader.next());
@@ -443,7 +448,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.stepOut();
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.LIST, reader.next());
@@ -470,7 +475,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeInt(123);
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRING, reader.next());
         assertEquals("StringValueLong", reader.stringValue());
         assertEquals(IonType.INT, reader.next());
@@ -490,7 +495,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeInt(123);
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.LIST, reader.next());
         reader.stepIn();
         assertEquals(IonType.STRING, reader.next());
@@ -517,7 +522,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.stepOut();
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.SYMBOL, reader.next());
@@ -549,7 +554,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbol("orange");
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.SYMBOL, reader.next());
@@ -593,7 +598,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbol("orange");
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.SYMBOL, reader.next());
@@ -627,7 +632,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbol("orange");
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.SYMBOL, reader.next());
@@ -684,7 +689,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbol("purple");
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -725,7 +730,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbolToken(4);
         writer.close();
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("def", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -739,7 +744,7 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(bytes(0xE0, 0x01, 0x74, 0xEA, 0x20));
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -749,7 +754,7 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(bytes(0xE0, 0x01, 0x00, 0xEB, 0x20));
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -776,7 +781,7 @@ public class IonReaderBinaryIncrementalTest {
         firstValueWriter.writeString("foo");
         firstValueWriter.stepOut();
         firstValueWriter.close();
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(pipe);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, pipe);
         assertNull(reader.getType());
         assertNull(reader.next());
         assertNull(reader.getType());
@@ -823,7 +828,7 @@ public class IonReaderBinaryIncrementalTest {
         IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
         writer.writeString("StringValueLong");
         writer.close();
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(pipe);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, pipe);
         byte[] bytes = out.toByteArray();
         for (byte b : bytes) {
             assertNull(reader.next());
@@ -850,7 +855,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeString("StringValueLong");
         writer.stepOut();
         writer.close();
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(pipe);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, pipe);
         byte[] bytes = firstValue.toByteArray();
         for (byte b : bytes) {
             assertNull(reader.next());
@@ -919,7 +924,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.stepOut();
         writer.close();
 
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(pipe);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, pipe);
         byte[] bytes = firstValue.toByteArray();
         for (byte b : bytes) {
             assertNull(reader.next());
@@ -967,7 +972,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertNull(reader.getType());
         assertEquals(IonType.FLOAT, reader.next());
         assertEquals(0., reader.doubleValue(), acceptableDelta);
@@ -1030,7 +1035,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.TIMESTAMP, reader.next());
         assertEquals(timestampA, reader.timestampValue());
         assertEquals(IonType.TIMESTAMP, reader.next());
@@ -1100,7 +1105,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.NULL, reader.next());
         assertTrue(reader.isNullValue());
         assertEquals(IonType.BOOL, reader.next());
@@ -1177,7 +1182,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.BOOL, reader.next());
         assertTrue(reader.booleanValue());
         assertEquals(IonType.BOOL, reader.next());
@@ -1217,7 +1222,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.BLOB, reader.next());
         assertArrayEquals(blobBytes, reader.newBytes());
         assertEquals(IonType.CLOB, reader.next());
@@ -1253,7 +1258,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.BLOB, reader.next());
         byte[] fullBlob = new byte[blobBytes.length];
         assertEquals(fullBlob.length, reader.getBytes(fullBlob, 0, fullBlob.length));
@@ -1331,7 +1336,7 @@ public class IonReaderBinaryIncrementalTest {
         out.write(new byte[14]);
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.INT, reader.next());
         assertEquals(0, reader.intValue());
         assertEquals(IonType.INT, reader.next());
@@ -1374,7 +1379,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.DECIMAL, reader.next());
         assertEquals(BigDecimal.ZERO, reader.decimalValue());
         assertEquals(IonType.DECIMAL, reader.next());
@@ -1419,7 +1424,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
         out.write(bytes(0x38, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00));
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.INT, reader.next());
         assertEquals(IntegerSize.INT, reader.getIntegerSize());
         assertEquals(BigInteger.ZERO, reader.bigIntegerValue());
@@ -1486,7 +1491,8 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input, catalog, null);
+        IonReaderBuilder builder = IonReaderBuilder.standard().withCatalog(catalog);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -1533,7 +1539,8 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input, catalog, null);
+        IonReaderBuilder builder = IonReaderBuilder.standard().withCatalog(catalog);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -1586,7 +1593,8 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input, catalog, null);
+        IonReaderBuilder builder = IonReaderBuilder.standard().withCatalog(catalog);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -1664,7 +1672,8 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input, catalog, null);
+        IonReaderBuilder builder = IonReaderBuilder.standard().withCatalog(catalog);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
         SymbolTable[] imports = reader.getSymbolTable().getImportedTables();
@@ -1727,7 +1736,8 @@ public class IonReaderBinaryIncrementalTest {
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x20);
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input, catalog, null);
+        IonReaderBuilder builder = IonReaderBuilder.standard().withCatalog(catalog);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, input);
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
         SymbolTable[] imports = reader.getSymbolTable().getImportedTables();
@@ -1771,7 +1781,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
 
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.SYMBOL, reader.next());
@@ -1804,7 +1814,7 @@ public class IonReaderBinaryIncrementalTest {
             writer.close();
         }
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertNull(reader.next());
@@ -1827,7 +1837,7 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x31);
         out.write(0x00);
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         reader.next();
         thrown.expect(IonException.class);
         reader.longValue();
@@ -1840,7 +1850,7 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x31);
         out.write(0x00);
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         reader.next();
         thrown.expect(IonException.class);
         reader.bigIntegerValue();
@@ -1854,7 +1864,7 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x21);
         out.write(0x01);
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.LIST, reader.next());
         reader.stepIn();
         thrown.expect(IonException.class);
@@ -1867,7 +1877,7 @@ public class IonReaderBinaryIncrementalTest {
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(bytes(0x37, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01));
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertEquals(IonType.INT, reader.next());
         assertNull(reader.next());
         thrown.expect(IonException.class);
@@ -1882,7 +1892,7 @@ public class IonReaderBinaryIncrementalTest {
             0x0e, 0x90, 0x00, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         ));
         InputStream input = new ByteArrayInputStream(out.toByteArray());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(input);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, input);
         assertNull(reader.next());
         thrown.expect(IonException.class);
         reader.close();
@@ -1893,7 +1903,10 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertNull(reader.next());
         reader.close();
     }
@@ -1904,7 +1917,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x71);
         out.write(0x0A); // SID 10
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.SYMBOL, reader.next());
         thrown.expect(IonException.class);
         reader.stringValue();
@@ -1916,7 +1932,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x71);
         out.write(0x0A); // SID 10
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.SYMBOL, reader.next());
         thrown.expect(IonException.class);
         reader.symbolValue();
@@ -1929,7 +1948,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0xD2);
         out.write(0x8A); // SID 10
         out.write(0x20); // int 0
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.INT, reader.next());
@@ -1944,7 +1966,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0xD2);
         out.write(0x8A); // SID 10
         out.write(0x20); // int 0
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.INT, reader.next());
@@ -1960,7 +1985,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x81);
         out.write(0x8A); // SID 10
         out.write(0x20); // int 0
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.INT, reader.next());
         thrown.expect(IonException.class);
         reader.getTypeAnnotations();
@@ -1974,7 +2002,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x81);
         out.write(0x8A); // SID 10
         out.write(0x20); // int 0
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.INT, reader.next());
         thrown.expect(IonException.class);
         reader.getTypeAnnotationSymbols();
@@ -1988,7 +2019,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x81);
         out.write(0x8A); // SID 10
         out.write(0x20); // int 0
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.INT, reader.next());
         Iterator<String> annotationIterator = reader.iterateTypeAnnotations();
         thrown.expect(IonException.class);
@@ -2000,7 +2034,10 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x20);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.INT, reader.next());
         thrown.expect(IonException.class);
         reader.stepIn();
@@ -2013,7 +2050,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0xD2);
         out.write(0x84); // "name"
         out.write(0xD0);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         reader.stepIn();
         thrown.expect(IonException.class);
@@ -2025,7 +2065,10 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x20);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         thrown.expect(IllegalStateException.class);
         reader.stepOut();
@@ -2036,7 +2079,10 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x20);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         thrown.expect(IonException.class);
         reader.byteSize();
@@ -2047,7 +2093,10 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0x20);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         thrown.expect(IllegalStateException.class);
         reader.doubleValue();
@@ -2061,7 +2110,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x01);
         out.write(0x02);
         out.write(0x03);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -2071,7 +2123,10 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0xF0);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -2082,7 +2137,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         out.write(0xB1); // list
         out.write(0xF0);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         reader.stepIn();
         thrown.expect(IonException.class);
@@ -2100,7 +2158,10 @@ public class IonReaderBinaryIncrementalTest {
         String string = sb.toString();
         writer.writeString(string);
         writer.close();
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.STRING, reader.next());
         assertEquals(string, reader.stringValue());
         reader.close();
@@ -2116,7 +2177,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x84); // annotation: "name"
         out.write(0x01); // 2-byte no-op pad
         out.write(0x00);
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         reader.stepIn();
         thrown.expect(IonException.class);
@@ -2135,7 +2199,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x81); // 1 byte of annotations
         out.write(0x84); // annotation: "name"
         out.write(0x20); // int 0
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         reader.stepIn();
         thrown.expect(IonException.class);
@@ -2152,7 +2219,10 @@ public class IonReaderBinaryIncrementalTest {
         out.write(0x84); // annotation: "name"
         out.write(0x20); // int 0
         out.write(0x20); // next value
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         reader.stepIn();
         thrown.expect(IonException.class);
@@ -2199,7 +2269,10 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbolToken(10);
         writer.close();
 
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -2237,7 +2310,10 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbolToken(10);
         writer.close();
 
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         thrown.expect(IonException.class);
         reader.next();
     }
@@ -2264,7 +2340,10 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbolToken(12);
         writer.close();
 
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.SYMBOL, reader.next());
         SymbolToken symbolValue = reader.symbolValue();
         assertNull(symbolValue.getText());
@@ -2332,10 +2411,10 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbolToken(16); // unknown text, import SID 2 (from baz)
         writer.close();
 
+        IonReaderBuilder builder = IonReaderBuilder.standard().withCatalog(catalog);
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            catalog,
-            null
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("abc", reader.stringValue());
@@ -2383,7 +2462,10 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeSymbol("abc");
         writer.close();
 
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(new ByteArrayInputStream(out.toByteArray()));
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            STANDARD_READER_BUILDER,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         reader.next();
         SymbolTable symbolTable = reader.getSymbolTable();
         assertNull(symbolTable.getName());
@@ -2408,10 +2490,12 @@ public class IonReaderBinaryIncrementalTest {
         writer.writeString("abcdefghijklmnopqrstuvwxyz");
         writer.close();
 
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard().withInitialBufferSize(8).build()
+        );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         assertEquals(IonType.STRING, reader.next());
         assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
@@ -2468,14 +2552,16 @@ public class IonReaderBinaryIncrementalTest {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(16)
                 .withHandler(handler)
                 .build()
+        );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         assertEquals(IonType.STRING, reader.next());
         assertEquals("abc", reader.stringValue());
@@ -2517,15 +2603,14 @@ public class IonReaderBinaryIncrementalTest {
             }
         };
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            pipe,
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(16)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
         byte[] bytes = out.toByteArray();
         int valueCounter = 0;
         for (byte b : bytes) {
@@ -2580,14 +2665,16 @@ public class IonReaderBinaryIncrementalTest {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(5)
                 .withMaximumBufferSize(5)
                 .withHandler(handler)
                 .build()
+        );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         // The maximum buffer size is 5, which will be exceeded after the IVM (4 bytes), the type ID (1 byte), and
         // the length byte (1 byte).
@@ -2622,15 +2709,14 @@ public class IonReaderBinaryIncrementalTest {
             }
         };
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            pipe,
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(5)
                 .withMaximumBufferSize(5)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
         byte[] bytes = out.toByteArray();
         for (byte b : bytes) {
             assertNull(reader.next());
@@ -2672,14 +2758,16 @@ public class IonReaderBinaryIncrementalTest {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(7)
                 .withMaximumBufferSize(7)
                 .withHandler(handler)
                 .build()
+        );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         // The maximum buffer size is 7, which will be exceeded after the IVM (4 bytes), the annotation wrapper type ID
         // (1 byte), the annotations length (1 byte), and the annotation SID 3 (1 byte). The next byte is the wrapped
@@ -2721,15 +2809,14 @@ public class IonReaderBinaryIncrementalTest {
             }
         };
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            pipe,
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(7)
                 .withMaximumBufferSize(7)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
         byte[] bytes = out.toByteArray();
 
         // The maximum buffer size is 7, which will be exceeded after the IVM (4 bytes), the annotation wrapper type ID
@@ -2784,18 +2871,20 @@ public class IonReaderBinaryIncrementalTest {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(48)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
+        );
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals(1, oversizedCounter.get());
-        assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());;
+        assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
         assertNull(reader.next());
         reader.close();
         assertEquals(1, oversizedCounter.get());
@@ -2833,15 +2922,14 @@ public class IonReaderBinaryIncrementalTest {
             }
         };
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            pipe,
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(48)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
         byte[] bytes = out.toByteArray();
         boolean foundValue = false;
         for (byte b : bytes) {
@@ -2886,14 +2974,16 @@ public class IonReaderBinaryIncrementalTest {
 
             }
         };
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(maximumBufferSize)
                 .withMaximumBufferSize(maximumBufferSize)
                 .withHandler(handler)
                 .build()
+        );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         assertNull(reader.next());
         assertEquals(1, oversizedCounter.get());
@@ -2940,15 +3030,14 @@ public class IonReaderBinaryIncrementalTest {
         };
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
         byte[] bytes = out.toByteArray();
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            pipe,
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(maximumBufferSize)
                 .withMaximumBufferSize(maximumBufferSize)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
         for (byte b : bytes) {
             assertNull(reader.next());
             pipe.receive(b);
@@ -2999,14 +3088,16 @@ public class IonReaderBinaryIncrementalTest {
 
             }
         };
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(out.toByteArray()),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(32)
                 .withHandler(handler)
                 .build()
+        );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(out.toByteArray())
         );
         assertEquals(IonType.STRING, reader.next());
         assertEquals("12345678", reader.stringValue());
@@ -3044,15 +3135,14 @@ public class IonReaderBinaryIncrementalTest {
         };
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
         byte[] bytes = out.toByteArray();
-        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
-            pipe,
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(32)
                 .withHandler(handler)
                 .build()
         );
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
         boolean foundValue = false;
         for (byte b : bytes) {
             IonType type = reader.next();
@@ -3138,9 +3228,7 @@ public class IonReaderBinaryIncrementalTest {
     }
 
     IonReader newBoundedIncrementalReader(byte[] bytes, int maximumBufferSize) {
-        return new IonReaderBinaryIncremental(
-            new ByteArrayInputStream(bytes),
-            null,
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(maximumBufferSize)
                 .withMaximumBufferSize(maximumBufferSize)
@@ -3161,6 +3249,10 @@ public class IonReaderBinaryIncrementalTest {
                     }
                 })
                 .build()
+        );
+        return new IonReaderBinaryIncremental(
+            builder,
+            new ByteArrayInputStream(bytes)
         );
     }
 
@@ -3418,5 +3510,68 @@ public class IonReaderBinaryIncrementalTest {
         assertEquals("hello", reader.stringValue());
         assertNull(reader.next());
         reader.close();
+    }
+
+    /**
+     * Compares an iterator to the given list.
+     * @param expected the list containing the elements to compare to.
+     * @param actual the iterator to be compared.
+     * @param isEqualityExpected true if the iterator is expected to contain the same elements as the list; otherwise,
+     *                           false.
+     */
+    private static void compareIterator(List<String> expected, Iterator<String> actual, boolean isEqualityExpected) {
+        int numberOfElements = 0;
+        while (actual.hasNext()) {
+            String actualValue = actual.next();
+            if (numberOfElements >= expected.size()) {
+                assertEquals(isEqualityExpected, !actual.hasNext());
+                break;
+            }
+            String expectedValue = expected.get(numberOfElements++);
+            if (isEqualityExpected) {
+                assertEquals(expectedValue, actualValue);
+            } else {
+                assertNotEquals(expectedValue, actualValue);
+            }
+        }
+        assertEquals(isEqualityExpected, numberOfElements == expected.size());
+    }
+
+    /**
+     * Tests the annotation iterator reuse option.
+     * @param isEnabled true if the option is enabled, false if it is disabled.
+     */
+    private static void annotationIteratorReuse(boolean isEnabled) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
+        writer.setTypeAnnotations("foo", "bar");
+        writer.writeInt(123);
+        writer.setTypeAnnotations("baz");
+        writer.writeInt(456);
+        writer.close();
+
+        InputStream input = new ByteArrayInputStream(out.toByteArray());
+        IonReaderBuilder builder = IonReaderBuilder.standard().withAnnotationIteratorReuseEnabled(isEnabled);
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, input);
+        assertEquals(IonType.INT, reader.next());
+        Iterator<String> firstValueAnnotationIterator = reader.iterateTypeAnnotations();
+        assertEquals(123, reader.intValue());
+        assertEquals(IonType.INT, reader.next());
+        compareIterator(Arrays.asList("foo", "bar"), firstValueAnnotationIterator, !isEnabled);
+        Iterator<String> secondValueAnnotationIterator = reader.iterateTypeAnnotations();
+        assertEquals(456, reader.intValue());
+        assertNull(reader.next());
+        compareIterator(Collections.singletonList("baz"), secondValueAnnotationIterator, !isEnabled);
+        reader.close();
+    }
+
+    @Test
+    public void annotationIteratorReuseEnabled() throws Exception {
+        annotationIteratorReuse(true);
+    }
+
+    @Test
+    public void annotationIteratorReuseDisabled() throws Exception {
+        annotationIteratorReuse(false);
     }
 }

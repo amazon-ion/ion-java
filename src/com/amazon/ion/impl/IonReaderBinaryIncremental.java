@@ -13,6 +13,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.IOException;
@@ -236,8 +237,11 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     // The symbol IDs for the annotations on the current value.
     private final List<Integer> annotationSids;
 
+    // True if the annotation iterator will be reused across values; otherwise, false.
+    private final boolean isAnnotationIteratorReuseEnabled;
+
     // Reusable iterator over the annotations on the current value.
-    private final AnnotationIterator annotationIterator = new AnnotationIterator();
+    private final AnnotationIterator annotationIterator;
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
@@ -322,29 +326,23 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
 
     /**
      * Constructor.
+     * @param builder the builder containing the configuration for the new reader.
      * @param inputStream the InputStream that provides binary Ion data.
      */
-    IonReaderBinaryIncremental(InputStream inputStream) {
-        this(inputStream, EMPTY_CATALOG, null);
-    }
-
-    /**
-     * Constructor.
-     * @param inputStream the InputStream that provides binary Ion data.
-     * @param catalog the IonCatalog from which to resolve shared symbol table imports.
-     * @param configuration the configuration for the lookahead buffer.
-     */
-    IonReaderBinaryIncremental(
-        InputStream inputStream,
-        IonCatalog catalog,
-        IonBufferConfiguration configuration
-    ) {
+    IonReaderBinaryIncremental(IonReaderBuilder builder, InputStream inputStream) {
         this.inputStream = inputStream;
-        this.catalog = catalog;
-        if (configuration == null) {
+        this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
+        if (builder.isAnnotationIteratorReuseEnabled()) {
+            isAnnotationIteratorReuseEnabled = true;
+            annotationIterator = new AnnotationIterator();
+        } else {
+            isAnnotationIteratorReuseEnabled = false;
+            annotationIterator = null;
+        }
+        if (builder.getBufferConfiguration() == null) {
             lookahead = new IonReaderLookaheadBuffer(STANDARD_BUFFER_CONFIGURATION, inputStream);
         } else {
-            lookahead = new IonReaderLookaheadBuffer(configuration, inputStream);
+            lookahead = new IonReaderLookaheadBuffer(builder.getBufferConfiguration(), inputStream);
         }
         buffer = (ResizingPipedInputStream) lookahead.getPipe();
         containerStack = new _Private_RecyclingStack<ContainerInfo>(
@@ -366,9 +364,9 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     private class AnnotationIterator implements Iterator<String> {
 
         // All of the annotation SIDs on the current value.
-        private List<Integer> annotationSids = Collections.emptyList();
+        protected List<Integer> annotationSids = Collections.emptyList();
         // The index into `annotationSids` containing the next annotation to be returned.
-        private int index = 0;
+        protected int index = 0;
 
         @Override
         public boolean hasNext() {
@@ -397,6 +395,23 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         public void reset() {
             index = 0;
             annotationSids = getAnnotationSids();
+        }
+    }
+
+    /**
+     * Non-reusable iterator over the annotations on the current value. May be iterated even if the reader advances
+     * past the current value.
+     */
+    private class SingleUseAnnotationIterator extends AnnotationIterator {
+
+        SingleUseAnnotationIterator() {
+            index = 0;
+            annotationSids = new ArrayList<Integer>(getAnnotationSids());
+        }
+
+        @Override
+        public void reset() {
+            throw new IllegalStateException("Single-use annotation iterators cannot be reset.");
         }
     }
 
@@ -1873,8 +1888,12 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     @Override
     public Iterator<String> iterateTypeAnnotations() {
         if (hasAnnotations) {
-            annotationIterator.reset();
-            return annotationIterator;
+            if (isAnnotationIteratorReuseEnabled) {
+                annotationIterator.reset();
+                return annotationIterator;
+            } else {
+                return new SingleUseAnnotationIterator();
+            }
         }
         return EMPTY_ITERATOR;
     }
