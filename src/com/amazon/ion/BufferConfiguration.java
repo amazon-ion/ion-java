@@ -2,23 +2,26 @@ package com.amazon.ion;
 
 /**
  * Provides logic common to all BufferConfiguration implementations.
- * @param <T> the {@link BufferEventHandler} implementation applicable to the concrete
- *            ReaderLookaheadBufferBase subclass.
- * @param <U> the type of the concrete subclass of this BufferConfiguration that is applicable to the
- *            ReaderLookaheadBufferBase subclass.
+ * @param <Handler> the {@link BufferEventHandler} implementation applicable to the concrete
+ *                  ReaderLookaheadBufferBase subclass.
+ * @param <Configuration> the type of the concrete subclass of this BufferConfiguration that is applicable to the
+ *                        ReaderLookaheadBufferBase subclass.
  */
-public abstract class BufferConfiguration<T extends BufferEventHandler, U extends BufferConfiguration<T, U>> {
+public abstract class BufferConfiguration<
+    Handler extends BufferEventHandler,
+    Configuration extends BufferConfiguration<Handler, Configuration>
+> {
 
     /**
      * Provides logic common to all BufferConfiguration Builder implementations.
-     * @param <T> the type of {@link BufferEventHandler} used by the BufferConfiguration.
-     * @param <U> the type of BufferConfiguration.
-     * @param <V> the type of Builder that builds BufferConfiguration subclasses of type T.
+     * @param <Handler> the type of {@link BufferEventHandler} used by the BufferConfiguration.
+     * @param <Configuration> the type of BufferConfiguration.
+     * @param <BuilderType> the type of Builder that builds BufferConfiguration subclasses of type `Handler`.
      */
     public static abstract class Builder<
-        T extends BufferEventHandler,
-        U extends BufferConfiguration<T, U>,
-        V extends Builder<T, U, V>
+        Handler extends BufferEventHandler,
+        Configuration extends BufferConfiguration<Handler, Configuration>,
+        BuilderType extends BufferConfiguration.Builder<Handler, Configuration, BuilderType>
     > {
 
         /**
@@ -40,7 +43,7 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
         /**
          * The handler that will be notified when events occur.
          */
-        private T eventHandler = null;
+        private Handler eventHandler = null;
 
         /**
          * Sets the initial size of the buffer that will be used to hold the data between top-level values. Default:
@@ -49,9 +52,9 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
          * @param initialBufferSizeInBytes the value.
          * @return this Builder.
          */
-        public final V withInitialBufferSize(final int initialBufferSizeInBytes) {
+        public final BuilderType withInitialBufferSize(final int initialBufferSizeInBytes) {
             initialBufferSize = initialBufferSizeInBytes;
-            return (V) this;
+            return (BuilderType) this;
         }
 
         /**
@@ -69,15 +72,15 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
          * @param handler the handler.
          * @return this builder.
          */
-        public final V withHandler(final T handler) {
+        public final BuilderType withHandler(final Handler handler) {
             eventHandler = handler;
-            return (V) this;
+            return (BuilderType) this;
         }
 
         /**
          * @return the handler that will be notified when events occur.
          */
-        public final T getHandler() {
+        public final Handler getHandler() {
             return eventHandler;
         }
 
@@ -90,9 +93,9 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
          * @param maximumBufferSizeInBytes the value.
          * @return this builder.
          */
-        public final V withMaximumBufferSize(final int maximumBufferSizeInBytes) {
+        public final BuilderType withMaximumBufferSize(final int maximumBufferSizeInBytes) {
             maximumBufferSize = maximumBufferSizeInBytes;
-            return (V) this;
+            return (BuilderType) this;
         }
 
         /**
@@ -111,13 +114,13 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
         /**
          * @return the no-op {@link BufferEventHandler} for the type of BufferConfiguration that this Builder builds.
          */
-        public abstract T getNoOpBufferEventHandler();
+        public abstract Handler getNoOpBufferEventHandler();
 
         /**
          * Creates a new BufferConfiguration from the Builder's current settings.
          * @return a new instance.
          */
-        public abstract U build();
+        public abstract Configuration build();
     }
 
     /**
@@ -133,13 +136,13 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
     /**
      * The handler that will be notified when events occur.
      */
-    private final T eventHandler;
+    private final Handler eventHandler;
 
     /**
      * Constructs an instance from the given Builder.
      * @param builder the builder containing the settings to apply to the new configuration.
      */
-    protected BufferConfiguration(BufferConfiguration.Builder<T, U, ?> builder) {
+    protected BufferConfiguration(Builder<Handler, Configuration, ?> builder) {
         initialBufferSize = builder.getInitialBufferSize();
         maximumBufferSize = builder.getMaximumBufferSize();
         if (initialBufferSize > maximumBufferSize) {
@@ -179,7 +182,7 @@ public abstract class BufferConfiguration<T extends BufferEventHandler, U extend
     /**
      * @return the handler that will be notified when events occur.
      */
-    public final T getHandler() {
+    public final Handler getHandler() {
         return eventHandler;
     }
 }

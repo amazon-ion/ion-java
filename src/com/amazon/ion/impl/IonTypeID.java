@@ -64,12 +64,11 @@ final class IonTypeID {
     /**
      * Determines whether the Ion spec allows this particular upperNibble/lowerNibble pair.
      */
-    private static boolean isValid(byte upperNibble, byte lowerNibble) {
+    private static boolean isValid(byte upperNibble, byte lowerNibble, IonType type) {
         if (upperNibble == TYPE_CODE_INVALID) {
             // Type code F is unused in Ion 1.0.
             return false;
         }
-        IonType type = ION_TYPES[upperNibble];
         if (type == IonType.BOOL) {
             // Bool values can only be false (0), true (1), or null (F).
             return lowerNibble <= 1 || lowerNibble == NULL_VALUE_NIBBLE;
@@ -95,8 +94,8 @@ final class IonTypeID {
     private IonTypeID(byte id) {
         byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
         this.lowerNibble = (byte) (id & LOW_NIBBLE_BITMASK);
-        this.isValid = isValid(upperNibble, lowerNibble);
         this.type = ION_TYPES[upperNibble];
+        this.isValid = isValid(upperNibble, lowerNibble, type);
         this.isNull = lowerNibble == NULL_VALUE_NIBBLE;
         this.isNopPad = type == IonType.NULL && !isNull;
         byte length = lowerNibble;
