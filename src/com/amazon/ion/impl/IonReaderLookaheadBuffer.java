@@ -207,7 +207,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
     private boolean isSymbolTableAnnotationFirst;
 
     /**
-     * The total number of annotations declared by the value's annotation wrapper.
+     * The number of bytes of annotation SIDs left to read from the value's annotation wrapper.
      */
     private long numberOfAnnotationSidBytesRemaining;
 

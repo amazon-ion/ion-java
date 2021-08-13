@@ -1,6 +1,5 @@
 package com.amazon.ion.impl;
 
-import com.amazon.ion.BufferEventHandler;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.system.IonReaderBuilder;
 
@@ -16,9 +15,8 @@ public interface ReaderLookaheadBuffer {
      * method returns will return `true`. In this case, this method must be called again before calling
      * `IonReader.next()` to position the reader on this value. Otherwise, `moreDataRequired()` will return `false` and
      * a call to `IonReader.next()` may be made to position the reader on this value. Implementations may throw
-     * `IonException` if invalid Ion data is detected. Any exceptions thrown when invoking {@link BufferEventHandler}
-     * methods will be propagated. Implementations may define additional exceptional cases.
-     * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
+     * `IonException` if invalid Ion data is detected. Implementations may define exceptional cases.
+     * @throws Exception if an IOException is thrown by the underlying InputStream.
      */
     void fillInput() throws Exception;
 
@@ -30,7 +28,7 @@ public interface ReaderLookaheadBuffer {
     boolean moreDataRequired();
 
     /**
-     * Indicates how much data is currently stored in the internal buffer. This can be used to detect whether
+     * Indicates how many bytes are currently stored in the internal buffer. This can be used to detect whether
      * calls to fillInput() are successfully retrieving data.
      * @return The number of bytes waiting in the input buffer.
      */

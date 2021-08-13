@@ -65,6 +65,10 @@ abstract class ReaderLookaheadBufferBase<T extends BufferEventHandler> implement
         clearMark();
     }
 
+    /**
+     * @inheritDoc
+     * @throws Exception if thrown by a handler method or if an IOException is thrown by the underlying InputStream.
+     */
     @Override
     public final void fillInput() throws Exception {
         clearMark();
