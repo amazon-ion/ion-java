@@ -1,15 +1,30 @@
 package com.amazon.ion;
 
+import com.amazon.ion.impl.IonReaderLookaheadBuffer;
+
 /**
  * Configures Ion lookahead buffers.
  */
-public final class IonBufferConfiguration extends BufferConfiguration<IonBufferEventHandler, IonBufferConfiguration> {
+public final class IonBufferConfiguration extends BufferConfiguration<IonBufferConfiguration> {
+
+    /**
+     * Functional interface for handling oversized symbol tables.
+     */
+    public interface OversizedSymbolTableHandler {
+        /**
+         * Invoked when the user specifies a finite maximum buffer size and that size is exceeded by symbol table(s)
+         * alone. Because symbol tables cannot be truncated without corrupting values that follow in the stream,
+         * this condition is not recoverable. After this method is called,
+         * {@link IonReaderLookaheadBuffer#fillInput()} has no effect.
+         * @throws Exception if handler logic fails.
+         */
+        void onOversizedSymbolTable() throws Exception;
+    }
 
     /**
      * Builds IonBufferConfiguration instances.
      */
-    public static final class Builder
-        extends BufferConfiguration.Builder<IonBufferEventHandler, IonBufferConfiguration, Builder> {
+    public static final class Builder extends BufferConfiguration.Builder<IonBufferConfiguration, Builder> {
 
         /**
          * 4-byte IVM + 1 byte user value.
@@ -17,25 +32,43 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferE
         private static final int MINIMUM_MAX_VALUE_SIZE = 5;
 
         /**
-         * An IonBufferEventHandler that does nothing.
+         * An OversizedValueHandler that does nothing.
          */
-        private static final IonBufferEventHandler NO_OP_EVENT_HANDLER = new IonBufferEventHandler() {
-
-            @Override
-            public void onOversizedSymbolTable() {
-                // Do nothing.
-            }
+        private static final OversizedValueHandler NO_OP_OVERSIZED_VALUE_HANDLER = new OversizedValueHandler() {
 
             @Override
             public void onOversizedValue() {
                 // Do nothing.
             }
+        };
+
+        /**
+         * A DataHandler that does nothing.
+         */
+        private static final DataHandler NO_OP_DATA_HANDLER = new DataHandler() {
 
             @Override
-            public void onData(int numberOfBytes) {
+            public void onData(int bytes) {
                 // Do nothing.
             }
         };
+
+        /**
+         * An OversizedSymbolTableHandler that does nothing.
+         */
+        private static final OversizedSymbolTableHandler NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER
+            = new OversizedSymbolTableHandler() {
+
+            @Override
+            public void onOversizedSymbolTable() {
+                // Do nothing.
+            }
+        };
+
+        /**
+         * The handler that will be notified when oversized symbol tables are encountered.
+         */
+        private OversizedSymbolTableHandler oversizedSymbolTableHandler = null;
 
         private Builder() {
             // Must be publicly instantiated via the factory method.
@@ -50,14 +83,45 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferE
             return new Builder();
         }
 
+        /**
+         * Sets the handler that will be notified when oversized symbol tables are encountered. If the maximum buffer
+         * size is finite (see {@link #withMaximumBufferSize(int)}, this handler is required to be non-null.
+         *
+         * @param handler the handler.
+         * @return this builder.
+         */
+        public Builder onOversizedSymbolTable(OversizedSymbolTableHandler handler) {
+            oversizedSymbolTableHandler = handler;
+            return this;
+        }
+
+        /**
+         * @return the handler that will be notified when oversized symbol tables are encountered.
+         */
+        public OversizedSymbolTableHandler getOversizedSymbolTableHandler() {
+            return oversizedSymbolTableHandler;
+        }
+
         @Override
         public int getMinimumMaximumBufferSize() {
             return MINIMUM_MAX_VALUE_SIZE;
         }
 
         @Override
-        public IonBufferEventHandler getNoOpBufferEventHandler() {
-            return NO_OP_EVENT_HANDLER;
+        public OversizedValueHandler getNoOpOversizedValueHandler() {
+            return NO_OP_OVERSIZED_VALUE_HANDLER;
+        }
+
+        @Override
+        public DataHandler getNoOpDataHandler() {
+            return NO_OP_DATA_HANDLER;
+        }
+
+        /**
+         * @return an OversizedSymbolTableHandler that does nothing.
+         */
+        public OversizedSymbolTableHandler getNoOpOversizedSymbolTableHandler() {
+            return NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER;
         }
 
         @Override
@@ -67,10 +131,28 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferE
     }
 
     /**
+     * The handler that will be notified when oversized symbol tables are encountered.
+     */
+    private final OversizedSymbolTableHandler oversizedSymbolTableHandler;
+
+    /**
      * Constructs an instance from the given Builder.
      * @param builder the builder containing the settings to apply to the new configuration.
      */
     private IonBufferConfiguration(Builder builder) {
         super(builder);
+        if (builder.getOversizedSymbolTableHandler() == null) {
+            requireUnlimitedBufferSize();
+            oversizedSymbolTableHandler = builder.getNoOpOversizedSymbolTableHandler();
+        } else {
+            oversizedSymbolTableHandler = builder.getOversizedSymbolTableHandler();
+        }
+    }
+
+    /**
+     * @return the handler that will be notified when oversized symbol tables are encountered.
+     */
+    public OversizedSymbolTableHandler getOversizedSymbolTableHandler() {
+        return oversizedSymbolTableHandler;
     }
 }

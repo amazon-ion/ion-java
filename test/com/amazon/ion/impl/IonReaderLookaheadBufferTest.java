@@ -1,7 +1,7 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.IonBufferConfiguration;
-import com.amazon.ion.IonBufferEventHandler;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -13,7 +13,6 @@ import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.util.Equivalence;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -43,35 +42,22 @@ import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
 public class IonReaderLookaheadBufferTest
-    extends IonReaderLookaheadBufferTestBase<IonBufferEventHandler, IonBufferConfiguration, IonBufferConfiguration.Builder>
+    extends IonReaderLookaheadBufferTestBase<IonBufferConfiguration, IonBufferConfiguration.Builder>
 {
 
-    private interface BuilderSupplier {
-        IonBufferConfiguration.Builder get();
-    }
+    @Override
+    BuilderSupplier<IonBufferConfiguration, IonBufferConfiguration.Builder> defaultBuilderSupplier() {
+        return new BuilderSupplier<IonBufferConfiguration, IonBufferConfiguration.Builder>() {
 
-    private static final BuilderSupplier DEFAULT_BUILDER_SUPPLIER = new BuilderSupplier() {
-
-        @Override
-        public IonBufferConfiguration.Builder get() {
-            return IonBufferConfiguration.Builder.standard();
-        }
-    };
-
-    private BuilderSupplier builderSupplier = DEFAULT_BUILDER_SUPPLIER;
-
-    @Before
-    public void setup() {
-        builderSupplier = DEFAULT_BUILDER_SUPPLIER;
+            @Override
+            public IonBufferConfiguration.Builder get() {
+                return IonBufferConfiguration.Builder.standard();
+            }
+        };
     }
 
     @Override
-    IonBufferConfiguration.Builder createLookaheadWrapperBuilder() {
-        return builderSupplier.get();
-    }
-
-    @Override
-    ReaderLookaheadBufferBase<IonBufferEventHandler> build(
+    ReaderLookaheadBufferBase build(
         IonBufferConfiguration.Builder configuration,
         InputStream inputStream
     ) {
@@ -79,43 +65,30 @@ public class IonReaderLookaheadBufferTest
     }
 
     @Override
-    IonBufferEventHandler createThrowingEventHandler() {
-        return new IonBufferEventHandler() {
-            @Override
-            public void onOversizedSymbolTable() {
-                throw new IllegalStateException();
-            }
-
+    void createThrowingOversizedEventHandlers(IonBufferConfiguration.Builder builder) {
+        builder.onOversizedValue(new BufferConfiguration.OversizedValueHandler() {
             @Override
             public void onOversizedValue() {
                 throw new IllegalStateException();
             }
-
+        })
+        .onOversizedSymbolTable(new IonBufferConfiguration.OversizedSymbolTableHandler() {
             @Override
-            public void onData(int numberOfBytes) {
+            public void onOversizedSymbolTable() {
                 throw new IllegalStateException();
             }
-        };
+        });
     }
 
     @Override
-    IonBufferEventHandler createCountingEventHandler(final AtomicLong byteCount) {
-        return new IonBufferEventHandler() {
-            @Override
-            public void onOversizedSymbolTable() {
-                throw new IllegalStateException();
-            }
-
-            @Override
-            public void onOversizedValue() {
-                throw new IllegalStateException();
-            }
-
+    void createCountingEventHandler(IonBufferConfiguration.Builder builder, final AtomicLong byteCount) {
+        createThrowingOversizedEventHandlers(builder);
+        builder.onData(new BufferConfiguration.DataHandler() {
             @Override
             public void onData(int numberOfBytes) {
                 byteCount.addAndGet(numberOfBytes);
             }
-        };
+        });
     }
 
     public static class BinaryStream {
@@ -330,6 +303,19 @@ public class IonReaderLookaheadBufferTest
                     reader.next();
                 }
             }
+        );
+    }
+
+    @Test
+    public void errorOnSpecifiedMaxSizeAndNullSymbolTableHandler() {
+        IonBufferConfiguration.Builder builder = builderSupplier.get();
+        thrown.expect(IllegalArgumentException.class);
+        build(
+            builder
+                .withMaximumBufferSize(10)
+                .onOversizedValue(builder.getNoOpOversizedValueHandler())
+                .onOversizedSymbolTable(null),
+            new ByteArrayInputStream(new byte[]{})
         );
     }
 
@@ -602,7 +588,10 @@ public class IonReaderLookaheadBufferTest
         }
     }
 
-    private static class RecordingEventHandler implements IonBufferEventHandler {
+    private static class RecordingEventHandler implements
+        BufferConfiguration.OversizedValueHandler,
+        IonBufferConfiguration.OversizedSymbolTableHandler,
+        BufferConfiguration.DataHandler {
 
         int oversizedSymbolTableCount = 0;
         int oversizedValueCount = 0;
@@ -662,7 +651,9 @@ public class IonReaderLookaheadBufferTest
             RecordingEventHandler eventHandler = new RecordingEventHandler();
             IonBufferConfiguration.Builder builder = IonBufferConfiguration.Builder.standard()
                 .withMaximumBufferSize(maxValueSize)
-                .withHandler(eventHandler)
+                .onOversizedValue(eventHandler)
+                .onOversizedSymbolTable(eventHandler)
+                .onData(eventHandler)
                 .withInitialBufferSize(initialBufferSize);
             IonReaderLookaheadBuffer lookahead = new IonReaderLookaheadBuffer(builder.build(), input);
             IonReader reader = null;
@@ -738,7 +729,9 @@ public class IonReaderLookaheadBufferTest
         RecordingEventHandler eventHandler = new RecordingEventHandler();
         IonBufferConfiguration.Builder builder = IonBufferConfiguration.Builder.standard()
             .withMaximumBufferSize(maximumSize)
-            .withHandler(eventHandler)
+            .onOversizedValue(eventHandler)
+            .onOversizedSymbolTable(eventHandler)
+            .onData(eventHandler)
             .withInitialBufferSize(initialBufferSize);
         IonReaderLookaheadBuffer lookahead = new IonReaderLookaheadBuffer(builder.build(), input);
         lookahead.fillInput();
@@ -791,7 +784,9 @@ public class IonReaderLookaheadBufferTest
         RecordingEventHandler eventHandler = new RecordingEventHandler();
         IonBufferConfiguration.Builder builder = IonBufferConfiguration.Builder.standard()
             .withMaximumBufferSize(maximumSize)
-            .withHandler(eventHandler)
+            .onOversizedValue(eventHandler)
+            .onOversizedSymbolTable(eventHandler)
+            .onData(eventHandler)
             .withInitialBufferSize(initialBufferSize);
         IonReaderLookaheadBuffer lookahead = new IonReaderLookaheadBuffer(builder.build(), input);
         // Skips the oversized values and buffers the int 1.
@@ -850,7 +845,9 @@ public class IonReaderLookaheadBufferTest
         RecordingEventHandler eventHandler = new RecordingEventHandler();
         IonBufferConfiguration.Builder builder = IonBufferConfiguration.Builder.standard()
             .withMaximumBufferSize(maximumSize)
-            .withHandler(eventHandler)
+            .onOversizedValue(eventHandler)
+            .onOversizedSymbolTable(eventHandler)
+            .onData(eventHandler)
             .withInitialBufferSize(initialBufferSize);
         IonReaderLookaheadBuffer lookahead = new IonReaderLookaheadBuffer(builder.build(), input);
 
@@ -896,12 +893,14 @@ public class IonReaderLookaheadBufferTest
         appender.append(0x66, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80); // timestamp 0001-01-01T00:00Z
         appender.append(0x20); // int 0
         final RecordingEventHandler eventHandler = new RecordingEventHandler();
-        builderSupplier = new BuilderSupplier() {
+        builderSupplier = new BuilderSupplier<IonBufferConfiguration, IonBufferConfiguration.Builder>() {
             @Override
             public IonBufferConfiguration.Builder get() {
                 return IonBufferConfiguration.Builder.standard()
                     .withMaximumBufferSize(maximumSize)
-                    .withHandler(eventHandler);
+                    .onOversizedValue(eventHandler)
+                    .onOversizedSymbolTable(eventHandler)
+                    .onData(eventHandler);
             }
         } ;
 
@@ -936,13 +935,15 @@ public class IonReaderLookaheadBufferTest
         byte[] truncatedBytes = new byte[bytes.length - 15];
         System.arraycopy(bytes, 0, truncatedBytes, 0, truncatedBytes.length);
         final RecordingEventHandler eventHandler = new RecordingEventHandler();
-        builderSupplier = new BuilderSupplier() {
+        builderSupplier = new BuilderSupplier<IonBufferConfiguration, IonBufferConfiguration.Builder>() {
             @Override
             public IonBufferConfiguration.Builder get() {
                 return IonBufferConfiguration.Builder.standard()
                     .withMaximumBufferSize(maximumSize)
                     .withInitialBufferSize(maximumSize)
-                    .withHandler(eventHandler);
+                    .onOversizedValue(eventHandler)
+                    .onOversizedSymbolTable(eventHandler)
+                    .onData(eventHandler);
             }
         };
 
@@ -1203,8 +1204,8 @@ public class IonReaderLookaheadBufferTest
         InputStream input = new ByteArrayInputStream(out.toByteArray());
         IonBufferConfiguration.Builder configurationBuilder = IonBufferConfiguration.Builder.standard()
             .withInitialBufferSize(9)
-            .withMaximumBufferSize(9)
-            .withHandler(createCountingEventHandler(new AtomicLong()));
+            .withMaximumBufferSize(9);
+        createCountingEventHandler(configurationBuilder, new AtomicLong());
         IonReaderLookaheadBuffer lookahead = new IonReaderLookaheadBuffer(configurationBuilder.build(), input);
         lookahead.fillInput();
         assertFalse(lookahead.moreDataRequired());
@@ -1249,8 +1250,8 @@ public class IonReaderLookaheadBufferTest
         InputStream input = new ByteArrayInputStream(out.toByteArray());
         IonBufferConfiguration.Builder configurationBuilder = IonBufferConfiguration.Builder.standard()
             .withInitialBufferSize(22)
-            .withMaximumBufferSize(22)
-            .withHandler(createCountingEventHandler(new AtomicLong()));
+            .withMaximumBufferSize(22);
+        createCountingEventHandler(configurationBuilder, new AtomicLong());
         IonReaderLookaheadBuffer lookahead = new IonReaderLookaheadBuffer(configurationBuilder.build(), input);
         lookahead.fillInput();
         assertFalse(lookahead.moreDataRequired());

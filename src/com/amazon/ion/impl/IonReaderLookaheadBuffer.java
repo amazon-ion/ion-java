@@ -1,7 +1,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
-import com.amazon.ion.IonBufferEventHandler;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 
@@ -20,7 +19,7 @@ import java.util.List;
  * top-level value. Any such invalid data will be detected as normal by the IonReader. In the few cases where this
  * wrapper does detect an error (e.g. upon finding the illegal type 0xF), it will raise {@link IonException}.
  */
-public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<IonBufferEventHandler> {
+public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -187,6 +186,11 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
     private final List<Integer> annotationSids = new ArrayList<Integer>(3);
 
     /**
+     * The handler that will be notified when a symbol table exceeds the maximum buffer size.
+     */
+    private final IonBufferConfiguration.OversizedSymbolTableHandler oversizedSymbolTableHandler;
+
+    /**
      * The number of additional bytes that must be read from `input` and stored in `pipe` before
      * {@link #moreDataRequired()} can return false.
      */
@@ -310,6 +314,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
             }
         );
         pageSize = configuration.getInitialBufferSize();
+        oversizedSymbolTableHandler = configuration.getOversizedSymbolTableHandler();
         inProgressVarUInt = new VarUInt();
         reset();
     }
@@ -361,7 +366,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
                     (inProgressVarUInt.value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
             if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
                 inProgressVarUInt.isComplete = true;
-                eventHandler.onData(inProgressVarUInt.numberOfBytesRead);
+                dataHandler.onData(inProgressVarUInt.numberOfBytesRead);
                 return;
             }
         }
@@ -412,7 +417,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
             return ReadTypeIdResult.NO_DATA;
         }
         valueTid = IonTypeID.TYPE_IDS[header];
-        eventHandler.onData(1);
+        dataHandler.onData(1);
         if (header == IVM_START_BYTE) {
             if (!isUnannotated) {
                 throw new IonException("Invalid annotation header.");
@@ -606,15 +611,15 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
      * @throws Exception if thrown by the handler.
      */
     private void notifyHandlerOfOversizedValue() throws Exception {
-        if (handlerNeedsToBeNotifiedOfOversizedValue && eventHandler != null) {
+        if (handlerNeedsToBeNotifiedOfOversizedValue) {
             if (isSystemValue) {
                 // Processing cannot continue after system values (symbol tables) are truncated because subsequent
                 // values may be unreadable. Notify the user.
-                eventHandler.onOversizedSymbolTable();
+                oversizedSymbolTableHandler.onOversizedSymbolTable();
             } else {
                 // An oversized user value has been encountered. Notify the user so they can decide whether to continue
                 // or abort.
-                eventHandler.onOversizedValue();
+                oversizedValueHandler.onOversizedValue();
             }
         }
         handlerNeedsToBeNotifiedOfOversizedValue = false;
@@ -727,7 +732,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase<Io
                             return;
                         }
                     }
-                    eventHandler.onData(numberOfBytesToRead);
+                    dataHandler.onData(numberOfBytesToRead);
                     additionalBytesNeeded -= numberOfBytesToRead;
                 }
                 state = State.BEFORE_TYPE_ID;

@@ -1,9 +1,9 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
-import com.amazon.ion.IonBufferEventHandler;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -2509,7 +2509,9 @@ public class IonReaderBinaryIncrementalTest {
         builder
             .withMaximumBufferSize(builder.getMinimumMaximumBufferSize() - 1)
             .withInitialBufferSize(builder.getMinimumMaximumBufferSize() - 1)
-            .withHandler(builder.getNoOpBufferEventHandler());
+            .onOversizedValue(builder.getNoOpOversizedValueHandler())
+            .onOversizedSymbolTable(builder.getNoOpOversizedSymbolTableHandler())
+            .onData(builder.getNoOpDataHandler());
         thrown.expect(IllegalArgumentException.class);
         builder.build();
     }
@@ -2524,6 +2526,16 @@ public class IonReaderBinaryIncrementalTest {
         builder.build();
     }
 
+    /**
+     * Unified handler interface to reduce boilerplate when defining test handlers.
+     */
+    private interface UnifiedTestHandler extends
+        BufferConfiguration.OversizedValueHandler,
+        IonBufferConfiguration.OversizedSymbolTableHandler,
+        BufferConfiguration.DataHandler {
+        // Empty.
+    }
+
     @Test
     public void oversizeValueDetectedDuringMultiByteRead() throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -2536,7 +2548,7 @@ public class IonReaderBinaryIncrementalTest {
 
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2556,7 +2568,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(16)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
@@ -2586,7 +2600,7 @@ public class IonReaderBinaryIncrementalTest {
 
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2607,7 +2621,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(16)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
@@ -2649,7 +2665,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2669,7 +2685,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(5)
                 .withMaximumBufferSize(5)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
@@ -2692,7 +2710,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2713,7 +2731,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(5)
                 .withMaximumBufferSize(5)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
@@ -2742,7 +2762,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2762,7 +2782,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(7)
                 .withMaximumBufferSize(7)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
@@ -2792,7 +2814,7 @@ public class IonReaderBinaryIncrementalTest {
         writer.close();
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2813,7 +2835,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(7)
                 .withMaximumBufferSize(7)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
@@ -2855,7 +2879,7 @@ public class IonReaderBinaryIncrementalTest {
         // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2875,7 +2899,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(48)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
@@ -2905,7 +2931,7 @@ public class IonReaderBinaryIncrementalTest {
         // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
         final AtomicInteger oversizedCounter = new AtomicInteger();
         final AtomicInteger byteCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 throw new IllegalStateException("not expected");
@@ -2926,7 +2952,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(48)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
@@ -2958,7 +2986,7 @@ public class IonReaderBinaryIncrementalTest {
         // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
         // for symbol 10.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 oversizedCounter.incrementAndGet();
@@ -2978,7 +3006,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(maximumBufferSize)
                 .withMaximumBufferSize(maximumBufferSize)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
@@ -3012,7 +3042,7 @@ public class IonReaderBinaryIncrementalTest {
         // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
         // for symbol 10.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 oversizedCounter.incrementAndGet();
@@ -3034,7 +3064,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(maximumBufferSize)
                 .withMaximumBufferSize(maximumBufferSize)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
@@ -3072,7 +3104,7 @@ public class IonReaderBinaryIncrementalTest {
         // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
         // for symbol 10.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 oversizedCounter.incrementAndGet();
@@ -3092,7 +3124,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(32)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(
@@ -3117,7 +3151,7 @@ public class IonReaderBinaryIncrementalTest {
         // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
         // for symbol 10.
         final AtomicInteger oversizedCounter = new AtomicInteger();
-        IonBufferEventHandler handler = new IonBufferEventHandler() {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
             @Override
             public void onOversizedSymbolTable() {
                 oversizedCounter.incrementAndGet();
@@ -3139,7 +3173,9 @@ public class IonReaderBinaryIncrementalTest {
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(8)
                 .withMaximumBufferSize(32)
-                .withHandler(handler)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, pipe);
@@ -3228,26 +3264,29 @@ public class IonReaderBinaryIncrementalTest {
     }
 
     IonReader newBoundedIncrementalReader(byte[] bytes, int maximumBufferSize) {
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
+            @Override
+            public void onOversizedSymbolTable() {
+                Assert.fail("Oversized symbol table not expected.");
+            }
+
+            @Override
+            public void onOversizedValue() {
+                Assert.fail("Oversized value not expected.");
+            }
+
+            @Override
+            public void onData(int numberOfBytes) {
+                // Do nothing.
+            }
+        };
         IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(maximumBufferSize)
                 .withMaximumBufferSize(maximumBufferSize)
-                .withHandler(new IonBufferEventHandler() {
-                    @Override
-                    public void onOversizedSymbolTable() {
-                        Assert.fail("Oversized symbol table not expected.");
-                    }
-
-                    @Override
-                    public void onOversizedValue() {
-                        Assert.fail("Oversized value not expected.");
-                    }
-
-                    @Override
-                    public void onData(int numberOfBytes) {
-                        // Do nothing.
-                    }
-                })
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
                 .build()
         );
         return new IonReaderBinaryIncremental(

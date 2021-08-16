@@ -1,27 +1,52 @@
 package com.amazon.ion;
 
+import com.amazon.ion.impl.ReaderLookaheadBuffer;
+
 /**
  * Provides logic common to all BufferConfiguration implementations.
- * @param <Handler> the {@link BufferEventHandler} implementation applicable to the concrete
- *                  ReaderLookaheadBufferBase subclass.
  * @param <Configuration> the type of the concrete subclass of this BufferConfiguration that is applicable to the
  *                        ReaderLookaheadBufferBase subclass.
  */
-public abstract class BufferConfiguration<
-    Handler extends BufferEventHandler,
-    Configuration extends BufferConfiguration<Handler, Configuration>
-> {
+public abstract class BufferConfiguration<Configuration extends BufferConfiguration<Configuration>> {
+
+    /**
+     * Functional interface for handling oversized values.
+     */
+    public interface OversizedValueHandler {
+        /**
+         * Invoked each time a value (and any symbol tables that immediately precede it) exceed the buffer size limit
+         * specified by the LookaheadReaderWrapper instance, but the symbol tables by themselves do not exceed the
+         * limit. This is recoverable. If the implementation wishes to recover, it should simply return normally from
+         * this method. The oversized value will be flushed from the input pipe; normal processing will resume with the
+         * next value. If the implementation wishes to abort processing immediately, it may throw an exception from this
+         * method. Such an exception will propagate upward and will be thrown from
+         * {@link ReaderLookaheadBuffer#fillInput()}.
+         * @throws Exception if handler logic fails.
+         */
+        void onOversizedValue() throws Exception;
+    }
+
+    /**
+     * Functional interface for reporting processed data.
+     */
+    public interface DataHandler {
+        /**
+         * Invoked whenever the bytes from a value are processed, regardless of whether the bytes are buffered or
+         * skipped due to the value being oversized.
+         * @param numberOfBytes the number of bytes processed.
+         * @throws Exception if handler logic fails.
+         */
+        void onData(int numberOfBytes) throws Exception;
+    }
 
     /**
      * Provides logic common to all BufferConfiguration Builder implementations.
-     * @param <Handler> the type of {@link BufferEventHandler} used by the BufferConfiguration.
      * @param <Configuration> the type of BufferConfiguration.
-     * @param <BuilderType> the type of Builder that builds BufferConfiguration subclasses of type `Handler`.
+     * @param <BuilderType> the type of Builder that builds BufferConfiguration subclasses of type `Configuration`.
      */
     public static abstract class Builder<
-        Handler extends BufferEventHandler,
-        Configuration extends BufferConfiguration<Handler, Configuration>,
-        BuilderType extends BufferConfiguration.Builder<Handler, Configuration, BuilderType>
+        Configuration extends BufferConfiguration<Configuration>,
+        BuilderType extends BufferConfiguration.Builder<Configuration, BuilderType>
     > {
 
         /**
@@ -41,9 +66,14 @@ public abstract class BufferConfiguration<
         private int maximumBufferSize = Integer.MAX_VALUE;
 
         /**
-         * The handler that will be notified when events occur.
+         * The handler that will be notified when oversized values are encountered.
          */
-        private Handler eventHandler = null;
+        private OversizedValueHandler oversizedValueHandler = null;
+
+        /**
+         * The handler that will be notified when data is processed.
+         */
+        private DataHandler dataHandler = null;
 
         /**
          * Sets the initial size of the buffer that will be used to hold the data between top-level values. Default:
@@ -65,23 +95,41 @@ public abstract class BufferConfiguration<
         }
 
         /**
-         * Sets the handler that will be notified when events occur. If the maximum buffer size is finite (see
-         * {@link #withMaximumBufferSize(int)}, the handler is required to be non-null. Otherwise, the handler may be
-         * null, in which case the number of bytes processed will not be reported.
+         * Sets the handler that will be notified when oversized values are encountered. If the maximum buffer size is
+         * finite (see {@link #withMaximumBufferSize(int)}, this handler is required to be non-null.
          *
          * @param handler the handler.
          * @return this builder.
          */
-        public final BuilderType withHandler(final Handler handler) {
-            eventHandler = handler;
+        public final BuilderType onOversizedValue(final OversizedValueHandler handler) {
+            oversizedValueHandler = handler;
             return (BuilderType) this;
         }
 
         /**
-         * @return the handler that will be notified when events occur.
+         * Sets the handler that will be notified when data is processed. The handler may be null, in which case the
+         * number of bytes processed will not be reported.
+         *
+         * @param handler the handler.
+         * @return this builder.
          */
-        public final Handler getHandler() {
-            return eventHandler;
+        public final BuilderType onData(final DataHandler handler) {
+            dataHandler = handler;
+            return (BuilderType) this;
+        }
+
+        /**
+         * @return the handler that will be notified when oversized values are encountered.
+         */
+        public final OversizedValueHandler getOversizedValueHandler() {
+            return oversizedValueHandler;
+        }
+
+        /**
+         * @return the handler that will be notified when data is processed.
+         */
+        public final DataHandler getDataHandler() {
+            return dataHandler;
         }
 
         /**
@@ -112,9 +160,14 @@ public abstract class BufferConfiguration<
         public abstract int getMinimumMaximumBufferSize();
 
         /**
-         * @return the no-op {@link BufferEventHandler} for the type of BufferConfiguration that this Builder builds.
+         * @return the no-op {@link OversizedValueHandler} for the type of BufferConfiguration that this Builder builds.
          */
-        public abstract Handler getNoOpBufferEventHandler();
+        public abstract OversizedValueHandler getNoOpOversizedValueHandler();
+
+        /**
+         * @return the no-op {@link DataHandler} for the type of BufferConfiguration that this Builder builds.
+         */
+        public abstract DataHandler getNoOpDataHandler();
 
         /**
          * Creates a new BufferConfiguration from the Builder's current settings.
@@ -134,15 +187,20 @@ public abstract class BufferConfiguration<
     private final int maximumBufferSize;
 
     /**
-     * The handler that will be notified when events occur.
+     * The handler that will be notified when oversized values are encountered.
      */
-    private final Handler eventHandler;
+    private final OversizedValueHandler oversizedValueHandler;
+
+    /**
+     * The handler that will be notified when data is processed.
+     */
+    private final DataHandler dataHandler;
 
     /**
      * Constructs an instance from the given Builder.
      * @param builder the builder containing the settings to apply to the new configuration.
      */
-    protected BufferConfiguration(Builder<Handler, Configuration, ?> builder) {
+    protected BufferConfiguration(Builder<Configuration, ?> builder) {
         initialBufferSize = builder.getInitialBufferSize();
         maximumBufferSize = builder.getMaximumBufferSize();
         if (initialBufferSize > maximumBufferSize) {
@@ -153,15 +211,27 @@ public abstract class BufferConfiguration<
                 "Maximum buffer size must be at least %d bytes.", builder.getMinimumMaximumBufferSize()
             ));
         }
-        if (builder.getHandler() == null) {
-            if (maximumBufferSize < Integer.MAX_VALUE) {
-                throw new IllegalArgumentException(
-                    "Must specify an EventHandler when a maximum buffer size is specified."
-                );
-            }
-            eventHandler = builder.getNoOpBufferEventHandler();
+        if (builder.getOversizedValueHandler() == null) {
+            requireUnlimitedBufferSize();
+            oversizedValueHandler = builder.getNoOpOversizedValueHandler();
         } else {
-            eventHandler = builder.getHandler();
+            oversizedValueHandler = builder.getOversizedValueHandler();
+        }
+        if (builder.getDataHandler() == null) {
+            dataHandler = builder.getNoOpDataHandler();
+        } else {
+            dataHandler = builder.getDataHandler();
+        }
+    }
+
+    /**
+     * Requires that the maximum buffer size not be limited.
+     */
+    protected void requireUnlimitedBufferSize() {
+        if (maximumBufferSize < Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                "Must specify an OversizedValueHandler when a maximum buffer size is specified."
+            );
         }
     }
 
@@ -180,9 +250,16 @@ public abstract class BufferConfiguration<
     }
 
     /**
-     * @return the handler that will be notified when events occur.
+     * @return the handler that will be notified when oversized values are encountered.
      */
-    public final Handler getHandler() {
-        return eventHandler;
+    public final OversizedValueHandler getOversizedValueHandler() {
+        return oversizedValueHandler;
+    }
+
+    /**
+     * @return the handler that will be notified when data is processed.
+     */
+    public final DataHandler getDataHandler() {
+        return dataHandler;
     }
 }

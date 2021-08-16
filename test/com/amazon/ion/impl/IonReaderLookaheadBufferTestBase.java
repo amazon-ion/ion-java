@@ -1,7 +1,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
-import com.amazon.ion.BufferEventHandler;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonLob;
 import com.amazon.ion.IonReader;
@@ -33,9 +32,8 @@ import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
 
 public abstract class IonReaderLookaheadBufferTestBase<
-    T extends BufferEventHandler,
-    U extends BufferConfiguration<T, U>,
-    V extends BufferConfiguration.Builder<T, U, V>
+    Configuration extends BufferConfiguration<Configuration>,
+    Builder extends BufferConfiguration.Builder<Configuration, Builder>
 > {
 
     private static final IonSystem ION_SYSTEM = IonSystemBuilder.standard().build();
@@ -52,16 +50,6 @@ public abstract class IonReaderLookaheadBufferTestBase<
     @Parameter
     public Integer initialBufferSize;
 
-    private T eventHandler = null;
-
-    private Integer maximumBufferSize = null;
-
-    @Before
-    public void setup() {
-        eventHandler = null;
-        maximumBufferSize = null;
-    }
-
     interface IonReaderAssertion {
         void evaluate(IonReader reader);
     }
@@ -76,27 +64,35 @@ public abstract class IonReaderLookaheadBufferTestBase<
         }
     }
 
-    abstract V createLookaheadWrapperBuilder();
+    interface BuilderSupplier<
+        Configuration extends BufferConfiguration<Configuration>,
+        Builder extends BufferConfiguration.Builder<Configuration, Builder>
+    > {
+        Builder get();
+    }
 
-    abstract ReaderLookaheadBufferBase<T> build(V builder, InputStream inputStream);
+    BuilderSupplier<Configuration, Builder> builderSupplier = null;
 
-    abstract T createThrowingEventHandler();
-    abstract T createCountingEventHandler(AtomicLong byteCount);
+    abstract BuilderSupplier<Configuration, Builder> defaultBuilderSupplier();
+
+    @Before
+    public void setup() {
+        builderSupplier = defaultBuilderSupplier();
+    }
+
+    abstract ReaderLookaheadBufferBase build(Builder builder, InputStream inputStream);
+
+    abstract void createThrowingOversizedEventHandlers(Builder builder);
+    abstract void createCountingEventHandler(Builder builder, AtomicLong byteCount);
 
     void readValuesOneByteAtATime(Value... values) throws Exception {
         IonReader reader = null;
         ResizingPipedInputStream input = new ResizingPipedInputStream(1);
-        V builder = createLookaheadWrapperBuilder();
+        Builder builder = builderSupplier.get();
         if (initialBufferSize != null) {
             builder.withInitialBufferSize(initialBufferSize);
         }
-        if (maximumBufferSize != null) {
-            builder.withMaximumBufferSize(maximumBufferSize);
-        }
-        if (eventHandler != null) {
-            builder.withHandler(eventHandler);
-        }
-        ReaderLookaheadBufferBase<T> lookahead = build(builder, input);
+        ReaderLookaheadBufferBase lookahead = build(builder, input);
         try {
             for (Value value : values) {
                 for (int i = -1; i < value.stream.length; i++) {
@@ -620,9 +616,16 @@ public abstract class IonReaderLookaheadBufferTestBase<
 
     @Test
     public void handlerWithUnlimitedMaxSizeCountsBytesProcessed() throws Exception {
-        AtomicLong totalBytesProcessed = new AtomicLong();
-        maximumBufferSize = Integer.MAX_VALUE;
-        eventHandler = createCountingEventHandler(totalBytesProcessed);
+        final AtomicLong totalBytesProcessed = new AtomicLong();
+        builderSupplier = new BuilderSupplier<Configuration, Builder>() {
+            @Override
+            public Builder get() {
+                Builder builder = defaultBuilderSupplier().get();
+                builder.withMaximumBufferSize(Integer.MAX_VALUE);
+                createCountingEventHandler(builder, totalBytesProcessed);
+                return builder;
+            }
+        };
         byte[] valueBytes = toBytes("[{foo:bar}, (baz zar), 123]");
         readValuesOneByteAtATime(
             new Value(
@@ -654,21 +657,22 @@ public abstract class IonReaderLookaheadBufferTestBase<
     public void errorOnSpecifiedMaxSizeAndNullHandler() {
         thrown.expect(IllegalArgumentException.class);
         build(
-            createLookaheadWrapperBuilder()
+            builderSupplier.get()
                 .withMaximumBufferSize(10)
-                .withHandler(null),
+                .onOversizedValue(null),
             new ByteArrayInputStream(new byte[]{})
         );
     }
 
     @Test
     public void errorOnMaximumSizeLessThanFive() {
-        BufferConfiguration.Builder<T, U, V> builder = createLookaheadWrapperBuilder();
+        Builder builder = builderSupplier.get();
         int minimumMaximumBufferSize = builder.getMinimumMaximumBufferSize();
+        builder.withMaximumBufferSize(minimumMaximumBufferSize - 1);
+        createThrowingOversizedEventHandlers(builder);
         thrown.expect(IllegalArgumentException.class);
         build(
-            builder.withMaximumBufferSize(minimumMaximumBufferSize - 1)
-                .withHandler(createThrowingEventHandler()),
+            builder,
             new ByteArrayInputStream(new byte[]{})
         );
     }

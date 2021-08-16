@@ -1,7 +1,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
-import com.amazon.ion.BufferEventHandler;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.system.IonReaderBuilder;
 
@@ -11,7 +10,7 @@ import java.io.InputStream;
 /**
  * Base class for lookahead buffers that enable incremental reading of streaming data.
  */
-abstract class ReaderLookaheadBufferBase<T extends BufferEventHandler> implements ReaderLookaheadBuffer {
+abstract class ReaderLookaheadBufferBase implements ReaderLookaheadBuffer {
 
     /**
      * An InputStream over binary Ion data.
@@ -29,9 +28,14 @@ abstract class ReaderLookaheadBufferBase<T extends BufferEventHandler> implement
     private final int maximumBufferSize;
 
     /**
-     * The handler that will be notified when the maximum buffer size is exceeded.
+     * The handler that will be notified when a value exceeds the maximum buffer size.
      */
-    protected final T eventHandler;
+    protected final BufferConfiguration.OversizedValueHandler oversizedValueHandler;
+
+    /**
+     * The handler that will be notified when data is processed.
+     */
+    protected final BufferConfiguration.DataHandler dataHandler;
 
     /**
      * The current mark for the pipe's value of 'available'.
@@ -53,7 +57,7 @@ abstract class ReaderLookaheadBufferBase<T extends BufferEventHandler> implement
      * @param configuration the buffer configuration.
      * @param inputStream an InputStream over Ion data.
      */
-    ReaderLookaheadBufferBase(final BufferConfiguration<T, ?> configuration, final InputStream inputStream) {
+    ReaderLookaheadBufferBase(final BufferConfiguration<?> configuration, final InputStream inputStream) {
         input = inputStream;
         pipe = new ResizingPipedInputStream(
             configuration.getInitialBufferSize(),
@@ -61,7 +65,8 @@ abstract class ReaderLookaheadBufferBase<T extends BufferEventHandler> implement
             true
         );
         maximumBufferSize = configuration.getMaximumBufferSize();
-        eventHandler = configuration.getHandler();
+        oversizedValueHandler = configuration.getOversizedValueHandler();
+        dataHandler = configuration.getDataHandler();
         clearMark();
     }
 
