@@ -260,6 +260,8 @@ public abstract class IonTestCase
     {
         IonLoader loader = loader();
         IonDatagram dg;
+        // Note: when ion-java#379 is complete, the following branches should be replaced with
+        // `dg = loader.load(ionFile)`.
         if (ionFile.getName().endsWith(".ion")) {
             dg = loader.load(ionFile);
         } else {
