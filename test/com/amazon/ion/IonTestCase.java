@@ -776,19 +776,16 @@ public abstract class IonTestCase
     public static void checkSymbol(String text, int sid, SymbolToken sym)
     {
         assertEquals("SymbolToken.text", text, sym.getText());
-        if (text == null) {
-            // Local symbols with unknown text may be treated equivalently to symbol zero.
-            assertTrue("SymbolToken.id", sid == sym.getSid() || 0 == sym.getSid());
-        } else {
-            assertEquals("SymbolToken.id", sid, sym.getSid());
-        }
 
         if (text != null)
         {
+            assertEquals("SymbolToken.id", sid, sym.getSid());
             assertEquals("SymbolToken.assumeText", text, sym.assumeText());
         }
         else
         {
+            // Local symbols with unknown text may be treated equivalently to symbol zero.
+            assertTrue("SymbolToken.id", sid == sym.getSid() || 0 == sym.getSid());
             try
             {
                 sym.assumeText();
