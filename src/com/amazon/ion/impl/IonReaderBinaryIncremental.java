@@ -637,6 +637,20 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             if (sid == null) {
                 return null;
             }
+            // The following per-call allocation is intentional. When weighed against the alternative of making
+            // 'mapView' a 'Map<String, SymbolToken>` instead of a `Map<String, Integer>`, the following points should
+            // be considered:
+            // 1. A LocalSymbolTableSnapshot is only created when getSymbolTable() is called on the reader. The reader
+            // does not use the LocalSymbolTableSnapshot internally. There are two cases when getSymbolTable() would be
+            // called: a) when the user calls it, which will basically never happen, and b) when the user uses
+            // IonSystem.iterate over the reader, in which case each top-level value holds a reference to the symbol
+            // table that was in scope when it occurred. In case a), in addition to rarely being called at all, it
+            // would be even rarer for a user to use find() to retrieve each symbol (especially more than once) from the
+            // returned symbol table. Case b) may be called more frequently, but it remains equally rare that a user
+            // would retrieve each symbol at least once.
+            // 2. If we make mapView a Map<String, SymbolToken>, then we are guaranteeing that we will allocate at least
+            // one SymbolToken per symbol (because mapView is created in the constructor of LocalSymbolTableSnapshot)
+            // even though it's unlikely most will ever be needed.
             return new SymbolTokenImpl(text, sid, null);
         }
 
