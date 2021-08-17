@@ -20,11 +20,8 @@ import static com.amazon.ion.IonType.DATAGRAM;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.IonAssert;
 
-import java.io.Closeable;
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
@@ -34,10 +31,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.amazon.ion.IonType.DATAGRAM;
 
 public abstract class EquivsTestCase
     extends IonTestCase
@@ -67,23 +60,9 @@ public abstract class EquivsTestCase
 
     private File myTestFile;
 
-    private List<Closeable> resourcesToClose = new ArrayList<Closeable>(1);
-
     public void setTestFile(File file)
     {
         myTestFile = file;
-    }
-
-    @Before
-    public void resetResources() {
-        resourcesToClose.clear();
-    }
-
-    @After
-    public void closeResources() throws IOException {
-        for (Closeable resource : resourcesToClose) {
-            resource.close();
-        }
     }
 
     public EquivsTestCase(boolean expectedEquality)
@@ -243,8 +222,8 @@ public abstract class EquivsTestCase
             system().getCatalog(),
             new ByteArrayInputStream(binaryOutputStream.toByteArray())
         );
-        resourcesToClose.add(binaryReader);
         data[2] = loader.load(binaryReader);
+        binaryReader.close();
         return data;
     }
 
