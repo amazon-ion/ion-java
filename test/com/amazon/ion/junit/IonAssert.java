@@ -115,6 +115,8 @@ public final class IonAssert
         assertNull(in.next());
         assertNoCurrentValue(in);
         assertNull(in.next());
+        // The following is repeated intentionally to ensure that the reader acts consistently and sanely when
+        // next() is called multiple times at EOF.
         assertNull(in.next());
     }
 
