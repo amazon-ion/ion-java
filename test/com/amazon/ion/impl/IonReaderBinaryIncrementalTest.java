@@ -100,6 +100,8 @@ public class IonReaderBinaryIncrementalTest {
         reader.stepIn();
         assertFalse(reader.isInStruct());
         assertNull(reader.next());
+        // The following is repeated intentionally to ensure that the reader acts consistently and sanely when
+        // next() is called multiple times at the end of a container.
         assertNull(reader.next());
         reader.stepOut();
         assertEquals(IonType.SEXP, reader.next());
@@ -2152,6 +2154,8 @@ public class IonReaderBinaryIncrementalTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
         StringBuilder sb = new StringBuilder();
+        // 8192 is a arbitrarily large; it requires a couple bytes of length, and it doesn't fit in the preallocated
+        // string decoding buffer of size 4096.
         for (int i = 0; i < 8192; i++) {
             sb.append('a');
         }
