@@ -622,8 +622,8 @@ public class IonReaderLookaheadBufferTest
         }
         // 14 values ranging in size from 1-14 bytes. There are 14 - x values larger than x bytes.
         BinaryIonAppender appender = new BinaryIonAppender();
-        appender.append(0xE0, 0x01, 0x00, 0xEA);
-        appender.append(0x11);
+        appender.append(0xE0, 0x01, 0x00, 0xEA); // IVM version 1.0
+        appender.append(0x11); // boolean true
         appender.append(0x21, 0x00); // int 0 (overpadded)
         appender.append(0x22, 0x00, 0x01); // int 1 (overpadded)
         appender.append(0x33, 0x00, 0x00, 0x02); // int -2 (overpadded)
