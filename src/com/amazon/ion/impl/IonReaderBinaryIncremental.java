@@ -1822,21 +1822,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     }
 
     /**
-     * Reads the annotation symbol IDs from an annotation wrapper.
-     * @param sidConsumer the sink for the symbol IDs. Note: in newer Java versions, this could be a Consumer, reducing
-     *                    the number of loops required to, e.g., convert symbol IDs into SymbolTokens.
-     */
-    private void readAnnotationSids(List<Integer> sidConsumer) {
-        int savedPeekIndex = peekIndex;
-        peekIndex = annotationStartPosition;
-        long annotationsEndPosition = peekIndex + annotationsLength;
-        while (peekIndex < annotationsEndPosition) {
-            sidConsumer.add(readVarUInt());
-        }
-        peekIndex = savedPeekIndex;
-    }
-
-    /**
      * Gets the annotation symbol IDs for the current value, reading them from the buffer first if necessary.
      * @return the annotation symbol IDs, or an empty list if the current value is not annotated.
      */
@@ -1845,7 +1830,13 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             return lookahead.getAnnotationSids();
         } else {
             if (annotationSids.isEmpty()) {
-                readAnnotationSids(annotationSids);
+                int savedPeekIndex = peekIndex;
+                peekIndex = annotationStartPosition;
+                long annotationsEndPosition = peekIndex + annotationsLength;
+                while (peekIndex < annotationsEndPosition) {
+                    annotationSids.add(readVarUInt());
+                }
+                peekIndex = savedPeekIndex;
             }
             return annotationSids;
         }
