@@ -15,10 +15,14 @@
 
 package com.amazon.ion;
 
+import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
 
+import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.IonStreamUtils;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.math.BigDecimal;
@@ -550,6 +554,30 @@ public class TestUtils
         if (! _Private_Utils.utf8(FERMATA_UTF8).equals(FERMATA))
         {
             throw new AssertionError("Broken encoding");
+        }
+    }
+
+    /**
+     * Byte appender for binary Ion streams.
+     */
+    public static class BinaryIonAppender {
+        private final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        public BinaryIonAppender() throws Exception {
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+        }
+
+        public BinaryIonAppender append(int... data) throws Exception {
+            return append(bytes(data));
+        }
+
+        public BinaryIonAppender append(byte[] data) throws Exception {
+            out.write(data);
+            return this;
+        }
+
+        public byte[] toByteArray() {
+            return out.toByteArray();
         }
     }
 }
