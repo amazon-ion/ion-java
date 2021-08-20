@@ -258,9 +258,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     // is used only if necessary to avoid imposing the extra expense on all symbol lookups.
     private List<SymbolToken> symbolTokensById = null;
 
-    // The number of symbols in the local symbol table that is currently in scope.
-    private int numberOfSymbols;
-
     // The highest local symbol ID that resolves to a symbol contained in a shared symbol table imported by the
     // current local symbol table.
     private int importMaxId;
@@ -352,7 +349,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         annotationSids = new ArrayList<Integer>(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         symbols.addAll(SYSTEM_SYMBOLS_1_0);
-        numberOfSymbols = SYSTEM_SYMBOLS_1_0_SIZE;
         imports = new TreeMap<Integer, SymbolTable>();
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         resetImports();
@@ -561,6 +557,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         final List<String> listView;
 
         LocalSymbolTableSnapshot() {
+            int numberOfSymbols = symbols.size();
             maxId = numberOfSymbols - 1;
             importedTablesMaxId = importMaxId;
             // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
@@ -668,7 +665,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             if (id < 0) {
                 throw new IllegalArgumentException("Symbol IDs must be at least 0.");
             }
-            if (id >= numberOfSymbols) {
+            if (id >= symbols.size()) {
                 return null;
             }
             return listView.get(id);
@@ -752,7 +749,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         // system symbol table.
         symbols.clear();
         symbols.addAll(SYSTEM_SYMBOLS_1_0);
-        numberOfSymbols = SYSTEM_SYMBOLS_1_0_SIZE;
         cachedReadOnlySymbolTable = null;
         if (symbolTokensById != null) {
             symbolTokensById.clear();
@@ -766,15 +762,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         imports.clear();
         SymbolTable system = SharedSymbolTable.getSystemSymbolTable(majorVersion);
         importMaxId = system.getMaxId();
-    }
-
-    /**
-     * Add a symbol to the local symbol table.
-     * @param symbol the symbol to add.
-     */
-    private void addSymbol(String symbol) {
-        symbols.add(symbol);
-        numberOfSymbols++;
     }
 
     /**
@@ -842,7 +829,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
      * @return a String.
      */
     private String getSymbol(int sid) {
-        if (sid >= numberOfSymbols) {
+        if (sid >= symbols.size()) {
             throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
         }
         return symbols.get(sid);
@@ -862,7 +849,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
                 symbolTokensById.add(null);
             }
         }
-        if (sid >= numberOfSymbols) {
+        if (sid >= symbols.size()) {
             throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
         }
         SymbolToken token = symbolTokensById.get(sid);
@@ -902,7 +889,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         int id = 1;
         Iterator<String> importedSymbols = shared.iterateDeclaredSymbolNames();
         while (importedSymbols.hasNext() && id <= adjustedMaxId) {
-            addSymbol(importedSymbols.next());
+            symbols.add(importedSymbols.next());
             id++;
         }
     }
@@ -1004,9 +991,9 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             stepIn();
             while (next() != null) {
                 if (valueType != IonType.STRING) {
-                    addSymbol(null);
+                    symbols.add(null);
                 } else {
-                    addSymbol(stringValue());
+                    symbols.add(stringValue());
                 }
             }
             stepOut();
@@ -1247,7 +1234,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     @Override
     public SymbolTable getSymbolTable() {
         if (cachedReadOnlySymbolTable == null) {
-            if (numberOfSymbols == SYSTEM_SYMBOLS_1_0_SIZE) {
+            if (symbols.size() == SYSTEM_SYMBOLS_1_0_SIZE) {
                 cachedReadOnlySymbolTable = SharedSymbolTable.getSystemSymbolTable(majorVersion);
             } else {
                 cachedReadOnlySymbolTable = new LocalSymbolTableSnapshot();
