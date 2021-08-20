@@ -660,6 +660,53 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         return bytesFilled;
     }
 
+    /*
+     * The state transitions of the fillInput() method are summarized by the following diagram.
+     *
+     *                                 fillInput()
+     *                                       |
+     *                                       |   +----------------------------------------------------+
+     *                                       |   |                                                    |
+     *       Read first byte of IVM +--------v---v-+                                                  |
+     *   +--------------------------+BEFORE_TYPE_ID<--+                                               |
+     *   |   Or length was inferred |              +--+1-byte value(null or bool) read                |
+     *   |    from the type ID    +>+------+-------+                                                  |
+     *   |                        |        |                                                          |
+     *   |                        |        |No bytes available                                        |
+     *   |           1-byte value |        v                                                          |
+     *   |                        | +----------------+                                                |
+     *   |                        +-+READING_TYPE_ID <-+                                              |
+     *   |                          |                +-+No bytes available                            |
+     *   |                          +------+---------+                                                |
+     *   |                                 |Read type-id of multi-byte value                          |
+     *   |                                 v                                                          |
+     *   |      Finished header     +----------------+                                                |
+     *   | +------------------------+READING_HEADER  <--+                                             |
+     *   | |                        |                +--+Not enough bytes to complete header          |
+     *   | |                        +------+---------+                                                |
+     *   | |                               |Read annotation wrapper with symbol table annotation      |
+     *   | |                               v                                                          |
+     *   | |             +---------------------------------------------+                              |
+     *   | |             |READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION   <--+                           |
+     *   | |             |                                             +--+No bytes available         |
+     *   | |             +--+--------------+---------------------------+                              |
+     *   | |                |              |The wrapped value is a struct                             |
+     *   | | The wrapped    |              v                                                          |
+     *   | |  value is not  |  +-----------------------------+                                        |
+     *   | |   a struct     |  | READING_SYMBOL_TABLE_LENGTH <--+                                     |
+     *   | |                |  |                             +--+Not enough bytes to complete length  |
+     *   | |                |  +-----------+-----------------+                                        |
+     *   | |                |              |Read length                                               |
+     *   | |                |              v                                                          |
+     *   | |                |      +-----------------+                                                |
+     *   | +--------------->+----->| SKIPPING_VALUE  <--+                                             |
+     *   |                         |                 +--+More bytes needed to complete skip           |
+     *   +------------------------>+-------+---------+                                                |
+     *                                     |                                                          |
+     *                                     |All bytes skipped                                         |
+     *                                     |                                                          |
+     *                                     +----------------------------------------------------------+
+     */
     @Override
     protected void fillInputHelper() throws Exception {
         while (true) {
