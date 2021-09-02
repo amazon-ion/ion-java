@@ -38,7 +38,10 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
 
             @Override
             public void onOversizedValue() {
-                // Do nothing.
+                // If no maximum buffer size is configured, values cannot be considered oversized and this
+                // implementation will never be called.
+                // If a maximum buffer size is configured, a handler must also be configured. In that case,
+                // this implementation will only be called if the user provides it to the builder manually.
             }
         };
 
@@ -61,7 +64,10 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
 
             @Override
             public void onOversizedSymbolTable() {
-                // Do nothing.
+                // If no maximum buffer size is configured, symbol tables cannot be considered oversized and this
+                // implementation will never be called.
+                // If a maximum buffer size is configured, a handler must also be configured. In that case,
+                // this implementation will only be called if the user provides it to the builder manually.
             }
         };
 
