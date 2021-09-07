@@ -460,7 +460,7 @@ final class IonStructLite
 
     public ValueFactory add(final String fieldName)
     {
-        return new _Private_CurriedValueFactory(_context.getSystem())
+        return new _Private_CurriedValueFactory(getSystem())
         {
             @Override
             protected void handle(IonValue newValue)
@@ -531,7 +531,7 @@ final class IonStructLite
 
     public ValueFactory put(final String fieldName)
     {
-        return new _Private_CurriedValueFactory(_context.getSystem())
+        return new _Private_CurriedValueFactory(getSystem())
         {
             @Override
             protected void handle(IonValue newValue)

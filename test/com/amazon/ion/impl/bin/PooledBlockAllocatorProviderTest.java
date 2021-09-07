@@ -30,7 +30,7 @@ public class PooledBlockAllocatorProviderTest
     @Before
     public void setup()
     {
-        provider = new PooledBlockAllocatorProvider();
+        provider = PooledBlockAllocatorProvider.getInstance();
     }
 
     @After

@@ -20,8 +20,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * A simple pooling implementation of {@link BlockAllocatorProvider} with a global thread-safe free block list
+ * A singleton implementation of {@link BlockAllocatorProvider} offering a thread-safe free block list
  * for each block size.
+ *
  * <p>
  * This implementation is thread-safe.
  */
@@ -32,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
      * <p>
      * This implementation is thread-safe.
      */
-    private final class PooledBlockAllocator extends BlockAllocator
+    private static final class PooledBlockAllocator extends BlockAllocator
     {
         private final int blockSize, blockLimit;
         private final ConcurrentLinkedQueue<Block> freeBlocks;
@@ -76,11 +77,19 @@ import java.util.concurrent.ConcurrentMap;
         public void close() {}
     }
 
+    // A globally shared instance of the PooledBlockAllocatorProvider.
+    // This instance allows BlockAllocators to be re-used across instantiations of classes like
+    // the binary Ion writer, thereby avoiding costly array initializations.
+    private static final PooledBlockAllocatorProvider INSTANCE = new PooledBlockAllocatorProvider();
     private final ConcurrentMap<Integer, BlockAllocator> allocators;
 
-    public PooledBlockAllocatorProvider()
+    private PooledBlockAllocatorProvider()
     {
         allocators = new ConcurrentHashMap<Integer, BlockAllocator>();
+    }
+
+    public static PooledBlockAllocatorProvider getInstance() {
+        return INSTANCE;
     }
 
     @Override
