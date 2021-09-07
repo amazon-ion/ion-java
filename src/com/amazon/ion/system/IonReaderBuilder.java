@@ -179,8 +179,9 @@ public class IonReaderBuilder
      * {@link IonReader#close()} is called when an incomplete value is buffered, an {@link IonException} will be raised.
      * </p>
      * <p>
-     * There is no incremental text IonReader, so for text data a non-incremental IonReader will always be returned
-     * regardless of the value of this option.
+     * There is currently no incremental text IonReader, so for text data a non-incremental IonReader will be
+     * returned regardless of the value of this option. If incremental text reading is supported in the future, it
+     * may be enabled via this option.
      * </p>
      * <p>
      * When this option is enabled, auto-detection of GZIP data is not supported; the byte array or InputStream
