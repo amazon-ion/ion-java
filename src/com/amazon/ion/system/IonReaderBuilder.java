@@ -15,8 +15,10 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeIncrementalReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 
+import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -24,6 +26,11 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.util.IonStreamUtils;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -42,6 +49,9 @@ public class IonReaderBuilder
 {
 
     private IonCatalog catalog = null;
+    private boolean isIncrementalReadingEnabled = false;
+    private IonBufferConfiguration bufferConfiguration = null;
+    private boolean isAnnotationIteratorReuseEnabled = true;
 
     private IonReaderBuilder()
     {
@@ -50,6 +60,8 @@ public class IonReaderBuilder
     private IonReaderBuilder(IonReaderBuilder that)
     {
         this.catalog = that.catalog;
+        this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
+        this.bufferConfiguration = that.bufferConfiguration;
     }
 
     /**
@@ -158,6 +170,172 @@ public class IonReaderBuilder
     }
 
     /**
+     * <p>
+     * Determines whether the IonReader will allow incremental reading of binary Ion data. When enabled, if
+     * {@link IonReader#next()} returns {@code null} at the top-level, it indicates that there is not enough data
+     * in the stream to complete a top-level value. The user may wait for more data to become available in the stream
+     * and call {@link IonReader#next()} again to continue reading. Unlike the non-incremental reader, the incremental
+     * reader will never throw an exception due to unexpected EOF during {@code next()}. If, however,
+     * {@link IonReader#close()} is called when an incomplete value is buffered, an {@link IonException} will be raised.
+     * </p>
+     * <p>
+     * There is currently no incremental text IonReader, so for text data a non-incremental IonReader will be
+     * returned regardless of the value of this option. If incremental text reading is supported in the future, it
+     * may be enabled via this option.
+     * </p>
+     * <p>
+     * When this option is enabled, auto-detection of GZIP data is not supported; the byte array or InputStream
+     * implementation provided to {@link #build(byte[])} or {@link #build(InputStream)} must return uncompressed bytes.
+     * This can be achieved by wrapping the data in a GZIPInputStream and passing it to {@link #build(InputStream)}.
+     * </p>
+     * <p>
+     * Additionally, when this option is enabled, annotation iterators are reused by default, improving performance.
+     * See {@link #withAnnotationIteratorReuseEnabled(boolean)} for more information and to disable that option.
+     * </p>
+     * <p>
+     * Although the incremental binary IonReader provides performance superior to the non-incremental binary IonReader
+     * for both incremental and non-incremental use cases, there is one caveat: the incremental implementation
+     * must be able to buffer an entire top-level value and any preceding system values (Ion version marker(s) and
+     * symbol table(s)) in memory. This will not be a problem for the vast majority of Ion streams, as it is rare for a
+     * single top-level value or symbol table to exceed a few megabytes in size. However, if the size of the stream's
+     * values risk exceeding the available memory, then this option must not be enabled.
+     * </p>
+     * @param isEnabled true if the option is enabled; otherwise, false.
+     *
+     * @return this builder instance, if mutable;
+     * otherwise a mutable copy of this builder.
+     *
+     * @see #setIncrementalReadingEnabled()
+     * @see #setIncrementalReadingDisabled()
+     */
+    public IonReaderBuilder withIncrementalReadingEnabled(boolean isEnabled) {
+        IonReaderBuilder b = mutable();
+        if (isEnabled) {
+            b.setIncrementalReadingEnabled();
+        } else {
+            b.setIncrementalReadingDisabled();
+        }
+        return b;
+    }
+
+    /**
+     * @see #withIncrementalReadingEnabled(boolean)
+     */
+    public void setIncrementalReadingEnabled() {
+        mutationCheck();
+        isIncrementalReadingEnabled = true;
+    }
+
+    /**
+     * @see #withIncrementalReadingEnabled(boolean)
+     */
+    public void setIncrementalReadingDisabled() {
+        mutationCheck();
+        isIncrementalReadingEnabled = false;
+    }
+
+    /**
+     * @see #withIncrementalReadingEnabled(boolean)
+     * @return true if incremental reading is enabled; otherwise, false.
+     */
+    public boolean isIncrementalReadingEnabled() {
+        return isIncrementalReadingEnabled;
+    }
+
+    /**
+     * Sets the buffer configuration. This can be used, for example, to set a maximum buffer size
+     * and receive notifications when values would exceed this size. Currently, this is ignored unless incremental
+     * reading has been enabled via {@link #withIncrementalReadingEnabled(boolean)}) or
+     * {@link #setIncrementalReadingEnabled()}. This configuration is optional. If not provided, the buffer size will
+     * be limited only by the available memory.
+     *
+     * @param configuration the configuration.
+     *
+     * @return this builder instance, if mutable;
+     * otherwise a mutable copy of this builder.
+     * 
+     * @see #setBufferConfiguration(IonBufferConfiguration)
+     */
+    public IonReaderBuilder withBufferConfiguration(IonBufferConfiguration configuration) {
+        IonReaderBuilder b = mutable();
+        b.setBufferConfiguration(configuration);
+        return b;
+    }
+
+    /**
+     * @see #withBufferConfiguration(IonBufferConfiguration)
+     */
+    public void setBufferConfiguration(IonBufferConfiguration configuration) {
+        mutationCheck();
+        bufferConfiguration = configuration;
+    }
+
+    /**
+     * @see #withBufferConfiguration(IonBufferConfiguration)
+     * @return the current configuration.
+     */
+    public IonBufferConfiguration getBufferConfiguration() {
+        return bufferConfiguration;
+    }
+
+    /**
+     * <p>
+     * Determines whether readers will reuse the annotation iterator returned by
+     * {@link IonReader#iterateTypeAnnotations()}. When enabled, the returned iterator remains valid only while the
+     * reader remains positioned at the current value; storing the iterator and iterating its values after that will
+     * cause undefined behavior. This provides improved performance and memory efficiency when frequently iterating
+     * annotations. When disabled, the returned iterator may be stored and used to retrieve the annotations that were
+     * on the value at the reader's position at the time of the call, regardless of where the reader is currently
+     * positioned.
+     * </p>
+     * <p>
+     * Currently, this option only has an effect when incremental reading is enabled (see
+     * {@link #withIncrementalReadingEnabled(boolean)}). In that case, it is enabled by default. Non-incremental readers
+     * always act as if this option were disabled.
+     * </p>
+     * @param isEnabled true if the option is enabled; otherwise, false.
+     *
+     * @return this builder instance, if mutable;
+     * otherwise a mutable copy of this builder.
+     *
+     * @see #setAnnotationIteratorReuseEnabled()
+     * @see #setAnnotationIteratorReuseDisabled()
+     */
+    public IonReaderBuilder withAnnotationIteratorReuseEnabled(boolean isEnabled) {
+        IonReaderBuilder b = mutable();
+        if (isEnabled) {
+            b.setAnnotationIteratorReuseEnabled();
+        } else {
+            b.setAnnotationIteratorReuseDisabled();
+        }
+        return b;
+    }
+
+    /**
+     * @see #withAnnotationIteratorReuseEnabled(boolean)
+     */
+    public void setAnnotationIteratorReuseEnabled() {
+        mutationCheck();
+        isAnnotationIteratorReuseEnabled = true;
+    }
+
+    /**
+     * @see #withAnnotationIteratorReuseEnabled(boolean)
+     */
+    public void setAnnotationIteratorReuseDisabled() {
+        mutationCheck();
+        isAnnotationIteratorReuseEnabled = false;
+    }
+
+    /**
+     * @see #withAnnotationIteratorReuseEnabled(boolean)
+     * @return true if annotation iterator reuse is enabled; otherwise, false.
+     */
+    public boolean isAnnotationIteratorReuseEnabled() {
+        return isAnnotationIteratorReuseEnabled;
+    }
+
+    /**
      * Based on the builder's configuration properties, creates a new IonReader
      * instance over the given block of Ion data, detecting whether it's text or
      * binary data.
@@ -175,7 +353,7 @@ public class IonReaderBuilder
      */
     public IonReader build(byte[] ionData)
     {
-        return makeReader(validateCatalog(), ionData);
+        return build(ionData, 0, ionData.length);
     }
 
     /**
@@ -198,6 +376,15 @@ public class IonReaderBuilder
      */
     public IonReader build(byte[] ionData, int offset, int length)
     {
+        if (isIncrementalReadingEnabled) {
+            if (IonStreamUtils.isGzip(ionData, offset, length)) {
+                throw new IllegalArgumentException("Automatic GZIP detection is not supported with incremental" +
+                        "support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).");
+            }
+            if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
+                return makeIncrementalReader(this, new ByteArrayInputStream(ionData, offset, length));
+            }
+        }
         return makeReader(validateCatalog(), ionData, offset, length);
     }
 
@@ -223,7 +410,29 @@ public class IonReaderBuilder
      */
     public IonReader build(InputStream ionData)
     {
-        return makeReader(validateCatalog(), ionData);
+        InputStream wrapper = ionData;
+        if (isIncrementalReadingEnabled) {
+            if (!ionData.markSupported()) {
+                wrapper = new BufferedInputStream(ionData);
+            }
+            wrapper.mark(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
+            byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
+            int bytesRead;
+            try {
+                bytesRead = wrapper.read(possibleIVM);
+                wrapper.reset();
+            } catch (IOException e) {
+                throw new IonException(e);
+            }
+            if (IonStreamUtils.isGzip(possibleIVM, 0, possibleIVM.length)) {
+                throw new IllegalArgumentException("Automatic GZIP detection is not supported with incremental" +
+                        "support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).");
+            }
+            if (possibleIVM.length == bytesRead && IonStreamUtils.isIonBinary(possibleIVM)) {
+                return makeIncrementalReader(this, wrapper);
+            }
+        }
+        return makeReader(validateCatalog(), wrapper);
     }
 
     /**
