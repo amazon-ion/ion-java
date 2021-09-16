@@ -78,24 +78,6 @@ public class BinaryTest extends IonTestCase
     private IonValue ion(final String hex)
     {
         byte[] data = hexToBytes(MAGIC_COOKIE + hex);
-        // Note: when ion-java#379 is complete, the following branch should be removed.
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            IonReader reader = getStreamingMode().newIonReader(system().getCatalog(), data);
-            Iterator<IonValue> iterator = system().iterate(reader);
-            IonValue value = null;
-            if (iterator.hasNext()) {
-                value = iterator.next();
-            }
-            if (iterator.hasNext()) {
-                throw new IonException("not a single value");
-            }
-            try {
-                reader.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return value;
-        }
         return system().singleValue(data);
     }
 

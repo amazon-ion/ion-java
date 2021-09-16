@@ -15,8 +15,6 @@
 
 package com.amazon.ion.impl.lite;
 
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
-
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -24,8 +22,10 @@ import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl._Private_IncrementalReader;
 import com.amazon.ion.impl._Private_IonWriterFactory;
-import com.amazon.ion.impl._Private_LocalSymbolTableFactory;
+import com.amazon.ion.system.IonReaderBuilder;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,7 +41,7 @@ final class IonLoaderLite
     /** Not null. */
     private final IonCatalog    _catalog;
 
-    private final _Private_LocalSymbolTableFactory _lstFactory;
+    private final IonReaderBuilder _readerBuilder;
 
     /**
      * @param system must not be null.
@@ -54,7 +54,13 @@ final class IonLoaderLite
 
         _system = system;
         _catalog = catalog;
-        _lstFactory = _system.getLstFactory();
+        if (catalog == system.getCatalog()) {
+            _readerBuilder = system.getReaderBuilder();
+        } else {
+            // The IonCatalog provided in the constructor always takes precedence over the one already configured on the
+            // system's IonReaderBuilder.
+            _readerBuilder = system.getReaderBuilder().withCatalog(catalog).immutable();
+        }
     }
 
     public IonSystem getSystem()
@@ -99,7 +105,7 @@ final class IonLoaderLite
     public IonDatagram load(String ionText) throws IonException
     {
         try {
-            IonReader reader = makeReader(_catalog, ionText, _lstFactory);
+            IonReader reader = _readerBuilder.build(ionText);
             IonDatagramLite datagram = load_helper(reader);
             return datagram;
         }
@@ -111,7 +117,7 @@ final class IonLoaderLite
     public IonDatagram load(Reader ionText) throws IonException, IOException
     {
         try {
-            IonReader reader = makeReader(_catalog, ionText, _lstFactory);
+            IonReader reader = _readerBuilder.build(ionText);
             IonDatagramLite datagram = load_helper(reader);
             return datagram;
         }
@@ -124,7 +130,7 @@ final class IonLoaderLite
 
     public IonDatagram load(byte[] ionData) throws IonException
     {
-        IonReader reader = makeReader(_catalog, ionData, 0, ionData.length, _lstFactory);
+        IonReader reader = _readerBuilder.build(ionData, 0, ionData.length);
         try {
             return load(reader);
         }
@@ -142,14 +148,21 @@ final class IonLoaderLite
     public IonDatagram load(InputStream ionData)
         throws IonException, IOException
     {
+        IonReader reader = null;
         try {
-            IonReader reader = makeReader(_catalog, ionData, _lstFactory);
+            reader = _readerBuilder.build(ionData);
             return load(reader);
         }
         catch (IonException e) {
             IOException io = e.causeOfType(IOException.class);
             if (io != null) throw io;
             throw e;
+        } finally {
+            // If a value was incomplete, incremental readers will not yet have raised an error. Force an error
+            // to be raised in this case.
+            if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof _Private_IncrementalReader) {
+                ((_Private_IncrementalReader) reader).requireCompleteValue();
+            }
         }
     }
 

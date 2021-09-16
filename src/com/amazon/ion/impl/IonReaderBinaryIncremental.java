@@ -64,7 +64,7 @@ import java.util.TreeMap;
  * To enable this implementation, use {@code IonReaderBuilder.withIncrementalReadingEnabled(true)}.
  * </p>
  */
-class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
+class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _Private_IncrementalReader {
 
     /*
      * Potential future enhancements:
@@ -266,9 +266,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     // symbol table is encountered in the stream.
     private SymbolTable cachedReadOnlySymbolTable = null;
 
-    // True if the current symbol table has already been transferred via pop_passed_symbol_table with the reader
-    // positioned at the current value; otherwise, false.
-    private boolean hasTransferredSymbolTable = false;
+    // The SymbolTable that was transferred via the last call to pop_passed_symbol_table.
+    private SymbolTable symbolTableLastTransferred = null;
 
     // The symbol ID of the current value's field name, or -1 if the current value is not in a struct.
     private int fieldNameSid = -1;
@@ -1033,6 +1032,12 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
             resetSymbolTable();
             resetImports();
             lookahead.resetIvmIndex();
+        } else if (peekIndex < 0) {
+            // peekIndex is initialized to -1 and only increases. This branch is reached if the IVM does not occur
+            // first in the stream. This is necessary because currently a binary incremental reader will be created if
+            // an empty stream is provided to the IonReaderBuilder. If, once bytes appear in the stream, those bytes do
+            // not represent valid binary Ion, a quick failure is necessary.
+            throw new IonException("Binary Ion must start with an Ion version marker.");
         }
         List<IonReaderLookaheadBuffer.SymbolTableMarker> symbolTableMarkers = lookahead.getSymbolTableMarkers();
         if (!symbolTableMarkers.isEmpty()) {
@@ -1176,7 +1181,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
         fieldNameSid = -1;
         lobBytesRead = 0;
         valueStartPosition = -1;
-        hasTransferredSymbolTable = false;
         hasAnnotations = false;
         if (containerStack.isEmpty()) {
             nextAtTopLevel();
@@ -1245,13 +1249,14 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
 
     @Override
     public SymbolTable pop_passed_symbol_table() {
-        if (hasTransferredSymbolTable) {
+        SymbolTable currentSymbolTable = getSymbolTable();
+        if (currentSymbolTable == symbolTableLastTransferred) {
             // This symbol table has already been returned. Since the contract is that it is a "pop", it should not
             // be returned twice.
             return null;
         }
-        hasTransferredSymbolTable = true;
-        return getSymbolTable();
+        symbolTableLastTransferred = currentSymbolTable;
+        return symbolTableLastTransferred;
     }
 
     @Override
@@ -1937,7 +1942,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
     }
 
     @Override
-    public void close() throws IOException {
+    public void requireCompleteValue() {
         // NOTE: If we want to replace the other binary IonReader implementation with this one, the following
         // validation could be performed in next() if incremental mode is not enabled. That would allow this
         // implementation to behave in the same way as the other implementation when an incomplete value is
@@ -1951,6 +1956,11 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter {
                 throw new IonException("Unexpected EOF.");
             }
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        requireCompleteValue();
         inputStream.close();
     }
 

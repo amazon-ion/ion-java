@@ -101,6 +101,7 @@ public class IonSystemBuilder
 
     IonCatalog myCatalog;
     boolean myStreamCopyOptimized = false;
+    IonReaderBuilder readerBuilder;
 
 
     /** You no touchy. */
@@ -113,6 +114,7 @@ public class IonSystemBuilder
     {
         this.myCatalog      = that.myCatalog;
         this.myStreamCopyOptimized = that.myStreamCopyOptimized;
+        this.readerBuilder = that.readerBuilder;
     }
 
     //=========================================================================
@@ -274,6 +276,59 @@ public class IonSystemBuilder
     //=========================================================================
 
     /**
+     * Gets the reader builder whose options will be used when building an
+     * {@link IonSystem}. By default, {@link IonReaderBuilder#standard()} will
+     * be used.
+     *
+     * @see #setReaderBuilder(IonReaderBuilder)
+     * @see #withReaderBuilder(IonReaderBuilder)
+     */
+    public final IonReaderBuilder getReaderBuilder() {
+        return readerBuilder;
+    }
+
+    /**
+     * Sets the reader builder whose options will be used to use when building
+     * an {@link IonSystem}. The reader builder's catalog will never be used; the
+     * catalog provided to {@link #setCatalog(IonCatalog)} or
+     * {@link #withCatalog(IonCatalog)} will always be used instead.
+     *
+     * @param builder the reader builder to use in built systems.
+     *  If null, each system will be built with {@link IonReaderBuilder#standard()}.
+     *
+     * @see #getReaderBuilder()
+     * @see #withReaderBuilder(IonReaderBuilder)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public final void setReaderBuilder(IonReaderBuilder builder) {
+        mutationCheck();
+        readerBuilder = builder;
+    }
+
+    /**
+     * Declares the reader builder whose options will be used to use when building
+     * an {@link IonSystem}, returning a new mutable builder if this is immutable.
+     * The reader builder's catalog will never be used; the catalog provided to
+     * {@link #setCatalog(IonCatalog)} or {@link #withCatalog(IonCatalog)} will
+     * always be used instead.
+     *
+     * @param builder the reader builder to use in built systems.
+     *  If null, each system will be built with {@link IonReaderBuilder#standard()}.
+     *
+     * @see #getReaderBuilder()
+     * @see #setReaderBuilder(IonReaderBuilder)
+     */
+    public final IonSystemBuilder withReaderBuilder(IonReaderBuilder builder)
+    {
+        IonSystemBuilder b = mutable();
+        b.setReaderBuilder(builder);
+        return b;
+    }
+
+    //=========================================================================
+
+    /**
      * Builds a new {@link IonSystem} instance based on this builder's
      * configuration properties.
      */
@@ -298,10 +353,9 @@ public class IonSystemBuilder
         bwb.setInitialSymbolTable(systemSymtab);
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
-        IonReaderBuilder rb = IonReaderBuilder.standard().withCatalog(catalog);
-        IonSystem sys = newLiteSystem(twb, bwb, rb);
-
-        return sys;
+        IonReaderBuilder rb = readerBuilder == null ? IonReaderBuilder.standard() : readerBuilder;
+        rb = rb.withCatalog(catalog);
+        return newLiteSystem(twb, bwb, rb);
     }
 
     //=========================================================================

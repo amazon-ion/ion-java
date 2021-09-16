@@ -63,29 +63,26 @@ public abstract class IonTestCase
     protected enum StreamingMode {
         NEW_STREAMING() {
             @Override
-            public IonReader newIonReader(IonCatalog catalog, InputStream inputStream) {
-                return IonReaderBuilder.standard().withCatalog(catalog).build(inputStream);
-            }
-
-            @Override
-            public IonReader newIonReader(IonCatalog catalog, byte[] data) {
-                return IonReaderBuilder.standard().withCatalog(catalog).build(data);
+            public IonReaderBuilder getReaderBuilder() {
+                return IonReaderBuilder.standard();
             }
         },
         NEW_STREAMING_INCREMENTAL() {
             @Override
-            public IonReader newIonReader(IonCatalog catalog, InputStream inputStream) {
-                return IonReaderBuilder.standard().withCatalog(catalog).withIncrementalReadingEnabled(true).build(inputStream);
-            }
-
-            @Override
-            public IonReader newIonReader(IonCatalog catalog, byte[] data) {
-                return IonReaderBuilder.standard().withCatalog(catalog).withIncrementalReadingEnabled(true).build(data);
+            public IonReaderBuilder getReaderBuilder() {
+                return IonReaderBuilder.standard().withIncrementalReadingEnabled(true);
             }
         };
 
-        public abstract IonReader newIonReader(IonCatalog catalog, InputStream inputStream);
-        public abstract IonReader newIonReader(IonCatalog catalog, byte[] data);
+        public abstract IonReaderBuilder getReaderBuilder();
+
+        public final IonReader newIonReader(IonCatalog catalog, InputStream inputStream) {
+            return getReaderBuilder().withCatalog(catalog).build(inputStream);
+        }
+
+        public final IonReader newIonReader(IonCatalog catalog, byte[] data) {
+            return getReaderBuilder().withCatalog(catalog).build(data);
+        }
     }
 
     // Using an enum makes the test names more understandable than a boolean.
@@ -259,16 +256,7 @@ public abstract class IonTestCase
         throws IonException, IOException
     {
         IonLoader loader = loader();
-        IonDatagram dg;
-        // Note: when ion-java#379 is complete, the following branches should be replaced with
-        // `dg = loader.load(ionFile)`.
-        if (ionFile.getName().endsWith(".ion")) {
-            dg = loader.load(ionFile);
-        } else {
-            IonReader reader = myStreamingMode.newIonReader(system().getCatalog(), new FileInputStream(ionFile));
-            dg = loader.load(reader);
-            reader.close();
-        }
+        IonDatagram dg = loader.load(ionFile);
 
         // Flush out any encoding problems in the data.
         forceDeepMaterialization(dg);
@@ -317,6 +305,7 @@ public abstract class IonTestCase
         IonSystemBuilder b = IonSystemBuilder.standard().withCatalog(catalog);
 
         b.withStreamCopyOptimized(myStreamCopyOptimized);
+        b.withReaderBuilder(getStreamingMode().getReaderBuilder());
 
         IonSystem system = b.build();
         return (_Private_IonSystem) system;
@@ -828,7 +817,7 @@ public abstract class IonTestCase
 
         assertFalse(value.isNullValue());
 
-        if (name == null && id != 0)
+        if (name == null)
         {
             try {
                 sym.stringValue();
@@ -841,7 +830,6 @@ public abstract class IonTestCase
         }
         else
         {
-            // Note: symbol zero follows this path because it causes stringValue() to return null rather than throw.
             assertEquals("symbol name", name, sym.stringValue());
         }
 

@@ -58,6 +58,11 @@ public class SeekableReaderTest
     @Test
     public void testTrivialSpan()
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         String text = "null";
         read(text);
         in.next();
@@ -73,6 +78,11 @@ public class SeekableReaderTest
     @Test
     public void testWalkingBackwards()
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         String text =
             "null true 3 4e0 5.0 6666-06-06T '7' \"8\" {{\"\"}} {{}} [] () {}";
 
@@ -113,6 +123,11 @@ public class SeekableReaderTest
     @Test
     public void testHoistingWithinContainers()
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         read("{f:v,g:[c, (d), e], /* h */ $0:null} s");
 
         in.next();
@@ -188,6 +203,11 @@ public class SeekableReaderTest
     @Test
     public void testHoistingLongValue()
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         // This value is "long" in that it has a length subfield in the prefix.
         String text = " \"123456789012345\" ";
         read(text);
@@ -205,6 +225,11 @@ public class SeekableReaderTest
     public void testHoistingOrderedStruct()
     throws IOException
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         File file = getTestdataFile("good/structOrdered.10n");
         byte[] binary = _Private_Utils.loadFileBytes(file);
 
@@ -224,6 +249,11 @@ public class SeekableReaderTest
     public void testHoistingAnnotatedTopLevelValue()
         throws IOException
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         read("a::v");
         in.next();
         Span span = sr.currentSpan();
@@ -241,6 +271,11 @@ public class SeekableReaderTest
     public void testHoistingAnnotatedContainedValue()
         throws IOException
     {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
+            //      See ion-java/issues/382 and ion-java/issues/383.
+            return;
+        }
         read("[a::v]");
         in.next();
         in.stepIn();
