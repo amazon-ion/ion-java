@@ -6,6 +6,7 @@ import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
@@ -13,6 +14,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 
@@ -534,7 +536,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     /**
      * Read-only snapshot of the local symbol table at the reader's current position.
      */
-    private class LocalSymbolTableSnapshot implements SymbolTable {
+    private class LocalSymbolTableSnapshot implements SymbolTable, SymbolTableAsStruct {
 
         // The system symbol table.
         private final SymbolTable system = SharedSymbolTable.getSystemSymbolTable(majorVersion);
@@ -554,6 +556,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
 
         // List representation of this symbol table, indexed by symbol ID.
         final List<String> listView;
+
+        private SymbolTableStructCache structCache = null;
 
         LocalSymbolTableSnapshot() {
             int numberOfSymbols = symbols.size();
@@ -728,6 +732,14 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         @Override
         public String toString() {
             return "(LocalSymbolTable max_id:" + getMaxId() + ')';
+        }
+
+        @Override
+        public IonStruct getIonRepresentation(ValueFactory valueFactory) {
+            if (structCache == null) {
+                structCache = new SymbolTableStructCache(this, getImportedTables(), null);
+            }
+            return structCache.getIonRepresentation(valueFactory);
         }
     }
 

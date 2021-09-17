@@ -15,19 +15,9 @@
 
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.IMPORTS;
-import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbols.MAX_ID;
-import static com.amazon.ion.SystemSymbols.NAME;
-import static com.amazon.ion.SystemSymbols.SYMBOLS;
-import static com.amazon.ion.SystemSymbols.VERSION;
-
 import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
-import com.amazon.ion.IonType;
-import com.amazon.ion.IonValue;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.ValueFactory;
 import java.util.ArrayList;
@@ -41,6 +31,7 @@ import java.util.List;
 @Deprecated
 class LocalSymbolTableAsStruct
     extends LocalSymbolTable
+    implements SymbolTableAsStruct
 {
 
     static class Factory implements _Private_LocalSymbolTableFactory
@@ -72,7 +63,7 @@ class LocalSymbolTableAsStruct
                 // This was an LST append, so the existing symbol table was updated.
                 return currentSymbolTable;
             }
-            return new LocalSymbolTableAsStruct(imageFactory, imports, symbolsList);
+            return new LocalSymbolTableAsStruct(imports, symbolsList, null);
         }
 
         public SymbolTable newLocalSymtab(SymbolTable defaultSystemSymtab,
@@ -81,9 +72,7 @@ class LocalSymbolTableAsStruct
             LocalSymbolTableImports unifiedSymtabImports =
                 new LocalSymbolTableImports(defaultSystemSymtab, imports);
 
-            return new LocalSymbolTableAsStruct(imageFactory,
-                                                unifiedSymtabImports,
-                                                null /* local symbols */);
+            return new LocalSymbolTableAsStruct(unifiedSymtabImports, null /* local symbols */, null);
         }
 
         /**
@@ -109,49 +98,32 @@ class LocalSymbolTableAsStruct
                                                                    symbolsList,
                                                                    ionRep.getSymbolTable());
 
-            LocalSymbolTableAsStruct table = new LocalSymbolTableAsStruct(imageFactory,
-                                                                          imports,
-                                                                          symbolsList);
-            table.myImage = ionRep;
-
-            return table;
+            return new LocalSymbolTableAsStruct(imports, symbolsList, ionRep);
         }
 
     }
 
-    /**
-     * The factory used to build the {@link #myImage} of a local symtab.
-     * It's used by the datagram level to maintain the tree representation.
-     * It cannot be changed since local symtabs can't be moved between trees.
-     */
-    private final ValueFactory myImageFactory;
+    private final SymbolTableStructCache structCache;
 
     /**
-     * Memoized result of {@link #getIonRepresentation()};
-     * Once this is created, we maintain it as symbols are added.
-     */
-    private IonStruct myImage;
-
-    /**
-     * @param imageFactory      never null
      * @param imports           never null
      * @param symbolsList       may be null or empty
      */
-    private LocalSymbolTableAsStruct(ValueFactory imageFactory,
-                                     LocalSymbolTableImports imports,
-                                     List<String> symbolsList)
+    private LocalSymbolTableAsStruct(LocalSymbolTableImports imports,
+                                     List<String> symbolsList,
+                                     IonStruct image)
     {
         super(imports, symbolsList);
-        myImageFactory = imageFactory;
+        structCache = new SymbolTableStructCache(this, imports.getImportedTablesNoCopy(), image);
     }
 
     @Override
     int putSymbol(String symbolName)
     {
         int sid = super.putSymbol(symbolName);
-        if (myImage != null)
+        if (structCache.hasStruct())
         {
-            recordLocalSymbolInIonRep(myImage, symbolName, sid);
+            structCache.addSymbol(symbolName, sid);
         }
         return sid;
     }
@@ -170,102 +142,10 @@ class LocalSymbolTableAsStruct
     //       then extra content doesn't matter.
     //
 
-    /**
-     * Only valid on local symtabs that already have an _image_factory set.
-     *
-     * @return Not null.
-     */
-    IonStruct getIonRepresentation()
+    @Override
+    public IonStruct getIonRepresentation(ValueFactory factory)
     {
-        synchronized (this)
-        {
-            IonStruct image = myImage;
-
-            if (image == null)
-            {
-                // Start a new image from scratch
-                myImage = image = makeIonRepresentation(myImageFactory);
-            }
-
-            return image;
-        }
-    }
-
-    /**
-     * NOT SYNCHRONIZED! Call only from a synch'd method.
-     *
-     * @return a new struct, not null.
-     */
-    private IonStruct makeIonRepresentation(ValueFactory factory)
-    {
-        IonStruct ionRep = factory.newEmptyStruct();
-
-        ionRep.addTypeAnnotation(ION_SYMBOL_TABLE);
-
-        SymbolTable[] importedTables = getImportedTablesNoCopy();
-
-        if (importedTables.length > 1)
-        {
-            IonList importsList = factory.newEmptyList();
-            for (int i = 1; i < importedTables.length; i++)
-            {
-                SymbolTable importedTable = importedTables[i];
-                IonStruct importStruct = factory.newEmptyStruct();
-
-                importStruct.add(NAME,
-                                 factory.newString(importedTable.getName()));
-                importStruct.add(VERSION,
-                                 factory.newInt(importedTable.getVersion()));
-                importStruct.add(MAX_ID,
-                                 factory.newInt(importedTable.getMaxId()));
-
-                importsList.add(importStruct);
-            }
-            ionRep.add(IMPORTS, importsList);
-        }
-
-        if (mySymbolsCount > 0)
-        {
-            int sid = myFirstLocalSid;
-            for (int offset = 0; offset < mySymbolsCount; offset++, sid++)
-            {
-                String symbolName = mySymbolNames[offset];
-                recordLocalSymbolInIonRep(ionRep, symbolName, sid);
-            }
-        }
-
-        return ionRep;
-    }
-
-    /**
-     * NOT SYNCHRONIZED! Call within constructor or from synched method.
-     * @param symbolName can be null when there's a gap in the local symbols list.
-     */
-    private void recordLocalSymbolInIonRep(IonStruct ionRep,
-                                           String symbolName,
-                                           int sid)
-    {
-        assert sid >= myFirstLocalSid;
-
-        ValueFactory sys = ionRep.getSystem();
-
-        // TODO this is crazy inefficient and not as reliable as it looks
-        // since it doesn't handle the case where's theres more than one list
-        IonValue syms = ionRep.get(SYMBOLS);
-        while (syms != null && syms.getType() != IonType.LIST)
-        {
-            ionRep.remove(syms);
-            syms = ionRep.get(SYMBOLS);
-        }
-        if (syms == null)
-        {
-            syms = sys.newEmptyList();
-            ionRep.put(SYMBOLS, syms);
-        }
-
-        int this_offset = sid - myFirstLocalSid;
-        IonValue name = sys.newString(symbolName);
-        ((IonList)syms).add(this_offset, name);
+        return structCache.getIonRepresentation(factory);
     }
 
 }

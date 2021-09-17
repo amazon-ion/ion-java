@@ -873,21 +873,23 @@ public final class _Private_Utils
      */
     public static IonStruct symtabTree(SymbolTable symtab, ValueFactory valueFactory)
     {
-        LocalSymbolTableAsStruct localSymbolTableAsStruct;
-        if (symtab instanceof  LocalSymbolTableAsStruct) {
-            localSymbolTableAsStruct = (LocalSymbolTableAsStruct) symtab;
+        SymbolTableAsStruct localSymbolTableAsStruct;
+        if (symtab instanceof SymbolTableAsStruct) {
+            localSymbolTableAsStruct = (SymbolTableAsStruct) symtab;
         } else {
-            localSymbolTableAsStruct = (LocalSymbolTableAsStruct) new LocalSymbolTableAsStruct.Factory(valueFactory)
+            LocalSymbolTableAsStruct table =
+                (LocalSymbolTableAsStruct) new LocalSymbolTableAsStruct.Factory(valueFactory)
                     .newLocalSymtab(symtab.getSystemSymbolTable(), symtab.getImportedTables());
             Iterator<String> localSymbolsIterator = symtab.iterateDeclaredSymbolNames();
             while (localSymbolsIterator.hasNext()) {
                 String localSymbol = localSymbolsIterator.next();
                 if (localSymbol != null) {
-                    localSymbolTableAsStruct.intern(localSymbol);
+                    table.intern(localSymbol);
                 }
             }
+            localSymbolTableAsStruct = table;
         }
-        return localSymbolTableAsStruct.getIonRepresentation();
+        return localSymbolTableAsStruct.getIonRepresentation(valueFactory);
     }
 
     /**
