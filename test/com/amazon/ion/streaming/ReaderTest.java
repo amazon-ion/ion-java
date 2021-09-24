@@ -20,6 +20,7 @@ import static com.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SymbolTable;
@@ -178,132 +179,104 @@ public class ReaderTest
         }
     }
 
+    int readInt(String text) {
+        IonReader r = myReaderMaker.newReader(system(), text);
+        if (r.next() == null) {
+            fail("Expected to read an integer");
+        }
+        return r.intValue();
+    }
+
+    long readLong(String text) {
+        IonReader r = myReaderMaker.newReader(system(), text);
+        if (r.next() == null) {
+            fail("Expected to read a long");
+        }
+        return r.longValue();
+    }
+
+    double readDouble(String text) {
+        IonReader r = myReaderMaker.newReader(system(), text);
+        if (r.next() == null) {
+            fail("Expected to read a double");
+        }
+        return r.doubleValue();
+    }
+
+    BigInteger readBigInteger(String text) {
+        IonReader r = myReaderMaker.newReader(system(), text);
+        if (r.next() == null) {
+            fail("Expected to read a BigInteger");
+        }
+        return r.bigIntegerValue();
+    }
+
+    Decimal readDecimal(String text) {
+        IonReader r = myReaderMaker.newReader(system(), text);
+        if (r.next() == null) {
+            fail("Expected to read a Decimal");
+        }
+        return r.decimalValue();
+    }
+
+    BigDecimal readBigDecimal(String text) {
+        IonReader r = myReaderMaker.newReader(system(), text);
+        if (r.next() == null) {
+            fail("Expected to read an BigDecimal");
+        }
+        return r.bigDecimalValue();
+    }
+
     @Test
     public void testReadingDecimalAsInteger()
     {
-        // decimal value <space> int conversion
-        read(
-            "0. 0 " +
-            "-2147483648. -2147483648 " + // Min int
-            "2147483647. 2147483647 " // Max int
-        );
-        while (in.next() != null)
-        {
-            int actual = in.intValue();
-
-            in.next();
-            int expected = in.intValue();
-
-            assertEquals(expected, actual);
-        }
+        assertEquals(readInt("0."), readInt("0"));
+        assertEquals(readInt("-2147483648."), readInt("-2147483648")); // Min int
+        assertEquals(readInt("2147483647."), readInt("2147483647")); // Max int
     }
 
     @Test
     public void testReadingDecimalAsLong()
     {
-        // decimal value <space> int conversion
-        read(
-            "0. 0 " +
-            "2147483647. 2147483647 " + // Max int
-            "9223372036854775807. 9223372036854775807 " // Max long
-        );
-        while (in.next() != null)
-        {
-            long actual = in.longValue();
-
-            in.next();
-            long expected = in.longValue();
-
-            assertEquals(expected, actual);
-        }
+        assertEquals(readLong("0."), readLong("0"));
+        assertEquals(readLong("2147483647."), readLong("2147483647")); // Max int
+        assertEquals(readLong("9223372036854775807."), readLong("9223372036854775807")); // Max long
     }
 
     @Test
     public void testReadingDecimalAsBigInteger()
     {
-        //    decimal value         int conversion
-        read("null.decimal          null.int                  " +
-             "0.                                            0 " +
-             "9223372036854775807.        9223372036854775807 " + // Max long
-             "2d24                  2000000000000000000000000 "
-             );
-
-        while (in.next() != null)
-        {
-            BigInteger actual = in.bigIntegerValue();
-            assertEquals(in.isNullValue(), actual == null);
-
-            in.next();
-            BigInteger expected = in.bigIntegerValue();
-
-            assertEquals(expected, actual);
-        }
+        assertEquals(readBigInteger("0."), readBigInteger("0"));
+        assertEquals(readBigInteger("null.decimal"), readBigInteger("null.int"));
+        assertEquals(readBigInteger("9223372036854775807."), readBigInteger("9223372036854775807")); // Max long
+        assertEquals(readBigInteger("2d24"), readBigInteger("2000000000000000000000000"));
     }
 
     @Test
     public void testReadingDecimalAsDouble()
     {
-        // decimal value <space> float conversion
-        read(
-            "0. 0e0 " +
-            "1.23 123e-2 " +
-            "-1.23 -1.23e0 " +
-            "2d24 2e24 "
-        );
-
-        while (in.next() != null)
-        {
-            double actual = in.doubleValue();
-
-            in.next();
-            double expected = in.doubleValue();
-
-            assertEquals(expected, actual, 1e-9);
-        }
+        assertEquals(readDouble("0."), readDouble("0e0"));
+        assertEquals(readDouble("1.23"), readDouble("123e-2"));
+        assertEquals(readDouble("-1.23"), readDouble("-1.23e0"));
+        assertEquals(readDouble("2d24"), readDouble("2e24"));
     }
 
     @Test
     public void testReadingFloatAsInteger()
     {
-        // float value <space> int conversion
-        read(
-            "-0e0 0 " +
-            " 0e0 0 " +
-            "-2147483648e0 -2147483648 " + // Min int
-            "2147483647e0 2147483647 " // Max int
-        );
-
-        while (in.next() != null)
-        {
-            int actual = in.intValue();
-
-            in.next();
-            int expected = in.intValue();
-
-            assertEquals(expected, actual);
-        }
+        assertEquals(readInt("-0e0"), readInt("0"));
+        assertEquals(readInt("-0e0"), readInt("0"));
+        assertEquals(readInt("-2147483648e0"), readInt("-2147483648")); // Min int
+        assertEquals(readInt("2147483647e0"), readInt("2147483647")); // Max int
     }
 
     @Test
     public void testReadingFloatAsLong()
     {
-        // float value <space> int conversion
-        read(
-            "-0e0 0 " +
-            " 0e0 0 " +
-            "-2147483648e0 -2147483648 " + // Min int
-            "2147483647e0 2147483647 " // Max int
-        );
-
-        while (in.next() != null)
-        {
-            long actual = in.longValue();
-
-            in.next();
-            long expected = in.longValue();
-
-            assertEquals(expected, actual);
-        }
+        assertEquals(readLong("0e0"), readLong("0"));
+        assertEquals(readLong("0e0"), readLong("0"));
+        assertEquals(readLong("-2147483648e0"), readLong("-2147483648")); // Min int
+        assertEquals(readLong("2147483647e0"), readLong("2147483647")); // Max int
     }
 
     @Test
@@ -311,26 +284,16 @@ public class ReaderTest
     {
         // Note that one can't represent Long.MAX_VALUE as a double, there's
         // not enough bits in the mantissa!
+        BigInteger actual = readBigInteger("null.float");
+        assertNull(actual);
+        BigInteger expected = readBigInteger("null.int");
+        assertNull(expected);
+        assertEquals(actual, expected);
 
-        //    float value            int conversion
-        read("null.float             null.int                  " +
-             "-0e0                                           0 " +
-             " 0e0                                           0 " +
-             "9223372036854776000e0        9223372036854776000 " +
-             "2e24                   2000000000000000000000000 " +
-             ""
-             );
-
-        while (in.next() != null)
-        {
-            BigInteger actual = in.bigIntegerValue();
-            assertEquals(in.isNullValue(), actual == null);
-
-            in.next();
-            BigInteger expected = in.bigIntegerValue();
-
-            assertEquals(expected, actual);
-        }
+        assertEquals(readBigInteger("-0e0"), readBigInteger("0"));
+        assertEquals(readBigInteger("0e0"), readBigInteger("0"));
+        assertEquals(readBigInteger("9223372036854776000e0"), readBigInteger("9223372036854776000"));
+        assertEquals(readBigInteger("2e24"), readBigInteger("2000000000000000000000000"));
     }
 
 
@@ -345,33 +308,19 @@ public class ReaderTest
     @Test @Ignore
     public void testReadingFloatAsBigDecimal() // TODO amzn/ion-java/issues/56
     {
+        BigDecimal actualBd = readBigDecimal("null.float");
+        assertEquals(in.isNullValue(), actualBd  == null);
+        Decimal actualDec = readDecimal("null.decimal");
+        assertEquals(in.isNullValue(), actualDec == null);
+        assertEquals(actualBd, actualDec);
+
         // Note that one can't represent Long.MAX_VALUE as a double, there's
         // not enough bits in the mantissa!
-
-        //    float value             decimal conversion
-        read("null.float              null.decimal                " +
-             "-0e0                                          -0.   " +
-             " 0e0                                           0.   " +
-             "9223372036854776000e0        9223372036854776000.   " +
-             "9223372036854776000e12       9223372036854776000d12 " +
-             "2e24                    2000000000000000000000000.  " +
-             ""
-             );
-
-        while (in.next() != null)
-        {
-            BigDecimal actualBd  = in.bigDecimalValue();
-            Decimal    actualDec = in.decimalValue();
-            assertEquals(in.isNullValue(), actualBd  == null);
-            assertEquals(in.isNullValue(), actualDec == null);
-
-            in.next();
-            BigDecimal expectedBd  = in.bigDecimalValue();
-            Decimal    expectedDec = in.decimalValue();
-
-            assertEquals(expectedBd,  actualBd);
-            assertEquals(expectedDec, actualDec);
-        }
+        assertEquals(readBigDecimal("-0e0"), readDecimal("-0."));
+        assertEquals(readBigDecimal("0e0"), readDecimal("0."));
+        assertEquals(readBigDecimal("9223372036854776000e0"), readDecimal("9223372036854776000."));
+        assertEquals(readBigDecimal("9223372036854776000e12"), readDecimal("9223372036854776000d12"));
+        assertEquals(readBigDecimal("2e24"), readDecimal("2000000000000000000000000."));
     }
 
 
