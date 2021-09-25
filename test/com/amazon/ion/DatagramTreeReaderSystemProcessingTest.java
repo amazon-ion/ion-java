@@ -40,6 +40,14 @@ public class DatagramTreeReaderSystemProcessingTest
         myDatagramMaker = maker;
     }
 
+    @Override
+    protected int expectedLocalNullSlotSymbolId()
+    {
+        return getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL  && myDatagramMaker.sourceIsBinary()
+            ? 0
+            : 10;
+    }
+
     /**
      * Load the datagram. The datagram is only loaded during
      * {@link #read()} and {@link #systemRead()}.

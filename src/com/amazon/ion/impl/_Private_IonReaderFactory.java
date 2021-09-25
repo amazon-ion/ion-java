@@ -241,9 +241,10 @@ public final class _Private_IonReaderFactory
     }
 
     public static final IonReader makeReader(IonCatalog catalog,
-                                             IonValue value)
+                                             IonValue value,
+                                             _Private_LocalSymbolTableFactory lstFactory)
     {
-        return new IonReaderTreeUserX(value, catalog, LocalSymbolTable.DEFAULT_LST_FACTORY);
+        return new IonReaderTreeUserX(value, catalog, lstFactory);
     }
 
     public static final IonReader makeSystemReader(IonSystem system,

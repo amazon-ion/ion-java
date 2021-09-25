@@ -18,7 +18,6 @@ package com.amazon.ion.impl.lite;
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
@@ -43,6 +42,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnexpectedEofException;
 import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
+import com.amazon.ion.impl._Private_IonReaderBuilder;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
@@ -89,6 +89,7 @@ final class IonSystemLite
         assert catalog == rb.getCatalog();
 
         _catalog = catalog;
+        myReaderBuilder = ((_Private_IonReaderBuilder) rb).withLstFactory(_lstFactory).immutable();
         _loader = new IonLoaderLite(this, catalog);
         _system_symbol_table = bwb.getInitialSymbolTable();
         assert _system_symbol_table.isSystemTable();
@@ -99,8 +100,10 @@ final class IonSystemLite
 
         bwb.setSymtabValueFactory(this);
         myBinaryWriterBuilder = bwb.immutable();
+    }
 
-        myReaderBuilder = rb.immutable();
+    IonReaderBuilder getReaderBuilder() {
+        return myReaderBuilder;
     }
 
     //==========================================================================
@@ -179,7 +182,7 @@ final class IonSystemLite
 
     public Iterator<IonValue> iterate(Reader ionText)
     {
-        IonReader reader = makeReader(_catalog, ionText, _lstFactory);
+        IonReader reader = myReaderBuilder.build(ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -187,13 +190,13 @@ final class IonSystemLite
     public Iterator<IonValue> iterate(InputStream ionData)
     {
         // This method causes a memory leak when reading a gzipped stream, see deprecation notice.
-        IonReader reader = makeReader(_catalog, ionData, _lstFactory);
+        IonReader reader = myReaderBuilder.build(ionData);
         return iterate(reader);
     }
 
     public Iterator<IonValue> iterate(String ionText)
     {
-        IonReader reader = makeReader(_catalog, ionText, _lstFactory);
+        IonReader reader = myReaderBuilder.build(ionText);
         ReaderIterator iterator = new ReaderIterator(this, reader);
         return iterator;
     }
@@ -201,7 +204,7 @@ final class IonSystemLite
     public Iterator<IonValue> iterate(byte[] ionData)
     {
         // This method causes a memory leak when reading a gzipped stream, see deprecation notice.
-        IonReader reader = makeReader(_catalog, ionData, _lstFactory);
+        IonReader reader = myReaderBuilder.build(ionData);
         return iterate(reader);
     }
 

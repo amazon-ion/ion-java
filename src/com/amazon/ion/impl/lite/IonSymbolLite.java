@@ -308,8 +308,8 @@ final class IonSymbolLite
             return null;
         }
         String name = _stringValue(symbolTableProvider);
-        if (name == null && _sid != 0) {
-            assert(_sid > 0);
+        if (name == null) {
+            assert(_sid >= 0);
             throw new UnknownSymbolException(_sid);
         }
         return name;

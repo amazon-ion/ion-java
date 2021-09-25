@@ -29,12 +29,19 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.zip.GZIPOutputStream;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 
 public class IonSystemTest
     extends IonTestCase
 {
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     //========================================================================
     // iterate(Reader)
 
@@ -312,6 +319,12 @@ public class IonSystemTest
         checkInt(1234, dg.get(0));
     }
 
+    private void expectIncrementalReaderToFail() {
+        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
+            thrown.expect(IllegalArgumentException.class);
+        }
+    }
+
     @Test
     public void testGzipDetection()
         throws Exception
@@ -321,12 +334,14 @@ public class IonSystemTest
         byte[] gzipTextBytes = gzip(textBytes);
 
         checkGzipDetection(textBytes);
+        expectIncrementalReaderToFail();
         checkGzipDetection(gzipTextBytes);
 
         byte[] binaryBytes = loader().load(ionText).getBytes();
         byte[] gzipBinaryBytes = gzip(binaryBytes);
 
         checkGzipDetection(binaryBytes);
+        expectIncrementalReaderToFail();
         checkGzipDetection(gzipBinaryBytes);
     }
 
@@ -347,6 +362,7 @@ public class IonSystemTest
         String ionText = "1234";
         byte[] textBytes = _Private_Utils.utf8(ionText);
         byte[] gzipTextBytes = gzip(textBytes);
+        expectIncrementalReaderToFail();
         IonInt ionValue = (IonInt) system().singleValue(gzipTextBytes);
 
         assertEquals(1234, ionValue.intValue());
@@ -358,6 +374,7 @@ public class IonSystemTest
         String ionText = "1234";
         byte[] binaryIon = toBinaryIon(ionText);
         byte[] gzipBytes = gzip(binaryIon);
+        expectIncrementalReaderToFail();
         IonInt ionValue = (IonInt) system().singleValue(gzipBytes);
 
         assertEquals(1234, ionValue.intValue());

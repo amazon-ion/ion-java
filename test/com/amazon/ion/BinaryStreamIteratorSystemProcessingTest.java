@@ -26,6 +26,11 @@ public class BinaryStreamIteratorSystemProcessingTest
     private byte[] myBytes;
     private InputStream myStream;
 
+    @Override
+    protected int expectedLocalNullSlotSymbolId()
+    {
+        return getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL ? 0 : 10;
+    }
 
     @Override
     protected void prepare(String text)

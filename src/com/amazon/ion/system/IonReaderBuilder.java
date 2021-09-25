@@ -15,9 +15,6 @@
 
 package com.amazon.ion.system;
 
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeIncrementalReader;
-import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
-
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -26,11 +23,8 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.impl._Private_IonConstants;
-import com.amazon.ion.util.IonStreamUtils;
+import com.amazon.ion.impl._Private_IonReaderBuilder;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -45,7 +39,7 @@ import java.io.Reader;
  * in this class.
  */
 @SuppressWarnings("deprecation")
-public class IonReaderBuilder
+public abstract class IonReaderBuilder
 {
 
     private IonCatalog catalog = null;
@@ -53,15 +47,16 @@ public class IonReaderBuilder
     private IonBufferConfiguration bufferConfiguration = null;
     private boolean isAnnotationIteratorReuseEnabled = true;
 
-    private IonReaderBuilder()
+    protected IonReaderBuilder()
     {
     }
 
-    private IonReaderBuilder(IonReaderBuilder that)
+    protected IonReaderBuilder(IonReaderBuilder that)
     {
         this.catalog = that.catalog;
         this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
         this.bufferConfiguration = that.bufferConfiguration;
+        this.isAnnotationIteratorReuseEnabled = that.isAnnotationIteratorReuseEnabled;
     }
 
     /**
@@ -72,7 +67,7 @@ public class IonReaderBuilder
      */
     public static IonReaderBuilder standard()
     {
-        return new Mutable();
+        return new _Private_IonReaderBuilder.Mutable();
     }
 
     /**
@@ -82,7 +77,7 @@ public class IonReaderBuilder
      */
     public IonReaderBuilder copy()
     {
-        return new Mutable(this);
+        return new _Private_IonReaderBuilder.Mutable(this);
     }
 
     /**
@@ -163,7 +158,7 @@ public class IonReaderBuilder
         return catalog;
     }
 
-    private IonCatalog validateCatalog()
+    protected IonCatalog validateCatalog()
     {
         // matches behavior in IonSystemBuilder when no catalog provided
         return catalog != null ? catalog : new SimpleCatalog();
@@ -374,19 +369,7 @@ public class IonReaderBuilder
      *
      * @see IonSystem#newReader(byte[], int, int)
      */
-    public IonReader build(byte[] ionData, int offset, int length)
-    {
-        if (isIncrementalReadingEnabled) {
-            if (IonStreamUtils.isGzip(ionData, offset, length)) {
-                throw new IllegalArgumentException("Automatic GZIP detection is not supported with incremental" +
-                        "support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).");
-            }
-            if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
-                return makeIncrementalReader(this, new ByteArrayInputStream(ionData, offset, length));
-            }
-        }
-        return makeReader(validateCatalog(), ionData, offset, length);
-    }
+    public abstract IonReader build(byte[] ionData, int offset, int length);
 
     /**
      * Based on the builder's configuration properties, creates a new IonReader
@@ -408,32 +391,7 @@ public class IonReaderBuilder
      *
      * @see IonSystem#newReader(InputStream)
      */
-    public IonReader build(InputStream ionData)
-    {
-        InputStream wrapper = ionData;
-        if (isIncrementalReadingEnabled) {
-            if (!ionData.markSupported()) {
-                wrapper = new BufferedInputStream(ionData);
-            }
-            wrapper.mark(_Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
-            byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
-            int bytesRead;
-            try {
-                bytesRead = wrapper.read(possibleIVM);
-                wrapper.reset();
-            } catch (IOException e) {
-                throw new IonException(e);
-            }
-            if (IonStreamUtils.isGzip(possibleIVM, 0, possibleIVM.length)) {
-                throw new IllegalArgumentException("Automatic GZIP detection is not supported with incremental" +
-                        "support enabled. Wrap the bytes with a GZIPInputStream and call build(InputStream).");
-            }
-            if (possibleIVM.length == bytesRead && IonStreamUtils.isIonBinary(possibleIVM)) {
-                return makeIncrementalReader(this, wrapper);
-            }
-        }
-        return makeReader(validateCatalog(), wrapper);
-    }
+    public abstract IonReader build(InputStream ionData);
 
     /**
      * Based on the builder's configuration properties, creates a new
@@ -452,10 +410,7 @@ public class IonReaderBuilder
      *
      * @see IonSystem#newReader(Reader)
      */
-    public IonReader build(Reader ionText)
-    {
-        return makeReader(validateCatalog(), ionText);
-    }
+    public abstract IonReader build(Reader ionText);
 
     /**
      * Based on the builder's configuration properties, creates a new
@@ -470,10 +425,7 @@ public class IonReaderBuilder
      *
      * @see IonSystem#newReader(IonValue)
      */
-    public IonReader build(IonValue value)
-    {
-        return makeReader(validateCatalog(), value);
-    }
+    public abstract IonReader build(IonValue value);
 
     /**
      * Based on the builder's configuration properties, creates an new
@@ -483,40 +435,6 @@ public class IonReaderBuilder
      *
      * @see IonSystem#newReader(String)
      */
-    public IonTextReader build(String ionText)
-    {
-        return makeReader(validateCatalog(), ionText);
-    }
-
-    private static class Mutable extends IonReaderBuilder
-    {
-
-        private Mutable()
-        {
-        }
-
-        private Mutable(IonReaderBuilder that)
-        {
-            super(that);
-        }
-
-        @Override
-        public IonReaderBuilder immutable()
-        {
-            return new IonReaderBuilder(this);
-        }
-
-        @Override
-        public IonReaderBuilder mutable()
-        {
-            return this;
-        }
-
-        @Override
-        protected void mutationCheck()
-        {
-        }
-
-    }
+    public abstract IonTextReader build(String ionText);
 
 }

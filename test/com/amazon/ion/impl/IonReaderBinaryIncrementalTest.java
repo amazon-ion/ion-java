@@ -4,10 +4,15 @@ import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonString;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -788,6 +793,110 @@ public class IonReaderBinaryIncrementalTest {
         reader.stepOut();
         assertNull(reader.next());
         reader.close();
+    }
+
+    @Test
+    public void incrementalMultipleValuesLoadFromReader() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        final IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(STANDARD_READER_BUILDER, pipe);
+        final IonLoader loader = SYSTEM.getLoader();
+        byte[] bytes = toBinary("value_type::\"StringValueLong\"");
+        for (byte b : bytes) {
+            IonDatagram empty = loader.load(reader);
+            assertTrue(empty.isEmpty());
+            pipe.receive(b);
+        }
+        IonDatagram firstValue = loader.load(reader);
+        assertEquals(1, firstValue.size());
+        IonString string = (IonString) firstValue.get(0);
+        assertEquals("StringValueLong", string.stringValue());
+        assertEquals(Collections.singletonList("value_type"), Arrays.asList(string.getTypeAnnotations()));
+        bytes = toBinary("{foobar: \"StringValueLong\"}");
+        for (byte b : bytes) {
+            IonDatagram empty = loader.load(reader);
+            assertTrue(empty.isEmpty());
+            pipe.receive(b);
+        }
+        IonDatagram secondValue = loader.load(reader);
+        assertEquals(1, secondValue.size());
+        IonStruct struct = (IonStruct) secondValue.get(0);
+        string = (IonString) struct.get("foobar");
+        assertEquals("StringValueLong", string.stringValue());
+        IonDatagram empty = loader.load(reader);
+        assertTrue(empty.isEmpty());
+        reader.close();
+    }
+
+    @Test
+    public void incrementalMultipleValuesLoadFromInputStreamFails() throws Exception {
+        final ResizingPipedInputStream pipe = new ResizingPipedInputStream(1);
+        final IonLoader loader = IonSystemBuilder.standard()
+            .withReaderBuilder(STANDARD_READER_BUILDER)
+            .build()
+            .getLoader();
+        IonDatagram empty = loader.load(pipe);
+        assertTrue(empty.isEmpty());
+        pipe.receive(_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0]);
+        // Because reader does not persist across load invocations, the loader must throw an exception if the reader
+        // had an incomplete value buffered.
+        thrown.expect(IonException.class);
+        loader.load(pipe);
+    }
+
+    private static void incrementalMultipleValuesIterate(
+        Iterator<IonValue> iterator,
+        ResizingPipedInputStream pipe
+    ) throws Exception {
+        byte[] bytes = toBinary("value_type::\"StringValueLong\"");
+        for (byte b : bytes) {
+            assertFalse(iterator.hasNext());
+            pipe.receive(b);
+        }
+        assertTrue(iterator.hasNext());
+        IonString string = (IonString) iterator.next();
+        assertEquals("StringValueLong", string.stringValue());
+        assertEquals(Collections.singletonList("value_type"), Arrays.asList(string.getTypeAnnotations()));
+        bytes = toBinary("{foobar: \"StringValueLong\"}");
+        for (byte b : bytes) {
+            assertFalse(iterator.hasNext());
+            pipe.receive(b);
+        }
+        assertTrue(iterator.hasNext());
+        IonStruct struct = (IonStruct) iterator.next();
+        string = (IonString) struct.get("foobar");
+        assertEquals("StringValueLong", string.stringValue());
+        assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    public void incrementalMultipleValuesIterateFromReader() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        IonReader reader = STANDARD_READER_BUILDER.build(pipe);
+        Iterator<IonValue> iterator = SYSTEM.iterate(reader);
+        incrementalMultipleValuesIterate(iterator, pipe);
+        reader.close();
+    }
+
+    @Test
+    public void incrementalMultipleValuesIterateFromInputStream() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        IonSystem system = IonSystemBuilder.standard().withReaderBuilder(STANDARD_READER_BUILDER).build();
+        Iterator<IonValue> iterator = system.iterate(pipe);
+        incrementalMultipleValuesIterate(iterator, pipe);
+    }
+
+    @Test
+    public void incrementalReadInitiallyEmptyStreamThatTurnsOutToBeText() {
+        // Note: if incremental text read support is added, this test will start failing, which is expected. For now,
+        // we ensure that this fails quickly.
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(1);
+        IonReader reader = STANDARD_READER_BUILDER.build(pipe);
+        assertNull(reader.next());
+        // Valid text Ion. Also hex 0x20, which is binary int 0. However, it is not preceded by the IVM, so it must be
+        // interpreted as text. The binary reader must fail.
+        pipe.receive(' ');
+        thrown.expect(IonException.class);
+        reader.next();
     }
 
     @Test

@@ -879,6 +879,13 @@ public final class _Private_Utils
         } else {
             localSymbolTableAsStruct = (LocalSymbolTableAsStruct) new LocalSymbolTableAsStruct.Factory(valueFactory)
                     .newLocalSymtab(symtab.getSystemSymbolTable(), symtab.getImportedTables());
+            Iterator<String> localSymbolsIterator = symtab.iterateDeclaredSymbolNames();
+            while (localSymbolsIterator.hasNext()) {
+                String localSymbol = localSymbolsIterator.next();
+                if (localSymbol != null) {
+                    localSymbolTableAsStruct.intern(localSymbol);
+                }
+            }
         }
         return localSymbolTableAsStruct.getIonRepresentation();
     }
