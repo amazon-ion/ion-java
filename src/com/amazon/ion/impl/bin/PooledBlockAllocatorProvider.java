@@ -18,6 +18,7 @@ package com.amazon.ion.impl.bin;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A singleton implementation of {@link BlockAllocatorProvider} offering a thread-safe free block list
@@ -37,6 +38,7 @@ import java.util.concurrent.ConcurrentMap;
     {
         private final int blockSize, blockLimit;
         private final ConcurrentLinkedQueue<Block> freeBlocks;
+        private final AtomicInteger size = new AtomicInteger(0);
         static final int FREE_CAPACITY = 1024 * 1024 * 64; // 64MB
 
         public PooledBlockAllocator(final int blockSize)
@@ -57,12 +59,30 @@ import java.util.concurrent.ConcurrentMap;
                     @Override
                     public void close()
                     {
-                        if (freeBlocks.size() < blockLimit) {
+                        // In the common case, the pool is not full. Optimistically increment the size.
+                        if (size.getAndIncrement() < blockLimit)
+                        {
                             reset();
                             freeBlocks.add(this);
                         }
+                        else
+                        {
+                            // The pool was full. Since the size was optimistically incremented, decrement it now.
+                            // Note: there is a race condition here that is deliberately allowed as an optimization.
+                            // Under high contention, multiple threads could end up here before the first one
+                            // decrements the size, causing blocks to be dropped wastefully. This is not harmful
+                            // because blocks will be re-allocated when necessary; the pool is kept as close as
+                            // possible to capacity on a best-effort basis. This race condition should not be "fixed"
+                            // without a thorough study of the performance implications.
+                            size.decrementAndGet();
+                        }
                     }
                 };
+            }
+            else
+            {
+                // A block was retrieved from the pool; decrement the pool size.
+                size.decrementAndGet();
             }
             return block;
         }
