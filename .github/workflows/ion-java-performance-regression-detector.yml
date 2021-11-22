@@ -68,7 +68,7 @@ jobs:
         run : rm -r /home/runner/.m2
 
       - name: Build ion-java from the previous commit
-        run: cd ion-java && git checkout HEAD^ && mvn clean install
+        run: cd ion-java && git checkout HEAD^ && git submodule update --recursive && mvn clean install
 
       - name: Build ion-java-benchmark-cli
         run: cd ion-java-benchmark-cli && mvn clean install
