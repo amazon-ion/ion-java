@@ -283,6 +283,12 @@ abstract class IonReaderBinaryRawX
                 else if (_value_tid == _Private_IonConstants.tidTypedecl) {
                     assert (_value_tid == (BINARY_VERSION_MARKER_TID & 0xff)); // the bvm tid happens to be type decl
                     if (_value_len == BINARY_VERSION_MARKER_LEN ) {
+                        if (getDepth() != 0) {
+                            // In Ion text, we can interpret an IVM in the wrong position as an ordinary Symbol,
+                            // but in Ion binary, the BVM is unambiguously an IVM rather than a Symbol, and it
+                            // is not allowed in any container type.
+                            throw newErrorAt("Encountered IVM type code E0 below the top level");
+                        }
                         // this isn't valid for any type descriptor except the first byte
                         // of a 4 byte version marker - so lets read the rest
                         load_version_marker();
