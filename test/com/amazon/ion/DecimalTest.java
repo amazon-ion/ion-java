@@ -31,6 +31,7 @@ public class DecimalTest
     {
         assertSame(IonType.DECIMAL, value.getType());
         assertTrue("isNullValue is false", value.isNullValue());
+        assertFalse(value.isNumericValue());
 
         try
         {
@@ -346,4 +347,13 @@ public class DecimalTest
         checkDecimal(123, 0, value.bigDecimalValue());
     }
 
+    @Test
+    public void testIsNumeric()
+    {
+        IonNumber value = (IonNumber) oneValue("1.23");
+        assertTrue(value.isNumericValue());
+
+        IonNumber nullValue = (IonNumber) oneValue("null.decimal");
+        assertFalse(nullValue.isNumericValue());
+    }
 }

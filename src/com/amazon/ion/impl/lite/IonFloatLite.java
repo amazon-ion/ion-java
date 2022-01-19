@@ -95,6 +95,7 @@ final class IonFloatLite
         return _float_value.doubleValue();
     }
 
+    @Override
     public BigDecimal bigDecimalValue()
         throws NullValueException
     {
@@ -151,6 +152,7 @@ final class IonFloatLite
         }
     }
 
+    @Override
     public boolean isNumericValue()
     {
         return !(isNullValue() || _float_value.isNaN() || _float_value.isInfinite());

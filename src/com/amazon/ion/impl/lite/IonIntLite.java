@@ -146,6 +146,22 @@ final class IonIntLite
         return _big_int_value;
     }
 
+    @Override
+    public BigDecimal bigDecimalValue() {
+        if (isNullValue()) {
+            return null;
+        } else if (_big_int_value == null) {
+            return BigDecimal.valueOf(_long_value);
+        } else {
+            return new BigDecimal(_big_int_value);
+        }
+    }
+
+    @Override
+    public boolean isNumericValue() {
+        return !isNullValue();
+    }
+
     public void setValue(int value)
     {
         setValue((long)value);

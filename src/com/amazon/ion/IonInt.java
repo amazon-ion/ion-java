@@ -15,6 +15,7 @@
 
 package com.amazon.ion;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
@@ -24,7 +25,7 @@ import java.math.BigInteger;
  * code outside of this library.
  */
 public interface IonInt
-    extends IonValue
+    extends IonNumber
 {
     /**
      * Gets the content of this Ion <code>int</code> as a Java
@@ -55,6 +56,15 @@ public interface IonInt
      * or <code>null</code> if this is <code>null.int</code>.
      */
     public BigInteger bigIntegerValue();
+
+    /**
+     * Gets the value of this Ion {@code int} as a {@link BigDecimal}.
+     * The scale of the {@code BigDecimal} is zero.
+     *
+     * @return the {@code BigDecimal} value,
+     * or {@code null} if {@code this.isNullValue()}.
+     */
+    public BigDecimal bigDecimalValue();
 
     /**
      * Gets an {@link IntegerSize} representing the smallest-possible
