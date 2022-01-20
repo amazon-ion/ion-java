@@ -921,4 +921,42 @@ public class WriteBufferTest
         buf.truncate(3);
         assertBuffer("ARG".getBytes("UTF-8"));
     }
+
+    @Test
+    public void shiftBytesLeftWithinFirstBufferBlock() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // All bytes are being shifted within the first buffer block.
+        buf.writeBytes("01234567".getBytes());
+        buf.shiftBytesLeft(4, 1);
+        assertBuffer("0124567".getBytes());
+    }
+
+    @Test
+    public void shiftBytesLeftWithinLastBufferBlock() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // All bytes are being shifted within the last buffer block.
+        buf.writeBytes("0123456789ABCDEF".getBytes());
+        buf.shiftBytesLeft(3, 2);
+        assertBuffer("0123456789ADEF".getBytes());
+    }
+
+    @Test
+    public void shiftBytesLeftAcrossBufferBlocks() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // Some bytes are shifted to the previous block, some are shifted within
+        // the last block.
+        buf.writeBytes("0123456789ABCDEF".getBytes());
+        buf.shiftBytesLeft(8, 3);
+        assertBuffer("0123489ABCDEF".getBytes());
+    }
+
+    @Test
+    public void shiftBytesLeftAcrossBufferBlocksExclusively() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // Unlike `shiftBytesLeftAcrossBufferBlocks`, EVERY byte that is shifted
+        // in the buffer ends up in the previous block.
+        buf.writeBytes("0123456789ABCDEF".getBytes());
+        buf.shiftBytesLeft(5, 5);
+        assertBuffer("012345BCDEF".getBytes());
+    }
 }

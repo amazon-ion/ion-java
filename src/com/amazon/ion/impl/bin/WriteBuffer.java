@@ -170,6 +170,122 @@ import java.util.List;
         block.limit += len;
     }
 
+    /**
+     * Shifts the last `length` bytes in the buffer to the left. This can be used when a value's header was
+     * preallocated but the value's encoded size proved to be much smaller than anticipated.
+     *
+     * The caller must guarantee that the buffer contains enough bytes to perform the requested shift.
+     *
+     * @param length    The number of bytes at the end of the buffer that we'll be shifting to the left.
+     * @param shiftBy   The number of bytes to the left that we'll be shifting.
+     */
+    public void shiftBytesLeft(int length, int shiftBy) {
+        if (shiftBy == 0) {
+            // Nothing to do.
+            return;
+        }
+
+        // If all of the bytes that we need to shift are in the current block, do a simple memcpy.
+        if (current.limit >= length + shiftBy) {
+            shiftBytesLeftWithinASingleBlock(length, shiftBy);
+            return;
+        }
+
+        // Otherwise, the slice we're shifting straddles multiple blocks. We'll need to iterate across those blocks
+        // applying shifting logic to each one.
+        shiftBytesLeftAcrossBlocks(length, shiftBy);
+    }
+
+    /**
+     * Shifts the last `length` bytes in the buffer to the left. The caller must guarantee that the `current` Block
+     * contains at least `length + shiftBy` bytes. This ensures that we're shifting a contiguous slice of bytes within
+     * a single block.
+     *
+     * @param length    The number of bytes at the end of the buffer that we'll be shifting to the left.
+     * @param shiftBy   The number of bytes to the left that we'll be shifting.
+     */
+    private void shiftBytesLeftWithinASingleBlock(int length, int shiftBy) {
+        int startOfSliceToShift = current.limit - length;
+        System.arraycopy(
+                current.data,
+                startOfSliceToShift,
+                current.data,
+                startOfSliceToShift - shiftBy,
+                length
+        );
+        // Update the `limit` (cursor position) within the current block to reflect that
+        // we have reclaimed `length` bytes of space in the buffer.
+        current.limit -= shiftBy;
+    }
+
+    /**
+     * Shifts the last `length` bytes in the buffer to the left. Unlike
+     * {@link #shiftBytesLeftWithinASingleBlock(int, int)}, this method supports shifting bytes across multiple blocks
+     * in the buffer.
+     *
+     * @param length    The number of bytes at the end of the buffer that we'll be shifting to the left.
+     * @param shiftBy   The number of bytes to the left that we'll be shifting.
+     */
+    private void shiftBytesLeftAcrossBlocks(int length, int shiftBy) {
+        // Our starting position is the first byte that we plan to shift backwards. The `bufferOffset` is the cursor's
+        // current position in the stream; we can use this to derive which block it's in as well as its position within
+        // that block.
+        long bufferOffset = position() - length;
+
+        Block block = null;
+        while (length > 0)
+        {
+            // Using the `bufferOffset`, determine which block we're in...
+            int blockIndex = index(bufferOffset);
+            block = blocks.get(blockIndex);
+            // ...and our offset within that block.
+            int blockOffset = offset(bufferOffset);
+
+            // If the block offset is within `shiftBy` bytes of beginning of the block, some bytes we're shifting
+            // will end up in the previous block. Here's an illustrated example:
+            //
+            // shiftBy = 2, blockIndex = 1, blockOffset = 1
+            //                        v---- Cursor is here
+            // Before: [A B C D E] [F G H I J]
+            // After : [A B C D G] [F G H I J]
+            //  Now this is G --^       ^-- And the cursor is here, ready to continue copy the rest.
+            if (blockOffset < shiftBy) {
+                Block previousBlock = blocks.get(blockIndex - 1);
+                int numberOfBytesToShift = Math.min(length, shiftBy) - blockOffset;
+                System.arraycopy(block.data, blockOffset, previousBlock.data, previousBlock.data.length - numberOfBytesToShift, numberOfBytesToShift);
+
+                // Now that we've shifted some bytes, update our position within the buffer.
+                bufferOffset += numberOfBytesToShift;
+                length -= numberOfBytesToShift;
+
+                // If there are no more bytes to shift...
+                if (length == 0) {
+                    // ...lower the `limit` because we've reclaimed some bytes in this block...
+                    block.limit -= numberOfBytesToShift;
+                    // ... and early return.
+                    return;
+                }
+                // Otherwise, use our new buffer offset to recalculate our position our block-specific position.
+                blockIndex = index(bufferOffset);
+                block = blocks.get(blockIndex);
+                blockOffset = offset(bufferOffset);
+            }
+
+            // At this point, the block offset is at least `shiftBy` bytes away from the beginning of the block, so
+            // we can do a memcpy to shift the rest of the bytes in the block.
+            int numberOfBytesToShift = Math.min(length, block.data.length - blockOffset);
+            System.arraycopy(block.data, blockOffset, block.data, blockOffset - shiftBy, numberOfBytesToShift);
+
+            // Update our counters and see if there are any more bytes to shift.
+            bufferOffset += numberOfBytesToShift;
+            length -= numberOfBytesToShift;
+        }
+        if (block != null) {
+            // We've reclaimed some space in this block, lower the `limit` accordingly.
+            block.limit -= shiftBy;
+        }
+    }
+
     /** Writes an array of bytes to the buffer expanding if necessary, defaulting to the entire array. */
     public void writeBytes(byte[] bytes)
     {
