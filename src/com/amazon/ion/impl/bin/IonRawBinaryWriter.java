@@ -202,6 +202,15 @@ import java.util.NoSuchElementException;
 
         /*package*/ abstract void patchLength(final WriteBuffer buffer, final long position, final long length);
 
+        /**
+         * Returns the number of header bytes that this mode would preallocate to hold the VarUInt-encoded length of
+         * the current value. This number is equal to the total header length (i.e. `typedLength`) minus one, as it does
+         * not include the type descriptor byte. (Examples: PREALLOCATE_0 returns `0`, PREALLOCATE_1 returns `1`, etc.)
+         */
+        int numberOfLengthBytes() {
+            return typedLength - 1;
+        }
+
         /*package*/ static PreallocationMode withPadSize(final int pad)
         {
             switch (pad)
@@ -723,48 +732,70 @@ import java.util.NoSuchElementException;
 
     private ContainerInfo popContainer()
     {
-        final ContainerInfo current = containers.pop();
-        if (current == null)
+        final ContainerInfo currentContainer = containers.pop();
+        if (currentContainer == null)
         {
             throw new IllegalStateException("Tried to pop container state without said container");
         }
 
         // only patch for real containers and annotations -- we use VALUE for tracking only
-        final long length = current.length;
-        if (current.type != ContainerType.VALUE)
+        long length = currentContainer.length;
+        if (currentContainer.type != ContainerType.VALUE)
         {
             // patch in the length
-            final long position = current.position;
-            if (current.length <= preallocationMode.contentMaxLength && preallocationMode != PreallocationMode.PREALLOCATE_0)
+            final long positionOfFirstLengthByte = currentContainer.position;
+            if (length <= 0xD) {
+                // The body of this container/wrapper is small enough that its length can fit in the lower nibble of
+                // the type descriptor byte; we don't need the extra length bytes that were preallocated (if any).
+                // We'll shift the encoded body of the container/wrapper backwards in the buffer to overwrite them.
+
+                // The number of bytes we need to shift by is determined by the writer's preallocation mode.
+                final int numberOfBytesToShiftBy = preallocationMode.numberOfLengthBytes();
+
+                // `length` is the encoded length of the container/wrapper we're stepping out of. It does not
+                // include any header bytes. In this `if` branch, we've confirmed that `length` is <= 0xD,
+                // so this downcast from `long` to `int` is safe.
+                final int lengthOfSliceToShift = (int) length;
+
+                // Shift the container/wrapper body backwards in the buffer. Because this only happens when
+                // `lengthOfSliceToShift` is 13 or fewer bytes, this will usually be a very fast memcpy.
+                // It's slightly more work if the slice we're shifting happens to straddle two memory blocks
+                // inside the buffer.
+                buffer.shiftBytesLeft(lengthOfSliceToShift, numberOfBytesToShiftBy);
+
+                // Overwrite the lower nibble of the original type descriptor byte with the body's encoded length.
+                final long typeDescriptorPosition = positionOfFirstLengthByte - 1;
+                final long type = (buffer.getUInt8At(typeDescriptorPosition) & 0xF0) | length;
+                buffer.writeUInt8At(typeDescriptorPosition, type);
+
+                // We've reclaimed some number of bytes; adjust the container length as appropriate.
+                length -= numberOfBytesToShiftBy;
+            }
+            else if (currentContainer.length <= preallocationMode.contentMaxLength)
             {
-                preallocationMode.patchLength(buffer, position, length);
+                // The container's encoded body is too long to fit the length in the type descriptor byte, but it will
+                // fit in the preallocated length bytes that were added to the buffer when the container was started.
+                // Update those bytes with the VarUInt encoding of the length value.
+                preallocationMode.patchLength(buffer, positionOfFirstLengthByte, length);
             }
             else
             {
-                // side patch
-                if (current.length <= 0xD && preallocationMode == PreallocationMode.PREALLOCATE_0)
-                {
-                    // XXX if we're not using padding we can get here and optimize the length a little without side patching!
-                    final long typePosition = position - 1;
-                    final long type = (buffer.getUInt8At(typePosition) & 0xF0) | current.length;
-                    buffer.writeUInt8At(typePosition, type);
-                }
-                else
-                {
-                    addPatchPoint(position, preallocationMode.typedLength - 1, length);
-                }
+                // The container's encoded body is too long to fit in the length bytes that were preallocated.
+                // Write the VarUInt encoding of the length in a secondary buffer and make a note to include that
+                // when we go to flush the primary buffer to the output stream.
+                addPatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes(), length);
             }
         }
-        if (current.patches != null)
+        if (currentContainer.patches != null)
         {
             // at this point, we've appended our patch points upward, lets make sure we get
             // our child patch points in
-            extendPatchPoints(current.patches);
+            extendPatchPoints(currentContainer.patches);
         }
 
         // make sure to record length upward
         updateLength(length);
-        return current;
+        return currentContainer;
     }
 
     private void writeVarUInt(final long value)
