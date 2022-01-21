@@ -262,10 +262,10 @@ import java.util.List;
                 if (length == 0) {
                     // ...lower the `limit` because we've reclaimed some bytes in this block...
                     block.limit -= numberOfBytesToShift;
-                    // ... and early return.
+                    // ...and early return.
                     return;
                 }
-                // Otherwise, use our new buffer offset to recalculate our position our block-specific position.
+                // Otherwise, use our new buffer offset to recalculate our block-specific position.
                 blockIndex = index(bufferOffset);
                 block = blocks.get(blockIndex);
                 blockOffset = offset(bufferOffset);
@@ -281,7 +281,7 @@ import java.util.List;
             length -= numberOfBytesToShift;
         }
         if (block != null) {
-            // We've reclaimed some space in this block, lower the `limit` accordingly.
+            // We've reclaimed some space in this block; lower the `limit` accordingly.
             block.limit -= shiftBy;
         }
     }

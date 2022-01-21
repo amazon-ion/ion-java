@@ -203,12 +203,12 @@ import java.util.NoSuchElementException;
         /*package*/ abstract void patchLength(final WriteBuffer buffer, final long position, final long length);
 
         /**
-         * Returns the length (in bytes) of the header that this mode would preallocate. This is the number of
-         * bytes preallocated for the VarUInt length (the number in the mode name) plus one extra byte for the
-         * type descriptor itself. (Examples: PREALLOCATE_0 returns `1`, PREALLOCATE_1 returns `2`, etc.)
+         * Returns the number of header bytes that this mode would preallocate to hold the VarUInt-encoded length of
+         * the current value. This number is equal to the total header length (i.e. `typedLength`) minus one, as it does
+         * not include the type descriptor byte. (Examples: PREALLOCATE_0 returns `0`, PREALLOCATE_1 returns `1`, etc.)
          */
-        int preallocatedHeaderLength() {
-            return typedLength;
+        int numberOfLengthBytes() {
+            return typedLength - 1;
         }
 
         /*package*/ static PreallocationMode withPadSize(final int pad)
@@ -750,7 +750,7 @@ import java.util.NoSuchElementException;
                 // We'll shift the encoded body of the container/wrapper backwards in the buffer to overwrite them.
 
                 // The number of bytes we need to shift by is determined by the writer's preallocation mode.
-                final int numberOfBytesToShiftBy = preallocationMode.preallocatedHeaderLength() - 1;
+                final int numberOfBytesToShiftBy = preallocationMode.numberOfLengthBytes();
 
                 // `length` is the encoded length of the container/wrapper we're stepping out of. It does not
                 // include any header bytes. In this `if` branch, we've confirmed that `length` is <= 0xD,
@@ -783,7 +783,7 @@ import java.util.NoSuchElementException;
                 // The container's encoded body is too long to fit in the length bytes that were preallocated.
                 // Write the VarUInt encoding of the length in a secondary buffer and make a note to include that
                 // when we go to flush the primary buffer to the output stream.
-                addPatchPoint(positionOfFirstLengthByte, preallocationMode.typedLength - 1, length);
+                addPatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes(), length);
             }
         }
         if (currentContainer.patches != null)
