@@ -37,7 +37,7 @@ import java.math.BigDecimal;
  * @see IonDecimal
  */
 public interface IonFloat
-    extends IonValue
+    extends IonNumber
 {
     /**
      * Gets the value of this Ion <code>float</code> as a Java
@@ -66,6 +66,8 @@ public interface IonFloat
      * recommended to call {@link IonFloat#isNumericValue()} before calling
      * this method.
      *
+     * If you need negative zeros, use {@link #doubleValue()}.
+     *
      * @return the {@link BigDecimal} value, or {@code null} if
      * {@code this.isNullValue()}.
      *
@@ -73,6 +75,7 @@ public interface IonFloat
      * {@code +inf}, or {@code -inf}, because {@link BigDecimal} cannot
      * represent those values.
      */
+    @Override
     public BigDecimal bigDecimalValue()
         throws NullValueException;
 

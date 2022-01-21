@@ -124,6 +124,7 @@ final class IonDecimalLite
         return d;
     }
 
+    @Override
     public BigDecimal bigDecimalValue()
         throws NullValueException
     {
@@ -134,6 +135,11 @@ final class IonDecimalLite
         throws NullValueException
     {
         return Decimal.valueOf(_decimal_value); // Works for null.
+    }
+
+    @Override
+    public boolean isNumericValue() {
+        return !isNullValue();
     }
 
     public void setValue(long value)

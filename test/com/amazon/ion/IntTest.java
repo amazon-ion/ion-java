@@ -32,6 +32,7 @@ public class IntTest
     {
         assertSame(IonType.INT, value.getType());
         assertTrue("isNullValue() is false",   value.isNullValue());
+        assertFalse(value.isNumericValue());
 
         try
         {
@@ -48,6 +49,7 @@ public class IntTest
         catch (NullValueException e) { }
 
         assertNull("toBigInteger() isn't null", value.bigIntegerValue());
+        assertNull("bigDecimalValue() isn't null", value.bigDecimalValue());
     }
 
 
@@ -63,6 +65,7 @@ public class IntTest
         value.setValue(A_LONG_INT);
         assertEquals(A_LONG_INT, value.longValue());
         assertEquals(BigInteger.valueOf(A_LONG_INT), value.bigIntegerValue());
+        assertEquals(BigDecimal.valueOf(A_LONG_INT), value.bigDecimalValue());
 
         value.setValue(null);
         checkNullInt(value);
@@ -224,6 +227,9 @@ public class IntTest
         assertEquals(SUPER_BIG_TRUNC_32, val.intValue());
 
         assertEquals(SUPER_BIG.hashCode(), val.hashCode());
+
+        IonNumber result = (IonNumber) reload(val);
+        assertEquals(0, big.compareTo(result.bigDecimalValue()));
     }
 
     @Test
@@ -479,6 +485,26 @@ public class IntTest
     @Test
     public void testGetIntegerSizeNegativeIntBoundary() {
         testGetIntegerSizeIntBoundary(Integer.MIN_VALUE);
+    }
+
+    @Test
+    public void testIsNumeric()
+    {
+        IonNumber value = (IonNumber) oneValue("1");
+        assertTrue(value.isNumericValue());
+
+        IonNumber nullValue = (IonNumber) oneValue("null.int");
+        assertFalse(nullValue.isNumericValue());
+    }
+
+    @Test
+    public void testBigDecimalValue()
+    {
+        IonNumber value = (IonNumber) oneValue("1");
+        assertEquals(BigDecimal.valueOf(1), value.bigDecimalValue());
+
+        IonNumber nullValue = (IonNumber) oneValue("null.int");
+        assertNull(nullValue.bigDecimalValue());
     }
 
     private void testGetIntegerSizeLongBoundary(long boundaryValue) {
