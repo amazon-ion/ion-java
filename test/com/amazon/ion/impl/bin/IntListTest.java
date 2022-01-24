@@ -7,12 +7,13 @@ public class IntListTest extends TestCase {
     public void testSize() {
         IntList intList = new IntList();
         assertEquals(intList.size(), 0);
-        intList.add(1);
+        
+        intList.add(0);
         assertEquals(intList.size(), 1);
-        intList.add(2);
+        
+        intList.add(0);
         assertEquals(intList.size(), 2);
-        intList.add(3);
-        assertEquals(intList.size(), 3);
+        
         intList.clear();
         assertEquals(intList.size(), 0);
     }
