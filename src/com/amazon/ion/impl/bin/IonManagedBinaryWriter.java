@@ -927,18 +927,16 @@ import java.util.Map;
 
     public void setTypeAnnotations(final String... annotations)
     {
-        if (annotations == null)
-        {
-            user.setTypeAnnotationSymbols((SymbolToken[]) null);
+        // Clear the current list of annotations
+        user.setTypeAnnotationSymbols((SymbolToken[]) null);
+        if (annotations == null) {
+            return;
         }
-        else
-        {
-            final SymbolToken[] tokens = new SymbolToken[annotations.length];
-            for (int i = 0; i < tokens.length; i++)
-            {
-                tokens[i] = intern(annotations[i]);
-            }
-            user.setTypeAnnotationSymbols(tokens);
+
+        // Add each string to the annotations list.
+        // XXX: This is a very hot path. This code avoids allocating temporary iterators/arrays.
+        for (int i = 0; i < annotations.length; i++) {
+            addTypeAnnotation(annotations[i]);
         }
     }
 
