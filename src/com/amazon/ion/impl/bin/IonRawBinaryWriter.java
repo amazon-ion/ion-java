@@ -498,7 +498,7 @@ import java.util.NoSuchElementException;
     private boolean                             hasWrittenValuesSinceConstructed;
 
     private int                     currentFieldSid;
-    private final List<Integer>     currentAnnotationSids;
+    private final IntList     currentAnnotationSids;
     // XXX this is for managed detection of TLV that is a LST--this is easier to track here than at the managed level
     private boolean                     hasTopLevelSymbolTableAnnotation;
 
@@ -540,7 +540,7 @@ import java.util.NoSuchElementException;
         this.hasWrittenValuesSinceConstructed = false;
 
         this.currentFieldSid                  = SID_UNASSIGNED;
-        this.currentAnnotationSids            = new ArrayList<Integer>();
+        this.currentAnnotationSids            = new IntList();
         this.hasTopLevelSymbolTableAnnotation = false;
 
         this.closed = false;
@@ -847,8 +847,10 @@ import java.util.NoSuchElementException;
             final long annotationsLengthPosition = buffer.position();
             buffer.writeVarUInt(0L);
             int annotationsLength = 0;
-            for (final int symbol : currentAnnotationSids)
+            // XXX: This is a very hot path. This code intentionally avoids creating iterators.
+            for (int m = 0; m < currentAnnotationSids.size(); m++)
             {
+                final int symbol = currentAnnotationSids.get(m);
                 checkSid(symbol);
                 final int symbolLength = buffer.writeVarUInt(symbol);
                 annotationsLength += symbolLength;
