@@ -18,90 +18,84 @@ package com.amazon.ion.impl.bin;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * A facade over {@link Block} management and low-level Ion encoding concerns for the {@link IonRawBinaryWriter}.
  */
 /*package*/ final class WriteBuffer implements Closeable
 {
-    private final BlockAllocator allocator;
-    private final List<Block> blocks;
-    private Block current;
-    private int index;
+
+    // A `long` is 8 bytes of data. The VarUInt encoding will add a continuation bit to every byte,
+    // growing the data size by 8 more bits. Therefore, the largest encoded size of a `long` is
+    // 9 bytes.
+//    private static final int MAX_VAR_UINT_LENGTH = 9;
+//    private static final int BITS_PER_VAR_UINT_BYTE = 7;
+
+    // A `long` is 8 bytes of data. The VarInt encoding will add one continuation bit per byte
+    // as well as a sign bit, for a total of 9 extra bits. Therefore, the largest encoding
+    // of a `long` will be just over 9 bytes.
+    private static final int MAX_VAR_INT_LENGTH = 10;
+
+    private ByteBuffer byteBuffer;
+    // Reusable buffer for encoding VarUInts and VarInts
+//    private final byte[] varUIntBuffer;
+//    private final byte[] varIntBuffer;
+
+    private Block initialBlock;
+
+    private byte[] intBuffer;
 
     public WriteBuffer(final BlockAllocator allocator)
     {
-        this.allocator = allocator;
-        this.blocks = new ArrayList<Block>();
-
-        // initial seed of the first block
-        allocateNewBlock();
-
-        this.index = 0;
-        this.current = blocks.get(0);
-    }
-
-    private void allocateNewBlock()
-    {
-        blocks.add(allocator.allocateBlock());
-    }
-
-    /** Returns the block index for the given position. */
-    private int index(final long position)
-    {
-        return (int) (position / allocator.getBlockSize());
-    }
-
-    /** Returns the offset within the block for a given position. */
-    private int offset(final long position)
-    {
-        return (int) (position % allocator.getBlockSize());
+        initialBlock = allocator.allocateBlock();
+        byteBuffer = ByteBuffer.wrap(initialBlock.data);
+//        varUIntBuffer = new byte[MAX_VAR_UINT_LENGTH];
+//        varIntBuffer = new byte[MAX_VAR_INT_LENGTH];
+        intBuffer = new byte[16];
     }
 
     /** Resets the write buffer to empty. */
     public void reset()
     {
         close();
-        allocateNewBlock();
-        index = 0;
-        current = blocks.get(index);
     }
 
     public void close()
     {
-        // free all the blocks
-        for (final Block block : blocks)
-        {
-            block.close();
+        byteBuffer.clear();
+        if (initialBlock != null) {
+            initialBlock.close();
+            initialBlock = null;
         }
-        blocks.clear();
-
-        // note--we don't explicitly flag that we're closed for efficiency
     }
 
     /** Resets the write buffer to a particular point. */
     public void truncate(final long position)
     {
-        final int index = index(position);
-        final int offset = offset(position);
-        final Block block = blocks.get(index);
-        this.index = index;
-        block.limit = offset;
-        current = block;
+        byteBuffer.position((int) position);
     }
 
-    /** Returns the amount of capacity left in the current block. */
-    public int remaining()
-    {
-        return current.remaining();
+    private int remaining() {
+        return byteBuffer.remaining();
     }
 
-    /** Returns the logical position in the current block. */
-    public long position()
-    {
-        return (((long) index) * allocator.getBlockSize()) + current.limit;
+    public int position() {
+        return byteBuffer.position();
+    }
+
+    private void grow() {
+        //System.out.println("Growing from " + byteBuffer.capacity() + " to " + (byteBuffer.capacity() * 2));
+        ByteBuffer newBuffer = ByteBuffer.allocate(byteBuffer.capacity() * 2);
+        byteBuffer.flip();
+        newBuffer.put(byteBuffer);
+        if (initialBlock != null) {
+            // return the block to its pool, we'll make a new one
+            initialBlock.close();
+            initialBlock = null;
+        }
+        byteBuffer = newBuffer;
     }
 
     private static final int OCTET_MASK = 0xFF;
@@ -109,65 +103,27 @@ import java.util.List;
     /** Returns the octet at the logical position given. */
     public int getUInt8At(final long position)
     {
-        final int index = index(position);
-        final int offset = offset(position);
-        final Block block = blocks.get(index);
-        return block.data[offset] & OCTET_MASK;
+        return byteBuffer.get((int) position) & OCTET_MASK;
     }
 
     /** Writes a single octet to the buffer, expanding if necessary. */
     public void writeByte(final byte octet)
     {
-        if (remaining() < 1)
-        {
-            if (index == blocks.size() - 1)
-            {
-                allocateNewBlock();
-            }
-            index++;
-            current = blocks.get(index);
+        if (remaining() < 1) {
+            grow();
         }
-        final Block block = current;
-        block.data[block.limit] = octet;
-        block.limit++;
+        byteBuffer.put(octet);
     }
 
-    // slow in the sense that we do all kind of block boundary checking
-    private void writeBytesSlow(final byte[] bytes, int off, int len)
-    {
-        while (len > 0)
-        {
-            final Block block = current;
-            final int amount = Math.min(len, block.remaining());
-            System.arraycopy(bytes, off, block.data, block.limit, amount);
-            block.limit += amount;
-            off += amount;
-            len -= amount;
-            if (block.remaining() == 0)
-            {
-                if (index == blocks.size() - 1)
-                {
-                    allocateNewBlock();
-                }
-                index++;
-                current = blocks.get(index);
-            }
-        }
-
-    }
 
     /** Writes an array of bytes to the buffer expanding if necessary. */
     public void writeBytes(final byte[] bytes, final int off, final int len)
     {
-        if (len > remaining())
-        {
-            writeBytesSlow(bytes, off, len);
-            return;
+        while (remaining() < len) {
+            // TODO: Enforce a maximum size
+            grow();
         }
-
-        final Block block = current;
-        System.arraycopy(bytes, off, block.data, block.limit, len);
-        block.limit += len;
+        byteBuffer.put(bytes, off, len);
     }
 
     /**
@@ -180,367 +136,34 @@ import java.util.List;
      * @param shiftBy   The number of bytes to the left that we'll be shifting.
      */
     public void shiftBytesLeft(int length, int shiftBy) {
-        if (shiftBy == 0) {
-            // Nothing to do.
-            return;
+        if (byteBuffer.position() < length + shiftBy) {
+            throw new IndexOutOfBoundsException(
+                    "Cannot shift "
+                        + length
+                        + " bytes to the left by "
+                        + shiftBy
+                        + "; buffer only contains "
+                        + byteBuffer.position()
+                        + " bytes."
+            );
         }
 
-        // If all of the bytes that we need to shift are in the current block, do a simple memcpy.
-        if (current.limit >= length + shiftBy) {
-            shiftBytesLeftWithinASingleBlock(length, shiftBy);
-            return;
-        }
-
-        // Otherwise, the slice we're shifting straddles multiple blocks. We'll need to iterate across those blocks
-        // applying shifting logic to each one.
-        shiftBytesLeftAcrossBlocks(length, shiftBy);
-    }
-
-    /**
-     * Shifts the last `length` bytes in the buffer to the left. The caller must guarantee that the `current` Block
-     * contains at least `length + shiftBy` bytes. This ensures that we're shifting a contiguous slice of bytes within
-     * a single block.
-     *
-     * @param length    The number of bytes at the end of the buffer that we'll be shifting to the left.
-     * @param shiftBy   The number of bytes to the left that we'll be shifting.
-     */
-    private void shiftBytesLeftWithinASingleBlock(int length, int shiftBy) {
-        int startOfSliceToShift = current.limit - length;
+        int startOfSliceToShift = byteBuffer.position() - length;
         System.arraycopy(
-                current.data,
+                byteBuffer.array(),
                 startOfSliceToShift,
-                current.data,
+                byteBuffer.array(),
                 startOfSliceToShift - shiftBy,
                 length
         );
-        // Update the `limit` (cursor position) within the current block to reflect that
-        // we have reclaimed `length` bytes of space in the buffer.
-        current.limit -= shiftBy;
-    }
-
-    /**
-     * Shifts the last `length` bytes in the buffer to the left. Unlike
-     * {@link #shiftBytesLeftWithinASingleBlock(int, int)}, this method supports shifting bytes across multiple blocks
-     * in the buffer.
-     *
-     * @param length    The number of bytes at the end of the buffer that we'll be shifting to the left.
-     * @param shiftBy   The number of bytes to the left that we'll be shifting.
-     */
-    private void shiftBytesLeftAcrossBlocks(int length, int shiftBy) {
-        // Our starting position is the first byte that we plan to shift backwards. The `bufferOffset` is the cursor's
-        // current position in the stream; we can use this to derive which block it's in as well as its position within
-        // that block.
-        long bufferOffset = position() - length;
-
-        Block block = null;
-        while (length > 0)
-        {
-            // Using the `bufferOffset`, determine which block we're in...
-            int blockIndex = index(bufferOffset);
-            block = blocks.get(blockIndex);
-            // ...and our offset within that block.
-            int blockOffset = offset(bufferOffset);
-
-            // If the block offset is within `shiftBy` bytes of beginning of the block, some bytes we're shifting
-            // will end up in the previous block. Here's an illustrated example:
-            //
-            // shiftBy = 2, blockIndex = 1, blockOffset = 1
-            //                        v---- Cursor is here
-            // Before: [A B C D E] [F G H I J]
-            // After : [A B C D G] [F G H I J]
-            //  Now this is G --^       ^-- And the cursor is here, ready to continue copy the rest.
-            if (blockOffset < shiftBy) {
-                Block previousBlock = blocks.get(blockIndex - 1);
-                int numberOfBytesToShift = Math.min(length, shiftBy) - blockOffset;
-                System.arraycopy(block.data, blockOffset, previousBlock.data, previousBlock.data.length - numberOfBytesToShift, numberOfBytesToShift);
-
-                // Now that we've shifted some bytes, update our position within the buffer.
-                bufferOffset += numberOfBytesToShift;
-                length -= numberOfBytesToShift;
-
-                // If there are no more bytes to shift...
-                if (length == 0) {
-                    // ...lower the `limit` because we've reclaimed some bytes in this block...
-                    block.limit -= numberOfBytesToShift;
-                    // ...and early return.
-                    return;
-                }
-                // Otherwise, use our new buffer offset to recalculate our block-specific position.
-                blockIndex = index(bufferOffset);
-                block = blocks.get(blockIndex);
-                blockOffset = offset(bufferOffset);
-            }
-
-            // At this point, the block offset is at least `shiftBy` bytes away from the beginning of the block, so
-            // we can do a memcpy to shift the rest of the bytes in the block.
-            int numberOfBytesToShift = Math.min(length, block.data.length - blockOffset);
-            System.arraycopy(block.data, blockOffset, block.data, blockOffset - shiftBy, numberOfBytesToShift);
-
-            // Update our counters and see if there are any more bytes to shift.
-            bufferOffset += numberOfBytesToShift;
-            length -= numberOfBytesToShift;
-        }
-        if (block != null) {
-            // We've reclaimed some space in this block; lower the `limit` accordingly.
-            block.limit -= shiftBy;
-        }
+        int newEnd = byteBuffer.position() - shiftBy;
+        byteBuffer.position(newEnd);
     }
 
     /** Writes an array of bytes to the buffer expanding if necessary, defaulting to the entire array. */
     public void writeBytes(byte[] bytes)
     {
         writeBytes(bytes, 0, bytes.length);
-    }
-
-    // UTF-8 character writing
-
-    private static final char HIGH_SURROGATE_FIRST      = 0xD800;
-    private static final char HIGH_SURROGATE_LAST       = 0xDBFF;
-    private static final char LOW_SURROGATE_FIRST       = 0xDC00;
-    private static final char LOW_SURROGATE_LAST        = 0xDFFF;
-    private static final int  SURROGATE_BASE            = 0x10000;
-    private static final int  BITS_PER_SURROGATE        = 10;
-
-    private static final int  UTF8_FOLLOW_MASK          = 0x3F;
-
-    private static final int  UTF8_FOLLOW_PREFIX_MASK   = 0x80;
-    private static final int  UTF8_2_OCTET_PREFIX_MASK  = 0xC0;
-    private static final int  UTF8_3_OCTET_PREFIX_MASK  = 0xE0;
-    private static final int  UTF8_4_OCTET_PREFIX_MASK  = 0xF0;
-
-    private static final int  UTF8_BITS_PER_FOLLOW_OCTET = 6;
-    private static final int  UTF8_2_OCTET_SHIFT         = 1 * UTF8_BITS_PER_FOLLOW_OCTET;
-    private static final int  UTF8_3_OCTET_SHIFT         = 2 * UTF8_BITS_PER_FOLLOW_OCTET;
-    private static final int  UTF8_4_OCTET_SHIFT         = 3 * UTF8_BITS_PER_FOLLOW_OCTET;
-
-    private static final int UTF8_2_OCTET_MIN_VALUE = 1 << 7;
-    private static final int UTF8_3_OCTET_MIN_VALUE = 1 << (5 + (1 * UTF8_BITS_PER_FOLLOW_OCTET));
-
-
-    // slow in the sense that we deal with any kind of UTF-8 sequence and block boundaries
-    private int writeUTF8Slow(final CharSequence chars, int off, int len)
-    {
-        int octets = 0;
-        while (len > 0)
-        {
-            final char ch = chars.charAt(off);
-            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
-            {
-                throw new IllegalArgumentException("Unpaired low surrogate: " + (int) ch);
-            }
-            if ((ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST))
-            {
-                // we need to look ahead in this case
-                off++;
-                len--;
-                if (len == 0)
-                {
-                    throw new IllegalArgumentException("Unpaired low surrogate at end of character sequence: " + ch);
-                }
-
-                final int ch2 = chars.charAt(off);
-                if (ch2 < LOW_SURROGATE_FIRST || ch2 > LOW_SURROGATE_LAST)
-                {
-                    throw new IllegalArgumentException("Low surrogate with unpaired high surrogate: " + ch + " + " + ch2);
-                }
-
-                // at this point we have a high and low surrogate
-                final int codepoint = (((ch - HIGH_SURROGATE_FIRST) << BITS_PER_SURROGATE) | (ch2 - LOW_SURROGATE_FIRST)) + SURROGATE_BASE;
-                writeByte((byte) (UTF8_4_OCTET_PREFIX_MASK | ( codepoint >> UTF8_4_OCTET_SHIFT)                    ));
-                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ((codepoint >> UTF8_3_OCTET_SHIFT) & UTF8_FOLLOW_MASK)));
-                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ((codepoint >> UTF8_2_OCTET_SHIFT) & UTF8_FOLLOW_MASK)));
-                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ( codepoint                        & UTF8_FOLLOW_MASK)));
-
-                octets += 4;
-            }
-            else if (ch < UTF8_2_OCTET_MIN_VALUE)
-            {
-                writeByte((byte) ch);
-                octets++;
-            }
-            else if (ch < UTF8_3_OCTET_MIN_VALUE)
-            {
-                writeByte((byte) (UTF8_2_OCTET_PREFIX_MASK | (ch >> UTF8_2_OCTET_SHIFT)                    ));
-                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | (ch                        & UTF8_FOLLOW_MASK)));
-                octets += 2;
-            }
-            else
-            {
-                writeByte((byte) (UTF8_3_OCTET_PREFIX_MASK | ( ch >> UTF8_3_OCTET_SHIFT)                    ));
-                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ((ch >> UTF8_2_OCTET_SHIFT) & UTF8_FOLLOW_MASK)));
-                writeByte((byte) (UTF8_FOLLOW_PREFIX_MASK  | ( ch                        & UTF8_FOLLOW_MASK)));
-                octets += 3;
-            }
-            off++;
-            len--;
-        }
-        return octets;
-    }
-
-    private int writeUTF8UpTo3Byte(final CharSequence chars, int off, int len)
-    {
-        // fast path if we fit in the block assuming optimistically for all three-byte
-        if ((len * 3) > remaining())
-        {
-            return writeUTF8Slow(chars, off, len);
-        }
-
-        final Block block = current;
-        int limit = block.limit;
-        int octets = 0;
-        while (len > 0)
-        {
-            final char ch = chars.charAt(off);
-            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
-            {
-                throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
-            }
-            if ((ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST))
-            {
-                // we lost the 3-byte bet
-                break;
-            }
-
-            if (ch < UTF8_2_OCTET_MIN_VALUE)
-            {
-                block.data[limit++] = (byte) ch;
-                octets++;
-            }
-            else if (ch < UTF8_3_OCTET_MIN_VALUE)
-            {
-                block.data[limit++] = (byte) (UTF8_2_OCTET_PREFIX_MASK | (ch >> UTF8_2_OCTET_SHIFT)                    );
-                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | (ch                        & UTF8_FOLLOW_MASK));
-                octets += 2;
-            }
-            else
-            {
-                block.data[limit++] = (byte) (UTF8_3_OCTET_PREFIX_MASK | ( ch >> UTF8_3_OCTET_SHIFT)                    );
-                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | ((ch >> UTF8_2_OCTET_SHIFT) & UTF8_FOLLOW_MASK));
-                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | ( ch                        & UTF8_FOLLOW_MASK));
-                octets += 3;
-            }
-            off++;
-            len--;
-        }
-        block.limit = limit;
-
-        if (len > 0)
-        {
-            // just defer to 'slow' writing for non-BMP characters
-            return octets + writeUTF8Slow(chars, off, len);
-        }
-        return octets;
-    }
-
-    private int writeUTF8UpTo2Byte(final CharSequence chars, int off, int len)
-    {
-        // fast path if we fit in the block assuming optimistically for all two-byte
-        if ((len * 2) > remaining())
-        {
-            return writeUTF8Slow(chars, off, len);
-        }
-
-        final Block block = current;
-        int limit = block.limit;
-        char ch = '\0';
-        int octets = 0;
-        while (len > 0)
-        {
-            ch = chars.charAt(off);
-            if (ch >= UTF8_3_OCTET_MIN_VALUE)
-            {
-                // we lost the 2-byte bet
-                break;
-            }
-
-            if (ch < UTF8_2_OCTET_MIN_VALUE)
-            {
-                block.data[limit++] = (byte) ch;
-                octets++;
-            }
-            else
-            {
-                block.data[limit++] = (byte) (UTF8_2_OCTET_PREFIX_MASK | (ch >> UTF8_2_OCTET_SHIFT)                    );
-                block.data[limit++] = (byte) (UTF8_FOLLOW_PREFIX_MASK  | (ch                        & UTF8_FOLLOW_MASK));
-                octets += 2;
-            }
-            off++;
-            len--;
-        }
-        block.limit = limit;
-
-        if (len > 0)
-        {
-            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
-            {
-                throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
-            }
-            if (ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST)
-            {
-                // just defer to 'slow' writing for non-BMP characters
-                return octets + writeUTF8Slow(chars, off, len);
-            }
-
-            // we must be a three byte BMP character
-            return octets + writeUTF8UpTo3Byte(chars, off, len);
-        }
-        return octets;
-    }
-
-    /** Returns the number of octets written. */
-    public int writeUTF8(final CharSequence chars, int off, int len)
-    {
-        // fast path if we fit in the block assuming optimistically for all ASCII
-        if (len > remaining())
-        {
-            return writeUTF8Slow(chars, off, len);
-        }
-        final Block block = current;
-        int limit = block.limit;
-        char ch = '\0';
-        int octets = 0;
-        while (len > 0)
-        {
-            ch = chars.charAt(off);
-            if (ch >= UTF8_2_OCTET_MIN_VALUE)
-            {
-                // we lost the ASCII bet
-                break;
-            }
-
-            block.data[limit++] = (byte) ch;
-            octets++;
-            off++;
-            len--;
-        }
-        block.limit = limit;
-
-        if (len > 0)
-        {
-            if (ch < UTF8_3_OCTET_MIN_VALUE)
-            {
-                return octets + writeUTF8UpTo2Byte(chars, off, len);
-            }
-            if (ch >= LOW_SURROGATE_FIRST && ch <= LOW_SURROGATE_LAST)
-            {
-                throw new IllegalArgumentException("Unpaired low surrogate: " + ch);
-            }
-            if (ch >= HIGH_SURROGATE_FIRST && ch <= HIGH_SURROGATE_LAST)
-            {
-                // just defer to 'slow' writing for non-BMP characters
-                return octets + writeUTF8Slow(chars, off, len);
-            }
-
-            // we must be a three byte BMP character
-            return octets + writeUTF8UpTo3Byte(chars, off, len);
-        }
-        return octets;
-    }
-
-    /** Returns the number of octets written. */
-    public int writeUTF8(final CharSequence chars)
-    {
-        return writeUTF8(chars, 0, chars.length());
     }
 
     // unsigned fixed integer writes -- does not check sign/bounds
@@ -559,202 +182,94 @@ import java.util.List;
         writeByte((byte) value);
     }
 
-    private void writeUInt16Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) (value                      ));
-    }
-
     public void writeUInt16(long value)
     {
-        if (remaining() < 2)
-        {
-            writeUInt16Slow(value);
-            return;
+        if (remaining() < 2) {
+            grow();
         }
-
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) (value                      );
-        block.limit = limit;
-    }
-
-    private void writeUInt24Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) (value                      ));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     public void writeUInt24(long value)
     {
-        if (remaining() < 3)
-        {
-            writeUInt24Slow(value);
-            return;
+        if (remaining() < 3) {
+            grow();
         }
 
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) (value                      );
-        block.limit = limit;
-    }
-
-    private void writeUInt32Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) (value                      ));
+        byteBuffer.put((byte) (value >> UINT_3_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     public void writeUInt32(long value)
     {
-        if (remaining() < 4)
-        {
-            writeUInt32Slow(value);
-            return;
+        if (remaining() < 4) {
+            grow();
         }
 
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) (value                      );
-        block.limit = limit;
-    }
-
-    private void writeUInt40Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) (value                      ));
+        byteBuffer.put((byte) (value >> UINT_4_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_3_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     public void writeUInt40(long value)
     {
-        if (remaining() < 5)
-        {
-            writeUInt40Slow(value);
-            return;
+        if (remaining() < 5) {
+            grow();
         }
 
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) (value                      );
-        block.limit = limit;
-    }
-
-    private void writeUInt48Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_6_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) (value                      ));
+        byteBuffer.put((byte) (value >> UINT_5_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_4_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_3_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     public void writeUInt48(long value)
     {
-        if (remaining() < 6)
-        {
-            writeUInt48Slow(value);
-            return;
+        if (remaining() < 6) {
+            grow();
         }
 
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_6_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) ( value                     );
-        block.limit = limit;
-    }
-
-    private void writeUInt56Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_7_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_6_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) (value                      ));
+        byteBuffer.put((byte) (value >> UINT_6_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_5_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_4_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_3_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     public void writeUInt56(long value)
     {
-        if (remaining() < 7)
-        {
-            writeUInt56Slow(value);
-            return;
+        if (remaining() < 7) {
+            grow();
         }
 
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_7_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_6_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) (value                      );
-        block.limit = limit;
-    }
-
-    private void writeUInt64Slow(long value)
-    {
-        writeByte((byte) (value >> UINT_8_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_7_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_6_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_5_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_4_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_3_OCTET_SHIFT));
-        writeByte((byte) (value >> UINT_2_OCTET_SHIFT));
-        writeByte((byte) ( value                     ));
+        byteBuffer.put((byte) (value >> UINT_7_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_6_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_5_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_4_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_3_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     public void writeUInt64(long value)
     {
-        if (remaining() < 8)
-        {
-            writeUInt64Slow(value);
-            return;
+        if (remaining() < 8) {
+            grow();
         }
 
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte) (value >> UINT_8_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_7_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_6_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_5_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_4_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_3_OCTET_SHIFT);
-        data[limit++] = (byte) (value >> UINT_2_OCTET_SHIFT);
-        data[limit++] = (byte) ( value                      );
-        block.limit = limit;
-
-
+        byteBuffer.put((byte) (value >> UINT_8_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_7_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_6_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_5_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_4_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_3_OCTET_SHIFT));
+        byteBuffer.put((byte) (value >> UINT_2_OCTET_SHIFT));
+        byteBuffer.put((byte) (value));
     }
 
     // signed fixed integer writes - does not check bounds (especially important for IntX.MIN_VALUE).
@@ -849,7 +364,7 @@ import java.util.List;
     // variable length integer writing
 
     private static final long VAR_INT_BITS_PER_OCTET = 7;
-    private static final long VAR_INT_MASK = 0x7F;
+    private static final long LOWER_SEVEN_BITS_MASK = 0x7F;
 
     private static final long VAR_UINT_9_OCTET_SHIFT = (8 * VAR_INT_BITS_PER_OCTET);
     private static final long VAR_UINT_9_OCTET_MIN_VALUE = (1L << VAR_UINT_9_OCTET_SHIFT);
@@ -877,152 +392,134 @@ import java.util.List;
 
     private static final long VAR_INT_FINAL_OCTET_SIGNAL_MASK = 0x80;
 
-    private int writeVarUIntSlow(final long value)
-    {
-        int size = 1;
-        if (value >= VAR_UINT_9_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value >> VAR_UINT_9_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
+    // Caller guarantees value is less than VAR_UINT_4_OCTET_MIN_VALUE
+    public int writeSmallVarUInt(final long value) {
+        if (remaining() < 3) { // todo: constant?
+            grow();
         }
-        if (value >= VAR_UINT_8_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value >> VAR_UINT_8_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
-        }
-        if (value >= VAR_UINT_7_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value >> VAR_UINT_7_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
-        }
-        if (value >= VAR_UINT_6_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value >> VAR_UINT_6_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
-        }
-        if (value >= VAR_UINT_5_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value >> VAR_UINT_5_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
-        }
-        if (value >= VAR_UINT_4_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
-        }
+
+        int startPosition = position();
         if (value >= VAR_UINT_3_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
+            intBuffer[0] = (byte) ((value >> VAR_UINT_3_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK);
+            intBuffer[1] = (byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK);
+            intBuffer[2] = (byte) ((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+            byteBuffer.put(intBuffer, 0, 3);
+            return 3;
+//            byteBuffer.put((byte) ((value >> VAR_UINT_3_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+//            byteBuffer.put((byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+//            byteBuffer.put((byte) ((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK));
+//            return position() - startPosition;
         }
+
         if (value >= VAR_UINT_2_OCTET_MIN_VALUE)
         {
-            writeUInt8((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-            size++;
+            intBuffer[0] = (byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK);
+            intBuffer[1] = (byte) ((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+            byteBuffer.put(intBuffer, 0, 2);
+            return 2;
+//            byteBuffer.put((byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+//            byteBuffer.put((byte) ((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK));
+//            return position() - startPosition;
         }
-        writeUInt8((value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-        return size;
-    }
 
-    private int writeVarUIntDirect2(final long value)
-    {
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-
-        block.limit = limit;
-        return 2;
-    }
-
-    private int writeVarUIntDirect3(final long value)
-    {
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte)  ((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-
-        block.limit = limit;
-        return 3;
-    }
-
-    private int writeVarUIntDirect4(final long value)
-    {
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte)  ((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte)  ((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-
-        block.limit = limit;
-        return 4;
-    }
-
-    private int writeVarUIntDirect5(final long value)
-    {
-        final Block block = current;
-        final byte[] data = block.data;
-        int limit = block.limit;
-        data[limit++] = (byte)  ((value >> VAR_UINT_5_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte)  ((value >> VAR_UINT_4_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte)  ((value >> VAR_UINT_3_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte)  ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-        data[limit++] = (byte) (((value)                           & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-
-        block.limit = limit;
-        return 5;
+        byteBuffer.put((byte) ((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK));
+        return position() - startPosition;
     }
 
     public int writeVarUInt(final long value)
     {
-        if (value < VAR_UINT_2_OCTET_MIN_VALUE)
-        {
-            writeUInt8((value & 0x7F) | 0x80);
-            return 1;
+        if (value < VAR_UINT_4_OCTET_MIN_VALUE) {
+            return writeSmallVarUInt(value);
         }
-        if (value < VAR_UINT_3_OCTET_MIN_VALUE)
-        {
-            if (remaining() < 2)
-            {
-                return writeVarUIntSlow(value);
-            }
-            return writeVarUIntDirect2(value);
-        }
-        if (value < VAR_UINT_4_OCTET_MIN_VALUE)
-        {
-            if (remaining() < 3)
-            {
-                return writeVarUIntSlow(value);
-            }
-            return writeVarUIntDirect3(value);
-        }
-        if (value < VAR_UINT_5_OCTET_MIN_VALUE)
-        {
-            if (remaining() < 4)
-            {
-                return writeVarUIntSlow(value);
-            }
-            return writeVarUIntDirect4(value);
-        }
-        if (value < VAR_UINT_6_OCTET_MIN_VALUE)
-        {
-            if (remaining() < 5)
-            {
-                return writeVarUIntSlow(value);
-            }
-            return writeVarUIntDirect5(value);
 
+        if (remaining() < 9) { // todo: constant?
+            grow();
         }
-        // TODO determine if it is worth doing the fast path beyond 2**35 - 1
 
-        // we give up--go to the 'slow' path
-        return writeVarUIntSlow(value);
+        int startPosition = position();
+        if (value >= VAR_UINT_9_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_9_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_8_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_8_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_7_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_7_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_6_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_6_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_5_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_5_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_4_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_4_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_3_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_3_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        if (value >= VAR_UINT_2_OCTET_MIN_VALUE)
+        {
+            byteBuffer.put((byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        }
+        byteBuffer.put((byte) ((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK));
+        return position() - startPosition;
     }
+
+//    public int slow_writeVarUInt(final long value)
+//    {
+//        // This check is conservative in that it could trigger growth even if a smaller value could still fit.
+//        // However, doing a single bounds check for the entire method is nice and simple.
+//        if (remaining() < MAX_VAR_UINT_LENGTH) {
+//            grow();
+//        }
+//
+//        if (value == 0) {
+//            byteBuffer.put((byte) VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+//            return 1;
+//        }
+//
+//        // Escape analysis should notice that this byte array 1) is small and 2) doesn't survive the method. That will
+//        // allow the JVM to convert it to a stack allocation.
+//        final byte[] encodedBytes = varUIntBuffer;
+//        Arrays.fill(encodedBytes, (byte) 0);
+//
+//        // Set the `end` flag bit of the final byte to 1
+//        encodedBytes[encodedBytes.length - 1] = (byte) VAR_INT_FINAL_OCTET_SIGNAL_MASK;
+//
+//        // We'll be writing to the end of the buffer as we go and working backwards. Keep track of the index of the
+//        // left-most populated byte in the buffer.
+//        int firstByte;
+//        // A copy of `value` that we'll consume in the process of encoding.
+//        long magnitude = value;
+//        for (firstByte = encodedBytes.length - 1; firstByte >= 0; firstByte--) {
+//            encodedBytes[firstByte] |= (byte) (magnitude & LOWER_SEVEN_BITS_MASK);
+//            magnitude >>= BITS_PER_VAR_UINT_BYTE;
+//            if (magnitude == 0) {
+//                break;
+//            }
+//        }
+
+//        int encodedLength = encodedBytes.length - firstByte;
+//        if (remaining() < encodedLength) {
+//            int remaining = remaining();
+//            System.out.println("oh no!");
+//            System.out.println("encoded length: " + encodedLength);
+//            System.out.println("encoded bytes : " + Arrays.toString(encodedBytes));
+//            System.out.println("remaining     : " + remaining);
+//        }
+//        byteBuffer.put(encodedBytes, firstByte, encodedLength);
+//
+//        return encodedLength;
+//    }
 
     private static final long VAR_INT_SIGNED_OCTET_MASK = 0x3F;
     private static final long VAR_INT_SIGNBIT_ON_MASK   = 0x40L;
@@ -1041,173 +538,170 @@ import java.util.List;
     private static final long VAR_INT_3_OCTET_MIN_VALUE  = (VAR_UINT_3_OCTET_MIN_VALUE >> 1);
     private static final long VAR_INT_2_OCTET_MIN_VALUE  = (VAR_UINT_2_OCTET_MIN_VALUE >> 1);
 
-    private int writeVarIntSlow(final long magnitude, final long signMask)
-    {
-        int size = 1;
-        if (magnitude >= VAR_INT_10_OCTET_MIN_VALUE)
-        {
-            writeUInt8(((magnitude >> VAR_INT_10_OCTET_SHIFT) & VAR_INT_SIGNED_OCTET_MASK) | signMask);
-            size++;
-        }
-        if (magnitude >= VAR_INT_9_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_9_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_8_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_8_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_7_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_7_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_6_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_6_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_5_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_5_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_4_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_4_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_3_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_3_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        if (magnitude >= VAR_INT_2_OCTET_MIN_VALUE)
-        {
-            final long bits = (magnitude >> VAR_UINT_2_OCTET_SHIFT);
-            writeUInt8(size == 1 ? ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (bits & VAR_INT_MASK));
-            size++;
-        }
-        writeUInt8((size == 1 ? ((magnitude & VAR_INT_SIGNED_OCTET_MASK) | signMask) : (magnitude & VAR_INT_MASK)) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-
-        return size;
-    }
-
     private static final long VAR_INT_BITS_PER_SIGNED_OCTET = 6;
     private static final long VAR_SINT_2_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (1 * VAR_INT_BITS_PER_OCTET);
     private static final long VAR_SINT_3_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (2 * VAR_INT_BITS_PER_OCTET);
     private static final long VAR_SINT_4_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (3 * VAR_INT_BITS_PER_OCTET);
     private static final long VAR_SINT_5_OCTET_SHIFT = VAR_INT_BITS_PER_SIGNED_OCTET + (4 * VAR_INT_BITS_PER_OCTET);
 
-    public int writeVarInt(long value)
-    {
-        assert value != Long.MIN_VALUE;
-
-        final long signMask = value < 0 ? VAR_INT_SIGNBIT_ON_MASK : VAR_INT_SIGNBIT_OFF_MASK;
-        final long magnitude = value < 0 ? -value : value;
-        if (magnitude < VAR_INT_2_OCTET_MIN_VALUE)
-        {
-            writeUInt8((magnitude & VAR_INT_SIGNED_OCTET_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK | signMask);
-            return 1;
+    private void writeVarIntByte(int sizeSoFar, long signMask, long magnitude, long octetShift) {
+        final long bits = (magnitude >> octetShift);
+        byte next;
+        if (sizeSoFar == 1) {
+            next = (byte) ((bits & VAR_INT_SIGNED_OCTET_MASK) | signMask);
+        } else {
+            next = (byte) (bits & LOWER_SEVEN_BITS_MASK);
         }
-        final long signBit = value < 0 ? 1 : 0;
-        final int remaining = remaining();
-        if (magnitude < VAR_INT_3_OCTET_MIN_VALUE && remaining >= 2)
-        {
-            return writeVarUIntDirect2(magnitude | (signBit << VAR_SINT_2_OCTET_SHIFT));
-        }
-        else if (magnitude < VAR_INT_4_OCTET_MIN_VALUE && remaining >= 3)
-        {
-            return writeVarUIntDirect3(magnitude | (signBit << VAR_SINT_3_OCTET_SHIFT));
-        }
-        else if (magnitude < VAR_INT_5_OCTET_MIN_VALUE && remaining >= 4)
-        {
-            return writeVarUIntDirect4(magnitude | (signBit << VAR_SINT_4_OCTET_SHIFT));
-        }
-        else if (magnitude < VAR_INT_6_OCTET_MIN_VALUE && remaining >= 5)
-        {
-            return writeVarUIntDirect5(magnitude | (signBit << VAR_SINT_5_OCTET_SHIFT));
-        }
-        // TODO determine if it is worth doing the fast path beyond 2**34 - 1
-
-        // we give up--go to the slow path
-        return writeVarIntSlow(magnitude, signMask);
+        byteBuffer.put(next);
     }
+    public int writeVarInt(final long value)
+    {
+        if (remaining() < MAX_VAR_INT_LENGTH) {
+            grow();
+        }
+
+        long magnitude = Math.abs(value);
+        final long signMask = value < 0 ? VAR_INT_SIGNBIT_ON_MASK : VAR_INT_SIGNBIT_OFF_MASK;
+        int size = 1;
+
+        if (magnitude >= VAR_INT_10_OCTET_MIN_VALUE)
+        {
+            byte next = (byte) (((magnitude >> VAR_INT_10_OCTET_SHIFT) & VAR_INT_SIGNED_OCTET_MASK) | signMask);
+            byteBuffer.put(next);
+            size++;
+        }
+        if (magnitude >= VAR_INT_9_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_9_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_8_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_8_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_7_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_7_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_6_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_6_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_5_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_5_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_4_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_4_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_3_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_3_OCTET_SHIFT);
+            size++;
+        }
+        if (magnitude >= VAR_INT_2_OCTET_MIN_VALUE)
+        {
+            writeVarIntByte(size, signMask, magnitude, VAR_UINT_2_OCTET_SHIFT);
+            size++;
+        }
+        byte lastByte;
+        if (size == 1) {
+            lastByte = (byte) ((magnitude & VAR_INT_SIGNED_OCTET_MASK) | signMask);
+        } else {
+            lastByte = (byte) (magnitude & LOWER_SEVEN_BITS_MASK);
+        }
+        lastByte |= VAR_INT_FINAL_OCTET_SIGNAL_MASK;
+        byteBuffer.put(lastByte);
+
+        return size;
+    }
+
+//    public int slow_writeVarInt(long value)
+//    {
+//        assert value != Long.MIN_VALUE;
+//
+//        if (remaining() < MAX_VAR_INT_LENGTH) {
+//            grow();
+//        }
+//
+//        if (value == 0) {
+//            byteBuffer.put((byte) VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+//            return 1;
+//        }
+//
+//        // Escape analysis should notice that this byte array 1) is small and 2) doesn't survive the method. That will
+//        // allow the JVM to convert it to a stack allocation.
+//        final byte[] encodedBytes = varIntBuffer;
+//        Arrays.fill(encodedBytes, (byte) 0);
+//        // Set the `end` flag bit of the final byte to 1
+//        encodedBytes[encodedBytes.length - 1] = (byte) VAR_INT_FINAL_OCTET_SIGNAL_MASK;
+//
+//        // Create a copy of `value` that we can consume during encoding. We'll encode the sign separately; we only
+//        // need the magnitude.
+//        long magnitude = Math.abs(value);
+//        int occupiedBits = 64 /* TODO: Const */ - Long.numberOfLeadingZeros(magnitude);
+//        int bytesRequired = 1;
+//        int remainingBits = Math.max(occupiedBits - 6 /*Mag bits in final byte*/, 0);
+//        bytesRequired += (int) Math.ceil(remainingBits / 7.0);
+//
+//        int bytesRemaining = bytesRequired;
+//        int firstByte = encodedBytes.length - bytesRequired;
+//        for (int byteIndex = encodedBytes.length - 1; byteIndex >= firstByte; byteIndex--) {
+//            bytesRemaining -= 1;
+//            if (bytesRemaining > 0) {
+//                encodedBytes[byteIndex] |= (byte) (magnitude & LOWER_SEVEN_BITS_MASK);
+//                magnitude >>>= 7;
+//            } else {
+//                encodedBytes[byteIndex] |= (byte) (magnitude & 0x3f); // Lower 6
+//                // If the value we're encoding is negative, flip the sign bit in the leftmost
+//                // encoded byte.
+//                if (value < 0) {
+//                    encodedBytes[byteIndex] |= 0x40;
+//                }
+//            }
+//        }
+//
+//        byteBuffer.put(encodedBytes, firstByte, bytesRequired);
+//        return bytesRequired;
+//    }
 
     // write variable integer of specific size at a specified position -- no bounds checking, will not expand the buffer
 
     public void writeVarUIntDirect1At(final long position, final long value)
     {
-        writeUInt8At(position, (value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
-    }
-
-    private void writeVarUIntDirect2StraddlingAt(final int index, final int offset, final long value)
-    {
-        // XXX we're stradling a block
-        final Block block1 = blocks.get(index);
-        block1.data[offset] = (byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-        final Block block2 = blocks.get(index + 1);
-        block2.data[0]      = (byte) ((value                            & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+        writeUInt8At(position, (value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
     }
 
     public void writeVarUIntDirect2At(long position, long value)
     {
-        final int index = index(position);
-        final int offset = offset(position);
-
-        if (offset + 2 > allocator.getBlockSize())
-        {
-            writeVarUIntDirect2StraddlingAt(index, offset, value);
-            return;
+        if (byteBuffer.remaining() < 2) {
+            grow();
         }
 
-        final Block block = blocks.get(index);
-        block.data[offset    ] = (byte) ((value >> VAR_UINT_2_OCTET_SHIFT) & VAR_INT_MASK);
-        block.data[offset + 1] = (byte) ((value                            & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+        byteBuffer.put((int) position, (byte)((value >> VAR_UINT_2_OCTET_SHIFT) & LOWER_SEVEN_BITS_MASK));
+        byteBuffer.put((int) position + 1, (byte)((value & LOWER_SEVEN_BITS_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK));
     }
 
     public void writeUInt8At(final long position, final long value)
     {
-        final int index = index(position);
-        final int offset = offset(position);
-
-        // XXX we'll never overrun a block unless we're given a position past our block array
-        final Block block = blocks.get(index);
-        block.data[offset] = (byte) value;
+        byteBuffer.put((int) position, (byte) value);
     }
 
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
     {
-        for (int i = 0; i <= index; i++)
-        {
-            Block block = blocks.get(i);
-            out.write(block.data, 0, block.limit);
-        }
+        out.write(byteBuffer.array(), 0, byteBuffer.position());
     }
 
     /** Write a specific segment of data from the buffer to a stream. */
     public void writeTo(final OutputStream out, long position, long length) throws IOException
     {
-        while (length > 0)
-        {
-            final int index = index(position);
-            final int offset = offset(position);
-            final Block block = blocks.get(index);
-            final int amount = (int) Math.min(block.data.length - offset, length);
-            out.write(block.data, offset, amount);
-
-            position += amount;
-            length -= amount;
-        }
+        out.write(byteBuffer.array(), (int) position, (int) length);
     }
 }

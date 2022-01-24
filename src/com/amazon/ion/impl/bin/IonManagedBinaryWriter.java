@@ -933,12 +933,15 @@ import java.util.Map;
         }
         else
         {
-            final SymbolToken[] tokens = new SymbolToken[annotations.length];
-            for (int i = 0; i < tokens.length; i++)
+            //final SymbolToken[] tokens = new SymbolToken[annotations.length];
+            // Clear annotations
+            setTypeAnnotationSymbols((SymbolToken[]) null);
+            for (int i = 0; i < annotations.length; i++)
             {
-                tokens[i] = intern(annotations[i]);
+//                tokens[i] = intern(annotations[i]);
+                addTypeAnnotation(annotations[i]);
             }
-            user.setTypeAnnotationSymbols(tokens);
+//            user.setTypeAnnotationSymbols(tokens);
         }
     }
 

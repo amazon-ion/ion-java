@@ -847,12 +847,19 @@ import java.util.NoSuchElementException;
             final long annotationsLengthPosition = buffer.position();
             buffer.writeVarUInt(0L);
             int annotationsLength = 0;
-            for (final int symbol : currentAnnotationSids)
-            {
+            // XXX: This is a VERY hot path. Using an iterator here can cause GC rates to spike.
+            for (int m = 0; m < currentAnnotationSids.size(); m++) {
+                final int symbol = currentAnnotationSids.get(m);
                 checkSid(symbol);
                 final int symbolLength = buffer.writeVarUInt(symbol);
                 annotationsLength += symbolLength;
             }
+//            for (final int symbol : currentAnnotationSids)
+//            {
+//                checkSid(symbol);
+//                final int symbolLength = buffer.writeVarUInt(symbol);
+//                annotationsLength += symbolLength;
+//            }
             if (annotationsLength > MAX_ANNOTATION_LENGTH)
             {
                 // TODO deal with side patching if we want to support > 32 4-byte symbols annotations... seems excessive
