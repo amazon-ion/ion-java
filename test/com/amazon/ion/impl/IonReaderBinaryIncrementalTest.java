@@ -1675,7 +1675,7 @@ public class IonReaderBinaryIncrementalTest {
 
     private static void assertSymbolEquals(
         String expectedText,
-        IonReaderBinaryIncremental.ImportLocation expectedImportLocation,
+        ImportLocation expectedImportLocation,
         SymbolToken actual
     ) {
         assertEquals(expectedText, actual.getText());
@@ -2162,11 +2162,11 @@ public class IonReaderBinaryIncrementalTest {
         IonReaderBinaryIncremental.SymbolTokenImpl symbolValue =
             (IonReaderBinaryIncremental.SymbolTokenImpl) reader.symbolValue();
         assertNull(symbolValue.getText());
-        assertEquals(new IonReaderBinaryIncremental.ImportLocation("foo", 3), symbolValue.getImportLocation());
+        assertEquals(new ImportLocation("foo", 3), symbolValue.getImportLocation());
         assertEquals(IonType.SYMBOL, reader.next());
         symbolValue = (IonReaderBinaryIncremental.SymbolTokenImpl) reader.symbolValue();
         assertNull(symbolValue.getText());
-        assertEquals(new IonReaderBinaryIncremental.ImportLocation("foo", 4), symbolValue.getImportLocation());
+        assertEquals(new ImportLocation("foo", 4), symbolValue.getImportLocation());
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("123", reader.stringValue());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -2175,7 +2175,7 @@ public class IonReaderBinaryIncrementalTest {
             new IonReaderBinaryIncremental.SymbolTokenImpl(
                 null,
                 15,
-                new IonReaderBinaryIncremental.ImportLocation("baz", 1)
+                new ImportLocation("baz", 1)
             ),
             symbolValue
         );
@@ -2185,7 +2185,7 @@ public class IonReaderBinaryIncrementalTest {
             new IonReaderBinaryIncremental.SymbolTokenImpl(
                 null,
                 16,
-                new IonReaderBinaryIncremental.ImportLocation("baz", 2)
+                new ImportLocation("baz", 2)
             ),
             symbolValue
         );

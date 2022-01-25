@@ -278,6 +278,21 @@ final class LocalSymbolTableImports
         return myImports;
     }
 
+    /**
+     * Gets the {@link ImportLocation} for the given symbol ID.
+     * @param sid the symbol ID.
+     * @return an ImportLocation, or null if the given symbol ID is not present in the imports.
+     */
+    ImportLocation getImportLocation(int sid) {
+        // TODO once ion-java moves to Java 1.6+, the search for the import could use Arrays.binarySearch.
+        for (int i = myBaseSids.length - 1; i >= 0; i--) {
+            if (myBaseSids[i] < sid) {
+                return new ImportLocation(myImports[i].getName(), sid - myBaseSids[i]);
+            }
+        }
+        return null;
+    }
+
     @Override
     public String toString()
     {
