@@ -1000,7 +1000,7 @@ public class IonReaderLookaheadBufferTest
 
         lookahead.fillInput();
         assertEquals(1, lookahead.getIvmIndex());
-        assertTrue(lookahead.getAnnotationSids().isEmpty());
+        assertFalse(lookahead.hasAnnotations());
         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
         assertEquals(5, lookahead.getValueStart());
         assertIonTypeId(IonType.INT, 0x1, lookahead.getValueTid());
@@ -1014,7 +1014,7 @@ public class IonReaderLookaheadBufferTest
         assertEquals(indexForInitialBufferSize(1, 1, 7), lookahead.getIvmIndex());
         lookahead.resetIvmIndex();
         assertEquals(-1, lookahead.getIvmIndex());
-        assertTrue(lookahead.getAnnotationSids().isEmpty());
+        assertFalse(lookahead.hasAnnotations());
         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
         assertEquals(indexForInitialBufferSize(6, 6, 12), lookahead.getValueStart());
         assertIonTypeId(IonType.STRUCT, 0x1, lookahead.getValueTid());
@@ -1023,7 +1023,9 @@ public class IonReaderLookaheadBufferTest
         lookahead.fillInput();
         assertEquals(-1, lookahead.getIvmIndex());
         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
-        assertEquals(Arrays.asList(4, 5), lookahead.getAnnotationSids());
+        assertTrue(lookahead.hasAnnotations());
+        assertEquals(indexForInitialBufferSize(10, 10, 16), lookahead.getAnnotationSidsMarker().startIndex);
+        assertEquals(indexForInitialBufferSize(12, 12, 18), lookahead.getAnnotationSidsMarker().endIndex);
         assertEquals(indexForInitialBufferSize(12, 12, 18), lookahead.getValueStart());
         assertIonTypeId(IonTypeID.ION_TYPE_ANNOTATION_WRAPPER, 0x5, lookahead.getValueTid());
         assertEquals(indexForInitialBufferSize(14, 14, 20), lookahead.getValueEnd());
@@ -1031,7 +1033,7 @@ public class IonReaderLookaheadBufferTest
         lookahead.fillInput();
         assertEquals(-1, lookahead.getIvmIndex());
         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
-        assertTrue(lookahead.getAnnotationSids().isEmpty());
+        assertFalse(lookahead.hasAnnotations());
         assertEquals(indexForInitialBufferSize(15, 15, 21), lookahead.getValueStart());
         assertIonTypeId(IonType.INT, 0x0, lookahead.getValueTid());
         assertEquals(indexForInitialBufferSize(15, 15, 21), lookahead.getValueEnd());
@@ -1060,8 +1062,8 @@ public class IonReaderLookaheadBufferTest
             builder.withInitialBufferSize(initialBufferSize);
         }
         lookahead = bufferFor(
-            // Symbol table declaring symbol 'x'.
-            0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'x',
+            // Symbol table with extra annotation 'name' declaring symbol 'x'.
+            0xE8, 0x82, 0x83, 0x84, 0xD4, 0x87, 0xB2, 0x81, 'x',
             // Symbol value with SID 10 ('x').
             0x71, 0x0A,
             // The value will not be consumed, so the indices continue.
@@ -1087,25 +1089,25 @@ public class IonReaderLookaheadBufferTest
         );
         lookahead.fillInput();
         assertEquals(1, lookahead.getIvmIndex());
-        assertTrue(lookahead.getAnnotationSids().isEmpty());
-        List<IonReaderLookaheadBuffer.SymbolTableMarker> symbolTableMarkers = lookahead.getSymbolTableMarkers();
+        assertFalse(lookahead.hasAnnotations());
+        List<IonReaderLookaheadBuffer.Marker> symbolTableMarkers = lookahead.getSymbolTableMarkers();
         assertEquals(1, symbolTableMarkers.size());
-        assertEquals(8, symbolTableMarkers.get(0).startIndex);
-        assertEquals(12, symbolTableMarkers.get(0).endIndex);
-        assertEquals(13, lookahead.getValueStart());
+        assertEquals(9, symbolTableMarkers.get(0).startIndex);
+        assertEquals(13, symbolTableMarkers.get(0).endIndex);
+        assertEquals(14, lookahead.getValueStart());
         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
-        assertEquals(14, lookahead.getValueEnd());
+        assertEquals(15, lookahead.getValueEnd());
         lookahead.resetSymbolTableMarkers();
         assertTrue(lookahead.getSymbolTableMarkers().isEmpty());
 
         lookahead.fillInput();
         symbolTableMarkers = lookahead.getSymbolTableMarkers();
         assertEquals(1, symbolTableMarkers.size());
-        assertEquals(18, symbolTableMarkers.get(0).startIndex);
-        assertEquals(25, symbolTableMarkers.get(0).endIndex);
-        assertEquals(26, lookahead.getValueStart());
+        assertEquals(19, symbolTableMarkers.get(0).startIndex);
+        assertEquals(26, symbolTableMarkers.get(0).endIndex);
+        assertEquals(27, lookahead.getValueStart());
         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
-        assertEquals(27, lookahead.getValueEnd());
+        assertEquals(28, lookahead.getValueEnd());
 
         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
         assertEquals(IonType.SYMBOL, reader.next());
@@ -1116,13 +1118,13 @@ public class IonReaderLookaheadBufferTest
         lookahead.fillInput();
         symbolTableMarkers = lookahead.getSymbolTableMarkers();
         assertEquals(2, symbolTableMarkers.size());
-        assertEquals(indexForInitialBufferSize(28, 28, 55), symbolTableMarkers.get(0).startIndex);
-        assertEquals(indexForInitialBufferSize(32, 32, 59), symbolTableMarkers.get(0).endIndex);
-        assertEquals(indexForInitialBufferSize(36, 36, 63), symbolTableMarkers.get(1).startIndex);
-        assertEquals(indexForInitialBufferSize(40, 40, 67), symbolTableMarkers.get(1).endIndex);
-        assertEquals(indexForInitialBufferSize(41, 41, 68), lookahead.getValueStart());
+        assertEquals(indexForInitialBufferSize(28, 28, 56), symbolTableMarkers.get(0).startIndex);
+        assertEquals(indexForInitialBufferSize(32, 32, 60), symbolTableMarkers.get(0).endIndex);
+        assertEquals(indexForInitialBufferSize(36, 36, 64), symbolTableMarkers.get(1).startIndex);
+        assertEquals(indexForInitialBufferSize(40, 40, 68), symbolTableMarkers.get(1).endIndex);
+        assertEquals(indexForInitialBufferSize(41, 41, 69), lookahead.getValueStart());
         assertIonTypeId(IonType.SYMBOL, 0x1, lookahead.getValueTid());
-        assertEquals(indexForInitialBufferSize(42, 42, 69), lookahead.getValueEnd());
+        assertEquals(indexForInitialBufferSize(42, 42, 70), lookahead.getValueEnd());
 
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("d", reader.stringValue());
@@ -1191,6 +1193,44 @@ public class IonReaderLookaheadBufferTest
         IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
         assertEquals(IonType.SYMBOL, reader.next());
         assertEquals("hello", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+    }
+
+    @Test
+    public void annotationMarkersAreCorrectlyShifted() throws Exception {
+        if (initialBufferSize == null || initialBufferSize != 1) {
+            return;
+        }
+        // Set the maximum size at 1 IVM (4 bytes) + the symbol table (12 bytes) + the value (2 bytes) + part of the
+        // next value (3 bytes).
+        builder = IonBufferConfiguration.Builder.standard()
+            .withInitialBufferSize(21)
+            .withMaximumBufferSize(21);
+        createCountingEventHandler(builder, new AtomicLong());
+        lookahead = bufferFor(
+            // Symbol table with the symbol 'hello'.
+            0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+            // Symbol 10 (hello)
+            0x71, 0x0A,
+            // name::hello
+            0xE4, 0x81, 0x84, 0x71, 0x0A
+        );
+
+        lookahead.fillInput();
+        assertFalse(lookahead.moreDataRequired());
+        IonReader reader = lookahead.newIonReader(IonReaderBuilder.standard());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertFalse(lookahead.hasAnnotations());
+        // The buffer will reach its maximum size after recording the annotation marker. The marker's indices will
+        // be shifted left when space is reclaimed to fit the value.
+        lookahead.fillInput();
+        assertFalse(lookahead.moreDataRequired());
+        assertEquals("hello", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertTrue(lookahead.hasAnnotations());
+        assertEquals(2, lookahead.getAnnotationSidsMarker().startIndex);
+        assertEquals(3, lookahead.getAnnotationSidsMarker().endIndex);
         assertNull(reader.next());
         reader.close();
     }

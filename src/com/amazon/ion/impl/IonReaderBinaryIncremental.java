@@ -15,6 +15,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
+import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
@@ -27,7 +28,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -216,7 +216,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     private final Utf8StringDecoder utf8Decoder = Utf8StringDecoderPool.getInstance().getOrCreate();
 
     // The symbol IDs for the annotations on the current value.
-    private final List<Integer> annotationSids;
+    private final IntList annotationSids;
 
     // True if the annotation iterator will be reused across values; otherwise, false.
     private final boolean isAnnotationIteratorReuseEnabled;
@@ -285,8 +285,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     // The buffer position of the first byte of the annotation wrapper for the current value.
     private int annotationStartPosition = -1;
 
-    // The number of bytes occupied by the annotation SIDs in the annotation wrapper for the current value.
-    private int annotationsLength = -1;
+    // The buffer position of the byte after the last byte in the annotation wrapper for the current value.
+    private int annotationEndPosition = -1;
 
     // The index of the next byte to peek from the underlying buffer.
     private int peekIndex = -1;
@@ -318,7 +318,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             CONTAINER_STACK_INITIAL_CAPACITY,
             CONTAINER_INFO_FACTORY
         );
-        annotationSids = new ArrayList<Integer>(ANNOTATIONS_LIST_INITIAL_CAPACITY);
+        annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
         symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         resetImports();
@@ -329,10 +329,63 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      */
     private class AnnotationIterator implements Iterator<String> {
 
+        // The byte position of the annotation to return from the next call to next().
+        private int nextAnnotationPeekIndex;
+
+        @Override
+        public boolean hasNext() {
+            return nextAnnotationPeekIndex < annotationEndPosition;
+        }
+
+        @Override
+        public String next() {
+            int savedPeekIndex = peekIndex;
+            peekIndex = nextAnnotationPeekIndex;
+            int sid = readVarUInt();
+            nextAnnotationPeekIndex = peekIndex;
+            peekIndex = savedPeekIndex;
+            String annotation = getSymbol(sid);
+            if (annotation == null) {
+                throw new UnknownSymbolException(sid);
+            }
+            return annotation;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("This iterator does not support element removal.");
+        }
+
+        /**
+         * Prepare the iterator to iterate over the annotations on the current value.
+         */
+        void ready() {
+            nextAnnotationPeekIndex = annotationStartPosition;
+        }
+
+        /**
+         * Invalidate the iterator so that all future calls to {@link #hasNext()} will return false until the
+         * next call to {@link #ready()}.
+         */
+        void invalidate() {
+            nextAnnotationPeekIndex = Integer.MAX_VALUE;
+        }
+    }
+
+    /**
+     * Non-reusable iterator over the annotations on the current value. May be iterated even if the reader advances
+     * past the current value.
+     */
+    private class SingleUseAnnotationIterator implements Iterator<String> {
+
         // All of the annotation SIDs on the current value.
-        protected List<Integer> annotationSids = Collections.emptyList();
+        private final IntList annotationSids;
         // The index into `annotationSids` containing the next annotation to be returned.
-        protected int index = 0;
+        private int index = 0;
+
+        SingleUseAnnotationIterator() {
+            annotationSids = new IntList(getAnnotationSids());
+        }
 
         @Override
         public boolean hasNext() {
@@ -353,31 +406,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         @Override
         public void remove() {
             throw new UnsupportedOperationException("This iterator does not support element removal.");
-        }
-
-        /**
-         * Reset the iterator so that it may be reused.
-         */
-        public void reset() {
-            index = 0;
-            annotationSids = getAnnotationSids();
-        }
-    }
-
-    /**
-     * Non-reusable iterator over the annotations on the current value. May be iterated even if the reader advances
-     * past the current value.
-     */
-    private class SingleUseAnnotationIterator extends AnnotationIterator {
-
-        SingleUseAnnotationIterator() {
-            index = 0;
-            annotationSids = new ArrayList<Integer>(getAnnotationSids());
-        }
-
-        @Override
-        public void reset() {
-            throw new IllegalStateException("Single-use annotation iterators cannot be reset.");
         }
     }
 
@@ -695,6 +723,16 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     }
 
     /**
+     * Resets the value's annotations.
+     */
+    private void resetAnnotations() {
+        hasAnnotations = false;
+        if (isAnnotationIteratorReuseEnabled) {
+            annotationIterator.invalidate();
+        }
+    }
+
+    /**
      * Clear the list of imported shared symbol tables.
      */
     private void resetImports() {
@@ -801,7 +839,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * Reads a local symbol table from the buffer.
      * @param marker marker for the start and end positions of the local symbol table in the buffer.
      */
-    private void readSymbolTable(IonReaderLookaheadBuffer.SymbolTableMarker marker) {
+    private void readSymbolTable(IonReaderLookaheadBuffer.Marker marker) {
         peekIndex = marker.startIndex;
         boolean isAppend = false;
         boolean hasSeenImports = false;
@@ -937,22 +975,24 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             // not represent valid binary Ion, a quick failure is necessary.
             throw new IonException("Binary Ion must start with an Ion version marker.");
         }
-        List<IonReaderLookaheadBuffer.SymbolTableMarker> symbolTableMarkers = lookahead.getSymbolTableMarkers();
+        List<IonReaderLookaheadBuffer.Marker> symbolTableMarkers = lookahead.getSymbolTableMarkers();
         if (!symbolTableMarkers.isEmpty()) {
             // The cached SymbolTable (if any) is a snapshot in time, so it must be cleared whenever a new symbol
             // table is read regardless of whether the new LST is an append or a reset.
             cachedReadOnlySymbolTable = null;
-            for (IonReaderLookaheadBuffer.SymbolTableMarker symbolTableMarker : symbolTableMarkers) {
+            for (IonReaderLookaheadBuffer.Marker symbolTableMarker : symbolTableMarkers) {
                 readSymbolTable(symbolTableMarker);
             }
             lookahead.resetSymbolTableMarkers();
         }
         peekIndex = lookahead.getValueStart();
-        if (lookahead.getAnnotationSids().isEmpty()) {
-            valueTypeID = lookahead.getValueTid();
-            valueType = valueTypeID.type;
-        } else {
-            hasAnnotations = true;
+        hasAnnotations = lookahead.hasAnnotations();
+        if (hasAnnotations) {
+            annotationSids.clear();
+            IonReaderLookaheadBuffer.Marker annotationSidsMarker = lookahead.getAnnotationSidsMarker();
+            annotationStartPosition = annotationSidsMarker.startIndex;
+            annotationEndPosition = annotationSidsMarker.endIndex;
+            peekIndex = annotationEndPosition;
             valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
             int wrappedValueLength = valueTypeID.length;
             if (valueTypeID.variableLength) {
@@ -965,6 +1005,9 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             if (peekIndex + wrappedValueLength != lookahead.getValueEnd()) {
                 throw new IonException("Mismatched annotation wrapper length.");
             }
+        } else {
+            valueTypeID = lookahead.getValueTid();
+            valueType = valueTypeID.type;
         }
         valueStartPosition = peekIndex;
         valueEndPosition = lookahead.getValueEnd();
@@ -1005,7 +1048,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         valueType = null;
         valueTypeID = null;
         annotationStartPosition = -1;
-        annotationsLength = -1;
+        annotationEndPosition = -1;
         hasAnnotations = false;
     }
 
@@ -1040,9 +1083,10 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
                 hasAnnotations = true;
                 annotationSids.clear();
-                annotationsLength = readVarUInt();
+                int annotationsLength = readVarUInt();
                 annotationStartPosition = peekIndex;
-                peekIndex = annotationStartPosition + annotationsLength;
+                annotationEndPosition = annotationStartPosition + annotationsLength;
+                peekIndex = annotationEndPosition;
                 typeID = readTypeId();
                 if (typeID.isNopPad) {
                     throw new IonException(
@@ -1061,7 +1105,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
                 }
             } else {
                 annotationStartPosition = -1;
-                annotationsLength = -1;
+                annotationEndPosition = -1;
                 hasAnnotations = false;
                 if (valueEndPosition > containerStack.peek().endPosition) {
                     throw new IonException("Value overflowed its container.");
@@ -1079,7 +1123,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         fieldNameSid = -1;
         lobBytesRead = 0;
         valueStartPosition = -1;
-        hasAnnotations = false;
+        resetAnnotations();
         if (containerStack.isEmpty()) {
             nextAtTopLevel();
         } else {
@@ -1701,27 +1745,22 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * Gets the annotation symbol IDs for the current value, reading them from the buffer first if necessary.
      * @return the annotation symbol IDs, or an empty list if the current value is not annotated.
      */
-    private List<Integer> getAnnotationSids() {
-        if (containerStack.isEmpty()) {
-            return lookahead.getAnnotationSids();
-        } else {
-            if (annotationSids.isEmpty()) {
-                int savedPeekIndex = peekIndex;
-                peekIndex = annotationStartPosition;
-                long annotationsEndPosition = peekIndex + annotationsLength;
-                while (peekIndex < annotationsEndPosition) {
-                    annotationSids.add(readVarUInt());
-                }
-                peekIndex = savedPeekIndex;
+    private IntList getAnnotationSids() {
+        if (annotationSids.isEmpty()) {
+            int savedPeekIndex = peekIndex;
+            peekIndex = annotationStartPosition;
+            while (peekIndex < annotationEndPosition) {
+                annotationSids.add(readVarUInt());
             }
-            return annotationSids;
+            peekIndex = savedPeekIndex;
         }
+        return annotationSids;
     }
 
     @Override
     public String[] getTypeAnnotations() {
         if (hasAnnotations) {
-            List<Integer> annotationSids = getAnnotationSids();
+            IntList annotationSids = getAnnotationSids();
             String[] annotationArray = new String[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
                 String symbol = getSymbol(annotationSids.get(i));
@@ -1738,7 +1777,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
         if (hasAnnotations) {
-            List<Integer> annotationSids = getAnnotationSids();
+            IntList annotationSids = getAnnotationSids();
             SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
             for (int i = 0; i < annotationArray.length; i++) {
                 annotationArray[i] = getSymbolToken(annotationSids.get(i));
@@ -1770,7 +1809,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     public Iterator<String> iterateTypeAnnotations() {
         if (hasAnnotations) {
             if (isAnnotationIteratorReuseEnabled) {
-                annotationIterator.reset();
+                annotationIterator.ready();
                 return annotationIterator;
             } else {
                 return new SingleUseAnnotationIterator();
