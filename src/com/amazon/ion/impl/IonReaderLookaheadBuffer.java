@@ -142,24 +142,24 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     }
 
     /**
-     * Holds the start and end indices of a buffered symbol table.
+     * Holds the start and end indices of a slice of the buffer.
      */
-    static class SymbolTableMarker {
+    static class Marker {
         /**
-         * Index of the first byte of the symbol table struct's contents.
+         * Index of the first byte in the slice.
          */
         int startIndex;
 
         /**
-         * Index of the first byte after the end of the symbol table.
+         * Index of the first byte after the end of the slice.
          */
         int endIndex;
 
         /**
-         * @param startIndex index of the first byte of the symbol table struct's contents.
-         * @param length the number of bytes that remain in the symbol table struct after 'startIndex'.
+         * @param startIndex index of the first byte in the slice.
+         * @param length the number of bytes in the slice.
          */
-        private SymbolTableMarker(final int startIndex, final int length) {
+        private Marker(final int startIndex, final int length) {
             this.startIndex = startIndex;
             this.endIndex = startIndex + length;
         }
@@ -178,12 +178,13 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     /**
      * Markers for any symbol tables that occurred in the stream between the last value and the current value.
      */
-    private final List<SymbolTableMarker> symbolTableMarkers = new ArrayList<SymbolTableMarker>(2);
+    private final List<Marker> symbolTableMarkers = new ArrayList<Marker>(2);
 
     /**
-     * The symbol IDs of any annotations on the current value.
+     * Marker for the sequence of annotation symbol IDs on the current value. If there are no annotations on the
+     * current value, the startIndex will be negative.
      */
-    private final List<Integer> annotationSids = new ArrayList<Integer>(3);
+    private final Marker annotationSidsMarker = new Marker(-1, 0);
 
     /**
      * The handler that will be notified when a symbol table exceeds the maximum buffer size.
@@ -203,12 +204,6 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * {@link #moreDataRequired()} returns false.
      */
     private boolean isSystemValue;
-
-    /**
-     * True if the current value has an annotation wrapper whose first annotation is `$ion_symbol_table`.
-     * The value will be deemed a system value if it is later determined to be a struct.
-     */
-    private boolean isSymbolTableAnnotationFirst;
 
     /**
      * The number of bytes of annotation SIDs left to read from the value's annotation wrapper.
@@ -284,14 +279,13 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     private void reset() {
         additionalBytesNeeded = 0;
         isSystemValue = false;
-        isSymbolTableAnnotationFirst = false;
         numberOfAnnotationSidBytesRemaining = 0;
         currentNumberOfAnnotations = 0;
         valuePreHeaderIndex = -1;
         valuePostHeaderIndex = -1;
         valueTid = null;
         valueEndIndex = -1;
-        annotationSids.clear();
+        annotationSidsMarker.startIndex = -1;
         valueStartAvailable = pipe.available();
         startNewValue();
     }
@@ -490,29 +484,21 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
             additionalBytesNeeded -= inProgressVarUInt.numberOfBytesRead;
             numberOfAnnotationSidBytesRemaining = inProgressVarUInt.value;
             initializeVarUInt(VarUInt.Location.ANNOTATION_WRAPPER_SID);
+            annotationSidsMarker.startIndex = peekIndex;
+            annotationSidsMarker.endIndex = annotationSidsMarker.startIndex + (int) numberOfAnnotationSidBytesRemaining;
         }
         if (inProgressVarUInt.location == VarUInt.Location.ANNOTATION_WRAPPER_SID) {
-            while (true) {
-                readVarUInt();
-                if (inProgressVarUInt.isComplete) {
-                    currentNumberOfAnnotations++;
-                    if (currentNumberOfAnnotations == 1 && inProgressVarUInt.value == ION_SYMBOL_TABLE_SID) {
-                        isSymbolTableAnnotationFirst = true;
-                    }
-                    annotationSids.add((int) inProgressVarUInt.value);
-                    numberOfAnnotationSidBytesRemaining -= inProgressVarUInt.numberOfBytesRead;
-                    additionalBytesNeeded -= inProgressVarUInt.numberOfBytesRead;
-                    if (numberOfAnnotationSidBytesRemaining <= 0) {
-                        state = State.SKIPPING_VALUE;
-                    } else {
-                        initializeVarUInt(VarUInt.Location.ANNOTATION_WRAPPER_SID);
-                        continue;
-                    }
-                    if (isSymbolTableAnnotationFirst) {
-                        state = State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION;
-                    }
+            // Read the first annotation SID, which is all that is required to determine whether the value is a
+            // symbol table.
+            readVarUInt();
+            if (inProgressVarUInt.isComplete) {
+                numberOfAnnotationSidBytesRemaining -= inProgressVarUInt.numberOfBytesRead;
+                additionalBytesNeeded -= inProgressVarUInt.numberOfBytesRead;
+                if (inProgressVarUInt.value == ION_SYMBOL_TABLE_SID) {
+                    state = State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION;
+                } else {
+                    state = State.SKIPPING_VALUE;
                 }
-                break;
             }
         }
     }
@@ -528,11 +514,15 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         peekIndex = Math.max(peekIndex - shiftAmount, 0);
         valuePreHeaderIndex -= shiftAmount;
         valuePostHeaderIndex -= shiftAmount;
-        for (SymbolTableMarker symbolTableMarker : symbolTableMarkers) {
+        for (Marker symbolTableMarker : symbolTableMarkers) {
             if (symbolTableMarker.startIndex > afterIndex) {
                 symbolTableMarker.startIndex -= shiftAmount;
                 symbolTableMarker.endIndex -= shiftAmount;
             }
+        }
+        if (annotationSidsMarker.startIndex > afterIndex) {
+            annotationSidsMarker.startIndex -= shiftAmount;
+            annotationSidsMarker.endIndex -= shiftAmount;
         }
         if (ivmSecondByteIndex > afterIndex) {
             ivmSecondByteIndex -= shiftAmount;
@@ -660,6 +650,27 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         return bytesFilled;
     }
 
+    /**
+     * Attempts to skip the requested number of bytes.
+     * @param numberOfBytesToSkip the number of bytes to attempt to skip.
+     * @return the number of bytes actually skipped.
+     * @throws Exception if thrown by the event handler.
+     */
+    private long skip(long numberOfBytesToSkip) throws Exception {
+        int numberOfBytesSkipped;
+        if (pipe.availableBeyondBoundary() >= numberOfBytesToSkip) {
+            numberOfBytesSkipped = (int) numberOfBytesToSkip;
+            pipe.extendBoundary(numberOfBytesSkipped);
+            peekIndex += numberOfBytesSkipped;
+        } else {
+            numberOfBytesSkipped = fillOrSkip();
+        }
+        if (numberOfBytesSkipped > 0) {
+            dataHandler.onData(numberOfBytesSkipped);
+        }
+        return numberOfBytesSkipped;
+    }
+
     /*
      * The state transitions of the fillInput() method are summarized by the following diagram.
      *
@@ -729,6 +740,15 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
                 valuePostHeaderIndex = peekIndex;
             }
             if (state == State.READING_VALUE_WITH_SYMBOL_TABLE_ANNOTATION) {
+                // Skip annotations until positioned on the value's type ID.
+                while (numberOfAnnotationSidBytesRemaining > 0) {
+                    long numberOfBytesSkipped = skip(numberOfAnnotationSidBytesRemaining);
+                    if (numberOfBytesSkipped < 1) {
+                        return;
+                    }
+                    numberOfAnnotationSidBytesRemaining -= numberOfBytesSkipped;
+                    additionalBytesNeeded -= numberOfBytesSkipped;
+                }
                 ReadTypeIdResult result = readTypeID(false);
                 if (result == ReadTypeIdResult.NO_DATA) {
                     return;
@@ -750,7 +770,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
                     }
                     additionalBytesNeeded = inProgressVarUInt.value;
                 }
-                symbolTableMarkers.add(new SymbolTableMarker(peekIndex, (int) additionalBytesNeeded));
+                symbolTableMarkers.add(new Marker(peekIndex, (int) additionalBytesNeeded));
                 state = State.SKIPPING_VALUE;
             }
             if (state == State.SKIPPING_VALUE) {
@@ -768,19 +788,11 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
                     // large enough that it doesn't fit within the buffer's configured maximum size.
                 }
                 while (additionalBytesNeeded > 0) {
-                    int numberOfBytesToRead;
-                    if (pipe.availableBeyondBoundary() >= additionalBytesNeeded) {
-                        numberOfBytesToRead = (int) additionalBytesNeeded;
-                        pipe.extendBoundary(numberOfBytesToRead);
-                        peekIndex += numberOfBytesToRead;
-                    } else {
-                        numberOfBytesToRead = fillOrSkip();
-                        if (numberOfBytesToRead < 1) {
-                            return;
-                        }
+                    long numberOfBytesSkipped = skip(additionalBytesNeeded);
+                    if (numberOfBytesSkipped < 1) {
+                        return;
                     }
-                    dataHandler.onData(numberOfBytesToRead);
-                    additionalBytesNeeded -= numberOfBytesToRead;
+                    additionalBytesNeeded -= numberOfBytesSkipped;
                 }
                 state = State.BEFORE_TYPE_ID;
             }
@@ -880,6 +892,9 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @return the index of the first byte of the value representation (past the type ID and the optional length field).
      */
     int getValueStart() {
+        if (hasAnnotations()) {
+            return annotationSidsMarker.endIndex;
+        }
         return valuePostHeaderIndex;
     }
 
@@ -898,9 +913,12 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     }
 
     /**
-     * @return markers for any symbol tables that occurred in the stream between the last value and the current value.
+     * Returns markers for any symbol tables that occurred in the stream between the last value and the current value.
+     * The startIndex of the returned markers is the index of the first byte of the symbol table struct's contents.
+     * The endIndex of the returned markers is the index of the first byte after the end of the symbol table.
+     * @return the markers.
      */
-    List<SymbolTableMarker> getSymbolTableMarkers() {
+    List<Marker> getSymbolTableMarkers() {
         return symbolTableMarkers;
     }
 
@@ -912,10 +930,19 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     }
 
     /**
-     * @return the symbol IDs of any annotations on the current value.
+     * @return true if the current value has annotations; otherwise, false.
      */
-    List<Integer> getAnnotationSids() {
-        return annotationSids;
+    boolean hasAnnotations() {
+        return annotationSidsMarker.startIndex >= 0;
+    }
+    /**
+     * Returns the marker for the sequence of annotation symbol IDs on the current value. The startIndex of the
+     * returned marker is the index of the first byte of the first annotation symbol ID in the sequence. The endIndex
+     * of the returned marker is the index of the type ID byte of the value to which the annotations are applied.
+     * @return  the marker.
+     */
+    Marker getAnnotationSidsMarker() {
+        return annotationSidsMarker;
     }
 
 }

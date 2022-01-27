@@ -30,6 +30,16 @@ public class IntList {
     }
 
     /**
+     * Constructs a new IntList that contains all the elements of the given IntList.
+     * @param other the IntList to copy.
+     */
+    public IntList(final IntList other) {
+        this.numberOfValues = other.numberOfValues;
+        this.data = new int[other.data.length];
+        System.arraycopy(other.data, 0, this.data, 0, numberOfValues);
+    }
+
+    /**
      * Accessor.
      * @return  The number of ints currently stored in the list.
      */
