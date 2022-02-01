@@ -90,6 +90,21 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
         }
 
         /**
+         * Provides a new builder that would build IonBufferConfiguration instances with configuration identical to
+         * the given configuration.
+         * @param existingConfiguration an existing configuration.
+         * @return a new mutable builder.
+         */
+        public static Builder from(IonBufferConfiguration existingConfiguration) {
+            return IonBufferConfiguration.Builder.standard()
+                .onData(existingConfiguration.getDataHandler())
+                .onOversizedValue(existingConfiguration.getOversizedValueHandler())
+                .onOversizedSymbolTable(existingConfiguration.getOversizedSymbolTableHandler())
+                .withInitialBufferSize(existingConfiguration.getInitialBufferSize())
+                .withMaximumBufferSize(existingConfiguration.getMaximumBufferSize());
+        }
+
+        /**
          * Sets the handler that will be notified when oversized symbol tables are encountered. If the maximum buffer
          * size is finite (see {@link #withMaximumBufferSize(int)}, this handler is required to be non-null.
          *
