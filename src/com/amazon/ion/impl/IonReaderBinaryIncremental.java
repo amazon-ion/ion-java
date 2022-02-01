@@ -21,6 +21,7 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.system.SimpleCatalog;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -138,6 +139,36 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
 
         // The system symbol table SID for the text "max_id".
         private static final int MAX_ID_ID = 8;
+    }
+
+    /**
+     * @param value a non-negative number.
+     * @return the exponent of the next power of two greater than the given number.
+     */
+    private static int logBase2(int value) {
+        return 32 - Integer.numberOfLeadingZeros(value == 0 ? 0 : value - 1);
+    }
+
+    /**
+     * Cache of configurations for fixed-sized streams. FIXED_SIZE_CONFIGURATIONS[i] returns a configuration with
+     * buffer size max(8, 2^i). Retrieve a configuration large enough for a given size using
+     * FIXED_SIZE_CONFIGURATIONS(logBase2(size)). Only supports sizes less than or equal to
+     * STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize().
+     */
+    private static final IonBufferConfiguration[] FIXED_SIZE_CONFIGURATIONS;
+
+    static {
+        int maxBufferSizeExponent = logBase2(STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize());
+        FIXED_SIZE_CONFIGURATIONS = new IonBufferConfiguration[maxBufferSizeExponent + 1];
+        for (int i = 0; i <= maxBufferSizeExponent; i++) {
+            // Create a buffer configuration for buffers of size 2^i. The minimum size is 8: the smallest power of two
+            // larger than the minimum buffer size allowed.
+            int size = Math.max(8, (int) Math.pow(2, i));
+            FIXED_SIZE_CONFIGURATIONS[i] = IonBufferConfiguration.Builder.from(STANDARD_BUFFER_CONFIGURATION)
+                .withInitialBufferSize(size)
+                .withMaximumBufferSize(size)
+                .build();
+        }
     }
 
     // The final byte of the binary IVM.
@@ -308,11 +339,27 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             isAnnotationIteratorReuseEnabled = false;
             annotationIterator = null;
         }
-        if (builder.getBufferConfiguration() == null) {
-            lookahead = new IonReaderLookaheadBuffer(STANDARD_BUFFER_CONFIGURATION, inputStream);
-        } else {
-            lookahead = new IonReaderLookaheadBuffer(builder.getBufferConfiguration(), inputStream);
+        IonBufferConfiguration configuration = builder.getBufferConfiguration();
+        if (configuration == null) {
+            configuration = STANDARD_BUFFER_CONFIGURATION;
+            if (inputStream instanceof ByteArrayInputStream) {
+                // ByteArrayInputStreams are fixed-size streams. Clamp the reader's internal buffer size at the size of
+                // the stream to avoid wastefully allocating extra space that will never be needed. It is still
+                // preferable for the user to manually specify the buffer size if it's less than the default, as doing
+                // so allows this branch to be skipped.
+                int fixedBufferSize;
+                try {
+                    fixedBufferSize = inputStream.available();
+                } catch (IOException e) {
+                    // ByteArrayInputStream.available() does not throw.
+                    throw new IllegalStateException(e);
+                }
+                if (configuration.getInitialBufferSize() > fixedBufferSize) {
+                    configuration = FIXED_SIZE_CONFIGURATIONS[logBase2(fixedBufferSize)];
+                }
+            }
         }
+        lookahead = new IonReaderLookaheadBuffer(configuration, inputStream);
         buffer = (ResizingPipedInputStream) lookahead.getPipe();
         containerStack = new _Private_RecyclingStack<ContainerInfo>(
             CONTAINER_STACK_INITIAL_CAPACITY,
@@ -988,6 +1035,9 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         peekIndex = lookahead.getValueStart();
         hasAnnotations = lookahead.hasAnnotations();
         if (hasAnnotations) {
+            if (peekIndex >= lookahead.getValueEnd()) {
+                throw new IonException("Annotation wrappers without values are invalid.");
+            }
             annotationSids.clear();
             IonReaderLookaheadBuffer.Marker annotationSidsMarker = lookahead.getAnnotationSidsMarker();
             annotationStartPosition = annotationSidsMarker.startIndex;
@@ -1020,6 +1070,9 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      */
     private IonTypeID readTypeId() {
         valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
+        if (!valueTypeID.isValid) {
+            throw new IonException("Invalid type ID.");
+        }
         valueType = valueTypeID.type;
         return valueTypeID;
     }
