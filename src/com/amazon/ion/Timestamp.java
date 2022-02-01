@@ -216,7 +216,7 @@ public final class Timestamp
     private static final int[] LEAP_DAYS_IN_MONTH   = { 0,  31,  29,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
     private static final int[] NORMAL_DAYS_IN_MONTH = { 0,  31,  28,  31,  30,  31,  30,  31,  31,  30,  31,  30,  31 };
 
-    private static int last_day_in_month(int year, int month) {
+    private static byte last_day_in_month(int year, int month) {
         boolean is_leap;
         if ((year % 4) == 0) {
             // divisible by 4 (lower 2 bits are zero) - may be a leap year
@@ -237,7 +237,7 @@ public final class Timestamp
         else {
             is_leap = false;
         }
-        return is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month];
+        return (byte) (is_leap ? LEAP_DAYS_IN_MONTH[month] : NORMAL_DAYS_IN_MONTH[month]);
     }
 
     /**
@@ -256,19 +256,19 @@ public final class Timestamp
         }
         // To convert _to_ UTC you must SUBTRACT the local offset
         offset = -offset;
-        int hour_offset = offset / 60;
-        int min_offset = offset - (hour_offset * 60);
+        byte hour_offset = (byte) (offset / 60);
+        byte min_offset = (byte) (offset - (hour_offset * 60));
 
         if (offset < 0) {
             _minute += min_offset;  // lower the minute value by adding a negative offset
             _hour += hour_offset;
             if (_minute < 0) {
-                _minute += 60;
+                _minute += (byte) 60;
                 _hour -= 1;
             }
             if (_hour >= 0) return;  // hour is 0-23
-            _hour += 24;
-            _day -= 1;
+            _hour += (byte) 24;
+            _day -= (byte) 1;
             if (_day >= 1) return;  // day is 1-31
             // we can't do this until we've figured out the month and year: _day += last_day_in_month(_year, _month);
             _month -= 1;
@@ -277,8 +277,8 @@ public final class Timestamp
                 assert(_day == last_day_in_month(_year, _month));
                 return;  // 1-12
             }
-            _month += 12;
-            _year -= 1;
+            _month += (byte) 12;
+            _year -= (short) 1;
             if (_year < 1) throw new IllegalArgumentException("year is less than 1");
             _day += last_day_in_month(_year, _month);  // and now we know, even if the year did change
             assert(_day == last_day_in_month(_year, _month));
@@ -287,21 +287,21 @@ public final class Timestamp
             _minute += min_offset;  // lower the minute value by adding a negative offset
             _hour += hour_offset;
             if (_minute > 59) {
-                _minute -= 60;
-                _hour += 1;
+                _minute -= (byte) 60;
+                _hour += (byte) 1;
             }
             if (_hour < 24) return;  // hour is 0-23
-            _hour -= 24;
-            _day += 1;
+            _hour -= (byte) 24;
+            _day += (byte) 1;
             if (_day <= last_day_in_month(_year, _month)) return;  // day is 1-31
             // we can't do this until we figure out the final month and year: _day -= last_day_in_month(_year, _month);
             _day = 1; // this is always the case
-            _month += 1;
+            _month += (byte) 1;
             if (_month <= 12) {
                 return;  // 1-12
             }
-            _month -= 12;
-            _year += 1;
+            _month -= (byte) 12;
+            _year += (short) 1;
             if (_year > 9999) throw new IllegalArgumentException("year exceeds 9999");
         }
     }
