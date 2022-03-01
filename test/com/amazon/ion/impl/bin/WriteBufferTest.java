@@ -951,6 +951,16 @@ public class WriteBufferTest
     }
 
     @Test
+    public void shiftBytesLeftAcrossBufferBlocksExclusively() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // Unlike `shiftBytesLeftAcrossBufferBlocks`, EVERY byte that is shifted
+        // in the buffer ends up in the previous block.
+        buf.writeBytes("0123456789ABCDEF".getBytes());
+        buf.shiftBytesLeft(5, 5);
+        assertBuffer("012345BCDEF".getBytes());
+    }
+
+    @Test
     public void shiftBytesLeftAcrossBufferBlocksEmptyingLastBlock() throws IOException {
         assertEquals(11, ALLOCATOR.getBlockSize());
         // The "B" is the first and only byte in the second block.
@@ -958,6 +968,25 @@ public class WriteBufferTest
         buf.writeBytes("0123456789AB".getBytes());
         buf.shiftBytesLeft(1, 1);
         assertBuffer("0123456789B".getBytes());
+    }
+
+    @Test
+    public void shiftEntireBlock() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // The buffer contains two full blocks
+        buf.writeBytes("0123456789|ABCDEFGHIJ|".getBytes());
+        // We shift an entire block left by the block size
+        buf.shiftBytesLeft(11, 11);
+        assertBuffer("ABCDEFGHIJ|".getBytes());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotShiftLeftByMoreThanTheBlockSize() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // We have multiple blocks' worth of data...
+        buf.writeBytes("0123456789|0123456789|0123456789|".getBytes());
+        // ...but we cannot shift left by more than 11, the allocator's block size.
+        buf.shiftBytesLeft(12, 12);
     }
 
     @Test
@@ -1002,13 +1031,11 @@ public class WriteBufferTest
         assertBuffer("01234567ABEFGH".getBytes());
     }
 
-    @Test
-    public void shiftBytesLeftAcrossBufferBlocksExclusively() throws IOException {
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotShiftNBytesLeftByMoreThanNBytes() {
         assertEquals(11, ALLOCATOR.getBlockSize());
-        // Unlike `shiftBytesLeftAcrossBufferBlocks`, EVERY byte that is shifted
-        // in the buffer ends up in the previous block.
-        buf.writeBytes("0123456789ABCDEF".getBytes());
-        buf.shiftBytesLeft(5, 5);
-        assertBuffer("012345BCDEF".getBytes());
+        buf.writeBytes("0123456789AB".getBytes());
+        // shiftBy (10) cannot be greater than length (2)
+        buf.shiftBytesLeft(2, 10);
     }
 }

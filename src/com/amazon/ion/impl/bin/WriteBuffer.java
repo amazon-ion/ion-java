@@ -174,10 +174,14 @@ import java.util.List;
      * Shifts the last `length` bytes in the buffer to the left. This can be used when a value's header was
      * preallocated but the value's encoded size proved to be much smaller than anticipated.
      *
-     * The caller must guarantee that the buffer contains enough bytes to perform the requested shift.
+     * The caller must guarantee that:
+     * - the buffer contains enough bytes to perform the requested shift
+     * - the number of bytes being shifted is greater than or equal to the distance of the shift
+     * - the distance of the shift is less than or equal to the WriteBuffer's block size
      *
      * @param length    The number of bytes at the end of the buffer that we'll be shifting to the left.
      * @param shiftBy   The number of bytes to the left that we'll be shifting.
+     * @throws IllegalArgumentException if `shiftBy` is greater than either `length` or the WriteBuffer's block size.
      */
     public void shiftBytesLeft(int length, int shiftBy) {
         if (shiftBy == 0) {
@@ -185,10 +189,24 @@ import java.util.List;
             return;
         }
 
+        if (shiftBy > length) {
+            throw new IllegalArgumentException("shiftBy (" + shiftBy + ") cannot be larger than length (" + length + ")");
+        }
+
         // If all of the bytes that we need to shift are in the current block, do a simple memcpy.
         if (current.limit >= length + shiftBy) {
             shiftBytesLeftWithinASingleBlock(length, shiftBy);
             return;
+        }
+
+        if (shiftBy > allocator.getBlockSize()) {
+            throw new IllegalArgumentException(
+                    "Cannot shift left by more than the block size. (shiftBy="
+                    + shiftBy
+                    + ", blockSize="
+                    + allocator.getBlockSize()
+                    + ")"
+            );
         }
 
         // Otherwise, the slice we're shifting straddles multiple blocks. We'll need to iterate across those blocks
@@ -263,7 +281,7 @@ import java.util.List;
                 if (length == 0) {
                     // ...lower the `limit` because we've reclaimed some bytes in this block...
                     block.limit -= numberOfBytesToShift;
-                    // ...lower the limit of the previous block if the last byte shifted...
+                    // ...lower the limit of the previous block if the last byte shifted far enough to free capacity...
                     previousBlock.limit -= (shiftBy - numberOfBytesToShift);
                     // ...if the previous block is now the last block, update the WriteBuffer's internal state...
                     updateLastBlock(bufferOffset - shiftBy);
