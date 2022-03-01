@@ -184,7 +184,7 @@ import java.util.List;
      * @throws IllegalArgumentException if `shiftBy` is greater than either `length` or the WriteBuffer's block size.
      */
     public void shiftBytesLeft(int length, int shiftBy) {
-        if (shiftBy == 0) {
+        if (length == 0 || shiftBy == 0) {
             // Nothing to do.
             return;
         }
