@@ -252,7 +252,8 @@ import java.util.List;
             if (blockOffset < shiftBy) {
                 Block previousBlock = blocks.get(blockIndex - 1);
                 int numberOfBytesToShift = Math.min(length, shiftBy) - blockOffset;
-                System.arraycopy(block.data, blockOffset, previousBlock.data, previousBlock.data.length - numberOfBytesToShift, numberOfBytesToShift);
+                int destinationOffset = previousBlock.data.length - shiftBy + blockOffset;
+                System.arraycopy(block.data, blockOffset, previousBlock.data, destinationOffset, numberOfBytesToShift);
 
                 // Now that we've shifted some bytes, update our position within the buffer.
                 bufferOffset += numberOfBytesToShift;
@@ -262,6 +263,10 @@ import java.util.List;
                 if (length == 0) {
                     // ...lower the `limit` because we've reclaimed some bytes in this block...
                     block.limit -= numberOfBytesToShift;
+                    // ...lower the limit of the previous block if the last byte shifted...
+                    previousBlock.limit -= (shiftBy - numberOfBytesToShift);
+                    // ...if the previous block is now the last block, update the WriteBuffer's internal state...
+                    updateLastBlock(bufferOffset - shiftBy);
                     // ...and early return.
                     return;
                 }
@@ -284,6 +289,22 @@ import java.util.List;
             // We've reclaimed some space in this block; lower the `limit` accordingly.
             block.limit -= shiftBy;
         }
+    }
+
+    // Given the offset of the next available (i.e. writeable) byte, updates the `current` and `index` fields of the
+    // WriteBuffer to point to the appropriate Block in the `block` list.
+    private void updateLastBlock(long bufferOffset) {
+        // Get the index of the Block that contains the next writeable offset.
+        int newIndex = index(bufferOffset);
+        // If the next writeable offset is in the second-to-last Block, drop the last Block (which is empty) from the
+        // list and return it to the pool.
+        if (this.index > newIndex) {
+            Block formerLastBlock = this.blocks.remove(this.index);
+            formerLastBlock.close();
+        }
+        // Update the index and current to point to the new last block.
+        this.index = newIndex;
+        this.current = blocks.get(this.index);
     }
 
     /** Writes an array of bytes to the buffer expanding if necessary, defaulting to the entire array. */

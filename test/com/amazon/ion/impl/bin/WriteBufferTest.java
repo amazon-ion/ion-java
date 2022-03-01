@@ -951,6 +951,58 @@ public class WriteBufferTest
     }
 
     @Test
+    public void shiftBytesLeftAcrossBufferBlocksEmptyingLastBlock() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // The "B" is the first and only byte in the second block.
+        // Shifting 1 byte left by one empties the last block.
+        buf.writeBytes("0123456789AB".getBytes());
+        buf.shiftBytesLeft(1, 1);
+        assertBuffer("0123456789B".getBytes());
+    }
+
+    @Test
+    public void shiftBytesLeftAcrossBufferBlocksShorteningNextToLastBlock() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // The "B" is the first and only byte in the second block.
+        // Shifting 2 bytes left by two empties the last block and shortens the next-to-last block by 1 byte.
+        // Following this operation, the next-to-last block becomes the last block.
+        buf.writeBytes("0123456789AB".getBytes());
+        buf.shiftBytesLeft(2, 2);
+        assertBuffer("01234567AB".getBytes());
+    }
+
+    @Test
+    public void writingAfterLastBlockChanges() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // The "B" is the first and only byte in the second block.
+        // Shifting 2 bytes left by two empties the last block and shortens the next-to-last block by 1 byte.
+        // Following this operation, the next-to-last block becomes the last block.
+        buf.writeBytes("0123456789AB".getBytes());
+        buf.shiftBytesLeft(2, 2);
+        assertBuffer("01234567AB".getBytes());
+        // After shifting and changing the last block, we can still append data without issue.
+        buf.writeBytes("CDE".getBytes());
+        assertBuffer("01234567ABCDE".getBytes());
+    }
+
+    @Test
+    public void updateLastBlock() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // The "B" is the first and only byte in the second block.
+        // Shifting 2 bytes left by two empties the last block and shortens the next-to-last block by 1 byte.
+        // Following this operation, the next-to-last block becomes the last block.
+        buf.writeBytes("0123456789AB".getBytes());
+        buf.shiftBytesLeft(2, 2);
+        assertBuffer("01234567AB".getBytes());
+        // We write some more data to the buffer. If the last block has been discarded correctly, we can do another
+        // shift operation without getting corrupt data.
+        buf.writeBytes("CDEFGH".getBytes());
+        assertBuffer("01234567ABCDEFGH".getBytes());
+        buf.shiftBytesLeft(4, 2);
+        assertBuffer("01234567ABEFGH".getBytes());
+    }
+
+    @Test
     public void shiftBytesLeftAcrossBufferBlocksExclusively() throws IOException {
         assertEquals(11, ALLOCATOR.getBlockSize());
         // Unlike `shiftBytesLeftAcrossBufferBlocks`, EVERY byte that is shifted
