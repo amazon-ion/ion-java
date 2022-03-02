@@ -249,7 +249,7 @@ import java.util.List;
             Block destinationBlock = blocks.get(destinationBlockIndex);
             int destinationBlockOffset = offset(destinationBufferOffset);
 
-            // Determine how many bytes are left in the source in destination blocks following their respective
+            // Determine how many bytes are left in the source and destination blocks following their respective
             // block offsets.
             int bytesLeftInSourceBlock = sourceBlock.limit - sourceBlockOffset;
             int bytesLeftInDestinationBlock = destinationBlock.limit - destinationBlockOffset;

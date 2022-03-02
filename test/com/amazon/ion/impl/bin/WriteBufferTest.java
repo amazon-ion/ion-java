@@ -987,7 +987,7 @@ public class WriteBufferTest
         buf.writeBytes("0123456789|0123456789|0123456789|0123456789|0123456789|".getBytes());
         // We can shift left amounts greater than the block size
         buf.shiftBytesLeft(24, 24);
-        buf.writeBytes("0123456789|0123456789|012345678".getBytes());
+        assertBuffer("01234569|0123456789|0123456789|".getBytes());
     }
 
     @Test
@@ -1038,7 +1038,7 @@ public class WriteBufferTest
         buf.writeBytes("0123456789AB".getBytes());
         // Shift left by more bytes than we're shifting (shiftBy > length)
         buf.shiftBytesLeft(2, 5);
-        buf.writeBytes("01234AB".getBytes());
+        assertBuffer("01234AB".getBytes());
     }
 
     @Test
@@ -1046,7 +1046,7 @@ public class WriteBufferTest
         assertEquals(11, ALLOCATOR.getBlockSize());
         buf.writeBytes("01234567AB".getBytes());
         buf.shiftBytesLeft(2, 8);
-        buf.writeBytes("AB".getBytes());
+        assertBuffer("AB".getBytes());
     }
 
     @Test
@@ -1054,7 +1054,7 @@ public class WriteBufferTest
         assertEquals(11, ALLOCATOR.getBlockSize());
         buf.writeBytes("0123456789AB".getBytes());
         buf.shiftBytesLeft(2, 10);
-        buf.writeBytes("AB".getBytes());
+        assertBuffer("AB".getBytes());
     }
 
     @Test
