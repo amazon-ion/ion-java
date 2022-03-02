@@ -980,13 +980,14 @@ public class WriteBufferTest
         assertBuffer("ABCDEFGHIJ|".getBytes());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void cannotShiftLeftByMoreThanTheBlockSize() {
+    @Test
+    public void shiftBytesLeftByMoreThanTheBlockSize() {
         assertEquals(11, ALLOCATOR.getBlockSize());
-        // We have multiple blocks' worth of data...
-        buf.writeBytes("0123456789|0123456789|0123456789|".getBytes());
-        // ...but we cannot shift left by more than 11, the allocator's block size.
-        buf.shiftBytesLeft(12, 12);
+        // We have 5 blocks' worth of data
+        buf.writeBytes("0123456789|0123456789|0123456789|0123456789|0123456789|".getBytes());
+        // We can shift left amounts greater than the block size
+        buf.shiftBytesLeft(24, 24);
+        buf.writeBytes("0123456789|0123456789|012345678".getBytes());
     }
 
     @Test
@@ -1031,11 +1032,45 @@ public class WriteBufferTest
         assertBuffer("01234567ABEFGH".getBytes());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void cannotShiftNBytesLeftByMoreThanNBytes() {
+    @Test
+    public void shiftNBytesLeftByMoreThanNBytes() {
         assertEquals(11, ALLOCATOR.getBlockSize());
         buf.writeBytes("0123456789AB".getBytes());
-        // shiftBy (10) cannot be greater than length (2)
+        // Shift left by more bytes than we're shifting (shiftBy > length)
+        buf.shiftBytesLeft(2, 5);
+        buf.writeBytes("01234AB".getBytes());
+    }
+
+    @Test
+    public void shiftLeftToBeginning() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.writeBytes("01234567AB".getBytes());
+        buf.shiftBytesLeft(2, 8);
+        buf.writeBytes("AB".getBytes());
+    }
+
+    @Test
+    public void shiftLeftToBeginningAcrossBlocks() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.writeBytes("0123456789AB".getBytes());
         buf.shiftBytesLeft(2, 10);
+        buf.writeBytes("AB".getBytes());
+    }
+
+    @Test
+    public void shiftBytesLeftAcrossBufferBlocksToStartThenWritePastBlockBoundary() throws IOException {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        // The "B" is the first and only byte in the second block.
+        // Shifting 2 bytes left by 10 empties the last block and positions the shifted bytes at the start of the first
+        // block.
+        buf.writeBytes("0123456789AB".getBytes());
+        buf.shiftBytesLeft(2, 10);
+        assertBuffer("AB".getBytes());
+        // Write enough bytes to expand back into the next block.
+        buf.writeBytes("CDE0123456789AB".getBytes());
+        assertBuffer("ABCDE0123456789AB".getBytes());
+        // Shift one byte left past the block boundary. This should once again empty the last block.
+        buf.shiftBytesLeft(1, 6);
+        assertBuffer("ABCDE01234B".getBytes());
     }
 }
