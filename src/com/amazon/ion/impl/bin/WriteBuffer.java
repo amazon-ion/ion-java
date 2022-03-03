@@ -180,7 +180,7 @@ import java.util.List;
      * @param shiftBy   The number of bytes to the left that we'll be shifting.
      */
     public void shiftBytesLeft(int length, int shiftBy) {
-        if (shiftBy == 0) {
+        if (length == 0 || shiftBy == 0) {
             // Nothing to do.
             return;
         }
@@ -227,63 +227,74 @@ import java.util.List;
      * @param shiftBy   The number of bytes to the left that we'll be shifting.
      */
     private void shiftBytesLeftAcrossBlocks(int length, int shiftBy) {
-        // Our starting position is the first byte that we plan to shift backwards. The `bufferOffset` is the cursor's
-        // current position in the stream; we can use this to derive which block it's in as well as its position within
-        // that block.
-        long bufferOffset = position() - length;
+        // In this method, "buffer offsets" are absolute indexes into the WriteBuffer and
+        // "block offsets" are indexes that are relative to the beginning of the current Block.
 
-        Block block = null;
-        while (length > 0)
-        {
-            // Using the `bufferOffset`, determine which block we're in...
-            int blockIndex = index(bufferOffset);
-            block = blocks.get(blockIndex);
-            // ...and our offset within that block.
-            int blockOffset = offset(bufferOffset);
+        // The first buffer offset that does not yet contain data.
+        long position = position();
+        // This is the buffer offset of the first byte that we will be shifting backwards.
+        long sourceBufferOffset = position - length;
+        // When we're done, this will be the first offset in the buffer that does not contain data.
+        long writeBufferLimit = position - shiftBy;
 
-            // If the block offset is within `shiftBy` bytes of beginning of the block, some bytes we're shifting
-            // will end up in the previous block. Here's an illustrated example:
-            //
-            // shiftBy = 2, blockIndex = 1, blockOffset = 1
-            //                        v---- Cursor is here
-            // Before: [A B C D E] [F G H I J]
-            // After : [A B C D G] [F G H I J]
-            //  Now this is G --^       ^-- And the cursor is here, ready to continue copy the rest.
-            if (blockOffset < shiftBy) {
-                Block previousBlock = blocks.get(blockIndex - 1);
-                int numberOfBytesToShift = Math.min(length, shiftBy) - blockOffset;
-                System.arraycopy(block.data, blockOffset, previousBlock.data, previousBlock.data.length - numberOfBytesToShift, numberOfBytesToShift);
+        while (length > 0) {
+            // Convert the source buffer offset into a (Block, block offset) pair.
+            int sourceBlockIndex = index(sourceBufferOffset);
+            Block sourceBlock = blocks.get(sourceBlockIndex);
+            int sourceBlockOffset = offset(sourceBufferOffset);
 
-                // Now that we've shifted some bytes, update our position within the buffer.
-                bufferOffset += numberOfBytesToShift;
-                length -= numberOfBytesToShift;
+            // Convert the destination buffer offset into a (Block, block offset) pair.
+            // Because buffer offsets are absolute, the `destinationBufferOffset` in each loop iteration is
+            // `shiftBy` positions behind the `sourceBufferOffset`.
+            long destinationBufferOffset = sourceBufferOffset - shiftBy;
+            int destinationBlockIndex = index(destinationBufferOffset);
+            Block destinationBlock = blocks.get(destinationBlockIndex);
+            int destinationBlockOffset = offset(destinationBufferOffset);
 
-                // If there are no more bytes to shift...
-                if (length == 0) {
-                    // ...lower the `limit` because we've reclaimed some bytes in this block...
-                    block.limit -= numberOfBytesToShift;
-                    // ...and early return.
-                    return;
-                }
-                // Otherwise, use our new buffer offset to recalculate our block-specific position.
-                blockIndex = index(bufferOffset);
-                block = blocks.get(blockIndex);
-                blockOffset = offset(bufferOffset);
-            }
+            // Determine how many bytes are left in the source and destination blocks following their respective
+            // block offsets.
+            int bytesLeftInSourceBlock = sourceBlock.limit - sourceBlockOffset;
+            int bytesLeftInDestinationBlock = destinationBlock.limit - destinationBlockOffset;
+            // Whichever block has fewer bytes remaining will determine how many bytes we consider to be
+            // available for shifting in this pass.
+            int bytesAvailableToCopy = Math.min(bytesLeftInSourceBlock, bytesLeftInDestinationBlock);
 
-            // At this point, the block offset is at least `shiftBy` bytes away from the beginning of the block, so
-            // we can do a memcpy to shift the rest of the bytes in the block.
-            int numberOfBytesToShift = Math.min(length, block.data.length - blockOffset);
-            System.arraycopy(block.data, blockOffset, block.data, blockOffset - shiftBy, numberOfBytesToShift);
+            // If there are more bytes available than we need to finish the shifting operation, take `length` instead.
+            int numberOfBytesToShift = Math.min(length, bytesAvailableToCopy);
 
-            // Update our counters and see if there are any more bytes to shift.
-            bufferOffset += numberOfBytesToShift;
+            // Copy the bytes from the source to the destination.
+            System.arraycopy(
+                    sourceBlock.data,
+                    sourceBlockOffset,
+                    destinationBlock.data,
+                    destinationBlockOffset,
+                    numberOfBytesToShift
+            );
+
+            // Update our record of how many bytes to shift remain...
             length -= numberOfBytesToShift;
+            // ...and from which point we should resume in the next iteration.
+            sourceBufferOffset += numberOfBytesToShift;
         }
-        if (block != null) {
-            // We've reclaimed some space in this block; lower the `limit` accordingly.
-            block.limit -= shiftBy;
+
+        // At this point, the shifting is complete. However, we have reclaimed some amount of space in the WriteBuffer.
+        // Using the `writeBufferLimit` we calculated at the beginning of the method, find the last Block that still
+        // contains data.
+        int lastBlockIndex = index(writeBufferLimit);
+        Block lastBlock = blocks.get(lastBlockIndex);
+        int lastBlockOffset = offset(writeBufferLimit);
+
+        // Update that Block's limit...
+        lastBlock.limit = lastBlockOffset;
+        // ...and return any empty blocks at the tail of the `blocks` list to the pool.
+        for (int m = blocks.size() - 1; m > lastBlockIndex; m--) {
+            Block emptyBlock = blocks.remove(m);
+            emptyBlock.close();
         }
+
+        // Update the WriteBuffer's member fields to reflect the changes we've made.
+        current = lastBlock;
+        index = lastBlockIndex;
     }
 
     /** Writes an array of bytes to the buffer expanding if necessary, defaulting to the entire array. */
