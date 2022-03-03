@@ -230,10 +230,12 @@ import java.util.List;
         // In this method, "buffer offsets" are absolute indexes into the WriteBuffer and
         // "block offsets" are indexes that are relative to the beginning of the current Block.
 
+        // The first buffer offset that does not yet contain data.
+        long position = position();
         // This is the buffer offset of the first byte that we will be shifting backwards.
-        long sourceBufferOffset = position() - length;
+        long sourceBufferOffset = position - length;
         // When we're done, this will be the first offset in the buffer that does not contain data.
-        long writeBufferLimit = sourceBufferOffset - shiftBy + length;
+        long writeBufferLimit = position - shiftBy;
 
         while (length > 0) {
             // Convert the source buffer offset into a (Block, block offset) pair.
