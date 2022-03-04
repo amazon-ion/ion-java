@@ -189,7 +189,7 @@ class IonReaderBinarySystemX
                 _v.setAuthoritativeType(AS_TYPE.int_value);
             }
             else if (_value_len <= MAX_BINARY_LENGTH_LONG) {
-                long v = readULong(_value_len);
+                long v = readULong((int) _value_len);
 
                 if (v < 0) {
                     // we probably can't fit this magnitude properly into a Java long
@@ -222,7 +222,7 @@ class IonReaderBinarySystemX
                 }
             }
             else {
-                BigInteger v = readBigInteger(_value_len, is_negative);
+                BigInteger v = readBigInteger((int) _value_len, is_negative);
                 _v.setValue(v);
                 _v.setAuthoritativeType(AS_TYPE.bigInteger_value);
             }
@@ -233,24 +233,24 @@ class IonReaderBinarySystemX
                 d = 0.0;
             }
             else {
-                d = readFloat(_value_len);
+                d = readFloat((int) _value_len);
             }
             _v.setValue(d);
             _v.setAuthoritativeType(AS_TYPE.double_value);
             break;
         case DECIMAL:
-            Decimal dec = readDecimal(_value_len);
+            Decimal dec = readDecimal((int) _value_len);
             _v.setValue(dec);
             _v.setAuthoritativeType(AS_TYPE.decimal_value);
             break;
         case TIMESTAMP:
             // TODO: it looks like a 0 length return a null timestamp - is that right?
-            Timestamp t = readTimestamp(_value_len);
+            Timestamp t = readTimestamp((int) _value_len);
             _v.setValue(t);
             _v.setAuthoritativeType(AS_TYPE.timestamp_value);
             break;
         case SYMBOL:
-            long sid = readULong(_value_len);
+            long sid = readULong((int) _value_len);
             if (sid < 0 || sid > Integer.MAX_VALUE) {
                 String message = "symbol id ["
                                + sid
@@ -265,7 +265,7 @@ class IonReaderBinarySystemX
             _v.setAuthoritativeType(AS_TYPE.int_value);
             break;
         case STRING:
-            String s = readString(_value_len);
+            String s = readString((int) _value_len);
             _v.setValue(s);
             _v.setAuthoritativeType(AS_TYPE.string_value);
             break;

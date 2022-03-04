@@ -29,6 +29,8 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
     private static final int IVM_START_BYTE = 0xE0;
     private static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
     private static final int ION_SYMBOL_TABLE_SID = 3;
+    // The following is a limitation imposed by this implementation, not the Ion specification.
+    private static final long MAXIMUM_VALUE_SIZE = Integer.MAX_VALUE;
 
     /**
      * Represents a VarUInt that may be read in multiple steps.
@@ -544,9 +546,9 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @return the number of bytes actually skipped.
      * @throws IOException if thrown by the underlying InputStream.
      */
-    private int skipBytesFromInput(int numberOfBytesToSkip) throws IOException {
+    private long skipBytesFromInput(long numberOfBytesToSkip) throws IOException {
         try {
-            return (int) getInput().skip(numberOfBytesToSkip);
+            return getInput().skip(numberOfBytesToSkip);
         } catch (EOFException e) {
             // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
             // to skip than are currently available (e.g. if a header or trailer is incomplete).
@@ -584,7 +586,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         if (isSkippingCurrentValue()) {
             if (state == State.SKIPPING_VALUE) {
                 // This is a seek operation, meaning that the bytes don't need to be interpreted.
-                received = skipBytesFromInput(amountToFill);
+                received = (int) skipBytesFromInput(amountToFill);
             } else {
                 // The bytes need to be interpreted, so they cannot be skipped. The caller must retrieve them from
                 // the input.
@@ -621,15 +623,18 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @return the number of bytes filled or skipped.
      * @throws Exception if thrown by the event handler.
      */
-    private int fillOrSkip() throws Exception {
+    private long fillOrSkip() throws Exception {
         // Clamping at the number of buffered bytes available guarantees that the buffer
         // will never grow beyond its initial size.
-        int bytesRequested = (int) additionalBytesNeeded - pipe.availableBeyondBoundary();
-        int bytesFilled;
+        long bytesRequested = additionalBytesNeeded - pipe.availableBeyondBoundary();
+        long bytesFilled;
         if (isSkippingCurrentValue()) {
             bytesFilled = skipBytesFromInput(bytesRequested);
         } else {
-            bytesFilled = fillPage(bytesRequested);
+            if (additionalBytesNeeded > MAXIMUM_VALUE_SIZE) {
+                throw new IonException("The size of the value exceeds the limits of the implementation.");
+            }
+            bytesFilled = fillPage((int) bytesRequested);
         }
         if (bytesFilled < 1) {
             return 0;
@@ -643,9 +648,9 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
             // buffered.
             bytesFilled = bytesFilled + ((int) additionalBytesNeeded - bytesRequested);
         } else {
-            bytesFilled = (int) Math.min(additionalBytesNeeded, bytesFilled);
-            pipe.extendBoundary(bytesFilled);
-            peekIndex += bytesFilled;
+            bytesFilled = Math.min(additionalBytesNeeded, bytesFilled);
+            pipe.extendBoundary((int) bytesFilled);
+            peekIndex += (int) bytesFilled;
         }
         return bytesFilled;
     }
@@ -657,16 +662,21 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @throws Exception if thrown by the event handler.
      */
     private long skip(long numberOfBytesToSkip) throws Exception {
-        int numberOfBytesSkipped;
+        long numberOfBytesSkipped;
         if (pipe.availableBeyondBoundary() >= numberOfBytesToSkip) {
             numberOfBytesSkipped = (int) numberOfBytesToSkip;
-            pipe.extendBoundary(numberOfBytesSkipped);
-            peekIndex += numberOfBytesSkipped;
+            pipe.extendBoundary((int) numberOfBytesSkipped);
+            peekIndex += (int) numberOfBytesSkipped;
         } else {
             numberOfBytesSkipped = fillOrSkip();
         }
         if (numberOfBytesSkipped > 0) {
-            dataHandler.onData(numberOfBytesSkipped);
+            long numberOfBytesToReport = numberOfBytesSkipped;
+            while (numberOfBytesToReport > 0) {
+                int numberOfBytesToReportThisIteration = (int) Math.min(Integer.MAX_VALUE, numberOfBytesToReport);
+                dataHandler.onData(numberOfBytesToReportThisIteration);
+                numberOfBytesToReport -= numberOfBytesToReportThisIteration;
+            }
         }
         return numberOfBytesSkipped;
     }

@@ -69,7 +69,7 @@ abstract class IonReaderBinaryRawX
     }
     State               _state;
     UnifiedInputStreamX _input;
-    int                 _local_remaining;
+    long                _local_remaining;
     boolean             _eof;
     boolean             _has_next_needed;
     ValueVariant        _v;
@@ -83,7 +83,7 @@ abstract class IonReaderBinaryRawX
      */
     int                 _value_field_id;
     int                 _value_tid;
-    int                 _value_len;
+    long                _value_len;
     long                _value_start;
     int                 _value_lob_remaining;
     boolean             _value_lob_is_ready;
@@ -169,11 +169,14 @@ abstract class IonReaderBinaryRawX
 
     static private final int  POS_OFFSET        = 0;
     static private final int  TYPE_LIMIT_OFFSET = 1;
-    static private final long TYPE_MASK         = 0xffffffff;
-    static private final int  LIMIT_SHIFT       = 32;
+    // All type IDs can fit in one byte.
+    static private final long TYPE_MASK         = 0xff;
+    // The limit is restricted to 7 bytes (see readVarUIntOrEOF(boolean longAllowed)), leaving space for one byte
+    // to hold the type ID. Shift the limit 8 bits left to make room for the type ID byte.
+    static private final int  LIMIT_SHIFT       = 8;
     static private final int  POS_STACK_STEP    = 2;
 
-    private final void push(int type, long position, int local_remaining)
+    private final void push(int type, long position, long local_remaining)
     {
         int oldlen = _container_stack.length;
         if ((_container_top + POS_STACK_STEP) >= oldlen) {
@@ -203,11 +206,10 @@ abstract class IonReaderBinaryRawX
         }
         return type;
     }
-    private final int get_top_local_remaining() {
+    private final long get_top_local_remaining() {
         assert(_container_top > 0);
         long type_limit = _container_stack[_container_top - POS_STACK_STEP + TYPE_LIMIT_OFFSET];
-        int  local_remaining = (int)((type_limit >> LIMIT_SHIFT) & TYPE_MASK);
-        return local_remaining;
+        return type_limit >> LIMIT_SHIFT;
     }
     private final void pop() {
         assert(_container_top > 0);
@@ -404,7 +406,7 @@ abstract class IonReaderBinaryRawX
         case S_BEFORE_VALUE:
         case S_AFTER_VALUE:
             if (_annotations.isDefined()) {
-                int local_remaining_save = _local_remaining;
+                long local_remaining_save = _local_remaining;
                 _input._save_points.savePointPushActive(_annotations, getPosition(), 0);
                 _local_remaining =  NO_LIMIT; // limit will be handled by the save point
                 _annotation_count = 0;
@@ -475,7 +477,7 @@ abstract class IonReaderBinaryRawX
             return UnifiedInputStreamX.EOF;
         }
         int tid = _Private_IonConstants.getTypeCode(td);
-        int len = _Private_IonConstants.getLowNibble(td);
+        long len = _Private_IonConstants.getLowNibble(td);
 
         // NOP Padding
         if (tid == _Private_IonConstants.tidNull && len != _Private_IonConstants.lnIsNull) {
@@ -486,7 +488,16 @@ abstract class IonReaderBinaryRawX
             tid = _Private_IonConstants.tidNopPad; // override typeId to use Pad marker
         }
         else if (len == _Private_IonConstants.lnIsVarLen) {
-            len = readVarUInt();
+            // For now, only allow *container* lengths to exceed Integer.MAX_VALUE.
+            // Note: for annotated scalars that exceed the limit, this method will be called again for the wrapped
+            // value's type ID, and will fail.
+            boolean isLongLengthAllowed = (
+                tid == _Private_IonConstants.tidTypedecl // Annotation wrapper
+                    || tid == _Private_IonConstants.tidList
+                    || tid == _Private_IonConstants.tidSexp
+                    || tid == _Private_IonConstants.tidStruct
+            );
+            len = readVarUInt(isLongLengthAllowed);
             start_of_value = _input.getPosition();
         }
         else if (tid == _Private_IonConstants.tidNull) {
@@ -500,7 +511,7 @@ abstract class IonReaderBinaryRawX
             _state = State.S_AFTER_VALUE;
         }
         else if (tid == _Private_IonConstants.tidBoolean) {
-            switch (len) {
+            switch ((int) len) {
                 case _Private_IonConstants.lnBooleanFalse:
                     _value_is_true = false;
                     break;
@@ -518,7 +529,7 @@ abstract class IonReaderBinaryRawX
             if ((_struct_is_ordered = (len == 1))) {
                 // special case of an ordered struct, it gets the
                 // otherwise impossible to have length of 1
-                len = readVarUInt();
+                len = readVarUInt(true);
                 if (len == 0) {
                     throwErrorAt("Structs flagged as having ordered keys must contain at least one key/value pair.");
                 }
@@ -621,7 +632,7 @@ abstract class IonReaderBinaryRawX
         // value processing when we step out
         long curr_position = getPosition();
         long next_position = curr_position + _value_len;
-        int  next_remaining = _local_remaining;
+        long  next_remaining = _local_remaining;
         if (next_remaining != NO_LIMIT) {
             next_remaining -= _value_len;
             if (next_remaining < 0) {
@@ -644,7 +655,7 @@ abstract class IonReaderBinaryRawX
         // first we get the top values, then we
         // pop them all off in one fell swoop.
         long next_position   = get_top_position();
-        int  local_remaining = get_top_local_remaining();
+        long local_remaining = get_top_local_remaining();
         int  parent_tid      = get_top_type();
         pop();
         _eof = false;
@@ -672,8 +683,7 @@ abstract class IonReaderBinaryRawX
                     distance -= max_skip;
                 }
                 if (distance > 0) {
-                    assert( distance < Integer.MAX_VALUE );
-                    skip((int)distance);
+                    skip(distance);
                 }
             }
             catch (IOException e) {
@@ -705,7 +715,7 @@ abstract class IonReaderBinaryRawX
                 len = 0;
             }
             else {
-                len = _value_len;
+                len = (int) _value_len;
             }
             _value_lob_remaining = len;
             _value_lob_is_ready = true;
@@ -808,7 +818,7 @@ abstract class IonReaderBinaryRawX
                 if (_local_remaining < 1) {
                     throwUnexpectedEOFException();
                 }
-                len = _local_remaining;
+                len = (int) _local_remaining;
             }
             read = _input.read(dst, start, len);
             _local_remaining -= read;
@@ -848,7 +858,7 @@ abstract class IonReaderBinaryRawX
         long pos = _input.getPosition();
         return pos;
     }
-    private final void skip(int len) throws IOException
+    private final void skip(long len) throws IOException
     {
         if (len < 0) {
             // no need to test this start >= dst.length ||
@@ -856,7 +866,11 @@ abstract class IonReaderBinaryRawX
             throw new IllegalArgumentException();
         }
         if (_local_remaining == NO_LIMIT) {
-            _input.skip(len);
+            while (len > 0) {
+                int toSkip = (int) Math.min(Integer.MAX_VALUE, len);
+                _input.skip(toSkip);
+                len -= toSkip;
+            }
         }
         else {
             if (len > _local_remaining) {
@@ -865,8 +879,12 @@ abstract class IonReaderBinaryRawX
                 }
                 len = _local_remaining;
             }
-            _input.skip(len);
             _local_remaining -= len;
+            while (len > 0) {
+                int toSkip = (int) Math.min(Integer.MAX_VALUE, len);
+                _input.skip(toSkip);
+                len -= toSkip;
+            }
         }
         return;
     }
@@ -986,7 +1004,7 @@ abstract class IonReaderBinaryRawX
             if ((b & 0x80) != 0) break;
 
             // Don't support anything above a 5-byte VarInt for now, see https://github.com/amzn/ion-java/issues/146
-            throwVarIntOverflowException();
+            throwVarIntOverflowException(5);
         }
 
         if (isNegative) {
@@ -995,13 +1013,24 @@ abstract class IonReaderBinaryRawX
 
         int retValueAsInt = (int) retValue;
         if (retValue != ((long) retValueAsInt)) {
-            throwVarIntOverflowException();
+            throwVarIntOverflowException(4);
         }
 
         return retValueAsInt;
     }
 
     protected final int readVarUIntOrEOF() throws IOException
+    {
+        return (int) readVarUIntOrEOF(false);
+    }
+
+    /**
+     * Attempts to read a VarUInt.
+     * @param longAllowed true if values over Integer.MAX_VALUE are allowed. If false, such values will raise an error.
+     * @return the value of the VarUInt, or -1 if EOF has been reached.
+     * @throws IOException if thrown when reading from the stream.
+     */
+    protected final long readVarUIntOrEOF(boolean longAllowed) throws IOException
     {
 // VarUInt uses the high-order bit of the last octet as a marker; some (but not all) 5-byte VarUInt can fit
         // into a Java int.
@@ -1034,26 +1063,49 @@ abstract class IonReaderBinaryRawX
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
 
-            // Don't support anything above a 5-byte VarUInt for now, see https://github.com/amzn/ion-java/issues/146
-            throwVarIntOverflowException();
+            if ((b = read()) < 0) throwUnexpectedEOFException();
+            retvalue = (retvalue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break;
+
+            if ((b = read()) < 0) throwUnexpectedEOFException();
+            retvalue = (retvalue << 7) | (b & 0x7F);
+            if ((b & 0x80) != 0) break;
+
+            // Don't support anything above a 7-byte VarUInt for now, see https://github.com/amzn/ion-java/issues/146
+            throwVarIntOverflowException(7);
         }
 
-        int retValueAsInt = (int) retvalue;
-        if (retvalue != ((long) retValueAsInt)) {
-            throwVarIntOverflowException();
-        }
+        if (!longAllowed) {
+            int retValueAsInt = (int) retvalue;
+            if (retvalue != ((long) retValueAsInt)) {
+                throwVarIntOverflowException(4);
+            }
 
-        return retValueAsInt;
+            return retValueAsInt;
+        }
+        return retvalue;
     }
     protected final int readVarUInt() throws IOException
     {
-        int varUInt = readVarUIntOrEOF();
+        return (int) readVarUInt(false);
+    }
+
+    /**
+     * Attempts to read a VarUInt, raising an error if EOF is encountered.
+     * @param longAllowed true if values over Integer.MAX_VALUE are allowed. If false, such values will raise an error.
+     * @return the value of the VarUInt.
+     * @throws IOException if thrown when reading from the stream.
+     */
+    protected final long readVarUInt(boolean longAllowed) throws IOException
+    {
+        long varUInt = readVarUIntOrEOF(longAllowed);
         if (varUInt == UnifiedInputStreamX.EOF) {
             throwUnexpectedEOFException();
         }
 
         return varUInt;
     }
+
     protected final double readFloat(int len) throws IOException
     {
         if (len == 0)
@@ -1083,7 +1135,7 @@ abstract class IonReaderBinaryRawX
         }
         else {
             // otherwise we to it the hard way ....
-            int save_limit = NO_LIMIT;
+            long save_limit = NO_LIMIT;
             if (_local_remaining != NO_LIMIT) {
                 save_limit = _local_remaining - len;
             }
@@ -1093,8 +1145,8 @@ abstract class IonReaderBinaryRawX
             int signum;
             if (_local_remaining > 0)
             {
-                byte[] bits = new byte[_local_remaining];
-                readAll(bits, 0, _local_remaining);
+                byte[] bits = new byte[(int) _local_remaining];
+                readAll(bits, 0, (int) _local_remaining);
                 signum = 1;
                 if (bits[0] < 0)
                 {
@@ -1136,7 +1188,7 @@ abstract class IonReaderBinaryRawX
 
         int         year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
         BigDecimal  frac = null;
-        int         save_limit = NO_LIMIT;
+        long        save_limit = NO_LIMIT;
         if (_local_remaining != NO_LIMIT) {
             save_limit = _local_remaining - len;
         }
@@ -1172,7 +1224,7 @@ abstract class IonReaderBinaryRawX
                         p = Precision.SECOND;
                         if (_local_remaining > 0) {
                             // now we read in our actual "milliseconds since the epoch"
-                            frac = readDecimal(_local_remaining);
+                            frac = readDecimal((int) _local_remaining);
                             if (frac.compareTo(BigDecimal.ZERO) < 0 || frac.compareTo(BigDecimal.ONE) >= 0) {
                                 throwErrorAt(
                                         "The fractional seconds value in a timestamp must be greater than or "
@@ -1211,7 +1263,7 @@ abstract class IonReaderBinaryRawX
 
         utf8Decoder.prepareDecode(numberOfBytes);
 
-        int save_limit = NO_LIMIT;
+        long save_limit = NO_LIMIT;
         if (_local_remaining != NO_LIMIT) {
             save_limit = _local_remaining - numberOfBytes;
         }
@@ -1267,7 +1319,7 @@ abstract class IonReaderBinaryRawX
     }
 
     private String readStringWithReusableBuffer(int numberOfBytes, ByteBuffer utf8InputBuffer) throws IOException {
-        int save_limit = NO_LIMIT;
+        long save_limit = NO_LIMIT;
         if (_local_remaining != NO_LIMIT) {
             save_limit = _local_remaining - numberOfBytes;
         }
@@ -1284,8 +1336,8 @@ abstract class IonReaderBinaryRawX
     private final void throwUnexpectedEOFException() throws IOException {
         throwErrorAt("unexpected EOF in value");
     }
-    private final void throwVarIntOverflowException() throws IOException {
-        throwErrorAt("int in stream is too long for a Java int 32");
+    private final void throwVarIntOverflowException(int byteLimit) throws IOException {
+        throwErrorAt("int in stream is too long to fit in " + byteLimit + " bytes.");
     }
 
     protected IonException newErrorAt(String msg) {
