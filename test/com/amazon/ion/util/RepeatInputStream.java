@@ -77,7 +77,7 @@ public final class RepeatInputStream
             return -1;
         }
 
-        int rem = len - off;
+        int rem = len;
         int consumed = 0;
         while (rem > 0 && !isDone())
         {
