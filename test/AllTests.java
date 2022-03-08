@@ -77,6 +77,7 @@ import com.amazon.ion.impl.LocalSymbolTableTest;
 import com.amazon.ion.impl.SharedSymbolTableTest;
 import com.amazon.ion.impl.SymbolTableTest;
 import com.amazon.ion.impl.TreeReaderTest;
+import com.amazon.ion.impl.bin.IonManagedBinaryWriterGoodTest;
 import com.amazon.ion.impl.bin.IonManagedBinaryWriterTest;
 import com.amazon.ion.impl.bin.IonRawBinaryWriterTest;
 import com.amazon.ion.impl.bin.PooledBlockAllocatorProviderTest;
@@ -217,11 +218,12 @@ import org.junit.runners.Suite;
     ResizingPipedInputStreamTest.class,
     IonReaderLookaheadBufferTest.class,
 
-    // experimental binary writer tests
+    // binary writer tests
     PooledBlockAllocatorProviderTest.class,
     WriteBufferTest.class,
     IonRawBinaryWriterTest.class,
     IonManagedBinaryWriterTest.class,
+    IonManagedBinaryWriterGoodTest.class,
 
     // Hash code tests
     HashCodeCorrectnessTest.class,
