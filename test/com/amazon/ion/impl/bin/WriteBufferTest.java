@@ -1073,4 +1073,24 @@ public class WriteBufferTest
         buf.shiftBytesLeft(1, 6);
         assertBuffer("ABCDE01234B".getBytes());
     }
+
+    @Test
+    public void shiftBytesLeftWithLengthZero() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.writeBytes("012345".getBytes());
+        // Shift left by two, retaining zero bytes (i.e. truncate).
+        // In Ion, this situation occurs when a length bytes are preallocated for containers that end up being empty.
+        buf.shiftBytesLeft(0, 2);
+        assertBuffer("0123".getBytes());
+    }
+
+    @Test
+    public void shiftBytesLeftWithLengthZeroAcrossBlocks() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.writeBytes("0123456789|0".getBytes());
+        // Shift left by two, retaining zero bytes (i.e. truncate).
+        // In Ion, this situation occurs when a length bytes are preallocated for containers that end up being empty.
+        buf.shiftBytesLeft(0, 2);
+        assertBuffer("0123456789".getBytes());
+    }
 }

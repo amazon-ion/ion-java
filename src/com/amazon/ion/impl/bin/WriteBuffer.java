@@ -180,7 +180,7 @@ import java.util.List;
      * @param shiftBy   The number of bytes to the left that we'll be shifting.
      */
     public void shiftBytesLeft(int length, int shiftBy) {
-        if (length == 0 || shiftBy == 0) {
+        if (shiftBy == 0) {
             // Nothing to do.
             return;
         }
