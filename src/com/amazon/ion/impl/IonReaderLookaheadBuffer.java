@@ -516,6 +516,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         peekIndex = Math.max(peekIndex - shiftAmount, 0);
         valuePreHeaderIndex -= shiftAmount;
         valuePostHeaderIndex -= shiftAmount;
+        valueStartWriteIndex -= shiftAmount;
         for (Marker symbolTableMarker : symbolTableMarkers) {
             if (symbolTableMarker.startIndex > afterIndex) {
                 symbolTableMarker.startIndex -= shiftAmount;
