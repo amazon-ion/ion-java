@@ -2671,6 +2671,130 @@ public class IonReaderBinaryIncrementalTest {
         assertEquals(out.size(), byteCounter.get());
     }
 
+    /**
+     * Calls next() on the given reader and returns the result.
+     * @param reader an Ion reader.
+     * @param pipe the stream from which the reader pulls data. If null, all data is available up front.
+     * @param source the source of data to be fed into the pipe. Only used if pipe is not null.
+     * @return the result of the first non-null call to reader.next(), or null if the source data is exhausted before
+     *  reader.next() returns non-null.
+     */
+    private static IonType ionReaderNext(IonReader reader, ResizingPipedInputStream pipe, ByteArrayInputStream source) {
+        if (pipe == null) {
+            return reader.next();
+        }
+        while (source.available() > 0) {
+            pipe.receive(source.read());
+            if (reader.next() != null) {
+                return reader.getType();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Verifies that oversized value handling works properly when the second value is oversized.
+     * @param withSymbolTable true if the first value should be preceded by a symbol table.
+     * @param withThirdValue true if the second (oversized) value should be followed by a third value that fits.
+     * @param byteByByte true if bytes should be fed to the reader one at a time.
+     * @throws Exception if thrown unexpectedly.
+     */
+    private static void oversizedSecondValue(
+        boolean withSymbolTable,
+        boolean withThirdValue,
+        boolean byteByByte
+    ) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
+        String firstValue = "12345678";
+        if (withSymbolTable) {
+            writer.writeSymbol(firstValue);
+        } else {
+            writer.writeString(firstValue);
+        }
+        writer.writeString("abcdefghijklmnopqrstuvwxyz");
+        String thirdValue = "abc";
+        if (withThirdValue) {
+            writer.writeString(thirdValue);
+        }
+        writer.close();
+
+        final AtomicInteger oversizedCounter = new AtomicInteger();
+        final AtomicInteger byteCounter = new AtomicInteger();
+        UnifiedTestHandler handler = new UnifiedTestHandler() {
+            @Override
+            public void onOversizedSymbolTable() {
+                throw new IllegalStateException("not expected");
+            }
+
+            @Override
+            public void onOversizedValue() {
+                oversizedCounter.incrementAndGet();
+            }
+
+            @Override
+            public void onData(int numberOfBytes) {
+                byteCounter.addAndGet(numberOfBytes);
+            }
+        };
+        // Greater than the first value (and symbol table, if any), less than the second and third values.
+        int maximumBufferSize = 25;
+        IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
+            IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(maximumBufferSize)
+                .withMaximumBufferSize(maximumBufferSize)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
+                .build()
+        );
+        ResizingPipedInputStream pipe = null;
+        ByteArrayInputStream source = new ByteArrayInputStream(out.toByteArray());
+        InputStream in;
+        if (byteByByte) {
+            pipe = new ResizingPipedInputStream(out.size());
+            in = pipe;
+        } else {
+            in = source;
+        }
+        IonReaderBinaryIncremental reader = new IonReaderBinaryIncremental(builder, in);
+        assertEquals(withSymbolTable ? IonType.SYMBOL : IonType.STRING, ionReaderNext(reader, pipe, source));
+        assertEquals(0, oversizedCounter.get());
+        assertEquals(firstValue, reader.stringValue());
+        if (withThirdValue) {
+            assertEquals(IonType.STRING, ionReaderNext(reader, pipe, source));
+            assertEquals(thirdValue, reader.stringValue());
+        }
+        assertNull(ionReaderNext(reader, pipe, source));
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        assertEquals(out.size(), byteCounter.get());
+    }
+
+    @Test
+    public void oversizedSecondValueWithoutSymbolTable() throws Exception {
+        oversizedSecondValue(false, false, false);
+        oversizedSecondValue(false, true, false);
+    }
+
+    @Test
+    public void oversizedSecondValueWithoutSymbolTableIncremental() throws Exception {
+        oversizedSecondValue(false, false, true);
+        oversizedSecondValue(false, true, true);
+    }
+
+    @Test
+    public void oversizedSecondValueWithSymbolTable() throws Exception {
+        oversizedSecondValue(true, false, false);
+        oversizedSecondValue(true, true, false);
+    }
+
+    @Test
+    public void oversizedSecondValueWithSymbolTableIncremental() throws Exception {
+        oversizedSecondValue(true, false, true);
+        oversizedSecondValue(true, true, true);
+    }
+
     private void oversizeSymbolTableDetectedInHeader(int maximumBufferSize) throws Exception {
         // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
         // for symbol 10.
