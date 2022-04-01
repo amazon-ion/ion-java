@@ -3388,4 +3388,22 @@ public class IonReaderBinaryIncrementalTest {
     public void annotationIteratorReuseDisabled() throws Exception {
         annotationIteratorReuse(false);
     }
+
+    @Test
+    public void failsOnMalformedSymbolTable() {
+        byte[] data = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // Binary IVM
+            0xE6, // 6-byte annotation wrapper
+            0x81, // 1 byte of annotation SIDs
+            0x83, // SID 3 ($ion_symbol_table)
+            0xD3, // 3-byte struct
+            0x84, // Field name SID 4 (name)
+            0xE7, // 7-byte annotation wrapper (error: there should only be two bytes remaining).
+            0x81, // Junk byte to fill the 6 bytes of the annotation wrapper and 3 bytes of the struct.
+            0x20  // Next top-level value (int 0).
+        );
+        IonReader reader = newBoundedIncrementalReader(data, 1024);
+        thrown.expect(IonException.class);
+        reader.next();
+    }
 }
