@@ -962,6 +962,9 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             }
             peekIndex = currentValueEndPosition;
         }
+        if (peekIndex > marker.endIndex) {
+            throw new IonException("Malformed symbol table. Child values exceeded the length declared in the header.");
+        }
         if (!hasSeenImports) {
             resetSymbolTable();
             resetImports();
