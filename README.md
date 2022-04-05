@@ -60,7 +60,7 @@ dependency into your project's `pom.xml`:
 <dependency>
   <groupId>com.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
-  <version>1.9.3</version>
+  <version>1.9.4</version>
 </dependency>
 ```
 
