@@ -2737,7 +2737,7 @@ public class IonReaderBinaryIncrementalTest {
                 byteCounter.addAndGet(numberOfBytes);
             }
         };
-        // Greater than the first value (and symbol table, if any), less than the second and third values.
+        // Greater than the first value (and symbol table, if any) and third value, less than the second value.
         int maximumBufferSize = 25;
         IonReaderBuilder builder = IonReaderBuilder.standard().withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
