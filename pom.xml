@@ -148,9 +148,6 @@
             </Export-Package>
             <!-- This can be used to retrieve the compiled JarInfo. -->
             <Main-Class>com.amazon.ion.impl._Private_CommandLine</Main-Class>
-            <!-- Add these properties to the manifest so they may be retrieved at runtime. -->
-            <Ion-Java-Build-Time>${build.time}</Ion-Java-Build-Time>
-            <Ion-Java-Project-Version>${project.version}</Ion-Java-Project-Version>
             <Automatic-Module-Name>com.amazon.ion</Automatic-Module-Name>
           </instructions>
         </configuration>

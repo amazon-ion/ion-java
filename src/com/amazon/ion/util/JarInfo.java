@@ -16,10 +16,12 @@
 package com.amazon.ion.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import com.amazon.ion.IonException;
@@ -31,11 +33,6 @@ import com.amazon.ion.Timestamp;
  */
 public final class JarInfo
 {
-
-    private static final String MANIFEST_FILE = "META-INF/MANIFEST.MF";
-    private static final String BUILD_TIME_ATTRIBUTE = "Ion-Java-Build-Time";
-    private static final String PROJECT_VERSION_ATTRIBUTE = "Ion-Java-Project-Version";
-
     private String ourProjectVersion;
 
     private Timestamp ourBuildTime;
@@ -49,34 +46,9 @@ public final class JarInfo
      */
     public JarInfo() throws IonException
     {
-        Enumeration<URL> manifestUrls;
-        try
-        {
-            manifestUrls = getClass().getClassLoader().getResources(MANIFEST_FILE);
-        }
-        catch (IOException e)
-        {
-            throw new IonException("Unable to load manifests.", e);
-        }
-        List<Manifest> manifests = new ArrayList<Manifest>();
-        while (manifestUrls.hasMoreElements())
-        {
-            try
-            {
-                manifests.add(new Manifest(manifestUrls.nextElement().openStream()));
-            }
-            catch (IOException e)
-            {
-                continue; // try the next manifest
-            }
-        }
-        loadBuildProperties(manifests);
+        loadBuildProperties();
     }
 
-    JarInfo(List<Manifest> manifests)
-    {
-        loadBuildProperties(manifests);
-    }
 
     /**
      * Gets the ion-java project version of this build.
@@ -101,50 +73,54 @@ public final class JarInfo
     // TODO writeTo(IonWriter)
 
     // ========================================================================
-
-    private void loadBuildProperties(List<Manifest> manifests) throws IonException
+    /**
+     * @return null but not empty string
+     */
+    private static String nonEmptyProperty(Properties props, String name)
     {
-        boolean propertiesLoaded = false;
-        for(Manifest manifest : manifests)
-        {
-            boolean success = tryLoadBuildProperties(manifest);
-            if(success && propertiesLoaded)
-            {
-                // In the event of conflicting manifests, fail instead of risking returning incorrect version info.
-                throw new IonException("Found multiple manifests with ion-java version info on the classpath.");
-            }
-            propertiesLoaded |= success;
-        }
-        if (!propertiesLoaded)
-        {
-            throw new IonException("Unable to locate manifest with ion-java version info on the classpath.");
-        }
+        String value = props.getProperty(name, "");
+        if (value.length() == 0) value = null;
+        return value;
     }
 
-    /*
-     * Returns true if the properties were loaded, otherwise false.
-     */
-    private boolean tryLoadBuildProperties(Manifest manifest)
+    private void loadBuildProperties()
+            throws IonException
     {
-        Attributes mainAttributes = manifest.getMainAttributes();
-        String projectVersion = mainAttributes.getValue(PROJECT_VERSION_ATTRIBUTE);
-        String time = mainAttributes.getValue(BUILD_TIME_ATTRIBUTE);
-
-        if (projectVersion == null || time == null)
-        {
-            return false;
-        }
-
-        ourProjectVersion = projectVersion;
-
+        String file = getClass().getSimpleName() + ".properties";
         try
         {
-            ourBuildTime = Timestamp.valueOf(time);
+            Properties props = new Properties();
+
+            InputStream in = getClass().getResourceAsStream(file);
+            if (in != null)
+            {
+                try
+                {
+                    props.load(in);
+                }
+                finally
+                {
+                    in.close();
+                }
+            }
+
+            ourProjectVersion = nonEmptyProperty(props, "build.version");
+
+            String time = nonEmptyProperty(props, "build.time");
+            if (time != null)
+            {
+                try {
+                    ourBuildTime = Timestamp.valueOf(time);
+                }
+                catch (IllegalArgumentException e)
+                {
+                    // Badly formatted timestamp. Ignore it.
+                }
+            }
         }
-        catch (IllegalArgumentException e)
+        catch (IOException e)
         {
-            // Badly formatted timestamp. Ignore it.
+            throw new IonException("Unable to load " + file, e);
         }
-        return true;
     }
 }
