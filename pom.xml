@@ -65,7 +65,17 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
     <build.year>${maven.build.timestamp}</build.year>
-    <jdkVersion>1.6</jdkVersion>
+    <!-- As of 2022 we still need to use a parallel property to actually get formatting
+      Don't be fooled if removing the .format line below looks to have no effect- try changing it.
+      See: https://issues.apache.org/jira/browse/MRESOURCES-99
+      -->
+    <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssXXX</maven.build.timestamp.format>
+    <build.time>${maven.build.timestamp}</build.time>
+    <!-- Can't target 6 from 8
+      https://stackoverflow.com/questions/48146930/is-it-possible-to-compile-project-on-java-8-for-target-java-6
+    -->
+    <jdk.source.version>6</jdk.source.version>
+    <jdk.target.version>6</jdk.target.version>
   </properties>
 
   <dependencies>
@@ -85,43 +95,29 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <!-- src/main/resources is the default resources directory but it looks like we need to list it explicitly in
+             order to set filtering=true, which does the interpolation in properties files
+             -->
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <sourceDirectory>src</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <plugins>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
+        <version>3.8.1</version>
         <configuration>
-          <source>${jdkVersion}</source>
-          <target>${jdkVersion}</target>
+          <source>${jdk.source.version}</source>
+          <target>${jdk.target.version}</target>
         </configuration>
       </plugin>
-      <plugin>
-        <!--
-        Since the format of maven.build.timestamp cannot be changed
-        during the build, define the build.time property here.
-        -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
-        <executions>
-          <execution>
-            <phase>initialize</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <exportAntProperties>true</exportAntProperties>
-              <target>
-                <tstamp>
-                  <format property="build.time" pattern="yyyy-MM-dd'T'HH:mm:ssXXX"/>
-                </tstamp>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+
       <plugin>
         <!-- Run the unit tests. -->
         <groupId>org.apache.maven.plugins</groupId>
@@ -134,6 +130,7 @@
           <argLine>-ea -Xmx3000M ${argLine}</argLine>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -152,6 +149,7 @@
           </instructions>
         </configuration>
       </plugin>
+
       <!-- Code Coverage -->
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -268,11 +266,9 @@
   <profiles>
     <profile>
       <id>release</id>
-      <properties>
-        <jdkVersion>1.5</jdkVersion>
-      </properties>
       <build>
         <plugins>
+
           <plugin>
             <!-- Package the source jar. -->
             <groupId>org.apache.maven.plugins</groupId>
@@ -287,6 +283,7 @@
               </execution>
             </executions>
           </plugin>
+
           <plugin>
             <!-- Package the javadoc jar. -->
             <groupId>org.apache.maven.plugins</groupId>
@@ -315,6 +312,7 @@
               </execution>
             </executions>
           </plugin>
+
           <plugin>
             <!-- GPG signing. -->
             <groupId>org.apache.maven.plugins</groupId>
@@ -330,6 +328,7 @@
               </execution>
             </executions>
           </plugin>
+
           <plugin>
             <!-- Publish the artifacts. -->
             <groupId>org.sonatype.plugins</groupId>
@@ -342,6 +341,7 @@
               <autoReleaseAfterClose>true</autoReleaseAfterClose>
             </configuration>
           </plugin>
+
         </plugins>
       </build>
     </profile>
