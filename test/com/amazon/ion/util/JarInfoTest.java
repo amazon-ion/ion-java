@@ -15,17 +15,31 @@
 
 package com.amazon.ion.util;
 
+import com.amazon.ion.Timestamp;
 import org.junit.Test;
 
-public class JarInfoTest
-{
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.matchesPattern;
+
+public class JarInfoTest {
     @Test
-    public void testConstruction()
-    {
-        // This attempts to load the properties file, but within IDE its
-        // not on the classpath.  At least we'll make sure the constructor
-        // doesn't die when the file is missing.
+    public void getBuildTime() {
         JarInfo info = new JarInfo();
+        Timestamp timestamp = info.getBuildTime();
+        // This test was written at the timestamp below, the loaded time should always be greater
+        Timestamp original = Timestamp.valueOf("2022-05-10T22:56:48Z");
+        assertThat(timestamp, greaterThan(original));
+    }
+
+    @Test
+    public void getProjectVersion() {
+        JarInfo info = new JarInfo();
+        String projectVersion = info.getProjectVersion();
+        // Semantic version MAJOR.MINOR.PATCH with optional -SNAPSHOT suffix
+        // Should always match our project version
+        String projectVersionPattern = "\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?";
+        assertThat(projectVersion, matchesPattern(projectVersionPattern));
     }
 
 }
