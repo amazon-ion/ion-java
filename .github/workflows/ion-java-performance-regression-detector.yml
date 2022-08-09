@@ -43,9 +43,9 @@ jobs:
       - name: Generate test Ion Data
         run: |
           mkdir -p testData
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/nestedStruct.isl testData/testStruct.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/nestedList.isl testData/testList.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/Sexpression.isl testData/testS-expression.10n
+          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/nestedStruct.isl testData/testStructs.10n
+          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/nestedList.isl testData/testLists.10n
+          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/sexp.isl testData/testSexps.10n
 
       - name: Upload test Ion Data to artifacts
         uses: actions/upload-artifact@v2
