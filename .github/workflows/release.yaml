@@ -1,0 +1,38 @@
+name: ion-java release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  check-tag:
+    # First, a sanity check to ensure that the library version matches the release version
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: get tag version
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: check library version
+        run: |
+          LIBRARY_VERSION="$(./gradlew properties | grep version | sed 's/version: /v/')"
+          [ "$LIBRARY_VERSION" = "$RELEASE_TAG" ]
+  publish-to-github-release:
+    #
+    needs: check-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - run: ./gradlew build
+      - name: set env
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - name: Upload Jar to GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$RELEASE_TAG" build/lib/*
+  # TODO: Add `publish-to-maven-central` job

@@ -6,25 +6,23 @@ on:
   pull_request:
     branches: [ master ]
 
-
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [8, 9, 10, 11]
+        java: [8, 11]
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
       - name: Use java ${{ matrix.java }}
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
+          distribution: 'corretto'
           java-version: ${{ matrix.java }}
-      - run: mvn test
-      - run: mvn package -f ion-java-cli/pom.xml
-      - run: java -jar ion-java-cli/target/ion-java-cli-1.0.jar version
+      - run: ./gradlew build
+      - run: ./ion-test-driver-run version
 
   report-generation:
     runs-on: ubuntu-latest
@@ -36,18 +34,7 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
-      - run: mvn test site
+      - run: ./gradlew check
       - uses: codecov/codecov-action@v1
         with:
-          file: target/site/jacoco/jacoco.xml
-      - name: deploy gh-pages
-        if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-        uses: JamesIves/github-pages-deploy-action@3.7.1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: "./target/site"
-
-
-
-
+          file: build/reports/jacoco/test/jacocoTestReport.xml

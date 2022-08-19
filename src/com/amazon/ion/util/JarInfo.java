@@ -86,7 +86,7 @@ public final class JarInfo
     private void loadBuildProperties()
             throws IonException
     {
-        String file = "/build.properties";
+        String file = "/ion-java.properties";
         try
         {
             Properties props = new Properties();

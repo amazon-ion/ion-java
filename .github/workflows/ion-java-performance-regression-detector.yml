@@ -24,7 +24,7 @@ jobs:
           path: ion-java-new
 
       - name: Build ion-java from the new commit
-        run: cd ion-java-new && git submodule init && git submodule update && mvn clean install
+        run: cd ion-java-new && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
 
       - name: Checkout ion-java-benchmark-cli
         uses: actions/checkout@v2
@@ -77,7 +77,7 @@ jobs:
           path: ion-java
 
       - name: Build ion-java from the previous commit
-        run: cd ion-java && git submodule init && git submodule update && mvn clean install
+        run: cd ion-java && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
 
       - name: Build ion-java-benchmark-cli
         run: cd ion-java-benchmark-cli && mvn clean install
