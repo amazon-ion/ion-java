@@ -167,7 +167,7 @@ class IonReaderTextUserX
                 }
             }
         }
-        return (_eof != true);
+        return (!_eof);
     }
 
     private static boolean isIonVersionMarker(String text)

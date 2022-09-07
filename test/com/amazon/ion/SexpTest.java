@@ -150,6 +150,17 @@ public class SexpTest
     }
 
     @Test
+    public void testAnnotatedDotInSexp()
+            throws Exception
+    {
+        IonSexp value = (IonSexp) oneValue("(a::.)");
+        assertEquals(1, value.size());
+        IonSymbol item = (IonSymbol) value.get(0);
+        checkSymbol(".", item);
+        checkAnnotation("a", item);
+    }
+
+    @Test
     public void testNegativeNumbersInSexp()
         throws Exception
     {
