@@ -616,9 +616,6 @@ final class IonReaderTextRawTokensX
         switch (c) {
         case -1:
             return next_token_finish(IonTokenConstsX.TOKEN_EOF, true);
-        case '/':
-            unread_char(c);
-            return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_OPERATOR, true);
         case ':':
             c2 = read_char();
             if (c2 != ':') {
@@ -670,7 +667,7 @@ final class IonReaderTextRawTokensX
             }
             unread_char(c);
             return next_token_finish(IonTokenConstsX.TOKEN_SYMBOL_OPERATOR, true);
-        case '#':
+        case '#': case '/':
         case '<': case '>': case '*': case '=': case '^': case '&': case '|':
         case '~': case ';': case '!': case '?': case '@': case '%': case '`':
             unread_char(c);
