@@ -20,12 +20,11 @@ jobs:
       - name: Checkout ion-java from the new commit.
         uses: actions/checkout@v2
         with:
-          fetch-depth: 2
-          submodules: recursive
-          path: ion-java
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: ion-java-new
 
       - name: Build ion-java from the new commit
-        run: cd ion-java && mvn clean install
+        run: cd ion-java-new && git submodule init && git submodule update && mvn clean install
 
       - name: Checkout ion-java-benchmark-cli
         uses: actions/checkout@v2
@@ -70,8 +69,15 @@ jobs:
       - name: Clean maven dependencies repository
         run : rm -r /home/runner/.m2
 
+      - name: Checkout the current commit
+        uses: actions/checkout@v2
+        with:
+          repository: amzn/ion-java
+          ref: master
+          path: ion-java
+
       - name: Build ion-java from the previous commit
-        run: cd ion-java && git checkout HEAD^ && git submodule update --recursive && mvn clean install
+        run: cd ion-java && git submodule init && git submodule update && mvn clean install
 
       - name: Build ion-java-benchmark-cli
         run: cd ion-java-benchmark-cli && mvn clean install
