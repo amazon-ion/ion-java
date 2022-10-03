@@ -1,0 +1,48 @@
+name: Create GitHub prerelease after fast-forward check
+on: workflow_dispatch
+
+jobs:
+  prerelease:
+    name: prerelease
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Access to the incoming release
+        uses: actions/checkout@v3
+        with:
+          repository: amzn/ion-java
+          path: current_release
+
+      - name: Build ion-java
+        run: |
+          cd current_release
+          git submodule init
+          git submodule update
+          mvn clean install
+
+      - name: Get the parameters of executable jar
+        run: |
+          cd current_release/target
+          echo "path=$(readlink -f $(ls *.jar))" >> $GITHUB_ENV
+          echo "file_name=$(ls *.jar)" >> $GITHUB_ENV
+          echo "version_number=$(echo $(ls *.jar) | cut -d'-' -f3)" >> $GITHUB_ENV
+
+      - name: Create new release
+        id: create_new_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.version_number }}
+          release_name: v${{ env.version_number }}
+          prerelease: true
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_new_release.outputs.upload_url }}
+          asset_path: ${{ env.path }}
+          asset_name: ${{ env.file_name }}
+          asset_content_type: application/zip

@@ -1,0 +1,101 @@
+name: Version-bump-and-fast-forward-check
+on: [pull_request]
+
+jobs:
+  check-version-bump:
+    name: check-version-bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Switch to the branch of the pull request
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: ion-java-new
+
+      - name: Checkout the current repository master branch
+        uses: actions/checkout@v3
+        with:
+          repository: amzn/ion-java
+          ref: master
+          path: ion-java-current
+
+      - name: Check whether the pull request contains version number bump
+        run: |
+          cd /home/runner/work/ion-java/ion-java/ion-java-new
+          versionNew=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          commitID=$(git rev-parse HEAD)
+          cd /home/runner/work/ion-java/ion-java/ion-java-current
+          versionCurrent=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ $versionNew != $versionCurrent ]]; then echo "version bump check pass"; else exit 1; fi 
+
+  comment-when-version-number-check-failed:
+    needs: check-version-bump
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    name: comment-when-version-number-check-failed
+    steps:
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            This PR doesn't contain version number bump and will not trigger the ion-java GitHub prerelease process.
+
+  fast-forward-check:
+    needs: check-version-bump
+    name: fast-forward-check
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Access to the last release
+        uses: oprypin/find-latest-tag@v1
+        id: check_last_release
+        with:
+          repository: amzn/ion-java
+          releases-only: true
+
+      - name: Checkout the last release
+        uses: actions/checkout@v3
+        with:
+          repository: amzn/ion-java
+          ref: ${{ steps.check_last_release.outputs.tag }}
+          path: last-release
+
+      - name: Get the commit id of the last release
+        run: |
+          cd last-release
+          echo "last_release_commit_id=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Access to the incoming release
+        uses: actions/checkout@v3
+        with:
+          repository: amzn/ion-java
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: ion-java-new
+
+      - name: Get the commit id of the incoming release
+        run: |
+          cd ion-java-new
+          echo "current_release_commit_id=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo $(git rev-parse HEAD)
+
+      - name: Check whether the incoming release is fast-forward compared to the last release
+        run: |
+          cd ion-java-new 
+          if git merge-base --is-ancestor ${{env.current_release_commit_id}} ${{env.current_release_commit_id}}; then echo "Trigger github release"; else exit 1; fi 
+
+      - name: comment
+        if: steps.build.outputs.exit_code == 0
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            This PR passes version bump check and fast-forward check, please double check the version number and merge this PR. After merging this PR, please trigger "Create gitHub prerelease after fast-forward check" workflow manually to create prerelease.
+
+      - name: comment
+        if: steps.build.outputs.exit_code == 1
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            This PR is not fast-forward compared to the last release, please check.
