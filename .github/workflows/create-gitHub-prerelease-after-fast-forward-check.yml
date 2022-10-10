@@ -1,11 +1,39 @@
 name: Create GitHub prerelease after fast-forward check
-on: workflow_dispatch
+on:
+  pull_request:
+    types:
+      - closed
 
 jobs:
+  check-version-change:
+    if: github.event.pull_request.merged == true
+    name: check-version-change
+    runs-on: ubuntu-latest
+    outputs:
+      output1: ${{ steps.check-version-change.outputs.result }}
+    steps:
+      - name: Checkout the current repository master branch
+        uses: actions/checkout@v3
+        with:
+          repository: amzn/ion-java
+          ref: master
+          fetch-depth: 2
+          path: ion-java-current
+
+      - name: Check whether the pull request contains version number bump
+        id: check-version-change
+        run: |
+          cd ion-java-current
+          versionNew=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          git reset --hard HEAD^
+          versionPrevious=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ $versionNew != $versionPrevious ]]; then echo "::set-output name=result::pass"; else echo "::set-output name=result::failed"; fi
+
   prerelease:
     name: prerelease
+    needs: check-version-change
+    if: ${{ needs.check-version-change.outputs.output1 == 'pass' }}
     runs-on: ubuntu-latest
-
     steps:
       - name: Access to the incoming release
         uses: actions/checkout@v3
@@ -16,9 +44,7 @@ jobs:
       - name: Build ion-java
         run: |
           cd current_release
-          git submodule init
-          git submodule update
-          mvn clean install
+          mvn clean install -DskipTests
 
       - name: Get the parameters of executable jar
         run: |
