@@ -51,7 +51,7 @@ jobs:
           cd current_release/target
           echo "path=$(readlink -f $(ls *.jar))" >> $GITHUB_ENV
           echo "file_name=$(ls *.jar)" >> $GITHUB_ENV
-          echo "version_number=$(echo $(ls *.jar) | cut -d'-' -f3)" >> $GITHUB_ENV
+          cd .. && echo "version_number=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
 
       - name: Create new release
         id: create_new_release
