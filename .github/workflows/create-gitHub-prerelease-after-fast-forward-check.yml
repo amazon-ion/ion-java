@@ -15,7 +15,7 @@ jobs:
       - name: Checkout the current repository master branch
         uses: actions/checkout@v3
         with:
-          repository: amzn/ion-java
+          repository: linlin-s/ion-java
           ref: master
           fetch-depth: 2
           path: ion-java-current
@@ -38,7 +38,7 @@ jobs:
       - name: Access to the incoming release
         uses: actions/checkout@v3
         with:
-          repository: amzn/ion-java
+          repository: linlin-s/ion-java
           path: current_release
 
       - name: Build ion-java

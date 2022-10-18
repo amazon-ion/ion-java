@@ -17,7 +17,7 @@ jobs:
       - name: Checkout the current repository master branch
         uses: actions/checkout@v3
         with:
-          repository: amzn/ion-java
+          repository: linlin-s/ion-java
           ref: master
           path: ion-java-current
 
@@ -59,7 +59,7 @@ jobs:
       - name: Access to the incoming release
         uses: actions/checkout@v3
         with:
-          repository: amzn/ion-java
+          repository: linlin-s/ion-java
           ref: ${{ github.event.pull_request.head.sha }}
           path: ion-java-new
 
@@ -75,7 +75,7 @@ jobs:
           if git merge-base --is-ancestor ${{env.last_release_commit_id}} ${{env.current_release_commit_id}}; then echo "Trigger github release"; else exit 1; fi
 
       - name: comment
-        if: steps.build.outputs.exit_code == 0
+        if: ${{ success() }}
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -83,7 +83,7 @@ jobs:
             This PR passes version bump check and fast-forward check, please double check the version number and merge this PR. After merging this PR, "Create gitHub prerelease after fast-forward check" workflow will be automatically triggered to create prerelease.
 
       - name: comment
-        if: steps.build.outputs.exit_code == 1
+        if: ${{ failure() }}
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.pull_request.number }}
