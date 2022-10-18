@@ -20,7 +20,7 @@
   <artifactId>ion-java</artifactId>
   <version>1.9.7</version>
   <packaging>bundle</packaging>
-
+<!--No version bump-->
   <name>${project.groupId}:${project.artifactId}</name>
   <description>
     A Java implementation of the Amazon Ion data notation.
