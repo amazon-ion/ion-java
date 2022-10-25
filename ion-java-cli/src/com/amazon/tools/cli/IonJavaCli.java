@@ -63,6 +63,7 @@ public class IonJavaCli {
         OutputFormat outputFormat = null;
         CommandType commandType = null;
 
+        // test
         try {
             //parse
             parser.parseArgument(args);
