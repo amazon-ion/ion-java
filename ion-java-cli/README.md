@@ -4,15 +4,14 @@ A Java implementation of CLI where its design document is located in [here](http
 The package is stored under `ion-java/ion-java-cli`.
 
 ## Setup
-Build ion-java-cli. Note that using -f option for ion-java-cli's `pom.xml`.
+Build ion-java-cli.
 ```
-$ mvn -f ion-java-cli/pom.xml install
+./gradle ion-java-cli:build
 ```
 
 ## Getting Started
-Invoking `ion-java-cli-x.y.jar` under `ion-java-cli/target/` directory. <br/> 
+Running the test driver CLI.
 
-For example:
 ```
-java -jar ion-java-cli/target/ion-java-cli-1.0.jar process test_file.ion -f pretty -o output.ion
+./gradlew ion-java-cli:run -q --args="process test_file.ion -f pretty -o output.ion"
 ```

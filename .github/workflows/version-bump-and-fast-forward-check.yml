@@ -25,10 +25,10 @@ jobs:
         id: check-version-change
         run: |
           cd /home/runner/work/ion-java/ion-java/ion-java-new
-          versionNew=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          versionNew="$(<project.version)"
           commitID=$(git rev-parse HEAD)
           cd /home/runner/work/ion-java/ion-java/ion-java-current
-          versionCurrent=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          versionCurrent="$(<project.version)"
           if [[ $versionNew != $versionCurrent ]]; then echo "::set-output name=result::pass"; else echo "::set-output name=result::failed"; fi
 
   fast-forward-check:
