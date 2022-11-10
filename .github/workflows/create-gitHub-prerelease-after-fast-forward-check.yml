@@ -24,9 +24,9 @@ jobs:
         id: check-version-change
         run: |
           cd ion-java-current
-          versionNew=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          versionNew="$(<project.version)"
           git reset --hard HEAD^
-          versionPrevious=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          versionPrevious="$(<project.version)"
           if [[ $versionNew != $versionPrevious ]]; then echo "::set-output name=result::pass"; else echo "::set-output name=result::failed"; fi
 
   prerelease:
@@ -44,14 +44,14 @@ jobs:
       - name: Build ion-java
         run: |
           cd current_release
-          mvn clean install -DskipTests
+          ./gradlew build
 
       - name: Get the parameters of executable jar
         run: |
           cd current_release/target
           echo "path=$(readlink -f $(ls *.jar))" >> $GITHUB_ENV
           echo "file_name=$(ls *.jar)" >> $GITHUB_ENV
-          cd .. && echo "version_number=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+          cd .. && echo "version_number=$(<project.version)" >> $GITHUB_ENV
 
       - name: Create new release
         id: create_new_release

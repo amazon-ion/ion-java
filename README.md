@@ -31,7 +31,7 @@ specified in `ion-java`'s `.gitmodules` file.
 the following command.
 
 ```
-$ mvn install
+$ ./gradlew publishToMavenLocal
 ```
 
 ### Pulling in Upstream Changes
@@ -56,12 +56,19 @@ For detailed walkthroughs of git submodule usage, see the
 To start using `ion-java` in your code with Maven, insert the following
 dependency into your project's `pom.xml`:
 
-```
+```xml
 <dependency>
   <groupId>com.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
   <version>1.9.5</version>
 </dependency>
+```
+
+For Gradle (Kotlin DSL), use:
+```kotlin
+dependencies {
+    implementation("com.amazon.ion:ion-java:1.9.5")
+}
 ```
 
 #### Legacy group id
