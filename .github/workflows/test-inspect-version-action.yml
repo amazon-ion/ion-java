@@ -1,0 +1,90 @@
+# Test cases for the 'inspect-version' action
+
+name: Test 'inspect-version' Action
+
+on:
+  pull_request:
+    paths:
+      - .github/actions/inspect-version/action.yml
+      - .github/workflows/test-inspect-version-action.yml
+  push:
+    paths:
+      - .github/actions/inspect-version/action.yml
+      - .github/workflows/test-inspect-version-action.yml
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      # Parameterized testing!
+      # The matrix has 3 parameters -- "version" and "fail_if_invalid" correspond
+      # to the action inputs. The "expected" parameter can either be a json object of the
+      # expected outputs or it can be the string 'action_failure' to indicate that we
+      # expect the action outcome to be 'failure'.
+      fail-fast: false
+      matrix:
+        include:
+          - version: '1.0.0'
+            expected: { is_newest: false, is_release: true, is_valid_to_release: false }
+
+          - version: '1.0.0'
+            fail_if_invalid: true
+            expected: action_failure
+
+          - version: 'v1.0.0'
+            expected: { is_newest: false, is_release: true, is_valid_to_release: false }
+
+          - version: '3.0.0'
+            fail_if_invalid: true
+            expected: { is_newest: true, is_release: true, is_valid_to_release: true }
+
+          - version: 'v3.0.0'
+            expected: { is_newest: true, is_release: true, is_valid_to_release: true }
+
+          - version: '1.0.0-SNAPSHOT'
+            fail_if_invalid: true
+            expected: { is_newest: false, is_release: false, is_valid_to_release: false }
+
+          - version: 'v1.0.0-SNAPSHOT'
+            expected: { is_newest: false, is_release: false, is_valid_to_release: false }
+
+          - version: 'nonsense_version'
+            expected: action_failure
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Invoke Action
+        id: inspect
+        continue-on-error: ${{ matrix.expected == 'action_failure' }}
+        uses: ./.github/actions/inspect-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          repo: amzn/ion-java
+          project_version: ${{ matrix.version }}
+          fail_if_invalid: ${{ matrix.fail_if_invalid }}
+
+      - name: Check For Expected Error
+        if: ${{ matrix.expected == 'action_failure' }}
+        shell: bash
+        run: |
+          PASS=${{ steps.test_fail.outcome != 'failure' }}
+          if [[ $PASS == 'false' ]]; then exit 1; fi
+
+      - name: Check For Expected Output
+        if: ${{ matrix.expected != 'action_failure' }}
+        shell: bash
+        # Comparing the whole objects directly doesn't work because GitHub Actions
+        # expressions will only compare objects by reference.
+        env:
+          PASS: >
+            ${{ 
+              matrix.expected.is_newest == steps.inspect.outputs.is_newest 
+                && matrix.expected.is_release == steps.inspect.outputs.is_release 
+                && matrix.expected.is_valid_to_release == steps.inspect.outputs.is_valid_to_release 
+            }}
+        run: |
+          echo "Pass? $PASS"
+          echo "expected: ${{ toJSON(matrix.expected) }}"
+          echo "was: ${{ toJSON(steps.inspect.outputs) }}"
+          if [[ $PASS == 'false' ]]; then exit 1; fi

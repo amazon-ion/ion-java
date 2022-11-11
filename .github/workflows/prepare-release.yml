@@ -1,0 +1,75 @@
+# This workflow runs when a commit is pushed to 'master' that has a change to the
+# 'project.version' file. Since we have a branch protection rule for 'master', a push
+# event is functionally the same as a merged PR event.
+#
+# If the project/library version is not a snapshot version, and it is greater than the
+# latest release in GitHub, then it creates a draft PR for the new library version.
+# This workflow always compares against the releases in amzn/ion-java, but will create
+# a draft release in a forked repository if the workflow is triggered in a fork.
+# See limitations at:
+# https://github.com/amzn/ion-java/blob/master/.github/actions/inspect-version/action.yml
+#
+# This workflow is almost a reusable workflow that can be used by any of our repos that
+# use semantic versioned releases. In order to make it reusable, we need to move it to
+# a separate repo, update the workflow trigger ('on') to be 'workflow_call', and define
+# inputs for any context that needs to be passed in. Any repo that uses this must either
+# pass in the library version as a workflow argument, or it will need to have the
+# `project.version` file. Also, there are some references to the 'master' branch that
+# will need to be factored out (since some of our repos use 'main' as the default branch).
+# Finally, there are references to "amzn/ion-java" should come from an input variable
+# or be retrieved from the GitHub Actions context.
+# See https://docs.github.com/en/actions/using-workflows/reusing-workflows
+#
+# This could also be bundled into a composite custom action instead of a workflow.
+# See https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
+
+name: Prepare Release
+on:
+  # We have a branch protection rule for master, so all commits to master require
+  # an approved PR. That means this workflow trigger is effectively equivalent to
+  # "on: PR that is merged into master"
+  push:
+    branches:
+      - 'master'
+    paths:
+      - 'project.version'
+  # Allow it to be manually triggered if necessary
+  workflow_dispatch:
+
+jobs:
+  check-version:
+    name: Check Project Version
+    runs-on: ubuntu-latest
+    outputs:
+      should_create_draft: ${{ steps.inspect.outputs.is_valid_to_release }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get project version
+        run: |
+          echo "PROJECT_VERSION=$(<project.version)" >> $GITHUB_ENV
+      - uses: ./.github/actions/inspect-version
+        id: inspect
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          repo: amzn/ion-java
+          project_version: ${{ env.PROJECT_VERSION }}
+      - run: |
+          echo "Result: ${{ toJSON(steps.inspect.outputs) }}"
+  create-draft:
+    name: Create Draft
+    runs-on: ubuntu-latest
+    needs: check-version
+    if: ${{ needs.check-version.outputs.should_create_draft == 'true' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create a draft release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "valid to release: ${{ needs.check-version.steps.inspect.outputs.is_valid_to_release }}"
+          RELEASE_TAG="v$(<project.version)"
+          # This intentionally creates the draft release in the current repo, which
+          # could be a fork, if this workflow was triggered in a fork.
+          gh release create "$RELEASE_TAG" --draft --generate-notes

@@ -1,0 +1,99 @@
+# With a bit of work, this reusable composite action could be used by ANY of our repos
+# that use semantic versioned releases. In order to make it reusable in other repos, we
+# need to move it to a separate repo so that it can be versioned independently of ion-java.
+#
+# See https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
+#
+# However, the more maintainable long-term solution is to rewrite this action as a
+# Javascript-based action.
+# See https://docs.github.com/en/actions/creating-actions/creating-a-javascript-action
+
+name: Inspect Version
+
+description: >
+  Inspects whether the version is a release version (i.e. has no "-SNAPSHOT" or "-beta"
+  suffixes) and whether the release version is greater than the most recent release on GitHub.
+  The action can optionally have an outcome of 'failure' if the version is a release version
+  that is not valid to release (i.e. not greater than latest existing release).
+  
+  When using this action, you should provide a github API auth token in the environment to 
+  prevent being throttled by the GitHub API and to ensure that the action can read the 
+  latest release of the repository, if the repository is private.
+  
+  Example usage:
+  ```yaml
+      - uses: ./.github/actions/inspect-version
+        env:
+          GITHUB_TOKEN: $\{{ secrets.GITHUB_TOKEN }}
+        with:
+          project_version: $\{{ env.PROJECT_VERSION }}
+          repo: amzn/ion-java
+          fail_if_invalid: true
+  ```
+
+inputs:
+  project_version:
+    description: The semantic version of the project.
+    required: true
+  repo:
+    description: The source repo in 'org/repo-name' form
+    required: true
+  fail_if_invalid:
+    description: Whether the action should fail if the conditions are not met.
+    required: false
+    default: 'false'
+
+outputs:
+  is_newest:
+    description: Whether or not the project version is greater than the most recent existing version
+    value: ${{ steps.inspection.outputs.is_newest }}
+  is_release:
+    description: Whether or not the version is a release version
+    value: ${{ steps.inspection.outputs.is_release }}
+  is_valid_to_release:
+    description: Whether or not the version is valid to release
+    value: ${{ steps.inspection.outputs.is_release == 'true' && steps.inspection.outputs.is_newest == 'true' }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get latest release version
+      # TODO: Consider handling cases where most recent release is not the "latest"
+      # This step assumes that the most recent release will have the highest version number.
+      # That is usually true, but it is NOT guaranteed.
+      shell: bash
+      run: |
+        echo "LATEST_RELEASE_VERSION=$(gh release view -R "${{ inputs.repo }}" --json tagName --jq '.tagName')" >> $GITHUB_ENV
+    - name: Compare the library version with the latest release version
+      # TODO: Replace this with a stricter check that the library version is one of the three
+      # possible subsequent versions. E.g. if latest version is 1.2.3, then library version
+      # should be one of 1.2.4, 1.3.0, or 2.0.0
+      id: is-greater-version
+      uses: popematt/compare-semvers@v1
+      with:
+        first: ${{ inputs.project_version }}
+        second: ${{ env.LATEST_RELEASE_VERSION }}
+    - name: Inspect Version
+      id: inspection
+      shell: bash
+      run: |
+        if [[ "${{ steps.is-greater-version.outputs.result }}" == 1 ]]; then
+          IS_NEWEST=true;
+        else
+          IS_NEWEST=false;
+        fi
+        echo "Is Newest? $IS_NEWEST";
+        echo "is_newest=$IS_NEWEST" >> $GITHUB_OUTPUT;
+        
+        pattern='^v?[0-9]+\.[0-9]+\.[0-9]+$'
+        if [[ "${{ inputs.project_version }}" =~ $pattern ]]; then
+          IS_RELEASE=true;
+        else
+          IS_RELEASE=false;
+        fi
+        echo "Is Release? $IS_RELEASE";
+        echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT;
+    - name: Exit with Error
+      if: ${{ inputs.fail_if_invalid == 'true' && steps.inspection.outputs.is_newest != 'true' && steps.inspection.outputs.is_release == 'true' }}
+      shell: bash
+      run: exit 1
