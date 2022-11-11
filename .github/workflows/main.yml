@@ -12,38 +12,43 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [8, 9, 10, 11]
+        include:
+          - java: 8
+            upload_reports: true
+          - java: 11
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
       - name: Use java ${{ matrix.java }}
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
+          distribution: 'corretto'
           java-version: ${{ matrix.java }}
       - uses: gradle/gradle-build-action@v2
         with:
           arguments: build
       - run: ./ion-test-driver-run version
+      - if: ${{ matrix.upload_reports }}
+        uses: codecov/codecov-action@v3
+        with:
+          files: build/reports/jacoco/test/jacocoTestReport.xml
 
-  report-generation:
+  check-version:
+    # Ensures that the version is not a release (i.e. -SNAPSHOT) or if it is a release version,
+    # ensures that the version is a later version number than the existing releases.
+    # See limitations at:
+    # https://github.com/amzn/ion-java/blob/master/.github/actions/inspect-version/action.yml
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Get Project Version
+        run: |
+          echo "PROJECT_VERSION=v$(<project.version)" >> $GITHUB_ENV
+      - uses: ./.github/actions/inspect-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          submodules: recursive
-      - name: Use java 11
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-      - uses: gradle/gradle-build-action@v2
-        with:
-          arguments: test
-      - uses: codecov/codecov-action@v1
-        with:
-          file: build/reports/jacoco/test/jacocoTestReport.xml
-
-
-
-
+          repo: amzn/ion-java
+          project_version: ${{ env.PROJECT_VERSION }}
+          fail_if_invalid: true

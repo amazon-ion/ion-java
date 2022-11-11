@@ -1,0 +1,61 @@
+# This workflow runs when a GitHub release is published.
+#
+# It validates that the tag correctly matches the library version, and then publishes
+# artifacts for the release. Currently, this includes uploading the compiled Jar to
+# the GitHub release. However, it should be extended to also include PGP signing and
+# uploading to Maven Central.
+#
+# This workflow is almost a reusable workflow that can be used by any of our Gradle/JVM
+# libraries. In order to make it reusable, we need to move it to a separate repo, update
+# the workflow trigger ('on') to be 'workflow_call', and define inputs for any context
+# that needs to be passed in.
+#
+# See https://docs.github.com/en/actions/using-workflows/reusing-workflows
+#
+# TODO: Consider whether we should merge this with the "prepare-release" workflow rather
+# than having separate workflows.
+
+name: Publish Artifacts for Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  check-tag:
+    # First, a sanity check to ensure that the library version matches the release version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validate project version matches tag
+        shell: bash
+        run: |
+          RELEASE_TAG=${GITHUB_REF#refs/tags/}
+          # the tag should start with `v`, so prepend `v` to the contents of project.version
+          PROJECT_VERSION="v$(<project.version)"
+          echo "Project Version: $PROJECT_VERSION"
+          echo "Release Tag: $RELEASE_TAG"
+          [ "$PROJECT_VERSION" = "$RELEASE_TAG" ] || exit 1
+  publish-to-github-release:
+    # only run if `check-tag` completes successfully
+    needs: check-tag
+    runs-on: ubuntu-latest
+    steps:
+        # TODO: replace with artifact upload/download -- make sure there's no race condition with other builds also
+        # uploaading an artifact.
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build
+      - name: Upload Jar to GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # TODO - reusability
+        # the location of the library(s) should be configurable as an input
+        # parameter rather than being hard coded as `build/lib/ion-java...`
+        # It may also need to be able to upload more than one file.
+        run: |
+          gh release upload "v$(<project.version)" "build/libs/ion-java-$(<project.version).jar"
+  # TODO: Add `publish-to-maven-central` job
