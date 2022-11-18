@@ -48,7 +48,7 @@ jobs:
           submodules: recursive
       - uses: gradle/gradle-build-action@v2
         with:
-          arguments: build
+          arguments: build cyclonedxBom
       - name: Upload Jar to GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,4 +58,5 @@ jobs:
         # It may also need to be able to upload more than one file.
         run: |
           gh release upload "v$(<project.version)" "build/libs/ion-java-$(<project.version).jar"
+          gh release upload "v$(<project.version)" "build/reports/bom.json"
   # TODO: Add `publish-to-maven-central` job
