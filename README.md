@@ -79,6 +79,6 @@ source libraries. We still maintain the legacy group id but strongly encourage u
 to the official one.
 
 ## Using the Library
-A great way to get started is to use the [Ion cookbook](http://amzn.github.io/ion-docs/cookbook.html).
+A great way to get started is to use the [Ion cookbook](https://amazon-ion.github.io/ion-docs/guides/cookbook.html).
 The [API documentation](http://www.javadoc.io/doc/com.amazon.ion/ion-java) will give a lot
 of detailed information about how to use the library.
