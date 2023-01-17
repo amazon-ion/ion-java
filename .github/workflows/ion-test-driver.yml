@@ -1,10 +1,15 @@
 name: ion-test-driver
 
-on: [pull_request]
+on:
+  workflow_run:
+    workflows: [ PR Content Check ]
+    types:
+      - completed
 
 jobs:
   ion-test-driver:
     runs-on: macos-10.15
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout ion-java
         uses: actions/checkout@master
