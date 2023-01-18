@@ -21,6 +21,8 @@ dependencies {
     testImplementation("junit:junit:4.13.1")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
+    // https://mvnrepository.com/artifact/com.google.code.tempus-fugit/tempus-fugit
+    testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
 }
 
 group = "com.amazon.ion"
