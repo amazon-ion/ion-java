@@ -1360,7 +1360,7 @@ import java.util.NoSuchElementException;
         // When SID 2 occurs at the top level with no annotations, it has the
         // special properties of an IVM. Otherwise, it's considered a normal
         // symbol value.
-        // TODO amzn/ion-java/issues/88 requires this behavior to be changed,
+        // TODO amazon-ion/ion-java/issues/88 requires this behavior to be changed,
         // such that top-level SID 2 is treated as a symbol value, not an IVM.
         return depth == 0 && sid == ION_1_0_SID && !hasAnnotations();
     }

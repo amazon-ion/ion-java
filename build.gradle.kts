@@ -72,7 +72,7 @@ tasks {
 
     /**
      * This task creates a properties file that will be included in the compiled jar. It contains information about
-     * the build/version of the library used in [com.amazon.ion.util.JarInfo]. See https://github.com/amzn/ion-java/pull/433
+     * the build/version of the library used in [com.amazon.ion.util.JarInfo]. See https://github.com/amazon-ion/ion-java/pull/433
      * for why this is done with a properties file rather than the Jar manifest.
      */
     val generateJarInfo by creating<Task> {
@@ -124,7 +124,7 @@ publishing {
         pom {
             name.set("Ion Java")
             description.set(project.description)
-            url.set("https://github.com/amzn/ion-java/")
+            url.set("https://github.com/amazon-ion/ion-java/")
 
             licenses {
                 license {
@@ -141,9 +141,9 @@ publishing {
                 }
             }
             scm {
-                connection.set("scm:git:git@github.com:amzn/ion-java.git")
-                developerConnection.set("scm:git:git@github.com:amzn/ion-java.git")
-                url.set("git@github.com:amzn/ion-java.git")
+                connection.set("scm:git:git@github.com:amazon-ion/ion-java.git")
+                developerConnection.set("scm:git:git@github.com:amazon-ion/ion-java.git")
+                url.set("git@github.com:amazon-ion/ion-java.git")
             }
         }
     }

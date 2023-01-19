@@ -38,7 +38,7 @@ jobs:
     # Ensures that the version is not a release (i.e. -SNAPSHOT) or if it is a release version,
     # ensures that the version is a later version number than the existing releases.
     # See limitations at:
-    # https://github.com/amzn/ion-java/blob/master/.github/actions/inspect-version/action.yml
+    # https://github.com/amazon-ion/ion-java/blob/master/.github/actions/inspect-version/action.yml
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -49,6 +49,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo: amzn/ion-java
+          repo: amazon-ion/ion-java
           project_version: ${{ env.PROJECT_VERSION }}
           fail_if_invalid: true

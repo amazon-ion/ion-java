@@ -36,12 +36,12 @@ public interface _Private_IonSystem
     public SymbolTable newSharedSymbolTable(IonStruct ionRep);
 
     /**
-     * TODO Must correct amzn/ion-java/issues/63 before exposing this or using from public API.
+     * TODO Must correct amazon-ion/ion-java/issues/63 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(String ionText);
 
     /**
-     * TODO Must correct amzn/ion-java/issues/63 before exposing this or using from public API.
+     * TODO Must correct amazon-ion/ion-java/issues/63 before exposing this or using from public API.
      */
     public Iterator<IonValue> systemIterate(Reader ionText);
 

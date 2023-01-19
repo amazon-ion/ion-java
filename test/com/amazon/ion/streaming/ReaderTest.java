@@ -306,7 +306,7 @@ public class ReaderTest
      * it's not what one would expect.
      */
     @Test @Ignore
-    public void testReadingFloatAsBigDecimal() // TODO amzn/ion-java/issues/56
+    public void testReadingFloatAsBigDecimal() // TODO amazon-ion/ion-java/issues/56
     {
         BigDecimal actualBd = readBigDecimal("null.float");
         assertEquals(in.isNullValue(), actualBd  == null);
@@ -428,7 +428,7 @@ public class ReaderTest
     public void testReadLobUsingGetBytes() throws Exception
     {
         if (!myReaderMaker.sourceIsBinary()) {
-            // TODO text implements getBytes() differently: https://github.com/amzn/ion-java/issues/319
+            // TODO text implements getBytes() differently: https://github.com/amazon-ion/ion-java/issues/319
             return;
         }
         String data = "{{\"abcdefghijklmnopqrstuvwxyz\"}}";

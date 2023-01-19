@@ -43,7 +43,7 @@ import java.util.Iterator;
  * <b>Implementations of this interface are safe for use by multiple
  * threads.</b>
  *
- * @see <a href="http://amzn.github.io/ion-docs/docs/symbols.html">Ion Symbols page</a>
+ * @see <a href="https://amazon-ion.github.io/ion-docs/docs/symbols.html">Ion Symbols page</a>
  */
 public interface SymbolTable
 {

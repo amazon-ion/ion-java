@@ -49,7 +49,7 @@ public class IonMarkupWriterTest extends IonTestCase {
             "<afterAnnotations BLOB><beforeData BLOB>" +
             "{{T25lIEJpZyBGYXQgVGVzdCBCbG9iIEZvciBZb3VyIFBsZWFzdXJl}}<afterData" +
             " BLOB><beforeStepOut STRUCT>}<afterData STRUCT>";
-    // TODO amzn/ion-java/issues/57 determine if platform specific newlines are appropriate for pretty printing
+    // TODO amazon-ion/ion-java/issues/57 determine if platform specific newlines are appropriate for pretty printing
     private String pExpected = String.format(
             "%n<beforeAnnotations STRUCT><beforeEachAnnotation STRUCT>abcd" +
             "<afterEachAnnotation STRUCT>::<afterAnnotations STRUCT><beforeData" +

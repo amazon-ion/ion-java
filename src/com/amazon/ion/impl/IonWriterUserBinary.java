@@ -97,7 +97,7 @@ class IonWriterUserBinary
                  mySymtabExtendsCache.symtabsCompat(getSymbolTable(),
                                                     reader.getSymbolTable())))
             {
-                // TODO amzn/ion-java/issues/16 Doesn't copy annotations or field names.
+                // TODO amazon-ion/ion-java/issues/16 Doesn't copy annotations or field names.
                 transfer.transferCurrentValue(myCopySink);
                 return;
             }

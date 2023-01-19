@@ -64,7 +64,7 @@ class IonReaderTextSystemX
 
     protected IonReaderTextSystemX(UnifiedInputStreamX iis)
     {
-        _system_symtab = _Private_Utils.systemSymtab(1); // TODO check IVM to determine version: amzn/ion-java/issues/19
+        _system_symtab = _Private_Utils.systemSymtab(1); // TODO check IVM to determine version: amazon-ion/ion-java/issues/19
         init_once();
         init(iis, IonType.DATAGRAM);
     }

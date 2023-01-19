@@ -257,7 +257,7 @@ class LocalSymbolTable
                 sid = getSidForSymbolTableField(fieldName);
             }
 
-            // TODO amzn/ion-java/issues/36 Switching over SIDs doesn't cover the case
+            // TODO amazon-ion/ion-java/issues/36 Switching over SIDs doesn't cover the case
             //      where the relevant field names are defined by a prev LST;
             //      the prev LST could have 'symbols' defined locally with a
             //      different SID!
@@ -839,7 +839,7 @@ class LocalSymbolTable
         // Superset must have same/more known symbols than subset.
         if (getMaxId() < subset.getMaxId()) return false;
 
-        // TODO amzn/ion-java/issues/18 Currently, we check imports by their refs. which
+        // TODO amazon-ion/ion-java/issues/18 Currently, we check imports by their refs. which
         //      might be overly strict; imports which are not the same ref.
         //      but have the same semantic states fails the extension check.
         if (! myImportsList.equalImports(subset.myImportsList))

@@ -1161,7 +1161,7 @@ class ReverseBinaryEncoder
         {
             final int originalOffset = myBuffer.length - myOffset;
 
-            // TODO amzn/ion-java/issues/31 should not preserve the ordering of fields
+            // TODO amazon-ion/ion-java/issues/31 should not preserve the ordering of fields
             ArrayList<IonValue> values = new ArrayList<IonValue>();
 
             // Fill ArrayList with IonValues, the add() just copies the
@@ -1182,7 +1182,7 @@ class ReverseBinaryEncoder
                 writeVarUInt(sid);
             }
 
-            // TODO amzn/ion-java/issues/41 Detect if the struct fields are sorted in ascending
+            // TODO amazon-ion/ion-java/issues/41 Detect if the struct fields are sorted in ascending
             // order of Sids. If so, 1 should be written into 'length' field.
             // Note that this 'length' field is not the same as the four-bit
             // length L in the type descriptor octet.
@@ -1273,7 +1273,7 @@ class ReverseBinaryEncoder
      *    have different Ion versions.
      * </ul>
      *
-     * TODO amzn/ion-java/issues/25 Currently, {@link IonDatagram#systemIterator()} doesn't
+     * TODO amazon-ion/ion-java/issues/25 Currently, {@link IonDatagram#systemIterator()} doesn't
      * retain information about interspersed IVMs within the IonDatagram.
      * As such, we cannot obtain the location of interspersed IVMs, if any.
      *

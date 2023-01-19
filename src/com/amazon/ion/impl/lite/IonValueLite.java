@@ -310,7 +310,7 @@ abstract class IonValueLite
                         this._annotations[i] =
                             _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     } else {
-                        // TODO - amzn/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
+                        // TODO - amazon-ion/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
                         this._annotations[i] = existing._annotations[i];
                         hasSIDsRetained |= this._annotations[i].getSid() > UNKNOWN_SYMBOL_ID;
                     }
@@ -325,7 +325,7 @@ abstract class IonValueLite
         // existing 'read only' flag - we force the deep-copy back to being mutable
         clear_flag(IS_LOCKED);
         // whilst the clone *should* guarantee symbol context is purged, the annotation behavior existing above
-        // under the TO DO for amzn/ion-java/issues/223 does mean that SID context can be propogated through a clone, therefore
+        // under the TO DO for amazon-ion/ion-java/issues/223 does mean that SID context can be propogated through a clone, therefore
         // the encoding flag has to reflect this reality
         _isSymbolIdPresent(hasSIDsRetained);
     }
@@ -467,7 +467,7 @@ abstract class IonValueLite
 
     public SymbolToken getFieldNameSymbol()
     {
-        // TODO amzn/ion-java/issues/27 We should memoize the results of symtab lookups.
+        // TODO amazon-ion/ion-java/issues/27 We should memoize the results of symtab lookups.
         // BUT: that could cause thread-safety problems for read-only values.
         // I think makeReadOnly should populate the tokens fully
         // so that we only need to lookup from mutable instances.
@@ -613,7 +613,7 @@ abstract class IonValueLite
         if (_fieldName != null) return _fieldName;
         if (_fieldId <= 0) return null;
 
-        // TODO amzn/ion-java/issues/27 why no symtab lookup, like getFieldNameSymbol()?
+        // TODO amazon-ion/ion-java/issues/27 why no symtab lookup, like getFieldNameSymbol()?
         throw new UnknownSymbolException(_fieldId);
     }
 
@@ -683,7 +683,7 @@ abstract class IonValueLite
             String text = token.getText();
             if (text != null && token.getSid() == UNKNOWN_SYMBOL_ID)
             {
-                // TODO amzn/ion-java/issues/27 We should memoize the result of symtab lookups
+                // TODO amazon-ion/ion-java/issues/27 We should memoize the result of symtab lookups
                 // into _annotations.
                 // See getFieldNameSymbol() for challenges doing so.
 

@@ -660,7 +660,7 @@ class IonWriterSystemText
             && ! _following_long_string
             && _long_string_threshold < value.length())
         {
-            // TODO amzn/ion-java/issues/57 This can lead to mixed newlines in the output.
+            // TODO amazon-ion/ion-java/issues/57 This can lead to mixed newlines in the output.
             // It assumes NL line separators, but _options could use CR+NL
             _output.printLongString(value);
 

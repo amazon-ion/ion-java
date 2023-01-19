@@ -94,7 +94,7 @@ public interface IonSystem
      * or if any but the first is a system table.
      * @throws NullPointerException if any import is null.
      */
-    // TODO amzn/ion-java/issues/38 Should we allow substituted imports as valid args?
+    // TODO amazon-ion/ion-java/issues/38 Should we allow substituted imports as valid args?
     public SymbolTable newLocalSymbolTable(SymbolTable... imports);
 
 

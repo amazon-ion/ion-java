@@ -282,7 +282,7 @@ public class TextWriterTest
 
         options.withPrettyPrinting();
         expectRendering(
-            // TODO amzn/ion-java/issues/57 determine if these really should be platform independent newlines
+            // TODO amazon-ion/ion-java/issues/57 determine if these really should be platform independent newlines
             format(
                 "%n" +
                 "'''looong'''%n" +

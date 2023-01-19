@@ -65,7 +65,7 @@ final class SymbolTokenImpl
     }
 
     /*
-     * TODO amzn/ion-java#126
+     * TODO amazon-ion/ion-java#126
      *Equals and hashCode must be symmetric.
      *Two symboltokens are only equal when text1 equals text2 (including null == null)
      *This is an incomplete solution, needs to be updated as symboltokens are fleshed out.

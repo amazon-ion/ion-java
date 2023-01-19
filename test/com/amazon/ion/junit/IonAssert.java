@@ -86,7 +86,7 @@ public final class IonAssert
         assertTrue(in.getFieldId() < 0);
         assertNull(in.getFieldNameSymbol());
 
-        // TODO amzn/ion-java/issues/13 Text reader doesn't throw, but others do.
+        // TODO amazon-ion/ion-java/issues/13 Text reader doesn't throw, but others do.
         try {
             String[] ann = in.getTypeAnnotations();
             assertEquals(0, ann.length);

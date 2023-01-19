@@ -50,7 +50,7 @@ class IonReaderBinarySystemX
     {
         super();
         init_raw(in);
-        // TODO check IVM to determine version: amzn/ion-java#19, amzn/ion-java#24
+        // TODO check IVM to determine version: amazon-ion/ion-java#19, amazon-ion/ion-java#24
         _symbols = SharedSymbolTable.getSystemSymbolTable(1);
     }
 

@@ -932,7 +932,7 @@ public final class Timestamp
      * @return
      *          {@code null} if the {@code CharSequence} is "null.timestamp"
      *
-     * @see <a href="http://amzn.github.io/ion-docs/docs/spec.html#timestamp">Ion Timestamp Page</a>
+     * @see <a href="https://amazon-ion.github.io/ion-docs/docs/spec.html#timestamp">Ion Timestamp Page</a>
      * @see <a href="http://www.w3.org/TR/NOTE-datetime">W3C Note on Date and Time Formats</a>
      */
     public static Timestamp valueOf(CharSequence ionFormattedTimestamp)

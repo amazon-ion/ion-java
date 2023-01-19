@@ -44,7 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * TODO amzn/ion-java/issues/29 Refactor this test class, possible duplicate test coverage in
+ * TODO amazon-ion/ion-java/issues/29 Refactor this test class, possible duplicate test coverage in
  * {@link RoundTripTest}.
  */
 public class RoundTripStreamingTest

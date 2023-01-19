@@ -41,7 +41,7 @@ import java.util.Iterator;
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  * We still have some work to do before this interface is stable.
- * See <a href="https://github.com/amzn/ion-java/issues/11">issue amzn/ion-java/issues/11</a>
+ * See <a href="https://github.com/amazon-ion/ion-java/issues/11">issue amazon-ion/ion-java/issues/11</a>
  * <p>
  * An {@code IonReader} has a "cursor" tracking the <em>current value</em> on
  * which the reader is positioned. Generally, newly created readers are not
@@ -88,7 +88,7 @@ import java.util.Iterator;
  * <h3>The {@link SeekableReader} Facet</h3>
  * This facet is available on all readers <em>except</em> those created from
  * an {@link java.io.InputStream InputStream}.
- * (See <a href="https://github.com/amzn/ion-java/issues/17">issue amzn/ion-java/issues/17</a>.)
+ * (See <a href="https://github.com/amazon-ion/ion-java/issues/17">issue amazon-ion/ion-java/issues/17</a>.)
  * It allows the user to reposition the reader to a {@link Span} over the
  * same reader instance or another reader with the same source.
  *

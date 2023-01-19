@@ -27,7 +27,7 @@ description: >
           GITHUB_TOKEN: $\{{ secrets.GITHUB_TOKEN }}
         with:
           project_version: $\{{ env.PROJECT_VERSION }}
-          repo: amzn/ion-java
+          repo: amazon-ion/ion-java
           fail_if_invalid: true
   ```
 

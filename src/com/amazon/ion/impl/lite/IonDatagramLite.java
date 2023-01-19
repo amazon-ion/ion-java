@@ -417,7 +417,7 @@ final class IonDatagramLite
             // refer to slots in shared symbol table imports declared by the discarded table, an
             // error will be raised unnecessarily. To avoid that, only write an IVM when the writer's
             // symbol table is already the system symbol table.
-            // TODO evaluate whether an IVM should ever be written here. amzn/ion-java#200
+            // TODO evaluate whether an IVM should ever be written here. amazon-ion/ion-java#200
             try {
                 writer.writeSymbol(SystemSymbols.ION_1_0);
             } catch (IOException ioe) {

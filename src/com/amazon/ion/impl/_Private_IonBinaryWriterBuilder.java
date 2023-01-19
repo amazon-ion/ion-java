@@ -40,7 +40,7 @@ import java.io.OutputStream;
 public class _Private_IonBinaryWriterBuilder
     extends IonBinaryWriterBuilder
 {
-    // amzn/ion-java/issues/59 expose configuration points properly and figure out deprecation path for the old writer.
+    // amazon-ion/ion-java/issues/59 expose configuration points properly and figure out deprecation path for the old writer.
     private final _Private_IonManagedBinaryWriterBuilder myBinaryWriterBuilder;
     private ValueFactory mySymtabValueFactory;
 
@@ -298,7 +298,7 @@ public class _Private_IonBinaryWriterBuilder
      */
     private _Private_IonBinaryWriterBuilder fillLegacyDefaults()
     {
-        // amzn/ion-java/issues/59 Fix this to use the new writer or eliminate it
+        // amazon-ion/ion-java/issues/59 Fix this to use the new writer or eliminate it
 
         // Ensure that we don't modify the user's builder.
         _Private_IonBinaryWriterBuilder b = copy();
@@ -375,7 +375,7 @@ public class _Private_IonBinaryWriterBuilder
     @Deprecated
     public final IonBinaryWriter buildLegacy()
     {
-        // amzn/ion-java/issues/59 Fix this to use the new writer or eliminate it
+        // amazon-ion/ion-java/issues/59 Fix this to use the new writer or eliminate it
         _Private_IonBinaryWriterBuilder b = fillLegacyDefaults();
 
         IonWriterSystemBinary systemWriter =

@@ -123,7 +123,7 @@ import java.util.Set;
  * <h3>Terminology</h3>
  * Within this class, <i>strict</i> equivalence refers to Ion data model
  * equivalence as defined above and by the
- * <a href="http://amzn.github.io/ion-docs/docs/spec.html">Ion
+ * <a href="https://amazon-ion.github.io/ion-docs/docs/spec.html">Ion
  * Specification</a>. <i>Structural</i> or <i>non-strict</i> equivalence
  * follows the same rules as strict equivalence, except that
  * <ul>
@@ -135,7 +135,7 @@ import java.util.Set;
 public final class Equivalence {
 
     /**
-     * TODO amzn/ion-java/issues/26 Marker for code that needs to be altered in order to
+     * TODO amazon-ion/ion-java/issues/26 Marker for code that needs to be altered in order to
      * support a public comparison API to determine ordering of values, not
      * just equality.
      */
@@ -434,7 +434,7 @@ public final class Equivalence {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
             if (name == null) {
-                // TODO amzn/ion-java/issues/23 Problematic with unknown field names.
+                // TODO amazon-ion/ion-java/issues/23 Problematic with unknown field names.
                 name = UNKNOWN_SYMBOL_TEXT_PREFIX + tok.getSid();
             }
             this.name = name;
@@ -448,7 +448,7 @@ public final class Equivalence {
         @Override
         public int hashCode() {
             return name.hashCode();
-            // TODO amzn/ion-java/issues/58 : implement hash code such that it respects
+            // TODO amazon-ion/ion-java/issues/58 : implement hash code such that it respects
             // 'strict'. The prevously attempted fix is commented out below but
             // is not sufficient because value.hasCode will always include
             // type annotations in the hash computation. Type annotations
@@ -538,14 +538,14 @@ public final class Equivalence {
                     }
                     break;
                 case DECIMAL:
-                    assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java/issues/26
+                    assert !PUBLIC_COMPARISON_API; // TODO amazon-ion/ion-java/issues/26
                     result = Decimal.equals(((IonDecimal) v1).decimalValue(),
                                             ((IonDecimal) v2).decimalValue())
                                             ? 0 : 1;
                     break;
                 case TIMESTAMP:
                     if (configuration.isStrict) {
-                        assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java/issues/26
+                        assert !PUBLIC_COMPARISON_API; // TODO amazon-ion/ion-java/issues/26
                         result = (((IonTimestamp) v1).timestampValue().equals(
                                   ((IonTimestamp) v2).timestampValue())
                                   ? 0 : 1);
@@ -573,7 +573,7 @@ public final class Equivalence {
                     result = compareLobContents((IonLob) v1, (IonLob) v2);
                     break;
                 case STRUCT:
-                    assert !PUBLIC_COMPARISON_API; // TODO amzn/ion-java/issues/26
+                    assert !PUBLIC_COMPARISON_API; // TODO amazon-ion/ion-java/issues/26
                     result = compareStructs((IonStruct) v1,
                                             (IonStruct) v2,
                                             configuration);
