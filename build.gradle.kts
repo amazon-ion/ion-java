@@ -94,11 +94,11 @@ tasks {
     jacocoTestReport {
         dependsOn(test)
         reports {
-            xml.isEnabled = true
-            html.isEnabled = true
+            xml.required.set(true)
+            html.required.set(true)
         }
         doLast {
-            logger.quiet("Coverage report written to file://${reports.html.destination}/index.html")
+            logger.quiet("Coverage report written to file://${reports.html.outputLocation}/index.html")
         }
     }
 
@@ -131,7 +131,7 @@ publishing {
             licenses {
                 license {
                     name.set("The Apache License, Version 2.0")
-                    url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                 }
             }
             developers {
