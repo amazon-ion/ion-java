@@ -185,7 +185,7 @@ public class IonRoundtripConcurrencyStressTest {
         try {
             ionReader.next();
         } finally {
-             ionReader.close();
+            ionReader.close();
         }
         return SYSTEM.newValue(ionReader);
     }
