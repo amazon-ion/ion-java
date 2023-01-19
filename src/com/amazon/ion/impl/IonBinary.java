@@ -800,7 +800,7 @@ final class IonBinary
             // add up the length of the encoded symbols
             for (int ii=0; ii<annotations.length; ii++) {
                 int symid = symbolTable.findSymbol(annotations[ii]);
-                assert symid > 0; // TODO amzn/ion-java/issues/12
+                assert symid > 0; // TODO amazon-ion/ion-java/issues/12
                 annotationLen += IonBinary.lenVarUInt(symid);
             }
 

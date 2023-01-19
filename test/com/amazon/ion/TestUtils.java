@@ -139,17 +139,17 @@ public class TestUtils
             // Skips documentation that accompanies some test vectors
             NOT_MARKDOWN_FILTER,   
             new FileIsNot(
-                      "bad/clobWithNullCharacter.ion"          // TODO amzn/ion-java/43
-                      ,"bad/emptyAnnotatedInt.10n"             // TODO amzn/ion-java/55
-                      ,"good/subfieldVarUInt32bit.ion"         // TODO amzn/ion-java/62
+                      "bad/clobWithNullCharacter.ion"          // TODO amazon-ion/ion-java/43
+                      ,"bad/emptyAnnotatedInt.10n"             // TODO amazon-ion/ion-java/55
+                      ,"good/subfieldVarUInt32bit.ion"         // TODO amazon-ion/ion-java/62
                       ,"good/subfieldVarUInt.ion"              // Note: this passes but takes too long. That's fine; it's not a realistic use case.
-                      ,"good/utf16.ion"                        // TODO amzn/ion-java/61
-                      ,"good/utf32.ion"                        // TODO amzn/ion-java/61
+                      ,"good/utf16.ion"                        // TODO amazon-ion/ion-java/61
+                      ,"good/utf32.ion"                        // TODO amazon-ion/ion-java/61
                       ,"good/whitespace.ion"
-                      ,"good/item1.10n"                        // TODO amzn/ion-java#126 (roundtrip symbols with unknown text)
-                      ,"bad/typecodes/type_6_length_0.10n"     // TODO amzn/ion-java#272
-                      ,"good/typecodes/T7-large.10n"           // TODO amzn/ion-java#273 
-                      ,"good/equivs/clobNewlines.ion"          // TODO amzn/ion-java#274
+                      ,"good/item1.10n"                        // TODO amazon-ion/ion-java#126 (roundtrip symbols with unknown text)
+                      ,"bad/typecodes/type_6_length_0.10n"     // TODO amazon-ion/ion-java#272
+                      ,"good/typecodes/T7-large.10n"           // TODO amazon-ion/ion-java#273 
+                      ,"good/equivs/clobNewlines.ion"          // TODO amazon-ion/ion-java#274
             )
         );
 

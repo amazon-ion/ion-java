@@ -44,7 +44,7 @@ final class IonStructLite
 {
     private static final int HASH_SIGNATURE =
         IonType.STRUCT.toString().hashCode();
-    // TODO amzn/ion-java/issues/41: add support for _isOrdered
+    // TODO amazon-ion/ion-java/issues/41: add support for _isOrdered
 
     IonStructLite(ContainerlessContext context, boolean isNull)
     {

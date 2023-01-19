@@ -50,7 +50,7 @@ import java.util.Iterator;
  *
  * This reader scan skip values and in doing so it does not
  * materialize the contents and it does not validate the contents.
- * TODO amzn/ion-java/issues/7 We may want to make validation on skip optional.
+ * TODO amazon-ion/ion-java/issues/7 We may want to make validation on skip optional.
  *
  * This manages the value buffer (_v ValueVariant) and the lob
  * content (_lob_*) which is cached in some cases.  It's main

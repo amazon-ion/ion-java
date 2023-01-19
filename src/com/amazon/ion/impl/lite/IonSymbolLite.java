@@ -65,11 +65,11 @@ final class IonSymbolLite
             if (text != null)
             {
                 super.setValue(text);
-                // TODO [amzn/ion-java/issues/27] - needs consistent handling, when to retain SID's vs ignore
+                // TODO [amazon-ion/ion-java/issues/27] - needs consistent handling, when to retain SID's vs ignore
             }
             else
             {
-                // TODO [amzn/ion-java/issues/223] - needs consistent handling, resolution against context symbol table
+                // TODO [amazon-ion/ion-java/issues/223] - needs consistent handling, resolution against context symbol table
                 _sid = sid;
                 // there *is* an encoding present so we must update
                 _isSymbolIdPresent(true);
@@ -156,7 +156,7 @@ final class IonSymbolLite
         assert(symtab != null);
 
         String name = _get_value();
-        // TODO [amzn/ion-java/issues/27] - needs consistent handling, when to retain SID's vs ignore (here memoizing SID on read)
+        // TODO [amazon-ion/ion-java/issues/27] - needs consistent handling, when to retain SID's vs ignore (here memoizing SID on read)
         if (!symtab.isLocalTable())
         {
             setSID(symtab.findSymbol(name));
@@ -262,7 +262,7 @@ final class IonSymbolLite
         }
         else
         {
-            // TODO [amzn/ion-java/issues/223] - needs consistent handling, resolution against context symbol table
+            // TODO [amazon-ion/ion-java/issues/223] - needs consistent handling, resolution against context symbol table
             // there is not text, so we can't clear the SID.
             allSymbolIDsCleared = false;
         }
@@ -286,7 +286,7 @@ final class IonSymbolLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        // TODO amzn/ion-java/issues/27 Fix symbol handling
+        // TODO amazon-ion/ion-java/issues/27 Fix symbol handling
         // A million-dollar question is - if text is missing, do
         // we throw (cannot serialize) or do we pass the sid thru???
 

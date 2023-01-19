@@ -546,7 +546,7 @@ abstract class IonReaderBinaryRawX
         // the value BEFORE a *Value() method is even called. Once that is fixed,
         // _value_start can be removed, and _input._pos can be used to find the
         // start of the value at the current valid position.
-        // amzn/ion-java/issues/88 tracks the fix for bringing IVM handling up to
+        // amazon-ion/ion-java/issues/88 tracks the fix for bringing IVM handling up to
         // spec.
         _value_start = start_of_value;
         _position_len = len + (start_of_value - start_of_tid);
@@ -968,7 +968,7 @@ abstract class IonReaderBinaryRawX
         // into a Java int.
         // To validate overflows we accumulate the VarInt in a long and then check if it can be represented by an int
         //
-        // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
+        // see https://amazon-ion.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
 
         long retValue = 0;
         int b = firstByte;
@@ -1003,7 +1003,7 @@ abstract class IonReaderBinaryRawX
             retValue = (retValue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
 
-            // Don't support anything above a 5-byte VarInt for now, see https://github.com/amzn/ion-java/issues/146
+            // Don't support anything above a 5-byte VarInt for now, see https://github.com/amazon-ion/ion-java/issues/146
             throwVarIntOverflowException(5);
         }
 
@@ -1036,7 +1036,7 @@ abstract class IonReaderBinaryRawX
         // into a Java int.
         // To validate overflows we accumulate the VarInt in a long and then check if it can be represented by an int
         //
-        // see http://amzn.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
+        // see https://amazon-ion.github.io/ion-docs/docs/binary.html#varuint-and-varint-fields
 
         long retvalue = 0;
         int  b;
@@ -1071,7 +1071,7 @@ abstract class IonReaderBinaryRawX
             retvalue = (retvalue << 7) | (b & 0x7F);
             if ((b & 0x80) != 0) break;
 
-            // Don't support anything above a 7-byte VarUInt for now, see https://github.com/amzn/ion-java/issues/146
+            // Don't support anything above a 7-byte VarUInt for now, see https://github.com/amazon-ion/ion-java/issues/146
             throwVarIntOverflowException(7);
         }
 

@@ -1,7 +1,7 @@
 # Amazon Ion Java
-A Java implementation of the [Ion data notation](http://amzn.github.io/ion-docs).
+A Java implementation of the [Ion data notation](https://amazon-ion.github.io/ion-docs).
 
-[![Build Status](https://travis-ci.org/amzn/ion-java.svg?branch=master)](https://travis-ci.org/amzn/ion-java)
+[![Build Status](https://travis-ci.org/amazon-ion/ion-java.svg?branch=master)](https://travis-ci.org/amazon-ion/ion-java)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.amazon.ion/ion-java)
 [![Javadoc](https://javadoc-badge.appspot.com/com.amazon.ion/ion-java.svg?label=javadoc)](http://www.javadoc.io/doc/com.amazon.ion/ion-java)
 
@@ -13,7 +13,7 @@ The easiest way to clone the `ion-java` repository and initialize its `ion-tests
 submodule is to run the following command.
 
 ```
-$ git clone --recursive https://github.com/amzn/ion-java.git ion-java
+$ git clone --recursive https://github.com/amazon-ion/ion-java.git ion-java
 ```
 
 Alternatively, the submodule may be initialized independently from the clone

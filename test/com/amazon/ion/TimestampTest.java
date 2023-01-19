@@ -881,14 +881,14 @@ public class TimestampTest
     }
 
     @Test
-    @Ignore("https://github.com/amzn/ion-java/issues/303")
+    @Ignore("https://github.com/amazon-ion/ion-java/issues/303")
     public void forEpochSecondTesOffsetTooLow() {
         thrown.expect(IllegalArgumentException.class);
         Timestamp.forEpochSecond(0, 0, -24 * 60);
     }
 
     @Test
-    @Ignore("https://github.com/amzn/ion-java/issues/303")
+    @Ignore("https://github.com/amazon-ion/ion-java/issues/303")
     public void forEpochSecondTestOffsetTooHigh() {
         thrown.expect(IllegalArgumentException.class);
         Timestamp.forEpochSecond(0, 0, 24 * 60);
@@ -3063,7 +3063,7 @@ public class TimestampTest
     @Test
     public void testInstantVsTimestampMillis() {
         /* If ion-java migrates to Java 8, which added Instant, this test becomes valid.
-        // addresses: https://github.com/amzn/ion-java/issues/165
+        // addresses: https://github.com/amazon-ion/ion-java/issues/165
         String tsText = "0001-01-01T00:00:00.000Z";
         // Instant extends the Gregorian calendar system all the way back to the beginning, whereas Timestamp uses
         // the default GregorianCalendar implementation, which transitions from Julian to Gregorian in 1582. As a

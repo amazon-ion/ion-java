@@ -69,7 +69,7 @@ final class SharedSymbolTable
     /**
      * The <b>singleton</b> instance of Ion 1.0 system symbol table.
      * <p>
-     * TODO amzn/ion-java/issues/34 Optimize system symtabs by using our custom backing impl.
+     * TODO amazon-ion/ion-java/issues/34 Optimize system symtabs by using our custom backing impl.
      */
     private static final SymbolTable ION_1_0_SYSTEM_SYMTAB;
     static
@@ -238,9 +238,9 @@ final class SharedSymbolTable
                 sid = getSidForSymbolTableField(fieldName);
             }
 
-            // TODO amzn/ion-java/issues/35 If there's more than one 'symbols' or 'imports'
+            // TODO amazon-ion/ion-java/issues/35 If there's more than one 'symbols' or 'imports'
             //      field, they will be merged together.
-            // TODO amzn/ion-java/issues/36 Switching over SIDs doesn't cover the case
+            // TODO amazon-ion/ion-java/issues/36 Switching over SIDs doesn't cover the case
             //      where the relevant field names are defined by a prev LST;
             //      the prev LST could have 'symbols' defined locally with a
             //      different SID!
@@ -398,7 +398,7 @@ final class SharedSymbolTable
         while (symbols.hasNext())
         {
             String text = symbols.next();
-            // TODO amzn/ion-java/issues/12 What about empty symbols?
+            // TODO amazon-ion/ion-java/issues/12 What about empty symbols?
             if (symbolsMap.get(text) == null)
             {
                 putToMapIfNotThere(symbolsMap, text, sid);

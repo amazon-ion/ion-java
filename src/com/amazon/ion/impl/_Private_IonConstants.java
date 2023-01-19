@@ -291,7 +291,7 @@ public final class _Private_IonConstants
      * </pre>
      *
      * <p>
-     * TODO amzn/ion-java/issues/23 However, there is still a potential failure if one of the
+     * TODO amazon-ion/ion-java/issues/23 However, there is still a potential failure if one of the
      * IonStruct's nested value has a field name with text
      * {@code " -- UNKNOWN SYMBOL TEXT -- $123"}, and that another nested value
      * of an IonStruct has a field name with unknown text and sid 123, these

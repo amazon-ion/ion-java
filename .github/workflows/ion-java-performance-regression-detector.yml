@@ -29,7 +29,7 @@ jobs:
       - name: Checkout ion-java-benchmark-cli
         uses: actions/checkout@v2
         with:
-          repository: amzn/ion-java-benchmark-cli
+          repository: amazon-ion/ion-java-benchmark-cli
           ref: master
           path: ion-java-benchmark-cli
 
@@ -72,7 +72,7 @@ jobs:
       - name: Checkout the current commit
         uses: actions/checkout@v2
         with:
-          repository: amzn/ion-java
+          repository: amazon-ion/ion-java
           ref: master
           path: ion-java
 

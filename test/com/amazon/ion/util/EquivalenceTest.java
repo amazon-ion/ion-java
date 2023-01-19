@@ -368,7 +368,7 @@ public class EquivalenceTest
         assertNotIonEq(ion("\"hi\""), ion("'hi'"));
     }
 
-    // TODO amzn/ion-java/issues/58 : Remove the ignore annotation from this test after
+    // TODO amazon-ion/ion-java/issues/58 : Remove the ignore annotation from this test after
     // making the required changes to Equivalence.Field.hashCode.
     @Ignore
     @Test
@@ -400,7 +400,7 @@ public class EquivalenceTest
         assertTrue(f1.hashCode() != f3.hashCode());
     }
 
-    // TODO amzn/ion-java/issues/58 : Remove the ignore annotation from this test after
+    // TODO amazon-ion/ion-java/issues/58 : Remove the ignore annotation from this test after
     // making the required changes to Equivalence.Field.hashCode.
     @Ignore
     @Test

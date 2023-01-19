@@ -4,10 +4,10 @@
 #
 # If the project/library version is not a snapshot version, and it is greater than the
 # latest release in GitHub, then it creates a draft PR for the new library version.
-# This workflow always compares against the releases in amzn/ion-java, but will create
+# This workflow always compares against the releases in amazon-ion/ion-java, but will create
 # a draft release in a forked repository if the workflow is triggered in a fork.
 # See limitations at:
-# https://github.com/amzn/ion-java/blob/master/.github/actions/inspect-version/action.yml
+# https://github.com/amazon-ion/ion-java/blob/master/.github/actions/inspect-version/action.yml
 #
 # This workflow is almost a reusable workflow that can be used by any of our repos that
 # use semantic versioned releases. In order to make it reusable, we need to move it to
@@ -16,7 +16,7 @@
 # pass in the library version as a workflow argument, or it will need to have the
 # `project.version` file. Also, there are some references to the 'master' branch that
 # will need to be factored out (since some of our repos use 'main' as the default branch).
-# Finally, there are references to "amzn/ion-java" should come from an input variable
+# Finally, there are references to "amazon-ion/ion-java" should come from an input variable
 # or be retrieved from the GitHub Actions context.
 # See https://docs.github.com/en/actions/using-workflows/reusing-workflows
 #
@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo: amzn/ion-java
+          repo: amazon-ion/ion-java
           project_version: ${{ env.PROJECT_VERSION }}
       - run: |
           echo "Result: ${{ toJSON(steps.inspect.outputs) }}"

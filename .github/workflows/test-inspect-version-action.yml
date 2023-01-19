@@ -60,7 +60,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo: amzn/ion-java
+          repo: amazon-ion/ion-java
           project_version: ${{ matrix.version }}
           fail_if_invalid: ${{ matrix.fail_if_invalid }}
 

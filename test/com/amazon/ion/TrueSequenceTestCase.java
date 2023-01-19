@@ -82,7 +82,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/47  Implement indexed addAll for datagram
+     *  TODO amazon-ion/ion-java/issues/47  Implement indexed addAll for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -155,7 +155,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -208,7 +208,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -220,7 +220,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -234,7 +234,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -247,7 +247,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -261,7 +261,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test
@@ -275,7 +275,7 @@ public abstract class TrueSequenceTestCase
 
 
     /**
-     *  TODO amzn/ion-java/issues/50 Implement set for datagram
+     *  TODO amazon-ion/ion-java/issues/50 Implement set for datagram
      *  Hoist this up to SequencenceTestCase.
      */
     @Test

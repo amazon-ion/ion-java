@@ -852,11 +852,11 @@ public abstract class IonWriterTestCase
 
         Iterator<IonValue> it = systemIterateOutput();
 
-        if (myOutputForm != OutputForm.TEXT) { // TODO amzn/ion-java/issues/8
+        if (myOutputForm != OutputForm.TEXT) { // TODO amazon-ion/ion-java/issues/8
             checkSymbol(SystemSymbols.ION_1_0, it.next());
         }
         checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
-        // TODO amzn/ion-java#14
+        // TODO amazon-ion/ion-java#14
         if (myOutputForm != OutputForm.TEXT)
         {
             checkSymbol(null, 12, it.next());
@@ -939,7 +939,7 @@ public abstract class IonWriterTestCase
     }
 
 
-    @Test @Ignore // TODO amzn/ion-java/issues/15
+    @Test @Ignore // TODO amazon-ion/ion-java/issues/15
     public void testWritingSymtabWithExtraAnnotations()
     throws Exception
     {
@@ -1028,7 +1028,7 @@ public abstract class IonWriterTestCase
     }
 
     /**
-     * TODO amzn/ion-java/issues/8 datagram is lazy creating local symtabs.
+     * TODO amazon-ion/ion-java/issues/8 datagram is lazy creating local symtabs.
      * Should use a reader to check the results.
      */
     @Test
@@ -1049,7 +1049,7 @@ public abstract class IonWriterTestCase
         if (myOutputForm == OutputForm.BINARY) {
             checkAnnotation(ION_SYMBOL_TABLE, it.next());
         }
-        // TODO amzn/ion-java#14
+        // TODO amazon-ion/ion-java#14
         if (myOutputForm == OutputForm.BINARY)
         {
             checkSymbol(null, 10, it.next());
@@ -1077,7 +1077,7 @@ public abstract class IonWriterTestCase
         assertEquals(2, dg.size());
     }
 
-    @Test // TODO amzn/ion-java/issues/8 Inconsistencies between writers
+    @Test // TODO amazon-ion/ion-java/issues/8 Inconsistencies between writers
     public void testWritingDatagram()
         throws Exception
     {
@@ -1093,7 +1093,7 @@ public abstract class IonWriterTestCase
             checkAnnotation(SystemSymbols.ION_SYMBOL_TABLE, it.next());
         }
 
-        // TODO amzn/ion-java#14
+        // TODO amazon-ion/ion-java#14
         if (myOutputForm != OutputForm.TEXT)
         {
             checkSymbol(null, 10, it.next());

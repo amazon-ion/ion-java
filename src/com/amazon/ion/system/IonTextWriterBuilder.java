@@ -66,7 +66,7 @@ import java.nio.charset.Charset;
  * <p>
  * Currently, there is no configuration point available to disable the
  * auto-flushing mechanism. Please vote on
- * <a href="https://github.com/amzn/ion-java/issues/32">issue amzn/ion-java/issues/32</a>
+ * <a href="https://github.com/amazon-ion/ion-java/issues/32">issue amazon-ion/ion-java/issues/32</a>
  * if you require it.
  *
  */

@@ -5,7 +5,7 @@ package com.amazon.ion.impl;
  * in a shared symbol table.
  * NOTE: this is currently not publicly accessible, but it is an important step toward being able to correctly
  * round-trip symbols with unknown text from shared symbol tables in different symbol table contexts. See
- * https://github.com/amzn/ion-java/issues/126 . Support is added now to avoid risking the appearance of performance
+ * https://github.com/amazon-ion/ion-java/issues/126 . Support is added now to avoid risking the appearance of performance
  * degradation if ImportLocation support were added after initial release of the incremental IonReader.
  */
 class ImportLocation {

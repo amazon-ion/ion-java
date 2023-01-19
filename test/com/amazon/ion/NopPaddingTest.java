@@ -17,7 +17,7 @@ package com.amazon.ion;
 import org.junit.Test;
 
 /**
- * Testing support for NOP padding for empty Ion, see <a href="https://amzn.github.io/ion-docs/binary.html#nop-pad">spec</a> for more details
+ * Testing support for NOP padding for empty Ion, see <a href="https://amazon-ion.github.io/ion-docs/binary.html#nop-pad">spec</a> for more details
  */
 public class NopPaddingTest
     extends IonTestCase

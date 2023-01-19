@@ -192,7 +192,7 @@ public abstract class SystemProcessingTestCase
 
     //=========================================================================
 
-    /** TODO amzn/ion-java/issues/8 This is broken for loaders which are now more lazy */
+    /** TODO amazon-ion/ion-java/issues/8 This is broken for loaders which are now more lazy */
     @Test @Ignore
     public void testLocalTableResetting()
         throws Exception
@@ -1053,7 +1053,7 @@ public abstract class SystemProcessingTestCase
         checkEof();
     }
 
-    // TODO amzn/ion-java/issues/25 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
+    // TODO amazon-ion/ion-java/issues/25 test for interspersed IVMs - testSystemIterationShowsInterspersedIvm
 
     @Test
     public void testHighUnicodeDirectInBlob()

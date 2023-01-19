@@ -1104,7 +1104,7 @@ public abstract class IonTestCase
         IonValue clone = newFactory.clone(original);
         IonAssert.assertIonEquals(original, clone);
 
-        // TODO amzn/ion-java/issues/30 IonSystemLite.clone() on a value that is in IonSystemImpl
+        // TODO amazon-ion/ion-java/issues/30 IonSystemLite.clone() on a value that is in IonSystemImpl
         // doesn't seem to copy over local symbol tables.
 //        assertEquals(original.toString(), clone.toString());
 

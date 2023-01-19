@@ -1,5 +1,5 @@
 # Amazon Ion Java CLI
-A Java implementation of CLI where its design document is located in [here](https://github.com/amzn/ion-test-driver#design).
+A Java implementation of CLI where its design document is located in [here](https://github.com/amazon-ion/ion-test-driver#design).
 
 The package is stored under `ion-java/ion-java-cli`.
 
