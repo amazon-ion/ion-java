@@ -1,15 +1,15 @@
 name: ion-test-driver
 
-on:
-  workflow_run:
-    workflows: [ PR Content Check ]
-    types:
-      - completed
+on: [pull_request]
 
 jobs:
+  PR-Content-Check:
+    uses: amazon-ion/ion-java/.github/workflows/PR-content-check.yml@master
+
   ion-test-driver:
     runs-on: macos-10.15
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: PR-Content-Check
+    if: ${{ needs.PR-Content-Check.outputs.result == 'pass' }}
     steps:
       - name: Checkout ion-java
         uses: actions/checkout@master

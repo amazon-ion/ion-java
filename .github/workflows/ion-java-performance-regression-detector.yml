@@ -3,17 +3,16 @@
 
 name: Ion Java performance regression detector
 
-on:
-  workflow_run:
-    workflows: [ PR Content Check ]
-    types:
-      - completed
+on: [pull_request]
 
 jobs:
+  PR-Content-Check:
+    uses: amazon-ion/ion-java/.github/workflows/PR-content-check.yml@master
+
   detect-regression:
     name: Detect Regression
-    needs: check-PR-content
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: PR-Content-Check
+    if: ${{ needs.PR-Content-Check.outputs.result == 'pass' }}
     runs-on: ubuntu-latest
 
     steps:
