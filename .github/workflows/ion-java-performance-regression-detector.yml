@@ -6,9 +6,13 @@ name: Ion Java performance regression detector
 on: [pull_request]
 
 jobs:
+  PR-Content-Check:
+    uses: amazon-ion/ion-java/.github/workflows/PR-content-check.yml@master
+
   detect-regression:
     name: Detect Regression
-
+    needs: PR-Content-Check
+    if: ${{ needs.PR-Content-Check.outputs.result == 'pass' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -18,7 +22,7 @@ jobs:
           java-version: 1.8
 
       - name: Checkout ion-java from the new commit.
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: ion-java-new
@@ -27,7 +31,7 @@ jobs:
         run: cd ion-java-new && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
 
       - name: Checkout ion-java-benchmark-cli
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: amazon-ion/ion-java-benchmark-cli
           ref: master
@@ -70,7 +74,7 @@ jobs:
         run : rm -r /home/runner/.m2
 
       - name: Checkout the current commit
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: amazon-ion/ion-java
           ref: master
