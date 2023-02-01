@@ -2,6 +2,7 @@ import java.net.URI
 import java.time.Instant
 import java.util.Properties
 
+
 plugins {
     java
     `maven-publish`
@@ -21,7 +22,6 @@ dependencies {
     testImplementation("junit:junit:4.13.1")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
-    // https://mvnrepository.com/artifact/com.google.code.tempus-fugit/tempus-fugit
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
 }
 
@@ -49,34 +49,67 @@ sourceSets {
     }
 }
 
-// spotbugs-gradle-plugin creates a :spotbugsTest task by default, but we don't want it
-// see: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/391
-project.gradle.startParameter.excludedTaskNames.add(":spotbugsTest")
-tasks.spotbugsMain {
-    baselineFile.set(file("$rootDir/config/spotbugs/baseline.xml"))
-    reports.create("html") {
-        required.set(true)
-    }
-}
-
 tasks {
     withType<JavaCompile> { options.encoding = "UTF-8" }
 
     javadoc {
         // Suppressing Javadoc warnings is clunky, but there doesn't seem to be any nicer way to do it.
-        // https://stackoverflow.com/questions/52205209/configure-gradle-build-to-suppress-javadoc-console-warnings
+        // https://stackoverflow.com/questions/62894307/option-xdoclintnone-does-not-work-in-gradle-to-ignore-javadoc-warnings
         options {
-            (this as CoreJavadocOptions).addStringOption("Xdoclint:none", "-quiet")
+            this as StandardJavadocDocletOptions
+            addBooleanOption("Xdoclint:none", true)
+            addStringOption("Xmaxwarns", "1") // best we can do is limit warnings to 1
         }
     }
 
-    create<Jar>("sourcesJar") sourcesJar@ {
+    // spotbugs-gradle-plugin creates a :spotbugsTest task by default, but we don't want it
+    // see: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/391
+    project.gradle.startParameter.excludedTaskNames.add(":spotbugsTest")
+
+    spotbugsMain {
+        val spotbugsBaselineFile = "$rootDir/config/spotbugs/baseline.xml"
+
+        if (!project.hasProperty("baseline")) { // the common case
+            baselineFile.set(file(spotbugsBaselineFile))
+            reports.create("html") {
+                required.set(true)
+            }
+        } else { // Get here via e.g. `./gradlew :spotbugsMain -Pbaseline`
+            // Note this path succeeds :spotbugsMain because *of course it does*
+            ignoreFailures = true
+            reports.create("xml") {
+                // Why bother? Otherwise we have kilobytes of workspace-specific absolute paths, statistics, etc.
+                // cluttering up the baseline XML and preserved in perpetuity. It would be far better if we could use
+                // the SpotBugs relative path support, but the way SpotBugs reporters are presently architected they
+                // drop the `destination` information long before Project.writeXML uses its presence/absence to
+                // determine whether to generate relative instead of absolute paths. So, contribute patch to SpotBugs or
+                // write own SpotBugs reporter in parallel or... do this.
+                // Improvements are definitely possible, but left as an exercise to the reader.
+                doLast {
+                    // It would be super neat if we had some way to handle this xml processing directly inline, without
+                    // generating a temp file or at least without shelling out.
+                    // Use ant's xslt capabilities? Xalan? Saxon gradle plugin (eerohele)? javax.xml.transform?
+                    // In the mean time... xsltproc!
+                    exec {
+                        commandLine(
+                            "xsltproc",
+                            "--output", spotbugsBaselineFile,
+                            "$rootDir/config/spotbugs/baseline.xslt",
+                            outputLocation.get().toString()
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    create<Jar>("sourcesJar") sourcesJar@{
         archiveClassifier.set("sources")
         from(sourceSets["main"].java.srcDirs)
         artifacts { sourcesArtifact = archives(this@sourcesJar) }
     }
 
-    create<Jar>("javadocJar") javadocJar@ {
+    create<Jar>("javadocJar") javadocJar@{
         archiveClassifier.set("javadoc")
         from(javadoc)
         artifacts { javadocArtifact = archives(this@javadocJar) }
@@ -89,7 +122,7 @@ tasks {
      */
     val generateJarInfo by creating<Task> {
         doLast {
-        val propertiesFile = File("$generatedJarInfoDir/${project.name}.properties")
+            val propertiesFile = File("$generatedJarInfoDir/${project.name}.properties")
             propertiesFile.parentFile.mkdirs()
             val properties = Properties()
             properties.setProperty("build.version", version.toString())
