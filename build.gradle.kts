@@ -8,9 +8,9 @@ plugins {
     jacoco
     signing
     id("org.cyclonedx.bom") version "1.7.2"
-    // TODO: static analysis. E.g.:
+    id("com.github.spotbugs") version "5.0.13"
+    // TODO: more static analysis. E.g.:
     // id("com.diffplug.spotless") version "6.11.0"
-    // id("com.github.spotbugs") version "4.8.0"
 }
 
 repositories {
@@ -46,6 +46,16 @@ sourceSets {
     }
     test {
         java.srcDir("test")
+    }
+}
+
+// spotbugs-gradle-plugin creates a :spotbugsTest task by default, but we don't want it
+// see: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/391
+project.gradle.startParameter.excludedTaskNames.add(":spotbugsTest")
+tasks.spotbugsMain {
+    baselineFile.set(file("$rootDir/config/spotbugs/baseline.xml"))
+    reports.create("html") {
+        required.set(true)
     }
 }
 
