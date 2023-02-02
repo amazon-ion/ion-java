@@ -69,12 +69,20 @@ tasks {
     spotbugsMain {
         val spotbugsBaselineFile = "$rootDir/config/spotbugs/baseline.xml"
 
-        if (!project.hasProperty("baseline")) { // the common case
+        // CI=true means we're in a CI workflow
+        // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        val ciWorkflow = System.getenv()["CI"].toBoolean()
+        val baselining = project.hasProperty("baseline") // e.g. `./gradlew :spotbugsMain -Pbaseline`
+
+        if (!baselining) {
             baselineFile.set(file(spotbugsBaselineFile))
-            reports.create("html") {
-                required.set(true)
-            }
-        } else { // Get here via e.g. `./gradlew :spotbugsMain -Pbaseline`
+        }
+
+        // The plugin only prints to console when no reports are configured
+        // See: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/172
+        if (!ciWorkflow && !baselining) {
+            reports.create("html").required.set(true)
+        } else if (baselining) {
             // Note this path succeeds :spotbugsMain because *of course it does*
             ignoreFailures = true
             reports.create("xml") {
@@ -141,7 +149,7 @@ tasks {
             html.required.set(true)
         }
         doLast {
-            logger.quiet("Coverage report written to file://${reports.html.outputLocation}/index.html")
+            logger.quiet("Coverage report written to file://${reports.html.outputLocation.get().toString()}/index.html")
         }
     }
 
