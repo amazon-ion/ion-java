@@ -2,15 +2,16 @@ import java.net.URI
 import java.time.Instant
 import java.util.Properties
 
+
 plugins {
     java
     `maven-publish`
     jacoco
     signing
     id("org.cyclonedx.bom") version "1.7.2"
-    // TODO: static analysis. E.g.:
+    id("com.github.spotbugs") version "5.0.13"
+    // TODO: more static analysis. E.g.:
     // id("com.diffplug.spotless") version "6.11.0"
-    // id("com.github.spotbugs") version "4.8.0"
 }
 
 repositories {
@@ -21,7 +22,6 @@ dependencies {
     testImplementation("junit:junit:4.13.1")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
-    // https://mvnrepository.com/artifact/com.google.code.tempus-fugit/tempus-fugit
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
 }
 
@@ -54,19 +54,70 @@ tasks {
 
     javadoc {
         // Suppressing Javadoc warnings is clunky, but there doesn't seem to be any nicer way to do it.
-        // https://stackoverflow.com/questions/52205209/configure-gradle-build-to-suppress-javadoc-console-warnings
+        // https://stackoverflow.com/questions/62894307/option-xdoclintnone-does-not-work-in-gradle-to-ignore-javadoc-warnings
         options {
-            (this as CoreJavadocOptions).addStringOption("Xdoclint:none", "-quiet")
+            this as StandardJavadocDocletOptions
+            addBooleanOption("Xdoclint:none", true)
+            addStringOption("Xmaxwarns", "1") // best we can do is limit warnings to 1
         }
     }
 
-    create<Jar>("sourcesJar") sourcesJar@ {
+    // spotbugs-gradle-plugin creates a :spotbugsTest task by default, but we don't want it
+    // see: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/391
+    project.gradle.startParameter.excludedTaskNames.add(":spotbugsTest")
+
+    spotbugsMain {
+        val spotbugsBaselineFile = "$rootDir/config/spotbugs/baseline.xml"
+
+        // CI=true means we're in a CI workflow
+        // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        val ciWorkflow = System.getenv()["CI"].toBoolean()
+        val baselining = project.hasProperty("baseline") // e.g. `./gradlew :spotbugsMain -Pbaseline`
+
+        if (!baselining) {
+            baselineFile.set(file(spotbugsBaselineFile))
+        }
+
+        // The plugin only prints to console when no reports are configured
+        // See: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/172
+        if (!ciWorkflow && !baselining) {
+            reports.create("html").required.set(true)
+        } else if (baselining) {
+            // Note this path succeeds :spotbugsMain because *of course it does*
+            ignoreFailures = true
+            reports.create("xml") {
+                // Why bother? Otherwise we have kilobytes of workspace-specific absolute paths, statistics, etc.
+                // cluttering up the baseline XML and preserved in perpetuity. It would be far better if we could use
+                // the SpotBugs relative path support, but the way SpotBugs reporters are presently architected they
+                // drop the `destination` information long before Project.writeXML uses its presence/absence to
+                // determine whether to generate relative instead of absolute paths. So, contribute patch to SpotBugs or
+                // write own SpotBugs reporter in parallel or... do this.
+                // Improvements are definitely possible, but left as an exercise to the reader.
+                doLast {
+                    // It would be super neat if we had some way to handle this xml processing directly inline, without
+                    // generating a temp file or at least without shelling out.
+                    // Use ant's xslt capabilities? Xalan? Saxon gradle plugin (eerohele)? javax.xml.transform?
+                    // In the mean time... xsltproc!
+                    exec {
+                        commandLine(
+                            "xsltproc",
+                            "--output", spotbugsBaselineFile,
+                            "$rootDir/config/spotbugs/baseline.xslt",
+                            outputLocation.get().toString()
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    create<Jar>("sourcesJar") sourcesJar@{
         archiveClassifier.set("sources")
         from(sourceSets["main"].java.srcDirs)
         artifacts { sourcesArtifact = archives(this@sourcesJar) }
     }
 
-    create<Jar>("javadocJar") javadocJar@ {
+    create<Jar>("javadocJar") javadocJar@{
         archiveClassifier.set("javadoc")
         from(javadoc)
         artifacts { javadocArtifact = archives(this@javadocJar) }
@@ -79,7 +130,7 @@ tasks {
      */
     val generateJarInfo by creating<Task> {
         doLast {
-        val propertiesFile = File("$generatedJarInfoDir/${project.name}.properties")
+            val propertiesFile = File("$generatedJarInfoDir/${project.name}.properties")
             propertiesFile.parentFile.mkdirs()
             val properties = Properties()
             properties.setProperty("build.version", version.toString())
@@ -94,11 +145,11 @@ tasks {
     jacocoTestReport {
         dependsOn(test)
         reports {
-            xml.isEnabled = true
-            html.isEnabled = true
+            xml.required.set(true)
+            html.required.set(true)
         }
         doLast {
-            logger.quiet("Coverage report written to file://${reports.html.destination}/index.html")
+            logger.quiet("Coverage report written to file://${reports.html.outputLocation.get().toString()}/index.html")
         }
     }
 
@@ -131,7 +182,7 @@ publishing {
             licenses {
                 license {
                     name.set("The Apache License, Version 2.0")
-                    url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                 }
             }
             developers {
