@@ -40,18 +40,28 @@ jobs:
       - name: Build ion-java-benchmark-cli
         run: cd ion-java-benchmark-cli && mvn clean install
 
+      - name: Checkout ion-data-generator
+        uses: actions/checkout@v3
+        with:
+          repository: amazon-ion/ion-data-generator
+          ref: main
+          path: ion-data-generator
+
+      - name: Build ion-data-generator
+        run: cd ion-data-generator && mvn clean install
+
       - name: Check the version of ion-java.
         run: java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar --version
 
       - name: Generate test Ion Data
         run: |
           mkdir -p testData
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/nestedStruct.isl testData/testStructs.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/nestedList.isl testData/testLists.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/sexp.isl testData/testSexps.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/realWorldDataSchema01.isl testData/realWorldData01.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/realWorldDataSchema02.isl testData/realWorldData02.10n
-          java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar  generate -S 50000 --input-ion-schema ion-java-benchmark-cli/tst/com/amazon/ion/workflow/realWorldDataSchema03.isl testData/realWorldData03.10n
+          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/nestedStruct.isl testData/testStructs.10n
+          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/nestedList.isl testData/testLists.10n
+          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/sexp.isl testData/testSexps.10n
+          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema01.isl testData/realWorldData01.10n
+          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema02.isl testData/realWorldData02.10n
+          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema03.isl testData/realWorldData03.10n
 
       - name: Upload test Ion Data to artifacts
         uses: actions/upload-artifact@v2
