@@ -712,7 +712,7 @@ public final class _Private_IonTextAppender
             return;
         }
 
-        appendAscii(value.toString());
+        appendAscii(bigIntegerToString(value));
     }
 
 
@@ -743,7 +743,7 @@ public final class _Private_IonTextAppender
             appendAscii('-');
         }
 
-        final String unscaledText = unscaled.toString();
+        final String unscaledText = bigIntegerToString(unscaled);
         final int significantDigits = unscaledText.length();
 
         final int scale = value.scale();
@@ -1004,6 +1004,32 @@ public final class _Private_IonTextAppender
                 appendAscii(' ');
             }
             appendAscii("}}");
+        }
+    }
+
+    /**
+     * Convert {@link BigInteger} to a {@link String}.
+     * <p>
+     * The current implementation of {@link BigInteger#toString()} is suboptimal
+     * speed-wise, as it uses non-native division for arbitrary-sized integers
+     * to convert the binary representation to a string.
+     * This is inefficient for integers that can fit into a {@link Long}, where
+     * native division can be used to convert the long to its string representation,
+     * which is currently implemented in {@link Long#toString()}.
+     * <p>
+     * This method delegates to {@link Long#toString()} if it's possible to
+     * do so, which results in a speedup from 2x to 5x.
+     *
+     * @param value the integer to convert
+     * @return the string representation in base 10
+     */
+    private String bigIntegerToString(final BigInteger value)
+    {
+        if (value.bitLength() >= 64) {
+            // if it's out of long range, the only way is through toString()
+            return value.toString();
+        } else {
+            return Long.toString(value.longValue());
         }
     }
 }
