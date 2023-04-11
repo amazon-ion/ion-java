@@ -30,9 +30,8 @@ group = "com.amazon.ion"
 // and so that any tool can access the version without having to do any special parsing.
 version = File(project.rootDir.path + "/project.version").readLines().single()
 description = "A Java implementation of the Amazon Ion data notation."
-// Can't target 6 from 8
-// https://stackoverflow.com/questions/48146930/is-it-possible-to-compile-project-on-java-8-for-target-java-6
-java.sourceCompatibility = JavaVersion.VERSION_1_6
+java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.targetCompatibility = JavaVersion.VERSION_1_8
 
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 val generatedJarInfoDir = "${buildDir}/generated/jar-info"
@@ -50,7 +49,10 @@ sourceSets {
 }
 
 tasks {
-    withType<JavaCompile> { options.encoding = "UTF-8" }
+    withType<JavaCompile> {
+        options.encoding = "UTF-8"
+        // In Java 9+ we can use `release` but for now we're still building with JDK 8, 11
+    }
 
     javadoc {
         // Suppressing Javadoc warnings is clunky, but there doesn't seem to be any nicer way to do it.
@@ -149,7 +151,7 @@ tasks {
             html.required.set(true)
         }
         doLast {
-            logger.quiet("Coverage report written to file://${reports.html.outputLocation.get().toString()}/index.html")
+            logger.quiet("Coverage report written to file://${reports.html.outputLocation.get()}/index.html")
         }
     }
 
