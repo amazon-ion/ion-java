@@ -159,7 +159,7 @@ tasks {
 
     test {
         maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
-        maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).takeIf { it > 0 } ?: 1
+        maxParallelForks = max(1, Runtime.getRuntime().availableProcessors() / 2)
         useJUnitPlatform()
         // report is always generated after tests run
         finalizedBy(jacocoTestReport)
