@@ -19,7 +19,9 @@ repositories {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
+    testCompileOnly("junit:junit:4.13")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
@@ -156,6 +158,9 @@ tasks {
     }
 
     test {
+        maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
+        maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
+        useJUnitPlatform()
         // report is always generated after tests run
         finalizedBy(jacocoTestReport)
     }
