@@ -166,7 +166,7 @@ tasks {
     }
 
     withType<Sign> {
-        setOnlyIf { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
+        setOnlyIf { isReleaseVersion && gradle.taskGraph.hasTask(":publish") }
     }
 
     cyclonedxBom {
