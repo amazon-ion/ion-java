@@ -697,6 +697,21 @@ import java.util.NoSuchElementException;
         containers.push().initialize(type, buffer.position() + 1);
     }
 
+    private void addNegativePatchPoint(final long position, final int oldLength) {
+        final PatchPoint patch = new PatchPoint(position, oldLength, 0, 0);
+        if (containers.isEmpty())
+        {
+            // not nested, just append to the root list
+            patchPoints.append(patch);
+        }
+        else
+        {
+            // nested, apply it to the current container
+            containers.peek().appendPatch(patch);
+        }
+        updateLength(0 - oldLength);
+    }
+
     private void addPatchPoint(final long position, final int oldLength, final long value)
     {
         // record the size in a patch buffer
@@ -770,6 +785,12 @@ import java.util.NoSuchElementException;
 
                 // We've reclaimed some number of bytes; adjust the container length as appropriate.
                 length -= numberOfBytesToShiftBy;
+            }
+            else if (length <= 0x007F)
+            {
+                preallocationMode.patchLength(buffer, positionOfFirstLengthByte, length);
+                addNegativePatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes() - 1);
+
             }
             else if (length <= preallocationMode.contentMaxLength)
             {

@@ -53,7 +53,7 @@ public class _Private_IonBinaryWriterBuilder
         myBinaryWriterBuilder =
             _Private_IonManagedBinaryWriterBuilder
                 .create(AllocatorMode.POOLED)
-                .withPaddedLengthPreallocation(1)
+                .withPaddedLengthPreallocation(2)
                 ;
     }
 
