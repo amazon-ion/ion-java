@@ -7,7 +7,7 @@ jobs:
     uses: amazon-ion/ion-java/.github/workflows/PR-content-check.yml@master
 
   ion-test-driver:
-    runs-on: macos-10.15
+    runs-on: ubuntu-latest
     needs: PR-Content-Check
     if: ${{ needs.PR-Content-Check.outputs.result == 'pass' }}
     steps:
