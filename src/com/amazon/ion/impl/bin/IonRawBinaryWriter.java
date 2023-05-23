@@ -786,18 +786,15 @@ import java.util.NoSuchElementException;
                 // We've reclaimed some number of bytes; adjust the container length as appropriate.
                 length -= numberOfBytesToShiftBy;
             }
-            else if (length <= 0x007F)
-            {
-                preallocationMode.patchLength(buffer, positionOfFirstLengthByte, length);
-                addNegativePatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes() - 1);
-
-            }
             else if (length <= preallocationMode.contentMaxLength)
             {
                 // The container's encoded body is too long to fit the length in the type descriptor byte, but it will
                 // fit in the preallocated length bytes that were added to the buffer when the container was started.
                 // Update those bytes with the VarUInt encoding of the length value.
                 preallocationMode.patchLength(buffer, positionOfFirstLengthByte, length);
+                if (length <= 0x007F) {
+                    addNegativePatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes() - 1);
+                }
             }
             else
             {
