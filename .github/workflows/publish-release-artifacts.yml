@@ -40,9 +40,11 @@ jobs:
     # only run if `check-tag` completes successfully
     needs: check-tag
     runs-on: ubuntu-latest
+    permissions:
+      content: write
     steps:
         # TODO: replace with artifact upload/download -- make sure there's no race condition with other builds also
-        # uploaading an artifact.
+        # uploading an artifact.
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -54,7 +56,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # TODO - reusability
         # the location of the library(s) should be configurable as an input
-        # parameter rather than being hard coded as `build/lib/ion-java...`
+        # parameter rather than being hard coded as `build/libs/ion-java...`
         # It may also need to be able to upload more than one file.
         run: |
           gh release upload "v$(<project.version)" "build/libs/ion-java-$(<project.version).jar"
