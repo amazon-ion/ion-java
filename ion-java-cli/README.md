@@ -6,7 +6,7 @@ The package is stored under `ion-java/ion-java-cli`.
 ## Setup
 Build ion-java-cli.
 ```
-./gradle ion-java-cli:build
+./gradlew ion-java-cli:build
 ```
 
 ## Getting Started
