@@ -695,7 +695,8 @@ import java.util.NoSuchElementException;
 
     private void addPatchPoint(final long position, final int oldLength, final long value)
     {
-        // record the length of the patch
+
+        //record the length will be patched in
         final int patchLength = WriteBuffer.varUIntLength(value);
         final PatchPoint patch = new PatchPoint(position, oldLength, value);
         if (containers.isEmpty())
