@@ -46,6 +46,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl._Private_RecyclingQueue;
 import com.amazon.ion.impl._Private_RecyclingStack;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
@@ -248,51 +249,40 @@ import java.util.NoSuchElementException;
         }
     }
 
-    private static class ContainerInfo
+    private class ContainerInfo
     {
-        /** Whether or not the container is a struct */
+        /** Whether the container is a struct */
         public ContainerType type;
         /** The location of the pre-allocated size descriptor in the buffer. */
         public long position;
         /** The size of the current value. */
         public long length;
-        /** The patchlist for this container. */
-        public PatchList patches;
+        /**
+         * The index of the patch point placeholder.
+         */
+        public int placeholderPatchIndex;
 
         public ContainerInfo()
         {
             type = null;
             position = -1;
             length = -1;
-            patches = null;
+            placeholderPatchIndex = -1;
         }
 
-        public void appendPatch(final PatchPoint patch)
+        public void appendPatch(final long oldPosition, final int oldLength, final long length)
         {
-            if (patches == null)
-            {
-                patches = new PatchList();
-            }
-            patches.append(patch);
-        }
-
-        public void extendPatches(final PatchList newPatches)
-        {
-            if (patches == null)
-            {
-                patches = newPatches;
-            }
-            else
-            {
-                patches.extend(newPatches);
-            }
+            patchPoints.get(placeholderPatchIndex).initialize(oldPosition, oldLength, length);
         }
 
         public void initialize(final ContainerType type, final long offset) {
             this.type = type;
             this.position = offset;
-            this.patches = null;
             this.length = 0;
+            if (type != ContainerType.VALUE) {
+                placeholderPatchIndex = patchPoints.size();
+                patchPoints.push().initialize(-1, -1, -1);
+            }
         }
 
         @Override
@@ -305,17 +295,16 @@ import java.util.NoSuchElementException;
     private static class PatchPoint
     {
         /** position of the data being patched out. */
-        public final long oldPosition;
+        public long oldPosition;
         /** length of the data being patched out.*/
-        public final int oldLength;
+        public int oldLength;
         /** size of the container data or annotations.*/
-        public final long length;
-
-        public PatchPoint(final long oldPosition, final int oldLength, final long patchLength)
+        public long length;
+        public PatchPoint()
         {
-            this.oldPosition = oldPosition;
-            this.oldLength = oldLength;
-            this.length = patchLength;
+            oldPosition = -1;
+            oldLength = -1;
+            length = -1;
         }
 
         @Override
@@ -323,146 +312,11 @@ import java.util.NoSuchElementException;
         {
             return "(PP old::(" + oldPosition + " " + oldLength + ") patch::(" + length + ")";
         }
-    }
 
-    /**
-     * Simple singly linked list node that we can use to construct the patch list in the
-     * right order incrementally in recursive segments.
-     */
-    private static class PatchList implements Iterable<PatchPoint>
-    {
-        private static class Node {
-            public final PatchPoint value;
-            public Node next;
-
-            public Node(final PatchPoint value)
-            {
-                this.value = value;
-            }
-        }
-        private Node head;
-        private Node tail;
-
-        public PatchList()
-        {
-            head = null;
-            tail = null;
-        }
-
-        public boolean isEmpty()
-        {
-            return head == null && tail == null;
-        }
-
-        public void clear()
-        {
-            head = null;
-            tail = null;
-        }
-
-        public void append(final PatchPoint patch)
-        {
-            final Node node = new Node(patch);
-            if (head == null)
-            {
-                head = node;
-                tail = node;
-            }
-            else
-            {
-                tail.next = node;
-                tail = node;
-            }
-        }
-
-        public void extend(final PatchList end)
-        {
-            if (end != null)
-            {
-                if (head == null)
-                {
-                    if (end.head != null)
-                    {
-                        head = end.head;
-                        tail = end.tail;
-                    }
-                }
-                else
-                {
-                    tail.next = end.head;
-                    tail = end.tail;
-                }
-            }
-        }
-
-        public PatchPoint truncate(final long oldPosition)
-        {
-            Node prev = null;
-            Node curr = head;
-            while (curr != null)
-            {
-                final PatchPoint patch = curr.value;
-                if (patch.oldPosition >= oldPosition)
-                {
-                    tail = prev;
-                    if (tail == null)
-                    {
-                        head = null;
-                    }
-                    else
-                    {
-                        tail.next = null;
-                    }
-                    return patch;
-                }
-
-                prev = curr;
-                curr = curr.next;
-            }
-            return null;
-        }
-
-        public Iterator<PatchPoint> iterator()
-        {
-            return new Iterator<PatchPoint>()
-            {
-                Node curr = head;
-
-                public boolean hasNext()
-                {
-                    return curr != null;
-                }
-
-                public PatchPoint next()
-                {
-                    if (!hasNext())
-                    {
-                        throw new NoSuchElementException();
-                    }
-                    final PatchPoint value = curr.value;
-                    curr = curr.next;
-                    return value;
-                }
-
-                public void remove()
-                {
-                    throw new UnsupportedOperationException();
-                }
-            };
-        }
-
-        @Override
-        public String toString()
-        {
-            final StringBuilder buf = new StringBuilder();
-            buf.append("(PATCHES");
-            for (final PatchPoint patch : this)
-            {
-                buf.append(" ");
-                buf.append(patch);
-            }
-            buf.append(")");
-            return buf.toString();
+        public void initialize(final long oldPosition, final int oldLength, final long length) {
+            this.oldPosition = oldPosition;
+            this.oldLength = oldLength;
+            this.length = length;
         }
     }
 
@@ -487,7 +341,7 @@ import java.util.NoSuchElementException;
     private final PreallocationMode             preallocationMode;
     private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
-    private final PatchList                     patchPoints;
+    private final _Private_RecyclingQueue<PatchPoint> patchPoints;
     private final _Private_RecyclingStack<ContainerInfo> containers;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
@@ -521,7 +375,7 @@ import java.util.NoSuchElementException;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator);
-        this.patchPoints       = new PatchList();
+        this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
         this.containers        = new _Private_RecyclingStack<ContainerInfo>(
             10,
             new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
@@ -692,35 +546,30 @@ import java.util.NoSuchElementException;
         containers.push().initialize(type, buffer.position() + 1);
     }
 
-    private void addPatchPoint(final long position, final int oldLength, final long value)
+    private void addPatchPoint(final long position, final int oldLength, final long value, final ContainerInfo container)
     {
-        //record the length will be patched in
+        // record the size of the length data.
         final int patchLength = WriteBuffer.varUIntLength(value);
-        final PatchPoint patch = new PatchPoint(position, oldLength, value);
-        if (containers.isEmpty())
+        if (container == null)
         {
             // not nested, just append to the root list
-            patchPoints.append(patch);
+            patchPoints.push().initialize(position, oldLength, value);
         }
         else
         {
             // nested, apply it to the current container
-            containers.peek().appendPatch(patch);
+            container.appendPatch(position, oldLength, value);
         }
         updateLength(patchLength - oldLength);
     }
 
-    private void extendPatchPoints(final PatchList patches)
-    {
-        if (containers.isEmpty())
-        {
-            // not nested, extend root list
-            patchPoints.extend(patches);
-        }
-        else
-        {
-            // nested, apply it to the current container
-            containers.peek().extendPatches(patches);
+    /**
+     * This is used to reclaim the placeholder patch point after scan the current container.
+     * @param placeholderPatchIndex represents the index of the placeholder patch point.
+     */
+    private void reclaimPlaceholderPatchPoint(int placeholderPatchIndex) {
+        if (placeholderPatchIndex >= patchPoints.size() - 1) {
+            patchPoints.remove();
         }
     }
 
@@ -764,6 +613,7 @@ import java.util.NoSuchElementException;
 
                 // We've reclaimed some number of bytes; adjust the container length as appropriate.
                 length -= numberOfBytesToShiftBy;
+                reclaimPlaceholderPatchPoint(currentContainer.placeholderPatchIndex);
             }
             else if (currentContainer.length <= preallocationMode.contentMaxLength)
             {
@@ -771,20 +621,15 @@ import java.util.NoSuchElementException;
                 // fit in the preallocated length bytes that were added to the buffer when the container was started.
                 // Update those bytes with the VarUInt encoding of the length value.
                 preallocationMode.patchLength(buffer, positionOfFirstLengthByte, length);
+                reclaimPlaceholderPatchPoint(currentContainer.placeholderPatchIndex);
             }
             else
             {
                 // The container's encoded body is too long to fit in the length bytes that were preallocated.
                 // Write the VarUInt encoding of the length in a secondary buffer and make a note to include that
                 // when we go to flush the primary buffer to the output stream.
-                addPatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes(), length);
+                addPatchPoint(positionOfFirstLengthByte, preallocationMode.numberOfLengthBytes(), length, currentContainer);
             }
-        }
-        if (currentContainer.patches != null)
-        {
-            // at this point, we've appended our patch points upward, lets make sure we get
-            // our child patch points in
-            extendPatchPoints(currentContainer.patches);
         }
 
         // make sure to record length upward
@@ -1229,7 +1074,7 @@ import java.util.NoSuchElementException;
         {
             // side patch
             buffer.writeUInt8At(info.position - 1, type | 0xE);
-            addPatchPoint(info.position, 0, info.length);
+            addPatchPoint(info.position, 0, info.length, null);
         }
     }
 
@@ -1483,7 +1328,19 @@ import java.util.NoSuchElementException;
     /*package*/ void truncate(long position)
     {
         buffer.truncate(position);
-        patchPoints.truncate(position);
+        // TODO decide if it is worth making this faster than O(N)
+        Iterator<PatchPoint> patchIterator = patchPoints.iterate();
+        int i = 0;
+        while (patchIterator.hasNext()) {
+            PatchPoint patchPoint = patchIterator.next();
+            if (patchPoint.length > -1) {
+                if (patchPoint.oldPosition >= position) {
+                    patchPoints.truncate(i - 1);
+                    break;
+                }
+            }
+            i++;
+        }
     }
 
     public void flush() throws IOException {}
@@ -1507,8 +1364,13 @@ import java.util.NoSuchElementException;
         else
         {
             long bufferPosition = 0;
-            for (final PatchPoint patch : patchPoints)
+            Iterator<PatchPoint> iterator = patchPoints.iterate();
+            while (iterator.hasNext())
             {
+                PatchPoint patch = iterator.next();
+                if (patch.length < 0) {
+                    continue;
+                }
                 // write up to the thing to be patched
                 final long bufferLength = patch.oldPosition - bufferPosition;
                 buffer.writeTo(out, bufferPosition, bufferLength);
