@@ -369,11 +369,11 @@ done:       for (;;) {
             Integer retInteger = null;
             if (is_negative) {
                 if (retvalue != 0) {
-                    retInteger = new Integer(-retvalue);
+                    retInteger = Integer.valueOf(-retvalue);
                 }
             }
             else {
-                retInteger = new Integer(retvalue);
+                retInteger = Integer.valueOf(retvalue);
             }
             return retInteger;
         }

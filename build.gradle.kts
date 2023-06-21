@@ -14,6 +14,10 @@ plugins {
     // id("com.diffplug.spotless") version "6.11.0"
 }
 
+jacoco {
+    toolVersion = "0.8.10+"
+}
+
 repositories {
     mavenCentral()
 }

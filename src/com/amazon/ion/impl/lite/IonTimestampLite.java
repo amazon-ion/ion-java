@@ -212,7 +212,7 @@ final class IonTimestampLite
         throws NullValueException
     {
         // setLocalOffset(Integer) will check for the lock
-        setLocalOffset(new Integer(minutes));
+        setLocalOffset(Integer.valueOf(minutes));
     }
 
 

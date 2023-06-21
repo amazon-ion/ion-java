@@ -108,13 +108,13 @@ final class IonFloatLite
     public void setValue(float value)
     {
         // base set value will check for the lock
-        setValue(new Double(value));
+        setValue(Double.valueOf(value));
     }
 
     public void setValue(double value)
     {
         // base setValue will check for the lock
-        setValue(new Double(value));
+        setValue(Double.valueOf(value));
     }
 
     public void setValue(BigDecimal value)

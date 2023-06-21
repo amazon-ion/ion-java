@@ -257,7 +257,7 @@ public abstract class SequenceTestCase
         assertFalse(value.remove(nullBool1));
 
         try {
-            value.remove(new Integer(1));
+            value.remove(Integer.valueOf(1));
         }
         catch (ClassCastException e) { }
     }
@@ -375,7 +375,7 @@ public abstract class SequenceTestCase
 
         List<Object> empty = new ArrayList<Object>();
         List<Object> hasJavaNull = Arrays.asList((Object)null);
-        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Integer> hasJavaInt = Arrays.asList(Integer.valueOf(0));
         List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
         List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
                                                     (Object)nullValue2);
@@ -486,7 +486,7 @@ public abstract class SequenceTestCase
 
         List<Object> empty = new ArrayList<Object>();
         List<Object> hasJavaNull = Arrays.asList((Object)null);
-        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Integer> hasJavaInt = Arrays.asList(Integer.valueOf(0));
         List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
         List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
                                                     (Object)nullValue2);
@@ -564,7 +564,7 @@ public abstract class SequenceTestCase
 
         List<Object> empty = new ArrayList<Object>();
         List<Object> hasJavaNull = Arrays.asList((Object)null);
-        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Integer> hasJavaInt = Arrays.asList(Integer.valueOf(0));
         List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
         List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
                                                     (Object)nullValue2);
@@ -777,7 +777,7 @@ public abstract class SequenceTestCase
         }
         catch (NullPointerException e) { }
         try {
-            s.indexOf(new Integer(0));
+            s.indexOf(Integer.valueOf(0));
             fail("expected exception");
         }
         catch (ClassCastException e) { }
@@ -793,7 +793,7 @@ public abstract class SequenceTestCase
         }
         catch (NullPointerException e) { }
         try {
-            s.indexOf(new Integer(0));
+            s.indexOf(Integer.valueOf(0));
             fail("expected exception");
         }
         catch (ClassCastException e) { }

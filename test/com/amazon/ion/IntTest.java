@@ -291,7 +291,7 @@ public class IntTest
         assertEquals(1, v.intValue());
 
         try {
-            v.setValue(new Long(2));
+            v.setValue(Long.valueOf(2));
             fail("Expected exception for modifying read-only value");
         }
         catch (ReadOnlyValueException e) { }

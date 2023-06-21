@@ -322,7 +322,7 @@ public class TimestampTest
         checkTimestamp(now, value);
         assertEquals(13, value.getLocalOffset().intValue());
 
-        value.setLocalOffset(new Integer(-60));
+        value.setLocalOffset(Integer.valueOf(-60));
         checkTimestamp(now, value);
         assertEquals(-60, value.getLocalOffset().intValue());
 
@@ -523,14 +523,14 @@ public class TimestampTest
     @Test
     public void testDateWithNormalTzd()
     {
-        checkTime(1969, 02, 22, 16, 0, 0, null, new Integer(-480),
+        checkTime(1969, 02, 22, 16, 0, 0, null, Integer.valueOf(-480),
                   "1969-02-22T16:00-08:00");
     }
 
     @Test
     public void testDateWithOddTzd()
     {
-        checkTime(1969, 02, 23, 1, 15, 0, new BigDecimal("0.00"), new Integer(75),
+        checkTime(1969, 02, 23, 1, 15, 0, new BigDecimal("0.00"), Integer.valueOf(75),
                   "1969-02-23T01:15:00.00+01:15");
     }
 
@@ -540,19 +540,19 @@ public class TimestampTest
         IonTimestamp value = (IonTimestamp) oneValue("1969-02-23T00:00+01:23");
         assertEquals(83, value.getLocalOffset().intValue());
 
-        checkTime(1969, 02, 23, 0, 0, 0, null, new Integer(83),
+        checkTime(1969, 02, 23, 0, 0, 0, null, Integer.valueOf(83),
                   "1969-02-23T00:00+01:23");
 
         value = (IonTimestamp) oneValue("2007-05-08T05:17-12:07");
         assertEquals(-727, value.getLocalOffset().intValue());
 
-        checkTime(2007, 5, 8, 5, 17, 0, null, new Integer(-727),
+        checkTime(2007, 5, 8, 5, 17, 0, null, Integer.valueOf(-727),
                   "2007-05-08T05:17-12:07");
 
         value = (IonTimestamp) oneValue("2007-05-08T05:17Z");
         assertEquals(0, value.getLocalOffset().intValue());
 
-        checkTime(2007, 5, 8, 5, 17, 0, null, new Integer(0),
+        checkTime(2007, 5, 8, 5, 17, 0, null, Integer.valueOf(0),
                   "2007-05-08T05:17Z");
 
     }
@@ -653,7 +653,7 @@ public class TimestampTest
         catch (NullValueException e) { }
 
         try {
-            value.setLocalOffset(new Integer(60));
+            value.setLocalOffset(Integer.valueOf(60));
             fail("Expected NullValueException");
         }
         catch (NullValueException e) { }
