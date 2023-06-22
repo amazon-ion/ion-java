@@ -344,7 +344,7 @@ public abstract class TrueSequenceTestCase
         catch (NullPointerException e) { }
         try
         {
-            seq.contains(new Integer(0));
+            seq.contains(Integer.valueOf(0));
             fail("expected exception");
         }
         catch (ClassCastException e) { }
@@ -359,7 +359,7 @@ public abstract class TrueSequenceTestCase
 
         List<Object> empty = new ArrayList<Object>();
         List<Object> hasJavaNull = Arrays.asList((Object)null);
-        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Integer> hasJavaInt = Arrays.asList(Integer.valueOf(0));
         List<Object> hasNull = Arrays.asList((Object)nullValue);
         List<Object> hasNullAndInt = Arrays.asList((Object)intValue,
                                                    (Object)nullValue);
@@ -398,7 +398,7 @@ public abstract class TrueSequenceTestCase
 
         List<Object> empty = new ArrayList<Object>();
         List<Object> hasJavaNull = Arrays.asList((Object)null);
-        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+        List<Integer> hasJavaInt = Arrays.asList(Integer.valueOf(0));
         List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
         List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
                                                     (Object)nullValue2);
@@ -437,7 +437,7 @@ public abstract class TrueSequenceTestCase
 
         List<Object> empty = new ArrayList<Object>();
 //        List<Object> hasJavaNull = Arrays.asList((Object)null);
-//        List<Integer> hasJavaInt = Arrays.asList(new Integer(0));
+//        List<Integer> hasJavaInt = Arrays.asList(Integer.valueOf(0));
         List<Object> hasNull1 = Arrays.asList((Object)nullValue1);
         List<Object> hasNull2AndInt = Arrays.asList((Object)intValue1,
                                                     (Object)nullValue2);
@@ -489,7 +489,7 @@ public abstract class TrueSequenceTestCase
         catch (NullPointerException e) { }
 
         // This may be required by spec, it's ambiguous.
-//        Integer[] intArray = new Integer[0];
+//        Integer[] intArray = Integer.valueOf[0];
 //        try
 //        {
 //            seq.toArray(intArray);
@@ -509,7 +509,7 @@ public abstract class TrueSequenceTestCase
         }
         catch (NullPointerException e) { }
         try {
-            s.indexOf(new Integer(0));
+            s.indexOf(Integer.valueOf(0));
             fail("expected exception");
         }
         catch (ClassCastException e) { }

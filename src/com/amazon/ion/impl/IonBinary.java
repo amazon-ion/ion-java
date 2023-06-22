@@ -1516,11 +1516,11 @@ done:       for (;;) {
                 if (retvalue != 0) {
                     // this is correct even when retvalue == Long.MIN_VALUE
                     retvalue = -retvalue;
-                    retInteger = new Integer(retvalue);
+                    retInteger = Integer.valueOf(retvalue);
                 }
             }
             else {
-                retInteger = new Integer(retvalue);
+                retInteger = Integer.valueOf(retvalue);
             }
             return retInteger;
         }

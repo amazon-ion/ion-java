@@ -28,8 +28,8 @@ public class JavaNumericsTest
     @Test
     public void testDoubleEquality()
     {
-        Double posZeroDotZero = new Double( 0.0d);
-        Double negZeroDotZero = new Double(-0.0d);
+        Double posZeroDotZero = Double.valueOf( 0.0d);
+        Double negZeroDotZero = Double.valueOf(-0.0d);
 
         // Object Double can distinguish +/- zero
         assertFalse(negZeroDotZero.equals(posZeroDotZero));
@@ -42,7 +42,7 @@ public class JavaNumericsTest
         assertTrue(Double.compare(-0.0d, 0.0d) < 0);
 
         // Neither type can distinguish by precision
-        assertTrue(new Double(0.0d).equals(new Double(0.00000d)));
+        assertTrue(Double.valueOf(0.0d).equals(Double.valueOf(0.00000d)));
         assertTrue(0.0d == 0.00000d);
     }
 
@@ -64,9 +64,9 @@ public class JavaNumericsTest
         assertEquals("-0.0", "" + -0.0d);
         assertEquals("-0.0", "" + -0.00d);
 
-        assertEquals("-0.0", "" + new Double(-0.d));
-        assertEquals("-0.0", "" + new Double(-0.0d));
-        assertEquals("-0.0", "" + new Double(-0.00d));
+        assertEquals("-0.0", "" + Double.valueOf(-0.d));
+        assertEquals("-0.0", "" + Double.valueOf(-0.0d));
+        assertEquals("-0.0", "" + Double.valueOf(-0.00d));
     }
 
     /**
