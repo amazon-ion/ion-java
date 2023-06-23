@@ -24,6 +24,7 @@ import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.IonTextUtils.printString;
 
+import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBinaryWriter;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonContainer;
@@ -45,7 +46,6 @@ import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonReaderBuilder;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
-import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -317,156 +317,19 @@ final class IonSystemLite
 
     public IonValueLite newValue(IonReader reader)
     {
-        IonValueLite value = load_value_helper(reader, /*isTopLevel*/ true);
+        IonValueLite value = load_value_helper(reader);
         if (value == null) {
             throw new IonException("No value available");
         }
         return value;
     }
 
-    private IonValueLite load_value_helper(IonReader reader, boolean isTopLevel)
+    private IonValueLite load_value_helper(IonReader reader)
     {
-        boolean symbol_is_present = false;
-
-        IonType t = reader.getType();
-        if (t == null) {
-            return null;
-        }
-        IonValueLite v;
-        if (reader.isNullValue()) {
-            v = newNull(t);
-        }
-        else {
-            switch (t) {
-            case BOOL:
-                v = newBool(reader.booleanValue());
-                break;
-            case INT:
-                // TODO amazon-ion/ion-java/issues/9  Inefficient since we can't determine the size
-                // of the integer in order to avoid making BigIntegers.
-                v = newInt(reader.bigIntegerValue());
-                break;
-            case FLOAT:
-                v = newFloat(reader.doubleValue());
-                break;
-            case DECIMAL:
-                v = newDecimal(reader.decimalValue());
-                break;
-            case TIMESTAMP:
-                v = newTimestamp(reader.timestampValue());
-                break;
-            case SYMBOL:
-                v = newSymbol(reader.symbolValue());
-                symbol_is_present = true;
-                break;
-            case STRING:
-                v = newString(reader.stringValue());
-                break;
-            case CLOB:
-                v = newClob(reader.newBytes());
-                break;
-            case BLOB:
-                v = newBlob(reader.newBytes());
-                break;
-            case LIST:
-                v = newEmptyList();
-                break;
-            case SEXP:
-                v = newEmptySexp();
-                break;
-            case STRUCT:
-                v = newEmptyStruct();
-                break;
-            default: throw new IonException("unexpected type encountered reading value: "+t.toString());
-            }
-        }
-
-        // Forget any incoming SIDs on field names.
-        if (!isTopLevel && reader.isInStruct()) {
-            SymbolToken token = reader.getFieldNameSymbol();
-            String text = token.getText();
-            if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
-            {
-                token = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-            }
-            v.setFieldNameSymbol(token);
-            symbol_is_present = true;
-        }
-
-        // Forget any incoming SIDs on annotations.
-        // This is a fresh array so we can modify it:
-        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
-        if (annotations.length != 0)
-        {
-            for (int i = 0; i < annotations.length; i++)
-            {
-                SymbolToken token = annotations[i];
-                String text = token.getText();
-                if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID )
-                {
-                    annotations[i] = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-                }
-            }
-            v.setTypeAnnotationSymbols(annotations);
-            symbol_is_present = true;
-        }
-
-        if (!reader.isNullValue()) {
-            switch (t) {
-            case BOOL:
-            case INT:
-            case FLOAT:
-            case DECIMAL:
-            case TIMESTAMP:
-            case SYMBOL:
-            case STRING:
-            case CLOB:
-            case BLOB:
-                break;
-            case LIST:
-            case SEXP:
-            case STRUCT:
-                // we have to load the children after we grabbed the
-                // fieldname and annotations off of the parent container
-                if (load_children((IonContainerLite)v, reader)) {
-                    symbol_is_present = true;
-                }
-                break;
-            default:
-                throw new IonException("unexpected type encountered reading value: "+t.toString());
-            }
-        }
-        if (symbol_is_present) {
-            v._isSymbolPresent(true);
-        }
-        return v;
-    }
-
-    /**
-     * @return true iff any child contains a symbol
-     * (including field names and annotations)
-     */
-    private boolean load_children(IonContainerLite container, IonReader reader)
-    {
-        boolean symbol_is_present = false;
-
-        reader.stepIn();
-        for (;;) {
-            IonType t = reader.next();
-            if (t == null) {
-                break;
-            }
-            IonValueLite child = load_value_helper(reader, /*isTopLevel*/ false);
-
-            container.add(child);
-
-            if (child._isSymbolPresent()) {
-                symbol_is_present = true;
-            }
-        }
-        reader.stepOut();
-
-        return symbol_is_present;
+        // Note: this method constructs a new `ValueLoader` on each call to preserve thread safety.
+        // If this causes excessive GC pressure, we should consider making a thread-local ValueLoader member field
+        // on the IonSystemLite class.
+        return new ValueLoader().load(reader);
     }
 
     IonValueLite newValue(IonType valueType)
@@ -822,4 +685,190 @@ final class IonSystemLite
         return false;
     }
 
+    private class ValueLoader {
+        // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
+        private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+        private final ArrayList<IonContainerLite> containerStack;
+
+        private IonReader reader;
+
+        public ValueLoader() {
+            this.containerStack = new ArrayList<>(CONTAINER_STACK_INITIAL_CAPACITY);
+            // The reader is specified in each call to `load(IonReader)`.
+            this.reader = null;
+        }
+
+        // Does a shallow materialization of the value over which the reader is currently positioned.
+        // If the reader is positioned over a non-null container, the returned value will be an empty version
+        // of that container. Subsequent processing is required to populate it.
+        private IonValueLite shallowLoadCurrentValue() {
+            IonType ionType = reader.getType();
+            if (reader.isNullValue()) {
+                return newNull(ionType);
+            }
+
+            switch (ionType) {
+                case BOOL:
+                    return newBool(reader.booleanValue());
+                case INT:
+                    // Only construct a BigInteger if it's necessary.
+                    if (reader.getIntegerSize().equals(IntegerSize.BIG_INTEGER)) {
+                        return newInt(reader.bigIntegerValue());
+                    }
+                    return newInt(reader.longValue());
+                case FLOAT:
+                    return newFloat(reader.doubleValue());
+                case DECIMAL:
+                    return newDecimal(reader.decimalValue());
+                case TIMESTAMP:
+                    return newTimestamp(reader.timestampValue());
+                case SYMBOL:
+                    return newSymbol(reader.symbolValue());
+                case STRING:
+                    return newString(reader.stringValue());
+                case CLOB:
+                    return newClob(reader.newBytes());
+                case BLOB:
+                    return newBlob(reader.newBytes());
+                case LIST:
+                    return newEmptyList();
+                case SEXP:
+                    return newEmptySexp();
+                case STRUCT:
+                    return newEmptyStruct();
+                default:
+                    // Includes the variants `NULL` (handled prior to the switch) and `DATAGRAM`.
+                    throw new IonException("unexpected type encountered reading value: " + ionType);
+            }
+        }
+
+        // If the reader is positioned inside a struct, copies the field name to `value`.
+        // Note that this will NOT copy the field name over if the reader was inside a struct when `load(reader)` was
+        // called. For example, if a reader is consuming the following data:
+        //
+        //   {
+        //     foo: [1, 2, 3]
+        //   }
+        //
+        // And the reader is positioned on the field value `[1, 2, 3]` when the `load(reader)` was called, this
+        // method will NOT copy the field name `foo` over. ValueLoader treats the reader's initial state as the
+        // "top level" for the purposes of materializing the current value.
+        // For a test that enforces this behavior, see: IonReaderToIonValueTest.
+        // Returns `true` if the reader's current value has a field name; otherwise, returns false.
+        private boolean cloneFieldNameIfAny(IonValueLite value) {
+            if (containerStack.isEmpty() || !reader.isInStruct()) {
+                // This value is in a context that doesn't have a field name.
+                return false;
+            }
+            SymbolToken token = reader.getFieldNameSymbol();
+            String text = token.getText();
+            if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
+            {
+                token = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+            }
+            value.setFieldNameSymbol(token);
+            return true;
+        }
+
+        // Copies any annotations found on the reader's current position over to the provided `value`.
+        // Returns `true` if more than any annotations were found/copied. If no annotations were found/copied,
+        // returns `false`.
+        private boolean cloneAnnotationsIfAny(IonValueLite value) {
+            // `getTypeAnnotationSymbols` returns a freshly allocated array, so we can safely modify it.
+            SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
+            if (annotations.length == 0) {
+                return false;
+            }
+
+            for (int i = 0; i < annotations.length; i++)
+            {
+                SymbolToken token = annotations[i];
+                String text = token.getText();
+                if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID )
+                {
+                    annotations[i] = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
+                }
+            }
+            value.setTypeAnnotationSymbols(annotations);
+            return true;
+        }
+
+        // Appends the provided value to the container at the top of the container stack.
+        // Callers must guarantee that the container stack is not empty before invoking this.
+        private void attachToParent(IonValueLite value) {
+            // Get a reference to the container at the top of the container stack.
+            IonContainerLite parent = this.containerStack.get(this.containerStack.size() - 1);
+            // If this is the first child value with its symbol-is-present flag set to `true`,
+            // then we also need to set the parent's symbol-is-present flag to true as well.
+            boolean childSymbolIsPresent = value._isSymbolPresent();
+            boolean parentSymbolIsPresent = parent._isSymbolPresent();
+            parent._isSymbolPresent(parentSymbolIsPresent | childSymbolIsPresent);
+            // Append the child value to the end of the container.
+            parent.add(value);
+        }
+
+        // Materializes the Ion value over which the provided `reader` is currently positioned.
+        // If the reader is not positioned over a value, returns `null`.
+        public IonValueLite load(IonReader reader) {
+            // Set `this.reader` for the duration of the load() process.
+            this.reader = reader;
+
+            // If a previous attempt to read Ion data failed (because of invalid syntax, for example), the ValueLoader's
+            // `containerStack` member field can be left with residual data. Clearing it at the outset of this method
+            // call allows the ValueLoader to be reused after such failures.
+            containerStack.clear();
+
+            // This method does not advance the reader to the next value at the current level.
+            // If the reader is not already positioned on a value, there is nothing to do.
+            if (null == reader.getType()) {
+                return null;
+            }
+
+            // This logic is done iteratively rather than recursively to avoid exhausting the stack when processing
+            // deeply nested Ion data. Unfortunately, this does make it somewhat tougher for readers to digest.
+            while(true) {
+                // Create an IonValueLite from the reader's current value. If it's a container, it will not be populated yet.
+                IonValueLite value = shallowLoadCurrentValue();
+                // Copy any over any metadata from the reader, keeping track of whether this value or its metadata contain
+                // a symbol.
+                boolean symbol_is_present = value.getType().equals(IonType.SYMBOL);
+                symbol_is_present |= cloneFieldNameIfAny(value);
+                symbol_is_present |= cloneAnnotationsIfAny(value);
+                value._isSymbolPresent(symbol_is_present);
+
+                // If this value is a non-null container, add it to our container stack.
+                if (!reader.isNullValue() && IonType.isContainer(reader.getType())) {
+                    this.containerStack.add((IonContainerLite) value);
+                    reader.stepIn();
+                } else {
+                    // If it was a scalar (including null containers)...
+                    if (this.containerStack.isEmpty()) {
+                        // ...and we're at the top level, we're done. Return it.
+                        return value;
+                    } else {
+                        // ...and we're nested inside another container, attach it to the parent.
+                        attachToParent(value);
+                    }
+                }
+
+                // If we're inside a container and there are no more values, that container is now complete. We need
+                // to finalize it. That completed container may itself have been the last value in its parent, so
+                // we perform this container completion logic in a loop until we've either found another value at the
+                // current level or the container stack is empty (i.e. all containers are complete).
+                while (!containerStack.isEmpty() && null == reader.next()) {
+                    // Pop the now-complete container value off of the stack.
+                    IonContainerLite completedContainer = containerStack.remove(containerStack.size() - 1);
+                    reader.stepOut();
+                    // If stepping out put us back at the top level, we're done. Return the container we just popped.
+                    if (this.containerStack.isEmpty()) {
+                        return completedContainer;
+                    } else {
+                        // Otherwise, we just finished populating a container, but we're not at the top level yet. We need
+                        // to append our newly populated container to the end of its parent.
+                        attachToParent(completedContainer);
+                    }
+                }
+            }
+        }
+    }
 }
