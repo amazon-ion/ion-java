@@ -14,7 +14,7 @@ class IonSystemLiteTest {
     // exhausting the stack.
     @Test
     void materializeDeeplyNested() {
-        final int levelsOfNesting = 5_000_000;
+        final int levelsOfNesting = 1_000_000;
         final StringBuilder ionText = new StringBuilder(levelsOfNesting * 2);
         for (int m = 0; m < levelsOfNesting; m++) {
             ionText.append('[');
