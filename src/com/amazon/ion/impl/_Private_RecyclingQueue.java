@@ -1,29 +1,22 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.impl.bin.utf8.Pool;
+import com.amazon.ion.impl.bin.utf8.Poolable;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
 /**
  * A queue whose elements are recycled. This queue will be extended and iterated frequently.
- * @param <T> the type of elements stored.
+ * @param <T> the PatchPoint stored.
  */
-public class _Private_RecyclingQueue<T> {
-
-    /**
-     * Factory for new queue elements.
-     * @param <T> the type of element.
-     */
-    public interface ElementFactory<T> {
-        /**
-         * @return a new instance.
-         */
-        T newElement();
-    }
+public class _Private_RecyclingQueue<T> extends Poolable<_Private_RecyclingQueue<T>> {
 
     /**
      * Iterator for the queue.
      */
-    private class ElementIterator implements Iterator<T> {
+    private class ElementIterator implements Iterator<PatchPoint> {
         int i = 0;
         @Override
         public boolean hasNext() {
@@ -31,25 +24,21 @@ public class _Private_RecyclingQueue<T> {
         }
 
         @Override
-        public T next() {
+        public PatchPoint next() {
             return elements.get(i++);
         }
     }
 
     private final ElementIterator iterator;
-    private final List<T> elements;
-    private final ElementFactory<T> elementFactory;
+    private final List<PatchPoint> elements;
     private int currentIndex;
-    private T top;
+    // Initial capacity of the recycling queue.
+    private final int INITIAL_CAPACITY = 512;
+    private PatchPoint top;
 
-    /**
-     * @param initialCapacity the initial capacity of the underlying collection.
-     * @param elementFactory the factory used to create a new element on {@link #push()} when the queue has
-     *                       not previously grown to the new depth.
-     */
-    public _Private_RecyclingQueue(int initialCapacity, ElementFactory<T> elementFactory) {
-        elements = new ArrayList<T>(initialCapacity);
-        this.elementFactory = elementFactory;
+    public _Private_RecyclingQueue(Pool<_Private_RecyclingQueue<T>> pool) {
+        super(pool);
+        elements = new ArrayList<PatchPoint>(INITIAL_CAPACITY);
         currentIndex = -1;
         iterator = new ElementIterator();
     }
@@ -58,7 +47,7 @@ public class _Private_RecyclingQueue<T> {
         currentIndex = index;
     }
 
-    public T get(int index) {
+    public PatchPoint get(int index) {
         return elements.get(index);
     }
 
@@ -67,10 +56,10 @@ public class _Private_RecyclingQueue<T> {
      * previously grown to the new depth.
      * @return the element at the top of the queue after the push. This element must be initialized by the caller.
      */
-    public T push() {
+    public PatchPoint push() {
         currentIndex++;
         if (currentIndex >= elements.size()) {
-            top = elementFactory.newElement();
+            top = new PatchPoint();
             elements.add(top);
         }  else {
             top = elements.get(currentIndex);
@@ -85,7 +74,7 @@ public class _Private_RecyclingQueue<T> {
         currentIndex = Math.max(-1, currentIndex - 1);
     }
 
-    public Iterator<T> iterate() {
+    public Iterator<PatchPoint> iterate() {
         iterator.i = 0;
         return iterator;
     }

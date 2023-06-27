@@ -6,7 +6,7 @@ import java.io.Closeable;
  * Base class for types that may be pooled.
  * @param <T> the concrete type.
  */
-abstract class Poolable<T extends Poolable<T>> implements Closeable {
+public abstract class Poolable<T extends Poolable<T>> implements Closeable {
 
     // The pool to which this object is linked.
     private final Pool<T> pool;
@@ -14,7 +14,7 @@ abstract class Poolable<T extends Poolable<T>> implements Closeable {
     /**
      * @param pool the pool to which the object will be returned upon {@link #close()}.
      */
-    Poolable(Pool<T> pool) {
+    public Poolable(Pool<T> pool) {
         this.pool = pool;
     }
 

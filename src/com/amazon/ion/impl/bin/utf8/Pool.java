@@ -4,13 +4,13 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class Pool<T extends Poolable<?>> {
+public abstract class Pool<T extends Poolable<?>> {
 
     /**
      * Allocates objects to be pooled.
      * @param <T> the type of object.
      */
-    interface Allocator<T extends Poolable<?>> {
+    public interface Allocator<T extends Poolable<?>> {
 
         /**
          * Allocate a new object and link it to the given pool.
@@ -33,7 +33,7 @@ abstract class Pool<T extends Poolable<?>> {
     // Allocator of objects to be pooled.
     private final Allocator<T> allocator;
 
-    Pool(Allocator<T> allocator) {
+    public Pool(Allocator<T> allocator) {
         this.allocator = allocator;
         objectQueue = new ConcurrentLinkedQueue<T>();
         size = new AtomicInteger(0);

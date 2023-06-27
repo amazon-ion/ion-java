@@ -46,7 +46,9 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.PatchPoint;
 import com.amazon.ion.impl._Private_RecyclingQueue;
+import com.amazon.ion.impl._Private_RecyclingQueue_Pool;
 import com.amazon.ion.impl._Private_RecyclingStack;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
@@ -55,10 +57,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -292,34 +291,6 @@ import java.util.NoSuchElementException;
         }
     }
 
-    private static class PatchPoint
-    {
-        /** position of the data being patched out. */
-        public long oldPosition;
-        /** length of the data being patched out.*/
-        public int oldLength;
-        /** size of the container data or annotations.*/
-        public long length;
-        public PatchPoint()
-        {
-            oldPosition = -1;
-            oldLength = -1;
-            length = -1;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "(PP old::(" + oldPosition + " " + oldLength + ") patch::(" + length + ")";
-        }
-
-        public void initialize(final long oldPosition, final int oldLength, final long length) {
-            this.oldPosition = oldPosition;
-            this.oldLength = oldLength;
-            this.length = length;
-        }
-    }
-
     /*package*/ enum StreamCloseMode
     {
         NO_CLOSE,
@@ -375,7 +346,7 @@ import java.util.NoSuchElementException;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator);
-        this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
+        this.patchPoints       = _Private_RecyclingQueue_Pool.getInstance().getOrCreate();
         this.containers        = new _Private_RecyclingStack<ContainerInfo>(
             10,
             new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
@@ -1415,6 +1386,8 @@ import java.util.NoSuchElementException;
             // release all of our blocks -- these should never throw
             buffer.close();
             allocator.close();
+            patchPoints.clear();
+            patchPoints.close();
             utf8StringEncoder.close();
         }
         finally
