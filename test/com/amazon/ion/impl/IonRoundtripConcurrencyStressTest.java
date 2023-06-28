@@ -30,8 +30,8 @@ public class IonRoundtripConcurrencyStressTest {
 
     private static final IonSystem SYSTEM = IonSystemBuilder.standard().build();
     private static final IonReaderBuilder STANDARD_READER_BUILDER = IonReaderBuilder.standard()
-            .withIncrementalReadingEnabled(true);
-    private static final IonBinaryWriterBuilder STANDARD_WRITER_BUILDER = IonBinaryWriterBuilder.standard();
+            .withIncrementalReadingEnabled(true).immutable();
+    private static final IonBinaryWriterBuilder STANDARD_WRITER_BUILDER = IonBinaryWriterBuilder.standard().immutable();
     private static final Random RANDOM = new Random();
 
     @Rule public ConcurrentRule concurrently = new ConcurrentRule();
@@ -170,23 +170,16 @@ public class IonRoundtripConcurrencyStressTest {
 
     private static byte[] toBytes(final IonValue ion) throws IOException {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final IonWriter out = STANDARD_WRITER_BUILDER.build(baos);
-        try {
+        try (IonWriter out = STANDARD_WRITER_BUILDER.build(baos)) {
             ion.writeTo(out);
-        }
-        finally {
-            out.close();
         }
         return baos.toByteArray();
     }
 
     private static IonValue toIon(final byte[] bytes) throws Exception {
-        final IonReader ionReader = STANDARD_READER_BUILDER.build(bytes);
-        try {
+        try (IonReader ionReader = STANDARD_READER_BUILDER.build(bytes)) {
             ionReader.next();
-        } finally {
-            ionReader.close();
+            return SYSTEM.newValue(ionReader);
         }
-        return SYSTEM.newValue(ionReader);
     }
 }
