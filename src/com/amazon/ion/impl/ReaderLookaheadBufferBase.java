@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
@@ -57,7 +60,11 @@ abstract class ReaderLookaheadBufferBase implements ReaderLookaheadBuffer {
      * @param configuration the buffer configuration.
      * @param inputStream an InputStream over Ion data.
      */
-    ReaderLookaheadBufferBase(final BufferConfiguration<?> configuration, final InputStream inputStream) {
+    ReaderLookaheadBufferBase(
+        final BufferConfiguration<?> configuration,
+        final BufferConfiguration.OversizedValueHandler oversizedValueHandler,
+        final InputStream inputStream
+    ) {
         input = inputStream;
         pipe = new ResizingPipedInputStream(
             configuration.getInitialBufferSize(),
@@ -65,7 +72,7 @@ abstract class ReaderLookaheadBufferBase implements ReaderLookaheadBuffer {
             true
         );
         maximumBufferSize = configuration.getMaximumBufferSize();
-        oversizedValueHandler = configuration.getOversizedValueHandler();
+        this.oversizedValueHandler = oversizedValueHandler;
         dataHandler = configuration.getDataHandler();
         clearMark();
     }
