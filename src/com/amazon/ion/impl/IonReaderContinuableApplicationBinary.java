@@ -5,21 +5,29 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
+import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
+import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
@@ -68,6 +76,14 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     // The first lowest local symbol ID in the symbol table.
     private int firstLocalSymbolId = imports.getMaxId() + 1;
+
+    // A map of symbol ID to SymbolToken representation. Because most use cases only require symbol text, this
+    // is used only if necessary to avoid imposing the extra expense on all symbol lookups.
+    private List<SymbolToken> symbolTokensById = null;
+
+    // The cached SymbolTable representation of the current local symbol table. Invalidated whenever a local
+    // symbol table is encountered in the stream.
+    private SymbolTable cachedReadOnlySymbolTable = null;
 
     // ------
 
@@ -182,6 +198,218 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     }
 
     /**
+     * Read-only snapshot of the local symbol table at the reader's current position.
+     */
+    private class LocalSymbolTableSnapshot implements SymbolTable, SymbolTableAsStruct {
+
+        // The system symbol table.
+        private final SymbolTable system = IonReaderContinuableApplicationBinary.this.getSystemSymbolTable();
+
+        // The max ID of this local symbol table.
+        private final int maxId;
+
+        // The shared symbol tables imported by this local symbol table.
+        private final LocalSymbolTableImports importedTables;
+
+        // Map representation of this symbol table. Keys are symbol text; values are the lowest symbol ID that maps
+        // to that text.
+        final Map<String, Integer> mapView;
+
+        // List representation of this symbol table, indexed by symbol ID.
+        final String[] listView;
+
+        private SymbolTableStructCache structCache = null;
+
+        LocalSymbolTableSnapshot() {
+            int importsMaxId = imports.getMaxId();
+            int numberOfLocalSymbols = localSymbolMaxId + 1;
+            // Note: 'imports' is immutable, so a clone is not needed.
+            importedTables = imports;
+            maxId = importsMaxId + numberOfLocalSymbols;
+            // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
+            // It is not expected to grow.
+            listView = new String[numberOfLocalSymbols];
+            System.arraycopy(symbols, 0, listView, 0, numberOfLocalSymbols);
+            mapView = new HashMap<>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
+            for (int i = 0; i < numberOfLocalSymbols; i++) {
+                String symbol = listView[i];
+                if (symbol != null) {
+                    mapView.put(symbol, i + importsMaxId + 1);
+                }
+            }
+        }
+
+        @Override
+        public String getName() {
+            return null;
+        }
+
+        @Override
+        public int getVersion() {
+            return 0;
+        }
+
+        @Override
+        public boolean isLocalTable() {
+            return true;
+        }
+
+        @Override
+        public boolean isSharedTable() {
+            return false;
+        }
+
+        @Override
+        public boolean isSubstitute() {
+            return false;
+        }
+
+        @Override
+        public boolean isSystemTable() {
+            return false;
+        }
+
+        @Override
+        public SymbolTable getSystemSymbolTable() {
+            return system;
+        }
+
+        @Override
+        public String getIonVersionId() {
+            return system.getIonVersionId();
+        }
+
+        @Override
+        public SymbolTable[] getImportedTables() {
+            return importedTables.getImportedTables();
+        }
+
+        @Override
+        public int getImportedMaxId() {
+            return importedTables.getMaxId();
+        }
+
+        @Override
+        public SymbolToken find(String text) {
+            SymbolToken token = importedTables.find(text);
+            if (token != null) {
+                return token;
+            }
+            Integer sid = mapView.get(text);
+            if (sid == null) {
+                return null;
+            }
+            // The following per-call allocation is intentional. When weighed against the alternative of making
+            // 'mapView' a 'Map<String, SymbolToken>` instead of a `Map<String, Integer>`, the following points should
+            // be considered:
+            // 1. A LocalSymbolTableSnapshot is only created when getSymbolTable() is called on the reader. The reader
+            // does not use the LocalSymbolTableSnapshot internally. There are two cases when getSymbolTable() would be
+            // called: a) when the user calls it, which will basically never happen, and b) when the user uses
+            // IonSystem.iterate over the reader, in which case each top-level value holds a reference to the symbol
+            // table that was in scope when it occurred. In case a), in addition to rarely being called at all, it
+            // would be even rarer for a user to use find() to retrieve each symbol (especially more than once) from the
+            // returned symbol table. Case b) may be called more frequently, but it remains equally rare that a user
+            // would retrieve each symbol at least once.
+            // 2. If we make mapView a Map<String, SymbolToken>, then we are guaranteeing that we will allocate at least
+            // one SymbolToken per symbol (because mapView is created in the constructor of LocalSymbolTableSnapshot)
+            // even though it's unlikely most will ever be needed.
+            return new SymbolTokenWithImportLocation(text, sid, null);
+        }
+
+        @Override
+        public int findSymbol(String name) {
+            Integer sid = importedTables.findSymbol(name);
+            if (sid > UNKNOWN_SYMBOL_ID) {
+                return sid;
+            }
+            sid = mapView.get(name);
+            if (sid == null) {
+                return UNKNOWN_SYMBOL_ID;
+            }
+            return sid;
+        }
+
+        @Override
+        public String findKnownSymbol(int id) {
+            if (id < 0) {
+                throw new IllegalArgumentException("Symbol IDs must be at least 0.");
+            }
+            if (id > getMaxId()) {
+                return null;
+            }
+            return IonReaderContinuableApplicationBinary.this.getSymbolString(id, importedTables, listView);
+        }
+
+        @Override
+        public Iterator<String> iterateDeclaredSymbolNames() {
+            return new Iterator<String>() {
+
+                private int index = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return index < listView.length;
+                }
+
+                @Override
+                public String next() {
+                    String symbol = listView[index];
+                    index++;
+                    return symbol;
+                }
+
+                @Override
+                public void remove() {
+                    throw new UnsupportedOperationException("This iterator does not support element removal.");
+                }
+            };
+        }
+
+        @Override
+        public SymbolToken intern(String text) {
+            SymbolToken token = find(text);
+            if (token != null) {
+                return token;
+            }
+            throw new ReadOnlyValueException();
+        }
+
+        @Override
+        public int getMaxId() {
+            return maxId;
+        }
+
+        @Override
+        public boolean isReadOnly() {
+            return true;
+        }
+
+        @Override
+        public void makeReadOnly() {
+            // The symbol table is already read-only.
+        }
+
+        @Override
+        public void writeTo(IonWriter writer) throws IOException {
+            IonReader reader = new com.amazon.ion.impl.SymbolTableReader(this);
+            writer.writeValues(reader);
+        }
+
+        @Override
+        public String toString() {
+            return "(LocalSymbolTable max_id:" + getMaxId() + ')';
+        }
+
+        @Override
+        public IonStruct getIonRepresentation(ValueFactory valueFactory) {
+            if (structCache == null) {
+                structCache = new SymbolTableStructCache(this, getImportedTables(), null);
+            }
+            return structCache.getIonRepresentation(valueFactory);
+        }
+    }
+
+    /**
      * Reset the local symbol table to the system symbol table.
      */
     private void resetSymbolTable() {
@@ -189,6 +417,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         // potentially allowing them to be garbage collected.
         Arrays.fill(symbols, 0, localSymbolMaxId + 1, null);
         localSymbolMaxId = -1;
+        cachedReadOnlySymbolTable = null;
+        if (symbolTokensById != null) {
+            symbolTokensById.clear();
+        }
     }
 
     /**
@@ -199,6 +431,34 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         // must be added here.
         imports = ION_1_0_IMPORTS;
         firstLocalSymbolId = imports.getMaxId() + 1;
+    }
+
+    /**
+     * Restore a symbol table from a previous point in the stream.
+     * @param symbolTable the symbol table to restore.
+     */
+    protected void restoreSymbolTable(SymbolTable symbolTable) {
+        if (cachedReadOnlySymbolTable == symbolTable) {
+            return;
+        }
+        if (symbolTable instanceof LocalSymbolTableSnapshot) {
+            LocalSymbolTableSnapshot snapshot = (LocalSymbolTableSnapshot) symbolTable;
+            cachedReadOnlySymbolTable = snapshot;
+            imports = snapshot.importedTables;
+            firstLocalSymbolId = imports.getMaxId() + 1;
+            localSymbolMaxId = snapshot.maxId - firstLocalSymbolId;
+            // Note: because `symbols` only grows, `snapshot.listView` will always fit within `symbols`.
+            System.arraycopy(snapshot.listView, 0, symbols, 0, snapshot.listView.length);
+            if (symbolTokensById != null) {
+                symbolTokensById.clear();
+            }
+        } else {
+            // Note: this will only happen when `symbolTable` is the system symbol table.
+            resetSymbolTable();
+            cachedReadOnlySymbolTable = symbolTable;
+            resetImports();
+            localSymbolMaxId = -1;
+        }
     }
 
     /**
@@ -224,6 +484,21 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     }
 
     /**
+     * Gets the String representation of the given symbol ID. It is the caller's responsibility to ensure that the
+     * given symbol ID is within the max ID of the symbol table.
+     * @param sid the symbol ID.
+     * @param importedSymbols the symbol table's shared symbol table imports.
+     * @param localSymbols the symbol table's local symbols.
+     * @return a String, which will be null if the requested symbol ID has undefined text.
+     */
+    private String getSymbolString(int sid, LocalSymbolTableImports importedSymbols, String[] localSymbols) {
+        if (sid <= importedSymbols.getMaxId()) {
+            return importedSymbols.findKnownSymbol(sid);
+        }
+        return localSymbols[sid - (importedSymbols.getMaxId() + 1)];
+    }
+
+    /**
      * Retrieves the String text for the given symbol ID.
      * @param sid a symbol ID.
      * @return a String.
@@ -237,6 +512,43 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
         }
         return symbols[localSid];
+    }
+
+    /**
+     * Creates a SymbolToken representation of the given symbol ID.
+     * @param sid a symbol ID.
+     * @return a SymbolToken.
+     */
+    private SymbolToken getSymbolToken(int sid) {
+        int symbolTableSize = localSymbolMaxId + firstLocalSymbolId + 1; // +1 because the max ID is 0-indexed.
+        if (symbolTokensById == null) {
+            symbolTokensById = new ArrayList<>(symbolTableSize);
+        }
+        if (symbolTokensById.size() < symbolTableSize) {
+            for (int i = symbolTokensById.size(); i < symbolTableSize; i++) {
+                symbolTokensById.add(null);
+            }
+        }
+        if (sid >= symbolTableSize) {
+            throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
+        }
+        SymbolToken token = symbolTokensById.get(sid);
+        if (token == null) {
+            String text = getSymbolString(sid, imports, symbols);
+            ImportLocation importLocation = null;
+            if (text == null) {
+                // Note: this will never be a system symbol.
+                if (sid > 0 && sid < firstLocalSymbolId) {
+                    importLocation = imports.getImportLocation(sid);
+                } else {
+                    // All symbols with unknown text in the local symbol range are equivalent to symbol zero.
+                    sid = 0;
+                }
+            }
+            token = new SymbolTokenWithImportLocation(text, sid, importLocation);
+            symbolTokensById.set(sid, token);
+        }
+        return token;
     }
 
     /**
@@ -577,6 +889,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                 }
                 event = super.nextValue();
                 if (parent == null && isPositionedOnSymbolTable()) {
+                    cachedReadOnlySymbolTable = null;
                     symbolTableReader.resetState();
                     state = State.ON_SYMBOL_TABLE_STRUCT;
                     continue;
@@ -591,7 +904,14 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public SymbolTable getSymbolTable() {
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (cachedReadOnlySymbolTable == null) {
+            if (localSymbolMaxId < 0 && imports == ION_1_0_IMPORTS) {
+                cachedReadOnlySymbolTable = imports.getSystemSymbolTable();
+            } else {
+                cachedReadOnlySymbolTable = new LocalSymbolTableSnapshot();
+            }
+        }
+        return cachedReadOnlySymbolTable;
     }
 
     @Override
@@ -618,7 +938,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public SymbolToken symbolValue() {
-        throw new UnsupportedOperationException("Not yet implemented");
+        int sid = symbolValueId();
+        if (sid < 0) {
+            // The raw reader uses this to denote null.symbol.
+            return null;
+        }
+        return getSymbolToken(sid);
     }
 
     @Override
@@ -640,7 +965,15 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (!hasAnnotations) {
+            return SymbolToken.EMPTY_ARRAY;
+        }
+        IntList annotationSids = getAnnotationSidList();
+        SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
+        for (int i = 0; i < annotationArray.length; i++) {
+            annotationArray[i] = getSymbolToken(annotationSids.get(i));
+        }
+        return annotationArray;
     }
 
     private static final Iterator<String> EMPTY_ITERATOR = new Iterator<String>() {
@@ -683,7 +1016,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public SymbolToken getFieldNameSymbol() {
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (fieldSid < 0) {
+            return null;
+        }
+        return getSymbolToken(fieldSid);
     }
 
 }
