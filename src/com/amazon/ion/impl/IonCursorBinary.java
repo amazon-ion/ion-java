@@ -25,9 +25,13 @@ import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 class IonCursorBinary implements IonCursor {
 
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
+    private static final int HIGHEST_BIT_BITMASK = 0x80;
     private static final int VALUE_BITS_PER_VARUINT_BYTE = 7;
+    // Note: because long is a signed type, Long.MAX_VALUE is represented in Long.SIZE - 1 bits.
+    private static final int MAXIMUM_SUPPORTED_VAR_UINT_BYTES = (Long.SIZE - 1) / VALUE_BITS_PER_VARUINT_BYTE;
     private static final int IVM_START_BYTE = 0xE0;
     private static final int IVM_FINAL_BYTE = 0xEA;
+    private static final int IVM_REMAINING_LENGTH = 3; // Length of the IVM after the first byte.
     private static final int SINGLE_BYTE_MASK = 0xFF;
     private static final int LIST_TYPE_ORDINAL = IonType.LIST.ordinal();
     private static final IvmNotificationConsumer NO_OP_IVM_NOTIFICATION_CONSUMER = (x, y) -> {};
@@ -35,6 +39,16 @@ class IonCursorBinary implements IonCursor {
     // Initial capacity of the stack used to hold ContainerInfo. Each additional level of nesting in the data requires
     // a new ContainerInfo. Depths greater than 8 will be rare.
     private static final int CONTAINER_STACK_INITIAL_CAPACITY = 8;
+
+    /**
+     * The kind of location at which `checkpoint` points.
+     */
+    private enum CheckpointLocation {
+        BEFORE_UNANNOTATED_TYPE_ID,
+        BEFORE_ANNOTATED_TYPE_ID,
+        AFTER_SCALAR_HEADER,
+        AFTER_CONTAINER_HEADER
+    }
 
     /**
      * The state representing where the cursor left off after the previous operation.
@@ -52,6 +66,12 @@ class IonCursorBinary implements IonCursor {
      * State only used when the cursor's data source is refillable and the cursor is in slow mode.
      */
     private static class RefillableState {
+
+        /**
+         * At this and all greater depths, the buffer is known to hold all values in their entirety. This means slow mode
+         * can be disabled until stepping out of this depth.
+         */
+        int fillDepth = -1;
 
         /**
          * The current size of the internal buffer.
@@ -228,6 +248,20 @@ class IonCursorBinary implements IonCursor {
     private final RefillableState refillableState;
 
     /**
+     * Describes the byte at the `checkpoint` index.
+     */
+    private CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+
+    /**
+     * Indicates whether the cursor is in slow mode. Slow mode must be used when the input source is refillable (i.e.
+     * a stream) and the cursor has not buffered the current value's bytes. When slow mode is disabled, the cursor can
+     * consume bytes directly from its buffer without range checks or refilling. When a value has been buffered (see:
+     * `fillValue()`), its entire representation (including child values if applicable) can be read with slow mode
+     * disabled, resulting in better performance.
+     */
+    boolean isSlowMode;
+
+    /**
      * The total number of bytes that had been consumed from the stream as of the last time progress was reported to
      * the data handler.
      */
@@ -262,6 +296,7 @@ class IonCursorBinary implements IonCursor {
         this.offset = offset;
         this.limit = offset + length;
         byteBuffer = ByteBuffer.wrap(buffer, offset, length);
+        isSlowMode = false;
         refillableState = null;
     }
 
@@ -381,12 +416,29 @@ class IonCursorBinary implements IonCursor {
             limit = alreadyReadLen;
         }
         byteBuffer = ByteBuffer.wrap(buffer, 0, configuration.getInitialBufferSize());
+        isSlowMode = true;
         refillableState = new RefillableState(
             inputStream,
             configuration.getInitialBufferSize(),
             configuration.getMaximumBufferSize()
         );
     }
+
+    /*
+     * This class contains methods with the prefix 'slow'. These methods often
+     * have prefix-free 'quick' variants that are faster because they are always
+     * called from contexts where the buffer is already known to hold all bytes
+     * that will be required or available to complete the call, and therefore no
+     * filling is required. Sometimes a 'slow' method does not have a 'quick'
+     * variant. This is typically because the 'quick' variant is simple enough
+     * to be written inline at the call site. Public API methods will delegate
+     * to either the 'slow' or 'quick' variant depending on whether 'isSlowMode'
+     * is true. In general, 'isSlowMode' may be disabled whenever the input source
+     * is a byte array (and therefore cannot grow and does not need to be filled),
+     * or whenever the current value's parent container has already been filled.
+     * Where a choice exists, 'slow' methods must call other 'slow' methods, and
+     * 'quick' methods must call other 'quick' methods.
+     */
 
     /* ---- Begin: internal buffer manipulation methods ---- */
 
@@ -642,6 +694,28 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Reads a VarUInt, ensuring enough data is available in the buffer. NOTE: the VarUInt must fit in a `long`.
+     * @return the value.
+     */
+    private long slowReadVarUInt_1_0() {
+        int currentByte;
+        int numberOfBytesRead = 0;
+        long value = 0;
+        while (numberOfBytesRead < MAXIMUM_SUPPORTED_VAR_UINT_BYTES) {
+            currentByte = slowReadByte();
+            if (currentByte < 0) {
+                return -1;
+            }
+            numberOfBytesRead++;
+            value = (value << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+            if ((currentByte & HIGHEST_BIT_BITMASK) != 0) {
+                return value;
+            }
+        }
+        throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+    }
+
+    /**
      * Reads the header of an annotation wrapper. This must only be called when it is known that the buffer already
      * contains all the bytes in the header. Sets `valueMarker` with the start and end indices of the wrapped value.
      * Sets `annotationSequenceMarker` with the start and end indices of the sequence of annotation SIDs. After
@@ -681,6 +755,59 @@ class IonCursorBinary implements IonCursor {
         }
         return false;
     }
+
+    /**
+     * Reads the header of an annotation wrapper, ensuring enough data is available in the buffer. Sets `valueMarker`
+     * with the start and end indices of the wrapped value. Sets `annotationSequenceMarker` with the start and end
+     * indices of the sequence of annotation SIDs. After successful return, `peekIndex` will point at the type ID byte
+     * of the wrapped value.
+     * @param valueTid the type ID of the annotation wrapper.
+     * @return true if there are not enough bytes in the stream to complete the value; otherwise, false.
+     */
+    private boolean slowReadAnnotationWrapperHeader_1_0(IonTypeID valueTid) {
+        long valueLength;
+        if (valueTid.variableLength) {
+            // At this point the value must be at least 4 more bytes: 1 for the smallest-possible wrapper length, 1
+            // for the smallest-possible annotations length, one for the smallest-possible annotation, and 1 for the
+            // smallest-possible value representation.
+            if (!fillAt(peekIndex, 4)) {
+                return true;
+            }
+            valueLength = slowReadVarUInt_1_0();
+            if (valueLength < 0) {
+                return true;
+            }
+        } else {
+            // At this point the value must be at least 3 more bytes: 1 for the smallest-possible annotations
+            // length, 1 for the smallest-possible annotation, and 1 for the smallest-possible value representation.
+            if (!fillAt(peekIndex, 3)) {
+                return true;
+            }
+            valueLength = valueTid.length;
+        }
+        // Record the post-length index in a value that will be shifted in the event the buffer needs to refill.
+        setMarker(peekIndex + valueLength, valueMarker);
+        int annotationsLength = (int) slowReadVarUInt_1_0();
+        if (annotationsLength < 0) {
+            return true;
+        }
+        if (!fillAt(peekIndex, annotationsLength)) {
+            return true;
+        }
+        if (refillableState.isSkippingCurrentValue) {
+            // The value is already oversized, so the annotations sequence cannot be buffered.
+            return true;
+        }
+        annotationSequenceMarker.typeId = valueTid;
+        annotationSequenceMarker.startIndex = peekIndex;
+        annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
+        peekIndex = annotationSequenceMarker.endIndex;
+        if (peekIndex >= valueMarker.endIndex) {
+            throw new IonException("Annotation wrapper must wrap a value.");
+        }
+        return false;
+    }
+
 
     /**
      * Throws if the given marker represents an empty ordered struct, which is prohibited by the Ion 1.0 specification.
@@ -727,13 +854,35 @@ class IonCursorBinary implements IonCursor {
         return endIndex;
     }
 
+    /**
+     * Reads the field SID from the VarUInt starting at `peekIndex`, ensuring enough data is available in the buffer.
+     * @return true if there are not enough bytes in the stream to complete the field SID; otherwise, false.
+     */
+    private boolean slowReadFieldName_1_0() {
+        // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
+        // the smallest-possible representation.
+        if (!fillAt(peekIndex, 2)) {
+            return true;
+        }
+        fieldSid = (int) slowReadVarUInt_1_0();
+        return fieldSid < 0;
+    }
+
     /* ---- Ion 1.1 ---- */
 
     private long readVarUInt_1_1() {
         throw new UnsupportedOperationException();
     }
 
+    private long slowReadVarUInt_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
     private boolean readAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
+        throw new UnsupportedOperationException();
+    }
+
+    private boolean slowReadAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
         throw new UnsupportedOperationException();
     }
 
@@ -745,7 +894,15 @@ class IonCursorBinary implements IonCursor {
         throw new UnsupportedOperationException();
     }
 
+    private boolean slowReadFieldName_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
     private boolean isDelimitedEnd_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
+    private boolean slowIsDelimitedEnd_1_1() {
         throw new UnsupportedOperationException();
     }
 
@@ -757,9 +914,67 @@ class IonCursorBinary implements IonCursor {
         throw new UnsupportedOperationException();
     }
 
+    private boolean slowFindDelimitedEnd_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
+    private boolean slowSeekToDelimitedEnd_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
+    private boolean slowFillDelimitedContainer_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
+    private boolean slowSkipRemainingDelimitedContainerElements_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
     /* ---- End: version-dependent parsing methods ---- */
 
     /* ---- Begin: version-agnostic parsing, utility, and public API methods ---- */
+
+    /**
+     * Attempts to make the cursor READY by finishing the operation that was in progress last time the end of the stream
+     * was reached. This should not be called when the cursor state is already READY.
+     * @return true if the cursor is ready; otherwise, false.
+     */
+    private boolean slowMakeBufferReady() {
+        boolean isReady;
+        switch (refillableState.state) {
+            case SEEK:
+                isReady = slowSeek(refillableState.bytesRequested);
+                break;
+            case FILL:
+                isReady = fillAt(offset, refillableState.bytesRequested);
+                break;
+            case FILL_DELIMITED:
+                refillableState.state = State.READY;
+                isReady = slowFindDelimitedEnd_1_1();
+                break;
+            case SEEK_DELIMITED:
+                isReady = slowSeekToDelimitedEnd_1_1();
+                break;
+            case TERMINATED:
+                isReady = false;
+                break;
+            default:
+                throw new IllegalStateException();
+        }
+        if (!isReady) {
+            event = Event.NEEDS_DATA;
+        }
+        return isReady;
+    }
+
+    /**
+     * Sets `checkpoint` to the current `peekIndex`, which is at the given type of location.
+     * @param location the type of checkpoint location. Must not be BEFORE_UNANNOTATED_TYPE_ID.
+     */
+    private void setCheckpoint(CheckpointLocation location) {
+        checkpointLocation = location;
+        checkpoint = peekIndex;
+    }
 
     /**
      * Sets `checkpoint` to the current `peekIndex`, which must be before an unannotated type ID, and seeks the
@@ -768,6 +983,7 @@ class IonCursorBinary implements IonCursor {
     private void setCheckpointBeforeUnannotatedTypeId() {
         reset();
         offset = peekIndex;
+        checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
         checkpoint = peekIndex;
     }
 
@@ -796,7 +1012,7 @@ class IonCursorBinary implements IonCursor {
             return false;
         }
         if (parent.endIndex == -1) {
-            return isDelimitedEnd_1_1();
+            return isSlowMode ? slowIsDelimitedEnd_1_1() : isDelimitedEnd_1_1();
         }
         if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
@@ -860,6 +1076,36 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Validates and skips a NOP pad. After return, `peekIndex` will point to the first byte after the NOP pad.
+     * @param valueLength the length of the NOP pad.
+     * @param isAnnotated true if the NOP pad occurs within an annotation wrapper (which is illegal); otherwise, false.
+     * @return true if not enough data was available to seek past the NOP pad; otherwise, false.
+     */
+    private boolean slowSeekPastNopPad(long valueLength, boolean isAnnotated) {
+        if (isAnnotated) {
+            throw new IonException(
+                "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
+            );
+        }
+        if (!slowSeek(peekIndex + valueLength - offset)) {
+            event = Event.NEEDS_DATA;
+            return true;
+        }
+        if (offset < (peekIndex + valueLength)) {
+            // Some of the bytes of the NOP pad had to be skipped without buffering to keep the buffer within its
+            // maximum size. Therefore, any parent container end indices need to be shifted by the number of bytes
+            // that were never buffered.
+            shiftContainerEnds(peekIndex + valueLength - offset);
+        }
+        peekIndex = offset;
+        setCheckpointBeforeUnannotatedTypeId();
+        if (parent != null) {
+            checkContainerEnd();
+        }
+        return false;
+    }
+
+    /**
      * Validates that an annotated value's endIndex matches the annotation wrapper's endIndex (which is contained in
      * `valueMarker.endIndex`).
      * @param endIndex the annotated value's endIndex.
@@ -919,6 +1165,111 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Reads a value or annotation wrapper header, ensuring enough bytes are buffered. Upon invocation, `peekIndex` must
+     * be positioned on the first byte that follows the given type ID byte. After return, `peekIndex`
+     * will be positioned after the type ID byte of the value, and `markerToSet.typeId` will be set with the IonTypeID
+     * representing the value.
+     * @param  typeIdByte the type ID byte. This may be an annotation wrapper's type ID.
+     * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
+     * @param markerToSet the Marker to set with information parsed from the type ID and/or annotation wrapper header.
+     * @return false if enough bytes were buffered and the header belonged to an annotation wrapper or NOP pad;
+     *  otherwise, true. When false, the caller should call the method again to read the header for the value that
+     *  follows.
+     */
+    private boolean slowReadHeader(final int typeIdByte, final boolean isAnnotated, final Marker markerToSet) {
+        IonTypeID valueTid = typeIds[typeIdByte];
+        if (!valueTid.isValid) {
+            throw new IonException("Invalid type ID.");
+        } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
+            if (isAnnotated) {
+                throw new IonException("Nested annotation wrappers are invalid.");
+            }
+            hasAnnotations = true;
+            if (minorVersion == 0 ? slowReadAnnotationWrapperHeader_1_0(valueTid) : slowReadAnnotationWrapperHeader_1_1(valueTid)) {
+                return true;
+            }
+            setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
+        } else {
+            if (slowReadValueHeader(valueTid, isAnnotated, markerToSet)) {
+                if (refillableState.isSkippingCurrentValue) {
+                    // If the value will be skipped, its type ID must be set so that the core reader can determine
+                    // whether it represents a symbol table.
+                    markerToSet.typeId = valueTid;
+                }
+                return true;
+            }
+        }
+        markerToSet.typeId = valueTid;
+        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
+            return true;
+        }
+        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            if (minorVersion == 0) {
+                prohibitEmptyOrderedStruct_1_0(markerToSet);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Reads a value header, ensuring enough bytes are buffered. Upon invocation, `peekIndex` must
+     * be positioned on the first byte that follows the given type ID byte. After return, `peekIndex`
+     * will be positioned after the type ID byte of the value, and `markerToSet.typeId` will be set with the IonTypeID
+     * representing the value.
+     * @param  valueTid the type ID of the value. Must not be an annotation wrapper.
+     * @param isAnnotated true if this type ID is on a value within an annotation wrapper; false if it is not.
+     * @param markerToSet the Marker to set with information parsed from the header.
+     * @return true if not enough data was available in the stream to complete the header; otherwise, false.
+     */
+    private boolean slowReadValueHeader(IonTypeID valueTid, boolean isAnnotated, Marker markerToSet) {
+        long valueLength = 0;
+        long endIndex = 0;
+        if (valueTid.isDelimited) {
+            endIndex = -1;
+        } else if (valueTid.variableLength) {
+            // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
+            // and 1 for the smallest-possible value representation.
+            if (!fillAt(peekIndex, 2)) {
+                return true;
+            }
+            valueLength = minorVersion == 0 ? slowReadVarUInt_1_0() : slowReadVarUInt_1_1();
+            if (valueLength < 0) {
+                return true;
+            }
+        } else {
+            valueLength = valueTid.length;
+        }
+        if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
+            setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
+            event = Event.START_CONTAINER;
+        } else if (valueTid.isNopPad) {
+            if (slowSeekPastNopPad(valueLength, isAnnotated)) {
+                return true;
+            }
+            valueLength = 0;
+        } else {
+            setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+            event = Event.START_SCALAR;
+        }
+        if (refillableState.isSkippingCurrentValue) {
+            // Any bytes that were skipped directly from the input must still be included in the logical endIndex so
+            // that the rest of the oversized value's bytes may be skipped.
+            endIndex = endIndex == -1 ? -1 : (peekIndex + valueLength + refillableState.individualBytesSkippedWithoutBuffering);
+        } else {
+            endIndex = endIndex == -1 ? -1 : (peekIndex + valueLength);
+        }
+        if (isAnnotated) {
+            validateAnnotationWrapperEndIndex(endIndex);
+        }
+        setMarker(endIndex, markerToSet);
+        if (event == Event.START_CONTAINER && endIndex > -1 && availableAt(peekIndex) >= valueLength) {
+            refillableState.fillDepth = containerIndex + 1;
+        }
+        return false;
+    }
+
+    /**
      * Doubles the size of the cursor's container stack.
      */
     private void growContainerStack() {
@@ -941,8 +1292,10 @@ class IonCursorBinary implements IonCursor {
         parent = containerStack[containerIndex];
     }
 
-    @Override
-    public Event stepIntoContainer() {
+    /**
+     * Step into the current container.
+     */
+    private void quickStepIntoContainer() {
         if (valueTid == null || valueTid.type.ordinal() < LIST_TYPE_ORDINAL) {
             throw new IonException("Must be positioned on a container to step in.");
         }
@@ -953,11 +1306,59 @@ class IonCursorBinary implements IonCursor {
         valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
         reset();
+    }
+
+    /**
+     * Steps into the container on which the cursor is currently positioned, ensuring that the buffer is ready.
+     * @return `event`, which conveys the result.
+     */
+    private Event slowStepIntoContainer() {
+        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+            return event;
+        }
+        // Must be positioned on a container.
+        if (checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            throw new IonException("Must be positioned on a container to step in.");
+        }
+        // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
+        pushContainer();
+        if (containerIndex == refillableState.fillDepth) {
+            isSlowMode = false;
+        }
+        parent.typeId = valueMarker.typeId;
+        parent.endIndex = valueTid.isDelimited ? -1 : valueMarker.endIndex;
+        setCheckpointBeforeUnannotatedTypeId();
+        valueTid = null;
+        hasAnnotations = false;
+        event = Event.NEEDS_INSTRUCTION;
         return event;
     }
 
     @Override
+    public Event stepIntoContainer() {
+        if (isSlowMode) {
+            if (containerIndex != refillableState.fillDepth - 1) {
+                return slowStepIntoContainer();
+            }
+            isSlowMode = false;
+        }
+        quickStepIntoContainer();
+        return event;
+    }
+
+    /**
+     * Puts the cursor back in slow mode. Must not be called when the cursor is byte-backed.
+     */
+    private void resumeSlowMode() {
+        refillableState.fillDepth = -1;
+        isSlowMode = true;
+    }
+
+    @Override
     public Event stepOutOfContainer() {
+        if (isSlowMode) {
+            return slowStepOutOfContainer();
+        }
         if (parent == null) {
             // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
             throw new IllegalStateException("Cannot step out at top level.");
@@ -970,6 +1371,53 @@ class IonCursorBinary implements IonCursor {
         } else {
             peekIndex = parent.endIndex;
         }
+        if (!isSlowMode) {
+            setCheckpointBeforeUnannotatedTypeId();
+        }
+        containerIndex--;
+        if (containerIndex >= 0) {
+            parent = containerStack[containerIndex];
+            if (refillableState != null && containerIndex < refillableState.fillDepth) {
+                resumeSlowMode();
+            }
+        } else {
+            parent = null;
+            containerIndex = -1;
+            if (refillableState != null) {
+                resumeSlowMode();
+            }
+        }
+
+        valueTid = null;
+        event = Event.NEEDS_INSTRUCTION;
+        return event;
+    }
+
+    /**
+     * Steps out of the container on which the cursor is currently positioned, ensuring that the buffer is ready and
+     * that enough bytes are available in the stream.
+     * @return `event`, which conveys the result.
+     */
+    private Event slowStepOutOfContainer() {
+        if (parent == null) {
+            // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
+            throw new IllegalStateException("Cannot step out at top level.");
+        }
+        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+            return event;
+        }
+        event = Event.NEEDS_DATA;
+        // Seek past any remaining bytes from the previous value.
+        if (parent.endIndex == -1) {
+            if (slowSkipRemainingDelimitedContainerElements_1_1()) {
+                return event;
+            }
+        } else {
+            if (!slowSeek(parent.endIndex - offset)) {
+                return event;
+            }
+            peekIndex = parent.endIndex;
+        }
         setCheckpointBeforeUnannotatedTypeId();
         containerIndex--;
         if (containerIndex >= 0) {
@@ -978,9 +1426,9 @@ class IonCursorBinary implements IonCursor {
             parent = null;
             containerIndex = -1;
         }
-
-        valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
+        valueTid = null;
+        hasAnnotations = false;
         return event;
     }
 
@@ -1067,8 +1515,141 @@ class IonCursorBinary implements IonCursor {
         return false;
     }
 
+    /**
+     * Advances to the next token from the current checkpoint, seeking past the previous value if necessary, and
+     * ensuring that enough bytes are available in the stream. After return `event` will convey the result (e.g.
+     * START_SCALAR, END_CONTAINER, NEEDS_DATA).
+     */
+    private void slowNextToken() {
+        peekIndex = checkpoint;
+        event = Event.NEEDS_DATA;
+        while (true) {
+            if ((refillableState.state != State.READY && !slowMakeBufferReady()) || (parent != null && checkContainerEnd())) {
+                return;
+            }
+            int b;
+            switch (checkpointLocation) {
+                case BEFORE_UNANNOTATED_TYPE_ID:
+                    if (dataHandler != null) {
+                        reportConsumedData();
+                    }
+                    valueTid = null;
+                    hasAnnotations = false;
+                    if (parent != null && parent.typeId.type == IonType.STRUCT && (minorVersion == 0 ? slowReadFieldName_1_0() : slowReadFieldName_1_1())) {
+                        return;
+                    }
+                    valuePreHeaderIndex = peekIndex;
+                    b = slowReadByte();
+                    if (b < 0) {
+                        return;
+                    }
+                    if (b == IVM_START_BYTE && parent == null) {
+                        if (!fillAt(peekIndex, IVM_REMAINING_LENGTH)) {
+                            return;
+                        }
+                        readIvm();
+                        setCheckpointBeforeUnannotatedTypeId();
+                        continue;
+                    }
+                    if (slowReadHeader(b, false, valueMarker)) {
+                        valueTid = valueMarker.typeId;
+                        return;
+                    }
+                    valueTid = valueMarker.typeId;
+                    // Either a NOP has been skipped, or an annotation wrapper has been consumed.
+                    continue;
+                case BEFORE_ANNOTATED_TYPE_ID:
+                    valueTid = null;
+                    b = slowReadByte();
+                    if (b < 0) {
+                        return;
+                    }
+                    slowReadHeader(b, true, valueMarker);
+                    valueTid = valueMarker.typeId;
+                    // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the cursor
+                    // must be positioned after the header for the wrapped value.
+                    return;
+                case AFTER_SCALAR_HEADER:
+                case AFTER_CONTAINER_HEADER:
+                    if (slowSkipRemainingValueBytes()) {
+                        return;
+                    }
+                    // The previous value's bytes have now been skipped; continue.
+            }
+        }
+    }
+
+    /**
+     * Skips past the remaining bytes in the current value, ensuring enough bytes are available in the stream. If the
+     * skip was successful, sets the checkpoint at the resulting index.
+     * @return true if not enough data was available in the stream; otherwise, false.
+     */
+    private boolean slowSkipRemainingValueBytes() {
+        if (valueMarker.endIndex == -1 && valueTid != null && valueTid.isDelimited) {
+            seekPastDelimitedContainer_1_1();
+            if (event == Event.NEEDS_DATA) {
+                return true;
+            }
+        } else if (limit >= valueMarker.endIndex) {
+            offset = valueMarker.endIndex;
+        } else if (!slowSeek(valueMarker.endIndex - offset)) {
+            return true;
+        }
+        peekIndex = offset;
+        valuePreHeaderIndex = peekIndex;
+        if (peekIndex < valueMarker.endIndex) {
+            shiftContainerEnds(valueMarker.endIndex - peekIndex);
+        }
+        if (refillableState.fillDepth > containerIndex) {
+            // This value was filled, but was skipped. Reset the fillDepth so that the reader does not think the
+            // next value was filled immediately upon encountering it.
+            refillableState.fillDepth = -1;
+        }
+        setCheckpointBeforeUnannotatedTypeId();
+        return false;
+    }
+
+    /**
+     * Advances to the next token, ensuring enough bytes are available in the stream and checking against size limits.
+     * If an oversized value is encountered, attempts to skip past it.
+     * @return the result of the operation (e.g. START_SCALAR, END_CONTAINER).
+     */
+    private Event slowOverflowableNextToken() {
+        while (true) {
+            slowNextToken();
+            if (refillableState.isSkippingCurrentValue) {
+                seekPastOversizedValue();
+                continue;
+            }
+            return event;
+        }
+    }
+
+    /**
+     * Seeks past an oversized value.
+     */
+    private void seekPastOversizedValue() {
+        refillableState.oversizedValueHandler.onOversizedValue();
+        if (refillableState.state != State.TERMINATED) {
+            slowSeek(valueMarker.endIndex - offset - refillableState.individualBytesSkippedWithoutBuffering);
+            refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
+            peekIndex = offset;
+            // peekIndex now points at the first byte after the value. If any bytes were skipped directly from
+            // the input stream, peekIndex will be less than the value's pre-calculated endIndex. This requires
+            // the end indices for all parent containers to be shifted left by the number of bytes that were
+            // skipped without buffering.
+            shiftContainerEnds(valueMarker.endIndex - peekIndex);
+            setCheckpointBeforeUnannotatedTypeId();
+        }
+        refillableState.isSkippingCurrentValue = false;
+        refillableState.individualBytesSkippedWithoutBuffering = 0;
+    }
+
     @Override
     public Event nextValue() {
+        if (isSlowMode) {
+            return slowNextValue();
+        }
         event = Event.NEEDS_DATA;
         while (true) {
             if (nextToken()) {
@@ -1078,9 +1659,68 @@ class IonCursorBinary implements IonCursor {
         return event;
     }
 
+    /**
+     * Advances to the next value, seeking past the previous if necessary, and ensuring enough bytes are available in
+     * the stream.
+     * @return the result of the operation (e.g. START_SCALAR, END_CONTAINER).
+     */
+    private Event slowNextValue() {
+        if (refillableState.fillDepth > containerIndex) {
+            // This value was filled, but was skipped. Reset the fillDepth so that the reader does not think the
+            // next value was filled immediately upon encountering it.
+            refillableState.fillDepth = -1;
+            peekIndex = valueMarker.endIndex;
+            setCheckpointBeforeUnannotatedTypeId();
+            slowNextToken();
+            return event;
+        }
+        return slowOverflowableNextToken();
+    }
+
     @Override
     public Event fillValue() {
         event = Event.VALUE_READY;
+        if (isSlowMode && refillableState.fillDepth <= containerIndex) {
+            slowFillValue();
+            if (refillableState.isSkippingCurrentValue) {
+                seekPastOversizedValue();
+            }
+        }
+        return event;
+    }
+
+    /**
+     * Fills the buffer with the contents of the value on which the cursor is currently positioned, ensuring that
+     * enough bytes are available in the stream.
+     * @return `event`, which conveys the result.
+     */
+    private Event slowFillValue() {
+        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+            return event;
+        }
+        // Must be positioned after a header.
+        if (checkpointLocation != CheckpointLocation.AFTER_SCALAR_HEADER && checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            throw new IllegalStateException();
+        }
+        event = Event.NEEDS_DATA;
+
+        if (valueMarker.endIndex == -1) {
+            if (slowFillDelimitedContainer_1_1()) {
+                return event;
+            }
+        }
+        if (limit >= valueMarker.endIndex || fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
+            if (refillableState.isSkippingCurrentValue) {
+                event = Event.NEEDS_INSTRUCTION;
+            } else {
+                if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+                    // This container is buffered in its entirety. There is no need to fill the buffer again until stepping
+                    // out of the fill depth.
+                    refillableState.fillDepth = containerIndex + 1;
+                }
+                event = Event.VALUE_READY;
+            }
+        }
         return event;
     }
 
@@ -1154,7 +1794,23 @@ class IonCursorBinary implements IonCursor {
      * @return true if the cursor is expecting more data in order to complete a token; otherwise, false.
      */
     private boolean isAwaitingMoreData() {
+        if (isSlowMode) {
+            return slowIsAwaitingMoreData();
+        }
         return valueMarker.endIndex > limit;
+    }
+
+    /**
+     * @return true if the cursor is expecting more data in order to complete a token; otherwise, false.
+     */
+    private boolean slowIsAwaitingMoreData() {
+        // Note: this does not detect early end-of-stream in all cases, as doing so would require reading from
+        // the input stream, which is not worth the expense.
+        return refillableState.state != State.TERMINATED
+            && (refillableState.state == State.SEEK
+            || refillableState.state == State.SEEK_DELIMITED
+            || refillableState.bytesRequested > 1
+            || peekIndex > checkpoint);
     }
 
     /**

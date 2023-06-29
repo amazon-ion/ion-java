@@ -8,6 +8,10 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IvmNotificationConsumer;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.io.ByteArrayInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
@@ -19,6 +23,7 @@ import static com.amazon.ion.IonCursor.Event.START_SCALAR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+@RunWith(Parameterized.class)
 public class IonCursorBinaryTest {
 
     private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION = IonBufferConfiguration.Builder.standard().build();
@@ -30,6 +35,14 @@ public class IonCursorBinaryTest {
         assertNotNull(marker);
         return marker;
     }
+
+    @Parameterized.Parameters(name = "constructWithBytes={0}")
+    public static Object[] parameters() {
+        return new Object[]{true, false};
+    }
+
+    @Parameterized.Parameter
+    public boolean constructFromBytes;
 
     private IonCursorBinary cursor = null;
     private int numberOfIvmsEncountered = 0;
@@ -43,8 +56,19 @@ public class IonCursorBinaryTest {
     }
 
     private void initializeCursor(int... data) {
-        cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, bytes(data), 0, data.length);
+        if (constructFromBytes) {
+            cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, bytes(data), 0, data.length);
+        } else {
+            cursor = new IonCursorBinary(
+                STANDARD_BUFFER_CONFIGURATION,
+                new ByteArrayInputStream(bytes(data)),
+                null,
+                0,
+                0
+            );
+        }
         cursor.registerIvmNotificationConsumer(countingIvmConsumer);
+        cursor.registerOversizedValueHandler(STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler());
     }
 
     @Test
