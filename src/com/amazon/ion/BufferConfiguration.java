@@ -1,42 +1,39 @@
-package com.amazon.ion;
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
-import com.amazon.ion.impl.ReaderLookaheadBuffer;
+package com.amazon.ion;
 
 /**
  * Provides logic common to all BufferConfiguration implementations.
- * @param <Configuration> the type of the concrete subclass of this BufferConfiguration that is applicable to the
- *                        ReaderLookaheadBufferBase subclass.
+ * @param <Configuration> the type of the concrete subclass of this BufferConfiguration.
  */
 public abstract class BufferConfiguration<Configuration extends BufferConfiguration<Configuration>> {
 
     /**
      * Functional interface for handling oversized values.
      */
+    @FunctionalInterface
     public interface OversizedValueHandler {
         /**
-         * Invoked each time a value (and any symbol tables that immediately precede it) exceed the buffer size limit
-         * specified by the LookaheadReaderWrapper instance, but the symbol tables by themselves do not exceed the
-         * limit. This is recoverable. If the implementation wishes to recover, it should simply return normally from
-         * this method. The oversized value will be flushed from the input pipe; normal processing will resume with the
-         * next value. If the implementation wishes to abort processing immediately, it may throw an exception from this
-         * method. Such an exception will propagate upward and will be thrown from
-         * {@link ReaderLookaheadBuffer#fillInput()}.
-         * @throws Exception if handler logic fails.
+         * Invoked each time a user value exceeds the buffer size limit specified. This is recoverable. If the
+         * implementation wishes to recover, it should simply return normally from this method. The oversized value will
+         * be flushed from the buffer; normal processing will resume with the next value. If the implementation wishes
+         * to abort processing immediately, it may throw an exception from this method.
          */
-        void onOversizedValue() throws Exception;
+        void onOversizedValue();
     }
 
     /**
      * Functional interface for reporting processed data.
      */
+    @FunctionalInterface
     public interface DataHandler {
         /**
          * Invoked whenever the bytes from a value are processed, regardless of whether the bytes are buffered or
          * skipped due to the value being oversized.
          * @param numberOfBytes the number of bytes processed.
-         * @throws Exception if handler logic fails.
          */
-        void onData(int numberOfBytes) throws Exception;
+        void onData(int numberOfBytes);
     }
 
     /**
@@ -88,7 +85,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         }
 
         /**
-         * @return the initial size of the lookahead buffer, in bytes.
+         * @return the initial size of the buffer, in bytes.
          */
         public final int getInitialBufferSize() {
             return initialBufferSize;
@@ -133,10 +130,10 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         }
 
         /**
-         * Set the maximum number of bytes between top-level values. This can be used to limit growth of the internal
-         * buffer. For binary Ion, the minimum value is 5 because all valid binary Ion data begins with a 4-byte Ion
-         * version marker and the smallest value is 1 byte. For delimited text Ion, the minimum value is 2 because the
-         * smallest text Ion value is 1 byte and the smallest delimiter is 1 byte. Default: Integer.MAX_VALUE.
+         * Set the maximum size of the buffer. For binary Ion, the minimum value is 5 because all valid binary Ion data
+         * begins with a 4-byte Ion version marker and the smallest value is 1 byte. For text Ion, the minimum value is
+         * 2 because the smallest text Ion value is 1 byte and the smallest delimiter is 1 byte.
+         * Default: Integer.MAX_VALUE.
          *
          * @param maximumBufferSizeInBytes the value.
          * @return this builder.
@@ -177,12 +174,12 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
     }
 
     /**
-     * The initial size of the lookahead buffer, in bytes.
+     * The initial size of the buffer, in bytes.
      */
     private final int initialBufferSize;
 
     /**
-     * The maximum number of bytes that will be buffered.
+     * The maximum number of bytes that may be buffered.
      */
     private final int maximumBufferSize;
 
@@ -236,7 +233,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
     }
 
     /**
-     * @return the initial size of the lookahead buffer, in bytes.
+     * @return the initial size of the buffer, in bytes.
      */
     public final int getInitialBufferSize() {
         return initialBufferSize;

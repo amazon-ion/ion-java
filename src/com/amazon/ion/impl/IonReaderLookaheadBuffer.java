@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
@@ -298,7 +301,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
      * @param inputStream an InputStream over binary Ion data.
      */
     public IonReaderLookaheadBuffer(final IonBufferConfiguration configuration, final InputStream inputStream) {
-        super(configuration, inputStream);
+        super(configuration, configuration.getOversizedValueHandler(), inputStream);
         pipe.registerNotificationConsumer(
             new ResizingPipedInputStream.NotificationConsumer() {
                 @Override
@@ -412,7 +415,7 @@ public final class IonReaderLookaheadBuffer extends ReaderLookaheadBufferBase {
         if (header < 0) {
             return ReadTypeIdResult.NO_DATA;
         }
-        valueTid = IonTypeID.TYPE_IDS[header];
+        valueTid = IonTypeID.TYPE_IDS_1_0[header];
         dataHandler.onData(1);
         if (header == IVM_START_BYTE) {
             if (!isUnannotated) {

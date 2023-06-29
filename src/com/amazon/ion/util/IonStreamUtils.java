@@ -18,6 +18,7 @@ package com.amazon.ion.util;
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
 import static com.amazon.ion.util.GzipOrRawInputStream.GZIP_HEADER;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
@@ -123,6 +124,13 @@ public class IonStreamUtils
         return new GzipOrRawInputStream(in);
     }
 
+    /**
+     * Wraps the given Exception with IonException and throws.
+     * @param e the exception to wrap.
+     */
+    public static void throwAsIonException(Exception e) {
+        throw new IonException(e);
+    }
 
     //=========================================================================
 

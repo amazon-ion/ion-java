@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
@@ -1046,10 +1049,13 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             annotationStartPosition = annotationSidsMarker.startIndex;
             annotationEndPosition = annotationSidsMarker.endIndex;
             peekIndex = annotationEndPosition;
-            valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
+            valueTypeID = IonTypeID.TYPE_IDS_1_0[buffer.peek(peekIndex++)];
             int wrappedValueLength = valueTypeID.length;
             if (valueTypeID.variableLength) {
                 wrappedValueLength = readVarUInt();
+            }
+            if (valueTypeID.isNopPad) {
+                throw new IonException("Annotated NOP padding is invalid.");
             }
             valueType = valueTypeID.type;
             if (valueType == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
@@ -1072,7 +1078,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      * @return the TypeAndLength descriptor for the type ID byte.
      */
     private IonTypeID readTypeId() {
-        valueTypeID = IonTypeID.TYPE_IDS[buffer.peek(peekIndex++)];
+        valueTypeID = IonTypeID.TYPE_IDS_1_0[buffer.peek(peekIndex++)];
         if (!valueTypeID.isValid) {
             throw new IonException("Invalid type ID.");
         }
