@@ -147,6 +147,33 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     /**
+     * Writes binary Ion streams with a raw writer. Also allows bytes to be written directly to the stream.
+     */
+    private interface RawWriterFunction {
+        void write(_Private_IonRawWriter writer, ByteArrayOutputStream out) throws IOException;
+    }
+
+    /**
+     * Writes a raw binary stream using the provided raw writer function.
+     * @param writerFunction the write function.
+     * @param writeIvm true if an Ion 1.0 IVM should be written at the start of the stream; otherwise, false.
+     * @return the binary Ion bytes.
+     * @throws Exception if thrown during writing.
+     */
+    private byte[] writeRaw(RawWriterFunction writerFunction, boolean writeIvm) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        _Private_IonRawWriter writer = writerBuilder.build(out)
+            .asFacet(_Private_IonManagedWriter.class)
+            .getRawWriter();
+        if (writeIvm) {
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+        }
+        writerFunction.write(writer, out);
+        writer.close();
+        return out.toByteArray();
+    }
+
+    /**
      * Converts the given text Ion to the equivalent binary Ion.
      * @param ion text Ion data.
      * @return the equivalent binary Ion data.
@@ -177,6 +204,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
      */
     private IonReader readerFor(String ion) {
         byte[] binary = toBinary(ion);
+        totalBytesInStream = binary.length;
+        return readerFor(readerBuilder, binary);
+    }
+
+    /**
+     * Creates an incremental reader over the binary Ion data created by invoking the given RawWriterFunction.
+     * @param writerFunction the function used to generate the data.
+     * @return a new reader.
+     * @throws Exception if an exception is raised while writing the Ion data.
+     */
+    private IonReader readerFor(RawWriterFunction writerFunction) throws Exception {
+        byte[] binary = writeRaw(writerFunction, true);
         totalBytesInStream = binary.length;
         return readerFor(readerBuilder, binary);
     }
@@ -302,6 +341,118 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     @Test
+    public void lstAppend() throws Exception {
+        writerBuilder = writerBuilder.withLocalSymbolTableAppendEnabled();
+        IonReader reader = readerFor(writer -> {
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("foo");
+            writer.addTypeAnnotation("uvw");
+            writer.writeSymbol("abc");
+            writer.setFieldName("bar");
+            writer.setTypeAnnotations("qrs", "xyz");
+            writer.writeSymbol("def");
+            writer.stepOut();
+            writer.flush();
+            writer.writeSymbol("orange");
+        });
+
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("foo", reader.getFieldName());
+        assertEquals(Collections.singletonList("uvw"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("bar", reader.getFieldName());
+        assertEquals(Arrays.asList("qrs", "xyz"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("def", reader.stringValue());
+        reader.stepOut();
+        SymbolTable preAppend = reader.getSymbolTable();
+        assertEquals(IonType.SYMBOL, reader.next());
+        SymbolTable postAppend = reader.getSymbolTable();
+        assertEquals("orange", reader.stringValue());
+        assertNull(preAppend.find("orange"));
+        assertNotNull(postAppend.find("orange"));
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void lstNonAppend() throws Exception {
+        writerBuilder = writerBuilder.withLocalSymbolTableAppendDisabled();
+        IonReader reader = readerFor(writer -> {
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("foo");
+            writer.addTypeAnnotation("uvw");
+            writer.writeSymbol("abc");
+            writer.setFieldName("bar");
+            writer.setTypeAnnotations("qrs", "xyz");
+            writer.writeSymbol("def");
+            writer.stepOut();
+            writer.setTypeAnnotations("$ion_symbol_table");
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("symbols");
+            writer.stepIn(IonType.LIST);
+            writer.writeString("orange");
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbol("orange");
+        });
+
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("foo", reader.getFieldName());
+        assertEquals(Collections.singletonList("uvw"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("bar", reader.getFieldName());
+        assertEquals(Arrays.asList("qrs", "xyz"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("def", reader.stringValue());
+        reader.stepOut();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("orange", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void ivmBetweenValues() throws Exception {
+        writerBuilder = writerBuilder.withLocalSymbolTableAppendDisabled();
+        IonReader reader = readerFor(writer -> {
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("foo");
+            writer.addTypeAnnotation("uvw");
+            writer.writeSymbol("abc");
+            writer.setFieldName("bar");
+            writer.setTypeAnnotations("qrs", "xyz");
+            writer.writeSymbol("def");
+            writer.stepOut();
+            writer.finish();
+            writer.writeSymbol("orange");
+        });
+
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("foo", reader.getFieldName());
+        assertEquals(Collections.singletonList("uvw"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("bar", reader.getFieldName());
+        assertEquals(Arrays.asList("qrs", "xyz"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("def", reader.stringValue());
+        reader.stepOut();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("orange", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
     public void ivmOnly() throws Exception {
         IonReader reader = readerFor();
         assertNull(reader.next());
@@ -312,6 +463,90 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @Test
     public void twoIvmsOnly() throws Exception {
         IonReader reader = readerFor(0xE0, 0x01, 0x00, 0xEA);
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void multipleSymbolTablesBetweenValues() throws Exception {
+        IonReader reader = readerFor(writer -> {
+            writer.setTypeAnnotations("$ion_symbol_table");
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("symbols");
+            writer.stepIn(IonType.LIST);
+            writer.writeString("abc");
+            writer.stepOut();
+            writer.stepOut();
+            writer.setTypeAnnotations("$ion_symbol_table");
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("symbols");
+            writer.stepIn(IonType.LIST);
+            writer.writeString("def");
+            writer.stepOut();
+            writer.setFieldName("imports");
+            writer.writeSymbol("$ion_symbol_table");
+            writer.stepOut();
+            writer.writeSymbol("abc");
+            writer.writeSymbol("def");
+            writer.setTypeAnnotations("$ion_symbol_table");
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("symbols");
+            writer.stepIn(IonType.LIST);
+            writer.writeString("orange");
+            writer.stepOut();
+            writer.stepOut();
+            writer.setTypeAnnotations("$ion_symbol_table");
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("symbols");
+            writer.stepIn(IonType.LIST);
+            writer.writeString("purple");
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbol("purple");
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("purple", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void multipleIvmsBetweenValues() throws Exception  {
+        IonReader reader = readerFor((writer, out) -> {
+            writer.setTypeAnnotationSymbols(3);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(7);
+            writer.stepIn(IonType.LIST);
+            writer.writeString("abc");
+            writer.stepOut();
+            writer.stepOut();
+            writer.finish();
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            writer.setTypeAnnotationSymbols(3);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(7);
+            writer.stepIn(IonType.LIST);
+            writer.writeString("def");
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.finish();
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            writer.writeSymbolToken(4);
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("name", reader.stringValue());
         assertNull(reader.next());
         reader.close();
         assertBytesConsumed();
@@ -478,6 +713,310 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     @Test
+    public void symbolTableWithImportsThenSymbols() throws Exception {
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
+        readerBuilder = readerBuilder.withCatalog(catalog);
+        writerBuilder = writerBuilder.withCatalog(catalog);
+
+        IonReader reader = readerFor(writer -> {
+            writer.setTypeAnnotations("$ion_symbol_table");
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("imports");
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldName("name");
+            writer.writeString("foo");
+            writer.setFieldName("version");
+            writer.writeInt(1);
+            writer.setFieldName("max_id");
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.setFieldName("symbols");
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbol("abc");
+            writer.writeSymbol("def");
+            writer.writeSymbol("ghi");
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("ghi", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableWithSymbolsThenImports() throws Exception {
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
+        readerBuilder = readerBuilder.withCatalog(catalog);
+
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.writeSymbolToken(11);
+            writer.writeSymbolToken(12);
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("ghi", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableWithManySymbolsThenImports() throws Exception {
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
+        readerBuilder = readerBuilder.withCatalog(catalog);
+
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.writeString("jkl");
+            writer.writeString("mno");
+            writer.writeString("pqr");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.writeSymbolToken(11);
+            writer.writeSymbolToken(12);
+            writer.writeSymbolToken(13);
+            writer.writeSymbolToken(14);
+            writer.writeSymbolToken(15);
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("ghi", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("jkl", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("mno", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("pqr", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void multipleSymbolTablesWithSymbolsThenImports() throws Exception {
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
+        catalog.putTable(SYSTEM.newSharedSymbolTable("bar", 1, Collections.singletonList("baz").iterator()));
+        readerBuilder = readerBuilder.withCatalog(catalog);
+
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.writeSymbolToken(11);
+            writer.writeSymbolToken(12);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("xyz");
+            writer.writeString("uvw");
+            writer.writeString("rst");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("bar");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(1);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.writeSymbolToken(11);
+            writer.writeSymbolToken(12);
+            writer.writeSymbolToken(13);
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        SymbolTable[] imports = reader.getSymbolTable().getImportedTables();
+        assertEquals(1, imports.length);
+        assertEquals("foo", imports[0].getName());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("ghi", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("baz", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        imports = reader.getSymbolTable().getImportedTables();
+        assertEquals(1, imports.length);
+        assertEquals("bar", imports[0].getName());
+        assertEquals("xyz", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("uvw", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("rst", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void ivmResetsImports() throws Exception {
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
+        readerBuilder = readerBuilder.withCatalog(catalog);
+
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.writeSymbolToken(11);
+            writer.writeSymbolToken(12);
+            writer.close();
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            out.write(0x20);
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        SymbolTable[] imports = reader.getSymbolTable().getImportedTables();
+        assertEquals(1, imports.length);
+        assertEquals("foo", imports[0].getName());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("ghi", reader.stringValue());
+        assertEquals(IonType.INT, reader.next());
+        assertTrue(reader.getSymbolTable().isSystemTable());
+        assertEquals(0, reader.intValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    private static void assertSymbolEquals(
+        String expectedText,
+        ImportLocation expectedImportLocation,
+        SymbolToken actual
+    ) {
+        assertEquals(expectedText, actual.getText());
+        SymbolTokenWithImportLocation impl = (SymbolTokenWithImportLocation) actual;
+        assertEquals(expectedImportLocation, impl.getImportLocation());
+    }
+
+    @Test
+    public void symbolsAsTokens() throws Exception {
+        IonReader reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}");
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertSymbolEquals("foo", null, reader.getFieldNameSymbol());
+        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
+        assertEquals(1, annotations.length);
+        assertSymbolEquals("uvw", null, annotations[0]);
+        assertSymbolEquals("abc", null, reader.symbolValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertSymbolEquals("bar", null, reader.getFieldNameSymbol());
+        annotations = reader.getTypeAnnotationSymbols();
+        assertEquals(2, annotations.length);
+        assertSymbolEquals("qrs", null, annotations[0]);
+        assertSymbolEquals("xyz", null, annotations[1]);
+        assertSymbolEquals("def", null, reader.symbolValue());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
     public void intNegativeZeroFails() throws Exception {
         IonReader reader = readerFor(0x31, 0x00);
         reader.next();
@@ -548,6 +1087,97 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertNull(reader.next());
         reader.close();
         assertBytesConsumed();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeStringValue() throws Exception {
+        IonReader reader = readerFor(0x71, 0x0A); // SID 10
+        assertEquals(IonType.SYMBOL, reader.next());
+        thrown.expect(IonException.class);
+        reader.stringValue();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeSymbolValue() throws Exception {
+        IonReader reader = readerFor(0x71, 0x0A); // SID 10
+        assertEquals(IonType.SYMBOL, reader.next());
+        thrown.expect(IonException.class);
+        reader.symbolValue();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeFieldName() throws Exception {
+        IonReader reader = readerFor(
+            0xD2, // Struct, length 2
+            0x8A, // SID 10
+            0x20 // int 0
+        );
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.INT, reader.next());
+        thrown.expect(IonException.class);
+        reader.getFieldName();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeFieldNameSymbol() throws Exception {
+        IonReader reader = readerFor(
+            0xD2, // Struct, length 2
+            0x8A, // SID 10
+            0x20 // int 0
+        );
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.INT, reader.next());
+        thrown.expect(IonException.class);
+        reader.getFieldNameSymbol();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeAnnotation() throws Exception {
+        IonReader reader = readerFor(
+            0xE3, // Annotation wrapper, length 3
+            0x81, // annotation SID length 1
+            0x8A, // SID 10
+            0x20 // int 0
+        );
+        assertEquals(IonType.INT, reader.next());
+        thrown.expect(IonException.class);
+        reader.getTypeAnnotations();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeAnnotationSymbol() throws Exception {
+        IonReader reader = readerFor(
+            0xE3, // Annotation wrapper, length 3
+            0x81, // annotation SID length 1
+            0x8A, // SID 10
+            0x20 // int 0
+        );
+        assertEquals(IonType.INT, reader.next());
+        thrown.expect(IonException.class);
+        reader.getTypeAnnotationSymbols();
+        reader.close();
+    }
+
+    @Test
+    public void localSidOutOfRangeIterateAnnotations() throws Exception {
+        IonReader reader = readerFor(
+            0xE3, // Annotation wrapper, length 3
+            0x81, // annotation SID length 1
+            0x8A, // SID 10
+            0x20 // int 0
+        );
+        assertEquals(IonType.INT, reader.next());
+        Iterator<String> annotationIterator = reader.iterateTypeAnnotations();
+        thrown.expect(IonException.class);
+        annotationIterator.next();
         reader.close();
     }
 
@@ -712,6 +1342,363 @@ public class IonReaderContinuableTopLevelBinaryTest {
         thrown.expect(IonException.class);
         reader.next();
         reader.close();
+    }
+
+    @Test
+    public void multipleSymbolTableImportsFieldsFails() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("bar");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(1);
+            writer.stepOut();
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+        });
+
+        thrown.expect(IonException.class);
+        reader.next();
+        reader.close();
+    }
+
+    @Test
+    public void multipleSymbolTableSymbolsFieldsFails() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("bar");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(1);
+            writer.stepOut();
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("ghi");
+            writer.stepOut();
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString("abc");
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+        });
+
+        thrown.expect(IonException.class);
+        reader.next();
+        reader.close();
+    }
+
+    @Test
+    public void nonStringInSymbolsListCreatesNullSlot() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+            writer.stepIn(IonType.LIST);
+            writer.writeString(null);
+            writer.writeString("abc");
+            writer.writeInt(123);
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10);
+            writer.writeSymbolToken(11);
+            writer.writeSymbolToken(12);
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        SymbolToken symbolValue = reader.symbolValue();
+        assertNull(symbolValue.getText());
+        assertEquals(0, symbolValue.getSid());
+        assertEquals(IonType.SYMBOL, reader.next());
+        symbolValue = reader.symbolValue();
+        assertEquals("abc", symbolValue.getText());
+        assertEquals(IonType.SYMBOL, reader.next());
+        symbolValue = reader.symbolValue();
+        assertNull(symbolValue.getText());
+        assertEquals(0, symbolValue.getSid());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableWithMultipleImportsCorrectlyAssignsImportLocations() throws Exception {
+        SimpleCatalog catalog = new SimpleCatalog();
+        catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
+        catalog.putTable(SYSTEM.newSharedSymbolTable("bar", 1, Arrays.asList("123", "456").iterator()));
+        readerBuilder = readerBuilder.withCatalog(catalog);
+
+        IonReader reader = readerFor((writer, out) -> {
+            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+            writer.stepIn(IonType.LIST);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(4); // The matching shared symbol table in the catalog only declares two symbols.
+            writer.stepOut();
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("bar");
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            // The matching shared symbol table in the catalog declares two symbols, but only one is used.
+            writer.writeInt(1);
+            writer.stepOut();
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+            writer.writeString("baz"); // There is no match in the catalog; all symbols have unknown text.
+            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+            writer.writeInt(1);
+            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+            writer.writeInt(2);
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepOut();
+            writer.writeSymbolToken(10); // abc
+            writer.writeSymbolToken(11); // def
+            writer.writeSymbolToken(12); // unknown text, import SID 3 (from foo)
+            writer.writeSymbolToken(13); // unknown text, import SID 4 (from foo)
+            writer.writeSymbolToken(14); // 123
+            writer.writeSymbolToken(15); // unknown text, import SID 1 (from baz)
+            writer.writeSymbolToken(16); // unknown text, import SID 2 (from baz)
+        });
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("abc", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        SymbolTokenWithImportLocation symbolValue =
+            (SymbolTokenWithImportLocation) reader.symbolValue();
+        assertNull(symbolValue.getText());
+        assertEquals(new ImportLocation("foo", 3), symbolValue.getImportLocation());
+        assertEquals(IonType.SYMBOL, reader.next());
+        symbolValue = (SymbolTokenWithImportLocation) reader.symbolValue();
+        assertNull(symbolValue.getText());
+        assertEquals(new ImportLocation("foo", 4), symbolValue.getImportLocation());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("123", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        symbolValue = (SymbolTokenWithImportLocation) reader.symbolValue();
+        assertEquals(
+            new SymbolTokenWithImportLocation(
+                null,
+                15,
+                new ImportLocation("baz", 1)
+            ),
+            symbolValue
+        );
+        assertEquals(IonType.SYMBOL, reader.next());
+        symbolValue = (SymbolTokenWithImportLocation) reader.symbolValue();
+        assertEquals(
+            new SymbolTokenWithImportLocation(
+                null,
+                16,
+                new ImportLocation("baz", 2)
+            ),
+            symbolValue
+        );
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableSnapshotImplementsBasicMethods() throws Exception {
+        IonReader reader = readerFor("'abc'");
+        reader.next();
+        SymbolTable symbolTable = reader.getSymbolTable();
+        assertNull(symbolTable.getName());
+        assertEquals(0, symbolTable.getVersion());
+        assertTrue(symbolTable.isLocalTable());
+        assertTrue(symbolTable.isReadOnly());
+        assertFalse(symbolTable.isSharedTable());
+        assertFalse(symbolTable.isSystemTable());
+        assertFalse(symbolTable.isSubstitute());
+        symbolTable.makeReadOnly();
+        assertEquals(10, symbolTable.getMaxId());
+        assertEquals("abc", symbolTable.findKnownSymbol(10));
+        assertNull(symbolTable.findKnownSymbol(symbolTable.getMaxId() + 1));
+        thrown.expect(IllegalArgumentException.class);
+        symbolTable.findKnownSymbol(-1);
+        reader.close();
+    }
+
+    /**
+     * Compares an iterator to the given list.
+     * @param expected the list containing the elements to compare to.
+     * @param actual the iterator to be compared.
+     */
+    private static void compareIterator(List<String> expected, Iterator<String> actual) {
+        int numberOfElements = 0;
+        while (actual.hasNext()) {
+            String actualValue = actual.next();
+            if (numberOfElements >= expected.size()) {
+                assertTrue(actual.hasNext());
+                break;
+            }
+            String expectedValue = expected.get(numberOfElements++);
+            assertEquals(expectedValue, actualValue);
+        }
+        assertEquals(expected.size(), numberOfElements);
+    }
+
+    @Test
+    public void annotationIteratorReuse() throws Exception {
+        IonReader reader = readerFor("foo::bar::123 baz::456");
+
+        assertEquals(IonType.INT, reader.next());
+        Iterator<String> firstValueAnnotationIterator = reader.iterateTypeAnnotations();
+        assertEquals(123, reader.intValue());
+        assertEquals(IonType.INT, reader.next());
+        compareIterator(Arrays.asList("foo", "bar"), firstValueAnnotationIterator);
+        Iterator<String> secondValueAnnotationIterator = reader.iterateTypeAnnotations();
+        assertEquals(456, reader.intValue());
+        assertNull(reader.next());
+        compareIterator(Collections.singletonList("baz"), secondValueAnnotationIterator);
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void multiByteSymbolTokens() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+            writer.stepIn(IonType.LIST);
+            for (int i = SystemSymbols.ION_1_0_MAX_ID ; i < 332; i++) {
+                writer.writeNull(IonType.STRING);
+            }
+            writer.writeString("a");
+            writer.writeString("b");
+            writer.writeString("c");
+            writer.stepOut();
+            writer.stepOut();
+            writer.stepIn(IonType.STRUCT);
+            writer.addTypeAnnotationSymbol(333);
+            writer.setFieldNameSymbol(334);
+            writer.writeSymbolToken(335);
+            writer.stepOut();
+        });
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
+        assertEquals(1, annotations.length);
+        assertEquals("a", annotations[0].assumeText());
+        Iterator<String> annotationsIterator = reader.iterateTypeAnnotations();
+        assertTrue(annotationsIterator.hasNext());
+        assertEquals("a", annotationsIterator.next());
+        assertFalse(annotationsIterator.hasNext());
+        assertEquals("b", reader.getFieldNameSymbol().assumeText());
+        assertEquals("c", reader.symbolValue().assumeText());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableWithOpenContentImportsListField() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(SystemSymbols.NAME_SID);
+            writer.writeInt(123);
+            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+            writer.stepIn(IonType.LIST);
+            writer.writeString("a");
+            writer.stepOut();
+            writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
+            writer.writeString("foo");
+            writer.stepOut();
+            writer.writeSymbolToken(SystemSymbols.ION_1_0_MAX_ID + 1);
+        });
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("a", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableWithOpenContentImportsSymbolField() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+            writer.stepIn(IonType.LIST);
+            writer.writeString("a");
+            writer.stepOut();
+            writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
+            writer.writeSymbolToken(SystemSymbols.NAME_SID);
+            writer.stepOut();
+            writer.writeSymbolToken(SystemSymbols.ION_1_0_MAX_ID + 1);
+        });
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("a", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableWithOpenContentSymbolField() throws Exception {
+        IonReader reader = readerFor((writer, out) -> {
+            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+            writer.stepIn(IonType.STRUCT);
+            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+            writer.writeString("foo");
+            writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
+            writer.writeSymbolToken(SystemSymbols.NAME_SID);
+            writer.stepOut();
+            writer.writeSymbolToken(SystemSymbols.VERSION_SID);
+        });
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals(SystemSymbols.VERSION, reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
     }
 
 }
