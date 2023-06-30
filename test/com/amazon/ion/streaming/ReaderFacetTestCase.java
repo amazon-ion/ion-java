@@ -36,21 +36,13 @@ public abstract class ReaderFacetTestCase
      *
      * @see NonSpanReaderTest
      */
-    public static final ReaderMaker[] NON_SPAN_READERS =
-    {
-        ReaderMaker.FROM_INPUT_STREAM_BINARY_INCREMENTAL
-    };
+    public static final ReaderMaker[] NON_SPAN_READERS = {};
 
     /**
      * These are the readers that don't support {@link OffsetSpan}s.
      */
-    public static final ReaderMaker[] NON_OFFSET_SPAN_READERS;
-    static {
-        ReaderMaker[] domReaders = ReaderMaker.valuesWith(ReaderMaker.Feature.DOM);
-        NON_OFFSET_SPAN_READERS = new ReaderMaker[domReaders.length + 1];
-        System.arraycopy(domReaders, 0, NON_OFFSET_SPAN_READERS, 0, domReaders.length);
-        NON_OFFSET_SPAN_READERS[domReaders.length] = ReaderMaker.FROM_INPUT_STREAM_BINARY_INCREMENTAL;
-    }
+    public static final ReaderMaker[] NON_OFFSET_SPAN_READERS =
+        ReaderMaker.valuesWith(ReaderMaker.Feature.DOM);
 
     /**
      * These are the readers that don't support {@link TextSpan}s.
@@ -67,8 +59,7 @@ public abstract class ReaderFacetTestCase
     {
         ReaderMaker.FROM_INPUT_STREAM_BINARY,
         ReaderMaker.FROM_INPUT_STREAM_TEXT,
-        ReaderMaker.FROM_READER,
-        ReaderMaker.FROM_INPUT_STREAM_BINARY_INCREMENTAL
+        ReaderMaker.FROM_READER
     };
 
 

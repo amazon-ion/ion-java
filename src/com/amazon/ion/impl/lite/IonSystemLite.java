@@ -19,6 +19,7 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReader;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReaderText;
 import static com.amazon.ion.impl._Private_Utils.addAllNonNull;
 import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
@@ -45,7 +46,6 @@ import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonReaderBuilder;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonWriterFactory;
-import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -128,7 +128,7 @@ final class IonSystemLite
         {
             IonDatagram datagram = newDatagram();
             IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
-            IonReader reader = makeSystemReader(value.getSystem(), value);
+            IonReader reader = makeSystemReaderText(value.getSystem(), value);
 
             try {
                 writer.writeValues(reader);
@@ -730,7 +730,7 @@ final class IonSystemLite
 
     public IonReader newSystemReader(String ionText)
     {
-        return makeSystemReader(ionText);
+        return makeSystemReaderText(ionText);
     }
 
 
@@ -741,7 +741,7 @@ final class IonSystemLite
 
     public IonReader newSystemReader(InputStream ionData)
     {
-        return makeSystemReader(ionData);
+        return makeSystemReaderText(ionData);
     }
 
 
@@ -756,7 +756,7 @@ final class IonSystemLite
 
     public IonReader newSystemReader(Reader ionText)
     {
-        return makeSystemReader(ionText);
+        return makeSystemReaderText(ionText);
     }
 
 
@@ -767,7 +767,7 @@ final class IonSystemLite
 
     public IonReader newSystemReader(IonValue value)
     {
-        return makeSystemReader(this, value);
+        return makeSystemReaderText(this, value);
     }
 
 
