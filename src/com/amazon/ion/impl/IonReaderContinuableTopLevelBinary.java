@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
+import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonCursor;
@@ -20,10 +21,41 @@ import java.math.BigInteger;
 import java.util.Date;
 
 /**
- * An {@link IonReader} adapter to IonReaderContinuableApplicationBinary. Currently non-continuable. Support for
- * continuability will be added.
+ * An optionally continuable (i.e., incremental) binary {@link IonReader} implementation. Continuability is enabled
+ * using {@code IonReaderBuilder.withIncrementalReadingEnabled(true)}.
+ * <p>
+ * When continuable reading is enabled, if
+ * {@link IonReader#next()} returns {@code null} at the top-level, it indicates that there is not (yet) enough data in
+ * the stream to complete a top-level value. The user may wait for more data to become available in the stream and
+ * call {@link IonReader#next()} again to continue reading. Unlike the non-incremental reader, the continuable reader
+ * will never throw an exception due to unexpected EOF during {@code next()}. If, however, {@link IonReader#close()} is
+ * called when an incomplete value is buffered, an {@link IonException} will be raised.
+ * </p>
+ * <p>
+ * There is one caveat with the continuable reader implementation: it must be able to buffer an entire top-level value
+ * and any preceding system values (Ion version marker(s) and symbol table(s)) in memory. This means that each value
+ * and preceding system values must be no larger than any of the following:
+ * <ul>
+ * <li>The configured maximum buffer size of the {@link IonBufferConfiguration}.</li>
+ * <li>The memory available to the JVM.</li>
+ * <li>2GB, because the buffer is held in a Java {@code byte[]}, which is indexed by an {@code int}.</li>
+ * </ul>
+ * This will not be a problem for the vast majority of Ion streams, as it is
+ * rare for a single top-level value or symbol table to exceed a few megabytes in size. However, if the size of the
+ * stream's values risk exceeding the available memory, then continuable reading must not be used.
+ * </p>
  */
 final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableApplicationBinary implements IonReader, _Private_ReaderWriter {
+
+    // True if continuable reading is disabled.
+    private final boolean isNonContinuable;
+
+    // True if input is sourced from a non-fixed stream and the reader is non-continuable, meaning that its top level
+    // values are not automatically filled during next().
+    private final boolean isFillRequired;
+
+    // True if a value is in the process of being filled.
+    private boolean isFillingValue = false;
 
     // The type of value on which the reader is currently positioned.
     private IonType type = null;
@@ -40,6 +72,8 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
      */
     IonReaderContinuableTopLevelBinary(IonReaderBuilder builder, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen) {
         super(builder, inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
+        isNonContinuable = !builder.isIncrementalReadingEnabled();
+        isFillRequired = isNonContinuable;
     }
 
     /**
@@ -51,6 +85,8 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
      */
     IonReaderContinuableTopLevelBinary(IonReaderBuilder builder, byte[] data, int offset, int length) {
         super(builder, data, offset, length);
+        isNonContinuable = !builder.isIncrementalReadingEnabled();
+        isFillRequired = false;
     }
 
     @Override
@@ -70,13 +106,52 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    /**
+     * Advances to the next value and attempts to fill it.
+     * @return true if not enough data was available in the stream; otherwise, false.
+     */
+    private boolean nextAndFill() {
+        while (true) {
+            if (!isFillingValue) {
+                if (nextValue() == IonCursor.Event.NEEDS_DATA) {
+                    type = null;
+                    return true;
+                }
+            }
+            isFillingValue = true;
+            event = fillValue();
+            if (event == IonCursor.Event.NEEDS_DATA) {
+                type = null;
+                return true;
+            } else if (event == IonCursor.Event.NEEDS_INSTRUCTION) {
+                // The value was skipped for being too large. Get the next one.
+                isFillingValue = false;
+                continue;
+            }
+            break;
+        }
+        isFillingValue = false;
+        return false;
+    }
+
     @Override
     public IonType next() {
-        IonCursor.Event event = super.nextValue();
-        if (event == IonCursor.Event.NEEDS_DATA) {
-            endStream();
-            type = null;
-            return null;
+        if (!isSlowMode || isNonContinuable || parent != null) {
+            IonCursor.Event event = super.nextValue();
+            if (event == IonCursor.Event.NEEDS_DATA) {
+                if (isNonContinuable) {
+                    endStream();
+                }
+                type = null;
+                return null;
+            } else if (event == IonCursor.Event.NEEDS_INSTRUCTION) {
+                // The value was skipped for being too large.
+                isFillingValue = false;
+            }
+        } else {
+            if (nextAndFill()) {
+                return null;
+            }
         }
         type = super.getType();
         return type;
@@ -121,96 +196,134 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
         if (type != IonType.INT) {
             return null;
         }
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.getIntegerSize();
     }
 
     @Override
     public boolean booleanValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.booleanValue();
     }
 
     @Override
     public int intValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.intValue();
     }
 
     @Override
     public long longValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.longValue();
     }
 
     @Override
     public BigInteger bigIntegerValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.bigIntegerValue();
     }
 
     @Override
     public double doubleValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.doubleValue();
     }
 
     @Override
     public BigDecimal bigDecimalValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.bigDecimalValue();
     }
 
     @Override
     public Decimal decimalValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.decimalValue();
     }
 
     @Override
     public Date dateValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.dateValue();
     }
 
     @Override
     public Timestamp timestampValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.timestampValue();
     }
 
     @Override
     public String stringValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.stringValue();
     }
 
     @Override
     public SymbolToken symbolValue() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.symbolValue();
     }
 
     @Override
     public int byteSize() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.byteSize();
     }
 
     @Override
     public byte[] newBytes() {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.newBytes();
     }
 
     @Override
     public int getBytes(byte[] buffer, int offset, int len) {
-        prepareScalar();
+        if (isFillRequired) {
+            prepareScalar();
+        }
         return super.getBytes(buffer, offset, len);
     }
 
     @Override
     public <T> T asFacet(Class<T> facetType) {
         return null;
+    }
+
+    @Override
+    public void close() {
+        if (!isNonContinuable) {
+            endStream();
+        }
+        super.close();
     }
 }
