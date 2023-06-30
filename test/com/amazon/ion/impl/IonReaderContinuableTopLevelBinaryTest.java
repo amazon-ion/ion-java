@@ -131,6 +131,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byteCounter = new AtomicLong();
         oversizedCounter = new AtomicInteger();
         readerBuilder = IonReaderBuilder.standard()
+            .withIncrementalReadingEnabled(true)
             .withBufferConfiguration(standardBufferConfiguration);
         writerBuilder = IonBinaryWriterBuilder.standard();
     }
@@ -245,6 +246,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] binary = new TestUtils.BinaryIonAppender().append(ion).toByteArray();
         totalBytesInStream = binary.length;
         return readerFor(readerBuilder, binary);
+    }
+
+    /**
+     * Creates an incremental reader over the given binary Ion. This should only be used in cases where tests exercise
+     * behavior that does not exist when constructing a reader over a fixed buffer via byte array. In all other cases,
+     * use one of the other `readerFor` variants, which construct readers according to the 'constructFromBytes'
+     * parameter.
+     * @param input the binary Ion data.
+     * @return a new reader.
+     */
+    private IonReader readerFor(InputStream input) {
+        return new IonReaderContinuableTopLevelBinary(readerBuilder, input, null, 0, 0);
     }
 
     @Test
@@ -570,6 +583,243 @@ public class IonReaderContinuableTopLevelBinaryTest {
         thrown.expect(IonException.class);
         reader.next();
         reader.close();
+    }
+
+    /**
+     * Feeds all bytes from the given array into the pipe one-by-one, asserting before each byte that the reader
+     * is not positioned on a value.
+     * @param bytes the bytes to be fed.
+     * @param pipe the pipe into which the bytes are fed, and from which the reader consumes bytes.
+     * @param reader an incremental reader.
+     */
+    private void feedBytesOneByOne(byte[] bytes, ResizingPipedInputStream pipe, IonReader reader) {
+        for (byte b : bytes) {
+            assertNull(reader.next());
+            pipe.receive(b);
+        }
+    }
+
+    @Test
+    public void incrementalValue() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        IonReader reader = readerFor(pipe);
+        byte[] bytes = toBinary("\"StringValueLong\"");
+        totalBytesInStream = bytes.length;
+        feedBytesOneByOne(bytes, pipe, reader);
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("StringValueLong", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void incrementalMultipleValues() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        IonReader reader = readerFor(pipe);
+        byte[] bytes = toBinary("value_type::\"StringValueLong\"");
+        totalBytesInStream = bytes.length;
+        feedBytesOneByOne(bytes, pipe, reader);
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("StringValueLong", reader.stringValue());
+        assertEquals(Collections.singletonList("value_type"), Arrays.asList(reader.getTypeAnnotations()));
+        assertNull(reader.next());
+        assertBytesConsumed();
+        bytes = toBinary("{foobar: \"StringValueLong\"}");
+        totalBytesInStream += bytes.length;
+        feedBytesOneByOne(bytes, pipe, reader);
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("foobar", reader.getFieldName());
+        assertEquals("StringValueLong", reader.stringValue());
+        assertNull(reader.next());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void incrementalMultipleValuesLoadFromReader() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        final IonReader reader = readerFor(pipe);
+        final IonLoader loader = SYSTEM.getLoader();
+        byte[] bytes = toBinary("value_type::\"StringValueLong\"");
+        totalBytesInStream = bytes.length;
+        for (byte b : bytes) {
+            IonDatagram empty = loader.load(reader);
+            assertTrue(empty.isEmpty());
+            pipe.receive(b);
+        }
+        IonDatagram firstValue = loader.load(reader);
+        assertEquals(1, firstValue.size());
+        IonString string = (IonString) firstValue.get(0);
+        assertEquals("StringValueLong", string.stringValue());
+        assertEquals(Collections.singletonList("value_type"), Arrays.asList(string.getTypeAnnotations()));
+        assertBytesConsumed();
+        bytes = toBinary("{foobar: \"StringValueLong\"}");
+        totalBytesInStream += bytes.length;
+        for (byte b : bytes) {
+            IonDatagram empty = loader.load(reader);
+            assertTrue(empty.isEmpty());
+            pipe.receive(b);
+        }
+        IonDatagram secondValue = loader.load(reader);
+        assertEquals(1, secondValue.size());
+        IonStruct struct = (IonStruct) secondValue.get(0);
+        string = (IonString) struct.get("foobar");
+        assertEquals("StringValueLong", string.stringValue());
+        IonDatagram empty = loader.load(reader);
+        assertTrue(empty.isEmpty());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void incrementalMultipleValuesLoadFromInputStreamFails() throws Exception {
+        final ResizingPipedInputStream pipe = new ResizingPipedInputStream(1);
+        final IonLoader loader = IonSystemBuilder.standard()
+            .withReaderBuilder(readerBuilder)
+            .build()
+            .getLoader();
+        IonDatagram empty = loader.load(pipe);
+        assertTrue(empty.isEmpty());
+        pipe.receive(_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0]);
+        // Because reader does not persist across load invocations, the loader must throw an exception if the reader
+        // had an incomplete value buffered.
+        thrown.expect(IonException.class);
+        loader.load(pipe);
+    }
+
+    private void incrementalMultipleValuesIterate(Iterator<IonValue> iterator, ResizingPipedInputStream pipe) {
+        byte[] bytes = toBinary("value_type::\"StringValueLong\"");
+        totalBytesInStream = bytes.length;
+        for (byte b : bytes) {
+            assertFalse(iterator.hasNext());
+            pipe.receive(b);
+        }
+        assertTrue(iterator.hasNext());
+        IonString string = (IonString) iterator.next();
+        assertEquals("StringValueLong", string.stringValue());
+        assertEquals(Collections.singletonList("value_type"), Arrays.asList(string.getTypeAnnotations()));
+        assertFalse(iterator.hasNext());
+        assertBytesConsumed();
+        bytes = toBinary("{foobar: \"StringValueLong\"}");
+        totalBytesInStream += bytes.length;
+        for (byte b : bytes) {
+            assertFalse(iterator.hasNext());
+            pipe.receive(b);
+        }
+        assertTrue(iterator.hasNext());
+        IonStruct struct = (IonStruct) iterator.next();
+        string = (IonString) struct.get("foobar");
+        assertEquals("StringValueLong", string.stringValue());
+        assertFalse(iterator.hasNext());
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void incrementalMultipleValuesIterateFromReader() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        IonReader reader = readerBuilder.build(pipe);
+        Iterator<IonValue> iterator = SYSTEM.iterate(reader);
+        incrementalMultipleValuesIterate(iterator, pipe);
+        reader.close();
+    }
+
+    @Test
+    public void incrementalMultipleValuesIterateFromInputStream() {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        IonSystem system = IonSystemBuilder.standard().withReaderBuilder(readerBuilder).build();
+        Iterator<IonValue> iterator = system.iterate(pipe);
+        incrementalMultipleValuesIterate(iterator, pipe);
+    }
+
+
+    @Test
+    public void incrementalReadInitiallyEmptyStreamThatTurnsOutToBeText() {
+        // Note: if incremental text read support is added, this test will start failing, which is expected. For now,
+        // we ensure that this fails quickly.
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(1);
+        IonReader reader = readerBuilder.build(pipe);
+        assertNull(reader.next());
+        // Valid text Ion. Also hex 0x20, which is binary int 0. However, it is not preceded by the IVM, so it must be
+        // interpreted as text. The binary reader must fail.
+        pipe.receive(' ');
+        thrown.expect(IonException.class);
+        reader.next();
+    }
+
+    @Test
+    public void incrementalSymbolTables() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        byte[] firstValue = writeRaw(
+            (writer, out) -> {
+                writer.setTypeAnnotationSymbols(3);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(7);
+                writer.stepIn(IonType.LIST);
+                writer.writeString("abcdefghijklmnopqrstuvwxyz");
+                writer.writeString("def");
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepIn(IonType.STRUCT);
+                writer.setTypeAnnotationSymbols(11);
+                writer.setFieldNameSymbol(10);
+                writer.writeString("foo");
+                writer.stepOut();
+                writer.close();
+            },
+            true
+        );
+        byte[] secondValue = writeRaw(
+            (writer, out) -> {
+                writer.setTypeAnnotationSymbols(3);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(6);
+                writer.writeSymbolToken(3);
+                writer.setFieldNameSymbol(7);
+                writer.stepIn(IonType.LIST);
+                writer.writeString("foo");
+                writer.writeString("bar");
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(10);
+                writer.setTypeAnnotationSymbols(12, 13);
+                writer.writeString("fairlyLongString");
+                writer.stepOut();
+                writer.close();
+            },
+            false
+        );
+
+        IonReader reader = readerFor(pipe);
+        feedBytesOneByOne(firstValue, pipe, reader);
+        totalBytesInStream = firstValue.length;
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(Collections.singletonList("def"), Arrays.asList(reader.getTypeAnnotations()));
+        assertEquals("abcdefghijklmnopqrstuvwxyz", reader.getFieldName());
+        assertEquals("foo", reader.stringValue());
+        assertNull(reader.next());
+        reader.stepOut();
+        assertBytesConsumed();
+        feedBytesOneByOne(secondValue, pipe, reader);
+        totalBytesInStream += secondValue.length;
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("fairlyLongString", reader.stringValue());
+        assertEquals("abcdefghijklmnopqrstuvwxyz", reader.getFieldName());
+        assertEquals(Arrays.asList("foo", "bar"), Arrays.asList(reader.getTypeAnnotations()));
+        assertNull(reader.next());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
     }
 
     @Test
@@ -1699,6 +1949,42 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertNull(reader.next());
         reader.close();
         assertBytesConsumed();
+    }
+
+    @Test
+    public void stepOutWithoutEnoughDataNonIncrementalFails() throws Exception {
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA,
+            0xB6, // List length 6
+            0x21, 0x01, // Int 1
+            0x21, 0x02 // Int 2
+        );
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = readerFor(new ByteArrayInputStream(bytes));
+        assertEquals(IonType.LIST, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+        // Early step out. Not enough bytes to complete the value. Throw if the reader attempts
+        // to advance the cursor.
+        reader.stepOut();
+        thrown.expect(IonException.class);
+        reader.next();
+        reader.close();
+    }
+
+    @Test
+    public void skipWithoutEnoughDataNonIncrementalFails() throws Exception {
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA,
+            0x86, '1', '2', '3', '4' // String length 6; only 4 value bytes
+        );
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = readerFor(new ByteArrayInputStream(bytes));
+        assertEquals(IonType.STRING, reader.next());
+        thrown.expect(IonException.class);
+        reader.next();
+        reader.close();
     }
 
 }
