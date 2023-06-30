@@ -17,6 +17,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.OversizedValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
@@ -111,6 +112,48 @@ public class IonReaderContinuableTopLevelBinaryTest {
         @Override
         public void onOversizedValue() {
             Assert.fail("Oversized value not expected.");
+        }
+
+        @Override
+        public void onData(int numberOfBytes) {
+            byteCounter.addAndGet(numberOfBytes);
+        }
+    };
+
+    /**
+     * A handler that counts consumed bytes using `byteCounter`, counts oversized user values using `oversizedCounter`,
+     * and throws if any oversized symbol tables are encountered.
+     */
+    private final UnifiedTestHandler byteAndOversizedValueCountingHandler = new UnifiedTestHandler() {
+        @Override
+        public void onOversizedSymbolTable() {
+            throw new IllegalStateException("Oversized symbol table not expected.");
+        }
+
+        @Override
+        public void onOversizedValue() {
+            oversizedCounter.incrementAndGet();
+        }
+
+        @Override
+        public void onData(int numberOfBytes) {
+            byteCounter.addAndGet(numberOfBytes);
+        }
+    };
+
+    /**
+     * A handler that counts consumed bytes using `byteCounter`, counts oversized symbol tables using
+     * `oversizedCounter`, and throws if any oversized user values are encountered.
+     */
+    private final UnifiedTestHandler byteAndOversizedSymbolTableCountingHandler = new UnifiedTestHandler() {
+        @Override
+        public void onOversizedSymbolTable() {
+            oversizedCounter.incrementAndGet();
+        }
+
+        @Override
+        public void onOversizedValue() {
+            throw new IllegalStateException("Oversized value not expected.");
         }
 
         @Override
@@ -1814,6 +1857,995 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     /**
+     * Sets `readerBuilder`'s initial and maximum size bounds, and specifies the handler to use.
+     * @param initialSize the initial buffer size.
+     * @param maximumSize the maximum size to which the buffer may grow.
+     * @param handler the unified handler for byte counting and oversized value handling.
+     */
+    private void setBufferBounds(int initialSize, int maximumSize, UnifiedTestHandler handler) {
+        readerBuilder = readerBuilder.withBufferConfiguration(
+            IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(initialSize)
+                .withMaximumBufferSize(maximumSize)
+                .onOversizedValue(handler)
+                .onOversizedSymbolTable(handler)
+                .onData(handler)
+                .build()
+        );
+    }
+
+    /**
+     * Creates a bounded incremental reader over the given binary Ion, constructing a reader either from byte array or
+     * from InputStream depending on the value of the parameter 'constructFromBytes'.
+     * @param initialBufferSize the initial buffer size.
+     * @param maximumBufferSize the maximum size to which the buffer may grow.
+     * @param handler the unified handler for byte counting and oversized value handling.
+     */
+    private IonReader boundedReaderFor(byte[] bytes, int initialBufferSize, int maximumBufferSize, UnifiedTestHandler handler) {
+        byteCounter.set(0);
+        setBufferBounds(initialBufferSize, maximumBufferSize, handler);
+        return readerFor(readerBuilder, bytes);
+    }
+
+    /**
+     * Creates a bounded incremental reader over the given binary Ion. This should only be used in cases where tests
+     * exercise behavior that does not exist when constructing a reader over a fixed buffer via byte array. In all other
+     * cases, use one of the other `readerFor` variants, which construct readers according to the 'constructFromBytes'
+     * parameter.
+     * @param initialBufferSize the initial buffer size.
+     * @param maximumBufferSize the maximum size to which the buffer may grow.
+     * @param handler the unified handler for byte counting and oversized value handling.
+     */
+    private IonReader boundedReaderFor(InputStream stream, int initialBufferSize, int maximumBufferSize, UnifiedTestHandler handler) {
+        byteCounter.set(0);
+        setBufferBounds(initialBufferSize, maximumBufferSize, handler);
+        return readerFor(stream);
+    }
+
+    @Test
+    public void singleValueExceedsInitialBufferSize() throws Exception {
+        IonReader reader = boundedReaderFor(
+            toBinary("\"abcdefghijklmnopqrstuvwxyz\""),
+            8,
+            Integer.MAX_VALUE,
+            byteCountingHandler
+        );
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void maximumBufferSizeTooSmallFails() {
+        IonBufferConfiguration.Builder builder = IonBufferConfiguration.Builder.standard();
+        builder
+            .withMaximumBufferSize(builder.getMinimumMaximumBufferSize() - 1)
+            .withInitialBufferSize(builder.getMinimumMaximumBufferSize() - 1)
+            .onOversizedValue(builder.getNoOpOversizedValueHandler())
+            .onOversizedSymbolTable(builder.getNoOpOversizedSymbolTableHandler())
+            .onData(builder.getNoOpDataHandler());
+        thrown.expect(IllegalArgumentException.class);
+        builder.build();
+    }
+
+    @Test
+    public void maximumBufferSizeWithoutHandlerFails() {
+        IonBufferConfiguration.Builder builder = IonBufferConfiguration.Builder.standard();
+        builder
+            .withMaximumBufferSize(9)
+            .withInitialBufferSize(9);
+        thrown.expect(IllegalArgumentException.class);
+        builder.build();
+    }
+
+    @Test
+    public void oversizeValueDetectedDuringScalarFill() throws Exception {
+        byte[] bytes = toBinary(
+            "\"abcdefghijklmnopqrstuvwxyz\" " + // Requires 32 bytes (4 IVM, 1 TID, 1 length, 26 chars)
+            "\"abc\" " +
+            "\"abcdefghijklmnopqrstuvwxyz\" " +
+            "\"def\""
+        );
+
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 8, 16, byteAndOversizedValueCountingHandler);
+
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("abc", reader.stringValue());
+        assertEquals(1, oversizedCounter.get());
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("def", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(2, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizeValueDetectedDuringScalarFillIncremental() throws Exception {
+        byte[] bytes = toBinary(
+            "\"abcdefghijklmnopqrstuvwxyz\" " + // Requires 32 bytes (4 IVM, 1 TID, 1 length, 26 chars)
+            "\"abc\" " +
+            "\"abcdefghijklmnopqrstuvwxyz\" " +
+            "\"def\""
+        );
+
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
+        IonReader reader = boundedReaderFor(pipe, 8, 16, byteAndOversizedValueCountingHandler);
+        int valueCounter = 0;
+        for (byte b : bytes) {
+            pipe.receive(b);
+            IonType type = reader.next();
+            if (type != null) {
+                valueCounter++;
+                assertTrue(valueCounter < 3);
+                if (valueCounter == 1) {
+                    assertEquals(IonType.STRING, type);
+                    assertEquals("abc", reader.stringValue());
+                    assertEquals(1, oversizedCounter.get());
+                } else {
+                    assertEquals(2, valueCounter);
+                    assertEquals(IonType.STRING, type);
+                    assertEquals("def", reader.stringValue());
+                    assertEquals(2, oversizedCounter.get());
+                }
+            }
+        }
+        assertEquals(2, valueCounter);
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(2, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizeValueDetectedDuringFillOfOnlyScalarInStream() throws Exception {
+        // Unlike the previous test, where excessive size is detected when trying to skip past the value portion,
+        // this test verifies that excessive size can be detected while reading a value header, which happens
+        // byte-by-byte.
+        byte[] bytes = toBinary("\"abcdefghijklmnopqrstuvwxyz\""); // Requires a 2-byte header.
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
+
+        // The maximum buffer size is 5, which will be exceeded after the IVM (4 bytes), the type ID (1 byte), and
+        // the length byte (1 byte).
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizeValueDetectedDuringFillOfOnlyScalarInStreamIncremental() throws Exception {
+        byte[] bytes = toBinary("\"abcdefghijklmnopqrstuvwxyz\""); // Requires a 2-byte header.
+
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
+        IonReader reader = boundedReaderFor(pipe, 5, 5, byteAndOversizedValueCountingHandler);
+        feedBytesOneByOne(bytes, pipe, reader);
+        // The maximum buffer size is 5, which will be exceeded after the IVM (4 bytes), the type ID (1 byte), and
+        // the length byte (1 byte).
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizeValueDetectedDuringReadOfTypeIdOfSymbolTableAnnotatedValue() throws Exception {
+        // This value is not a symbol table, but follows most of the code path that symbol tables follow. Ensure that
+        // `onOversizedValue` (NOT `onOversizedSymbolTable`) is called, and that the stream continues to be read.
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xE6, 0x83, // Annotation wrapper with 3 bytes of annotations
+            0x00, 0x00, 0x83, // A single (overpadded) SID 3 ($ion_symbol_table)
+            0x21, 0x7B, // int 123
+            0x81, 'a' // String "a"
+        );
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);;
+
+        // The maximum buffer size is 5, which will be exceeded after the annotation wrapper type ID
+        // (1 byte), the annotations length (1 byte), and the annotation SID 3 (3 bytes). The next byte is the wrapped
+        // value type ID byte.
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("a", reader.stringValue());
+        assertEquals(1, oversizedCounter.get());
+        assertNull(reader.next());
+        reader.close();
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizeValueDetectedDuringReadOfTypeIdOfSymbolTableAnnotatedValueIncremental() throws Exception {
+        // This value is not a symbol table, but follows most of the code path that symbol tables follow. If all bytes
+        // were available up-front it would be possible to determine that this value is not a symbol table and call
+        // `onOversizedValue` (see the test above). However, since the value is determined to be oversized in the
+        // annotation wrapper at the top level, it must yield back to the user before determining whether the value
+        // is actually a symbol table. Therefore, it must call `onOversizedSymbolTable` conservatively, as the value
+        // *might* end up being a symbol table.
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xE6, 0x83, // Annotation wrapper with 3 bytes of annotations
+            0x00, 0x00, 0x83, // A single (overpadded) SID 3 ($ion_symbol_table)
+            0x21, 0x7B, // int 123
+            0x81, 'a' // String "a"
+        );
+
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
+        IonReader reader = boundedReaderFor(pipe, 5, 5, byteAndOversizedSymbolTableCountingHandler);
+
+        // The maximum buffer size is 5, which will be exceeded after the annotation wrapper type ID
+        // (1 byte), the annotations length (1 byte), and the annotation SID 3 (3 bytes). The next byte is the wrapped
+        // value type ID byte.
+        feedBytesOneByOne(bytes, pipe, reader);
+        assertEquals(1, oversizedCounter.get());
+        assertNull(reader.next());
+        assertNull(reader.next());
+        reader.close();
+    }
+
+    @Test
+    public void valueAfterLargeSymbolTableNotOversized() throws Exception {
+        // The first value is not oversized even though its size plus the size of the preceding symbol table
+        // exceeds the maximum buffer size.
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = writerBuilder.build(out);
+        writer.writeString("12345678");
+        writer.writeSymbol("abcdefghijklmnopqrstuvwxyz"); // Requires 32 bytes (4 IVM, 1 TID, 1 length, 26 chars)
+        writer.close();
+        // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
+        // for symbol 10.
+        // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
+
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(out.toByteArray()), 8, 48, byteAndOversizedValueCountingHandler);
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(0, oversizedCounter.get());
+        assertEquals("12345678", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals(0, oversizedCounter.get());
+        assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(0, oversizedCounter.get());
+        totalBytesInStream = out.size();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void valueAfterLargeSymbolTableNotOversizedIncremental() throws Exception {
+        // The first value is not oversized even though its size plus the size of the preceding symbol table
+        // exceeds the maximum buffer size.
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = writerBuilder.build(out);
+        writer.writeString("12345678");
+        writer.writeSymbol("abcdefghijklmnopqrstuvwxyz"); // Requires 32 bytes (4 IVM, 1 TID, 1 length, 26 chars)
+        writer.close();
+        // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
+        // for symbol 10.
+        // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
+
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
+        IonReader reader = boundedReaderFor(pipe, 8, 48, byteAndOversizedValueCountingHandler);
+        byte[] bytes = out.toByteArray();
+        int valueCounter = 0;
+        for (byte b : bytes) {
+            pipe.receive(b);
+            IonType type = reader.next();
+            if (type != null) {
+                valueCounter++;
+                if (valueCounter == 1) {
+                    assertEquals(IonType.STRING, type);
+                    assertEquals("12345678", reader.stringValue());
+                    assertEquals(0, oversizedCounter.get());
+                } else if (valueCounter == 2) {
+                    assertEquals(IonType.SYMBOL, type);
+                    assertEquals("abcdefghijklmnopqrstuvwxyz", reader.stringValue());
+                    assertEquals(0, oversizedCounter.get());
+                }
+            }
+        }
+        assertEquals(2, valueCounter);
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(0, oversizedCounter.get());
+        totalBytesInStream = out.size();
+        assertBytesConsumed();
+    }
+
+    /**
+     * Calls next() on the given reader and returns the result.
+     * @param reader an Ion reader.
+     * @param pipe the stream from which the reader pulls data. If null, all data is available up front.
+     * @param source the source of data to be fed into the pipe. Only used if pipe is not null.
+     * @return the result of the first non-null call to reader.next(), or null if the source data is exhausted before
+     *  reader.next() returns non-null.
+     */
+    private static IonType ionReaderNext(IonReader reader, ResizingPipedInputStream pipe, ByteArrayInputStream source) {
+        if (pipe == null) {
+            return reader.next();
+        }
+        while (source.available() > 0) {
+            pipe.receive(source.read());
+            if (reader.next() != null) {
+                return reader.getType();
+            }
+        }
+        return reader.next();
+    }
+
+    /**
+     * Verifies that oversized value handling works properly when the second value is oversized.
+     * @param withSymbolTable true if the first value should be preceded by a symbol table.
+     * @param withThirdValue true if the second (oversized) value should be followed by a third value that fits.
+     * @param byteByByte true if bytes should be fed to the reader one at a time.
+     * @throws Exception if thrown unexpectedly.
+     */
+    private void oversizedSecondValue(
+        boolean withSymbolTable,
+        boolean withThirdValue,
+        boolean byteByByte
+    ) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = writerBuilder.build(out);
+        String firstValue = "12345678";
+        if (withSymbolTable) {
+            writer.writeSymbol(firstValue);
+        } else {
+            writer.writeString(firstValue);
+        }
+        writer.writeString("abcdefghijklmnopqrstuvwxyz");
+        String thirdValue = "abc";
+        if (withThirdValue) {
+            writer.writeString(thirdValue);
+        }
+        writer.close();
+        oversizedCounter.set(0);
+
+        // Greater than the first value (and symbol table, if any) and third value, less than the second value.
+        int maximumBufferSize = 25;
+        ResizingPipedInputStream pipe = null;
+        ByteArrayInputStream source = new ByteArrayInputStream(out.toByteArray());
+        InputStream in;
+        if (byteByByte) {
+            pipe = new ResizingPipedInputStream(out.size());
+            in = pipe;
+        } else {
+            in = source;
+        }
+        IonReader reader = boundedReaderFor(in, maximumBufferSize, maximumBufferSize, byteAndOversizedValueCountingHandler);
+        assertEquals(withSymbolTable ? IonType.SYMBOL : IonType.STRING, ionReaderNext(reader, pipe, source));
+        assertEquals(0, oversizedCounter.get());
+        assertEquals(firstValue, reader.stringValue());
+        if (withThirdValue) {
+            assertEquals(IonType.STRING, ionReaderNext(reader, pipe, source));
+            assertEquals(thirdValue, reader.stringValue());
+        }
+        assertNull(ionReaderNext(reader, pipe, source));
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        totalBytesInStream = out.size();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizedSecondValueWithoutSymbolTable() throws Exception {
+        oversizedSecondValue(false, false, false);
+        oversizedSecondValue(false, true, false);
+    }
+
+    @Test
+    public void oversizedSecondValueWithoutSymbolTableIncremental() throws Exception {
+        oversizedSecondValue(false, false, true);
+        oversizedSecondValue(false, true, true);
+    }
+
+    @Test
+    public void oversizedSecondValueWithSymbolTable() throws Exception {
+        oversizedSecondValue(true, false, false);
+        oversizedSecondValue(true, true, false);
+    }
+
+    @Test
+    public void oversizedSecondValueWithSymbolTableIncremental() throws Exception {
+        oversizedSecondValue(true, false, true);
+        oversizedSecondValue(true, true, true);
+    }
+
+    private void oversizeSymbolTableDetectedInHeader(int maximumBufferSize) throws Exception {
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xEE, 0x00, 0x00, 0x00, 0x00, 0x86, // Annotation wrapper length 5 (overpadded)
+            0x81, // Annotation wrapper with 3 bytes of annotations
+            0x83, // SID 3 ($ion_symbol_table)
+            0xDE, 0x82, 0x84, 0x20, // Struct with overpadded length
+            0x81, 'a' // String "a"
+        );
+        oversizedCounter.set(0);
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), maximumBufferSize, maximumBufferSize, byteAndOversizedSymbolTableCountingHandler);
+        assertNull(reader.next());
+        assertEquals(1, oversizedCounter.get());
+        reader.close();
+    }
+
+    @Test
+    public void oversizeSymbolTableDetectedInHeader() throws Exception {
+        // The symbol table is determined to be oversized when reading the length of the annotation wrapper.
+        oversizeSymbolTableDetectedInHeader(5);
+        // The symbol table is determined to be oversized when reading the annotations length.
+        oversizeSymbolTableDetectedInHeader(6);
+        // The symbol table is determined to be oversized when reading SID 3.
+        oversizeSymbolTableDetectedInHeader(7);
+        // The symbol table is determined to be oversized when reading the type ID of the wrapped struct.
+        oversizeSymbolTableDetectedInHeader(8);
+        // The symbol table is determined to be oversized when reading the length of the wrapped struct.
+        oversizeSymbolTableDetectedInHeader(9);
+    }
+
+    private void oversizeSymbolTableDetectedInHeaderIncremental(int maximumBufferSize) throws Exception {
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xEE, 0x00, 0x00, 0x00, 0x00, 0x86, // Annotation wrapper length 5 (overpadded)
+            0x81, // Annotation wrapper with 3 bytes of annotations
+            0x83, // SID 3 ($ion_symbol_table)
+            0xDE, 0x82, 0x84, 0x20, // Struct with overpadded length
+            0x81, 'a' // String "a"
+        );
+        oversizedCounter.set(0);
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
+        IonReader reader = boundedReaderFor(pipe, maximumBufferSize, maximumBufferSize, byteAndOversizedSymbolTableCountingHandler);
+        feedBytesOneByOne(bytes, pipe, reader);
+        assertNull(reader.next());
+        assertEquals(1, oversizedCounter.get());
+        reader.close();
+    }
+
+    @Test
+    public void oversizeSymbolTableDetectedInHeaderIncremental() throws Exception {
+        // The symbol table is determined to be oversized when reading the length of the annotation wrapper.
+        oversizeSymbolTableDetectedInHeaderIncremental(5);
+        // The symbol table is determined to be oversized when reading the annotations length.
+        oversizeSymbolTableDetectedInHeaderIncremental(6);
+        // The symbol table is determined to be oversized when reading SID 3.
+        oversizeSymbolTableDetectedInHeaderIncremental(7);
+        // The symbol table is determined to be oversized when reading the type ID of the wrapped struct.
+        oversizeSymbolTableDetectedInHeaderIncremental(8);
+        // The symbol table is determined to be oversized when reading the length of the wrapped struct.
+        oversizeSymbolTableDetectedInHeaderIncremental(9);
+    }
+
+    @Test
+    public void oversizeSymbolTableDetectedInTheMiddle() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = writerBuilder.build(out);
+        writer.writeString("12345678");
+        writer.finish();
+        writer.writeSymbol("abcdefghijklmnopqrstuvwxyz"); // Requires 32 bytes (4 IVM, 1 TID, 1 length, 26 chars)
+        writer.close();
+        // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
+        // for symbol 10.
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(out.toByteArray()), 8, 25, byteAndOversizedSymbolTableCountingHandler);
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("12345678", reader.stringValue());
+        assertNull(reader.next());
+        assertEquals(1, oversizedCounter.get());
+        reader.close();
+    }
+
+    @Test
+    public void oversizeSymbolTableDetectedInTheMiddleIncremental() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = writerBuilder.build(out);
+        writer.writeString("12345678");
+        writer.finish();
+        writer.writeSymbol("abcdefghijklmnopqrstuvwxyz"); // Requires 32 bytes (4 IVM, 1 TID, 1 length, 26 chars)
+        writer.close();
+        // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
+        // for symbol 10.
+
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(out.size());
+        byte[] bytes = out.toByteArray();
+        IonReader reader = boundedReaderFor(pipe, 8, 25, byteAndOversizedSymbolTableCountingHandler);
+        boolean foundValue = false;
+        for (byte b : bytes) {
+            IonType type = reader.next();
+            if (type != null) {
+                assertFalse(foundValue);
+                assertEquals(IonType.STRING, type);
+                assertEquals("12345678", reader.stringValue());
+                foundValue = true;
+            }
+            pipe.receive(b);
+        }
+        assertTrue(foundValue);
+        assertNull(reader.next());
+        assertEquals(1, oversizedCounter.get());
+        reader.close();
+    }
+
+    @Test
+    public void skipOversizeScalarBelowTopLevelNonIncremental() throws Exception {
+        byte[] bytes = toBinary("[\"abcdefg\", 123]");
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
+        assertEquals(IonType.LIST, reader.next());
+        reader.stepIn();
+        assertEquals(0, oversizedCounter.get());
+        // This value is oversized, but since it is not filled, `onOversizedValue` does not need to be called.
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(0, oversizedCounter.get());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(0, oversizedCounter.get());
+        assertEquals(123, reader.intValue());
+        assertNull(reader.next());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(0, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void fillOversizeScalarBelowTopLevelNonIncremental() throws Exception {
+        byte[] bytes = toBinary("[\"abcdefg\", 123]");
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
+        assertEquals(IonType.LIST, reader.next());
+        reader.stepIn();
+        assertEquals(0, oversizedCounter.get());
+        assertEquals(IonType.STRING, reader.next());
+        // This value is oversized. Since the user attempts to consume it, `onOversizedValue` is called. An
+        // OversizedValueException is called because the user attempted to force parsing of an oversized scalar
+        // via an IonReader method that has no other way of conveying the failure.
+        try {
+            assertNull(reader.stringValue());
+            fail("Expected oversized value.");
+        } catch (OversizedValueException e) {
+            // Continue
+        }
+        assertEquals(1, oversizedCounter.get());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, oversizedCounter.get());
+        assertEquals(123, reader.intValue());
+        assertNull(reader.next());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizedValueBelowTopLevelDetectedInHeaderNonIncremental() throws Exception {
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xC7, // s-exp length 7
+            0xBE, 0x00, 0x00, 0x00, 0x00, 0x81, // List length 1 (overpadded)
+            0x20, // int 0
+            0x81, 'a' // String "a"
+        );
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(0, oversizedCounter.get());
+        assertNull(reader.next());
+        assertEquals(1, oversizedCounter.get());
+        reader.stepOut();
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("a", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void oversizedAnnotatedValueBelowTopLevelDetectedInHeaderNonIncremental() throws Exception {
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xC8, // s-exp length 8
+            0xE7, // Annotation wrapper length 7
+            0x84, // 4 byte annotation SID sequence
+            0x00, 0x00, 0x00, 0x84, // Annotation SID 4 (overpadded)
+            0xB1, // List length 1
+            0x20, // int 0
+            0x81, 'a' // String "a"
+        );
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(0, oversizedCounter.get());
+        assertNull(reader.next());
+        assertEquals(1, oversizedCounter.get());
+        reader.stepOut();
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("a", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void deeplyNestedValueNotOversizedDueToContainerHeaderLengthsNonIncremental() throws Exception {
+        // The string value requires 5 bytes, the maximum buffer size. The value should not be considered oversized
+        // even though it is contained within containers whose headers cannot fit in the buffer.
+        byte[] bytes = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0x82, '1', '2', // String "12"
+            0xC7, // s-exp length 7
+            0xC6, // s-exp length 6
+            0xC5, // s-exp length 5
+            0x84, '1', '2', '3', '4', // String "1234"
+            0x20 // int 0
+        );
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("12", reader.stringValue());
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SEXP, reader.next());
+        reader.stepIn();
+        assertEquals(0, oversizedCounter.get());
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals(0, oversizedCounter.get());
+        assertEquals("1234", reader.stringValue());
+        assertNull(reader.next());
+        reader.stepOut();
+        reader.stepOut();
+        reader.stepOut();
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(0, reader.intValue());
+        assertNull(reader.next());
+        reader.close();
+        assertEquals(0, oversizedCounter.get());
+        totalBytesInStream = bytes.length;
+        assertBytesConsumed();
+    }
+
+    private static void writeFirstStruct(IonWriter writer) throws IOException {
+        //{
+        //    foo: bar,
+        //    abc: [123, 456]
+        //}
+        writer.stepIn(IonType.STRUCT);
+        writer.setFieldName("foo");
+        writer.writeSymbol("bar");
+        writer.setFieldName("abc");
+        writer.stepIn(IonType.LIST);
+        writer.writeInt(123);
+        writer.writeInt(456);
+        writer.stepOut();
+        writer.stepOut();
+    }
+
+    private static void assertFirstStruct(IonReader reader) {
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("foo", reader.getFieldName());
+        assertEquals("bar", reader.stringValue());
+        assertEquals(IonType.LIST, reader.next());
+        assertEquals("abc", reader.getFieldName());
+        reader.stepIn();
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(123, reader.intValue());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(456, reader.intValue());
+        reader.stepOut();
+        reader.stepOut();
+    }
+
+    private static void writeSecondStruct(IonWriter writer) throws IOException {
+        //{
+        //    foo: baz,
+        //    abc: [42.0, 43e0]
+        //}
+        writer.stepIn(IonType.STRUCT);
+        writer.setFieldName("foo");
+        writer.writeSymbol("baz");
+        writer.setFieldName("abc");
+        writer.stepIn(IonType.LIST);
+        writer.writeDecimal(new BigDecimal("42.0"));
+        writer.writeFloat(43.);
+        writer.stepOut();
+        writer.stepOut();
+    }
+
+    private static void assertSecondStruct(IonReader reader) {
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("foo", reader.getFieldName());
+        assertEquals("baz", reader.stringValue());
+        assertEquals(IonType.LIST, reader.next());
+        assertEquals("abc", reader.getFieldName());
+        reader.stepIn();
+        assertEquals(IonType.DECIMAL, reader.next());
+        assertEquals(new BigDecimal("42.0"), reader.decimalValue());
+        assertEquals(IonType.FLOAT, reader.next());
+        assertEquals(43., reader.doubleValue(), 1e-9);
+        reader.stepOut();
+        reader.stepOut();
+        assertNull(reader.next());
+    }
+
+    @Test
+    public void flushBetweenStructs() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = _Private_IonManagedBinaryWriterBuilder
+            .create(_Private_IonManagedBinaryWriterBuilder.AllocatorMode.BASIC)
+                .withLocalSymbolTableAppendEnabled()
+                .newWriter(out);
+        writeFirstStruct(writer);
+        writer.flush();
+        writeSecondStruct(writer);
+        writer.close();
+
+        IonReader reader = boundedReaderFor(out.toByteArray(), 64, 64, byteCountingHandler);
+        assertFirstStruct(reader);
+        assertSecondStruct(reader);
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void structsWithFloat32AndPreallocatedLength() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = _Private_IonManagedBinaryWriterBuilder
+            .create(_Private_IonManagedBinaryWriterBuilder.AllocatorMode.BASIC)
+                .withPaddedLengthPreallocation(2)
+                .withFloatBinary32Enabled()
+                .newWriter(out);
+        writeFirstStruct(writer);
+        writeSecondStruct(writer);
+        writer.close();
+
+        IonReader reader = boundedReaderFor(out.toByteArray(), 64, 64, byteCountingHandler);
+        assertFirstStruct(reader);
+        assertSecondStruct(reader);
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadThatFillsBufferFollowedByValueNotOversized() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            0x03, 0x00, 0x00, 0x00, // 4 byte NOP pad.
+            0x20 // Int 0.
+        );
+        // The IVM is 4 bytes and the NOP pad is 4 bytes. The first value is the 9th byte and should not be considered
+        // oversize because the NOP pad can be discarded.
+        IonReader reader = boundedReaderFor(out.toByteArray(), 8, 8, byteCountingHandler);
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(0, reader.intValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadFollowedByValueThatOverflowsBufferNotOversized() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            0x03, 0x00, 0x00, 0x00, // 4 byte NOP pad.
+            0x21, 0x01 // Int 1.
+        );
+        // The IVM is 4 bytes and the NOP pad is 4 bytes. The first byte of the value is the 9th byte and fits in the
+        // buffer. Even though there is a 10th byte, the value should not be considered oversize because the NOP pad
+        // can be discarded.
+        IonReader reader = boundedReaderFor(out.toByteArray(), 9, 9, byteCountingHandler);
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void symbolTableFollowedByNopPadFollowedByValueThatOverflowsBufferNotOversized() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            // Symbol table with the symbol 'hello'.
+            0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+            0x00, // 1-byte NOP pad.
+            0x71, 0x0A // SID 10 (hello).
+        );
+        // The IVM is 4 bytes, the symbol table is 12 bytes, and the symbol value is 2 bytes (total 18). The 1-byte NOP
+        // pad needs to be reclaimed to make space for the value. Once that is done, the value will fit.
+        IonReader reader = boundedReaderFor(out.toByteArray(), 18, 18, byteCountingHandler);
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("hello", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void multipleNopPadsFollowedByValueThatOverflowsBufferNotOversized() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            // One byte no-op pad.
+            0x00,
+            // Two byte no-op pad.
+            0x01, 0xFF,
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // Int 1
+            0x21, 0x01,
+            // IVM 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            // The following no-op pads exceed the maximum buffer size, but should not cause an error to be raised.
+            // 16-byte no-op pad.
+            0x0E, 0x8E,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // Int 2.
+            0x21, 0x02,
+            // 16-byte no-op pad.
+            0x0E, 0x8E,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        );
+
+        IonReader reader = boundedReaderFor(out.toByteArray(), 11, 11, byteCountingHandler);
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(2, reader.intValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            // One byte no-op pad.
+            0x00,
+            // Two byte no-op pad.
+            0x01, 0xFF,
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // IVM 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            // 15-byte no-op pad.
+            0x0E, 0x8D,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Symbol table with the symbol 'hello'.
+            0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // Symbol 10 (hello)
+            0x71, 0x0A
+        );
+
+        // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
+        IonReader reader = boundedReaderFor(out.toByteArray(), 22, 22, byteCountingHandler);
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("hello", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors2() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            // One byte no-op pad.
+            0x00,
+            // Two byte no-op pad.
+            0x01, 0xFF,
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // IVM 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            // 16-byte no-op pad.
+            0x0E, 0x8E,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Symbol table with the symbol 'hello'.
+            0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // Symbol 10 (hello)
+            0x71, 0x0A
+        );
+
+        // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
+        IonReader reader = boundedReaderFor(out.toByteArray(), 22, 22, byteCountingHandler);
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("hello", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors3() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            // One byte no-op pad.
+            0x00,
+            // Two byte no-op pad.
+            0x01, 0xFF,
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // IVM 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            // 14-byte no-op pad.
+            0x0E, 0x8C,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Symbol table with the symbol 'hello'.
+            0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+            // Three byte no-op pad.
+            0x02, 0x99, 0x42,
+            // Symbol 10 (hello)
+            0x71, 0x0A
+        );
+
+        // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
+        IonReader reader = boundedReaderFor(out.toByteArray(), 22, 22, byteCountingHandler);
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("hello", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadSurroundingSymbolTableThatFitsInBuffer() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            // 14-byte no-op pad.
+            0x0E, 0x8C,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Symbol table with the symbol 'hello'.
+            0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
+            // 14-byte no-op pad.
+            0x0E, 0x8C,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // String abcdefg
+            0x87, 'a', 'b', 'c', 'd', 'e', 'f', 'g',
+            // Symbol 10 (hello)
+            0x71, 0x0A
+        );
+
+        // Set the maximum size at IVM (4 bytes) + 14-byte NOP pad + the symbol table (12 bytes) + 2 value bytes.
+        IonReader reader = boundedReaderFor(out.toByteArray(), 32, 32, byteCountingHandler);
+        assertEquals(IonType.STRING, reader.next());
+        assertEquals("abcdefg", reader.stringValue());
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("hello", reader.stringValue());
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    @Test
+    public void nopPadInStructNonIncremental() throws Exception {
+        TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
+            0xD6, // Struct length 6
+            0x80, // Field name SID 0
+            0x04, 0x00, 0x00, 0x00, 0x00 // 5-byte NOP pad.
+        );
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        IonReader reader = boundedReaderFor(out.toByteArray(), 5, Integer.MAX_VALUE, byteCountingHandler);
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertNull(reader.next());
+        reader.stepOut();
+        assertNull(reader.next());
+        reader.close();
+        assertBytesConsumed();
+    }
+
+    /**
      * Compares an iterator to the given list.
      * @param expected the list containing the elements to compare to.
      * @param actual the iterator to be compared.
@@ -1847,6 +2879,25 @@ public class IonReaderContinuableTopLevelBinaryTest {
         compareIterator(Collections.singletonList("baz"), secondValueAnnotationIterator);
         reader.close();
         assertBytesConsumed();
+    }
+
+    @Test(expected = IonException.class)
+    public void failsOnMalformedSymbolTable() throws Exception {
+        byte[] data = bytes(
+            0xE0, 0x01, 0x00, 0xEA, // Binary IVM
+            0xE6, // 6-byte annotation wrapper
+            0x81, // 1 byte of annotation SIDs
+            0x83, // SID 3 ($ion_symbol_table)
+            0xD3, // 3-byte struct
+            0x84, // Field name SID 4 (name)
+            0xE7, // 7-byte annotation wrapper (error: there should only be two bytes remaining).
+            0x81, // Junk byte to fill the 6 bytes of the annotation wrapper and 3 bytes of the struct.
+            0x20  // Next top-level value (int 0).
+        );
+        IonReader reader = boundedReaderFor(data, 1024, 1024, byteCountingHandler);
+        assertNull(reader.next());
+        assertNull(reader.next());
+        reader.close();
     }
 
     @Test
