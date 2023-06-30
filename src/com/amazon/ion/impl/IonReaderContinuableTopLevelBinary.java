@@ -10,6 +10,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
+import com.amazon.ion.OversizedValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
@@ -187,6 +188,9 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
         }
         if (fillValue() == Event.VALUE_READY) {
             return;
+        }
+        if (event == Event.NEEDS_INSTRUCTION) {
+            throw new OversizedValueException();
         }
         throw new IonException("Unexpected EOF.");
     }
