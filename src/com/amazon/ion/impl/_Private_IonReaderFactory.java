@@ -16,10 +16,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.UnifiedInputStreamX.makeStream;
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_SIZE;
-import static com.amazon.ion.util.IonStreamUtils.isIonBinary;
 
-import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -41,184 +38,117 @@ import java.util.zip.GZIPInputStream;
 public final class _Private_IonReaderFactory
 {
 
-    public static final IonReader makeReader(IonCatalog catalog,
-                                             byte[] bytes)
-    {
-        return makeReader(catalog, bytes, 0, bytes.length);
-    }
-
-    public static final IonReader makeReader(IonCatalog catalog,
-                                             byte[] bytes,
-                                             _Private_LocalSymbolTableFactory lstFactory)
-    {
-        return makeReader(catalog, bytes, 0, bytes.length, lstFactory);
-    }
-
     public static IonReader makeSystemReader(byte[] bytes)
     {
         return makeSystemReader(bytes, 0, bytes.length);
     }
 
 
-    public static final IonReader makeReader(IonCatalog catalog,
-                                             byte[] bytes,
-                                             int offset,
-                                             int length)
+    public static final IonReader makeReaderText(IonCatalog catalog,
+                                                 byte[] bytes,
+                                                 int offset,
+                                                 int length,
+                                                 _Private_LocalSymbolTableFactory lstFactory)
     {
+        UnifiedInputStreamX uis;
         try
         {
-            UnifiedInputStreamX uis = makeUnifiedStream(bytes, offset, length);
-            return makeReader(catalog, uis, offset, LocalSymbolTable.DEFAULT_LST_FACTORY);
+            uis = makeUnifiedStream(bytes, offset, length);
         }
         catch (IOException e)
         {
             throw new IonException(e);
         }
-    }
-
-    public static final IonReader makeReader(IonCatalog catalog,
-                                             byte[] bytes,
-                                             int offset,
-                                             int length,
-                                             _Private_LocalSymbolTableFactory lstFactory)
-    {
-        try
-        {
-            UnifiedInputStreamX uis = makeUnifiedStream(bytes, offset, length);
-            return makeReader(catalog, uis, offset, lstFactory);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+        return new IonReaderTextUserX(catalog, lstFactory, uis, offset);
     }
 
     public static IonReader makeSystemReader(byte[] bytes,
                                              int offset,
                                              int length)
     {
-        try
-        {
-            UnifiedInputStreamX uis = makeUnifiedStream(bytes, offset, length);
-            return makeSystemReader(uis);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
+        return _Private_IonReaderBuilder.buildReader(
+            (_Private_IonReaderBuilder) _Private_IonReaderBuilder.standard(),
+            bytes,
+            offset,
+            length,
+            _Private_IonReaderFactory::makeSystemReaderBinary,
+            _Private_IonReaderFactory::makeSystemReaderText
+        );
     }
 
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 char[] chars)
-    {
-        return makeReader(catalog, chars, 0, chars.length);
-    }
-
-    public static final IonReader makeSystemReader(char[] chars)
-    {
-        UnifiedInputStreamX in = makeStream(chars);
-        return new IonReaderTextSystemX(in);
-    }
-
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 char[] chars,
-                                                 int offset,
-                                                 int length)
-    {
-        UnifiedInputStreamX in = makeStream(chars, offset, length);
-        return new IonReaderTextUserX(catalog, LocalSymbolTable.DEFAULT_LST_FACTORY, in, offset);
-    }
-
-    public static final IonReader makeSystemReader(char[] chars,
-                                                   int offset,
-                                                   int length)
-    {
-        UnifiedInputStreamX in = makeStream(chars, offset, length);
-        return new IonReaderTextSystemX(in);
-    }
-
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 CharSequence chars)
-    {
-        return makeReader(catalog, chars, LocalSymbolTable.DEFAULT_LST_FACTORY);
-    }
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 CharSequence chars,
-                                                 _Private_LocalSymbolTableFactory lstFactory)
+    public static final IonTextReader makeReaderText(IonCatalog catalog,
+                                                     CharSequence chars,
+                                                     _Private_LocalSymbolTableFactory lstFactory)
     {
         UnifiedInputStreamX in = makeStream(chars);
         return new IonReaderTextUserX(catalog, lstFactory, in);
     }
 
-    public static final IonReader makeSystemReader(CharSequence chars)
+    public static final IonReader makeSystemReaderText(CharSequence chars)
     {
         UnifiedInputStreamX in = makeStream(chars);
         return new IonReaderTextSystemX(in);
     }
 
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 CharSequence chars,
-                                                 int offset,
-                                                 int length)
-    {
-        UnifiedInputStreamX in = makeStream(chars, offset, length);
-        return new IonReaderTextUserX(catalog, LocalSymbolTable.DEFAULT_LST_FACTORY, in, offset);
-    }
-
-    public static final IonReader makeSystemReader(CharSequence chars,
-                                                   int offset,
-                                                   int length)
-    {
-        UnifiedInputStreamX in = makeStream(chars, offset, length);
-        return new IonReaderTextSystemX(in);
-    }
-
-
-    public static final IonReader makeReader(IonCatalog catalog,
-                                             InputStream is)
-    {
-        return makeReader(catalog, is, LocalSymbolTable.DEFAULT_LST_FACTORY);
-    }
-
-    public static final IonReader makeReader(IonCatalog catalog,
-                                             InputStream is,
-                                             _Private_LocalSymbolTableFactory lstFactory)
-    {
-        try {
-            UnifiedInputStreamX uis = makeUnifiedStream(is);
-            return makeReader(catalog, uis, 0, lstFactory);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-    }
-
-    public static IonReader makeSystemReader(InputStream is)
-    {
-        try {
-            UnifiedInputStreamX uis = makeUnifiedStream(is);
-            return makeSystemReader(uis);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-    }
-
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 Reader chars)
-    {
-        return makeReader(catalog, chars, LocalSymbolTable.DEFAULT_LST_FACTORY);
-    }
-
-    public static final IonTextReader makeReader(IonCatalog catalog,
-                                                 Reader chars,
+    public static final IonReader makeReaderText(IonCatalog catalog,
+                                                 InputStream is,
                                                  _Private_LocalSymbolTableFactory lstFactory)
+    {
+        UnifiedInputStreamX uis;
+        try {
+            uis = makeUnifiedStream(is);
+        } catch (IOException e) {
+            throw new IonException(e);
+        }
+        return new IonReaderTextUserX(catalog, lstFactory, uis, 0);
+    }
+
+    public static IonReader makeSystemReaderText(InputStream is)
+    {
+        return _Private_IonReaderBuilder.buildReader(
+            (_Private_IonReaderBuilder) _Private_IonReaderBuilder.standard(),
+            is,
+            _Private_IonReaderFactory::makeSystemReaderBinary,
+            _Private_IonReaderFactory::makeSystemReaderText
+        );
+    }
+
+    private static IonReader makeSystemReaderText(IonCatalog catalog,
+                                                  InputStream is,
+                                                  _Private_LocalSymbolTableFactory lstFactory)
+    {
+        UnifiedInputStreamX uis;
+        try
+        {
+            uis = makeUnifiedStream(is);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+        return new IonReaderTextSystemX(uis);
+    }
+
+    private static IonReader makeSystemReaderText(IonCatalog catalog,
+                                                  byte[] bytes,
+                                                  int offset,
+                                                  int length,
+                                                  _Private_LocalSymbolTableFactory lstFactory) {
+        UnifiedInputStreamX uis;
+        try
+        {
+            uis = makeUnifiedStream(bytes, offset, length);
+        }
+        catch (IOException e)
+        {
+            throw new IonException(e);
+        }
+        return new IonReaderTextSystemX(uis);
+    }
+
+    public static final IonTextReader makeReaderText(IonCatalog catalog,
+                                                     Reader chars,
+                                                     _Private_LocalSymbolTableFactory lstFactory)
     {
         try {
             UnifiedInputStreamX in = makeStream(chars);
@@ -229,7 +159,7 @@ public final class _Private_IonReaderFactory
         }
     }
 
-    public static final IonReader makeSystemReader(Reader chars)
+    public static final IonReader makeSystemReaderText(Reader chars)
     {
         try {
             UnifiedInputStreamX in = makeStream(chars);
@@ -247,8 +177,8 @@ public final class _Private_IonReaderFactory
         return new IonReaderTreeUserX(value, catalog, lstFactory);
     }
 
-    public static final IonReader makeSystemReader(IonSystem system,
-                                                   IonValue value)
+    public static final IonReader makeSystemReaderText(IonSystem system,
+                                                       IonValue value)
     {
         if (system != null && system != value.getSystem()) {
             throw new IonException("you can't mix values from different systems");
@@ -256,47 +186,32 @@ public final class _Private_IonReaderFactory
         return new IonReaderTreeSystem(value);
     }
 
-    public static final IonReader makeIncrementalReader(IonReaderBuilder builder, InputStream is)
+    public static final IonReader makeReaderBinary(IonReaderBuilder builder, InputStream is, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen)
     {
-        return new IonReaderBinaryIncremental(builder, is);
+        return new IonReaderContinuableTopLevelBinary(builder, is, alreadyRead, alreadyReadOff, alreadyReadLen);
+    }
+
+    public static final IonReader makeSystemReaderBinary(IonReaderBuilder builder, InputStream is, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen)
+    {
+        return new IonReaderNonContinuableSystem(
+            new IonReaderContinuableCoreBinary(builder.getBufferConfiguration(), is, alreadyRead, alreadyReadOff, alreadyReadLen)
+        );
+    }
+
+    public static final IonReader makeReaderBinary(IonReaderBuilder builder, byte[] buffer, int off, int len)
+    {
+        return new IonReaderContinuableTopLevelBinary(builder, buffer, off, len);
+    }
+
+    public static final IonReader makeSystemReaderBinary(IonReaderBuilder builder, byte[] buffer, int off, int len)
+    {
+        return new IonReaderNonContinuableSystem(
+            new IonReaderContinuableCoreBinary(builder.getBufferConfiguration(), buffer, off, len)
+        );
     }
 
 
     //=========================================================================
-
-
-
-    private static IonReader makeReader(IonCatalog catalog,
-                                        UnifiedInputStreamX uis,
-                                        int offset,
-                                        _Private_LocalSymbolTableFactory lstFactory)
-        throws IOException
-    {
-        IonReader r;
-        if (has_binary_cookie(uis)) {
-            r = new IonReaderBinaryUserX(catalog, lstFactory, uis, offset);
-        }
-        else {
-            r = new IonReaderTextUserX(catalog, lstFactory, uis, offset);
-        }
-        return r;
-    }
-
-    private static IonReader makeSystemReader(UnifiedInputStreamX uis)
-        throws IOException
-    {
-        IonReader r;
-        if (has_binary_cookie(uis)) {
-            // TODO pass offset, or spans will be incorrect
-            r = new IonReaderBinarySystemX(uis);
-        }
-        else {
-            // TODO pass offset, or spans will be incorrect
-            r = new IonReaderTextSystemX(uis);
-        }
-        return r;
-    }
-
     //
     //  helper functions
     //
@@ -330,28 +245,5 @@ public final class _Private_IonReaderFactory
         in = IonStreamUtils.unGzip(in);
         UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(in);
         return uis;
-    }
-
-    private static final boolean has_binary_cookie(UnifiedInputStreamX uis)
-        throws IOException
-    {
-        byte[] bytes = new byte[BINARY_VERSION_MARKER_SIZE];
-
-        // try to read the first 4 bytes and unread them (we want
-        // the data stream undisturbed by our peeking ahead)
-        int len;
-        for (len = 0; len < BINARY_VERSION_MARKER_SIZE; len++) {
-            int c = uis.read();
-            if (c == UnifiedInputStreamX.EOF) {
-                break;
-            }
-            bytes[len] = (byte)c;
-        }
-        for (int ii=len; ii>0; ) {
-            ii--;
-            uis.unread(bytes[ii] & 0xff);
-        }
-        boolean is_cookie = isIonBinary(bytes, 0, len);
-        return is_cookie;
     }
 }
