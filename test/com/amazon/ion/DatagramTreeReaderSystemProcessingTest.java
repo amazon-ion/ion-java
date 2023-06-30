@@ -43,9 +43,9 @@ public class DatagramTreeReaderSystemProcessingTest
     @Override
     protected int expectedLocalNullSlotSymbolId()
     {
-        return getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL  && myDatagramMaker.sourceIsBinary()
-            ? 0
-            : 10;
+        // The spec allows for implementations to treat these malformed symbols as "null slots", and all "null slots"
+        // in local symbol tables as equivalent to symbol zero.
+        return myDatagramMaker.sourceIsBinary() ? 0 : 10;
     }
 
     /**

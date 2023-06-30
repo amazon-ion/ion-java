@@ -26,7 +26,7 @@ public class LoadBinaryBytesSystemProcessingTest
     @Override
     protected int expectedLocalNullSlotSymbolId()
     {
-        return getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL ? 0 : 10;
+        return 0;
     }
 
     @Override
