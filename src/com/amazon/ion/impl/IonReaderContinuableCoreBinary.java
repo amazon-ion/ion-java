@@ -653,18 +653,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 value = scalarConverter.getBigInteger();
                 scalarConverter.clear();
             }
-        } else if (valueTid.type == IonType.DECIMAL) {
-            if (valueTid.isNull) {
-                value = null;
-            } else {
-                scalarConverter.addValue(decimalValue());
-                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
-                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.bigInteger_value));
-                value = scalarConverter.getBigInteger();
-                scalarConverter.clear();
-            }
         } else {
-            throw new IllegalStateException("longValue() may only be called on values of type int, float, or decimal.");
+            throw new IllegalStateException("longValue() may only be called on values of type int or float.");
         }
         return value;
     }
