@@ -551,10 +551,19 @@ class IonReaderTextSystemX
         return _v.getLong();
     }
 
+    private void checkIsBigIntegerApplicableType()
+    {
+        if (_value_type != IonType.INT &&
+            _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException("Unexpected value type: " + _value_type);
+        }
+    }
+
     @Override
     public BigInteger bigIntegerValue()
     {
-        checkIsIntApplicableType();
+        checkIsBigIntegerApplicableType();
 
         load_or_cast_cached_value(AS_TYPE.bigInteger_value);
         if (_v.isNull()) return null;

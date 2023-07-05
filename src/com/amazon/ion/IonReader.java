@@ -321,8 +321,7 @@ public interface IonReader
 
     /**
      * Returns the current value as a {@link BigInteger}.  This is only valid if there
-     * is an underlying value and the value is of a numeric type (int, float, or
-     * decimal).
+     * is an underlying value and the value is of type int or float.
      */
     public BigInteger bigIntegerValue();
 
