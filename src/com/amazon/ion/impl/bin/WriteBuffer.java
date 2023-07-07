@@ -1070,7 +1070,7 @@ import java.util.List;
         {
             return 8;
         }
-        throw new IllegalStateException("ion-java failed to support your use case.");
+        return 9;
     }
 
     /** Write the varUint value to the outputStream. */

@@ -16,6 +16,8 @@
 package com.amazon.ion.impl.bin;
 
 import static com.amazon.ion.TestUtils.hexDump;
+import static com.amazon.ion.impl.bin.WriteBuffer.varUIntLength;
+import static com.amazon.ion.impl.bin.WriteBuffer.writeVarUIntTo;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -34,16 +36,20 @@ public class WriteBufferTest
 
     private WriteBuffer buf;
 
+    private ByteArrayOutputStream out;
+
     @Before
     public void setup()
     {
         buf = new WriteBuffer(ALLOCATOR);
+        out = new ByteArrayOutputStream();
     }
 
     @After
     public void teardown()
     {
         buf = null;
+        out.reset();
     }
 
     private byte[] bytes()
@@ -1092,5 +1098,206 @@ public class WriteBufferTest
         // In Ion, this situation occurs when a length bytes are preallocated for containers that end up being empty.
         buf.shiftBytesLeft(0, 2);
         assertBuffer("0123456789".getBytes());
+    }
+
+    /**
+     * Test if the method 'writeVarUIntTo' writes the expected bytes to the output stream.
+     * @throws Exception if there is an error occurred while writing data to the output stream.
+     */
+    @Test
+    public void writeVarUInt1() throws Exception {
+        final byte[] bytes = new byte[20];
+        for (int i = 0; i < bytes.length; i++)
+        {
+            writeVarUIntTo(out, 0x7F);
+            bytes[i] = (byte) 0xFF;
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt2() throws IOException {
+        final byte[] bytes = new byte[20];
+        for (int i = 0; i < bytes.length; i += 2)
+        {
+            writeVarUIntTo(out, 0x3FFF);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0xFF;
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt3() throws IOException {
+        final byte[] bytes = new byte[21];
+        for (int i = 0; i < bytes.length; i += 3)
+        {
+            writeVarUIntTo(out, 0x1FFFFF);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0xFF;
+
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt4() throws IOException {
+        final byte[] bytes = new byte[24];
+        for (int i = 0; i < bytes.length; i += 4)
+        {
+            writeVarUIntTo(out, 0xFFFFFF0);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0x7F;
+            bytes[i + 3] = (byte) 0xF0;
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt5() throws IOException {
+        final byte[] bytes = new byte[25];
+        for (int i = 0; i < bytes.length; i += 5)
+        {
+            writeVarUIntTo(out, 0x7FFFFFFF0L);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0x7F;
+            bytes[i + 3] = (byte) 0x7F;
+            bytes[i + 4] = (byte) 0xF0;
+
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt6() throws IOException {
+        final byte[] bytes = new byte[30];
+        for (int i = 0; i < bytes.length; i += 6)
+        {
+            writeVarUIntTo(out, 0x3FFFFFFFFF3L);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0x7F;
+            bytes[i + 3] = (byte) 0x7F;
+            bytes[i + 4] = (byte) 0x7F;
+            bytes[i + 5] = (byte) 0xF3;
+
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt7() throws IOException {
+        final byte[] bytes = new byte[35];
+        for (int i = 0; i < bytes.length; i += 7)
+        {
+            writeVarUIntTo(out, 0x1FFFFFFFFFFF2L);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0x7F;
+            bytes[i + 3] = (byte) 0x7F;
+            bytes[i + 4] = (byte) 0x7F;
+            bytes[i + 5] = (byte) 0x7F;
+            bytes[i + 6] = (byte) 0xF2;
+
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt8() throws IOException {
+        final byte[] bytes = new byte[40];
+        for (int i = 0; i < bytes.length; i += 8)
+        {
+            writeVarUIntTo(out, 0xFFFFFFFFFFFFFAL);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0x7F;
+            bytes[i + 3] = (byte) 0x7F;
+            bytes[i + 4] = (byte) 0x7F;
+            bytes[i + 5] = (byte) 0x7F;
+            bytes[i + 6] = (byte) 0x7F;
+            bytes[i + 7] = (byte) 0xFA;
+
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    @Test
+    public void writeVarUInt9() throws IOException {
+        final byte[] bytes = new byte[45];
+        for (int i = 0; i < bytes.length; i += 9)
+        {
+            writeVarUIntTo(out, 0x7FFFFFFFFFFFFFFCL);
+            bytes[i    ] = (byte) 0x7F;
+            bytes[i + 1] = (byte) 0x7F;
+            bytes[i + 2] = (byte) 0x7F;
+            bytes[i + 3] = (byte) 0x7F;
+            bytes[i + 4] = (byte) 0x7F;
+            bytes[i + 5] = (byte) 0x7F;
+            bytes[i + 6] = (byte) 0x7F;
+            bytes[i + 7] = (byte) 0x7F;
+            bytes[i + 8] = (byte) 0xFC;
+        }
+        assertArrayEquals(bytes, out.toByteArray());
+    }
+
+    /**
+     * Test if the method 'varUIntLength' generates the expected length of the provided long value.
+     */
+    @Test
+    public void testVarUIntLength1() {
+        int length = varUIntLength(0x7F);
+        assertEquals(1, length);
+    }
+
+    @Test
+    public void testVarUIntLength2() {
+        int length = varUIntLength(0x3FFF);
+        assertEquals(2, length);
+    }
+
+    @Test
+    public void testVarUIntLength3() {
+        int length = varUIntLength(0x1FFFFF);
+        assertEquals(3, length);
+    }
+
+    @Test
+    public void testVarUIntLength4() {
+        int length = varUIntLength(0xFFFFFF0);
+        assertEquals(4, length);
+    }
+
+    @Test
+    public void testVarUIntLength5() {
+        int length = varUIntLength(0x7FFFFFFF0L);
+        assertEquals(5, length);
+    }
+
+    @Test
+    public void testVarUIntLength6() {
+        int length = varUIntLength(0x3FFFFFFFFF3L);
+        assertEquals(6, length);
+    }
+
+    @Test
+    public void testVarUIntLength7() {
+        int length = varUIntLength(0x1FFFFFFFFFFF2L);
+        assertEquals(7, length);
+    }
+
+    @Test
+    public void testVarUIntLength8() {
+        int length = varUIntLength(0xFFFFFFFFFFFFFAL);
+        assertEquals(8, length);
+    }
+
+    @Test
+    public void testVarUIntLength9() {
+        int length = varUIntLength(0x7FFFFFFFFFFFFFFCL);
+        assertEquals(9, length);
     }
 }
