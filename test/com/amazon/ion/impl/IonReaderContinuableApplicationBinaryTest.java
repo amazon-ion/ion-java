@@ -4,6 +4,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IvmNotificationConsumer;
 import com.amazon.ion.system.IonReaderBuilder;
 import org.junit.Before;
@@ -66,6 +67,34 @@ public class IonReaderContinuableApplicationBinaryTest {
         );
     }
 
+    private void nextExpect(IonCursor.Event expected) {
+        assertEquals(expected, reader.nextValue());
+    }
+
+    private void fillExpect(IonCursor.Event expected) {
+        assertEquals(expected, reader.fillValue());
+    }
+
+    private void stepIn() {
+        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
+    }
+
+    private void stepOut() {
+        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+    }
+
+    private void expectField(String name) {
+        assertEquals(name, reader.getFieldName());
+    }
+
+    private void expectInt(int value) {
+        assertEquals(value, reader.intValue());
+    }
+
+    private void expectString(String value) {
+        assertEquals(value, reader.stringValue());
+    }
+
     @Test
     public void basicContainer() {
         initializeReader(
@@ -74,15 +103,15 @@ public class IonReaderContinuableApplicationBinaryTest {
             0x84, // Field SID 4 ("name")
             0x21, 0x01 // Int 1
         );
-        assertEquals(START_CONTAINER, reader.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals("name", reader.getFieldName());
-        assertEquals(VALUE_READY, reader.fillValue());
-        assertEquals(1, reader.intValue());
-        assertEquals(END_CONTAINER, reader.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, reader.nextValue());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        expectField("name");
+        fillExpect(VALUE_READY);
+        expectInt(1);
+        nextExpect(END_CONTAINER);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -92,13 +121,13 @@ public class IonReaderContinuableApplicationBinaryTest {
             0x71, 0x04, // Symbol value SID 4 ("name")
             0x71, 0x05 // Symbol value SID 5 ("version")
         );
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals(VALUE_READY, reader.fillValue());
-        assertEquals("name", reader.stringValue());
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals(VALUE_READY, reader.fillValue());
-        assertEquals("version", reader.stringValue());
-        assertEquals(NEEDS_DATA, reader.nextValue());
+        nextExpect(START_SCALAR);
+        fillExpect(VALUE_READY);
+        expectString("name");
+        nextExpect(START_SCALAR);
+        fillExpect(VALUE_READY);
+        expectString("version");
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -116,13 +145,13 @@ public class IonReaderContinuableApplicationBinaryTest {
             0x71, 0x0A, // Symbol value SID 10 ("A")
             0x71, 0x0B // Symbol value SID 11 ("B")
         );
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals(VALUE_READY, reader.fillValue());
-        assertEquals("A", reader.stringValue());
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals(VALUE_READY, reader.fillValue());
-        assertEquals("B", reader.stringValue());
-        assertEquals(NEEDS_DATA, reader.nextValue());
+        nextExpect(START_SCALAR);
+        fillExpect(VALUE_READY);
+        expectString("A");
+        nextExpect(START_SCALAR);
+        fillExpect(VALUE_READY);
+        expectString("B");
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -133,13 +162,13 @@ public class IonReaderContinuableApplicationBinaryTest {
             0x84, // Field SID 4 ("name")
             0x21, 0x01 // Int 1
         );
-        assertEquals(START_CONTAINER, reader.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals("name", reader.getFieldName());
-        assertEquals(END_CONTAINER, reader.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, reader.nextValue());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        expectField("name");
+        nextExpect(END_CONTAINER);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -150,12 +179,12 @@ public class IonReaderContinuableApplicationBinaryTest {
             0x84, // Field SID 4 ("name")
             0x21, 0x01 // Int 1
         );
-        assertEquals(START_CONTAINER, reader.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
-        assertEquals(START_SCALAR, reader.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        stepOut();
         assertNull(reader.getFieldName());
-        assertEquals(NEEDS_DATA, reader.nextValue());
+        nextExpect(NEEDS_DATA);
     }
 
 
