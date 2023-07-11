@@ -71,6 +71,28 @@ public class IonCursorBinaryTest {
         cursor.registerOversizedValueHandler(STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler());
     }
 
+    private void nextExpect(IonCursor.Event expected) {
+        assertEquals(expected, cursor.nextValue());
+    }
+
+    private void fillExpect(IonCursor.Event expected) {
+        assertEquals(expected, cursor.fillValue());
+    }
+
+    private void stepIn() {
+        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
+    }
+
+    private void stepOut() {
+        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
+    }
+
+    private void expectMarker(int expectedStart, int expectedEnd) {
+        Marker marker = loadScalar(cursor);
+        assertEquals(expectedStart, marker.startIndex);
+        assertEquals(expectedEnd, marker.endIndex);
+    }
+
     @Test
     public void basicContainer() {
         initializeCursor(
@@ -79,15 +101,13 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        Marker marker = loadScalar(cursor);
-        assertEquals(7, marker.startIndex);
-        assertEquals(8, marker.endIndex);
-        assertEquals(END_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        expectMarker(7, 8);
+        nextExpect(END_CONTAINER);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -97,15 +117,11 @@ public class IonCursorBinaryTest {
             0x83, 'f', 'o', 'o', // String length 3, starting at byte index 5
             0x83, 'b', 'a', 'r' // String length 3, starting at byte index 9
         );
-        assertEquals(START_SCALAR, cursor.nextValue());
-        Marker marker = loadScalar(cursor);
-        assertEquals(5, marker.startIndex);
-        assertEquals(8, marker.endIndex);
-        assertEquals(START_SCALAR, cursor.nextValue());
-        marker = loadScalar(cursor);
-        assertEquals(9, marker.startIndex);
-        assertEquals(12, marker.endIndex);
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_SCALAR);
+        expectMarker(5, 8);
+        nextExpect(START_SCALAR);
+        expectMarker(9, 12);
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -116,12 +132,12 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        assertEquals(END_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        nextExpect(END_CONTAINER);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -132,11 +148,11 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -147,8 +163,8 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -160,12 +176,10 @@ public class IonCursorBinaryTest {
             0x21, 0x01, // Int length 1, starting at byte index 7
             0x21, 0x03 // Int length 1, starting at byte index 9
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        Marker marker = loadScalar(cursor);
-        assertEquals(9, marker.startIndex);
-        assertEquals(10, marker.endIndex);
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        nextExpect(START_SCALAR);
+        expectMarker(9, 10);
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -179,18 +193,16 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 10
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        Marker marker = loadScalar(cursor);
-        assertEquals(10, marker.startIndex);
-        assertEquals(11, marker.endIndex);
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        stepOut();
+        nextExpect(START_SCALAR);
+        expectMarker(10, 11);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -204,22 +216,18 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 10
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(VALUE_READY, cursor.fillValue());
-        Marker marker = cursor.getValueMarker();
-        assertEquals(5, marker.startIndex);
-        assertEquals(11, marker.endIndex);
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        marker = loadScalar(cursor);
-        assertEquals(10, marker.startIndex);
-        assertEquals(11, marker.endIndex);
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        fillExpect(VALUE_READY);
+        expectMarker(5, 11);
+        stepIn();
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        stepOut();
+        nextExpect(START_SCALAR);
+        expectMarker(10, 11);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 
     @Test
@@ -233,17 +241,15 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 10
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(VALUE_READY, cursor.fillValue());
-        Marker marker = cursor.getValueMarker();
-        assertEquals(7, marker.startIndex);
-        assertEquals(8, marker.endIndex);
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        assertEquals(END_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_CONTAINER);
+        fillExpect(VALUE_READY);
+        expectMarker(7, 8);
+        stepIn();
+        nextExpect(START_SCALAR);
+        nextExpect(END_CONTAINER);
+        stepOut();
     }
 
     @Test
@@ -260,17 +266,15 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x20 // Int length 0, at byte index 14
         );
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(VALUE_READY, cursor.fillValue());
-        assertEquals(START_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
-        assertEquals(START_SCALAR, cursor.nextValue());
-        assertEquals(VALUE_READY, cursor.fillValue());
-        Marker marker = cursor.getValueMarker();
-        assertEquals(14, marker.startIndex);
-        assertEquals(14, marker.endIndex);
-        assertEquals(END_CONTAINER, cursor.nextValue());
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        nextExpect(START_CONTAINER);
+        fillExpect(VALUE_READY);
+        nextExpect(START_CONTAINER);
+        stepIn();
+        nextExpect(START_SCALAR);
+        fillExpect(VALUE_READY);
+        expectMarker(14, 14);
+        nextExpect(END_CONTAINER);
+        stepOut();
+        nextExpect(NEEDS_DATA);
     }
 }
