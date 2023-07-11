@@ -831,10 +831,10 @@ final class IonSystemLite
                 IonValueLite value = shallowLoadCurrentValue();
                 // Copy any over any metadata from the reader, keeping track of whether this value or its metadata contain
                 // a symbol.
-                boolean symbol_is_present = value.getType().equals(IonType.SYMBOL);
-                symbol_is_present |= cloneFieldNameIfAny(value);
-                symbol_is_present |= cloneAnnotationsIfAny(value);
-                value._isSymbolPresent(symbol_is_present);
+                boolean isSymbolPresent = value.getType().equals(IonType.SYMBOL);
+                isSymbolPresent |= cloneFieldNameIfAny(value);
+                isSymbolPresent |= cloneAnnotationsIfAny(value);
+                value._isSymbolPresent(isSymbolPresent);
 
                 // If this value is a non-null container, add it to our container stack.
                 if (!reader.isNullValue() && IonType.isContainer(reader.getType())) {
