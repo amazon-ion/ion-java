@@ -321,9 +321,18 @@ class IonReaderBinarySystemX
         return _v.getLong();
     }
 
+    private void checkIsBigIntegerApplicableType()
+    {
+        if (_value_type != IonType.INT &&
+                _value_type != IonType.FLOAT)
+        {
+            throw new IllegalStateException("Unexpected value type: " + _value_type);
+        }
+    }
+
     public BigInteger bigIntegerValue()
     {
-        checkIsIntApplicableType();
+        checkIsBigIntegerApplicableType();
 
         if (_value_is_null) {
             return null;

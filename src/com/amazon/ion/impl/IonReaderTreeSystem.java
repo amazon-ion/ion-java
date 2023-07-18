@@ -323,11 +323,7 @@ class IonReaderTreeSystem
             BigDecimal bd = ((IonFloat)_curr).bigDecimalValue();
             return (bd == null ? null : bd.toBigInteger());
         }
-        if (_curr instanceof IonDecimal)  {
-            BigDecimal bd = ((IonDecimal)_curr).bigDecimalValue();
-            return (bd == null ? null : bd.toBigInteger());
-        }
-        throw new IllegalStateException("current value is not an ion int, float, or decimal");
+        throw new IllegalStateException("current value is not an ion int or float");
     }
 
     public double doubleValue()
