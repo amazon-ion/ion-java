@@ -60,14 +60,14 @@ dependency into your project's `pom.xml`:
 <dependency>
   <groupId>com.amazon.ion</groupId>
   <artifactId>ion-java</artifactId>
-  <version>1.9.6</version>
+  <version>1.10.0</version>
 </dependency>
 ```
 
 For Gradle (Kotlin DSL), use:
 ```kotlin
 dependencies {
-    implementation("com.amazon.ion:ion-java:1.9.6")
+    implementation("com.amazon.ion:ion-java:1.10.0")
 }
 ```
 
