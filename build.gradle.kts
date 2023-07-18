@@ -67,6 +67,8 @@ tasks {
             this as StandardJavadocDocletOptions
             addBooleanOption("Xdoclint:none", true)
             addStringOption("Xmaxwarns", "1") // best we can do is limit warnings to 1
+            // Stops jquery from being included as a bundled dependency
+            this.noIndex(true)
         }
     }
 
