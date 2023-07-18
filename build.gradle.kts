@@ -36,8 +36,6 @@ group = "com.amazon.ion"
 // and so that any tool can access the version without having to do any special parsing.
 version = File(project.rootDir.path + "/project.version").readLines().single()
 description = "A Java implementation of the Amazon Ion data notation."
-java.sourceCompatibility = JavaVersion.VERSION_1_8
-java.targetCompatibility = JavaVersion.VERSION_1_8
 
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 val generatedJarInfoDir = "${buildDir}/generated/jar-info"
@@ -57,7 +55,9 @@ sourceSets {
 tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-        // In Java 9+ we can use `release` but for now we're still building with JDK 8, 11
+        // Because we set the `release` option, you can no longer build ion-java using JDK 8. However, we continue to
+        // emit JDK 8 compatible classes due to widespread use of this library with JDK 8.
+        options.release.set(8)
     }
 
     javadoc {
