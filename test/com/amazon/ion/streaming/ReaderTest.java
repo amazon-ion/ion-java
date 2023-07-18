@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -246,10 +248,12 @@ public class ReaderTest
     @Test
     public void testReadingDecimalAsBigInteger()
     {
-        assertEquals(readBigInteger("0."), readBigInteger("0"));
-        assertEquals(readBigInteger("null.decimal"), readBigInteger("null.int"));
-        assertEquals(readBigInteger("9223372036854775807."), readBigInteger("9223372036854775807")); // Max long
-        assertEquals(readBigInteger("2d24"), readBigInteger("2000000000000000000000000"));
+        try {
+            readBigInteger("0.");
+            Assert.fail();
+        } catch (Exception e) {
+            // Pass
+        }
     }
 
     @Test
