@@ -53,23 +53,8 @@ For detailed walkthroughs of git submodule usage, see the
 
 ### Depending on the Library
 
-To start using `ion-java` in your code with Maven, insert the following
-dependency into your project's `pom.xml`:
-
-```xml
-<dependency>
-  <groupId>com.amazon.ion</groupId>
-  <artifactId>ion-java</artifactId>
-  <version>1.10.0</version>
-</dependency>
-```
-
-For Gradle (Kotlin DSL), use:
-```kotlin
-dependencies {
-    implementation("com.amazon.ion:ion-java:1.10.0")
-}
-```
+To start using `ion-java` in your code, refer to [`ion-java` on Maven Central](https://central.sonatype.com/artifact/com.amazon.ion/ion-java)
+to find snippets for adding a dependency on the latest version of the library using your favorite build tool. 
 
 #### Legacy group id
 
