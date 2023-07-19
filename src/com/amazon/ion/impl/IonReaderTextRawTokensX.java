@@ -30,6 +30,7 @@ import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Tokenizer for the Ion text parser in IonTextIterator. This
@@ -1205,6 +1206,9 @@ final class IonReaderTextRawTokensX
     }
     private void skip_over_container(int terminator) throws IOException
     {
+        final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+        final ArrayList<Integer> terminatorStack = new ArrayList<>(CONTAINER_STACK_INITIAL_CAPACITY);
+
         assert( terminator == '}' || terminator == ']' || terminator == ')' );
         int c;
 
@@ -1217,7 +1221,12 @@ final class IonReaderTextRawTokensX
             case ']':
             case ')':
                 if (c == terminator) { // no point is checking this on every char
-                    return;
+                    if (terminatorStack.isEmpty()) {
+                        return;
+                    } else {
+                        // Pop one off the stack to continue
+                        terminator = terminatorStack.remove(terminatorStack.size() - 1);
+                    }
                 }
                 break;
             case '"':
@@ -1233,10 +1242,12 @@ final class IonReaderTextRawTokensX
                 }
                 break;
             case '(':
-                skip_over_container(')');
+                terminatorStack.add(terminator);
+                terminator = ')';
                 break;
             case '[':
-                skip_over_container(']');
+                terminatorStack.add(terminator);
+                terminator = ']';
                 break;
             case '{':
                 // this consumes lobs as well since the double
@@ -1273,7 +1284,8 @@ final class IonReaderTextRawTokensX
                 }
                 else {
                     unread_char(c);
-                    skip_over_container('}');
+                    terminatorStack.add(terminator);
+                    terminator = '}';
                 }
                 break;
             default:
