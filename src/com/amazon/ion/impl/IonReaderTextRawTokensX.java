@@ -108,6 +108,10 @@ final class IonReaderTextRawTokensX
      */
     private int                 _base64_prefetch_stack;
 
+    // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
+    private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+    // Used for tracking terminator characters when skipping a container
+    private final ArrayList<Integer> containerSkipTerminatorStack = new ArrayList<>(CONTAINER_STACK_INITIAL_CAPACITY);
 
     /**
      * IonTokenReader constructor requires a UnifiedInputStream
@@ -1206,10 +1210,12 @@ final class IonReaderTextRawTokensX
     }
     private void skip_over_container(int terminator) throws IOException
     {
-        final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
-        final ArrayList<Integer> terminatorStack = new ArrayList<>(CONTAINER_STACK_INITIAL_CAPACITY);
-
         assert( terminator == '}' || terminator == ']' || terminator == ')' );
+
+        // In theory, this should be empty at the start and end of every call to this
+        // method, but we'll clear it here anyway just in case.
+        containerSkipTerminatorStack.clear();
+
         int c;
 
         for (;;) {
@@ -1221,11 +1227,11 @@ final class IonReaderTextRawTokensX
             case ']':
             case ')':
                 if (c == terminator) { // no point is checking this on every char
-                    if (terminatorStack.isEmpty()) {
+                    if (containerSkipTerminatorStack.isEmpty()) {
                         return;
                     } else {
                         // Pop one off the stack to continue
-                        terminator = terminatorStack.remove(terminatorStack.size() - 1);
+                        terminator = containerSkipTerminatorStack.remove(containerSkipTerminatorStack.size() - 1);
                     }
                 }
                 break;
@@ -1242,11 +1248,11 @@ final class IonReaderTextRawTokensX
                 }
                 break;
             case '(':
-                terminatorStack.add(terminator);
+                containerSkipTerminatorStack.add(terminator);
                 terminator = ')';
                 break;
             case '[':
-                terminatorStack.add(terminator);
+                containerSkipTerminatorStack.add(terminator);
                 terminator = ']';
                 break;
             case '{':
@@ -1284,7 +1290,7 @@ final class IonReaderTextRawTokensX
                 }
                 else {
                     unread_char(c);
-                    terminatorStack.add(terminator);
+                    containerSkipTerminatorStack.add(terminator);
                     terminator = '}';
                 }
                 break;
