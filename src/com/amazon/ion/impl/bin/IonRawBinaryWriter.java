@@ -308,23 +308,20 @@ import java.util.NoSuchElementException;
         public final long oldPosition;
         /** length of the data being patched out.*/
         public final int oldLength;
-        /** position of the patch buffer where the length data is stored. */
-        public final long patchPosition;
-        /** length of the data to be patched in.*/
-        public final int patchLength;
+        /** size of the container data or annotations.*/
+        public final long length;
 
-        public PatchPoint(final long oldPosition, final int oldLength, final long patchPosition, final int patchLength)
+        public PatchPoint(final long oldPosition, final int oldLength, final long patchLength)
         {
             this.oldPosition = oldPosition;
             this.oldLength = oldLength;
-            this.patchPosition = patchPosition;
-            this.patchLength = patchLength;
+            this.length = patchLength;
         }
 
         @Override
         public String toString()
         {
-            return "(PP old::(" + oldPosition + " " + oldLength + ") patch::(" + patchPosition + " " + patchLength + ")";
+            return "(PP old::(" + oldPosition + " " + oldLength + ") patch::(" + length + ")";
         }
     }
 
@@ -490,7 +487,6 @@ import java.util.NoSuchElementException;
     private final PreallocationMode             preallocationMode;
     private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
-    private final WriteBuffer                   patchBuffer;
     private final PatchList                     patchPoints;
     private final _Private_RecyclingStack<ContainerInfo> containers;
     private int                                 depth;
@@ -525,7 +521,6 @@ import java.util.NoSuchElementException;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator);
-        this.patchBuffer       = new WriteBuffer(allocator);
         this.patchPoints       = new PatchList();
         this.containers        = new _Private_RecyclingStack<ContainerInfo>(
             10,
@@ -699,10 +694,9 @@ import java.util.NoSuchElementException;
 
     private void addPatchPoint(final long position, final int oldLength, final long value)
     {
-        // record the size in a patch buffer
-        final long patchPosition = patchBuffer.position();
-        final int patchLength = patchBuffer.writeVarUInt(value);
-        final PatchPoint patch = new PatchPoint(position, oldLength, patchPosition, patchLength);
+        // record the length of the patch
+        final int patchLength = WriteBuffer.varUIntLength(value);
+        final PatchPoint patch = new PatchPoint(position, oldLength, value);
         if (containers.isEmpty())
         {
             // not nested, just append to the root list
@@ -1489,12 +1483,7 @@ import java.util.NoSuchElementException;
     /*package*/ void truncate(long position)
     {
         buffer.truncate(position);
-        // TODO decide if it is worth making this faster than O(N)
-        final PatchPoint patch = patchPoints.truncate(position);
-        if (patch != null)
-        {
-            patchBuffer.truncate(patch.patchPosition);
-        }
+        patchPoints.truncate(position);
     }
 
     public void flush() throws IOException {}
@@ -1525,7 +1514,7 @@ import java.util.NoSuchElementException;
                 buffer.writeTo(out, bufferPosition, bufferLength);
 
                 // write out the patch
-                patchBuffer.writeTo(out, patch.patchPosition, patch.patchLength);
+                WriteBuffer.writeVarUIntTo(out, patch.length);
 
                 // skip over the preallocated varuint field
                 bufferPosition = patch.oldPosition;
@@ -1534,7 +1523,6 @@ import java.util.NoSuchElementException;
             buffer.writeTo(out, bufferPosition, buffer.position() - bufferPosition);
         }
         patchPoints.clear();
-        patchBuffer.reset();
         buffer.reset();
 
         if (streamFlushMode == StreamFlushMode.FLUSH)
@@ -1564,7 +1552,6 @@ import java.util.NoSuchElementException;
 
             // release all of our blocks -- these should never throw
             buffer.close();
-            patchBuffer.close();
             allocator.close();
             utf8StringEncoder.close();
         }
