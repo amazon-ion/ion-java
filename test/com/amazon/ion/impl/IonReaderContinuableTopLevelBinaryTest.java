@@ -1492,7 +1492,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void stepInOnScalarFails() throws Exception {
         reader = readerFor(0x20);
         nextExpect(IonType.INT);
-        thrown.expect(IonException.class);
+        thrown.expect(IllegalStateException.class);
         stepIn();
         reader.close();
     }
@@ -1502,7 +1502,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader = readerFor(0xD2, 0x84, 0xD0);
         reader.next();
         stepIn();
-        thrown.expect(IonException.class);
+        thrown.expect(IllegalStateException.class);
         stepIn();
         reader.close();
     }
