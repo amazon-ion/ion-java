@@ -845,7 +845,6 @@ class IonReaderTextSystemX
                     _lob_value_position = 0;
                 }
 
-                assert(_current_value_save_point_loaded && _current_value_save_point.isDefined());
                 _scanner.save_point_activate(_current_value_save_point);
 
                 len_read = readBytes(buffer, offset, len);
