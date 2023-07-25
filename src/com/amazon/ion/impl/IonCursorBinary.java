@@ -37,7 +37,7 @@ class IonCursorBinary implements IonCursor {
     private static final IvmNotificationConsumer NO_OP_IVM_NOTIFICATION_CONSUMER = (x, y) -> {};
 
     // Initial capacity of the stack used to hold ContainerInfo. Each additional level of nesting in the data requires
-    // a new ContainerInfo. Depths greater than 8 will be rare.
+    // a new ContainerInfo. Depths greater than 8 are assumed to be rare.
     private static final int CONTAINER_STACK_INITIAL_CAPACITY = 8;
 
     /**
@@ -76,13 +76,13 @@ class IonCursorBinary implements IonCursor {
         /**
          * The current size of the internal buffer.
          */
-        private long capacity;
+        long capacity;
 
         /**
          * The total number of bytes that have been discarded (shifted out of the buffer or skipped directly from
          * the input stream).
          */
-        protected long totalDiscardedBytes = 0;
+        long totalDiscardedBytes = 0;
 
         /**
          * The state of the reader when in slow mode (when slow mode is disabled, the reader is always implicitly in the
@@ -104,22 +104,22 @@ class IonCursorBinary implements IonCursor {
         /**
          * The source of data, for refillable streams.
          */
-        private final InputStream inputStream;
+        final InputStream inputStream;
 
         /**
          * Handler invoked when a single value would exceed `maximumBufferSize`.
          */
-        private BufferConfiguration.OversizedValueHandler oversizedValueHandler;
+        BufferConfiguration.OversizedValueHandler oversizedValueHandler;
 
         /**
          * Indicates whether the current value is being skipped due to being oversized.
          */
-        private boolean isSkippingCurrentValue = false;
+        boolean isSkippingCurrentValue = false;
 
         /**
          * The number of bytes of an oversized value skipped during single-byte read operations.
          */
-        private int individualBytesSkippedWithoutBuffering = 0;
+        int individualBytesSkippedWithoutBuffering = 0;
 
         RefillableState(InputStream inputStream, int capacity, int maximumBufferSize) {
             this.inputStream = inputStream;
@@ -132,17 +132,17 @@ class IonCursorBinary implements IonCursor {
     /**
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
      */
-    protected Marker[] containerStack = new Marker[CONTAINER_STACK_INITIAL_CAPACITY];
+    Marker[] containerStack = new Marker[CONTAINER_STACK_INITIAL_CAPACITY];
 
     /**
      * The index of the current container in `containerStack`.
      */
-    protected int containerIndex = -1;
+    int containerIndex = -1;
 
     /**
      * The Marker representing the parent container of the current value.
      */
-    protected Marker parent = null;
+    Marker parent = null;
 
     /**
      * The start offset into the user-provided byte array, or 0 if the user provided an InputStream.
@@ -162,7 +162,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * A slice of the current buffer.
      */
-    protected ByteBuffer byteBuffer;
+    ByteBuffer byteBuffer;
 
     /**
      * The handler that will be notified when data is processed.
@@ -183,17 +183,17 @@ class IonCursorBinary implements IonCursor {
     /**
      * Marker representing the current value.
      */
-    protected final Marker valueMarker = new Marker(-1, 0);
+    final Marker valueMarker = new Marker(-1, 0);
 
     /**
      * The index of the first byte in the header of the value at which the reader is currently positioned.
      */
-    protected long valuePreHeaderIndex = 0;
+    long valuePreHeaderIndex = 0;
 
     /**
      * Type ID for the current value.
      */
-    protected IonTypeID valueTid = null;
+    IonTypeID valueTid = null;
 
     /**
      * The consumer to be notified when Ion version markers are encountered.
@@ -203,12 +203,12 @@ class IonCursorBinary implements IonCursor {
     /**
      * The event that occurred as a result of the last call to any of the cursor's IonCursor methods.
      */
-    protected IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
+    IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
 
     /**
      * The buffer in which the cursor stores slices of the Ion stream.
      */
-    protected byte[] buffer;
+    byte[] buffer;
 
     /**
      * The major version of the Ion encoding currently being read.
@@ -223,7 +223,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * The field SID of the current value, if any.
      */
-    protected int fieldSid = -1;
+    int fieldSid = -1;
 
     /**
      * The index of the first byte in the buffer that has not yet been successfully processed. The checkpoint is
@@ -349,14 +349,34 @@ class IonCursorBinary implements IonCursor {
      * @param configuration the configuration to validate.
      * @return the validated configuration.
      */
-    private static IonBufferConfiguration validate(IonBufferConfiguration configuration) {
+    private static void validate(IonBufferConfiguration configuration) {
         if (configuration.getInitialBufferSize() < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
         }
         if (configuration.getMaximumBufferSize() < configuration.getInitialBufferSize()) {
             throw new IllegalArgumentException("Maximum buffer size cannot be less than the initial buffer size.");
         }
-        return configuration;
+    }
+
+    /**
+     * Provides a fixed-size buffer configuration suitable for the given ByteArrayInputStream.
+     * @param inputStream the stream.
+     * @param alreadyReadLen the number of bytes already read from the stream. The configuration provided will allow
+     *                       enough space for these bytes.
+     * @return a fixed IonBufferConfiguration.
+     */
+    private static IonBufferConfiguration getFixedSizeConfigurationFor(
+        ByteArrayInputStream inputStream,
+        int alreadyReadLen
+    ) {
+        int fixedBufferSize = inputStream.available();
+        if (alreadyReadLen > 0) {
+            fixedBufferSize += alreadyReadLen;
+        }
+        if (STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize() > fixedBufferSize) {
+            return FIXED_SIZE_CONFIGURATIONS[logBase2(fixedBufferSize)];
+        }
+        return STANDARD_BUFFER_CONFIGURATION;
     }
 
     /**
@@ -380,26 +400,13 @@ class IonCursorBinary implements IonCursor {
                 // the stream to avoid wastefully allocating extra space that will never be needed. It is still
                 // preferable for the user to manually specify the buffer size if it's less than the default, as doing
                 // so allows this branch to be skipped.
-                int fixedBufferSize;
-                try {
-                    fixedBufferSize = inputStream.available();
-                } catch (IOException e) {
-                    // ByteArrayInputStream.available() does not throw.
-                    throw new IllegalStateException(e);
-                }
-                if (alreadyReadLen > 0) {
-                    fixedBufferSize += alreadyReadLen;
-                }
-                if (STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize() > fixedBufferSize) {
-                    configuration = FIXED_SIZE_CONFIGURATIONS[logBase2(fixedBufferSize)];
-                } else {
-                    configuration = STANDARD_BUFFER_CONFIGURATION;
-                }
+                configuration = getFixedSizeConfigurationFor((ByteArrayInputStream) inputStream, alreadyReadLen);
             } else {
                 configuration = STANDARD_BUFFER_CONFIGURATION;
             }
+        } else {
+            validate(configuration);
         }
-        validate(configuration);
         peekIndex = 0;
         checkpoint = 0;
 
@@ -1297,7 +1304,10 @@ class IonCursorBinary implements IonCursor {
      */
     private void quickStepIntoContainer() {
         if (valueTid == null || valueTid.type.ordinal() < LIST_TYPE_ORDINAL) {
-            throw new IonException("Must be positioned on a container to step in.");
+            // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
+            // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
+            // within the library.
+            throw new IllegalStateException("Must be positioned on a container to step in.");
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         pushContainer();
@@ -1318,7 +1328,10 @@ class IonCursorBinary implements IonCursor {
         }
         // Must be positioned on a container.
         if (checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
-            throw new IonException("Must be positioned on a container to step in.");
+            // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
+            // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
+            // within the library.
+            throw new IllegalStateException("Must be positioned on a container to step in.");
         }
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         pushContainer();
@@ -1360,7 +1373,9 @@ class IonCursorBinary implements IonCursor {
             return slowStepOutOfContainer();
         }
         if (parent == null) {
-            // Note: this is IllegalStateException for consistency with the other binary IonReader implementation.
+            // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
+            // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
+            // within the library.
             throw new IllegalStateException("Cannot step out at top level.");
         }
         // Seek past the remaining bytes at this depth and pop from the stack.
@@ -1401,6 +1416,8 @@ class IonCursorBinary implements IonCursor {
     private Event slowStepOutOfContainer() {
         if (parent == null) {
             // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
+            // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
+            // within the library.
             throw new IllegalStateException("Cannot step out at top level.");
         }
         if (refillableState.state != State.READY && !slowMakeBufferReady()) {
@@ -1472,7 +1489,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Advances to the next token, seeking past the previous value if necessary. After return `event` will convey
      * the result (e.g. START_SCALAR, END_CONTAINER)
-     * @return false if the next token was an Ion version marker or NOP pad; otherwise, true. If false, this method
+     * @return true if the next token was an Ion version marker or NOP pad; otherwise, false. If true, this method
      *  should be called again to advance to the following value.
      */
     private boolean nextToken() {
@@ -1490,7 +1507,7 @@ class IonCursorBinary implements IonCursor {
             if (parent != null && parent.endIndex == peekIndex) {
                 event = Event.END_CONTAINER;
             }
-            return true;
+            return false;
         }
         reset();
         int b;
@@ -1499,20 +1516,20 @@ class IonCursorBinary implements IonCursor {
             b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
             if (b == IVM_START_BYTE) {
                 readIvm();
-                return false;
+                return true;
             }
         } else {
             if (nextContainedToken()) {
-                return true;
+                return false;
             }
             b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         }
         if (readHeader(b, false, valueMarker)) {
             valueTid = valueMarker.typeId;
-            return true;
+            return false;
         }
         valueTid = valueMarker.typeId;
-        return false;
+        return true;
     }
 
     /**
@@ -1651,11 +1668,7 @@ class IonCursorBinary implements IonCursor {
             return slowNextValue();
         }
         event = Event.NEEDS_DATA;
-        while (true) {
-            if (nextToken()) {
-                break;
-            }
-        }
+        while (nextToken());
         return event;
     }
 
@@ -1750,7 +1763,7 @@ class IonCursorBinary implements IonCursor {
      * @param offset the offset at which the slice will begin.
      * @param limit the slice's limit.
      */
-    protected void slice(long offset, long limit) {
+    void slice(long offset, long limit) {
         peekIndex = offset;
         this.limit = limit;
         setCheckpointBeforeUnannotatedTypeId();
