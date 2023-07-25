@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
+import static com.amazon.ion.SystemSymbols.ION;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
@@ -213,10 +214,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         // Map representation of this symbol table. Keys are symbol text; values are the lowest symbol ID that maps
         // to that text.
-        final Map<String, Integer> mapView;
+        final Map<String, Integer> textToId;
 
         // List representation of this symbol table, indexed by symbol ID.
-        final String[] listView;
+        final String[] idToText;
 
         private SymbolTableStructCache structCache = null;
 
@@ -228,13 +229,13 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             maxId = importsMaxId + numberOfLocalSymbols;
             // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
             // It is not expected to grow.
-            listView = new String[numberOfLocalSymbols];
-            System.arraycopy(symbols, 0, listView, 0, numberOfLocalSymbols);
-            mapView = new HashMap<>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
+            idToText = new String[numberOfLocalSymbols];
+            System.arraycopy(symbols, 0, idToText, 0, numberOfLocalSymbols);
+            textToId = new HashMap<>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
             for (int i = 0; i < numberOfLocalSymbols; i++) {
-                String symbol = listView[i];
+                String symbol = idToText[i];
                 if (symbol != null) {
-                    mapView.put(symbol, i + importsMaxId + 1);
+                    textToId.put(symbol, i + importsMaxId + 1);
                 }
             }
         }
@@ -295,7 +296,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             if (token != null) {
                 return token;
             }
-            Integer sid = mapView.get(text);
+            Integer sid = textToId.get(text);
             if (sid == null) {
                 return null;
             }
@@ -322,7 +323,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             if (sid > UNKNOWN_SYMBOL_ID) {
                 return sid;
             }
-            sid = mapView.get(name);
+            sid = textToId.get(name);
             if (sid == null) {
                 return UNKNOWN_SYMBOL_ID;
             }
@@ -337,7 +338,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             if (id > getMaxId()) {
                 return null;
             }
-            return IonReaderContinuableApplicationBinary.this.getSymbolString(id, importedTables, listView);
+            return IonReaderContinuableApplicationBinary.this.getSymbolString(id, importedTables, idToText);
         }
 
         @Override
@@ -348,12 +349,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
                 @Override
                 public boolean hasNext() {
-                    return index < listView.length;
+                    return index < idToText.length;
                 }
 
                 @Override
                 public String next() {
-                    String symbol = listView[index];
+                    String symbol = idToText[index];
                     index++;
                     return symbol;
                 }
@@ -448,7 +449,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             firstLocalSymbolId = imports.getMaxId() + 1;
             localSymbolMaxId = snapshot.maxId - firstLocalSymbolId;
             // Note: because `symbols` only grows, `snapshot.listView` will always fit within `symbols`.
-            System.arraycopy(snapshot.listView, 0, symbols, 0, snapshot.listView.length);
+            System.arraycopy(snapshot.idToText, 0, symbols, 0, snapshot.idToText.length);
             if (symbolTokensById != null) {
                 symbolTokensById.clear();
             }
@@ -470,6 +471,23 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
      */
     private SymbolTable createImport(String name, int version, int maxId) {
         SymbolTable shared = catalog.getTable(name, version);
+        if (maxId < 0) {
+            if (shared == null || version != shared.getVersion()) {
+                String message =
+                    "Import of shared table "
+                        + name
+                        + " lacks a valid max_id field, but an exact match was not"
+                        + " found in the catalog";
+                if (shared != null) {
+                    message += " (found version " + shared.getVersion() + ")";
+                }
+                throw new IonException(message);
+            }
+
+            // Exact match is found, but max_id is undefined in import declaration. Set max_id to tge largest SID of
+            // the matching symbol table.
+            maxId = shared.getMaxId();
+        }
         if (shared == null) {
             // No match. All symbol IDs that fall within this shared symbol table's range will have unknown text.
             return new SubstituteSymbolTable(name, version, maxId);
@@ -559,7 +577,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         private boolean hasSeenImports;
         private boolean hasSeenSymbols;
-        private boolean isAppend;
         private String name = null;
         private int version = -1;
         private int maxId = -1;
@@ -569,7 +586,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         private void resetState() {
             hasSeenImports = false;
             hasSeenSymbols = false;
-            isAppend = false;
             newImports = null;
             newSymbols = null;
             name = null;
@@ -636,9 +652,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         private void preparePossibleAppend() {
-            if (symbolValueId() == ION_SYMBOL_TABLE_SID) {
-                isAppend = true;
-            } else {
+            if (symbolValueId() != ION_SYMBOL_TABLE_SID) {
                 resetSymbolTable();
             }
             state = State.ON_SYMBOL_TABLE_FIELD;
@@ -676,7 +690,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         private void startReadingImportStruct() {
             name = null;
-            version = -1;
+            version = 1;
             maxId = -1;
             if (IonReaderContinuableApplicationBinary.super.getType() == IonType.STRUCT) {
                 stepIntoContainer();
@@ -686,8 +700,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         private void finishReadingImportStruct() {
             stepOutOfContainer();
-            newImports.add(createImport(name, version, maxId));
             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
+            // Ignore import clauses with malformed name field.
+            if (name == null || name.length() == 0 || name.equals(ION)) {
+                return;
+            }
+            newImports.add(createImport(name, version, maxId));
         }
 
         private void startReadingImportStructField() {
@@ -709,14 +727,14 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         private void readImportVersion() {
-            if (IonReaderContinuableApplicationBinary.super.getType() == IonType.INT) {
-                version = intValue();
+            if (IonReaderContinuableApplicationBinary.super.getType() == IonType.INT && !IonReaderContinuableApplicationBinary.super.isNullValue()) {
+                version = Math.max(1, intValue());
             }
             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
         }
 
         private void readImportMaxId() {
-            if (IonReaderContinuableApplicationBinary.super.getType() == IonType.INT) {
+            if (IonReaderContinuableApplicationBinary.super.getType() == IonType.INT && !IonReaderContinuableApplicationBinary.super.isNullValue()) {
                 maxId = intValue();
             }
             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;

@@ -32,9 +32,9 @@ import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
  * exposed via public interfaces, it is not currently considered performance-critical, and no continuable equivalent
  * is provided.
  */
-class IonReaderNonContinuableSystem implements IonReader {
+final class IonReaderNonContinuableSystem implements IonReader {
 
-    protected final IonReaderContinuableCore reader;
+    private final IonReaderContinuableCore reader;
     private IonType type = null;
     private IonType typeAfterIvm = null;
     private final Queue<Integer> pendingIvmSids = new ArrayDeque<>(1);
@@ -129,7 +129,7 @@ class IonReaderNonContinuableSystem implements IonReader {
     /**
      * Prepares a scalar value to be parsed by ensuring it is present in the buffer.
      */
-    protected void prepareScalar() {
+    private void prepareScalar() {
         IonCursor.Event event = reader.getCurrentEvent();
         if (event == IonCursor.Event.VALUE_READY) {
             return;
