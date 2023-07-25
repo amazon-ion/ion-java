@@ -220,14 +220,6 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
     }
 
     @Override
-    public int intValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.intValue();
-    }
-
-    @Override
     public long longValue() {
         if (isFillRequired) {
             prepareScalar();
@@ -297,14 +289,6 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             prepareScalar();
         }
         return super.symbolValue();
-    }
-
-    @Override
-    public int byteSize() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.byteSize();
     }
 
     @Override

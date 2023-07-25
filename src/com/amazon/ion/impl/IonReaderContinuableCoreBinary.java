@@ -549,7 +549,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public int byteSize() {
-        if (valueTid == null || (!IonType.isLob(valueTid.type) && !valueTid.isNull)) {
+        if (valueTid == null || !IonType.isLob(valueTid.type) || valueTid.isNull) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         return (int) (valueMarker.endIndex - valueMarker.startIndex);
@@ -607,7 +607,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public long longValue() {
         long value;
-        if (valueTid.type == IonType.INT) {
+        if (valueTid.type == IonType.INT && !valueTid.isNull) {
             if (valueTid.length == 0) {
                 return 0;
             }
@@ -667,7 +667,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public double doubleValue() {
         double value;
-        if (valueTid.type == IonType.FLOAT) {
+        if (valueTid.type == IonType.FLOAT && !valueTid.isNull) {
             int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
             if (length == 0) {
                 return 0.0d;
@@ -714,7 +714,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public boolean booleanValue() {
-        if (valueTid == null || IonType.BOOL != valueTid.type) {
+        if (valueTid == null || IonType.BOOL != valueTid.type || valueTid.isNull) {
             throwDueToInvalidType(IonType.BOOL);
         }
         return minorVersion == 0 ? readBoolean_1_0() : readBoolean_1_1();
