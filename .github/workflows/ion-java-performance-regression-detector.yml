@@ -3,16 +3,14 @@
 
 name: Ion Java performance regression detector
 
-on: [pull_request]
+on:
+  pull_request:
+    paths:
+      - 'src/*'
 
 jobs:
-  PR-Content-Check:
-    uses: amazon-ion/ion-java/.github/workflows/PR-content-check.yml@master
-
   detect-regression:
     name: Detect Regression
-    needs: PR-Content-Check
-    if: ${{ needs.PR-Content-Check.outputs.result == 'pass' }}
     runs-on: ubuntu-latest
 
     steps:
