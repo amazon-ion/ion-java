@@ -62,16 +62,17 @@ final class IonFloatLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode()
     {
         int result = HASH_SIGNATURE;
-
-        if (!isNullValue())  {
-            long bits = Double.doubleToLongBits(doubleValue());
-            result ^= (int) ((bits >>> 32) ^ bits);
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+        long bits = Double.doubleToLongBits(_float_value);
+        result ^= (int) ((bits >>> 32) ^ bits);
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -142,14 +143,7 @@ final class IonFloatLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        if (isNullValue())
-        {
-            writer.writeNull(IonType.FLOAT);
-        }
-        else
-        {
-            writer.writeFloat(_float_value);
-        }
+        writer.writeFloat(_float_value);
     }
 
     @Override

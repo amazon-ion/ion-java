@@ -301,29 +301,22 @@ final class IonDatagramLite
     }
 
     @Override
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
     public int hashCode() {
         int prime  = 8191;
         int result = HASH_SIGNATURE;
 
-        if (!isNullValue()) {
-            // As we are a datagram then the children need to resolve their own symbol tables -
-            // so we use the 'top level' #hashCode() which will force each child to resolve it's
-            // own symbol table.
-            for (IonValue v : this) {
-                result = prime * result + v.hashCode();
-                // mixing at each step to make the hash code order-dependent
-                result ^= (result << 29) ^ (result >> 3);
-            }
+        for (IonValue v : this) {
+            result = prime * result + v.hashCode();
+            // mixing at each step to make the hash code order-dependent
+            result ^= (result << 29) ^ (result >> 3);
         }
         return result;
     }
-
-    @Override
-    int hashCode(SymbolTableProvider symbolTableProvider) {
-        String message = "IonDatagrams do not need a resolved Symbol table use #hashCode()";
-        throw new UnsupportedOperationException(message);
-    }
-
 
     @Override
     public <T extends IonValue> T[] extract(Class<T> type)
@@ -428,14 +421,6 @@ final class IonDatagramLite
             iv.writeTo(writer);
         }
     }
-
-    @Override
-    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
-        throws IOException
-    {
-        throw new UnsupportedOperationException("IonDatagram does not operate with a Symbol Table");
-    }
-
 
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////

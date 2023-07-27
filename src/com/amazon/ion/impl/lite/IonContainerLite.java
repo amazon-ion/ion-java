@@ -20,6 +20,7 @@ import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.NullValueException;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
@@ -27,6 +28,8 @@ import com.amazon.ion.ValueVisitor;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_IonContainer;
 import com.amazon.ion.impl._Private_Utils;
+
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -283,6 +286,21 @@ abstract class IonContainerLite
             return __current;
         }
 
+        /**
+         * Returns the next element, or null if there are no more elements. This does not call force_position_sync(),
+         * so it must only be called from contexts where it is guaranteed that the container has not been mutated
+         * since the last position sync.
+         */
+        IonValueLite nextOrNull()
+        {
+            if (__pos >= _child_count) {
+                return null;
+            }
+            __current = _children[__pos++];
+            __lastMoveWasPrevious = false;
+            return __current;
+        }
+
         public final int nextIndex()
         {
             force_position_sync();
@@ -343,6 +361,8 @@ abstract class IonContainerLite
             int concrete_idx = concrete._elementid();
             assert(concrete_idx == idx);
 
+            beforeIteratorRemove(concrete, idx);
+
             // here we remove the member from the container's list of elements
             remove_child(idx);
             patch_elements_helper(concrete_idx);
@@ -354,12 +374,45 @@ abstract class IonContainerLite
                 __pos--;
             }
             __current = null;
+            afterIteratorRemove(concrete, idx);
         }
 
         public void set(IonValue element)
         {
             throw new UnsupportedOperationException();
         }
+    }
+
+    /**
+     * Called before a value is removed from the SequenceContentIterator. May be overridden by subclasses that require
+     * custom behavior.
+     * @param value the value that will be removed.
+     * @param idx the container index of the value that will be removed.
+     */
+    void beforeIteratorRemove(IonValueLite value, int idx) {
+        // Do nothing.
+    }
+
+    /**
+     * Called after a value is removed from the SequenceContentIterator. May be overridden by subclasses that require
+     * custom behavior.
+     * @param value the value that was removed.
+     * @param idx the container index of the value that was removed.
+     */
+    void afterIteratorRemove(IonValueLite value, int idx) {
+        // Do nothing.
+    }
+
+    @Override
+    final int scalarHashCode() {
+        throw new IllegalStateException("Not applicable for container values.");
+    }
+
+    @Override
+    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
+        throws IOException
+    {
+        throw new IllegalStateException("Not applicable for container values.");
     }
 
     public void makeNull()
