@@ -20,7 +20,6 @@ import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
-import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
@@ -38,9 +37,6 @@ import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Iterator;
 
 /**
  *  Base class of the light weight implementation of
@@ -407,34 +403,131 @@ abstract class IonValueLite
 
     abstract IonValueLite clone(IonContext parentContext);
 
+    /**
+     * @return the constant hash signature unique to the value's type.
+     */
+    abstract int hashSignature();
+
+    private static final int sidHashSalt   = 127; // prime to salt symbol IDs
+    private static final int textHashSalt  = 31; // prime to salt text
+    private static final int nameHashSalt  = 16777619; // prime to salt field names
+    private static final int valueHashSalt = 8191; // prime to salt values
+
+    private static class HashHolder {
+        int valueHash = 0;
+        IonContainerLite parent = null;
+        IonContainerLite.SequenceContentIterator iterator = null;
+
+        private int hashStructField(int partial, IonValueLite value) {
+            // If the field name's text is unknown, use its sid instead
+            String text = value._fieldName;
+
+            int nameHashCode = text == null
+                ? value._fieldId * sidHashSalt
+                : text.hashCode() * textHashSalt;
+
+            // mixing to account for small text and sid deltas
+            nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
+
+            int fieldHashCode = parent.hashSignature();
+            fieldHashCode = valueHashSalt * fieldHashCode + partial;
+            fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
+
+            // another mix step for each Field of the struct
+            fieldHashCode ^= (fieldHashCode << 19) ^ (fieldHashCode >> 13);
+            return fieldHashCode;
+        }
+
+        void update(int partial, IonValueLite value) {
+            if (parent == null) {
+                valueHash = partial;
+            } else {
+                if (parent instanceof IonStructLite) {
+                    // Additive hash is used to ensure insensitivity to order of
+                    // fields, and will not lose data on value hash codes
+                    valueHash += hashStructField(partial, value);
+                } else {
+                    valueHash = valueHashSalt * valueHash + partial;
+                    // mixing at each step to make the hash code order-dependent
+                    valueHash ^= (valueHash << 29) ^ (valueHash >> 3);
+                }
+            }
+        }
+    }
 
     /**
-     * Since {@link #equals(Object)} is overridden, each concrete class must provide
-     * an implementation of {@link Object#hashCode()}.
+     * Since {@link #equals(Object)} is overridden, each concrete class representing a scalar value must provide
+     * an implementation of {@link #scalarHashCode()}.
      * @return hash code for instance consistent with equals().
-     */
-    /*
-     * internally ALL implementations will be delegated too with the SymbolTable
-     * which is to prevent the SymbolTable being continually re-located in complex structures.
-     *
-     * This is near universally true - however does not apply for IonDatagramLite - hence it
-     * explicitly overrides hashCode()
      */
     @Override
     public int hashCode() {
-        // Supply a lazy symbol table provider, which will call getSymbolTable()
-        // only once it's actually necessary.
-        // This works for all child types with the exception of
-        // IonDatagramLite which has a different, explicit behavior for hashCode()
-        // (hence this method cannot be final).
-        return hashCode(new LazySymbolTableProvider(this));
+        // Branching early for scalars is a significant performance optimization because it avoids allocating an
+        // unnecessary hash stack for these values. Scalars *should* be the most commonly hashed kind of value.
+        if ((_flags & IS_NULL_VALUE) != 0) {
+            return hashTypeAnnotations(hashSignature());
+        } else if (this instanceof IonContainerLite) {
+            return containerHashCode();
+        }
+        return scalarHashCode();
     }
 
-    /*
-     * Internal HashCode implementation which utilizes a SymbolTableProvider
-     * to resolve the SymbolTable to use in encoding the sub-graph.
+    private int containerHashCode() {
+        HashHolder[] hashStack = new HashHolder[CONTAINER_STACK_INITIAL_CAPACITY];
+        int hashStackIndex = 0;
+        hashStack[hashStackIndex] = new HashHolder();
+        IonValueLite value = this;
+        do {
+            HashHolder hashHolder = hashStack[hashStackIndex];
+            if ((value._flags & IS_NULL_VALUE) != 0) {
+                // Null values are hashed using a constant signature unique to the type.
+                hashHolder.update(value.hashTypeAnnotations(value.hashSignature()), value);
+            } else if (!(value instanceof IonContainerLite)) {
+                hashHolder.update(value.scalarHashCode(), value);
+            } else {
+                // Step into the container by pushing a HashHolder for the container onto the stack.
+                if (++hashStackIndex >= hashStack.length) {
+                    hashStack = growHashStack(hashStack);
+                }
+                hashHolder = hashStack[hashStackIndex];
+                if (hashHolder == null) {
+                    hashHolder = new HashHolder();
+                    hashStack[hashStackIndex] = hashHolder;
+                }
+                hashHolder.parent = (IonContainerLite) value;
+                hashHolder.iterator = hashHolder.parent.new SequenceContentIterator(0, true);
+                hashHolder.valueHash = value.hashSignature();
+            }
+            do {
+                if (hashHolder.parent == null) {
+                    // Iteration has returned to the top level; return the top-level value's hash code.
+                    return hashHolder.valueHash;
+                }
+                value = hashHolder.iterator.nextOrNull();
+                if (value == null) {
+                    // The end of the container has been reached. Pop from the stack and update the parent's hash.
+                    hashHolder = hashStack[hashStackIndex--];
+                    IonValueLite container = hashHolder.parent;
+                    int containerHash = container.hashTypeAnnotations(hashHolder.valueHash);
+                    hashHolder.parent = null;
+                    hashHolder.iterator = null;
+                    hashHolder = hashStack[hashStackIndex];
+                    hashHolder.update(containerHash, container);
+                }
+            } while (value == null);
+        } while (true);
+    }
+
+    private static HashHolder[] growHashStack(HashHolder[] hashStack) {
+        HashHolder[] newHashStack = new HashHolder[hashStack.length * 2];
+        System.arraycopy(hashStack, 0, newHashStack, 0, hashStack.length);
+        return newHashStack;
+    }
+
+    /**
+     * Internal HashCode implementation to be overridden by scalar subclasses. Must only be called on non-null values.
      */
-    abstract int hashCode(SymbolTableProvider symbolTableProvider);
+    abstract int scalarHashCode();
 
     public IonContainerLite getContainer()
     {
@@ -797,20 +890,15 @@ abstract class IonValueLite
         return -1;
     }
 
-    protected int hashTypeAnnotations(final int original, SymbolTableProvider symbolTableProvider)
+    protected int hashTypeAnnotations(final int original)
     {
-        final SymbolToken[] tokens = getTypeAnnotationSymbols(symbolTableProvider);
+        final SymbolToken[] tokens = _annotations == null ? SymbolToken.EMPTY_ARRAY : _annotations;
         if (tokens.length == 0)
         {
             return original;
         }
 
-        final int sidHashSalt   = 127;      // prime to salt sid of annotation
-        final int textHashSalt  = 31;       // prime to salt text of annotation
-        final int prime = 8191;
-        int result = original ^ TYPE_ANNOTATION_HASH_SIGNATURE;
-
-        result = prime * original + tokens.length;
+        int result = valueHashSalt * original + tokens.length;
 
         for (final SymbolToken token : tokens)
         {
@@ -823,7 +911,7 @@ abstract class IonValueLite
             // mixing to account for small text and sid deltas
             tokenHashCode ^= (tokenHashCode << 19) ^ (tokenHashCode >> 13);
 
-            result = prime * result + tokenHashCode;
+            result = valueHashSalt * result + tokenHashCode;
 
             // mixing at each step to make the hash code order-dependent
             result ^= (result << 25) ^ (result >> 7);
@@ -970,64 +1058,121 @@ abstract class IonValueLite
         if (writer.isInStruct()
             && ! ((_Private_IonWriter) writer).isFieldNameSet())
         {
-            SymbolToken tok = value.getFieldNameSymbol(symbolTableProvider);
-            if (tok == null)
-            {
-                throw new IllegalStateException("Field name not set");
-            }
+            if (value._fieldName != null) {
+                writer.setFieldName(value._fieldName);
+            } else {
+                SymbolToken tok = value.getFieldNameSymbol(symbolTableProvider);
+                if (tok == null)
+                {
+                    throw new IllegalStateException("Field name not set");
+                }
 
-            writer.setFieldNameSymbol(tok);
+                writer.setFieldNameSymbol(tok);
+            }
         }
 
-        SymbolToken[] annotations = value.getTypeAnnotationSymbols(symbolTableProvider);
-        writer.setTypeAnnotationSymbols(annotations);
+        if (value._annotations != null) {
+            writer.setTypeAnnotationSymbols(value._annotations);
+        }
     }
 
+    /*  The following template may be used to iterate over the tree at the current value. Copying this structure
+        and filling in the blanks or customizing as necessary performed better (and consumed about the same number of
+        lines of code) than factoring it into a method and injecting logic into the blanks via lambdas as of 8/2023,
+        when writeTo and hashCode were made iterative instead of recursive. See those methods for examples of this
+        template being used.
+        --------------------------------------------------
+        IonContainerLite.SequenceContentIterator[] iteratorStack = new IonContainerLite.SequenceContentIterator[CONTAINER_STACK_INITIAL_CAPACITY];
+        int iteratorStackIndex = -1;
+        IonContainerLite.SequenceContentIterator currentIterator = null;
+        IonValueLite value = this;
+        do {
+            // BLANK: insert logic that needs to be performed before each value, such as handling field names.
+            if ((value._flags & IS_NULL_VALUE) != 0) {
+                // BLANK: insert logic for handling nulls of any type.
+            } else if (!(value instanceof IonContainerLite)) {
+                // BLANK: insert logic for handling non-null scalar values.
+            } else {
+                if (++iteratorStackIndex >= iteratorStack.length) {
+                    iteratorStack = growIteratorStack(iteratorStack);
+                }
+                currentIterator = ((IonContainerLite) value).new SequenceContentIterator(0, true);
+                iteratorStack[iteratorStackIndex] = currentIterator;
+                // BLANK: insert logic for handling the start of a container value.
+            }
+            do {
+                if (currentIterator == null) {
+                    // BLANK: insert logic for handling the end of iteration.
+                    return;
+                }
+                value = currentIterator.nextOrNull();
+                if (value == null) {
+                    // BLANK: insert logic for handling the end of a container value.
+                    iteratorStack[iteratorStackIndex] = null; // Allow this to be garbage collected
+                    currentIterator = (iteratorStackIndex == 0) ? null : iteratorStack[--iteratorStackIndex];
+                }
+            } while (value == null);
+        } while (true);
+     */
+
     private void writeToIterative(IonWriter writer, SymbolTableProvider symbolTableProvider) throws IOException {
-        Deque<Iterator<IonValue>> iteratorStack = null;
-        Iterator<IonValue> currentIterator = null;
+        IonContainerLite.SequenceContentIterator[] iteratorStack = new IonContainerLite.SequenceContentIterator[CONTAINER_STACK_INITIAL_CAPACITY];
+        int iteratorStackIndex = -1;
+        IonContainerLite.SequenceContentIterator currentIterator = null;
         IonValueLite value = this;
         do {
             writeFieldNameAndAnnotations(writer, value, symbolTableProvider);
-            IonType type = value.getType();
-            if (value.isNullValue()) {
-                writer.writeNull(type);
-            } else if (IonType.isContainer(type)) {
-                if (currentIterator != null) {
-                    if (iteratorStack == null) {
-                        iteratorStack = new ArrayDeque<>(CONTAINER_STACK_INITIAL_CAPACITY);
-                    }
-                    iteratorStack.add(currentIterator);
-                }
-                currentIterator = ((IonContainer) value).iterator();
-                writer.stepIn(type);
-            } else {
+            if ((value._flags & IS_NULL_VALUE) != 0) {
+                writer.writeNull(value.getType());
+            } else if (!(value instanceof IonContainerLite)) {
                 value.writeBodyTo(writer, symbolTableProvider);
+            } else {
+                if (++iteratorStackIndex >= iteratorStack.length) {
+                    iteratorStack = growIteratorStack(iteratorStack);
+                }
+                currentIterator = ((IonContainerLite) value).new SequenceContentIterator(0, true);
+                iteratorStack[iteratorStackIndex] = currentIterator;
+                writer.stepIn(value.getType());
             }
             do {
                 if (currentIterator == null) {
                     return;
                 }
-                value = currentIterator.hasNext() ? (IonValueLite) currentIterator.next() : null;
+                value = currentIterator.nextOrNull();
                 if (value == null) {
                     writer.stepOut();
-                    currentIterator = iteratorStack == null ? null : iteratorStack.pollLast();
+                    iteratorStack[iteratorStackIndex] = null; // Allow this to be garbage collected
+                    currentIterator = (iteratorStackIndex == 0) ? null : iteratorStack[--iteratorStackIndex];
                 }
             } while (value == null);
         } while (true);
     }
+    private static IonContainerLite.SequenceContentIterator[] growIteratorStack(IonContainerLite.SequenceContentIterator[] iteratorStack) {
+        IonContainerLite.SequenceContentIterator[] newIteratorStack = new IonContainerLite.SequenceContentIterator[iteratorStack.length * 2];
+        System.arraycopy(iteratorStack, 0, newIteratorStack, 0, iteratorStack.length);
+        return newIteratorStack;
+    }
+
 
     final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
     {
         try {
-            writeToIterative(writer, symbolTableProvider);
+            if ((_flags & IS_NULL_VALUE) != 0) {
+                writeFieldNameAndAnnotations(writer, this, symbolTableProvider);
+                writer.writeNull(getType());
+            } else if (this instanceof IonContainerLite) {
+                writeToIterative(writer, symbolTableProvider);
+            } else {
+                writeFieldNameAndAnnotations(writer, this, symbolTableProvider);
+                writeBodyTo(writer, symbolTableProvider);
+            }
         } catch (IOException e) {
             throw new IonException(e);
         }
     }
 
     /**
-     * Writes a *scalar* value to the given writer. It is incorrect to call this method on a container value.
+     * Writes a *non-null scalar* value to the given writer. It is incorrect to call this method on a container value.
      * @param writer an IonWriter.
      * @param symbolTableProvider a SymbolTableProvider.
      * @throws IOException if thrown when writing the value.

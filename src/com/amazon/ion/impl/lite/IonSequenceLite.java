@@ -90,24 +90,6 @@ abstract class IonSequenceLite
     @Override
     public abstract IonSequenceLite clone();
 
-    protected int sequenceHashCode(int seed, SymbolTableProvider symbolTableProvider)
-    {
-        final int prime = 8191;
-        int result = seed;
-
-        if (!isNullValue()) {
-            for (IonValue v : this) {
-                IonValueLite vLite = (IonValueLite) v;
-                result = prime * result + vLite.hashCode(symbolTableProvider);
-                // mixing at each step to make the hash code order-dependent
-                result ^= (result << 29) ^ (result >> 3);
-            }
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
-    }
-
-
     @Override
     // Increasing visibility
     public boolean add(IonValue element)
@@ -402,14 +384,6 @@ abstract class IonSequenceLite
         toArray(array);
         clear();
         return array;
-    }
-
-
-    @Override
-    void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
-        throws IOException
-    {
-        throw new IllegalStateException("writeBodyTo is only applicable for scalar values.");
     }
 
     /**

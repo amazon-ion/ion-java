@@ -70,8 +70,8 @@ final class IonSexpLite
     }
 
     @Override
-    public int hashCode(SymbolTableProvider symbolTableProvider) {
-        return sequenceHashCode(HASH_SIGNATURE, symbolTableProvider);
+    int hashSignature() {
+        return HASH_SIGNATURE;
     }
 
     @Override

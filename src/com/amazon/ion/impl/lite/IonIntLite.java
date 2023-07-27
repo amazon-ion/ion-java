@@ -80,29 +80,30 @@ final class IonIntLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode()
     {
         int result = HASH_SIGNATURE;
-
-        if (!isNullValue())  {
-            if (_big_int_value == null)
-            {
-                long lv = longValue();
-                // Throw away top 32 bits if they're not interesting.
-                // Otherwise n and -(n+1) get the same hash code.
-                result ^= (int) lv;
-                int hi_word = (int) (lv >>> 32);
-                if (hi_word != 0 && hi_word != -1)  {
-                    result ^= hi_word;
-                }
-            }
-            else
-            {
-                result = _big_int_value.hashCode();
+        if (_big_int_value == null)
+        {
+            // Throw away top 32 bits if they're not interesting.
+            // Otherwise n and -(n+1) get the same hash code.
+            result ^= (int) _long_value;
+            int hi_word = (int) (_long_value >>> 32);
+            if (hi_word != 0 && hi_word != -1)  {
+                result ^= hi_word;
             }
         }
+        else
+        {
+            result = _big_int_value.hashCode();
+        }
 
-        return hashTypeAnnotations(result, symbolTableProvider);
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -202,11 +203,7 @@ final class IonIntLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        if (isNullValue())
-        {
-            writer.writeNull(IonType.INT);
-        }
-        else if (_big_int_value != null)
+        if (_big_int_value != null)
         {
             writer.writeInt(_big_int_value);
         }

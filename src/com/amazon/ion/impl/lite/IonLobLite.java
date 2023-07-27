@@ -52,17 +52,13 @@ abstract class IonLobLite
      * @param seed Seed value
      * @return hash code
      */
-    protected int lobHashCode(int seed, SymbolTableProvider symbolTableProvider)
+    protected int lobHashCode(int seed)
     {
         int result = seed;
-
-        if (!isNullValue())  {
-            CRC32 crc = new CRC32();
-            crc.update(getBytes());
-            result ^= (int) crc.getValue();
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+        CRC32 crc = new CRC32();
+        crc.update(_lob_value);
+        result ^= (int) crc.getValue();
+        return hashTypeAnnotations(result);
     }
 
     /**

@@ -74,16 +74,15 @@ final class IonBoolLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode()
     {
-        int result = HASH_SIGNATURE;
-
-        if (!isNullValue())
-        {
-            result = booleanValue() ? TRUE_HASH : FALSE_HASH;
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+        int result = _isBoolTrue() ? TRUE_HASH : FALSE_HASH;
+        return hashTypeAnnotations(result);
     }
 
     public boolean booleanValue()
@@ -116,14 +115,7 @@ final class IonBoolLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        if (isNullValue())
-        {
-            writer.writeNull(IonType.BOOL);
-        }
-        else
-        {
-            writer.writeBool(_isBoolTrue());
-        }
+        writer.writeBool(_isBoolTrue());
     }
 
     @Override

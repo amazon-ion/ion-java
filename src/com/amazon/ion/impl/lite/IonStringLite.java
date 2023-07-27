@@ -56,15 +56,17 @@ final class IonStringLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode()
     {
         int result = HASH_SIGNATURE;
+        result ^= _text_value.hashCode();
 
-        if (!isNullValue()) {
-            result ^= stringValue().hashCode();
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -77,7 +79,7 @@ final class IonStringLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        writer.writeString(_get_value());
+        writer.writeString(_text_value);
     }
 
     @Override

@@ -41,6 +41,8 @@ import static java.util.Collections.unmodifiableMap;
 import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.impl._Private_Utils;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -60,30 +62,7 @@ import java.util.NoSuchElementException;
     {
         if (name == null) { throw new NullPointerException(); }
         if (val <= 0) { throw new IllegalArgumentException("Symbol value must be positive: " + val); }
-
-        return new SymbolToken()
-        {
-            public String getText()
-            {
-                return name;
-            }
-
-            public String assumeText()
-            {
-                return name;
-            }
-
-            public int getSid()
-            {
-                return val;
-            }
-
-            @Override
-            public String toString()
-            {
-                return "(symbol '" + getText() + "' " + getSid() + ")";
-            }
-        };
+        return _Private_Utils.newSymbolToken(name, val);
     }
 
     /** Lazy iterator over the symbol names of an iterator of symbol tokens. */

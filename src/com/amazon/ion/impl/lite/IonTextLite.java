@@ -22,7 +22,7 @@ abstract class IonTextLite
     extends IonValueLite
     implements IonText
 {
-    private String _text_value;
+    protected String _text_value;
 
     protected IonTextLite(ContainerlessContext context, boolean isNull)
     {
