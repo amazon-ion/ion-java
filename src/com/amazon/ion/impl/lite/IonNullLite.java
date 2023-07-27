@@ -71,8 +71,13 @@ final class IonNullLite
     }
 
     @Override
-    public int hashCode(SymbolTableProvider symbolTableProvider) {
-        return hashTypeAnnotations(HASH_SIGNATURE, symbolTableProvider);
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    public int scalarHashCode() {
+        return hashTypeAnnotations(HASH_SIGNATURE);
     }
 
 }

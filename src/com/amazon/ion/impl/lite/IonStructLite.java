@@ -282,54 +282,9 @@ final class IonStructLite
 //        }
 //    }
 
-    /**
-     * Implements {@link Object#hashCode()} consistent with equals.
-     * This is insensitive to order of fields.
-     * <p>
-     * This method must follow the contract of {@link Object#equals(Object)},
-     * which is located at {@link Equivalence#ionEquals(IonValue, IonValue)}.
-     *
-     * @return  An int, consistent with the contracts for
-     *          {@link Object#hashCode()} and {@link Object#equals(Object)}.
-     */
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
-    {
-        final int nameHashSalt  = 16777619; // prime to salt name of each Field
-        final int valueHashSalt = 8191;     // prime to salt value of each Field
-        final int sidHashSalt   = 127;      // prime to salt sid of fieldname
-        final int textHashSalt  = 31;       // prime to salt text of fieldname
-
-        int result = HASH_SIGNATURE;
-
-        if (!isNullValue())  {
-            for (IonValue v : this)  {
-                IonValueLite vlite = (IonValueLite) v;
-                // If fieldname's text is unknown, use its sid instead
-                SymbolToken token = vlite.getFieldNameSymbol(symbolTableProvider);
-                String text = token.getText();
-
-                int nameHashCode = text == null
-                    ? token.getSid()  * sidHashSalt
-                    : text.hashCode() * textHashSalt;
-
-                // mixing to account for small text and sid deltas
-                nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
-
-                int fieldHashCode = HASH_SIGNATURE;
-                fieldHashCode = valueHashSalt * fieldHashCode + vlite.hashCode(symbolTableProvider);
-                fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
-
-                // another mix step for each Field of the struct
-                fieldHashCode ^= (fieldHashCode << 19) ^ (fieldHashCode >> 13);
-
-                // Additive hash is used to ensure insensitivity to order of
-                // fields, and will not lose data on value hash codes
-                result += fieldHashCode;
-            }
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+    int hashSignature() {
+        return HASH_SIGNATURE;
     }
 
     public IonStruct cloneAndRemove(String... fieldNames)
@@ -629,38 +584,17 @@ final class IonStructLite
     }
 
     @Override
-    public ListIterator<IonValue> listIterator(int index) {
-        return new SequenceContentIterator(index, isReadOnly()) {
-            @Override
-            public void remove() {
-                if (__readOnly) {
-                    throw new UnsupportedOperationException();
-                }
-                force_position_sync();
+    void beforeIteratorRemove(IonValueLite value, int idx) {
+        if (_field_map != null) {
+            remove_field_from_field_map(value.getFieldName(), idx);
+        }
+    }
 
-                int idx = __pos;
-                if (!__lastMoveWasPrevious) {
-                    // position is 1 ahead of the array index
-                    idx--;
-                }
-                if (idx < 0) {
-                    throw new ArrayIndexOutOfBoundsException();
-                }
-
-                IonValueLite concrete = __current;
-                int concrete_idx = concrete._elementid();
-                assert(concrete_idx == idx);
-
-                if (_field_map != null) {
-                    remove_field_from_field_map(concrete.getFieldName(), idx);
-                }
-                super.remove();
-
-                if (_field_map != null) {
-                    patch_map_elements_helper(idx);
-                }
-            }
-        };
+    @Override
+    void afterIteratorRemove(IonValueLite value, int idx) {
+        if (_field_map != null) {
+            patch_map_elements_helper(idx);
+        }
     }
 
     public IonValue remove(String fieldName)
@@ -793,13 +727,6 @@ final class IonStructLite
         {
             throw new NullPointerException("fieldName is null");
         }
-    }
-
-    @Override
-    final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
-        throws IOException
-    {
-        throw new IllegalStateException("writeBodyTo is only applicable for scalar values.");
     }
 
     @Override

@@ -72,14 +72,14 @@ final class IonTimestampLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider) {
-        int result = HASH_SIGNATURE;
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
 
-        if (!isNullValue())  {
-            result ^= timestampValue().hashCode();
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+    @Override
+    int scalarHashCode() {
+        int result = HASH_SIGNATURE ^ _timestamp_value.hashCode();
+        return hashTypeAnnotations(result);
     }
 
     @Override

@@ -82,23 +82,26 @@ final class IonDecimalLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode()
     {
         int result = HASH_SIGNATURE;
 
         // This is consistent with Decimal.equals(Object), and with Equivalence
         // strict equality checks between two IonDecimals.
-        if (!isNullValue())  {
-            Decimal dec = decimalValue();
-            result ^= dec.hashCode();
+        Decimal dec = decimalValue();
+        result ^= dec.hashCode();
 
-            if (dec.isNegativeZero())
-            {
-                result ^= NEGATIVE_ZERO_HASH_SIGNATURE;
-            }
+        if (dec.isNegativeZero())
+        {
+            result ^= NEGATIVE_ZERO_HASH_SIGNATURE;
         }
 
-        return hashTypeAnnotations(result, symbolTableProvider);
+        return hashTypeAnnotations(result);
     }
 
     @Override

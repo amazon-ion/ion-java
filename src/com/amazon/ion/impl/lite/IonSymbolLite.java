@@ -101,28 +101,26 @@ final class IonSymbolLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider)
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode()
     {
         final int sidHashSalt   = 127;      // prime to salt sid
         final int textHashSalt  = 31;       // prime to salt text
         int result = HASH_SIGNATURE;
+        int tokenHashCode = _text_value == null
+            ? _sid  * sidHashSalt
+            : _text_value.hashCode() * textHashSalt;
 
-        if (!isNullValue())
-        {
-            SymbolToken token = symbolValue(symbolTableProvider);
-            String text = token.getText();
+        // mixing to account for small text and sid deltas
+        tokenHashCode ^= (tokenHashCode << 29) ^ (tokenHashCode >> 3);
 
-            int tokenHashCode = text == null
-                ? token.getSid()  * sidHashSalt
-                : text.hashCode() * textHashSalt;
+        result ^= tokenHashCode;
 
-            // mixing to account for small text and sid deltas
-            tokenHashCode ^= (tokenHashCode << 29) ^ (tokenHashCode >> 3);
-
-            result ^= tokenHashCode;
-        }
-
-        return hashTypeAnnotations(result, symbolTableProvider);
+        return hashTypeAnnotations(result);
     }
 
     @Override
@@ -291,7 +289,13 @@ final class IonSymbolLite
         // we throw (cannot serialize) or do we pass the sid thru???
 
         // NB! This will throw if symbol is not set
-        writer.writeSymbolToken(symbolValue(symbolTableProvider));
+        String text = _stringValue(symbolTableProvider);
+        if (text != null) {
+            writer.writeSymbol(text);
+        } else {
+            writer.writeSymbolToken(_Private_Utils.newSymbolToken(getSymbolId(symbolTableProvider)));
+        }
+
     }
 
     @Override

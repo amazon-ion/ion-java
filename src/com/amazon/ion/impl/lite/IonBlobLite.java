@@ -57,8 +57,13 @@ final class IonBlobLite
     }
 
     @Override
-    int hashCode(SymbolTableProvider symbolTableProvider) {
-        return lobHashCode(HASH_SIGNATURE, symbolTableProvider);
+    int hashSignature() {
+        return HASH_SIGNATURE;
+    }
+
+    @Override
+    int scalarHashCode() {
+        return lobHashCode(HASH_SIGNATURE);
     }
 
     @Override
