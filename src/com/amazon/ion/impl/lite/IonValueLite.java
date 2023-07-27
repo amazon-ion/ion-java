@@ -36,7 +36,6 @@ import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_IonWriter;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
@@ -82,6 +81,10 @@ abstract class IonValueLite
 
     // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
     private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+
+    // 'withCharsetAscii' is only specified for consistency with the behavior of the previous implementation of
+    // toString. Technically users are not allowed to rely on a canonical encoding, but in practice they often do.
+    private static final IonTextWriterBuilder DEFAULT_TO_STRING_WRITER_BUILDER = IonTextWriterBuilder.standard().withCharsetAscii().immutable();
 
     /**
      * Used by subclasses to retrieve metadata set by
@@ -930,17 +933,7 @@ abstract class IonValueLite
     @Override
     public String toString()
     {
-        StringBuilder buf = new StringBuilder(1024);
-        try
-        {
-            Printer p = new Printer();
-            p.print(this, buf);
-        }
-        catch (IOException e)
-        {
-            throw new IonException(e);
-        }
-        return buf.toString();
+        return toString(DEFAULT_TO_STRING_WRITER_BUILDER);
     }
 
     public String toString(IonTextWriterBuilder writerBuilder)

@@ -27,7 +27,6 @@ import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.streaming.ReaderCompare;
 import com.amazon.ion.streaming.RoundTripStreamingTest;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.util.Printer;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -79,7 +78,6 @@ public class RoundTripTest
     public static final BinaryEncoderType[] BINARY_ENCODER_TYPES =
         BinaryEncoderType.values();
 
-    private Printer             myPrinter;
     private StringBuilder       myBuilder;
     private File                myTestFile;
     private BinaryEncoderType   myBinaryEncoderType;
@@ -100,7 +98,6 @@ public class RoundTripTest
     throws Exception
     {
         super.setUp();
-        myPrinter = new Printer();
         myBuilder = new StringBuilder();
     }
 
@@ -109,7 +106,6 @@ public class RoundTripTest
     public void tearDown()
     throws Exception
     {
-        myPrinter = null;
         myBuilder = null;
         super.tearDown();
     }
@@ -118,11 +114,10 @@ public class RoundTripTest
     private String renderSystemView(IonDatagram datagram)
     throws IOException
     {
-        // TODO use Printer in raw mode.
         for (Iterator i = datagram.systemIterator(); i.hasNext();)
         {
             IonValue value = (IonValue) i.next();
-            myPrinter.print(value, myBuilder);
+            myBuilder.append(value.toString());
             myBuilder.append('\n');
         }
 
@@ -134,11 +129,10 @@ public class RoundTripTest
     private String renderUserView(IonDatagram datagram)
     throws IOException
     {
-        // TODO use Printer in raw mode.
         for (Iterator i = datagram.iterator(); i.hasNext();)
         {
             IonValue value = (IonValue) i.next();
-            myPrinter.print(value, myBuilder);
+            myBuilder.append(value.toString());
             myBuilder.append('\n');
         }
 
