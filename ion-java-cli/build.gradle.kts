@@ -17,12 +17,6 @@ dependencies {
     implementation(rootProject)
 }
 
-sourceSets {
-    main {
-        java.srcDir("src")
-    }
-}
-
 application {
     mainClass.set("com.amazon.tools.cli.IonJavaCli")
 }
