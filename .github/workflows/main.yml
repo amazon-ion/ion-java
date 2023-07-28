@@ -33,6 +33,10 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           files: build/reports/jacoco/test/jacocoTestReport.xml
+      - uses: actions/upload-artifact@v3
+        with:
+          name: spotbugs-report
+          path: build/reports/spotbugs/
 
   check-version:
     # Ensures that the version is not a release (i.e. -SNAPSHOT) or if it is a release version,

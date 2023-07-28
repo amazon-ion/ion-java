@@ -79,9 +79,6 @@ tasks {
     spotbugsMain {
         val spotbugsBaselineFile = "$rootDir/config/spotbugs/baseline.xml"
 
-        // CI=true means we're in a CI workflow
-        // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-        val ciWorkflow = System.getenv()["CI"].toBoolean()
         val baselining = project.hasProperty("baseline") // e.g. `./gradlew :spotbugsMain -Pbaseline`
 
         if (!baselining) {
@@ -90,9 +87,9 @@ tasks {
 
         // The plugin only prints to console when no reports are configured
         // See: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/172
-        if (!ciWorkflow && !baselining) {
+        if (!baselining) {
             reports.create("html").required.set(true)
-        } else if (baselining) {
+        } else {
             // Note this path succeeds :spotbugsMain because *of course it does*
             ignoreFailures = true
             reports.create("xml") {
