@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * <p>
@@ -101,6 +102,12 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
          * The byte position of the end of the container.
          */
         private int endPosition;
+
+        private ContainerInfo initialize(final IonType type, final int endPosition) {
+            this.type = type;
+            this.endPosition = endPosition;
+            return this;
+        }
     }
 
     /**
@@ -108,16 +115,6 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
      */
     private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION =
         IonBufferConfiguration.Builder.standard().build();
-
-    // Constructs ContainerInfo instances.
-    private static final _Private_RecyclingStack.ElementFactory<ContainerInfo> CONTAINER_INFO_FACTORY =
-        new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
-
-        @Override
-        public ContainerInfo newElement() {
-            return new ContainerInfo();
-        }
-    };
 
     // Symbol IDs for symbols contained in the system symbol table.
     private static class SystemSymbolIDs {
@@ -361,12 +358,13 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         }
         lookahead = new IonReaderLookaheadBuffer(configuration, inputStream);
         buffer = (ResizingPipedInputStream) lookahead.getPipe();
-        containerStack = new _Private_RecyclingStack<ContainerInfo>(
-            CONTAINER_STACK_INITIAL_CAPACITY,
-            CONTAINER_INFO_FACTORY
+        containerStack = new _Private_RecyclingStack<>(
+                CONTAINER_STACK_INITIAL_CAPACITY,
+                ContainerInfo::new
         );
+
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
-        symbols = new ArrayList<String>(SYMBOLS_LIST_INITIAL_CAPACITY);
+        symbols = new ArrayList<>(SYMBOLS_LIST_INITIAL_CAPACITY);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         resetImports();
     }
@@ -512,10 +510,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             // NOTE: once ImportLocation is available via the SymbolToken interface, it should be compared here
             // when text is null.
             SymbolToken other = (SymbolToken) o;
-            if(getText() == null || other.getText() == null) {
-                return getText() == other.getText();
-            }
-            return getText().equals(other.getText());
+            return Objects.equals(getText(), other.getText());
         }
 
         @Override
@@ -567,8 +562,8 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
             maxId = importsMaxId + numberOfLocalSymbols;
             // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
             // It is not expected to grow.
-            listView = new ArrayList<String>(symbols.subList(0, numberOfLocalSymbols));
-            mapView = new HashMap<String, Integer>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
+            listView = new ArrayList<>(symbols.subList(0, numberOfLocalSymbols));
+            mapView = new HashMap<>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
             for (int i = 0; i < numberOfLocalSymbols; i++) {
                 String symbol = listView.get(i);
                 if (symbol != null) {
@@ -853,7 +848,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
     private SymbolToken getSymbolToken(int sid) {
         int symbolTableSize = maxSymbolId() + 1;
         if (symbolTokensById == null) {
-            symbolTokensById = new ArrayList<SymbolToken>(symbolTableSize);
+            symbolTokensById = new ArrayList<>(symbolTableSize);
         }
         if (symbolTokensById.size() < symbolTableSize) {
             for (int i = symbolTokensById.size(); i < symbolTableSize; i++) {
@@ -908,7 +903,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
                     peekIndex = currentValueEndPosition;
                 } else if (typeID.type == IonType.LIST) {
                     resetImports();
-                    newImports = new ArrayList<SymbolTable>(3);
+                    newImports = new ArrayList<>(3);
                     newImports.add(getSystemSymbolTable());
                     stepIn();
                     IonType type = next();
@@ -1204,9 +1199,7 @@ class IonReaderBinaryIncremental implements IonReader, _Private_ReaderWriter, _P
         }
         // Note: the IonReader interface dictates that stepping into a null container has the same behavior as
         // an empty container.
-        ContainerInfo containerInfo = containerStack.push();
-        containerInfo.type = valueType;
-        containerInfo.endPosition = valueEndPosition;
+        containerStack.push(c -> c.initialize(valueType, valueEndPosition));
         valueType = null;
         valueTypeID = null;
         valueEndPosition = -1;
