@@ -104,17 +104,6 @@ import java.util.List;
         return (((long) index) * allocator.getBlockSize()) + current.limit;
     }
 
-    private static final int OCTET_MASK = 0xFF;
-
-    /** Returns the octet at the logical position given. */
-    public int getUInt8At(final long position)
-    {
-        final int index = index(position);
-        final int offset = offset(position);
-        final Block block = blocks.get(index);
-        return block.data[offset] & OCTET_MASK;
-    }
-
     /** Writes a single octet to the buffer, expanding if necessary. */
     public void writeByte(final byte octet)
     {
@@ -1266,10 +1255,14 @@ import java.util.List;
     {
         final int index = index(position);
         final int offset = offset(position);
-
         // XXX we'll never overrun a block unless we're given a position past our block array
         final Block block = blocks.get(index);
-        block.data[offset] = (byte) value;
+        long bitValue = block.data[offset];
+        if (value <= 0xD) {
+            block.data[offset] = (byte) (bitValue & 0xF0 | value) ;
+        } else {
+            block.data[offset] = (byte) value;
+        }
     }
 
     /** Get the length of FlexInt for the provided value. */

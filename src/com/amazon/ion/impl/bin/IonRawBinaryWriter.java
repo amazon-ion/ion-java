@@ -747,21 +747,18 @@ import java.util.NoSuchElementException;
                 // The number of bytes we need to shift by is determined by the writer's preallocation mode.
                 final int numberOfBytesToShiftBy = preallocationMode.numberOfLengthBytes();
 
-                // `length` is the encoded length of the container/wrapper we're stepping out of. It does not
-                // include any header bytes. In this `if` branch, we've confirmed that `length` is <= 0xD,
-                // so this downcast from `long` to `int` is safe.
-                final int lengthOfSliceToShift = (int) length;
-
                 // Shift the container/wrapper body backwards in the buffer. Because this only happens when
                 // `lengthOfSliceToShift` is 13 or fewer bytes, this will usually be a very fast memcpy.
                 // It's slightly more work if the slice we're shifting happens to straddle two memory blocks
                 // inside the buffer.
-                buffer.shiftBytesLeft(lengthOfSliceToShift, numberOfBytesToShiftBy);
+                // `length` is the encoded length of the container/wrapper we're stepping out of. It does not
+                // include any header bytes. In this `if` branch, we've confirmed that `length` is <= 0xD,
+                // so this downcast from `long` to `int` is safe.
+                buffer.shiftBytesLeft((int)length, numberOfBytesToShiftBy);
 
                 // Overwrite the lower nibble of the original type descriptor byte with the body's encoded length.
                 final long typeDescriptorPosition = positionOfFirstLengthByte - 1;
-                final long type = (buffer.getUInt8At(typeDescriptorPosition) & 0xF0) | length;
-                buffer.writeUInt8At(typeDescriptorPosition, type);
+                buffer.writeUInt8At(typeDescriptorPosition, length);
 
                 // We've reclaimed some number of bytes; adjust the container length as appropriate.
                 length -= numberOfBytesToShiftBy;
