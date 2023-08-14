@@ -157,7 +157,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * The index at which the next byte received will be written. Always greater than or equal to `offset`.
      */
-    private long limit;
+    long limit;
 
     /**
      * A slice of the current buffer.
@@ -553,6 +553,9 @@ class IonCursorBinary implements IonCursor {
         int b = -1;
         try {
             b = refillableState.inputStream.read();
+        } catch (EOFException e) {
+            // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
+            // to read than are currently available (e.g. if a header or trailer is incomplete).
         } catch (IOException e) {
             throwAsIonException(e);
         }
@@ -630,6 +633,9 @@ class IonCursorBinary implements IonCursor {
         int numberOfBytesFilled = -1;
         try {
             numberOfBytesFilled = refillableState.inputStream.read(buffer, (int) limit, (int) numberOfBytesToFill);
+        } catch (EOFException e) {
+            // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
+            // to read than are currently available (e.g. if a header or trailer is incomplete).
         } catch (IOException e) {
             throwAsIonException(e);
         }

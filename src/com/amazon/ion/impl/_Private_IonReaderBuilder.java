@@ -12,6 +12,7 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -90,6 +91,96 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         protected void mutationCheck() {
         }
 
+    }
+
+    /**
+     * InputStream that reads from exactly two delegate InputStreams in sequence. The second delegate remains
+     * in place even if it indicates EOF during a read call. This behavior differentiates this implementation from
+     * SequenceInputStream, which will return EOF forever after its final delegate returns EOF for the first time.
+     * The TwoElementSequenceInputStream allows the second delegate InputStream to return valid data if it subsequently
+     * receives more data, which is common when performing continuable reads.
+     */
+    private static final class TwoElementSequenceInputStream extends InputStream {
+
+        /**
+         * The first InputStream in the sequence.
+         */
+        private final InputStream first;
+
+        /**
+         * The last InputStream in the sequence.
+         */
+        private final InputStream last;
+
+        /**
+         * The current InputStream.
+         */
+        private InputStream in;
+
+        /**
+         * Constructor.
+         * @param first first InputStream in the sequence.
+         * @param last last InputStream in the sequence.
+         */
+        private TwoElementSequenceInputStream(final InputStream first, final InputStream last) {
+            this.first = first;
+            this.last = last;
+            this.in = first;
+        }
+
+        @Override
+        public int available() throws IOException {
+            return first.available() + last.available();
+        }
+
+        @Override
+        public int read() throws IOException {
+            int b = in.read();
+            if (b < 0 && in == first) {
+                in = last;
+                b = in.read();
+            }
+            return b;
+        }
+
+        @Override
+        public int read(final byte[] b, final int off, final int len) throws IOException {
+            int bytesToRead = len;
+            int bytesRead = 0;
+            int destinationOffset = off;
+            while (true) {
+                int bytesReadThisIteration = in.read(b, destinationOffset, bytesToRead);
+                if (bytesReadThisIteration < 0) {
+                    if (in == first) {
+                        in = last;
+                        continue;
+                    }
+                    break;
+                }
+                bytesRead += bytesReadThisIteration;
+                if (bytesRead == len) {
+                    break;
+                } else if (in == last) {
+                    // There's no other source of bytes, so return fewer bytes than requested.
+                    break;
+                }
+                bytesToRead -= bytesReadThisIteration;
+                destinationOffset += bytesReadThisIteration;
+            }
+            if (bytesRead > 0) {
+                return bytesRead;
+            }
+            return -1;
+        }
+
+        @Override
+        public void close() throws IOException {
+            try {
+                first.close();
+            } finally {
+                last.close();
+            }
+        }
     }
 
     @FunctionalInterface
@@ -209,9 +300,14 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         if (startsWithGzipHeader(possibleIVM, bytesRead)) {
             try {
                 ionData = new GZIPInputStream(
-                    new SequenceInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
+                    new TwoElementSequenceInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
                 );
-                bytesRead = ionData.read(possibleIVM);
+                try {
+                    bytesRead = ionData.read(possibleIVM);
+                } catch (EOFException e) {
+                    // Only a GZIP header was available, so this may be a binary Ion stream.
+                    bytesRead = 0;
+                }
             } catch (IOException e) {
                 throw new IonException(e);
             }
@@ -221,7 +317,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
         InputStream wrapper;
         if (bytesRead > 0) {
-            wrapper = new SequenceInputStream(
+            wrapper = new TwoElementSequenceInputStream(
                 new ByteArrayInputStream(possibleIVM, 0, bytesRead),
                 ionData
             );
