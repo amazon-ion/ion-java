@@ -130,17 +130,26 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         });
         registerOversizedValueHandler(
             () -> {
-                if (
-                    state != State.READING_VALUE || // The reader is currently processing a symbol table.
-                    (
-                        parent == null && hasAnnotations && ( // The reader is on an annotated top-level value.
-                            // The value's type is not yet known; it might be a symbol table.
-                            super.getType() == null ||
-                            // The value's type is known. It can be determined whether it is a symbol table.
-                            isPositionedOnSymbolTable()
-                        )
-                    )
-                ) {
+                boolean mightBeSymbolTable = true;
+                if (state == State.READING_VALUE) {
+                    // The reader is not currently processing a symbol table.
+                    if (parent != null || !hasAnnotations) {
+                        // The value is either not at the top level, or is unannotated, so it cannot be a symbol table.
+                        mightBeSymbolTable = false;
+                    } else if (annotationSequenceMarker.startIndex >= 0 && annotationSequenceMarker.endIndex <= limit) {
+                        // The annotations on the value are available.
+                        if (startsWithIonSymbolTable()) {
+                            // The first annotation on the value is $ion_symbol_table. It may be a symbol table if
+                            // its type is not yet known (null); it is definitely a symbol table if its type is STRUCT.
+                            IonType type = super.getType();
+                            mightBeSymbolTable = type == null || type == IonType.STRUCT;
+                        } else {
+                            // The first annotation on the value is not $ion_symbol_table, so it cannot be a symbol table.
+                            mightBeSymbolTable = false;
+                        }
+                    }
+                }
+                if (mightBeSymbolTable) {
                     builder.getBufferConfiguration().getOversizedSymbolTableHandler().onOversizedSymbolTable();
                     terminate();
                 } else {
