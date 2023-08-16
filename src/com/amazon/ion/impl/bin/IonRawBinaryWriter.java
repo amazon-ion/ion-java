@@ -758,8 +758,7 @@ import java.util.NoSuchElementException;
 
                 // Overwrite the lower nibble of the original type descriptor byte with the body's encoded length.
                 final long typeDescriptorPosition = positionOfFirstLengthByte - 1;
-                buffer.writeUInt8At(typeDescriptorPosition, length);
-
+                buffer.writeLowerNibbleAt(typeDescriptorPosition, length);
                 // We've reclaimed some number of bytes; adjust the container length as appropriate.
                 length -= numberOfBytesToShiftBy;
             }

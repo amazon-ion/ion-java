@@ -1257,12 +1257,20 @@ import java.util.List;
         final int offset = offset(position);
         // XXX we'll never overrun a block unless we're given a position past our block array
         final Block block = blocks.get(index);
+        block.data[offset] = (byte) value;
+    }
+
+    /**
+     * Overwrite the lower nibble of the specified type descriptor byte with the length information.
+     * @param position represents the position of the byte that will be overwritten.
+     * @param value represents the length value of the container.
+     */
+    public void writeLowerNibbleAt(final long position, final long value) {
+        final int index = index(position);
+        final int offset = offset(position);
+        final Block block = blocks.get(index);
         long bitValue = block.data[offset];
-        if (value <= 0xD) {
-            block.data[offset] = (byte) (bitValue & 0xF0 | value) ;
-        } else {
-            block.data[offset] = (byte) value;
-        }
+        block.data[offset] = (byte) (bitValue & 0xF0 | value) ;
     }
 
     /** Get the length of FlexInt for the provided value. */
