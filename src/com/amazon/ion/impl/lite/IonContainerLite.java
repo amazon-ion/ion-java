@@ -457,30 +457,6 @@ abstract class IonContainerLite
         return get_child_count();
     }
 
-    @Override
-    void makeReadOnlyInternal()
-    {
-        if (_isLocked()) return;
-
-        if (_children != null) {
-            for (int ii=0; ii<_child_count; ii++) {
-                IonValueLite child = _children[ii];
-                child.makeReadOnlyInternal();
-            }
-        }
-        // we don't need to call our copy of clear symbol ID's
-        // which recurses since the calls to child.makeReadOnly
-        // will have clear out the child symbol ID's already
-        // as the children were marked read only.  But we do need
-        // to call the base clear which will clear out the symbol
-        // table reference if one exists.
-        super.clearSymbolIDValues();
-        _isLocked(true);
-    }
-
-
-
-
     /**
      * methods from IonValue
      *
@@ -523,22 +499,6 @@ abstract class IonContainerLite
     public final SymbolTable getContextSymbolTable()
     {
         return null;
-    }
-
-    @Override
-    boolean attemptClearSymbolIDValues()
-    {
-        boolean symbolIDsAllCleared = super.attemptClearSymbolIDValues();
-
-        for (int ii = 0; ii < get_child_count(); ii++)
-        {
-            IonValueLite child = get_child(ii);
-            // NOTE: recursion is done to #clearSymbolIDValues rather than #attemptClearSymbolIDValues in order to
-            // set the SYMBOL ID PRESENT status flag correctly.
-            symbolIDsAllCleared &= child.clearSymbolIDValues();
-        }
-
-        return symbolIDsAllCleared;
     }
 
     /**

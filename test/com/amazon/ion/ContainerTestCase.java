@@ -153,6 +153,42 @@ public abstract class ContainerTestCase
         assertTrue(c.isReadOnly());
     }
 
+    @Test
+    public void testNestedNonEmptyMakeReadOnly()
+    {
+        IonSystem s = system();
+        IonContainer c = wrap(s.newList(s.newString("s")), s.newInt(2), s.newDecimal(3));
+        c.makeReadOnly();
+        assertEquals(3, c.size());
+        assertTrue(c.isReadOnly());
+        IonValue first = c.iterator().next();
+        assertTrue(first.isReadOnly());
+
+        try
+        {
+            add(c, system().newNull());
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        try
+        {
+            c.remove(first);
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        try
+        {
+            ((IonString)((IonList)first).listIterator().next()).setValue("changed");
+            fail("expected exception");
+        }
+        catch (ReadOnlyValueException e) { }
+
+        assertEquals(3, c.size());
+        assertTrue(c.isReadOnly());
+    }
+
 
     /**
      * Clears a container and verifies that it is not a <code>null</code>
