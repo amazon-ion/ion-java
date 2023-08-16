@@ -457,30 +457,6 @@ abstract class IonContainerLite
         return get_child_count();
     }
 
-    @Override
-    void makeReadOnlyInternal()
-    {
-        if (_isLocked()) return;
-
-        if (_children != null) {
-            for (int ii=0; ii<_child_count; ii++) {
-                IonValueLite child = _children[ii];
-                child.makeReadOnlyInternal();
-            }
-        }
-        // we don't need to call our copy of clear symbol ID's
-        // which recurses since the calls to child.makeReadOnly
-        // will have clear out the child symbol ID's already
-        // as the children were marked read only.  But we do need
-        // to call the base clear which will clear out the symbol
-        // table reference if one exists.
-        super.clearSymbolIDValues();
-        _isLocked(true);
-    }
-
-
-
-
     /**
      * methods from IonValue
      *

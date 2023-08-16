@@ -964,8 +964,32 @@ abstract class IonValueLite
 
     void makeReadOnlyInternal()
     {
-        clearSymbolIDValues();
-        _isLocked(true);
+        IonContainerLite.SequenceContentIterator[] iteratorStack = new IonContainerLite.SequenceContentIterator[CONTAINER_STACK_INITIAL_CAPACITY];
+        int iteratorStackIndex = -1;
+        IonContainerLite.SequenceContentIterator currentIterator = null;
+        IonValueLite value = this;
+        do {
+            if (!(value instanceof IonContainerLite)) {
+                clearSymbolIDValues();
+                _isLocked(true);
+            } else {
+                if (++iteratorStackIndex >= iteratorStack.length) {
+                    iteratorStack = growIteratorStack(iteratorStack);
+                }
+                currentIterator = ((IonContainerLite) value).new SequenceContentIterator(0, true);
+                iteratorStack[iteratorStackIndex] = currentIterator;
+            }
+            do {
+                if (currentIterator == null) {
+                    return;
+                }
+                value = currentIterator.nextOrNull();
+                if (value == null) {
+                    iteratorStack[iteratorStackIndex] = null; // Allow this to be garbage collected
+                    currentIterator = (iteratorStackIndex == 0) ? null : iteratorStack[--iteratorStackIndex];
+                }
+            } while (value == null);
+        } while (true);
     }
 
     /**
