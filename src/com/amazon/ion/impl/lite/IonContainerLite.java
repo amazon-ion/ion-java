@@ -501,22 +501,6 @@ abstract class IonContainerLite
         return null;
     }
 
-    @Override
-    boolean attemptClearSymbolIDValues()
-    {
-        boolean symbolIDsAllCleared = super.attemptClearSymbolIDValues();
-
-        for (int ii = 0; ii < get_child_count(); ii++)
-        {
-            IonValueLite child = get_child(ii);
-            // NOTE: recursion is done to #clearSymbolIDValues rather than #attemptClearSymbolIDValues in order to
-            // set the SYMBOL ID PRESENT status flag correctly.
-            symbolIDsAllCleared &= child.clearSymbolIDValues();
-        }
-
-        return symbolIDsAllCleared;
-    }
-
     /**
      * @param child
      */
