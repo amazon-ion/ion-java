@@ -651,7 +651,9 @@ abstract class IonValueLite
                 if (++clearSymbolIDsHolderStackIndex >= clearSymbolIDsHolderStack.length) {
                     clearSymbolIDsHolderStack = growClearSymbolIDsHolderStack(clearSymbolIDsHolderStack);
                 }
-                currentClearSymbolIDsHolder = new ClearSymbolIDsHolder();
+                if (clearSymbolIDsHolderStack[clearSymbolIDsHolderStackIndex] == null) {
+                    currentClearSymbolIDsHolder = new ClearSymbolIDsHolder();
+                }
                 currentClearSymbolIDsHolder.parent = (IonContainerLite) value;
                 currentClearSymbolIDsHolder.iterator = currentClearSymbolIDsHolder.parent.new SequenceContentIterator(
                         0,
@@ -674,7 +676,6 @@ abstract class IonValueLite
                         currentClearSymbolIDsHolder.parent._isLocked(true);
                     }
 
-                    clearSymbolIDsHolderStack[clearSymbolIDsHolderStackIndex] = null; // Allow this to be garbage collected
                     currentClearSymbolIDsHolder = (clearSymbolIDsHolderStackIndex == 0) ? null :
                             clearSymbolIDsHolderStack[--clearSymbolIDsHolderStackIndex];
                 }
@@ -1040,7 +1041,13 @@ abstract class IonValueLite
     }
 
     void makeReadOnlyInternal() {
-        clearSymbolIDsIterative(true);
+        if (this instanceof IonContainerLite)
+        {
+            clearSymbolIDsIterative(true);
+        } else {
+            scalarClearSymbolIDValues();
+            this._isLocked(true);
+        }
     }
 
     /**
