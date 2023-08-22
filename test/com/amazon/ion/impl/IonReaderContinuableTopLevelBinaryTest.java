@@ -1296,12 +1296,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     private static void assertSymbolEquals(
         String expectedText,
-        ImportLocation expectedImportLocation,
         SymbolToken actual
     ) {
         assertEquals(expectedText, actual.getText());
-        SymbolTokenWithImportLocation impl = (SymbolTokenWithImportLocation) actual;
-        assertEquals(expectedImportLocation, impl.getImportLocation());
     }
 
     @Test
@@ -1310,18 +1307,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.SYMBOL);
-        assertSymbolEquals("foo", null, reader.getFieldNameSymbol());
+        assertSymbolEquals("foo", reader.getFieldNameSymbol());
         SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
         assertEquals(1, annotations.length);
-        assertSymbolEquals("uvw", null, annotations[0]);
-        assertSymbolEquals("abc", null, reader.symbolValue());
+        assertSymbolEquals("uvw", annotations[0]);
+        assertSymbolEquals("abc", reader.symbolValue());
         nextExpect(IonType.SYMBOL);
-        assertSymbolEquals("bar", null, reader.getFieldNameSymbol());
+        assertSymbolEquals("bar", reader.getFieldNameSymbol());
         annotations = reader.getTypeAnnotationSymbols();
         assertEquals(2, annotations.length);
-        assertSymbolEquals("qrs", null, annotations[0]);
-        assertSymbolEquals("xyz", null, annotations[1]);
-        assertSymbolEquals("def", null, reader.symbolValue());
+        assertSymbolEquals("qrs", annotations[0]);
+        assertSymbolEquals("xyz", annotations[1]);
+        assertSymbolEquals("def", reader.symbolValue());
         stepOut();
         nextExpect(null);
         closeAndCount();
@@ -1815,36 +1812,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(IonType.SYMBOL);
         expectString("def");
         nextExpect(IonType.SYMBOL);
-        SymbolTokenWithImportLocation symbolValue =
-            (SymbolTokenWithImportLocation) reader.symbolValue();
+        SymbolToken symbolValue = reader.symbolValue();
         assertNull(symbolValue.getText());
-        assertEquals(new ImportLocation("foo", 3), symbolValue.getImportLocation());
         nextExpect(IonType.SYMBOL);
-        symbolValue = (SymbolTokenWithImportLocation) reader.symbolValue();
+        symbolValue = reader.symbolValue();
         assertNull(symbolValue.getText());
-        assertEquals(new ImportLocation("foo", 4), symbolValue.getImportLocation());
         nextExpect(IonType.SYMBOL);
         assertEquals("123", reader.stringValue());
         nextExpect(IonType.SYMBOL);
-        symbolValue = (SymbolTokenWithImportLocation) reader.symbolValue();
-        assertEquals(
-            new SymbolTokenWithImportLocation(
-                null,
-                15,
-                new ImportLocation("baz", 1)
-            ),
-            symbolValue
-        );
+        symbolValue = reader.symbolValue();
+        assertEquals(new SymbolTokenImpl(null, 15), symbolValue);
         nextExpect(IonType.SYMBOL);
-        symbolValue = (SymbolTokenWithImportLocation) reader.symbolValue();
-        assertEquals(
-            new SymbolTokenWithImportLocation(
-                null,
-                16,
-                new ImportLocation("baz", 2)
-            ),
-            symbolValue
-        );
+        symbolValue = reader.symbolValue();
+        assertEquals(new SymbolTokenImpl(null, 16), symbolValue);
         nextExpect(null);
         closeAndCount();
     }
