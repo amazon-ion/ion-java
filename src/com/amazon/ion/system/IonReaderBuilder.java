@@ -45,7 +45,6 @@ public abstract class IonReaderBuilder
     private IonCatalog catalog = null;
     private boolean isIncrementalReadingEnabled = false;
     private IonBufferConfiguration bufferConfiguration = null;
-    private boolean isAnnotationIteratorReuseEnabled = true;
 
     protected IonReaderBuilder()
     {
@@ -56,7 +55,6 @@ public abstract class IonReaderBuilder
         this.catalog = that.catalog;
         this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
         this.bufferConfiguration = that.bufferConfiguration;
-        this.isAnnotationIteratorReuseEnabled = that.isAnnotationIteratorReuseEnabled;
     }
 
     /**
@@ -179,10 +177,6 @@ public abstract class IonReaderBuilder
      * may be enabled via this option.
      * </p>
      * <p>
-     * When this option is enabled, annotation iterators are reused by default, improving performance.
-     * See {@link #withAnnotationIteratorReuseEnabled(boolean)} for more information and to disable that option.
-     * </p>
-     * <p>
      * There is one caveat to note when using this option: the incremental implementation must be able to buffer an
      * entire top-level value in memory. This will not be a problem for the vast majority of Ion streams, as it is rare
      * for a single top-level value or symbol table to exceed a few megabytes in size. However, if the size of the
@@ -264,63 +258,6 @@ public abstract class IonReaderBuilder
      */
     public IonBufferConfiguration getBufferConfiguration() {
         return bufferConfiguration;
-    }
-
-    /**
-     * <p>
-     * Determines whether readers will reuse the annotation iterator returned by
-     * {@link IonReader#iterateTypeAnnotations()}. When enabled, the returned iterator remains valid only while the
-     * reader remains positioned at the current value; storing the iterator and iterating its values after that will
-     * cause undefined behavior. This provides improved performance and memory efficiency when frequently iterating
-     * annotations. When disabled, the returned iterator may be stored and used to retrieve the annotations that were
-     * on the value at the reader's position at the time of the call, regardless of where the reader is currently
-     * positioned.
-     * </p>
-     * <p>
-     * Currently, this option only has an effect when incremental reading is enabled (see
-     * {@link #withIncrementalReadingEnabled(boolean)}). In that case, it is enabled by default. Non-incremental readers
-     * always act as if this option were disabled.
-     * </p>
-     * @param isEnabled true if the option is enabled; otherwise, false.
-     *
-     * @return this builder instance, if mutable;
-     * otherwise a mutable copy of this builder.
-     *
-     * @see #setAnnotationIteratorReuseEnabled()
-     * @see #setAnnotationIteratorReuseDisabled()
-     */
-    public IonReaderBuilder withAnnotationIteratorReuseEnabled(boolean isEnabled) {
-        IonReaderBuilder b = mutable();
-        if (isEnabled) {
-            b.setAnnotationIteratorReuseEnabled();
-        } else {
-            b.setAnnotationIteratorReuseDisabled();
-        }
-        return b;
-    }
-
-    /**
-     * @see #withAnnotationIteratorReuseEnabled(boolean)
-     */
-    public void setAnnotationIteratorReuseEnabled() {
-        mutationCheck();
-        isAnnotationIteratorReuseEnabled = true;
-    }
-
-    /**
-     * @see #withAnnotationIteratorReuseEnabled(boolean)
-     */
-    public void setAnnotationIteratorReuseDisabled() {
-        mutationCheck();
-        isAnnotationIteratorReuseEnabled = false;
-    }
-
-    /**
-     * @see #withAnnotationIteratorReuseEnabled(boolean)
-     * @return true if annotation iterator reuse is enabled; otherwise, false.
-     */
-    public boolean isAnnotationIteratorReuseEnabled() {
-        return isAnnotationIteratorReuseEnabled;
     }
 
     /**
