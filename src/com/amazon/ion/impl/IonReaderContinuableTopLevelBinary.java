@@ -3,8 +3,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.Decimal;
-import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -17,14 +15,9 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
-import com.amazon.ion.SymbolToken;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.IonReaderBuilder;
 
 import java.io.InputStream;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.Date;
 
 /**
  * An optionally continuable (i.e., incremental) binary {@link IonReader} implementation. Continuability is enabled
@@ -114,52 +107,75 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
 
     /**
      * Advances to the next value and attempts to fill it.
-     * @return true if not enough data was available in the stream; otherwise, false.
      */
-    private boolean nextAndFill() {
+    private void nextAndFill() {
         while (true) {
-            if (!isFillingValue) {
-                if (nextValue() == IonCursor.Event.NEEDS_DATA) {
-                    type = null;
-                    return true;
-                }
+            if (!isFillingValue && nextValue() == IonCursor.Event.NEEDS_DATA) {
+                return;
             }
             isFillingValue = true;
-            event = fillValue();
-            if (event == IonCursor.Event.NEEDS_DATA) {
-                type = null;
-                return true;
-            } else if (event == IonCursor.Event.NEEDS_INSTRUCTION) {
-                // The value was skipped for being too large. Get the next one.
-                isFillingValue = false;
-                continue;
+            if (fillValue() == IonCursor.Event.NEEDS_DATA) {
+                return;
             }
-            break;
+            isFillingValue = false;
+            if (event != IonCursor.Event.NEEDS_INSTRUCTION) {
+                type = super.getType();
+                return;
+            }
+            // The value was skipped for being too large. Get the next one.
         }
-        isFillingValue = false;
-        return false;
+    }
+
+    /**
+     * Handles the case where the current value extends beyond the end of the reader's internal buffer.
+     */
+    private void handleIncompleteValue() {
+        if (event == Event.NEEDS_DATA) {
+            // The reader has already consumed all bytes from the buffer. If non-continuable, this is the end of the
+            // stream. If continuable, continue to return null from next().
+            if (isNonContinuable) {
+                endStream();
+            }
+        } else if (isNonContinuable) {
+            // The reader is non-continuable and has not yet consumed all bytes from the buffer, so it can continue
+            // reading the incomplete container until the end is reached.
+            // Each value contains its own length prefix, so it is safe to reset the incomplete flag before attempting
+            // to read the value.
+            isValueIncomplete = false;
+            if (nextValue() == IonCursor.Event.NEEDS_DATA) {
+                // Attempting to read the partial value required consuming the remaining bytes in the stream, which
+                // is now at its end.
+                isValueIncomplete = true;
+                endStream();
+            } else {
+                // The reader successfully positioned itself on a value within an incomplete container.
+                type = super.getType();
+            }
+        }
     }
 
     @Override
     public IonType next() {
-        if (!isSlowMode || isNonContinuable || parent != null) {
-            IonCursor.Event event = super.nextValue();
-            if (event == IonCursor.Event.NEEDS_DATA) {
+        type = null;
+        if (isValueIncomplete) {
+            handleIncompleteValue();
+        } else if (!isSlowMode || isNonContinuable || parent != null) {
+            if (nextValue() == IonCursor.Event.NEEDS_DATA) {
                 if (isNonContinuable) {
                     endStream();
                 }
-                type = null;
-                return null;
-            } else if (event == IonCursor.Event.NEEDS_INSTRUCTION) {
-                // The value was skipped for being too large.
+            } else if (isValueIncomplete && !isNonContinuable) {
+                // The value is incomplete and the reader is continuable, so the reader must return null from next().
+                // Setting the event to NEEDS_DATA ensures that if the user attempts to skip past the incomplete
+                // value, null will continue to be returned.
+                event = Event.NEEDS_DATA;
+            } else {
                 isFillingValue = false;
+                type = super.getType();
             }
         } else {
-            if (nextAndFill()) {
-                return null;
-            }
+            nextAndFill();
         }
-        type = super.getType();
         return type;
     }
 
@@ -183,128 +199,23 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
     /**
      * Prepares a scalar value to be parsed by ensuring it is present in the buffer.
      */
-    private void prepareScalar() {
-        if (event == IonCursor.Event.VALUE_READY) {
-            return;
-        }
-        if (event != IonCursor.Event.START_SCALAR) {
-            // Note: existing tests expect IllegalStateException in this case.
-            throw new IllegalStateException("Reader is not positioned on a scalar value.");
-        }
-        if (fillValue() == Event.VALUE_READY) {
-            return;
-        }
-        if (event == Event.NEEDS_INSTRUCTION) {
-            throw new OversizedValueException();
+    @Override
+    void prepareScalar() {
+        if (!isValueIncomplete) {
+            if (!isSlowMode || event == IonCursor.Event.VALUE_READY) {
+                // Nothing to do.
+                return;
+            }
+            if (isFillRequired) {
+                if (fillValue() == Event.VALUE_READY) {
+                    return;
+                }
+                if (event == Event.NEEDS_INSTRUCTION) {
+                    throw new OversizedValueException();
+                }
+            }
         }
         throw new IonException("Unexpected EOF.");
-    }
-
-    @Override
-    public IntegerSize getIntegerSize() {
-        if (type != IonType.INT) {
-            return null;
-        }
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.getIntegerSize();
-    }
-
-    @Override
-    public boolean booleanValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.booleanValue();
-    }
-
-    @Override
-    public long longValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.longValue();
-    }
-
-    @Override
-    public BigInteger bigIntegerValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.bigIntegerValue();
-    }
-
-    @Override
-    public double doubleValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.doubleValue();
-    }
-
-    @Override
-    public BigDecimal bigDecimalValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.bigDecimalValue();
-    }
-
-    @Override
-    public Decimal decimalValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.decimalValue();
-    }
-
-    @Override
-    public Date dateValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.dateValue();
-    }
-
-    @Override
-    public Timestamp timestampValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.timestampValue();
-    }
-
-    @Override
-    public String stringValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.stringValue();
-    }
-
-    @Override
-    public SymbolToken symbolValue() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.symbolValue();
-    }
-
-    @Override
-    public byte[] newBytes() {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.newBytes();
-    }
-
-    @Override
-    public int getBytes(byte[] buffer, int offset, int len) {
-        if (isFillRequired) {
-            prepareScalar();
-        }
-        return super.getBytes(buffer, offset, len);
     }
 
     private static class IonReaderBinarySpan extends DowncastingFaceted implements Span, OffsetSpan {
