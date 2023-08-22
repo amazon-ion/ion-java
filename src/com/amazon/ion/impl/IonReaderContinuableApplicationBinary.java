@@ -326,7 +326,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             // 2. If we make mapView a Map<String, SymbolToken>, then we are guaranteeing that we will allocate at least
             // one SymbolToken per symbol (because mapView is created in the constructor of LocalSymbolTableSnapshot)
             // even though it's unlikely most will ever be needed.
-            return new SymbolTokenWithImportLocation(text, sid, null);
+            return new SymbolTokenImpl(text, sid);
         }
 
         @Override
@@ -565,17 +565,11 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         SymbolToken token = symbolTokensById.get(sid);
         if (token == null) {
             String text = getSymbolString(sid, imports, symbols);
-            ImportLocation importLocation = null;
-            if (text == null) {
-                // Note: this will never be a system symbol.
-                if (sid > 0 && sid < firstLocalSymbolId) {
-                    importLocation = imports.getImportLocation(sid);
-                } else {
-                    // All symbols with unknown text in the local symbol range are equivalent to symbol zero.
-                    sid = 0;
-                }
+            if (text == null && sid >= firstLocalSymbolId) {
+                // All symbols with unknown text in the local symbol range are equivalent to symbol zero.
+                sid = 0;
             }
-            token = new SymbolTokenWithImportLocation(text, sid, importLocation);
+            token = new SymbolTokenImpl(text, sid);
             symbolTokensById.set(sid, token);
         }
         return token;
