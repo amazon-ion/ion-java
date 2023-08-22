@@ -3123,4 +3123,94 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertEquals(1, oversizedCounter.get());
         nextExpect(null);
     }
+
+    @Test
+    public void incompleteContainerNonContinuable() throws Exception {
+        readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(0xB6, 0x20);
+        // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
+        // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
+        // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
+        // unexpected EOF exception.
+        nextExpect(IonType.LIST);
+        // Note: the legacy binary reader implementation did not throw in this case; that behavior remains.
+        reader.close();
+    }
+
+    @Test
+    public void incompleteContainerContinuable() throws Exception {
+        readerBuilder.withIncrementalReadingEnabled(true);
+        reader = readerFor(0xB6, 0x20);
+        // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
+        // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
+        // or skip the value with the guarantee that no unexpected EOF exception can occur.
+        nextExpect(null);
+        // When closed, the reader must throw an exception for unexpected EOF to disambiguate clean stream end from
+        // incomplete value.
+        thrown.expect(IonException.class);
+        reader.close();
+    }
+
+    @Test
+    public void skipIncompleteContainerNonContinuable() throws Exception {
+        readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(0xB6, 0x20);
+        // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
+        // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
+        // read incomplete values.
+        nextExpect(IonType.LIST);
+        // Attempting to skip past the value, results in an unexpected EOF exception.
+        thrown.expect(IonException.class);
+        reader.next();
+    }
+
+    @Test
+    public void skipIncompleteContainerContinuable() throws Exception {
+        readerBuilder.withIncrementalReadingEnabled(true);
+        reader = readerFor(0xB6, 0x20);
+        // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
+        // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
+        // or skip the value with the guarantee that no unexpected EOF exception can occur.
+        nextExpect(null);
+        // Attempting to skip past the incomplete value should still not raise an exception in continuable mode.
+        nextExpect(null);
+        // When closed, the reader must throw an exception for unexpected EOF to disambiguate clean stream end from
+        // incomplete value.
+        thrown.expect(IonException.class);
+        reader.close();
+    }
+
+    @Test
+    public void completeValueInIncompleteContainerNonContinuable() throws Exception {
+        readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(0xB6, 0x20);
+        // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
+        // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
+        // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
+        // unexpected EOF exception.
+        nextExpect(IonType.LIST);
+        // The incomplete container can be partially read until the bytes run out.
+        stepIn();
+        nextExpect(IonType.INT);
+        expectInt(0);
+        nextExpect(null);
+        // Note: the legacy binary reader implementation did not throw in this case; that behavior remains.
+        reader.close();
+    }
+
+    @Test
+    public void incompleteValueInIncompleteContainerNonContinuable() throws Exception {
+        readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(0xB6, 0x21);
+        // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
+        // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
+        // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
+        // unexpected EOF exception.
+        nextExpect(IonType.LIST);
+        stepIn();
+        nextExpect(IonType.INT);
+        // Attempting to skip past the incomplete value results in an error.
+        thrown.expect(IonException.class);
+        reader.next();
+    }
 }

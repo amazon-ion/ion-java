@@ -262,6 +262,11 @@ class IonCursorBinary implements IonCursor {
     boolean isSlowMode;
 
     /**
+     * Indicates whether the current value extends beyond the end of the buffer.
+     */
+    boolean isValueIncomplete = false;
+
+    /**
      * The total number of bytes that had been consumed from the stream as of the last time progress was reported to
      * the data handler.
      */
@@ -852,6 +857,9 @@ class IonCursorBinary implements IonCursor {
                 endIndex = (b & LOWER_SEVEN_BITS_BITMASK);
             } else {
                 endIndex = readVarUInt_1_0(b);
+                if (endIndex < 0) {
+                    throw new IonException("Unsupported value: declared length is too long.");
+                }
             }
         } else {
             endIndex = valueTid.length;
@@ -1163,8 +1171,7 @@ class IonCursorBinary implements IonCursor {
             }
             setMarker(endIndex, markerToSet);
             if (endIndex > limit) {
-                event = Event.NEEDS_DATA;
-                return true;
+                isValueIncomplete = true;
             }
         }
         markerToSet.typeId = valueTid;
@@ -1276,7 +1283,7 @@ class IonCursorBinary implements IonCursor {
             validateAnnotationWrapperEndIndex(endIndex);
         }
         setMarker(endIndex, markerToSet);
-        if (event == Event.START_CONTAINER && endIndex > -1 && availableAt(peekIndex) >= valueLength) {
+        if (event == Event.START_CONTAINER && endIndex > -1 && endIndex <= limit) {
             refillableState.fillDepth = containerIndex + 1;
         }
         return false;
@@ -1803,7 +1810,7 @@ class IonCursorBinary implements IonCursor {
 
     @Override
     public Event endStream() {
-        if (isAwaitingMoreData()) {
+        if (isValueIncomplete || isAwaitingMoreData()) {
             throw new IonException("Unexpected EOF.");
         }
         return Event.NEEDS_DATA;

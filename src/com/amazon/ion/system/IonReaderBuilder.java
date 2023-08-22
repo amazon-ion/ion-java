@@ -179,21 +179,14 @@ public abstract class IonReaderBuilder
      * may be enabled via this option.
      * </p>
      * <p>
-     * When this option is enabled, auto-detection of GZIP data is not supported; the byte array or InputStream
-     * implementation provided to {@link #build(byte[])} or {@link #build(InputStream)} must return uncompressed bytes.
-     * This can be achieved by wrapping the data in a GZIPInputStream and passing it to {@link #build(InputStream)}.
-     * </p>
-     * <p>
-     * Additionally, when this option is enabled, annotation iterators are reused by default, improving performance.
+     * When this option is enabled, annotation iterators are reused by default, improving performance.
      * See {@link #withAnnotationIteratorReuseEnabled(boolean)} for more information and to disable that option.
      * </p>
      * <p>
-     * Although the incremental binary IonReader provides performance superior to the non-incremental binary IonReader
-     * for both incremental and non-incremental use cases, there is one caveat: the incremental implementation
-     * must be able to buffer an entire top-level value and any preceding system values (Ion version marker(s) and
-     * symbol table(s)) in memory. This will not be a problem for the vast majority of Ion streams, as it is rare for a
-     * single top-level value or symbol table to exceed a few megabytes in size. However, if the size of the stream's
-     * values risk exceeding the available memory, then this option must not be enabled.
+     * There is one caveat to note when using this option: the incremental implementation must be able to buffer an
+     * entire top-level value in memory. This will not be a problem for the vast majority of Ion streams, as it is rare
+     * for a single top-level value or symbol table to exceed a few megabytes in size. However, if the size of the
+     * stream's values risks exceeding the available memory, then this option must not be enabled.
      * </p>
      * @param isEnabled true if the option is enabled; otherwise, false.
      *
