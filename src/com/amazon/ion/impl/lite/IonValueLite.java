@@ -651,7 +651,8 @@ abstract class IonValueLite
                 if (++clearSymbolIDsHolderStackIndex >= clearSymbolIDsHolderStack.length) {
                     clearSymbolIDsHolderStack = growClearSymbolIDsHolderStack(clearSymbolIDsHolderStack);
                 }
-                if (clearSymbolIDsHolderStack[clearSymbolIDsHolderStackIndex] == null) {
+                currentClearSymbolIDsHolder = clearSymbolIDsHolderStack[clearSymbolIDsHolderStackIndex];
+                if (currentClearSymbolIDsHolder == null) {
                     currentClearSymbolIDsHolder = new ClearSymbolIDsHolder();
                 }
                 currentClearSymbolIDsHolder.parent = (IonContainerLite) value;
@@ -676,6 +677,7 @@ abstract class IonValueLite
                         currentClearSymbolIDsHolder.parent._isLocked(true);
                     }
 
+                    currentClearSymbolIDsHolder.iterator = null;
                     currentClearSymbolIDsHolder = (clearSymbolIDsHolderStackIndex == 0) ? null :
                             clearSymbolIDsHolderStack[--clearSymbolIDsHolderStackIndex];
                 }
