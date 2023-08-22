@@ -519,11 +519,20 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return valueTid != null && valueTid.isNull;
     }
 
+    /**
+     * Performs any logic necessary to prepare a scalar value for parsing. In general nothing needs to be done, but
+     * subclasses may wish to provide different behavior, such as ensuring that the value is present in the buffer.
+     */
+    void prepareScalar() {
+        // May be overridden.
+    }
+
     @Override
     public IntegerSize getIntegerSize() {
         if (valueTid.type != IonType.INT || valueTid.isNull) {
             return null;
         }
+        prepareScalar();
         if (valueTid.length < 0) {
             return IntegerSize.BIG_INTEGER;
         } else if (valueTid.length < INT_SIZE_IN_BYTES) {
@@ -552,6 +561,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid == null || !IonType.isLob(valueTid.type) || valueTid.isNull) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
+        prepareScalar();
         return (int) (valueMarker.endIndex - valueMarker.startIndex);
     }
 
@@ -582,6 +592,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid.isNull) {
             return null;
         }
+        prepareScalar();
         peekIndex = valueMarker.startIndex;
         if (peekIndex >= valueMarker.endIndex) {
             return BigDecimal.ZERO;
@@ -597,6 +608,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid.isNull) {
             return null;
         }
+        prepareScalar();
         peekIndex = valueMarker.startIndex;
         if (peekIndex >= valueMarker.endIndex) {
             return Decimal.ZERO;
@@ -611,6 +623,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (valueTid.length == 0) {
                 return 0;
             }
+            prepareScalar();
             value = minorVersion == 0 ? readLong_1_0() : readLong_1_1();
         } else if (valueTid.type == IonType.FLOAT) {
             scalarConverter.addValue(doubleValue());
@@ -642,6 +655,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (valueTid.length == 0) {
                 return BigInteger.ZERO;
             }
+            prepareScalar();
             value = minorVersion == 0 ? readBigInteger_1_0() : readBigInteger_1_1();
         } else if (valueTid.type == IonType.FLOAT) {
             if (valueTid.isNull) {
@@ -668,6 +682,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     public double doubleValue() {
         double value;
         if (valueTid.type == IonType.FLOAT && !valueTid.isNull) {
+            prepareScalar();
             int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
             if (length == 0) {
                 return 0.0d;
@@ -699,6 +714,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid.isNull) {
             return null;
         }
+        prepareScalar();
         peekIndex = valueMarker.startIndex;
         return minorVersion == 0 ? readTimestamp_1_0() : readTimestamp_1_1();
     }
@@ -717,6 +733,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid == null || IonType.BOOL != valueTid.type || valueTid.isNull) {
             throwDueToInvalidType(IonType.BOOL);
         }
+        prepareScalar();
         return minorVersion == 0 ? readBoolean_1_0() : readBoolean_1_1();
     }
 
@@ -728,6 +745,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid.isNull) {
             return null;
         }
+        prepareScalar();
         ByteBuffer utf8InputBuffer = prepareByteBuffer(valueMarker.startIndex, valueMarker.endIndex);
         return utf8Decoder.decode(utf8InputBuffer, (int) (valueMarker.endIndex - valueMarker.startIndex));
     }
@@ -740,6 +758,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid.isNull) {
             return -1;
         }
+        prepareScalar();
         return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
     }
 
