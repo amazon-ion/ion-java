@@ -86,6 +86,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     // symbol table is encountered in the stream.
     private SymbolTable cachedReadOnlySymbolTable = null;
 
+    // The reusable annotation iterator.
+    private final AnnotationSequenceIterator annotationIterator = new AnnotationSequenceIterator();
+
     // ------
 
     /**
@@ -160,18 +163,18 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     }
 
     /**
-     * Non-reusable iterator over the annotations on the current value. May be iterated even if the reader advances
-     * past the current value.
+     * Reusable iterator over the annotations on the current value.
      */
-    private class SingleUseAnnotationSequenceIterator implements Iterator<String> {
+    private class AnnotationSequenceIterator implements Iterator<String> {
 
         // All of the annotation SIDs on the current value.
-        private final IntList annotationSids;
+        private IntList annotationSids;
         // The index into `annotationSids` containing the next annotation to be returned.
         private int index = 0;
 
-        SingleUseAnnotationSequenceIterator() {
-            annotationSids = new IntList(getAnnotationSidList());
+        void reset() {
+            index = 0;
+            annotationSids = getAnnotationSidList();
         }
 
         @Override
@@ -1026,7 +1029,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         if (!hasAnnotations) {
             return EMPTY_ITERATOR;
         }
-        return new SingleUseAnnotationSequenceIterator();
+        annotationIterator.reset();
+        return annotationIterator;
     }
 
     @Override
