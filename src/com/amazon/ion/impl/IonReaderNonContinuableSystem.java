@@ -293,7 +293,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
         SymbolTable symbolTable = getSymbolTable();
         for (int i = 0; i < annotationIds.length; i++) {
             int sid = annotationIds[i];
-            annotationSymbolTokens[i] = new SymbolTokenWithImportLocation(symbolTable.findKnownSymbol(sid), sid, null);
+            annotationSymbolTokens[i] = new SymbolTokenImpl(symbolTable.findKnownSymbol(sid), sid);
         }
         return annotationSymbolTokens;
     }
@@ -330,7 +330,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
         if (sid < 0) {
             return null;
         }
-        return new SymbolTokenWithImportLocation(getSymbolTable().findKnownSymbol(sid), sid, null);
+        return new SymbolTokenImpl(getSymbolTable().findKnownSymbol(sid), sid);
     }
 
     @Override
@@ -342,7 +342,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
             prepareScalar();
             sid = reader.symbolValueId();
         }
-        return new SymbolTokenWithImportLocation(getSymbolTable().findKnownSymbol(sid), sid, null);
+        return new SymbolTokenImpl(getSymbolTable().findKnownSymbol(sid), sid);
     }
 
     @Override
