@@ -616,7 +616,7 @@ abstract class IonValueLite
 
     private static class ClearSymbolIDsHolder
     {
-        boolean allSIDsClear = false;
+        boolean allSIDsClear = true;
         IonContainerLite parent = null;
         IonContainerLite.SequenceContentIterator iterator = null;
     }
@@ -631,55 +631,52 @@ abstract class IonValueLite
     }
 
     private boolean clearSymbolIDsIterative(boolean readOnlyMode) {
-        ClearSymbolIDsHolder[] clearSymbolIDsHolderStack = new ClearSymbolIDsHolder[CONTAINER_STACK_INITIAL_CAPACITY];
-        int clearSymbolIDsHolderStackIndex = -1;
+        ClearSymbolIDsHolder[] stack = new ClearSymbolIDsHolder[CONTAINER_STACK_INITIAL_CAPACITY];
+        int stackIndex = 0;
+        stack[stackIndex] = new ClearSymbolIDsHolder();
         IonValueLite value = this;
-        ClearSymbolIDsHolder currentClearSymbolIDsHolder = null;
-        boolean allSIDsClear = true;
-
         do {
+            ClearSymbolIDsHolder holder = stack[stackIndex];
             if (!(value instanceof IonContainerLite)) {
-                if (currentClearSymbolIDsHolder == null) {
-                    allSIDsClear = value.scalarClearSymbolIDValues();
-                } else {
-                    currentClearSymbolIDsHolder.allSIDsClear &= value.scalarClearSymbolIDValues();
-                }
-                if(readOnlyMode) {
+                holder.allSIDsClear &= value.scalarClearSymbolIDValues();
+                if (readOnlyMode) {
                     value._isLocked(true);
                 }
-            } else {
-                if (++clearSymbolIDsHolderStackIndex >= clearSymbolIDsHolderStack.length) {
-                    clearSymbolIDsHolderStack = growClearSymbolIDsHolderStack(clearSymbolIDsHolderStack);
+            } else if (value._isSymbolIdPresent() || readOnlyMode) {
+                // The value is a container, and it is necessary to walk its children.
+                // Step into the container by pushing a ClearSymbolIDsHolder for the container onto the stack.
+                if (++stackIndex >= stack.length) {
+                    stack = growClearSymbolIDsHolderStack(stack);
                 }
-                currentClearSymbolIDsHolder = clearSymbolIDsHolderStack[clearSymbolIDsHolderStackIndex];
-                if (currentClearSymbolIDsHolder == null) {
-                    currentClearSymbolIDsHolder = new ClearSymbolIDsHolder();
+                holder = stack[stackIndex];
+                if (holder == null) {
+                    holder = new ClearSymbolIDsHolder();
+                    stack[stackIndex] = holder;
                 }
-                currentClearSymbolIDsHolder.parent = (IonContainerLite) value;
-                currentClearSymbolIDsHolder.iterator = currentClearSymbolIDsHolder.parent.new SequenceContentIterator(
-                        0,
-                        true);
-                currentClearSymbolIDsHolder.allSIDsClear = currentClearSymbolIDsHolder.parent.attemptClearSymbolIDValues();
-                clearSymbolIDsHolderStack[clearSymbolIDsHolderStackIndex] = currentClearSymbolIDsHolder;
+                holder.parent = (IonContainerLite) value;
+                holder.iterator = holder.parent.new SequenceContentIterator(0, true);
+                holder.allSIDsClear = value.attemptClearSymbolIDValues();
             }
             do {
-                if (currentClearSymbolIDsHolder == null) {
-                    return allSIDsClear;
+                if (holder.parent == null) {
+                    // Iteration has returned to the top level. Return the top-level flag.
+                    return holder.allSIDsClear;
                 }
-                value = currentClearSymbolIDsHolder.iterator.nextOrNull();
+                value = holder.iterator.nextOrNull();
                 if (value == null) {
-                    allSIDsClear &= currentClearSymbolIDsHolder.allSIDsClear;
-                    if (allSIDsClear) {
+                    boolean allChildSidsClear = holder.allSIDsClear;
+                    if (allChildSidsClear) {
                         // clear the symbolID status flag
-                        currentClearSymbolIDsHolder.parent._isSymbolIdPresent(false);
+                        holder.parent._isSymbolIdPresent(false);
                     }
-                    if(readOnlyMode) {
-                        currentClearSymbolIDsHolder.parent._isLocked(true);
+                    if (readOnlyMode) {
+                        holder.parent._isLocked(true);
                     }
-
-                    currentClearSymbolIDsHolder.iterator = null;
-                    currentClearSymbolIDsHolder = (clearSymbolIDsHolderStackIndex == 0) ? null :
-                            clearSymbolIDsHolderStack[--clearSymbolIDsHolderStackIndex];
+                    // The end of the container has been reached. Pop from the stack and update the parent's flag.
+                    holder.parent = null;
+                    holder.iterator = null;
+                    holder = stack[--stackIndex];
+                    holder.allSIDsClear &= allChildSidsClear;
                 }
             } while (value == null);
         } while (true);
@@ -705,6 +702,11 @@ abstract class IonValueLite
 
     final boolean clearSymbolIDValues()
     {
+        // short circuit exit - no SID's present to remove - so can exit immediately
+        if (!_isSymbolIdPresent())
+        {
+            return true;
+        }
         if (this instanceof IonContainerLite)
         {
             return clearSymbolIDsIterative(false);
