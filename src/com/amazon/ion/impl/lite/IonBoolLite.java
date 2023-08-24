@@ -56,7 +56,7 @@ final class IonBoolLite
     }
 
     @Override
-    IonBoolLite clone(IonContext context)
+    IonValueLite shallowClone(IonContext context)
     {
         return new IonBoolLite(this, context);
     }
@@ -64,7 +64,7 @@ final class IonBoolLite
     @Override
     public IonBoolLite clone()
     {
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return (IonBoolLite) shallowClone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

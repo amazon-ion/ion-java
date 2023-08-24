@@ -53,10 +53,11 @@ final class IonStructLite
 
     private IonStructLite(IonStructLite existing, IonContext context)
     {
-        super(existing, context, true);
-        // field map can be shallow cloned due to it dealing with String and Integer
-        // values - both of which are immutable constructs and so safe to retain as references
-        this._field_map = null == existing._field_map ? null : new HashMap<String, Integer>(existing._field_map);
+        super(existing, context);
+        // The field map provides optimized lookups when the struct is larger than a few fields. Rather than being
+        // eagerly copied during clone, it is created on-demand. This has been shown to improve performance when cloning
+        // structs, even in cases where the field map is eventually needed.
+        this._field_map = null;
         this._field_map_duplicate_count = existing._field_map_duplicate_count;
         this.hasNullFieldName = existing.hasNullFieldName;
     }
@@ -67,15 +68,14 @@ final class IonStructLite
     public int                      _field_map_duplicate_count;
 
     @Override
-    IonStructLite clone(IonContext parentContext)
+    public IonStructLite clone()
     {
-        return new IonStructLite(this, parentContext);
+        return (IonStructLite) deepClone(false);
     }
 
     @Override
-    public IonStructLite clone()
-    {
-        return clone(ContainerlessContext.wrap(getSystem()));
+    IonValueLite shallowClone(IonContext context) {
+        return new IonStructLite(this, context);
     }
 
     @Override
@@ -84,34 +84,30 @@ final class IonStructLite
         if (_field_map != null) return;
 
         build_field_map();
-        return;
     }
-    protected void build_field_map()
+    private void build_field_map()
     {
         int size = (_children == null) ? 0 : _children.length;
 
-        _field_map = new HashMap<String, Integer>(size);
+        _field_map = new HashMap<>((int) Math.ceil(size / 0.75f), 0.75f); // avoids unconditional growth
         _field_map_duplicate_count = 0;
 
         int count = get_child_count();
         for (int ii=0; ii<count; ii++) {
             IonValueLite v = get_child(ii);
-            SymbolToken fieldNameSymbol = v.getFieldNameSymbol();
-            String name = fieldNameSymbol.getText();
-            if (_field_map.get(name) != null) {
+            if (_field_map.get(v._fieldName) != null) {
                 _field_map_duplicate_count++;
             }
-            _field_map.put(name, ii); // this causes the map to have the largest index value stored
+            _field_map.put(v._fieldName, ii); // this causes the map to have the largest index value stored
         }
-        return;
     }
     private void add_field(String fieldName, int newFieldIdx)
     {
         Integer idx = _field_map.get(fieldName);
         if (idx != null) {
             _field_map_duplicate_count++;
-            if (idx.intValue() > newFieldIdx) {
-                newFieldIdx = idx.intValue();
+            if (idx > newFieldIdx) {
+                newFieldIdx = idx;
             }
         }
         _field_map.put(fieldName, newFieldIdx);
@@ -122,8 +118,6 @@ final class IonStructLite
             return;
         }
 
-        Integer field_idx = _field_map.get(fieldName);
-        assert(field_idx != null);
         _field_map.remove(fieldName);
         _field_map_duplicate_count -= (copies - 1);
     }
@@ -133,7 +127,7 @@ final class IonStructLite
         Integer field_idx = _field_map.get(fieldName);
         assert(field_idx != null);
 
-        if (field_idx.intValue() != idx) {
+        if (field_idx != idx) {
             // if the map has a different index, this must
             // be a duplicate, and this copy isn't in the map
             assert(_field_map_duplicate_count > 0);
@@ -180,7 +174,7 @@ final class IonStructLite
             IonValueLite value = get_child(ii);
             String  field_name = value.getFieldName();
             Integer map_idx = _field_map.get(field_name);
-            if (map_idx.intValue() != ii) {
+            if (map_idx != ii) {
                 // if this is a field that to the right of
                 // the removed (in process of removing) value
                 // we need to patch the index value
@@ -223,7 +217,7 @@ final class IonStructLite
         Iterator<Entry<String, Integer>> it = _field_map.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
-            int idx = e.getValue().intValue();
+            int idx = e.getValue();
             IonValueLite v = (idx >= 0 && idx < get_child_count()) ? get_child(idx) : null;
             if (v == null || idx != v._elementid() || (e.getKey().equals(v.getFieldName()) == false)) {
                 error += "map entry ["+e+"] doesn't match list value ["+v+"]\n";
@@ -299,7 +293,7 @@ final class IonStructLite
 
     private IonStruct doClone(boolean keep, String... fieldNames)
     {
-        IonStruct clone;
+        IonStructLite clone;
         if (isNullValue())
         {
             clone = getSystem().newNullStruct();
@@ -314,20 +308,30 @@ final class IonStructLite
             }
 
             clone = getSystem().newEmptyStruct();
-            for (IonValue value : this)
-            {
-                SymbolToken fieldNameSymbol = value.getFieldNameSymbol();
-                String fieldName = fieldNameSymbol.getText();
-                if (fields.contains(fieldName) == keep)
+            clone._children = new IonValueLite[_children.length];
+            clone._child_count = 0;
+            for (int i = 0; i < _child_count; i++) {
+                IonValueLite value = _children[i];
+                if (fields.contains(value._fieldName) == keep)
                 {
+                    IonValueLite clonedChild = (IonValueLite) value.clone();
                     // This ensures that we don't copy an unknown field name.
-                    fieldName = value.getFieldName();
-                    clone.add(fieldName, value.clone());
+                    clonedChild._fieldName = value.getFieldName();
+                    clonedChild._elementid(clone._child_count);
+                    if (!clone._isSymbolIdPresent() && clonedChild._isSymbolIdPresent())
+                    {
+                        clone.cascadeSIDPresentToContextRoot();
+                    }
+                    clone._children[clone._child_count++] = clonedChild;
                 }
             }
         }
 
-        clone.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+
+        if (_annotations != null && _annotations.length > 0) {
+            clone._annotations = _annotations.clone();
+            clone.checkAnnotationsForSids();
+        }
 
         return clone;
     }
@@ -366,6 +370,14 @@ final class IonStructLite
 
         return field;
     }
+
+    private boolean fieldMapIsActive(int proposedSize) {
+        if (_field_map != null) return true;
+        if (proposedSize <= STRUCT_INITIAL_SIZE) return false;
+        build_field_map();
+        return true;
+    }
+
     private int find_field_helper(String fieldName)
     {
         validateFieldName(fieldName);
@@ -373,10 +385,10 @@ final class IonStructLite
         if (isNullValue()) {
             // nothing to see here, move along
         }
-        else if (_field_map != null) {
+        else if (fieldMapIsActive(_child_count)) {
             Integer idx = _field_map.get(fieldName);
             if (idx != null) {
-                return idx.intValue();
+                return idx;
             }
         }
         else {
@@ -404,10 +416,8 @@ final class IonStructLite
         throws NullPointerException, IllegalArgumentException,
         ContainedValueException
     {
-        // TODO validate in struct.setFieldName
-        String text = child.getFieldNameSymbol().getText();
         IonValueLite concrete = (IonValueLite) child;
-        _add(text, concrete);
+        _add(concrete._fieldName, concrete);
 
         return true;
     }
@@ -435,13 +445,12 @@ final class IonStructLite
     private void _add(String fieldName, IonValueLite child)
     {
         hasNullFieldName |= fieldName == null;
-        int size = get_child_count();
 
         // add this to the Container child collection
-        add(size, child);
+        add(_child_count, child);
 
         // if we have a hash map we need to update it now
-        if (_field_map != null) {
+        if (fieldMapIsActive(_child_count)) {
             add_field(fieldName, child._elementid());
         }
     }
@@ -455,8 +464,8 @@ final class IonStructLite
 
         IonValueLite concrete = (IonValueLite) value;
 
+        concrete._fieldName = fieldName;
         _add(fieldName, concrete);
-        concrete.setFieldName(fieldName);
     }
 
     public void add(SymbolToken fieldName, IonValue child)
@@ -519,19 +528,19 @@ final class IonStructLite
         validateFieldName(fieldName);
         if (value != null) validateNewChild(value);
 
-        int lowestRemovedIndex = get_child_count();
+        int lowestRemovedIndex = _child_count;
         boolean any_removed = false;
 
         // first we remove the any existing fields
         // associated with fieldName (which may be none)
-        if (_field_map != null && _field_map_duplicate_count == 0)
+        if (_field_map_duplicate_count == 0 && fieldMapIsActive(_child_count))
         {
             // we have a map and no duplicates so the index
             // (aka map) is all we need to find the only
             // value associated with fieldName, if there is one
             Integer idx = _field_map.get(fieldName);
             if (idx != null) {
-                lowestRemovedIndex = idx.intValue();
+                lowestRemovedIndex = idx;
                 remove_field_from_field_map(fieldName, lowestRemovedIndex);
                 remove_child(lowestRemovedIndex);
                 any_removed = true;
@@ -548,7 +557,7 @@ final class IonStructLite
             {
                 ii--;
                 IonValueLite child = get_child(ii);
-                if (fieldName.equals(child.getFieldNameSymbol().getText()))
+                if (fieldName.equals(child._fieldName))
                 {
                     // done by remove_child: child.detachFromContainer();
                     remove_child(ii);

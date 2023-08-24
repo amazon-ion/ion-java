@@ -60,7 +60,7 @@ final class IonTimestampLite
     }
 
     @Override
-    IonTimestampLite clone(IonContext context)
+    IonValueLite shallowClone(IonContext context)
     {
         return new IonTimestampLite(this, context);
     }
@@ -68,7 +68,7 @@ final class IonTimestampLite
     @Override
     public IonTimestampLite clone()
     {
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return (IonTimestampLite) shallowClone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

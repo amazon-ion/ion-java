@@ -30,6 +30,7 @@ import com.amazon.ion.impl._Private_IonContainer;
 import com.amazon.ion.impl._Private_Utils;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
@@ -59,45 +60,9 @@ abstract class IonContainerLite
         this.ionSystem = context.getSystem();
     }
 
-    IonContainerLite(IonContainerLite existing, IonContext context, boolean isStruct) {
+    IonContainerLite(IonContainerLite existing, IonContext context) {
         super(existing, context);
-        this.ionSystem = existing.getSystem();
-        boolean retainingSIDs = false;
-        int childCount = existing._child_count;
-        this._child_count = childCount;
-        // when cloning the children we establish 'this' the cloned outer container as the context
-        if (existing._children != null) {
-            boolean isDatagram = this instanceof IonDatagramLite;
-            this._children = new IonValueLite[childCount];
-            for (int i = 0; i < childCount; i++) {
-                IonValueLite child = existing._children[i];
-                IonContext childContext = isDatagram
-                     ? TopLevelContext.wrap(child.getAssignedSymbolTable(), (IonDatagramLite)this)
-                     : this;
-
-                IonValueLite copy = child.clone(childContext);
-                if (isStruct) {
-                    if(child.getFieldName() == null) {
-                        // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
-                        // this is expensive so only do it when necessary
-                        // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
-                        // is not necessary. https://github.com/amazon-ion/ion-java/issues/140
-                        copy.setFieldNameSymbol(child.getKnownFieldNameSymbol());
-                    }
-                    else {
-                        // if we have a non null name copying it is sufficient
-                        copy.setFieldName(child.getFieldName());
-                    }
-                }
-                this._children[i] = copy;
-                retainingSIDs |= copy._isSymbolIdPresent();
-            }
-            // unfortunately due to the existing behavior in IonValueLite copy-constructor where annotation SID's are
-            // preserved across the copy-constructor IF they have no resolved text it means that encodings could have
-            // been preserved on the child - therefore the cloned children each have to be re-interrogated and the
-            // setting updated IF such a change has occurred.
-            _isSymbolIdPresent(retainingSIDs);
-        }
+        this.ionSystem = existing.ionSystem;
     }
 
     // See the comment on the `ionSystem` member field for more information.
@@ -109,8 +74,124 @@ abstract class IonContainerLite
     @Override
     public abstract void accept(ValueVisitor visitor) throws Exception;
 
+    // Context to be used when cloning a value tree by walking it iteratively.
+    private static class CloneContext {
+
+        // The parent of the value currently being cloned.
+        IonContainerLite parentOriginal = null;
+
+        // The copy of the parent value, into which values at the current depth are placed.
+        IonContainerLite parentCopy = null;
+
+        // True if the parent value is a struct. Storing this in a variable is a performance optimization.
+        boolean parentIsStruct = false;
+
+        // The copied context relevant to the values cloned at the current depth.
+        IonContext contextCopy = null;
+
+        // The index in the parent container of the value currently being cloned.
+        int childIndex = 0;
+    }
+
+    /**
+     * Prepares a CloneContext for the container that is about to be walked.
+     * @param cloneContext the context to fill in.
+     * @param containerOriginal the container being cloned.
+     * @param containerCopy the container clone.
+     * @param needsTopLevelContext true if the value being cloned is a child of a datagram.
+     */
+    private static void setCloneContext(CloneContext cloneContext, IonContainerLite containerOriginal, IonContainerLite containerCopy, boolean needsTopLevelContext) {
+        cloneContext.parentOriginal = containerOriginal;
+        cloneContext.parentCopy = containerCopy;
+        containerCopy._children = new IonValueLite[containerOriginal._children.length];
+        containerCopy._child_count = containerOriginal._child_count;
+        if (needsTopLevelContext) {
+            cloneContext.contextCopy = TopLevelContext.wrap(containerOriginal._context.getContextSymbolTable(), (IonDatagramLite) containerCopy);
+            cloneContext.parentIsStruct = false;
+        } else {
+            cloneContext.contextCopy = containerCopy;
+            cloneContext.parentIsStruct = containerCopy instanceof IonStructLite;
+        }
+        cloneContext.childIndex = 0;
+    }
+
+    /**
+     * Clones the container by walking it iteratively.
+     * @param isDatagramBeingCloned true if the value to be cloned is an IonDatagram; otherwise, false.
+     * @return the clone.
+     */
+    final IonContainerLite deepClone(boolean isDatagramBeingCloned) {
+        // Note: for reasons that are not clear, calculating the initial context within this method is consistently
+        // 1-5% faster than requiring callers to pass it in.
+        IonContext initialContext = isDatagramBeingCloned ? null : ContainerlessContext.wrap(_context.getSystem(), _context.getContextSymbolTable());
+        if (_children == null) {
+            // When the container has no children, shallowClone and deepClone have the same effect, but shallowClone
+            // is more streamlined.
+            return (IonContainerLite) shallowClone(initialContext);
+        }
+        boolean areSIDsRetained = false;
+        CloneContext[] stack = new CloneContext[CONTAINER_STACK_INITIAL_CAPACITY];
+        int stackIndex = 0;
+        CloneContext cloneContext = new CloneContext();
+        cloneContext.contextCopy = initialContext;
+        stack[stackIndex] = cloneContext;
+        IonValueLite original = this;
+        IonValueLite copy;
+        while (true) {
+            if (!(original instanceof IonContainerLite)) {
+                // Note: the following four lines are duplicated on both branches. For reasons that are not clear, doing
+                // this is consistently ~10% faster than using a common code path when cloning streams of scalars.
+                copy = original.shallowClone(cloneContext.contextCopy);
+                if (cloneContext.parentIsStruct) {
+                    copy.copyFieldName(original);
+                }
+                cloneContext.parentCopy._children[cloneContext.childIndex++] = copy;
+            } else {
+                copy = original.shallowClone(cloneContext.contextCopy);
+                if (cloneContext.parentIsStruct) {
+                    copy.copyFieldName(original);
+                }
+                if (cloneContext.parentCopy != null) {
+                    cloneContext.parentCopy._children[cloneContext.childIndex++] = copy;
+                }
+                IonContainerLite containerOriginal = (IonContainerLite) original;
+                if (containerOriginal._children != null) {
+                    if (++stackIndex >= stack.length) {
+                        stack = Arrays.copyOf(stack, stack.length * 2);
+                    }
+                    // Reuse the context for the next container depth, only allocating a new one if necessary.
+                    cloneContext = stack[stackIndex];
+                    if (cloneContext == null) {
+                        cloneContext = new CloneContext();
+                        stack[stackIndex] = cloneContext;
+                    }
+                    // Create and initialize the container clone, preparing it to have child values copied in.
+                    setCloneContext(cloneContext, containerOriginal, (IonContainerLite) copy, isDatagramBeingCloned && stackIndex == 1);
+                }
+            }
+            // Symbol IDs are preserved if a symbol token has unknown text. The 'isSymbolIdPresent' is used to track this.
+            areSIDsRetained |= copy._isSymbolIdPresent();
+            while (cloneContext.childIndex >= cloneContext.parentOriginal._child_count) {
+                // This is the end of the container. Step out by returning to the context at the previous depth.
+                copy = cloneContext.parentCopy;
+                cloneContext.contextCopy = null;
+                cloneContext = stack[--stackIndex];
+                if (stackIndex == 0) {
+                    // Top-level; done.
+                    copy._isSymbolIdPresent(areSIDsRetained);
+                    return (IonContainerLite) copy;
+                }
+            }
+            // Prepare the next value to be cloned. This is the next child value at the current container depth.
+            original = cloneContext.parentOriginal._children[cloneContext.childIndex];
+        }
+    }
+
+
     @Override
-    public abstract IonContainer clone();
+    public IonContainer clone() {
+        return deepClone(false);
+    }
 
 
     public void clear()
@@ -616,16 +697,21 @@ abstract class IonContainerLite
         sizes[_Private_IonConstants.tidDATAGRAM] = 10;
         return sizes;
     }
+
+
+    static final int STRUCT_INITIAL_SIZE = 5;
+
     final protected int initialSize()
     {
         switch (this.getType()) {
         case LIST:     return 1;
         case SEXP:     return 4;
-        case STRUCT:   return 5;
+        case STRUCT:   return STRUCT_INITIAL_SIZE;
         case DATAGRAM: return 3;
         default:       return 4;
         }
     }
+
     final protected int nextSize(int current_size, boolean call_transition)
     {
         if (current_size == 0) {

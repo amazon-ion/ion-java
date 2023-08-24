@@ -58,15 +58,15 @@ final class IonSexpLite
     }
 
     @Override
-    IonSexpLite clone(IonContext parentContext)
+    public IonSexpLite clone()
     {
-        return new IonSexpLite(this, parentContext);
+        return (IonSexpLite) deepClone(false);
     }
 
     @Override
-    public IonSexpLite clone()
+    IonValueLite shallowClone(IonContext context)
     {
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return new IonSexpLite(this, context);
     }
 
     @Override

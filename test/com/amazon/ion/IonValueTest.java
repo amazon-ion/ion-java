@@ -313,4 +313,16 @@ public class IonValueTest
         v2 = system2.clone(v);
         IonAssert.assertIonEquals(v, v2);
     }
+
+    @Test
+    public void hashValueWithEmptySpaceInItsAnnotationsArray() {
+        IonInt valueWithoutNullAnnotationSlots = system().newInt(123);
+        valueWithoutNullAnnotationSlots.setTypeAnnotations("abc", "def", "ghi");
+        IonInt valueWithNullAnnotationSlots = system().newInt(123);
+        valueWithNullAnnotationSlots.addTypeAnnotation("abc"); // The annotation array grows to length 1
+        valueWithNullAnnotationSlots.addTypeAnnotation("def"); // The annotation array grows to length 2
+        valueWithNullAnnotationSlots.addTypeAnnotation("ghi"); // The annotation array grows to length 4, leaving a null at index 3
+        assertEquals(valueWithoutNullAnnotationSlots, valueWithNullAnnotationSlots);
+        assertEquals(valueWithoutNullAnnotationSlots.hashCode(), valueWithNullAnnotationSlots.hashCode());
+    }
 }
