@@ -160,4 +160,67 @@ public class CloneTest
         // If we don't fail we should at least retain the SID.
         assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
     }
+
+    @Test
+    public void cloneEmptyContainer()
+    {
+        IonStruct original = system().newEmptyStruct();
+        IonStruct clone = original.clone();
+        assertTrue(clone.isEmpty());
+        assertEquals(original, clone);
+    }
+
+    @Test
+    public void cloneEmptyNestedContainer()
+    {
+        IonList original = system().newEmptyList();
+        original.add().newEmptyStruct();
+        IonList clone = original.clone();
+        assertEquals(original, clone);
+    }
+
+    @Test
+    public void cloneBasicStruct()
+    {
+        IonStruct original = system().newEmptyStruct();
+        original.add("foo").newString("bar");
+        IonStruct clone = original.clone();
+        assertEquals(original, clone);
+    }
+
+    @Test
+    public void cloneNestedContainer()
+    {
+        IonStruct original = system().newEmptyStruct();
+        original.add("foo").newEmptyList().add().newString("bar");
+        IonStruct clone = original.clone();
+        assertEquals(original, clone);
+    }
+
+    @Test
+    public void cloneMultipleElements()
+    {
+        IonList original = system().newList(new int[] {1, 2, 3});
+        IonList clone = original.clone();
+        assertEquals(original, clone);
+    }
+
+    @Test
+    public void cloneDatagram() {
+        IonDatagram original = system().newDatagram();
+        original.add().newList(new int[] {1, 2, 3});
+        original.add().newList(new int[] {4, 5, 6});
+        IonDatagram clone = original.clone();
+        assertEquals(original, clone);
+    }
+
+    @Test
+    public void cloneValueWithEmptySpaceInItsAnnotationsArray() {
+        IonInt original = system().newInt(123);
+        original.addTypeAnnotation("abc"); // The annotation array grows to length 1
+        original.addTypeAnnotation("def"); // The annotation array grows to length 2
+        original.addTypeAnnotation("ghi"); // The annotation array grows to length 4, leaving a null at index 3
+        IonInt clone = original.clone();
+        assertEquals(original, clone);
+    }
 }

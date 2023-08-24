@@ -51,7 +51,7 @@ abstract class IonSequenceLite
     }
 
     IonSequenceLite(IonSequenceLite existing, IonContext context) {
-        super(existing, context, false);
+        super(existing, context);
     }
 
     /**
@@ -88,7 +88,9 @@ abstract class IonSequenceLite
     //=========================================================================
 
     @Override
-    public abstract IonSequenceLite clone();
+    public IonSequence clone() {
+        return (IonSequence) deepClone();
+    }
 
     @Override
     // Increasing visibility

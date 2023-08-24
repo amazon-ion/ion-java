@@ -109,18 +109,14 @@ final class IonDatagramLite
     }
 
     @Override
-    IonDatagramLite clone(IonContext parentContext)
-    {
-        String message = "IonDatagram cannot have a parent context (be nested)";
-        throw new UnsupportedOperationException(message);
+    public IonDatagram clone() {
+        return (IonDatagram) deepClone();
     }
 
     @Override
-    public IonDatagramLite clone()
-    {
+    IonValueLite shallowClone(IonContext context) {
         return new IonDatagramLite(this);
     }
-
 
     //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
