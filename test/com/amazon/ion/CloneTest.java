@@ -15,20 +15,44 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl._Private_IonSystem;
+import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.IonSystemBuilder;
+import org.junit.jupiter.api.Test;
+
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
-
-import com.amazon.ion.system.SimpleCatalog;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyIterable;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CloneTest
-    extends IonTestCase
 {
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
+    public static final _Private_IonSystem PRIVATE_ION_SYSTEM = (_Private_IonSystem) IonSystemBuilder.standard().build();
+
+    private static <V extends IonValue> V assertSelfCloneable(V original)
+    {
+        V clone = (V)original.clone();
+        return assertEqualsAndNotSame(original, clone);
+    }
+
+    private static <V extends IonValue> V assertSystemCloneable(V original)
+    {
+        V clone = (V)(system().clone(original));
+        return assertEqualsAndNotSame(original, clone);
+    }
+
+    private static <V extends IonValue> V assertEqualsAndNotSame(V expected, V actual)
+    {
+        IonAssert.assertIonEquals(expected, actual);
+        assertThat(actual, not(sameInstance(expected)));
+        return actual;
+    }
 
     @Test
     public void testIonValueCloneWithUnknownSymbolText()
@@ -36,9 +60,8 @@ public class CloneTest
         SymbolToken tok = newSymbolToken(99);
         IonSymbol original = system().newSymbol(tok);
 
-        thrown.expect(UnknownSymbolException.class);
-        thrown.expectMessage("$99");
-        original.clone();
+        UnknownSymbolException use = assertThrows(UnknownSymbolException.class, original::clone);
+        assertThat(use.getMessage(), containsString("$99"));
     }
 
     @Test
@@ -47,15 +70,14 @@ public class CloneTest
         SymbolToken tok = newSymbolToken(99);
         IonSymbol original = system().newSymbol(tok);
 
-        thrown.expect(UnknownSymbolException.class);
-        thrown.expectMessage("$99");
-        system().clone(original);
+        UnknownSymbolException use = assertThrows(UnknownSymbolException.class, () -> system().clone(original));
+        assertThat(use.getMessage(), containsString("$99"));
     }
 
     @Test
     public void testDifferentValueFactoryCloneWithUnknownSymbolText()
     {
-        IonSystem otherSystem = newSystem(new SimpleCatalog());
+        IonSystem otherSystem = IonSystemBuilder.standard().build();
 
         SymbolToken tok = newSymbolToken(99);
         IonSymbol original = system().newSymbol(tok);
@@ -75,8 +97,7 @@ public class CloneTest
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
 
-        IonInt actual = original.clone();
-        assertEquals(original, actual);
+        assertSelfCloneable(original);
     }
 
     @Test
@@ -86,14 +107,13 @@ public class CloneTest
         IonInt original = system().newInt(5);
         original.setTypeAnnotationSymbols(tok);
 
-        IonInt actual = system().clone(original);
-        assertEquals(original, actual);
+        assertSystemCloneable(original);
     }
 
     @Test
     public void testDifferentValueFactoryCloneWithUnknownAnnotationText()
     {
-        IonSystem otherSystem = newSystem(new SimpleCatalog());
+        IonSystem otherSystem = IonSystemBuilder.standard().build();
 
         SymbolToken tok = newSymbolToken(99);
         IonInt original = system().newInt(5);
@@ -119,9 +139,8 @@ public class CloneTest
         // This works since the cloned child doesn't retain its field name.
         child.clone();
 
-        thrown.expect(UnknownSymbolException.class);
-        thrown.expectMessage("$99");
-        original.clone();
+        UnknownSymbolException use = assertThrows(UnknownSymbolException.class, original::clone);
+        assertThat(use.getMessage(), containsString("$99"));
     }
 
     @Test
@@ -133,17 +152,16 @@ public class CloneTest
         original.add(tok, child);
 
         // This works since the cloned child doesn't retain its field name.
-        system().clone(child);
+        assertSystemCloneable(child);
 
-        thrown.expect(UnknownSymbolException.class);
-        thrown.expectMessage("$99");
-        system().clone(original);
+        UnknownSymbolException use = assertThrows(UnknownSymbolException.class, () -> system().clone(original));
+        assertThat(use.getMessage(), containsString("$99"));
     }
 
     @Test
     public void testDifferentValueFactoryCloneWithUnknownFieldNameText()
     {
-        IonSystem otherSystem = newSystem(new SimpleCatalog());
+        IonSystem otherSystem = IonSystemBuilder.standard().build();
 
         SymbolToken tok = newSymbolToken(99);
         IonStruct original = system().newEmptyStruct();
@@ -159,5 +177,95 @@ public class CloneTest
 
         // If we don't fail we should at least retain the SID.
         assertEquals(99, copy.iterator().next().getFieldNameSymbol().getSid());
+    }
+
+    @Test
+    public void cloneEmptyContainer()
+    {
+        IonStruct original = system().newEmptyStruct();
+
+        IonStruct clone = assertSelfCloneable(original);
+        assertThat(clone, emptyIterable());
+    }
+
+    @Test
+    public void cloneEmptyNestedContainer()
+    {
+        IonList original = system().newEmptyList();
+        original.add().newEmptyStruct();
+
+        assertSelfCloneable(original);
+    }
+
+    @Test
+    public void cloneBasicStruct()
+    {
+        IonStruct original = system().newEmptyStruct();
+        original.add("foo").newString("bar");
+
+        assertSelfCloneable(original);
+    }
+
+    @Test
+    public void cloneNestedContainer()
+    {
+        IonStruct original = system().newEmptyStruct();
+        original.add("foo").newEmptyList().add().newString("bar");
+
+        assertSelfCloneable(original);
+    }
+
+    @Test
+    public void cloneMultipleElements()
+    {
+        IonList original = system().newList(new int[] {1, 2, 3});
+
+        assertSelfCloneable(original);
+    }
+
+    @Test
+    public void cloneDatagram() {
+        IonDatagram original = system().newDatagram();
+        original.add().newList(new int[] {1, 2, 3});
+        original.add().newList(new int[] {4, 5, 6});
+
+        assertSelfCloneable(original);
+    }
+
+    @Test
+    public void cloneValueWithEmptySpaceInItsAnnotationsArray() {
+        IonInt original = system().newInt(123);
+        original.addTypeAnnotation("abc"); // The annotation array grows to length 1
+        original.addTypeAnnotation("def"); // The annotation array grows to length 2
+        original.addTypeAnnotation("ghi"); // The annotation array grows to length 4, leaving a null at index 3
+
+        assertSelfCloneable(original);
+    }
+
+    // TODO consider adding a general assertion for modify-after-clone. For now, the following test verifies that
+    //  modifying a cloned value does not modify the original in a specific case.
+    @Test
+    public void modifyAfterCloneDoesNotChangeOriginal() {
+        IonDatagram original = system().newDatagram();
+        original.add().newList(new int[] {1, 2, 3});
+        original.add().newList(new int[] {4, 5, 6});
+
+        IonDatagram clone = original.clone();
+        assertEqualsAndNotSame(original, clone);
+
+        IonList clonedList1 = (IonList) clone.get(0);
+        clonedList1.add().newInt(4);
+        IonList clonedList2 = (IonList) clone.get(1);
+        clonedList2.remove(0);
+
+        assertNotEquals(original, clone);
+    }
+
+    /**
+     * @return the singleton IonSystem
+     */
+    private static _Private_IonSystem system()
+    {
+        return PRIVATE_ION_SYSTEM;
     }
 }

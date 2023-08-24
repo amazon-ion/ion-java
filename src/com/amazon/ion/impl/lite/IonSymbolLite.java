@@ -78,7 +78,7 @@ final class IonSymbolLite
     }
 
     @Override
-    IonSymbolLite clone(IonContext context)
+    IonValueLite shallowClone(IonContext context)
     {
         IonSymbolLite clone = new IonSymbolLite(this, context);
         if(this._sid == 0) {
@@ -97,7 +97,7 @@ final class IonSymbolLite
             && _stringValue() == null) {
             throw new UnknownSymbolException(_sid);
         }
-        return clone(ContainerlessContext.wrap(getSystem()));
+        return (IonSymbolLite) shallowClone(ContainerlessContext.wrap(getSystem()));
     }
 
     @Override

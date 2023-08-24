@@ -76,7 +76,7 @@ abstract class IonValueLite
     protected static final int ELEMENT_SHIFT      = 8; // low 8 bits is flag, upper 24 (or 48 is element id)
 
     // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
-    private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
+    static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
 
     // 'withCharsetAscii' is only specified for consistency with the behavior of the previous implementation of
     // toString. Technically users are not allowed to rely on a canonical encoding, but in practice they often do.
@@ -267,13 +267,13 @@ abstract class IonValueLite
 
     /** Not null. */
     protected IonContext       _context;
-    private   String           _fieldName;
+    protected String           _fieldName;
 
     /**
      * The annotation sequence. This array is overallocated and may have
      * nulls at the end denoting unused slots.
      */
-    private   SymbolToken[] _annotations;
+    protected SymbolToken[] _annotations;
 
     // current size 32 bit: 3*4 + 4 +  8 = 24 (32 bytes allocated)
     //              64 bit: 3*8 + 4 + 16 = 52 (56 bytes allocated)
@@ -302,8 +302,9 @@ abstract class IonValueLite
      * @param context the non-null parent context to use for the cloned entity.
      */
     IonValueLite(IonValueLite existing, IonContext context) {
-        // Symbols are *immutable* therefore a shallow copy is sufficient
-        boolean hasSIDsRetained = false;
+        // IonValue.clone() mandates that the returned value is mutable, regardless of the
+        // existing 'read only' flag.
+        this._flags = existing._flags & ~IS_LOCKED & ~IS_SYMBOL_ID_PRESENT;
         if (null == existing._annotations) {
             this._annotations = null;
         } else {
@@ -311,30 +312,25 @@ abstract class IonValueLite
             this._annotations = new SymbolToken[size];
             for (int i = 0; i < size; i++) {
                 SymbolToken existingToken = existing._annotations[i];
-                if (existingToken != null) {
-                    String text = existingToken.getText();
-                    if (text != null) {
-                        this._annotations[i] =
-                            _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-                    } else {
-                        // TODO - amazon-ion/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
-                        this._annotations[i] = existing._annotations[i];
-                        hasSIDsRetained |= this._annotations[i].getSid() > UNKNOWN_SYMBOL_ID;
+                if (existingToken == null) {
+                    // The annotation array grows by doubling; null indicates the actual end.
+                    break;
+                }
+                String text = existingToken.getText();
+                int sid = existingToken.getSid();
+                if (text == null || sid == UNKNOWN_SYMBOL_ID) {
+                    // TODO - amazon-ion/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
+                    _annotations[i] = existingToken;
+                    if (sid > UNKNOWN_SYMBOL_ID) {
+                        _flags |= IS_SYMBOL_ID_PRESENT;
                     }
+                } else {
+                    this._annotations[i] = _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                 }
             }
         }
-        // We don't copy the field name, that happens in IonStruct's clone
-        this._flags       = existing._flags;
+        // Note: the field name is copied in IonStruct.clone.
         this._context     = context;
-
-        // as IonValue.clone() mandates that the returned value is mutable, regardless of the
-        // existing 'read only' flag - we force the deep-copy back to being mutable
-        clear_flag(IS_LOCKED);
-        // whilst the clone *should* guarantee symbol context is purged, the annotation behavior existing above
-        // under the TO DO for amazon-ion/ion-java/issues/223 does mean that SID context can be propogated through a clone, therefore
-        // the encoding flag has to reflect this reality
-        _isSymbolIdPresent(hasSIDsRetained);
     }
 
     public abstract void accept(ValueVisitor visitor) throws Exception;
@@ -390,18 +386,37 @@ abstract class IonValueLite
         // and so we will opt to clear down encoding present in a lazy fashion (e.g. when something actually needs it)
     }
 
+    // Copies the field name from the given value into this one
+    final void copyFieldName(IonValueLite original) {
+        if(original._fieldName == null) {
+            // when name is null it could be a sid 0 so we need to perform the full symbol token lookup.
+            // this is expensive so only do it when necessary
+            // TODO profile `getKnownFieldNameSymbol` to see if we can improve its performance so branching
+            // is not necessary. https://github.com/amazon-ion/ion-java/issues/140
+            setFieldNameSymbol(original.getKnownFieldNameSymbol());
+        }
+        else {
+            // if we have a non null name copying it is sufficient
+            _fieldName = original._fieldName;
+        }
+    }
+
     /**
      * {@inheritDoc}
      * <p>
      * The user can only call this method on the concrete (not abstract)
-     * subclasses of IonValueLite (e.g. IonIntLite). The explicit clone logic
-     * is contained in {@link #clone(IonContext)} which should in turn be implemented by
-     * using a copy-constructor.
+     * subclasses of IonValueLite (e.g. IonIntLite).
      */
     @Override
     public abstract IonValue clone();
 
-    abstract IonValueLite clone(IonContext parentContext);
+    /**
+     * Clones the value's annotations and field name (if any). For scalars, also clones the value. For containers,
+     * leaves the cloned container empty rather than cloning the children.
+     * @param parentContext the context applicable to the value's parent.
+     * @return a shallow clone of this value.
+     */
+    abstract IonValueLite shallowClone(IonContext parentContext);
 
     /**
      * @return the constant hash signature unique to the value's type.
@@ -885,6 +900,20 @@ abstract class IonValueLite
         return users_copy;
     }
 
+    // Iterates through the value's annotations and determines whether any annotations have symbol IDs retained.
+    // Cascades a flag to the root if any symbol IDs are found.
+    protected void checkAnnotationsForSids() {
+        if (!_isSymbolIdPresent()) {
+            for (SymbolToken token : _annotations) {
+                // upon finding first match of a symbol token containing a SID - cascade upwards and exit
+                if (null != token && UNKNOWN_SYMBOL_ID != token.getSid()) {
+                    cascadeSIDPresentToContextRoot();
+                    break;
+                }
+            }
+        }
+    }
+
     public void setTypeAnnotationSymbols(SymbolToken... annotations)
     {
         checkForLock();
@@ -897,19 +926,7 @@ abstract class IonValueLite
         else
         {
             _annotations = annotations.clone();
-
-            // new annotations could have SID's - so if this node is not currently marked as SID
-            // present then the new annotations have to be interrogated to see if they contain SID's and if they
-            // do - the SID Present flag must be cascaded.
-            if (!_isSymbolIdPresent()) {
-                for (SymbolToken token : _annotations) {
-                    // upon finding first match of a symbol token containing a SID - cascade upwards and exit
-                    if (null != token && UNKNOWN_SYMBOL_ID != token.getSid()) {
-                        cascadeSIDPresentToContextRoot();
-                        break;
-                    }
-                }
-            }
+            checkAnnotationsForSids();
         }
     }
 
@@ -980,10 +997,18 @@ abstract class IonValueLite
             return original;
         }
 
-        int result = valueHashSalt * original + tokens.length;
+        // Note: Because the tokens array doubles in size when it grows, tokens.length does not correctly convey
+        // the actual number of annotations on the value.
+        int count = 0;
+        while (count < tokens.length && tokens[count] != null) {
+            count++;
+        }
 
-        for (final SymbolToken token : tokens)
+        int result = valueHashSalt * original + count;
+
+        for (int i = 0; i < count; i++)
         {
+            SymbolToken token = tokens[i];
             String text = token.getText();
 
             int tokenHashCode = text == null
