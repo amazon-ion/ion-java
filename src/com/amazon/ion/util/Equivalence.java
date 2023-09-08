@@ -159,20 +159,25 @@ public final class Equivalence {
     static final class Configuration {
         private final boolean isStrict;
         private final Double epsilon;
+        private final int maxComparisonDepth;
 
         Configuration(Builder builder) {
             this.isStrict = builder.isStrict;
             this.epsilon = builder.epsilon;
+            this.maxComparisonDepth = builder.maxComparisonDepth;
         }
     }
 
     /**
-     * Constructs {@link Equivalence} instances.
+     * Constructs {@link Equivalence} instances. To compare IonValues using an
+     * Equivalence instance's configuration, call {@link #ionValueEquals(IonValue, IonValue)}
+     * on that instance rather than calling {@link IonValue#equals(Object)}.
      */
     public static final class Builder {
 
         private boolean isStrict = true;
         private Double epsilon = null;
+        private int maxComparisonDepth = 1000;
 
         /**
          * When true, checks for strict data equivalence over two Ion Values.
@@ -198,6 +203,22 @@ public final class Equivalence {
          */
         public Builder withEpsilon(double epsilon) {
             this.epsilon = epsilon;
+            return this;
+        }
+
+        /**
+         * The maximum depth to which two values will be compared. If the two
+         * values to be compared are still potentially equivalent beyond this
+         * depth, {@link Equivalence#ionValueEquals(IonValue, IonValue)} will
+         * throw an {@link IonException}.
+         * @param maxComparisonDepth the value.
+         * @return this builder.
+         */
+        public Builder withMaxComparisonDepth(int maxComparisonDepth) {
+            if (maxComparisonDepth < 0) {
+                throw new IllegalArgumentException("Max comparison depth must not be negative.");
+            }
+            this.maxComparisonDepth = maxComparisonDepth;
             return this;
         }
 
@@ -263,13 +284,13 @@ public final class Equivalence {
      * and cannot contain duplicate elements, hence we cannot use it.
      */
     private static final Map<Field, Field>
-        convertToMultiSet(final IonStruct struct, final Configuration configuration) {
+        convertToMultiSet(final IonStruct struct, final Configuration configuration, final int depth) {
 
         final Map<Field, Field> structMultiSet =
             new HashMap<Field, Field>();
 
         for (final IonValue val : struct) {
-            final Field item = new Field(val, configuration);
+            final Field item = new Field(val, configuration, depth);
             Field curr = structMultiSet.put(item, item);
             // curr will be non-null if the multi-set already contains the
             // name/value pair
@@ -290,7 +311,8 @@ public final class Equivalence {
 
     private static int compareStructs(final IonStruct s1,
                                       final IonStruct s2,
-                                      final Configuration configuration)
+                                      final Configuration configuration,
+                                      final int depth)
     {
         int result = s1.size() - s2.size();
         if (result == 0) {
@@ -298,7 +320,7 @@ public final class Equivalence {
             // Map<Field, Field>). Refer to convertToMultiSet()'s
             // documentation for more info
             final Map<Field, Field> s1MultiSet
-                    = convertToMultiSet(s1, configuration);
+                    = convertToMultiSet(s1, configuration, depth);
 
             // Iterates through each name/value pair in IonStruct s2 and
             // determine if it also occurs in s1MultiSet.
@@ -306,7 +328,7 @@ public final class Equivalence {
             //          If it does, remove an occurrence from s1MultiSet
             //          If it doesn't, the two IonStructs aren't equal
             for (IonValue val : s2) {
-                Field field = new Field(val, configuration);
+                Field field = new Field(val, configuration, depth);
 
                 // Find an occurrence of the name/value pair in s1MultiSet
                 Field mappedValue = s1MultiSet.get(field);
@@ -328,7 +350,8 @@ public final class Equivalence {
 
     private static int compareSequences(final IonSequence s1,
                                         final IonSequence s2,
-                                        final Configuration configuration)
+                                        final Configuration configuration,
+                                        final int depth)
     {
         int result = s1.size() - s2.size();
         if (result == 0) {
@@ -337,7 +360,8 @@ public final class Equivalence {
             while (iter1.hasNext()) {
                 result = ionCompareToImpl(iter1.next(),
                                           iter2.next(),
-                                          configuration);
+                                          configuration,
+                                          depth);
                 if (result != 0) {
                     break;
                 }
@@ -388,7 +412,6 @@ public final class Equivalence {
         return result;
     }
 
-
     /**
      * Class that denotes a name/value pair in Structs.
      * <p>
@@ -412,7 +435,7 @@ public final class Equivalence {
      * a single {@code Field} -> {@code Field} with {@code occurrences} of 2.
      * <p>
      * Refer to
-     * {@link Equivalence#convertToMultiSet(IonStruct, Configuration)} and
+     * {@link Equivalence#convertToMultiSet(IonStruct, Configuration, int)} and
      * {@link Field#equals(Object)} for more info.
      * <p>
      * NOTE: This class should only be instantiated for the sole purpose of
@@ -422,6 +445,7 @@ public final class Equivalence {
         private final String    name; // aka field name
         private final IonValue  value;
         private final Configuration configuration;
+        private final int depth;
 
         /**
          * Number of times that this specific field (with the same name
@@ -429,7 +453,7 @@ public final class Equivalence {
          */
         private int occurrences;
 
-        Field(final IonValue value, final Configuration configuration)
+        Field(final IonValue value, final Configuration configuration, final int depth)
         {
             SymbolToken tok = value.getFieldNameSymbol();
             String name = tok.getText();
@@ -440,6 +464,7 @@ public final class Equivalence {
             this.name = name;
             this.value = value;
             this.configuration = configuration;
+            this.depth = depth;
 
             // Occurrences of this name/value pair is 0 initially
             this.occurrences = 0;
@@ -468,20 +493,22 @@ public final class Equivalence {
             final Field sOther = (Field) other;
 
             return name.equals(sOther.name)
-                && ionEqualsImpl(value, ((Field) other).value, configuration);
+                && ionEqualsImpl(value, ((Field) other).value, configuration, depth);
         }
     }
 
     private static boolean ionEqualsImpl(final IonValue v1,
                                          final IonValue v2,
-                                         final Configuration configuration)
+                                         final Configuration configuration,
+                                         final int depth)
     {
-        return (ionCompareToImpl(v1, v2, configuration) == 0);
+        return (ionCompareToImpl(v1, v2, configuration, depth) == 0);
     }
 
     private static int ionCompareToImpl(final IonValue v1,
                                         final IonValue v2,
-                                        final Configuration configuration)
+                                        final Configuration configuration,
+                                        final int depth)
     {
         int result = 0;
 
@@ -574,16 +601,24 @@ public final class Equivalence {
                     break;
                 case STRUCT:
                     assert !PUBLIC_COMPARISON_API; // TODO amazon-ion/ion-java/issues/26
+                    if (depth >= configuration.maxComparisonDepth) {
+                        throw new IonException("Cannot continue comparison: maximum comparison depth exceeded. This limit may be raised using Equivalence.Builder.");
+                    }
                     result = compareStructs((IonStruct) v1,
                                             (IonStruct) v2,
-                                            configuration);
+                                            configuration,
+                                            depth + 1);
                     break;
                 case LIST:
                 case SEXP:
                 case DATAGRAM:
+                    if (depth >= configuration.maxComparisonDepth) {
+                        throw new IonException("Cannot continue comparison: maximum comparison depth exceeded. This limit may be raised using Equivalence.Builder.");
+                    }
                     result = compareSequences((IonSequence) v1,
                                               (IonSequence) v2,
-                                              configuration);
+                                              configuration,
+                                              depth + 1);
                     break;
                 }
             }
@@ -614,7 +649,7 @@ public final class Equivalence {
     public static boolean ionEquals(final IonValue v1,
                                     final IonValue v2)
     {
-        return ionEqualsImpl(v1, v2, STRICT_CONFIGURATION);
+        return ionEqualsImpl(v1, v2, STRICT_CONFIGURATION, 0);
     }
 
     /**
@@ -632,7 +667,7 @@ public final class Equivalence {
     public static boolean ionEqualsByContent(final IonValue v1,
                                              final IonValue v2)
     {
-        return ionEqualsImpl(v1, v2, NON_STRICT_CONFIGURATION);
+        return ionEqualsImpl(v1, v2, NON_STRICT_CONFIGURATION, 0);
     }
 
     /**
@@ -649,7 +684,7 @@ public final class Equivalence {
      * @return true if two Ion Values represent the same data.
      */
     public boolean ionValueEquals(final IonValue v1, final IonValue v2) {
-        return ionEqualsImpl(v1, v2, configuration);
+        return ionEqualsImpl(v1, v2, configuration, 0);
     }
 
 }

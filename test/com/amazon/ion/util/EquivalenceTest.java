@@ -15,6 +15,7 @@
 
 package com.amazon.ion.util;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonFloat;
 import com.amazon.ion.IonList;
 import com.amazon.ion.IonStruct;
@@ -386,9 +387,9 @@ public class EquivalenceTest
         assertEquals(3, struct.size());
 
         Equivalence.Configuration configuration = new Equivalence.Configuration(new Equivalence.Builder().withStrict(true));
-        Equivalence.Field f1 = new Equivalence.Field(v1, configuration);
-        Equivalence.Field f2 = new Equivalence.Field(v2, configuration);
-        Equivalence.Field f3 = new Equivalence.Field(v3, configuration);
+        Equivalence.Field f1 = new Equivalence.Field(v1, configuration, 0);
+        Equivalence.Field f2 = new Equivalence.Field(v2, configuration, 0);
+        Equivalence.Field f3 = new Equivalence.Field(v3, configuration, 0);
 
         assertFalse(f1.equals(f2));
         assertFalse(f1.equals(f3));
@@ -419,9 +420,9 @@ public class EquivalenceTest
         assertEquals(3, struct.size());
 
         Equivalence.Configuration configuration = new Equivalence.Configuration(new Equivalence.Builder().withStrict(true));
-        Equivalence.Field f1 = new Equivalence.Field(v1, configuration);
-        Equivalence.Field f2 = new Equivalence.Field(v2, configuration);
-        Equivalence.Field f3 = new Equivalence.Field(v3, configuration);
+        Equivalence.Field f1 = new Equivalence.Field(v1, configuration, 0);
+        Equivalence.Field f2 = new Equivalence.Field(v2, configuration, 0);
+        Equivalence.Field f3 = new Equivalence.Field(v3, configuration, 0);
 
         assertEquals(f1, f2);
         assertEquals(f2, f1); // symmetric
@@ -469,5 +470,27 @@ public class EquivalenceTest
         IonList list2 = system().newList(v2.clone());
         assertTrue(equivalence.ionValueEquals(list1, list2));
         assertTrue(equivalence.ionValueEquals(list2, list1));
+    }
+
+    @Test
+    public void maximumDepthCannotBeNegative() {
+        Equivalence.Builder builder = new Equivalence.Builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.withMaxComparisonDepth(-1));
+    }
+
+    @Test
+    public void maximumDepthExceeded() {
+        Equivalence equivalence = new Equivalence.Builder().withMaxComparisonDepth(3).build();
+        IonStruct struct1 = (IonStruct) system().singleValue("{foo: {bar: {baz: {zar: 123}}}}");
+        IonStruct struct2 = struct1.clone();
+        assertThrows(IonException.class, () -> equivalence.ionValueEquals(struct1, struct2));
+    }
+
+    @Test
+    public void maximumDepthNotExceeded() {
+        Equivalence equivalence = new Equivalence.Builder().withMaxComparisonDepth(4).build();
+        IonStruct struct1 = (IonStruct) system().singleValue("{foo: {bar: {baz: {zar: 123}}}}");
+        IonStruct struct2 = struct1.clone();
+        assertTrue(equivalence.ionValueEquals(struct1, struct2));
     }
 }
