@@ -799,16 +799,7 @@ final class IonStructLite
     final void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        if (isNullValue())
-        {
-            writer.writeNull(IonType.STRUCT);
-        }
-        else
-        {
-            writer.stepIn(IonType.STRUCT);
-            writeChildren(writer, this, symbolTableProvider);
-            writer.stepOut();
-        }
+        throw new IllegalStateException("writeBodyTo is only applicable for scalar values.");
     }
 
     @Override

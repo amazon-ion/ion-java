@@ -409,17 +409,7 @@ abstract class IonSequenceLite
     void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException
     {
-        IonType type = getType();
-        if (isNullValue())
-        {
-            writer.writeNull(type);
-        }
-        else
-        {
-            writer.stepIn(type);
-            writeChildren(writer, this, symbolTableProvider);
-            writer.stepOut();
-        }
+        throw new IllegalStateException("writeBodyTo is only applicable for scalar values.");
     }
 
     /**

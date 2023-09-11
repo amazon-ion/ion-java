@@ -20,6 +20,7 @@ import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static com.amazon.ion.util.Equivalence.ionEquals;
 
+import com.amazon.ion.IonContainer;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
@@ -38,6 +39,9 @@ import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.Printer;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 
 /**
  *  Base class of the light weight implementation of
@@ -75,6 +79,9 @@ abstract class IonValueLite
 
     private   static final int ELEMENT_MASK       = 0xff;
     protected static final int ELEMENT_SHIFT      = 8; // low 8 bits is flag, upper 24 (or 48 is element id)
+
+    // This value was chosen somewhat arbitrarily; it can/should be changed if it is found to be insufficient.
+    private static final int CONTAINER_STACK_INITIAL_CAPACITY = 16;
 
     /**
      * Used by subclasses to retrieve metadata set by
@@ -965,35 +972,11 @@ abstract class IonValueLite
         writeTo(writer, new LazySymbolTableProvider(this));
     }
 
-    final void writeChildren(IonWriter writer, Iterable<IonValue> container,
-                             SymbolTableProvider symbolTableProvider)
-    {
-        boolean isDatagram = this instanceof IonDatagram;
-        // unfortunately JDK5 does not allow for generic co-variant returns; i.e. specifying
-        // IonContainerLite#iterator() return type as Iterator<IonValueLite> causes a compile-time
-        // error under JDK5 as it doesn't understand this is an acceptable co-variant for
-        // Iterator<IonValue> IonContainer#iterator(). This said we know the underlying data
-        // structure is IonValueLite[] - so we can conduct the cast within the loop. When ion-java is
-        // moved to allow JDK6+ compile time dependency we can remove these crufty casts.
-        for (IonValue iv : container) {
-            IonValueLite vlite = (IonValueLite) iv;
-            if(isDatagram)
-            {
-                vlite.writeTo(writer);
-            }
-            else
-            {
-                vlite.writeTo(writer, symbolTableProvider);
-            }
-        }
-    }
-
-    final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
-    {
+    private static void writeFieldNameAndAnnotations(IonWriter writer, IonValueLite value, SymbolTableProvider symbolTableProvider) {
         if (writer.isInStruct()
             && ! ((_Private_IonWriter) writer).isFieldNameSet())
         {
-            SymbolToken tok = getFieldNameSymbol(symbolTableProvider);
+            SymbolToken tok = value.getFieldNameSymbol(symbolTableProvider);
             if (tok == null)
             {
                 throw new IllegalStateException("Field name not set");
@@ -1002,19 +985,59 @@ abstract class IonValueLite
             writer.setFieldNameSymbol(tok);
         }
 
-        SymbolToken[] annotations = getTypeAnnotationSymbols(symbolTableProvider);
+        SymbolToken[] annotations = value.getTypeAnnotationSymbols(symbolTableProvider);
         writer.setTypeAnnotationSymbols(annotations);
+    }
 
-        try
-        {
-            writeBodyTo(writer, symbolTableProvider);
-        }
-        catch (IOException e)
-        {
+    private void writeToIterative(IonWriter writer, SymbolTableProvider symbolTableProvider) throws IOException {
+        Deque<Iterator<IonValue>> iteratorStack = null;
+        Iterator<IonValue> currentIterator = null;
+        IonValueLite value = this;
+        do {
+            writeFieldNameAndAnnotations(writer, value, symbolTableProvider);
+            IonType type = value.getType();
+            if (value.isNullValue()) {
+                writer.writeNull(type);
+            } else if (IonType.isContainer(type)) {
+                if (currentIterator != null) {
+                    if (iteratorStack == null) {
+                        iteratorStack = new ArrayDeque<>(CONTAINER_STACK_INITIAL_CAPACITY);
+                    }
+                    iteratorStack.add(currentIterator);
+                }
+                currentIterator = ((IonContainer) value).iterator();
+                writer.stepIn(type);
+            } else {
+                value.writeBodyTo(writer, symbolTableProvider);
+            }
+            do {
+                if (currentIterator == null) {
+                    return;
+                }
+                value = currentIterator.hasNext() ? (IonValueLite) currentIterator.next() : null;
+                if (value == null) {
+                    writer.stepOut();
+                    currentIterator = iteratorStack == null ? null : iteratorStack.pollLast();
+                }
+            } while (value == null);
+        } while (true);
+    }
+
+    final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
+    {
+        try {
+            writeToIterative(writer, symbolTableProvider);
+        } catch (IOException e) {
             throw new IonException(e);
         }
     }
 
+    /**
+     * Writes a *scalar* value to the given writer. It is incorrect to call this method on a container value.
+     * @param writer an IonWriter.
+     * @param symbolTableProvider a SymbolTableProvider.
+     * @throws IOException if thrown when writing the value.
+     */
     abstract void writeBodyTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
         throws IOException;
 
