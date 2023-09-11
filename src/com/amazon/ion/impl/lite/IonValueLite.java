@@ -86,6 +86,7 @@ abstract class IonValueLite
     // toString. Technically users are not allowed to rely on a canonical encoding, but in practice they often do.
     private static final IonTextWriterBuilder DEFAULT_TO_STRING_WRITER_BUILDER = IonTextWriterBuilder.standard().withCharsetAscii().immutable();
 
+
     /**
      * Used by subclasses to retrieve metadata set by
      * {@link #_setMetadata(int, int, int)}.
