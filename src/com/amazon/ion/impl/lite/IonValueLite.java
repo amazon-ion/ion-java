@@ -37,6 +37,7 @@ import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 
 /**
  *  Base class of the light weight implementation of
@@ -502,7 +503,7 @@ abstract class IonValueLite
             } else {
                 // Step into the container by pushing a HashHolder for the container onto the stack.
                 if (++hashStackIndex >= hashStack.length) {
-                    hashStack = growHashStack(hashStack);
+                    hashStack = Arrays.copyOf(hashStack, hashStack.length * 2);
                 }
                 hashHolder = hashStack[hashStackIndex];
                 if (hashHolder == null) {
@@ -531,12 +532,6 @@ abstract class IonValueLite
                 }
             } while (value == null);
         } while (true);
-    }
-
-    private static HashHolder[] growHashStack(HashHolder[] hashStack) {
-        HashHolder[] newHashStack = new HashHolder[hashStack.length * 2];
-        System.arraycopy(hashStack, 0, newHashStack, 0, hashStack.length);
-        return newHashStack;
     }
 
     /**
@@ -637,15 +632,6 @@ abstract class IonValueLite
         IonContainerLite.SequenceContentIterator iterator = null;
     }
 
-    private static ClearSymbolIDsHolder[] growClearSymbolIDsHolderStack(
-            ClearSymbolIDsHolder[] clearSymbolIDsHolderStack)
-    {
-        ClearSymbolIDsHolder[] newClearSymbolIDsHolderStack = new ClearSymbolIDsHolder[clearSymbolIDsHolderStack.length * 2];
-        System.arraycopy(clearSymbolIDsHolderStack, 0, newClearSymbolIDsHolderStack, 0,
-                clearSymbolIDsHolderStack.length);
-        return newClearSymbolIDsHolderStack;
-    }
-
     private boolean clearSymbolIDsIterative(boolean readOnlyMode) {
         ClearSymbolIDsHolder[] stack = new ClearSymbolIDsHolder[CONTAINER_STACK_INITIAL_CAPACITY];
         int stackIndex = 0;
@@ -662,7 +648,7 @@ abstract class IonValueLite
                 // The value is a container, and it is necessary to walk its children.
                 // Step into the container by pushing a ClearSymbolIDsHolder for the container onto the stack.
                 if (++stackIndex >= stack.length) {
-                    stack = growClearSymbolIDsHolderStack(stack);
+                    stack = Arrays.copyOf(stack, stack.length * 2);
                 }
                 holder = stack[stackIndex];
                 if (holder == null) {
@@ -1205,7 +1191,7 @@ abstract class IonValueLite
                 // BLANK: insert logic for handling non-null scalar values.
             } else {
                 if (++iteratorStackIndex >= iteratorStack.length) {
-                    iteratorStack = growIteratorStack(iteratorStack);
+                    iteratorStack = Arrays.copyOf(iteratorStack, iteratorStack.length * 2);
                 }
                 currentIterator = ((IonContainerLite) value).new SequenceContentIterator(0, true);
                 iteratorStack[iteratorStackIndex] = currentIterator;
@@ -1239,7 +1225,7 @@ abstract class IonValueLite
                 value.writeBodyTo(writer, symbolTableProvider);
             } else {
                 if (++iteratorStackIndex >= iteratorStack.length) {
-                    iteratorStack = growIteratorStack(iteratorStack);
+                    iteratorStack = Arrays.copyOf(iteratorStack, iteratorStack.length * 2);
                 }
                 currentIterator = ((IonContainerLite) value).new SequenceContentIterator(0, true);
                 iteratorStack[iteratorStackIndex] = currentIterator;
@@ -1257,11 +1243,6 @@ abstract class IonValueLite
                 }
             } while (value == null);
         } while (true);
-    }
-    private static IonContainerLite.SequenceContentIterator[] growIteratorStack(IonContainerLite.SequenceContentIterator[] iteratorStack) {
-        IonContainerLite.SequenceContentIterator[] newIteratorStack = new IonContainerLite.SequenceContentIterator[iteratorStack.length * 2];
-        System.arraycopy(iteratorStack, 0, newIteratorStack, 0, iteratorStack.length);
-        return newIteratorStack;
     }
 
     final void writeTo(IonWriter writer, SymbolTableProvider symbolTableProvider)
