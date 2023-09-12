@@ -59,6 +59,8 @@ import java.util.Iterator;
 
 
 /**
+ * <b>DEPRECATED: use {@link IonValue#writeTo(IonWriter)} instead.</b>
+ * <p>
  * Renders {@link IonValue}s to text.
  * <p>
  * By default, output is in a compact format with minimal whitespace.
@@ -78,7 +80,9 @@ import java.util.Iterator;
  *
  * @see IonWriter
  * @see IonTextWriterBuilder
+ * @deprecated Use {@link IonValue#writeTo(IonWriter)} instead.
  */
+@Deprecated
 public class Printer
 {
     public class Options
@@ -537,6 +541,9 @@ public class Printer
     //=========================================================================
     // Print methods
 
+    /**
+     * @deprecated Use {@link IonValue#writeTo(IonWriter)} instead.
+     */
     public static class PrinterVisitor
         extends AbstractValueVisitor
     {
