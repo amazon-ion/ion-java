@@ -539,20 +539,26 @@ abstract class IonWriterSystem
         }
         else
         {
-            int count = annotations.length;
+            int annotationsArrayLength = annotations.length;
             // TODO the following makes two copy passes
             // TODO validate the input
-            ensureAnnotationCapacity(count);
+            ensureAnnotationCapacity(annotationsArrayLength);
 
             SymbolTable symtab = getSymbolTable();
-            for (int i = 0; i < count; i++)
+            int count = 0;
+            while (count < annotationsArrayLength)
             {
-                SymbolToken sym = annotations[i];
+                SymbolToken sym = annotations[count];
+                if (sym == null) {
+                    break;
+                }
                 if (sym.getText() == null) {
                     validateSymbolId(sym.getSid());
                 }
                 sym = _Private_Utils.localize(symtab, sym);
-                _annotations[i] = sym;
+                _annotations[count] = sym;
+
+                count++;
             }
             _annotation_count = count;
         }

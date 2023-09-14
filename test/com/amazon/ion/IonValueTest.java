@@ -17,6 +17,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.junit.IonAssert.assertAnnotations;
 import static java.lang.String.format;
+import static org.junit.Assert.assertEquals;
 
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -184,6 +185,22 @@ public class IonValueTest
         v.addTypeAnnotation(ann);
     }
 
+    @Test
+    public void testClearTypeAnnotations() {
+        IonValue v = system().singleValue("a::b::null");
+        v.clearTypeAnnotations();
+        assertAnnotations(v);
+    }
+
+    @Test
+    public void testClearTypeAnnotationsAndThenWriteValue() {
+        IonValue v = system().singleValue("a::b::null");
+        v.clearTypeAnnotations();
+        // This is potentially brittle if e.g. toString() was changed to have different whitespace.
+        // The important thing we're checking for in this test case is that no NPEs are thrown after clearing annotations.
+        assertEquals("null", v.toString());
+    }
+
     @Test @Ignore
     public void testAddAnnotationDuplicate()
     {
@@ -240,6 +257,16 @@ public class IonValueTest
         assertAnnotations(v);
     }
 
+    @Test
+    public void testRemoveTypeAnnotationAndThenWriteValueToString() {
+        IonValue v = system().singleValue("a::b::null");
+        v.removeTypeAnnotation("a");
+        // This is potentially brittle if e.g. toString() was changed to have different whitespace.
+        // The important thing we're checking for in this test case is that no NPEs are thrown after removing an annotation.
+        assertEquals("b::null", v.toString());
+        v.removeTypeAnnotation("b");
+        assertEquals("null", v.toString());
+    }
 
     @Test
     public void testRemoveTypeAnnotationNull()
