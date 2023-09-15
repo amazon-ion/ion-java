@@ -22,6 +22,7 @@ import static com.amazon.ion.TestUtils.FERMATA;
 import static com.amazon.ion.impl.Symtabs.FRED_MAX_IDS;
 import static com.amazon.ion.impl._Private_IonWriterBase.ERROR_MISSING_FIELD_NAME;
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
+import static com.amazon.ion.junit.IonAssert.assertAnnotations;
 import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.expectNextField;
 
@@ -1287,5 +1288,24 @@ public abstract class IonWriterTestCase
                         system().newValue(reader));
 
         assertNull(reader.next());
+    }
+
+    // Create a writer, set it using the provided annotations, then write the given value using IonValue.writeTo.
+    // Assert that the resulting value is annotated with only the annotations on the original IonValue, not the ones
+    // set on the writer.
+    private void writeToWithAnnotations(IonValue value, String... annotations) throws Exception {
+        iw = makeWriter();
+        iw.setTypeAnnotations(annotations);
+        value.writeTo(iw);
+        IonValue reread = system().singleValue(outputByteArray());
+        assertAnnotations(reread, value.getTypeAnnotations());
+    }
+
+    @Test
+    public void writeToOverwritesExistingAnnotations() throws Exception {
+        writeToWithAnnotations(system().singleValue("bar"));
+        writeToWithAnnotations(system().singleValue("foo::bar"));
+        writeToWithAnnotations(system().singleValue("foo"), "bar");
+        writeToWithAnnotations(system().singleValue("foo::bar"), "baz");
     }
 }
