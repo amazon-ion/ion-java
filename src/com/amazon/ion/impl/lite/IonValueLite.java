@@ -1168,9 +1168,7 @@ abstract class IonValueLite
             }
         }
 
-        if (value._annotations != null) {
-            writer.setTypeAnnotationSymbols(value._annotations);
-        }
+        writer.setTypeAnnotationSymbols(value._annotations);
     }
 
     /*  The following template may be used to iterate over the tree at the current value. Copying this structure
