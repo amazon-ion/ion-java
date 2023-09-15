@@ -749,6 +749,15 @@ public class StructTest
     }
 
     @Test
+    public void testRemoveAfterCloneAndRemove() {
+        IonStruct struct1 = (IonStruct) system().singleValue("{a:1,b:2}");
+        IonStruct struct2 = struct1.cloneAndRemove("a");
+
+        assertNotNull(struct2.remove("b"));
+        assertFalse(struct2.containsKey("b"));
+    }
+
+    @Test
     public void testPutOfClone()
     {
         IonStruct s = system().newEmptyStruct();
