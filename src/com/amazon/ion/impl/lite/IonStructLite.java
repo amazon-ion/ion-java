@@ -318,6 +318,7 @@ final class IonStructLite
                     // This ensures that we don't copy an unknown field name.
                     clonedChild._fieldName = value.getFieldName();
                     clonedChild._elementid(clone._child_count);
+                    clonedChild._context = clone;
                     if (!clone._isSymbolIdPresent() && clonedChild._isSymbolIdPresent())
                     {
                         clone.cascadeSIDPresentToContextRoot();
