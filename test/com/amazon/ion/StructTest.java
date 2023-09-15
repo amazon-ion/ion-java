@@ -16,6 +16,8 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_Utils;
@@ -25,6 +27,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Random;
+
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -1113,10 +1117,22 @@ public class StructTest
         assertEquals(expected, actual);
 
         assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
+    }
 
-        IonStruct n = struct("x::y::null.struct");
-        IonStruct n2 = n.cloneAndRemove("a");
-        assertEquals(struct("x::y::null.struct"), n2);
+    @Test
+    public void testCloneAndRemoveOnNullStruct() {
+        IonStruct struct = struct("foo::null.struct");
+        IonStruct clone = struct.cloneAndRemove("a");
+        assertEquals(struct, clone);
+        assertNotSame(struct, clone);
+    }
+
+    @Test
+    public void testCloneAndRemoveOnEmptyStruct() {
+        IonStruct struct = struct("foo::{}");
+        IonStruct clone = struct.cloneAndRemove("a");
+        assertEquals(struct, clone);
+        assertNotSame(struct, clone);
     }
 
     @Test
@@ -1215,22 +1231,37 @@ public class StructTest
     //-------------------------------------------------------------------------
 
     @Test
-    public void testCloneAndRetain()
-    {
+    public void testCloneAndRetain() {
         IonStruct s1 = struct("a::{c:1,d:2,e:3,d:3}");
         IonStruct actual = s1.cloneAndRetain("c", "d");
         IonStruct expected = struct("a::{c:1,d:2,d:3}");
         assertEquals(expected, actual);
 
         assertEquals(struct("a::{}"), actual.cloneAndRetain("e"));
+    }
 
-        IonStruct n = struct("y::null.struct");
-        IonStruct n2 = n.cloneAndRetain("a");
-        assertEquals(struct("y::null.struct"), n2);
-
+    @Test
+    public void testCloneAndRetainUnknownFieldName() {
+        IonStruct s1 = struct("a::{c:1,d:2,e:3,d:3}");
         // Not cool to ask to retain an unknown field name.
         thrown.expect(NullPointerException.class);
         s1.cloneAndRetain("c", null);
+    }
+
+    @Test
+    public void testCloneAndRetainOnNullStruct() {
+        IonStruct struct = struct("foo::null.struct");
+        IonStruct clone = struct.cloneAndRetain("a");
+        assertEquals(struct, clone);
+        assertNotSame(struct, clone);
+    }
+
+    @Test
+    public void testCloneAndRetainOnEmptyStruct() {
+        IonStruct struct = struct("foo::{}");
+        IonStruct clone = struct.cloneAndRetain("a");
+        assertEquals(struct, clone);
+        assertNotSame(struct, clone);
     }
 
     @Test
