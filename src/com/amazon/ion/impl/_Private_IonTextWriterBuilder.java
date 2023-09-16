@@ -60,6 +60,7 @@ public class _Private_IonTextWriterBuilder
     public boolean _timestamp_as_millis;
     public boolean _timestamp_as_string;
     public boolean _untyped_nulls;
+    public boolean _allow_invalid_sids;
 
     private _Private_CallbackBuilder _callback_builder;
 
@@ -85,6 +86,7 @@ public class _Private_IonTextWriterBuilder
         this._timestamp_as_millis = that._timestamp_as_millis;
         this._timestamp_as_string = that._timestamp_as_string;
         this._untyped_nulls       = that._untyped_nulls      ;
+        this._allow_invalid_sids  = that._allow_invalid_sids ;
     }
 
 
@@ -138,6 +140,19 @@ public class _Private_IonTextWriterBuilder
         _timestamp_as_millis = false;
         _untyped_nulls       = true;
 
+        return b;
+    }
+
+    /**
+     * Determines whether this builder should allow invalid SIDs (i.e. SIDs out of range of the current symbol table or
+     * SIDs with unknown text). This is disabled by default, because enabling this option can result in writing invalid
+     * Ion data. This option should only be enabled when writing text Ion data primarily for debugging by humans.
+     * @param allowInvalidSids whether to allow invalid SIDs.
+     * @return the builder.
+     */
+    public final _Private_IonTextWriterBuilder withInvalidSidsAllowed(boolean allowInvalidSids) {
+        _Private_IonTextWriterBuilder b = mutable();
+        b._allow_invalid_sids = allowInvalidSids;
         return b;
     }
 
@@ -212,7 +227,7 @@ public class _Private_IonTextWriterBuilder
         SymbolTable initialSymtab =
             initialSymtab(((_Private_ValueFactory)system).getLstFactory(), defaultSystemSymtab, imports);
 
-        return new IonWriterUser(catalog, system, systemWriter, initialSymtab);
+        return new IonWriterUser(catalog, system, systemWriter, initialSymtab, !_allow_invalid_sids);
     }
 
 

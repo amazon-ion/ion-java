@@ -82,7 +82,8 @@ class IonWriterSystemText
     {
         super(defaultSystemSymtab,
               options.getInitialIvmHandling(),
-              options.getIvmMinimizing());
+              options.getIvmMinimizing(),
+              !options._allow_invalid_sids);
 
         _output =
             _Private_IonTextAppender.forFastAppendable(out,

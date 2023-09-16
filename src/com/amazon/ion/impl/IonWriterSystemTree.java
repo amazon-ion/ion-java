@@ -84,7 +84,7 @@ final class IonWriterSystemTree
                                   InitialIvmHandling initialIvmHandling)
     {
         super(defaultSystemSymbolTable, initialIvmHandling,
-              IvmMinimizing.ADJACENT);
+              IvmMinimizing.ADJACENT, true);
 
         _factory = rootContainer.getSystem();
         _lst_factory = (LocalSymbolTableAsStruct.Factory)((_Private_ValueFactory)_factory).getLstFactory();

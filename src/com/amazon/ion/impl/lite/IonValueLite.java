@@ -31,6 +31,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueVisitor;
+import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_IonWriter;
 import com.amazon.ion.impl._Private_Utils;
@@ -81,7 +82,11 @@ abstract class IonValueLite
 
     // 'withCharsetAscii' is only specified for consistency with the behavior of the previous implementation of
     // toString. Technically users are not allowed to rely on a canonical encoding, but in practice they often do.
-    private static final IonTextWriterBuilder DEFAULT_TO_STRING_WRITER_BUILDER = IonTextWriterBuilder.standard().withCharsetAscii().immutable();
+    private static final IonTextWriterBuilder DEFAULT_TO_STRING_WRITER_BUILDER =
+        ((_Private_IonTextWriterBuilder) IonTextWriterBuilder.standard())
+            .withInvalidSidsAllowed(true)
+            .withCharsetAscii()
+            .immutable();
 
 
     /**

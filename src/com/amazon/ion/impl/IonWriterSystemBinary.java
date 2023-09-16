@@ -325,7 +325,8 @@ final class IonWriterSystemBinary
     {
         super(defaultSystemSymtab,
               (ensureInitialIvm ? InitialIvmHandling.ENSURE : null),
-              IvmMinimizing.ADJACENT);
+              IvmMinimizing.ADJACENT,
+              true);
 
         out.getClass(); // Efficient null check
         _user_output_stream = out;
