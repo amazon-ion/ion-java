@@ -426,6 +426,13 @@ public class IonRawBinaryWriterTest extends Assert
     }
 
     @Test
+    public void testSetTypeAnnotationSymbolsWithNullInArray() throws IOException {
+        writer.setTypeAnnotationSymbols(systemSymbol(NAME_SID), null);
+        writer.writeBool(true);
+        assertValue("name::true");
+    }
+
+    @Test
     public void testList() throws Exception
     {
         writer.setTypeAnnotationSymbols(systemSymbol(IMPORTS_SID));
