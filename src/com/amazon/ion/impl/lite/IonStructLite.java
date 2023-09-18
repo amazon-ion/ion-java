@@ -298,6 +298,9 @@ final class IonStructLite
         {
             clone = getSystem().newNullStruct();
         }
+        else if (_children == null) {
+            clone = getSystem().newEmptyStruct();
+        }
         else
         {
             Set<String> fields =
