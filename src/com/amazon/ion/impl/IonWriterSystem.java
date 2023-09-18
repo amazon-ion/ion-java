@@ -89,8 +89,10 @@ abstract class IonWriterSystem
      */
     IonWriterSystem(SymbolTable defaultSystemSymbolTable,
                     InitialIvmHandling initialIvmHandling,
-                    IvmMinimizing ivmMinimizing)
+                    IvmMinimizing ivmMinimizing,
+                    boolean requireSymbolValidation)
     {
+        super(requireSymbolValidation);
         defaultSystemSymbolTable.getClass(); // Efficient null check
         _default_system_symbol_table = defaultSystemSymbolTable;
         _symbol_table = defaultSystemSymbolTable;

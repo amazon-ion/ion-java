@@ -44,6 +44,16 @@ public abstract class _Private_IonWriterBase
     static final String ERROR_FINISH_NOT_AT_TOP_LEVEL =
         "IonWriter.finish() can only be called at top-level.";
 
+    private final boolean requireSymbolValidation;
+
+    /**
+     * @param requireSymbolValidation true if SID validation should be performed; otherwise, false.
+     *                                See {@link _Private_IonTextWriterBuilder#withInvalidSidsAllowed(boolean)}
+     */
+    public _Private_IonWriterBase(boolean requireSymbolValidation) {
+        this.requireSymbolValidation = requireSymbolValidation;
+    }
+
     /**
      * Returns the current depth of containers the writer is at.  This is
      * 0 if the writer is at top-level.
@@ -216,7 +226,7 @@ public abstract class _Private_IonWriterBase
     }
 
     final void validateSymbolId(int sid) {
-        if (sid > getSymbolTable().getMaxId()) {
+        if (requireSymbolValidation && sid > getSymbolTable().getMaxId()) {
             // There is no slot for this symbol ID in the symbol table,
             // so an error would be raised on read. Fail early on write.
             throw new UnknownSymbolException(sid);

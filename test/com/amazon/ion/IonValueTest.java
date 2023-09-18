@@ -19,11 +19,18 @@ import static com.amazon.ion.junit.IonAssert.assertAnnotations;
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 
+import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.IonAssert;
+import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 
 public class IonValueTest
@@ -351,5 +358,43 @@ public class IonValueTest
         valueWithNullAnnotationSlots.addTypeAnnotation("ghi"); // The annotation array grows to length 4, leaving a null at index 3
         assertEquals(valueWithoutNullAnnotationSlots, valueWithNullAnnotationSlots);
         assertEquals(valueWithoutNullAnnotationSlots.hashCode(), valueWithNullAnnotationSlots.hashCode());
+    }
+
+    /**
+     * Assert that toString can produce strings from values that contain symbols with unknown text.
+     * @param value a value containing a symbol token (field name, annotation, or symbol value) with text "foo".
+     */
+    private void toStringCanHandleSymbolTokenWithUnknownText(IonValue value) throws Exception {
+
+        SymbolTable shared = _Private_Utils.newSharedSymtab("table", 1, null, Collections.singletonList("foo").iterator());
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (IonWriter writer = IonBinaryWriterBuilder.standard().withImports(shared).build(out)) {
+            value.writeTo(writer);
+        }
+
+        // The value is encoded using a shared symbol table.
+        byte[] encoded = out.toByteArray();
+
+        // The shared symbol table is not provided to the loader, leaving the loaded IonValue with a symbol with
+        // unknown text.
+        String actual = system().singleValue(encoded).toString();
+        // The resulting string contains the symbol identifier for the symbol with unknown text.
+        assertTrue(actual.contains("$10"));
+    }
+
+    @Test
+    public void toStringCanHandleFieldNameWithUnknownText() throws Exception {
+        toStringCanHandleSymbolTokenWithUnknownText(system().singleValue("{foo: bar}"));
+    }
+
+    @Test
+    public void toStringCanHandleAnnotationWithUnknownText() throws Exception {
+        toStringCanHandleSymbolTokenWithUnknownText(system().singleValue("foo::bar"));
+    }
+
+    @Test
+    public void toStringCanHandleSymbolValueWithUnknownText() throws Exception {
+        toStringCanHandleSymbolTokenWithUnknownText(system().singleValue("foo"));
     }
 }

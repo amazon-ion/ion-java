@@ -48,7 +48,8 @@ class IonWriterUserBinary
         super(options.getCatalog(),
               options.getSymtabValueFactory(),
               systemWriter,
-              options.buildContextSymbolTable());
+              options.buildContextSymbolTable(),
+              true);
 
         if (options.isStreamCopyOptimized())
         {

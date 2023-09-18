@@ -98,8 +98,10 @@ class IonWriterUser
      */
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
-                  IonWriterSystem systemWriter)
+                  IonWriterSystem systemWriter,
+                  boolean requireSymbolValidation)
     {
+        super(requireSymbolValidation);
         _symtab_value_factory = symtabValueFactory;
         _catalog = catalog;
 
@@ -127,9 +129,10 @@ class IonWriterUser
     IonWriterUser(IonCatalog catalog,
                   ValueFactory symtabValueFactory,
                   IonWriterSystem systemWriter,
-                  SymbolTable symtab)
+                  SymbolTable symtab,
+                  boolean requireSymbolValidation)
     {
-        this(catalog, symtabValueFactory, systemWriter);
+        this(catalog, symtabValueFactory, systemWriter, requireSymbolValidation);
 
         SymbolTable defaultSystemSymtab =
             systemWriter.getDefaultSystemSymtab();
