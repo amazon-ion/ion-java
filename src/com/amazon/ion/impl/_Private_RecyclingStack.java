@@ -11,10 +11,16 @@ import java.util.NoSuchElementException;
  * @param <T> the type of elements stored.
  */
 public final class _Private_RecyclingStack<T> implements Iterable<T> {
-
+    private $Iterator stackIterator;
     @Override
     public ListIterator<T> iterator() {
-        return new $Iterator();
+        stackIterator = new $Iterator();
+        return stackIterator;
+    }
+
+    // Reset the cursor of iterator.
+    public void resetIterator() {
+        stackIterator.cursor = _Private_RecyclingStack.this.currentIndex;
     }
 
     /**
@@ -111,10 +117,6 @@ public final class _Private_RecyclingStack<T> implements Iterable<T> {
 
     private class $Iterator implements ListIterator<T> {
         private int cursor;
-
-        $Iterator() {
-            cursor = _Private_RecyclingStack.this.currentIndex;
-        }
 
         @Override
         public boolean hasNext() {
