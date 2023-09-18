@@ -586,6 +586,7 @@ import java.util.NoSuchElementException;
         {
             for (final SymbolToken annotation : annotations)
             {
+                if (annotation == null) break;
                 addTypeAnnotationSymbol(annotation.getSid());
             }
         }
