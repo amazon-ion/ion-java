@@ -330,7 +330,12 @@ public final class IonAssert
                                           IonValue expected,
                                           IonValue actual)
     {
-        if (expected == actual) return;
+        if (expected == actual) {
+            if (expected != null) {
+                assertEquals("IonValues were equal, but have unequal hash codes.", expected.hashCode(), actual.hashCode());
+            }
+            return;
+        }
 
         IonType expectedType = expected.getType();
         assertSame(path + " type", expectedType, actual.getType());

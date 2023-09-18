@@ -983,16 +983,16 @@ abstract class IonValueLite
     protected int hashTypeAnnotations(final int original)
     {
         final SymbolToken[] tokens = _annotations == null ? SymbolToken.EMPTY_ARRAY : _annotations;
-        if (tokens.length == 0)
-        {
-            return original;
-        }
-
         // Note: Because the tokens array doubles in size when it grows, tokens.length does not correctly convey
         // the actual number of annotations on the value.
         int count = 0;
         while (count < tokens.length && tokens[count] != null) {
             count++;
+        }
+
+        if (count == 0)
+        {
+            return original;
         }
 
         int result = valueHashSalt * original + count;

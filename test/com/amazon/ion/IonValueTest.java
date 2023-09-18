@@ -197,6 +197,8 @@ public class IonValueTest
         IonValue v = system().singleValue("a::b::null");
         v.clearTypeAnnotations();
         assertAnnotations(v);
+
+        IonAssert.assertIonEquals(system().newNull(), v);
     }
 
     @Test
@@ -252,16 +254,20 @@ public class IonValueTest
 
         v.removeTypeAnnotation(ann);
         assertAnnotations(v);
+        IonAssert.assertIonEquals(system().newNull(), v);
 
         v = system().singleValue("ann::ben::cam::null");
         v.removeTypeAnnotation(ben);
         assertAnnotations(v, ann, "cam");
+        IonAssert.assertIonEquals(system().singleValue("ann::cam::null"), v);
         v.removeTypeAnnotation(ben);
         assertAnnotations(v, ann, "cam");
         v.removeTypeAnnotation("cam");
         assertAnnotations(v, ann);
+        IonAssert.assertIonEquals(system().singleValue("ann::null"), v);
         v.removeTypeAnnotation(ann);
         assertAnnotations(v);
+        IonAssert.assertIonEquals(system().newNull(), v);
     }
 
     @Test
