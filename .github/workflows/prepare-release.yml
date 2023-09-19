@@ -43,7 +43,7 @@ jobs:
     outputs:
       should_create_draft: ${{ steps.inspect.outputs.is_valid_to_release }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Get project version
         run: |
           echo "PROJECT_VERSION=$(<project.version)" >> $GITHUB_ENV
@@ -64,7 +64,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Create a draft release
         shell: bash
         env:

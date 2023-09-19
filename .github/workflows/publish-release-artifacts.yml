@@ -21,12 +21,15 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   check-tag:
     # First, a sanity check to ensure that the library version matches the release version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Validate project version matches tag
         shell: bash
         run: |
@@ -45,10 +48,10 @@ jobs:
     steps:
         # TODO: replace with artifact upload/download -- make sure there's no race condition with other builds also
         # uploading an artifact.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           submodules: recursive
-      - uses: gradle/gradle-build-action@v2
+      - uses: gradle/gradle-build-action@ef76a971e2fa3f867b617efd72f2fbd72cf6f8bc # v2.8.0
         with:
           arguments: build cyclonedxBom
       - name: Upload Jar to GitHub release
