@@ -20,6 +20,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - uses: gradle/wrapper-validation-action@v1
       - name: Use java ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
