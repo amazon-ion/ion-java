@@ -359,7 +359,6 @@ import java.util.ListIterator;
     private final IntList     currentAnnotationSids;
     // XXX this is for managed detection of TLV that is a LST--this is easier to track here than at the managed level
     private boolean                     hasTopLevelSymbolTableAnnotation;
-    private ListIterator<ContainerInfo> stackIterator;
 
     private boolean                     closed;
 
@@ -400,7 +399,6 @@ import java.util.ListIterator;
         this.currentFieldSid                  = SID_UNASSIGNED;
         this.currentAnnotationSids            = new IntList();
         this.hasTopLevelSymbolTableAnnotation = false;
-        this.stackIterator = containers.iterator();
         this.closed = false;
     }
 
@@ -560,7 +558,7 @@ import java.util.ListIterator;
         // If we're adding a patch point we first need to ensure that all of our ancestors (containing values) already
         // have a patch point. No container can be smaller than the contents, so all outer layers also require patches.
         // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and reset the cursor every time we track back to the ancestors.
-        containers.resetIterator();
+        ListIterator<ContainerInfo> stackIterator = containers.iterator();
         // Walk down the stack until we find an ancestor which already has a patch point
         while (stackIterator.hasNext() && stackIterator.next().patchIndex == -1);
 

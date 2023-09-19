@@ -14,13 +14,12 @@ public final class _Private_RecyclingStack<T> implements Iterable<T> {
     private $Iterator stackIterator;
     @Override
     public ListIterator<T> iterator() {
-        stackIterator = new $Iterator();
+        if (stackIterator != null) {
+            stackIterator.cursor = _Private_RecyclingStack.this.currentIndex;
+        } else {
+            stackIterator = new $Iterator();
+        }
         return stackIterator;
-    }
-
-    // Reset the cursor of iterator.
-    public void resetIterator() {
-        stackIterator.cursor = _Private_RecyclingStack.this.currentIndex;
     }
 
     /**
