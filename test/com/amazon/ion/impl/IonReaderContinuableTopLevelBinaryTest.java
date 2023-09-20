@@ -3193,4 +3193,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
         thrown.expect(IonException.class);
         reader.next();
     }
+
+    @Test
+    public void earlyStepOutNonIncremental() throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(0xB4, 0x20); // List length 4 followed by a single byte
+        nextExpect(IonType.LIST);
+        stepIn();
+        // Early step-out. The reader could choose to fail here, but it is expensive to check for EOF on every stepOut.
+        stepOut();
+        // However, the reader *must* fail if the user requests the next value, because the stream is incomplete.
+        thrown.expect(IonException.class); // Unexpected EOF
+        nextExpect(null);
+    }
+
 }
