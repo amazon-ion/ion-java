@@ -20,6 +20,14 @@ public class _Private_RecyclingQueue<T> {
         T newElement();
     }
 
+    @FunctionalInterface
+    public interface Recycler<T> {
+        /**
+         * Re-initialize an element
+         */
+        void recycle(T t);
+    }
+
     /**
      * Iterator for the queue.
      */
@@ -67,7 +75,7 @@ public class _Private_RecyclingQueue<T> {
      * previously grown to the new depth.
      * @return the element at the top of the queue after the push. This element must be initialized by the caller.
      */
-    public T push() {
+    public int push(Recycler<T> recycler) {
         currentIndex++;
         if (currentIndex >= elements.size()) {
             top = elementFactory.newElement();
@@ -75,7 +83,8 @@ public class _Private_RecyclingQueue<T> {
         }  else {
             top = elements.get(currentIndex);
         }
-        return top;
+        recycler.recycle(top);
+        return currentIndex;
     }
 
     /**

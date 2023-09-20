@@ -2,13 +2,25 @@ package com.amazon.ion.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 /**
  * A stack whose elements are recycled. This can be useful when the stack needs to grow and shrink
  * frequently and has a predictable maximum depth.
  * @param <T> the type of elements stored.
  */
-public final class _Private_RecyclingStack<T> {
+public final class _Private_RecyclingStack<T> implements Iterable<T> {
+    private $Iterator stackIterator;
+    @Override
+    public ListIterator<T> iterator() {
+        if (stackIterator != null) {
+            stackIterator.cursor = _Private_RecyclingStack.this.currentIndex;
+        } else {
+            stackIterator = new $Iterator();
+        }
+        return stackIterator;
+    }
 
     /**
      * Factory for new stack elements.
@@ -22,6 +34,14 @@ public final class _Private_RecyclingStack<T> {
         T newElement();
     }
 
+    @FunctionalInterface
+    public interface Recycler<T> {
+        /**
+         * Re-initialize an element
+         */
+        void recycle(T t);
+    }
+
     private final List<T> elements;
     private final ElementFactory<T> elementFactory;
     private int currentIndex;
@@ -29,11 +49,11 @@ public final class _Private_RecyclingStack<T> {
 
     /**
      * @param initialCapacity the initial capacity of the underlying collection.
-     * @param elementFactory the factory used to create a new element on {@link #push()} when the stack has
+     * @param elementFactory the factory used to create a new element on {@link #push(Recycler)} when the stack has
      *                       not previously grown to the new depth.
      */
     public _Private_RecyclingStack(int initialCapacity, ElementFactory<T> elementFactory) {
-        elements = new ArrayList<T>(initialCapacity);
+        elements = new ArrayList<>(initialCapacity);
         this.elementFactory = elementFactory;
         currentIndex = -1;
         top = null;
@@ -44,7 +64,7 @@ public final class _Private_RecyclingStack<T> {
      * previously grown to the new depth.
      * @return the element at the top of the stack after the push. This element must be initialized by the caller.
      */
-    public T push() {
+    public T push(Recycler<T> recycler) {
         currentIndex++;
         if (currentIndex >= elements.size()) {
             top = elementFactory.newElement();
@@ -52,6 +72,7 @@ public final class _Private_RecyclingStack<T> {
         }  else {
             top = elements.get(currentIndex);
         }
+        recycler.recycle(top);
         return top;
     }
 
@@ -92,4 +113,62 @@ public final class _Private_RecyclingStack<T> {
     public int size() {
         return currentIndex + 1;
     }
+
+    private class $Iterator implements ListIterator<T> {
+        private int cursor;
+
+        @Override
+        public boolean hasNext() {
+            return cursor >= 0;
+        }
+
+        @Override
+        public T next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            // post-decrement because "next" is where the cursor is
+            return _Private_RecyclingStack.this.elements.get(cursor--);
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return cursor + 1 <= _Private_RecyclingStack.this.currentIndex;
+        }
+
+        @Override
+        public T previous() {
+            if (!hasPrevious()) {
+                throw new NoSuchElementException();
+            }
+            // pre-increment: "next" is where the cursor is, so "previous" is upward in stack
+            return _Private_RecyclingStack.this.elements.get(++cursor);
+        }
+
+        @Override
+        public int nextIndex() {
+            return cursor;
+        }
+
+        @Override
+        public int previousIndex() {
+            return cursor + 1;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void set(T t) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void add(T t) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
 }
