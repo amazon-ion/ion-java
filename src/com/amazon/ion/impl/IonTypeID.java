@@ -26,8 +26,11 @@ final class IonTypeID {
     // does not have a type ID, so we will use it to mean 'annotation wrapper' instead.
     static final IonType ION_TYPE_ANNOTATION_WRAPPER = IonType.DATAGRAM;
 
-    // Lookup table from type ID to IonType. See https://amzn.github.io/ion-docs/docs/binary.html#typed-value-formats
-    static final IonType[] ION_TYPES_1_0 = new IonType[] {
+    // Lookup table from type ID to "binary token type", loosely represented by the IonType enum to avoid the need to
+    // define a completely new enum with translations between them. "Binary token types" are a superset of IonType,
+    // adding annotation wrapper and `null` (i.e., illegal).
+    // See https://amzn.github.io/ion-docs/docs/binary.html#typed-value-formats
+    static final IonType[] BINARY_TOKEN_TYPES_1_0 = new IonType[] {
         IonType.NULL,
         IonType.BOOL,
         IonType.INT,
@@ -115,7 +118,7 @@ final class IonTypeID {
                 this.type = null;
             } else {
                 this.isNopPad = false;
-                this.type = ION_TYPES_1_0[upperNibble];
+                this.type = BINARY_TOKEN_TYPES_1_0[upperNibble];
             }
             this.isValid = isValid_1_0(upperNibble, lowerNibble, type);
             this.isNull = lowerNibble == NULL_VALUE_NIBBLE;
@@ -140,5 +143,13 @@ final class IonTypeID {
         } else {
             throw new IllegalStateException("Only Ion 1.0 is currently supported.");
         }
+    }
+
+    /**
+     * @return a String representation of this object (for debugging).
+     */
+    @Override
+    public String toString() {
+        return String.format("%s(%s)", type, length);
     }
 }

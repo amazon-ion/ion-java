@@ -40,6 +40,9 @@ class IonCursorBinary implements IonCursor {
     // a new ContainerInfo. Depths greater than 8 are assumed to be rare.
     private static final int CONTAINER_STACK_INITIAL_CAPACITY = 8;
 
+    // When set as an 'endIndex', indicates that the value is delimited.
+    private static final int DELIMITED_MARKER = -1;
+
     /**
      * The kind of location at which `checkpoint` points.
      */
@@ -160,7 +163,8 @@ class IonCursorBinary implements IonCursor {
     long limit;
 
     /**
-     * A slice of the current buffer.
+     * A slice of the current buffer. May be used to create ByteBuffer views over value representation bytes for
+     * quicker parsing.
      */
     ByteBuffer byteBuffer;
 
@@ -1016,7 +1020,7 @@ class IonCursorBinary implements IonCursor {
      * @param markerToSet the marker to set.
      */
     private void setMarker(long endIndex, Marker markerToSet) {
-        if (parent != null && endIndex > parent.endIndex && parent.endIndex > -1) {
+        if (parent != null && endIndex > parent.endIndex && parent.endIndex > DELIMITED_MARKER) {
             throw new IonException("Value exceeds the length of its parent container.");
         }
         markerToSet.startIndex = peekIndex;
@@ -1032,7 +1036,7 @@ class IonCursorBinary implements IonCursor {
         if (parent.endIndex > peekIndex) {
             return false;
         }
-        if (parent.endIndex == -1) {
+        if (parent.endIndex == DELIMITED_MARKER) {
             return isSlowMode ? slowIsDelimitedEnd_1_1() : isDelimitedEnd_1_1();
         }
         if (parent.endIndex == peekIndex) {
@@ -1246,7 +1250,7 @@ class IonCursorBinary implements IonCursor {
         long valueLength = 0;
         long endIndex = 0;
         if (valueTid.isDelimited) {
-            endIndex = -1;
+            endIndex = DELIMITED_MARKER;
         } else if (valueTid.variableLength) {
             // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
             // and 1 for the smallest-possible value representation.
@@ -1275,15 +1279,15 @@ class IonCursorBinary implements IonCursor {
         if (refillableState.isSkippingCurrentValue) {
             // Any bytes that were skipped directly from the input must still be included in the logical endIndex so
             // that the rest of the oversized value's bytes may be skipped.
-            endIndex = endIndex == -1 ? -1 : (peekIndex + valueLength + refillableState.individualBytesSkippedWithoutBuffering);
+            endIndex = endIndex == DELIMITED_MARKER ? DELIMITED_MARKER : (peekIndex + valueLength + refillableState.individualBytesSkippedWithoutBuffering);
         } else {
-            endIndex = endIndex == -1 ? -1 : (peekIndex + valueLength);
+            endIndex = endIndex == DELIMITED_MARKER ? DELIMITED_MARKER : (peekIndex + valueLength);
         }
         if (isAnnotated) {
             validateAnnotationWrapperEndIndex(endIndex);
         }
         setMarker(endIndex, markerToSet);
-        if (event == Event.START_CONTAINER && endIndex > -1 && endIndex <= limit) {
+        if (event == Event.START_CONTAINER && endIndex > DELIMITED_MARKER && endIndex <= limit) {
             refillableState.fillDepth = containerIndex + 1;
         }
         return false;
@@ -1296,7 +1300,7 @@ class IonCursorBinary implements IonCursor {
         Marker[] newStack = new Marker[containerStack.length * 2];
         System.arraycopy(containerStack, 0, newStack, 0, containerStack.length);
         for (int i = containerStack.length; i < newStack.length; i++) {
-            newStack[i] = new Marker(-1 ,-1);
+            newStack[i] = new Marker(-1, -1);
         }
         containerStack = newStack;
     }
@@ -1305,8 +1309,7 @@ class IonCursorBinary implements IonCursor {
      * Push a Marker representing the current container onto the stack.
      */
     private void pushContainer() {
-        containerIndex++;
-        if (containerIndex >= containerStack.length) {
+        if (++containerIndex >= containerStack.length) {
             growContainerStack();
         }
         parent = containerStack[containerIndex];
@@ -1325,7 +1328,7 @@ class IonCursorBinary implements IonCursor {
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         pushContainer();
         parent.typeId = valueTid;
-        parent.endIndex = valueTid.isDelimited ? -1 : valueMarker.endIndex;
+        parent.endIndex = valueTid.isDelimited ? DELIMITED_MARKER : valueMarker.endIndex;
         valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
         reset();
@@ -1352,7 +1355,7 @@ class IonCursorBinary implements IonCursor {
             isSlowMode = false;
         }
         parent.typeId = valueMarker.typeId;
-        parent.endIndex = valueTid.isDelimited ? -1 : valueMarker.endIndex;
+        parent.endIndex = valueTid.isDelimited ? DELIMITED_MARKER : valueMarker.endIndex;
         setCheckpointBeforeUnannotatedTypeId();
         valueTid = null;
         hasAnnotations = false;
@@ -1392,7 +1395,7 @@ class IonCursorBinary implements IonCursor {
             throw new IllegalStateException("Cannot step out at top level.");
         }
         // Seek past the remaining bytes at this depth and pop from the stack.
-        if (parent.endIndex == -1) {
+        if (parent.endIndex == DELIMITED_MARKER) {
             if (skipRemainingDelimitedContainerElements_1_1()) {
                 return event;
             }
@@ -1402,8 +1405,7 @@ class IonCursorBinary implements IonCursor {
         if (!isSlowMode) {
             setCheckpointBeforeUnannotatedTypeId();
         }
-        containerIndex--;
-        if (containerIndex >= 0) {
+        if (--containerIndex >= 0) {
             parent = containerStack[containerIndex];
             if (refillableState != null && containerIndex < refillableState.fillDepth) {
                 resumeSlowMode();
@@ -1438,7 +1440,7 @@ class IonCursorBinary implements IonCursor {
         }
         event = Event.NEEDS_DATA;
         // Seek past any remaining bytes from the previous value.
-        if (parent.endIndex == -1) {
+        if (parent.endIndex == DELIMITED_MARKER) {
             if (slowSkipRemainingDelimitedContainerElements_1_1()) {
                 return event;
             }
@@ -1449,8 +1451,7 @@ class IonCursorBinary implements IonCursor {
             peekIndex = parent.endIndex;
         }
         setCheckpointBeforeUnannotatedTypeId();
-        containerIndex--;
-        if (containerIndex >= 0) {
+        if (--containerIndex >= 0) {
             parent = containerStack[containerIndex];
         } else {
             parent = null;
@@ -1467,7 +1468,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the container has been reached; otherwise, false.
      */
     private boolean nextContainedToken() {
-        if (parent.endIndex == -1) {
+        if (parent.endIndex == DELIMITED_MARKER) {
             return isDelimitedEnd_1_1();
         } else if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
@@ -1615,7 +1616,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream; otherwise, false.
      */
     private boolean slowSkipRemainingValueBytes() {
-        if (valueMarker.endIndex == -1 && valueTid != null && valueTid.isDelimited) {
+        if (valueMarker.endIndex == DELIMITED_MARKER && valueTid != null && valueTid.isDelimited) {
             seekPastDelimitedContainer_1_1();
             if (event == Event.NEEDS_DATA) {
                 return true;
@@ -1730,7 +1731,7 @@ class IonCursorBinary implements IonCursor {
         }
         event = Event.NEEDS_DATA;
 
-        if (valueMarker.endIndex == -1) {
+        if (valueMarker.endIndex == DELIMITED_MARKER) {
             if (slowFillDelimitedContainer_1_1()) {
                 return event;
             }
@@ -1772,7 +1773,8 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Slices the buffer using the given offset and limit. Slices are treated as if they were at the top level.
+     * Slices the buffer using the given offset and limit. Slices are treated as if they were at the top level. This
+     * can be used to seek the reader to a "span" of bytes that represent a value in the stream.
      * @param offset the offset at which the slice will begin.
      * @param limit the slice's limit.
      */
