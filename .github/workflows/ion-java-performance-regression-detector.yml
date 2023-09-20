@@ -8,6 +8,9 @@ on:
     paths:
       - 'src/*'
 
+permissions:
+  contents: read
+
 jobs:
   detect-regression:
     name: Detect Regression
@@ -15,13 +18,13 @@ jobs:
 
     steps:
       - name: Set up JDK 11
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@cd89f46ac9d01407894225f350157564c9c7cee2 # v3.12.0
         with:
           distribution: 'corretto'
           java-version: 11
 
       - name: Checkout ion-java from the new commit.
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: ion-java-new
@@ -30,7 +33,7 @@ jobs:
         run: cd ion-java-new && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
 
       - name: Checkout ion-java-benchmark-cli
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           repository: amazon-ion/ion-java-benchmark-cli
           ref: master
@@ -40,7 +43,7 @@ jobs:
         run: cd ion-java-benchmark-cli && mvn clean install
 
       - name: Checkout ion-data-generator
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           repository: amazon-ion/ion-data-generator
           ref: main
@@ -63,7 +66,7 @@ jobs:
           java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema03.isl testData/realWorldData03.10n
 
       - name: Upload test Ion Data to artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: test Ion Data
           path: testData
@@ -74,7 +77,7 @@ jobs:
           cd ion-java-benchmark-cli && java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar run-suite --test-ion-data /home/runner/work/ion-java/ion-java/testData --benchmark-options-combinations tst/com/amazon/ion/benchmark/optionsCombinations.ion /home/runner/work/ion-java/ion-java/benchmarkResults
 
       - name: Upload benchmark results to artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: Benchmark result
           path: benchmarkResults
@@ -83,7 +86,7 @@ jobs:
         run : rm -r /home/runner/.m2
 
       - name: Checkout the current commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           repository: amazon-ion/ion-java
           ref: master
@@ -104,13 +107,13 @@ jobs:
           mkdir -p testData
 
       - name: Download test Ion Data from artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@cbed621e49e4c01b044d60f6c80ea4ed6328b281 # v2.1.1
         with:
           name: test Ion Data
           path: testData
 
       - name: Download benchmark results of ion-java from the new commit from artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@cbed621e49e4c01b044d60f6c80ea4ed6328b281 # v2.1.1
         with:
           name: Benchmark result
           path: benchmarkResults
@@ -119,7 +122,7 @@ jobs:
         run: cd ion-java-benchmark-cli && java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar run-suite --test-ion-data /home/runner/work/ion-java/ion-java/testData --benchmark-options-combinations tst/com/amazon/ion/benchmark/optionsCombinations.ion /home/runner/work/ion-java/ion-java/benchmarkResults
 
       - name: Upload new benchmark results directory to artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: Benchmark result
           path: benchmarkResults
@@ -133,7 +136,7 @@ jobs:
           if [ "$result" = "true" ]; then echo "No regression detected!" >> $GITHUB_STEP_SUMMARY; fi
 
       - name: Upload comparison reports to the benchmark results directory
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         with:
           name: Benchmark result
           path: benchmarkResults
