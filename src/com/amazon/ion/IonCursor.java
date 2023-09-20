@@ -17,7 +17,8 @@ public interface IonCursor extends Closeable {
 
         /**
          * There is not enough data in the stream to complete the requested operation. The operation should be retried
-         * when more data is available.
+         * when more data is available. Note that there is no way to "cancel" a previously requested operation;
+         * requesting a different operation after a `NEEDS_DATA` event has undefined behavior.
          */
         NEEDS_DATA,
 

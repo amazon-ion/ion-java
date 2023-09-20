@@ -31,4 +31,12 @@ class Marker {
         this.startIndex = startIndex;
         this.endIndex = startIndex + length;
     }
+
+    /**
+     * @return a String representation of this object (for debugging).
+     */
+    @Override
+    public String toString() {
+        return String.format("%s[%d:%d]", typeId, startIndex, endIndex);
+    }
 }
