@@ -1,6 +1,7 @@
 # Test cases for the 'inspect-version' action
 
 name: Test 'inspect-version' Action
+permissions: read-all
 
 on:
   pull_request:
