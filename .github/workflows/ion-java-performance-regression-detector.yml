@@ -24,7 +24,7 @@ jobs:
           java-version: 11
 
       - name: Checkout ion-java from the new commit.
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: ion-java-new
@@ -33,7 +33,7 @@ jobs:
         run: cd ion-java-new && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
 
       - name: Checkout ion-java-benchmark-cli
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
         with:
           repository: amazon-ion/ion-java-benchmark-cli
           ref: master
@@ -43,7 +43,7 @@ jobs:
         run: cd ion-java-benchmark-cli && mvn clean install
 
       - name: Checkout ion-data-generator
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
         with:
           repository: amazon-ion/ion-data-generator
           ref: main
@@ -86,7 +86,7 @@ jobs:
         run : rm -r /home/runner/.m2
 
       - name: Checkout the current commit
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
         with:
           repository: amazon-ion/ion-java
           ref: master

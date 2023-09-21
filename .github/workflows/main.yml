@@ -18,7 +18,7 @@ jobs:
             upload_reports: true
           - java: 17
     steps:
-      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2.7.0
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
         with:
           submodules: recursive
       - uses: gradle/wrapper-validation-action@56b90f209b02bf6d1deae490e9ef18b21a389cd4 # v1.1.0
@@ -47,7 +47,7 @@ jobs:
     # https://github.com/amazon-ion/ion-java/blob/master/.github/actions/inspect-version/action.yml
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
       - name: Get Project Version
         run: |
           echo "PROJECT_VERSION=v$(<project.version)" >> $GITHUB_ENV
