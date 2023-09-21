@@ -63,8 +63,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     // a particular index is null, that symbol has unknown text.
     private String[] symbols;
 
-    // The max ID of the local symbol table.
-    private int localSymbolMaxId = -1;
+    // The maximum offset into the 'symbols' array that points to a valid local symbol.
+    private int localSymbolMaxOffset = -1;
 
     // The catalog used by the reader to resolve shared symbol table imports.
     private final IonCatalog catalog;
@@ -235,14 +235,15 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         LocalSymbolTableSnapshot() {
             int importsMaxId = imports.getMaxId();
-            int numberOfLocalSymbols = localSymbolMaxId + 1;
+            int numberOfLocalSymbols = localSymbolMaxOffset + 1;
             // Note: 'imports' is immutable, so a clone is not needed.
             importedTables = imports;
             maxId = importsMaxId + numberOfLocalSymbols;
-            // Map with initial size the number of symbols and load factor 1, meaning it must be full before growing.
-            // It is not expected to grow.
             idToText = new String[numberOfLocalSymbols];
             System.arraycopy(symbols, 0, idToText, 0, numberOfLocalSymbols);
+            // Map with initial size and load factor set so that it will not grow unconditionally when it is filled.
+            // Note: using the default load factor of 0.75 results in better lookup performance than using 1.0 and
+            // filling the map to capacity.
             textToId = new HashMap<>((int) Math.ceil(numberOfLocalSymbols / 0.75), 0.75f);
             for (int i = 0; i < numberOfLocalSymbols; i++) {
                 String symbol = idToText[i];
@@ -428,8 +429,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private void resetSymbolTable() {
         // The following line is not required for correctness, but it frees the references to the old symbols,
         // potentially allowing them to be garbage collected.
-        Arrays.fill(symbols, 0, localSymbolMaxId + 1, null);
-        localSymbolMaxId = -1;
+        Arrays.fill(symbols, 0, localSymbolMaxOffset + 1, null);
+        localSymbolMaxOffset = -1;
         cachedReadOnlySymbolTable = null;
         if (symbolTokensById != null) {
             symbolTokensById.clear();
@@ -459,7 +460,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             cachedReadOnlySymbolTable = snapshot;
             imports = snapshot.importedTables;
             firstLocalSymbolId = imports.getMaxId() + 1;
-            localSymbolMaxId = snapshot.maxId - firstLocalSymbolId;
+            localSymbolMaxOffset = snapshot.maxId - firstLocalSymbolId;
             // Note: because `symbols` only grows, `snapshot.listView` will always fit within `symbols`.
             System.arraycopy(snapshot.idToText, 0, symbols, 0, snapshot.idToText.length);
             if (symbolTokensById != null) {
@@ -470,7 +471,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             resetSymbolTable();
             cachedReadOnlySymbolTable = symbolTable;
             resetImports();
-            localSymbolMaxId = -1;
+            localSymbolMaxOffset = -1;
         }
     }
 
@@ -537,11 +538,11 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         if (sid < firstLocalSymbolId) {
             return imports.findKnownSymbol(sid);
         }
-        int localSid = sid - firstLocalSymbolId;
-        if (localSid > localSymbolMaxId) {
+        int localSymbolOffset = sid - firstLocalSymbolId;
+        if (localSymbolOffset > localSymbolMaxOffset) {
             throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
         }
-        return symbols[localSid];
+        return symbols[localSymbolOffset];
     }
 
     /**
@@ -550,7 +551,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
      * @return a SymbolToken.
      */
     private SymbolToken getSymbolToken(int sid) {
-        int symbolTableSize = localSymbolMaxId + firstLocalSymbolId + 1; // +1 because the max ID is 0-indexed.
+        int symbolTableSize = localSymbolMaxOffset + firstLocalSymbolId + 1; // +1 because the max ID is 0-indexed.
         if (symbolTokensById == null) {
             symbolTokensById = new ArrayList<>(symbolTableSize);
         }
@@ -607,7 +608,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         private void growSymbolsArray(int shortfall) {
             int newSize = nextPowerOfTwo(symbols.length + shortfall);
             String[] resized = new String[newSize];
-            System.arraycopy(symbols, 0, resized, 0, localSymbolMaxId + 1);
+            System.arraycopy(symbols, 0, resized, 0, localSymbolMaxOffset + 1);
             symbols = resized;
         }
 
@@ -619,16 +620,16 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
             if (newSymbols != null) {
                 int numberOfNewSymbols = newSymbols.size();
-                int numberOfAvailableSlots = symbols.length - (localSymbolMaxId + 1);
+                int numberOfAvailableSlots = symbols.length - (localSymbolMaxOffset + 1);
                 int shortfall = numberOfNewSymbols - numberOfAvailableSlots;
                 if (shortfall > 0) {
                     growSymbolsArray(shortfall);
                 }
-                int i = localSymbolMaxId;
+                int i = localSymbolMaxOffset;
                 for (String newSymbol : newSymbols) {
                     symbols[++i] = newSymbol;
                 }
-                localSymbolMaxId += newSymbols.size();
+                localSymbolMaxOffset += newSymbols.size();
             }
             state = State.READING_VALUE;
         }
@@ -929,7 +930,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     @Override
     public SymbolTable getSymbolTable() {
         if (cachedReadOnlySymbolTable == null) {
-            if (localSymbolMaxId < 0 && imports == ION_1_0_IMPORTS) {
+            if (localSymbolMaxOffset < 0 && imports == ION_1_0_IMPORTS) {
                 cachedReadOnlySymbolTable = imports.getSystemSymbolTable();
             } else {
                 cachedReadOnlySymbolTable = new LocalSymbolTableSnapshot();

@@ -171,7 +171,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     int readVarUInt_1_0(byte currentByte) {
         int result = currentByte & LOWER_SEVEN_BITS_BITMASK;
         do {
-            // Note: if the varUInt  is malformed such that it extends beyond the declared length of the value *and*
+            // Note: if the varUInt is malformed such that it extends beyond the declared length of the value *and*
             // beyond the end of the buffer, this will result in IndexOutOfBoundsException because only the declared
             // value length has been filled. Preventing this is simple: if (peekIndex >= valueMarker.endIndex) throw
             // new IonException(); However, we choose not to perform that check here because it is not worth sacrificing
