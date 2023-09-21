@@ -107,13 +107,13 @@ jobs:
           mkdir -p testData
 
       - name: Download test Ion Data from artifacts
-        uses: actions/download-artifact@cbed621e49e4c01b044d60f6c80ea4ed6328b281 # v2.1.1
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test Ion Data
           path: testData
 
       - name: Download benchmark results of ion-java from the new commit from artifacts
-        uses: actions/download-artifact@cbed621e49e4c01b044d60f6c80ea4ed6328b281 # v2.1.1
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: Benchmark result
           path: benchmarkResults
