@@ -15,6 +15,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
@@ -328,14 +329,25 @@ class IonCursorBinary implements IonCursor {
      * @return the next power of two greater than or equal to the given number.
      */
     static int nextPowerOfTwo(int value) {
-        return (int) Math.pow(2, logBase2(value));
+        long highBit = Integer.toUnsignedLong(Integer.highestOneBit(value));
+        // Paraphrased from JLS 5.1.3. Narrowing Primitive Conversion
+        // For a narrowing conversion of a floating-point number to an integral type T
+        // If the input is not NaN and is not representable as the target type int, then the value must be too large
+        // (a positive value of large magnitude or positive infinity), and the result is the largest representable
+        // value of type int.
+        return (int)(double) ((highBit == value) ? value : highBit << 1);
     }
 
     /**
      * Cache of configurations for fixed-sized streams. FIXED_SIZE_CONFIGURATIONS[i] returns a configuration with
      * buffer size max(8, 2^i). Retrieve a configuration large enough for a given size using
      * FIXED_SIZE_CONFIGURATIONS(logBase2(size)). Only supports sizes less than or equal to
-     * STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize().
+     * STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize(). This limits the number of fixed-size configurations,
+     * keeping the footprint small and avoiding the need to create fixed-size configurations that require allocating
+     * really large initial buffers. Say the user provides a ByteArrayInputStream backed by a 2 GB byte array -- in
+     * that case, even though the data is fixed, the cursor should not allocate another 2 GB buffer to copy into. In
+     * that case, unless the user provides a custom buffer configuration, the cursor will just use the standard one
+     * that starts at 32K and copy into it incrementally as needed.
      */
     private static final IonBufferConfiguration[] FIXED_SIZE_CONFIGURATIONS;
 
@@ -657,7 +669,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Seeks forward in the stream up to the requested number of bytes, from `offset`.
      * @param numberOfBytes the number of bytes to seek from `offset`.
-     * @return true if the seek is complete; otherwise, false.
+     * @return true if not enough data was available in the stream; otherwise, false.
      */
     private boolean slowSeek(long numberOfBytes) {
         long size = availableAt(offset);
@@ -666,7 +678,7 @@ class IonCursorBinary implements IonCursor {
             offset += numberOfBytes;
             refillableState.bytesRequested = 0;
             refillableState.state = State.READY;
-            return true;
+            return false;
         }
         offset = limit;
         long skipped = 0;
@@ -683,11 +695,11 @@ class IonCursorBinary implements IonCursor {
         if (shortfall <= 0) {
             refillableState.bytesRequested = 0;
             refillableState.state = State.READY;
-            return true;
+            return false;
         }
         refillableState.bytesRequested = shortfall;
         refillableState.state = State.SEEK;
-        return false;
+        return true;
     }
 
     /* ---- End: internal buffer manipulation methods ---- */
@@ -968,7 +980,7 @@ class IonCursorBinary implements IonCursor {
         boolean isReady;
         switch (refillableState.state) {
             case SEEK:
-                isReady = slowSeek(refillableState.bytesRequested);
+                isReady = !slowSeek(refillableState.bytesRequested);
                 break;
             case FILL:
                 isReady = fillAt(offset, refillableState.bytesRequested);
@@ -1112,7 +1124,7 @@ class IonCursorBinary implements IonCursor {
                 "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
             );
         }
-        if (!slowSeek(peekIndex + valueLength - offset)) {
+        if (slowSeek(peekIndex + valueLength - offset)) {
             event = Event.NEEDS_DATA;
             return true;
         }
@@ -1213,15 +1225,13 @@ class IonCursorBinary implements IonCursor {
                 return true;
             }
             setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
-        } else {
-            if (slowReadValueHeader(valueTid, isAnnotated, markerToSet)) {
-                if (refillableState.isSkippingCurrentValue) {
-                    // If the value will be skipped, its type ID must be set so that the core reader can determine
-                    // whether it represents a symbol table.
-                    markerToSet.typeId = valueTid;
-                }
-                return true;
+        } else if (slowReadValueHeader(valueTid, isAnnotated, markerToSet)) {
+            if (refillableState.isSkippingCurrentValue) {
+                // If the value will be skipped, its type ID must be set so that the core reader can determine
+                // whether it represents a symbol table.
+                markerToSet.typeId = valueTid;
             }
+            return true;
         }
         markerToSet.typeId = valueTid;
         if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
@@ -1445,7 +1455,7 @@ class IonCursorBinary implements IonCursor {
                 return event;
             }
         } else {
-            if (!slowSeek(parent.endIndex - offset)) {
+            if (slowSeek(parent.endIndex - offset)) {
                 return event;
             }
             peekIndex = parent.endIndex;
@@ -1623,7 +1633,7 @@ class IonCursorBinary implements IonCursor {
             }
         } else if (limit >= valueMarker.endIndex) {
             offset = valueMarker.endIndex;
-        } else if (!slowSeek(valueMarker.endIndex - offset)) {
+        } else if (slowSeek(valueMarker.endIndex - offset)) {
             return true;
         }
         peekIndex = offset;
