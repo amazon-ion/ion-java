@@ -24,6 +24,7 @@
 # See https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
 
 name: Prepare Release
+permissions: read-all
 on:
   # We have a branch protection rule for master, so all commits to master require
   # an approved PR. That means this workflow trigger is effectively equivalent to
