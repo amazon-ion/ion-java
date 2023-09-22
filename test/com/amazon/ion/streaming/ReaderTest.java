@@ -286,10 +286,10 @@ public class ReaderTest
         assertEquals(readLong("9223372036854775807."), readLong("9223372036854775807")); // Max long
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testReadingDecimalAsBigInteger()
     {
-        readBigInteger("0.");
+        assertThrows(IllegalStateException.class, () -> readBigInteger("0."));
     }
 
     @Test
