@@ -137,7 +137,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                 if (state == State.READING_VALUE) {
                     // The reader is not currently processing a symbol table.
                     if (parent != null || !hasAnnotations) {
-                        // The value is either not at the top level, or is unannotated, so it cannot be a symbol table.
+                        // Only top-level annotated values can be symbol tables.
                         mightBeSymbolTable = false;
                     } else if (annotationSequenceMarker.startIndex >= 0 && annotationSequenceMarker.endIndex <= limit) {
                         // The annotations on the value are available.

@@ -25,6 +25,7 @@ import com.amazon.ion.util.IonStreamUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 
 
 public class TestUtils
@@ -581,5 +583,19 @@ public class TestUtils
         public byte[] toByteArray() {
             return out.toByteArray();
         }
+    }
+
+    /**
+     * Compresses the given bytes using GZIP.
+     * @param bytes the bytes to compress.
+     * @return a new byte array containing the GZIP payload.
+     * @throws Exception if thrown during compression.
+     */
+    public static byte[] gzippedBytes(int... bytes) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (OutputStream gzip = new GZIPOutputStream(out)) {
+            gzip.write(bytes(bytes)); // IVM
+        }
+        return out.toByteArray();
     }
 }
