@@ -42,7 +42,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -53,9 +52,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.TestUtils.gzippedBytes;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -3019,29 +3018,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Tests that a stream that initially contains only a GZIP header can be read successfully if more data
         // is later made available.
         final int gzipHeaderLength = 10; // Length of the GZIP header, as defined by the GZIP spec.
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (OutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(bytes(0xE0, 0x01, 0x00, 0xEA)); // IVM
-        }
+        byte[] gzIVM = gzippedBytes(0xE0, 0x01, 0x00, 0xEA);  // IVM
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
-
-        // First, feed just the GZIP header bytes. On next(), the GZIPInputStream will throw EOFException, which is
-        // handled by the reader.
-        pipe.receive(out.toByteArray(), 0, gzipHeaderLength);
+        // First, feed just the GZIP header bytes.
+        pipe.receive(gzIVM, 0, gzipHeaderLength); // Just the GZIP header
+        // We must build the reader after the input stream has some content
         reader = readerFor(new GZIPInputStream(pipe));
+        //  On next(), the GZIPInputStream will throw EOFException, which is handled by the reader.
         nextExpect(null);
-
+        // Finish feeding the gzipped IVM payload
+        pipe.receive(gzIVM, gzipHeaderLength, gzIVM.length - gzipHeaderLength);
         // Now feed the bytes for an Ion value, spanning the value across two GZIP payloads.
-        try (OutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(bytes(0x2E)); // Positive int with length subfield
-        }
-        try (OutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(bytes(0x81, 0x01)); // Length 1, value 1
-        }
-        byte[] bytes = out.toByteArray();
-        byte[] withoutGzipHeader = new byte[bytes.length - gzipHeaderLength];
-        System.arraycopy(bytes, gzipHeaderLength, withoutGzipHeader, 0, withoutGzipHeader.length);
-        pipe.receive(withoutGzipHeader);
+        pipe.receive(gzippedBytes(0x2E)); // Positive int with length subfield
+        pipe.receive(gzippedBytes(0x81, 0x01)); // Length 1, value 1
         nextExpect(IonType.INT);
         expectInt(1);
         nextExpect(null);
@@ -3056,22 +3045,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // which only occurs after a value is determined to be oversized, but still needs to be partially processed
         // to determine whether it might be a symbol table.
         final int maxBufferSize = 6;
-        ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-        try (OutputStream gzip = new GZIPOutputStream(out1)) {
-            // IVM followed by an annotation wrapper that declares length 7, then three overpadded VarUInt bytes that
-            // indicate two bytes of annotations follow, followed by two overpadded VarUInt bytes that indicate that
-            // the value's only annotation has SID 4 ('name').
-            gzip.write(bytes(0xE0, 0x01, 0x00, 0xEA, 0xE7, 0x00, 0x00, 0x82, 0x00, 0x84));
-        }
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
-
+        // IVM followed by an annotation wrapper that declares length 7, then three overpadded VarUInt bytes that
+        // indicate two bytes of annotations follow, followed by two overpadded VarUInt bytes that indicate that
+        // the value's only annotation has SID 4 ('name').
+        byte[] gzChunk = gzippedBytes(0xE0, 0x01, 0x00, 0xEA, 0xE7, 0x00, 0x00, 0x82, 0x00, 0x84);
         // First, feed the bytes (representing an incomplete Ion value) to the reader, but without a GZIP trailer.
-        byte[] out1Bytes = out1.toByteArray();
-        byte[] withoutTrailer = new byte[out1Bytes.length - gzipTrailerLength];
-        System.arraycopy(out1Bytes, 0, withoutTrailer, 0, withoutTrailer.length);
-        pipe.receive(withoutTrailer);
+        pipe.receive(gzChunk, 0, gzChunk.length - gzipTrailerLength);
+        // We must build the reader after the input stream has some content
         reader = boundedReaderFor(new GZIPInputStream(pipe), maxBufferSize, maxBufferSize, byteAndOversizedValueCountingHandler);
-
         // During this next(), the reader will read and discard
         // the IVM, then hold all the rest of these bytes in its buffer, which is then at its maximum size. At that
         // point, the reader will attempt to read another byte (expecting a type ID byte), and determine that the
@@ -3079,17 +3061,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // the reader consumes it directly from the underlying InputStream using a single-byte read, which causes
         // GZIPInputStream to throw EOFException because the GZIP trailer is missing.
         nextExpect(null);
-
         // Now, finish the previous GZIP payload by appending the trailer, then append a concatenated GZIP payload
         // that contains the rest of the Ion value.
-        pipe.receive(out1Bytes, out1Bytes.length - gzipTrailerLength, gzipTrailerLength);
-        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
-        try (OutputStream gzip = new GZIPOutputStream(out2)) {
-            // Positive integer length 1, with value 1 (the rest of the annotated value), then integer 0.
-            gzip.write(bytes(0x21, 0x01, 0x20));
-        }
-        pipe.receive(out2.toByteArray());
-
+        pipe.receive(gzChunk, gzChunk.length - gzipTrailerLength, gzipTrailerLength);
+        // Positive integer length 1, with value 1 (the rest of the annotated value), then integer 0.
+        pipe.receive(gzippedBytes(0x21, 0x01, 0x20));
         // On this next, the reader will finish skipping the oversized value by calling skip() on the underlying
         // GZIPInputStream, which is able to complete the request successfully now that the GZIP trailer is available.
         // The following value (integer 0) is then read successfully.

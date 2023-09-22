@@ -15,7 +15,7 @@
 
 package com.amazon.ion.system;
 
-import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.TestUtils.gzippedBytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -36,8 +36,6 @@ import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.amazon.ion.impl._Private_IonConstants;
@@ -198,30 +196,19 @@ public class IonReaderBuilderTest
         IonReaderBuilder builder = IonReaderBuilder.standard();
         builder.withIncrementalReadingEnabled(true);
         final int gzipHeaderLength = 10; // Length of the GZIP header, as defined by the GZIP spec.
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (OutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(bytes(0xE0, 0x01, 0x00, 0xEA)); // IVM
-        }
+        byte[] gzIVM = gzippedBytes(0xE0, 0x01, 0x00, 0xEA);  // IVM
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
-
-        // First, feed just the GZIP header bytes. On next(), the GZIPInputStream will throw EOFException, which is
-        // handled by the reader.
-        pipe.receive(out.toByteArray(), 0, gzipHeaderLength);
-
+        // First, feed just the GZIP header bytes.
+        pipe.receive(gzIVM, 0, gzipHeaderLength); // Just the GZIP header
+        // We must build the reader after the input stream has some content
         IonReader reader = builder.build(pipe);
+        //  On next(), the GZIPInputStream will throw EOFException, which is handled by the reader.
         assertNull(reader.next());
-
+        // Finish feeding the gzipped IVM payload
+        pipe.receive(gzIVM, gzipHeaderLength, gzIVM.length - gzipHeaderLength);
         // Now feed the bytes for an Ion value, spanning the value across two GZIP payloads.
-        try (OutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(bytes(0x2E)); // Positive int with length subfield
-        }
-        try (OutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(bytes(0x81, 0x01)); // Length 1, value 1
-        }
-        byte[] bytes = out.toByteArray();
-        byte[] withoutGzipHeader = new byte[bytes.length - gzipHeaderLength];
-        System.arraycopy(bytes, gzipHeaderLength, withoutGzipHeader, 0, withoutGzipHeader.length);
-        pipe.receive(withoutGzipHeader);
+        pipe.receive(gzippedBytes(0x2E)); // Positive int with length subfield
+        pipe.receive(gzippedBytes(0x81, 0x01)); // Length 1, value 1
         assertEquals(IonType.INT, reader.next());
         assertEquals(1, reader.intValue());
         assertNull(reader.next());
