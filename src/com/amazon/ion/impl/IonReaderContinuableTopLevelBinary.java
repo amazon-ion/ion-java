@@ -28,7 +28,7 @@ import java.io.InputStream;
  * the stream to complete a top-level value. The user may wait for more data to become available in the stream and
  * call {@link IonReader#next()} again to continue reading. Unlike the non-incremental reader, the continuable reader
  * will never throw an exception due to unexpected EOF during {@code next()}. If, however, {@link IonReader#close()} is
- * called when an incomplete value is buffered, an {@link IonException} will be raised.
+ * called when an incomplete value is buffered, the reader will raise an {@link IonException}.
  * </p>
  * <p>
  * There is one caveat with the continuable reader implementation: it must be able to buffer an entire top-level value
@@ -36,7 +36,7 @@ import java.io.InputStream;
  * and preceding system values must be no larger than any of the following:
  * <ul>
  * <li>The configured maximum buffer size of the {@link IonBufferConfiguration}.</li>
- * <li>The memory available to the JVM.</li>
+ * <li>The heap memory available in the JVM.</li>
  * <li>2GB, because the buffer is held in a Java {@code byte[]}, which is indexed by an {@code int}.</li>
  * </ul>
  * This will not be a problem for the vast majority of Ion streams, as it is
