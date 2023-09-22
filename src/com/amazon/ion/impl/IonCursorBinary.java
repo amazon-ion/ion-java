@@ -15,7 +15,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
@@ -368,7 +367,6 @@ class IonCursorBinary implements IonCursor {
     /**
      * Validates the given configuration.
      * @param configuration the configuration to validate.
-     * @return the validated configuration.
      */
     private static void validate(IonBufferConfiguration configuration) {
         if (configuration.getInitialBufferSize() < 1) {
@@ -453,19 +451,20 @@ class IonCursorBinary implements IonCursor {
     }
 
     /*
-     * This class contains methods with the prefix 'slow'. These methods often
-     * have prefix-free 'quick' variants that are faster because they are always
-     * called from contexts where the buffer is already known to hold all bytes
-     * that will be required or available to complete the call, and therefore no
-     * filling is required. Sometimes a 'slow' method does not have a 'quick'
-     * variant. This is typically because the 'quick' variant is simple enough
-     * to be written inline at the call site. Public API methods will delegate
-     * to either the 'slow' or 'quick' variant depending on whether 'isSlowMode'
-     * is true. In general, 'isSlowMode' may be disabled whenever the input source
-     * is a byte array (and therefore cannot grow and does not need to be filled),
+     * This class contains methods with the prefix 'slow', which usually have
+     * counterparts with the prefix 'unchecked'. The 'unchecked' variants are
+     * faster because they are always called from contexts where the buffer is
+     * already known to hold all bytes that will be required or available to
+     * complete the call, and therefore no filling or bounds checking is required.
+     * Sometimes a 'slow' method does not have an 'unchecked' variant. This is
+     * typically because the 'unchecked' variant is simple enough to be written
+     * inline at the call site. Public API methods will delegate to either the
+     * 'slow' or 'unchecked' variant depending on whether 'isSlowMode' is true.
+     * In general, 'isSlowMode' may be disabled whenever the input source is a
+     * byte array (and therefore cannot grow and does not need to be filled),
      * or whenever the current value's parent container has already been filled.
      * Where a choice exists, 'slow' methods must call other 'slow' methods, and
-     * 'quick' methods must call other 'quick' methods.
+     * 'unchecked' methods must call other 'unchecked' methods.
      */
 
     /* ---- Begin: internal buffer manipulation methods ---- */
@@ -712,7 +711,7 @@ class IonCursorBinary implements IonCursor {
      * called when it is known that the buffer already contains all the bytes in the VarUInt.
      * @return the value.
      */
-    private long readVarUInt_1_0(byte currentByte) {
+    private long uncheckedReadVarUInt_1_0(byte currentByte) {
         long result = currentByte & LOWER_SEVEN_BITS_BITMASK;
         do {
             // Note: if the varUInt  is malformed such that it extends beyond the declared length of the value *and*
@@ -757,14 +756,14 @@ class IonCursorBinary implements IonCursor {
      * @param valueTid the type ID of the annotation wrapper.
      * @return true if the length of the wrapped value extends beyond the bytes currently buffered; otherwise, false.
      */
-    private boolean readAnnotationWrapperHeader_1_0(IonTypeID valueTid) {
+    private boolean uncheckedReadAnnotationWrapperHeader_1_0(IonTypeID valueTid) {
         long endIndex;
         if (valueTid.variableLength) {
             byte b = buffer[(int) peekIndex++];
             if (b < 0) {
                 endIndex = (b & LOWER_SEVEN_BITS_BITMASK);
             } else {
-                endIndex = readVarUInt_1_0(b);
+                endIndex = uncheckedReadVarUInt_1_0(b);
             }
         } else {
             endIndex = valueTid.length;
@@ -779,7 +778,7 @@ class IonCursorBinary implements IonCursor {
         if (b < 0) {
             annotationsLength = (b & LOWER_SEVEN_BITS_BITMASK);
         } else {
-            annotationsLength = (int) readVarUInt_1_0(b);
+            annotationsLength = (int) uncheckedReadVarUInt_1_0(b);
         }
         annotationSequenceMarker.startIndex = peekIndex;
         annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
@@ -872,7 +871,7 @@ class IonCursorBinary implements IonCursor {
             if (b < 0) {
                 endIndex = (b & LOWER_SEVEN_BITS_BITMASK);
             } else {
-                endIndex = readVarUInt_1_0(b);
+                endIndex = uncheckedReadVarUInt_1_0(b);
                 if (endIndex < 0) {
                     throw new IonException("Unsupported value: declared length is too long.");
                 }
@@ -884,7 +883,7 @@ class IonCursorBinary implements IonCursor {
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
             event = Event.START_CONTAINER;
         } else if (valueTid.isNopPad) {
-            seekPastNopPad(endIndex, isAnnotated);
+            uncheckedSeekPastNopPad(endIndex, isAnnotated);
         } else {
             event = Event.START_SCALAR;
         }
@@ -907,7 +906,7 @@ class IonCursorBinary implements IonCursor {
 
     /* ---- Ion 1.1 ---- */
 
-    private long readVarUInt_1_1() {
+    private long uncheckedReadVarUInt_1_1() {
         throw new UnsupportedOperationException();
     }
 
@@ -915,7 +914,7 @@ class IonCursorBinary implements IonCursor {
         throw new UnsupportedOperationException();
     }
 
-    private boolean readAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
+    private boolean uncheckedReadAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
         throw new UnsupportedOperationException();
     }
 
@@ -927,7 +926,7 @@ class IonCursorBinary implements IonCursor {
         throw new UnsupportedOperationException();
     }
 
-    private void readFieldName_1_1() {
+    private void uncheckedReadFieldName_1_1() {
         throw new UnsupportedOperationException();
     }
 
@@ -935,7 +934,7 @@ class IonCursorBinary implements IonCursor {
         throw new UnsupportedOperationException();
     }
 
-    private boolean isDelimitedEnd_1_1() {
+    private boolean uncheckedIsDelimitedEnd_1_1() {
         throw new UnsupportedOperationException();
     }
 
@@ -1049,7 +1048,7 @@ class IonCursorBinary implements IonCursor {
             return false;
         }
         if (parent.endIndex == DELIMITED_MARKER) {
-            return isSlowMode ? slowIsDelimitedEnd_1_1() : isDelimitedEnd_1_1();
+            return isSlowMode ? slowIsDelimitedEnd_1_1() : uncheckedIsDelimitedEnd_1_1();
         }
         if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
@@ -1097,7 +1096,7 @@ class IonCursorBinary implements IonCursor {
      * @param endIndex the endIndex of the NOP pad.
      * @param isAnnotated true if the NOP pad occurs within an annotation wrapper (which is illegal); otherwise, false.
      */
-    private void seekPastNopPad(long endIndex, boolean isAnnotated) {
+    private void uncheckedSeekPastNopPad(long endIndex, boolean isAnnotated) {
         if (isAnnotated) {
             throw new IonException(
                 "Invalid annotation wrapper: NOP pad may not occur inside an annotation wrapper."
@@ -1165,7 +1164,7 @@ class IonCursorBinary implements IonCursor {
      * @return false if the header belonged to NOP pad; otherwise, true. When false, the caller should call the method
      *  again to read the header for the value that follows.
      */
-    private boolean readHeader(final int typeIdByte, final boolean isAnnotated, final Marker markerToSet) {
+    private boolean uncheckedReadHeader(final int typeIdByte, final boolean isAnnotated, final Marker markerToSet) {
         IonTypeID valueTid = typeIds[typeIdByte];
         if (!valueTid.isValid) {
             throw new IonException("Invalid type ID.");
@@ -1173,11 +1172,11 @@ class IonCursorBinary implements IonCursor {
             if (isAnnotated) {
                 throw new IonException("Nested annotation wrappers are invalid.");
             }
-            if (minorVersion == 0 ? readAnnotationWrapperHeader_1_0(valueTid) : readAnnotationWrapperHeader_1_1(valueTid)) {
+            if (minorVersion == 0 ? uncheckedReadAnnotationWrapperHeader_1_0(valueTid) : uncheckedReadAnnotationWrapperHeader_1_1(valueTid)) {
                 return true;
             }
             hasAnnotations = true;
-            return readHeader(buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK, true, valueMarker);
+            return uncheckedReadHeader(buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK, true, valueMarker);
         } else {
             long endIndex = minorVersion == 0
                 ? calculateEndIndex_1_0(valueTid, isAnnotated)
@@ -1328,7 +1327,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Step into the current container.
      */
-    private void quickStepIntoContainer() {
+    private void uncheckedStepIntoContainer() {
         if (valueTid == null || valueTid.type.ordinal() < LIST_TYPE_ORDINAL) {
             // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
             // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
@@ -1381,7 +1380,7 @@ class IonCursorBinary implements IonCursor {
             }
             isSlowMode = false;
         }
-        quickStepIntoContainer();
+        uncheckedStepIntoContainer();
         return event;
     }
 
@@ -1477,9 +1476,9 @@ class IonCursorBinary implements IonCursor {
      * Advances to the next value within a container, checking for container end and consuming the field name, if any.
      * @return true if the end of the container has been reached; otherwise, false.
      */
-    private boolean nextContainedToken() {
+    private boolean uncheckedNextContainedToken() {
         if (parent.endIndex == DELIMITED_MARKER) {
-            return isDelimitedEnd_1_1();
+            return uncheckedIsDelimitedEnd_1_1();
         } else if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
             return true;
@@ -1491,10 +1490,10 @@ class IonCursorBinary implements IonCursor {
                 if (b < 0) {
                     fieldSid = (b & LOWER_SEVEN_BITS_BITMASK);
                 } else {
-                    fieldSid = (int) readVarUInt_1_0(b);
+                    fieldSid = (int) uncheckedReadVarUInt_1_0(b);
                 }
             } else {
-                readFieldName_1_1();
+                uncheckedReadFieldName_1_1();
             }
         }
         valuePreHeaderIndex = peekIndex;
@@ -1516,7 +1515,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if the next token was an Ion version marker or NOP pad; otherwise, false. If true, this method
      *  should be called again to advance to the following value.
      */
-    private boolean nextToken() {
+    private boolean uncheckedNextToken() {
         if (peekIndex < valueMarker.endIndex) {
             peekIndex = valueMarker.endIndex;
         } else if (valueTid != null && valueTid.isDelimited) {
@@ -1543,12 +1542,12 @@ class IonCursorBinary implements IonCursor {
                 return true;
             }
         } else {
-            if (nextContainedToken()) {
+            if (uncheckedNextContainedToken()) {
                 return false;
             }
             b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         }
-        if (readHeader(b, false, valueMarker)) {
+        if (uncheckedReadHeader(b, false, valueMarker)) {
             valueTid = valueMarker.typeId;
             return false;
         }
@@ -1692,7 +1691,7 @@ class IonCursorBinary implements IonCursor {
             return slowNextValue();
         }
         event = Event.NEEDS_DATA;
-        while (nextToken());
+        while (uncheckedNextToken());
         return event;
     }
 
