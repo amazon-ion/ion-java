@@ -2000,14 +2000,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @Test
     public void oversizeValueDetectedDuringFillOfOnlyScalarInStream() throws Exception {
-        // Unlike the previous test, where excessive size is detected when trying to skip past the value portion,
-        // this test verifies that excessive size can be detected while reading a value header, which happens
-        // byte-by-byte.
         byte[] bytes = toBinary("\"abcdefghijklmnopqrstuvwxyz\""); // Requires a 2-byte header.
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
 
-        // The maximum buffer size is 5, which will be exceeded after the IVM (4 bytes), the type ID (1 byte), and
-        // the length byte (1 byte).
+        // The maximum buffer size is 5, which will be exceeded when attempting to fill the value with length 26.
         nextExpect(null);
         reader.close();
         expectOversized(1);
@@ -2022,8 +2018,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
         reader = boundedReaderFor(pipe, 5, 5, byteAndOversizedValueCountingHandler);
         feedBytesOneByOne(bytes, pipe, reader);
-        // The maximum buffer size is 5, which will be exceeded after the IVM (4 bytes), the type ID (1 byte), and
-        // the length byte (1 byte).
+        // The maximum buffer size is 5, which will be exceeded when attempting to fill the value with length 26.
         nextExpect(null);
         reader.close();
         expectOversized(1);

@@ -497,7 +497,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                 throw new IonException(message);
             }
 
-            // Exact match is found, but max_id is undefined in import declaration. Set max_id to tge largest SID of
+            // Exact match is found, but max_id is undefined in import declaration. Set max_id to the largest SID of
             // the matching symbol table.
             maxId = shared.getMaxId();
         }
