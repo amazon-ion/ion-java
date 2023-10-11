@@ -3,53 +3,33 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBufferConfiguration;
-import com.amazon.ion.IonCursor;
-import com.amazon.ion.IvmNotificationConsumer;
 import com.amazon.ion.system.IonReaderBuilder;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
-import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
-import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.START_SCALAR;
-import static com.amazon.ion.IonCursor.Event.VALUE_READY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
+import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
+import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
+import static com.amazon.ion.impl.IonCursorTestUtilities.assertSequence;
+import static com.amazon.ion.impl.IonCursorTestUtilities.container;
+import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
+import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
+import static com.amazon.ion.impl.IonCursorTestUtilities.intValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
+import static com.amazon.ion.impl.IonCursorTestUtilities.scalarField;
+import static com.amazon.ion.impl.IonCursorTestUtilities.symbolValue;
 
-@RunWith(Parameterized.class)
 public class IonReaderContinuableApplicationBinaryTest {
 
     private static final IonReaderBuilder STANDARD_READER_BUILDER = IonReaderBuilder.standard()
-        .withBufferConfiguration(IonBufferConfiguration.Builder.standard().build());
+        .withBufferConfiguration(STANDARD_BUFFER_CONFIGURATION);
 
-    @Parameterized.Parameters(name = "constructWithBytes={0}")
-    public static Object[] parameters() {
-        return new Object[]{true, false};
-    }
-
-    @Parameterized.Parameter
-    public boolean constructFromBytes;
-
-    IonReaderContinuableApplicationBinary reader = null;
-    int numberOfIvmsEncountered = 0;
-
-    private final IvmNotificationConsumer countingIvmConsumer = (majorVersion, minorVersion) -> numberOfIvmsEncountered++;
-
-    @Before
-    public void setup() {
-        reader = null;
-        numberOfIvmsEncountered = 0;
-    }
-
-    private void initializeReader(int... data) {
+    private IonReaderContinuableApplicationBinary initializeReader(boolean constructFromBytes, int... data) {
+        IonReaderContinuableApplicationBinary reader;
         if (constructFromBytes) {
             reader = new IonReaderContinuableApplicationBinary(STANDARD_READER_BUILDER, bytes(data), 0, data.length);
         } else {
@@ -61,78 +41,72 @@ public class IonReaderContinuableApplicationBinaryTest {
                 0
             );
         }
-        reader.registerIvmNotificationConsumer(countingIvmConsumer);
         reader.registerOversizedValueHandler(
             STANDARD_READER_BUILDER.getBufferConfiguration().getOversizedValueHandler()
         );
+        return reader;
     }
 
-    private void nextExpect(IonCursor.Event expected) {
-        assertEquals(expected, reader.nextValue());
+    /**
+     * Provides an Expectation that verifies that the value on which the cursor is currently positioned has the given
+     * field name.
+     */
+    private static Expectation<IonReaderContinuableApplicationBinary> fieldName(String expectedFieldName) {
+        return new Expectation<>(
+            String.format("fieldName(%s)", expectedFieldName),
+            reader -> Assertions.assertEquals(expectedFieldName, reader.getFieldName())
+        );
     }
 
-    private void fillExpect(IonCursor.Event expected) {
-        assertEquals(expected, reader.fillValue());
+    /**
+     * Provides Expectations that verify that advancing the cursor positions it on a scalar value with the given field
+     * name, without filling the scalar.
+     */
+    private static ExpectationProvider<IonReaderContinuableApplicationBinary> scalarFieldName(String expectedFieldName) {
+        return scalarField(fieldName(expectedFieldName));
     }
 
-    private void stepIn() {
-        assertEquals(NEEDS_INSTRUCTION, reader.stepIntoContainer());
-    }
-
-    private void stepOut() {
-        assertEquals(NEEDS_INSTRUCTION, reader.stepOutOfContainer());
-    }
-
-    private void expectField(String name) {
-        assertEquals(name, reader.getFieldName());
-    }
-
-    private void expectInt(int value) {
-        assertEquals(value, reader.intValue());
-    }
-
-    private void expectString(String value) {
-        assertEquals(value, reader.stringValue());
-    }
-
-    @Test
-    public void basicContainer() {
-        initializeReader(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicContainer(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4 ("name")
             0x21, 0x01 // Int 1
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        expectField("name");
-        fillExpect(VALUE_READY);
-        expectInt(1);
-        nextExpect(END_CONTAINER);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            reader,
+            container(
+                scalarFieldName("name"), intValue(1),
+                endContainer()
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicSystemSymbols() {
-        initializeReader(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicSystemSymbols(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0x71, 0x04, // Symbol value SID 4 ("name")
             0x71, 0x05 // Symbol value SID 5 ("version")
         );
-        nextExpect(START_SCALAR);
-        fillExpect(VALUE_READY);
-        expectString("name");
-        nextExpect(START_SCALAR);
-        fillExpect(VALUE_READY);
-        expectString("version");
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            reader,
+            scalar(), symbolValue("name"),
+            scalar(), symbolValue("version")
+        );
     }
 
-    @Test
-    public void basicLocalSymbols() {
-        initializeReader(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicLocalSymbols(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xE9, // Annotation wrapper length 9
             0x81, // 1 byte of annotations
@@ -145,47 +119,49 @@ public class IonReaderContinuableApplicationBinaryTest {
             0x71, 0x0A, // Symbol value SID 10 ("A")
             0x71, 0x0B // Symbol value SID 11 ("B")
         );
-        nextExpect(START_SCALAR);
-        fillExpect(VALUE_READY);
-        expectString("A");
-        nextExpect(START_SCALAR);
-        fillExpect(VALUE_READY);
-        expectString("B");
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            reader,
+            scalar(), symbolValue("A"),
+            scalar(), symbolValue("B")
+        );
     }
 
-    @Test
-    public void basicNoFill() {
-        initializeReader(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicNoFill(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4 ("name")
             0x21, 0x01 // Int 1
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        expectField("name");
-        nextExpect(END_CONTAINER);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            reader,
+            container(
+                scalarFieldName("name"), // Do not fill or consume the associated value
+                endContainer()
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicStepOutEarly() {
-        initializeReader(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicStepOutEarly(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4 ("name")
             0x21, 0x01 // Int 1
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        stepOut();
-        assertNull(reader.getFieldName());
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            reader,
+            container(
+                scalar()
+            ),
+            endStream()
+        );
     }
-
-
 }
