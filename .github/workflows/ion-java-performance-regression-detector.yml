@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ion-data-generator
-        uses: actions/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           repository: amazon-ion/ion-data-generator
           ref: main
@@ -64,20 +64,20 @@ jobs:
           java-version: 11
 
       - name: Checkout ion-java-benchmark-cli
-        uses: actions/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           repository: amazon-ion/ion-java-benchmark-cli
           ref: master
           path: ion-java-benchmark-cli
 
       - name: Checkout ion-java from the previous commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           ref: ${{ github.base_ref }}
           path: baseline
 
       - name: Checkout ion-java from the new commit.
-        uses: actions/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           ref: ${{ github.head_ref }}
           path: new
@@ -117,5 +117,4 @@ jobs:
         working-directory: ion-java-benchmark-cli
         run: |
           a=$(java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar compare --benchmark-result-previous /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion --benchmark-result-new /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion)
-          if [ ! -z "$a" ]; then echo "${a}" >> $GITHUB_STEP_SUMMARY; fi
-          exit 1
+          if [ ! -z "$a" ]; then echo "${a}" >> $GITHUB_STEP_SUMMARY; exit 1; fi
