@@ -3,59 +3,34 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCursor;
-import com.amazon.ion.IvmNotificationConsumer;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.util.function.Consumer;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
-import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
+import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
+import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
+import static com.amazon.ion.impl.IonCursorTestUtilities.STEP_IN;
+import static com.amazon.ion.impl.IonCursorTestUtilities.STEP_OUT;
+import static com.amazon.ion.impl.IonCursorTestUtilities.assertSequence;
+import static com.amazon.ion.impl.IonCursorTestUtilities.container;
+import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
+import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
+import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
+import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(Parameterized.class)
 public class IonCursorBinaryTest {
 
-    private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION = IonBufferConfiguration.Builder.standard().build();
-
-    private static Marker loadScalar(IonCursorBinary cursor) {
-        IonCursor.Event event = cursor.fillValue();
-        assertEquals(VALUE_READY, event);
-        Marker marker = cursor.getValueMarker();
-        assertNotNull(marker);
-        return marker;
-    }
-
-    @Parameterized.Parameters(name = "constructWithBytes={0}")
-    public static Object[] parameters() {
-        return new Object[]{true, false};
-    }
-
-    @Parameterized.Parameter
-    public boolean constructFromBytes;
-
-    private IonCursorBinary cursor = null;
-    private int numberOfIvmsEncountered = 0;
-
-    private final IvmNotificationConsumer countingIvmConsumer = (majorVersion, minorVersion) -> numberOfIvmsEncountered++;
-
-    @Before
-    public void setup() {
-        cursor = null;
-        numberOfIvmsEncountered = 0;
-    }
-
-    private void initializeCursor(int... data) {
+    private static IonCursorBinary initializeCursor(boolean constructFromBytes, int... data) {
+        IonCursorBinary cursor;
         if (constructFromBytes) {
             cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, bytes(data), 0, data.length);
         } else {
@@ -67,124 +42,169 @@ public class IonCursorBinaryTest {
                 0
             );
         }
-        cursor.registerIvmNotificationConsumer(countingIvmConsumer);
         cursor.registerOversizedValueHandler(STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler());
+        return cursor;
     }
 
-    private void nextExpect(IonCursor.Event expected) {
-        assertEquals(expected, cursor.nextValue());
+    /**
+     * Provides Expectations that verify that advancing the cursor to the next value results in the given event, and
+     * filling that value results in a Marker with the given start and end indices.
+     */
+    private static ExpectationProvider<IonCursorBinary> fill(IonCursor.Event expectedEvent, int expectedStart, int expectedEnd) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fill(%s, %d, %d)", expectedEvent, expectedStart, expectedEnd),
+            cursor -> {
+                assertEquals(expectedEvent, cursor.nextValue());
+                assertEquals(VALUE_READY, cursor.fillValue());
+                Marker marker = cursor.getValueMarker();
+                assertEquals(expectedStart, marker.startIndex);
+                assertEquals(expectedEnd, marker.endIndex);
+            }
+        ));
     }
 
-    private void fillExpect(IonCursor.Event expected) {
-        assertEquals(expected, cursor.fillValue());
+    /**
+     * Provides Expectations that verify that advancing the cursor positions it on a scalar, and filling that scalar
+     * results in a Marker with the given start and end indices.
+     */
+    private static ExpectationProvider<IonCursorBinary> fillScalar(int expectedStart, int expectedEnd) {
+        return fill(START_SCALAR, expectedStart, expectedEnd);
     }
 
-    private void stepIn() {
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
+    /**
+     * Provides Expectations that verify 1) that advancing the cursor positions it on a container, 2) filling that
+     * container results in a Marker with the given start and end indices, and 3) the container's child values match
+     * the given expectations.
+     */
+    @SafeVarargs
+    @SuppressWarnings("unchecked")
+    private static ExpectationProvider<IonCursorBinary> fillContainer(int expectedStart, int expectedEnd, ExpectationProvider<IonCursorBinary>... expectations) {
+        return consumer -> {
+            fill(START_CONTAINER, expectedStart, expectedEnd).accept(consumer);
+            consumer.accept((Expectation<IonCursorBinary>) STEP_IN);
+            for (Consumer<Consumer<Expectation<IonCursorBinary>>> expectation : expectations) {
+                expectation.accept(consumer);
+            }
+            consumer.accept((Expectation<IonCursorBinary>) STEP_OUT);
+        };
     }
 
-    private void stepOut() {
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
-    }
-
-    private void expectMarker(int expectedStart, int expectedEnd) {
-        Marker marker = loadScalar(cursor);
-        assertEquals(expectedStart, marker.startIndex);
-        assertEquals(expectedEnd, marker.endIndex);
-    }
-
-    @Test
-    public void basicContainer() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicContainer(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        expectMarker(7, 8);
-        nextExpect(END_CONTAINER);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            container(
+                fillScalar(7, 8)
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicStrings() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicStrings(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0x83, 'f', 'o', 'o', // String length 3, starting at byte index 5
             0x83, 'b', 'a', 'r' // String length 3, starting at byte index 9
         );
-        nextExpect(START_SCALAR);
-        expectMarker(5, 8);
-        nextExpect(START_SCALAR);
-        expectMarker(9, 12);
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            fillScalar(5, 8),
+            fillScalar(9, 12),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicNoFill() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicNoFill(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        nextExpect(END_CONTAINER);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            container(
+                scalar(),
+                endContainer()
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicStepOutEarly() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicStepOutEarly(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            container(
+                scalar()
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicTopLevelSkip() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicTopLevelSkip(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 7
         );
-        nextExpect(START_CONTAINER);
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            startContainer(),
+            endStream()
+        );
     }
 
-    @Test
-    public void basicTopLevelSkipThenConsume() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicTopLevelSkipThenConsume(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD3, // Struct length 3
             0x84, // Field SID 4
             0x21, 0x01, // Int length 1, starting at byte index 7
             0x21, 0x03 // Int length 1, starting at byte index 9
         );
-        nextExpect(START_CONTAINER);
-        nextExpect(START_SCALAR);
-        expectMarker(9, 10);
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            startContainer(),
+            fillScalar(9, 10),
+            endStream()
+        );
     }
 
-    @Test
-    public void nestedContainers() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nestedContainers(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD6, // Struct length 6
             0x83, // Field SID 3
@@ -193,21 +213,23 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 10
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        stepOut();
-        nextExpect(START_SCALAR);
-        expectMarker(10, 11);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            container(
+                container(
+                    scalar()
+                ),
+                fillScalar(10, 11)
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void fillContainerAtDepth0() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fillContainerAtDepth0(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD6, // Struct length 6, contents start at index 5
             0x83, // Field SID 3
@@ -216,23 +238,23 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 10
         );
-        nextExpect(START_CONTAINER);
-        fillExpect(VALUE_READY);
-        expectMarker(5, 11);
-        stepIn();
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        stepOut();
-        nextExpect(START_SCALAR);
-        expectMarker(10, 11);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            fillContainer(5, 11,
+                container(
+                    scalar()
+                ),
+                fillScalar(10, 11)
+            ),
+            endStream()
+        );
     }
 
-    @Test
-    public void fillContainerAtDepth1() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fillContainerAtDepth1(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD6, // Struct length 6
             0x83, // Field SID 3
@@ -241,20 +263,22 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x21, 0x01 // Int length 1, starting at byte index 10
         );
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_CONTAINER);
-        fillExpect(VALUE_READY);
-        expectMarker(7, 8);
-        stepIn();
-        nextExpect(START_SCALAR);
-        nextExpect(END_CONTAINER);
-        stepOut();
+        assertSequence(
+            cursor,
+            container(
+                fillContainer(7, 8,
+                    scalar(),
+                    endContainer()
+                )
+            )
+        );
     }
 
-    @Test
-    public void fillContainerThenSkip() {
-        initializeCursor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fillContainerThenSkip(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
             0xE0, 0x01, 0x00, 0xEA,
             0xD6, // Struct length 6
             0x83, // Field SID 3
@@ -266,15 +290,13 @@ public class IonCursorBinaryTest {
             0x84, // Field SID 4
             0x20 // Int length 0, at byte index 14
         );
-        nextExpect(START_CONTAINER);
-        fillExpect(VALUE_READY);
-        nextExpect(START_CONTAINER);
-        stepIn();
-        nextExpect(START_SCALAR);
-        fillExpect(VALUE_READY);
-        expectMarker(14, 14);
-        nextExpect(END_CONTAINER);
-        stepOut();
-        nextExpect(NEEDS_DATA);
+        assertSequence(
+            cursor,
+            fill(START_CONTAINER, 5, 11),
+            container(
+                fillScalar(14, 14)
+            ),
+            endStream()
+        );
     }
 }
