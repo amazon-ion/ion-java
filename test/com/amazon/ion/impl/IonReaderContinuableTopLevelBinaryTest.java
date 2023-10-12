@@ -30,13 +30,10 @@ import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -55,30 +52,19 @@ import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.TestUtils.gzippedBytes;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@RunWith(Parameterized.class)
 public class IonReaderContinuableTopLevelBinaryTest {
 
     private static final IonSystem SYSTEM = IonSystemBuilder.standard().build();
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
-    @Parameterized.Parameters(name = "constructWithBytes={0}")
-    public static Object[] parameters() {
-        return new Object[]{true, false};
-    }
-
-    @Parameterized.Parameter
-    public boolean constructFromBytes;
 
     // Builds the incremental reader. May be overwritten by individual tests.
     private IonReaderBuilder readerBuilder;
@@ -109,12 +95,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
     private final UnifiedTestHandler byteCountingHandler = new UnifiedTestHandler() {
         @Override
         public void onOversizedSymbolTable() {
-            Assert.fail("Oversized symbol table not expected.");
+            fail("Oversized symbol table not expected.");
         }
 
         @Override
         public void onOversizedValue() {
-            Assert.fail("Oversized value not expected.");
+            fail("Oversized value not expected.");
         }
 
         @Override
@@ -172,7 +158,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         .onData(byteCountingHandler)
         .build();
     
-    @Before
+    @BeforeEach
     public void setup() {
         byteCounter = new AtomicLong();
         oversizedCounter = new AtomicInteger();
@@ -234,10 +220,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
      * Creates an incremental reader over the given binary Ion, constructing a reader either from byte array or
      * from InputStream depending on the value of the parameter 'constructFromBytes'.
      * @param builder the reader builder.
+     * @param constructFromBytes whether to construct the reader from bytes or an InputStream.
      * @param bytes the binary Ion data.
      * @return a new reader.
      */
-    private IonReader readerFor(IonReaderBuilder builder, byte[] bytes) {
+    private IonReader readerFor(IonReaderBuilder builder, boolean constructFromBytes, byte[] bytes) {
         totalBytesInStream = bytes.length;
         if (constructFromBytes) {
             return new IonReaderContinuableTopLevelBinary(builder, bytes, 0, bytes.length);
@@ -248,51 +235,55 @@ public class IonReaderContinuableTopLevelBinaryTest {
     /**
      * Creates an incremental reader over the binary equivalent of the given text Ion.
      * @param ion text Ion data.
+     * @param constructFromBytes whether to construct the reader from bytes or an InputStream.
      * @return a new reader.
      */
-    private IonReader readerFor(String ion) {
+    private IonReader readerFor(String ion, boolean constructFromBytes) {
         byte[] binary = toBinary(ion);
         totalBytesInStream = binary.length;
-        return readerFor(readerBuilder, binary);
+        return readerFor(readerBuilder, constructFromBytes, binary);
     }
 
     /**
      * Creates an incremental reader over the binary Ion data created by invoking the given RawWriterFunction.
      * @param writerFunction the function used to generate the data.
+     * @param constructFromBytes whether to construct the reader from bytes or an InputStream.
      * @return a new reader.
      * @throws Exception if an exception is raised while writing the Ion data.
      */
-    private IonReader readerFor(RawWriterFunction writerFunction) throws Exception {
+    private IonReader readerFor(RawWriterFunction writerFunction, boolean constructFromBytes) throws Exception {
         byte[] binary = writeRaw(writerFunction, true);
         totalBytesInStream = binary.length;
-        return readerFor(readerBuilder, binary);
+        return readerFor(readerBuilder, constructFromBytes, binary);
     }
 
     /**
      * Creates an incremental reader over the binary Ion data created by invoking the given WriterFunction.
      * @param writerFunction the function used to generate the data.
+     * @param constructFromBytes whether to construct the reader from bytes or an InputStream.
      * @return a new reader.
      * @throws Exception if an exception is raised while writing the Ion data.
      */
-    private IonReader readerFor(WriterFunction writerFunction) throws Exception {
+    private IonReader readerFor(WriterFunction writerFunction, boolean constructFromBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = writerBuilder.build(out);
         writerFunction.write(writer);
         writer.close();
         byte[] binary = out.toByteArray();
         totalBytesInStream = binary.length;
-        return readerFor(readerBuilder, binary);
+        return readerFor(readerBuilder, constructFromBytes, binary);
     }
 
     /**
      * Creates an incremental reader over the given bytes, prepended with the IVM.
+     * @param constructFromBytes whether to construct the reader from bytes or an InputStream.
      * @param ion binary Ion bytes without an IVM.
      * @return a new reader.
      */
-    private IonReader readerFor(int... ion) throws Exception {
+    private IonReader readerFor(boolean constructFromBytes, int... ion) throws Exception {
         byte[] binary = new TestUtils.BinaryIonAppender().append(ion).toByteArray();
         totalBytesInStream = binary.length;
-        return readerFor(readerBuilder, binary);
+        return readerFor(readerBuilder, constructFromBytes, binary);
     }
 
     /**
@@ -344,10 +335,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertBytesConsumed();
     }
 
-    @Test
-    public void skipContainers() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipContainers(boolean constructFromBytes) throws Exception {
         reader = readerFor(
-            "[123] 456 {abc: foo::bar::123, def: baz::456} [123] 789 [foo::bar::123, baz::456] [123]"
+            "[123] 456 {abc: foo::bar::123, def: baz::456} [123] 789 [foo::bar::123, baz::456] [123]",
+            constructFromBytes
         );
         nextExpect(IonType.LIST);
         typeExpect(IonType.LIST);
@@ -376,9 +369,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void skipContainerAfterSteppingIn() throws Exception {
-        reader = readerFor("{abc: foo::bar::123, def: baz::456} 789");
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipContainerAfterSteppingIn(boolean constructFromBytes) throws Exception {
+        reader = readerFor("{abc: foo::bar::123, def: baz::456} 789", constructFromBytes);
         nextExpect(IonType.STRUCT);
         typeExpect(IonType.STRUCT);
         stepIn();
@@ -399,9 +393,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void skipValueInContainer() throws Exception {
-        reader = readerFor("{foo: \"bar\", abc: 123, baz: a}");
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipValueInContainer(boolean constructFromBytes) throws Exception {
+        reader = readerFor("{foo: \"bar\", abc: 123, baz: a}", constructFromBytes);
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.STRING);
@@ -415,9 +410,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolsAsStrings() throws Exception {
-        reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}");
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolsAsStrings(boolean constructFromBytes) throws Exception {
+        reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}", constructFromBytes);
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.SYMBOL);
@@ -433,21 +429,25 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void lstAppend() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void lstAppend(boolean constructFromBytes) throws Exception {
         writerBuilder = writerBuilder.withLocalSymbolTableAppendEnabled();
-        reader = readerFor(writer -> {
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("foo");
-            writer.addTypeAnnotation("uvw");
-            writer.writeSymbol("abc");
-            writer.setFieldName("bar");
-            writer.setTypeAnnotations("qrs", "xyz");
-            writer.writeSymbol("def");
-            writer.stepOut();
-            writer.flush();
-            writer.writeSymbol("orange");
-        });
+        reader = readerFor(
+            writer -> {
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("foo");
+                writer.addTypeAnnotation("uvw");
+                writer.writeSymbol("abc");
+                writer.setFieldName("bar");
+                writer.setTypeAnnotations("qrs", "xyz");
+                writer.writeSymbol("def");
+                writer.stepOut();
+                writer.flush();
+                writer.writeSymbol("orange");
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.STRUCT);
         stepIn();
@@ -470,27 +470,31 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void lstNonAppend() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void lstNonAppend(boolean constructFromBytes) throws Exception {
         writerBuilder = writerBuilder.withLocalSymbolTableAppendDisabled();
-        reader = readerFor(writer -> {
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("foo");
-            writer.addTypeAnnotation("uvw");
-            writer.writeSymbol("abc");
-            writer.setFieldName("bar");
-            writer.setTypeAnnotations("qrs", "xyz");
-            writer.writeSymbol("def");
-            writer.stepOut();
-            writer.setTypeAnnotations("$ion_symbol_table");
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("symbols");
-            writer.stepIn(IonType.LIST);
-            writer.writeString("orange");
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbol("orange");
-        });
+        reader = readerFor(
+            writer -> {
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("foo");
+                writer.addTypeAnnotation("uvw");
+                writer.writeSymbol("abc");
+                writer.setFieldName("bar");
+                writer.setTypeAnnotations("qrs", "xyz");
+                writer.writeSymbol("def");
+                writer.stepOut();
+                writer.setTypeAnnotations("$ion_symbol_table");
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("symbols");
+                writer.stepIn(IonType.LIST);
+                writer.writeString("orange");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbol("orange");
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.STRUCT);
         stepIn();
@@ -509,21 +513,25 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void ivmBetweenValues() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void ivmBetweenValues(boolean constructFromBytes) throws Exception {
         writerBuilder = writerBuilder.withLocalSymbolTableAppendDisabled();
-        reader = readerFor(writer -> {
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("foo");
-            writer.addTypeAnnotation("uvw");
-            writer.writeSymbol("abc");
-            writer.setFieldName("bar");
-            writer.setTypeAnnotations("qrs", "xyz");
-            writer.writeSymbol("def");
-            writer.stepOut();
-            writer.finish();
-            writer.writeSymbol("orange");
-        });
+        reader = readerFor(
+            writer -> {
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("foo");
+                writer.addTypeAnnotation("uvw");
+                writer.writeSymbol("abc");
+                writer.setFieldName("bar");
+                writer.setTypeAnnotations("qrs", "xyz");
+                writer.writeSymbol("def");
+                writer.stepOut();
+                writer.finish();
+                writer.writeSymbol("orange");
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.STRUCT);
         stepIn();
@@ -542,57 +550,63 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void ivmOnly() throws Exception {
-        reader = readerFor();
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void ivmOnly(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes);
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void twoIvmsOnly() throws Exception {
-        reader = readerFor(0xE0, 0x01, 0x00, 0xEA);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void twoIvmsOnly(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xE0, 0x01, 0x00, 0xEA);
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void multipleSymbolTablesBetweenValues() throws Exception {
-        reader = readerFor(writer -> {
-            writer.setTypeAnnotations("$ion_symbol_table");
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("symbols");
-            writer.stepIn(IonType.LIST);
-            writer.writeString("abc");
-            writer.stepOut();
-            writer.stepOut();
-            writer.setTypeAnnotations("$ion_symbol_table");
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("symbols");
-            writer.stepIn(IonType.LIST);
-            writer.writeString("def");
-            writer.stepOut();
-            writer.setFieldName("imports");
-            writer.writeSymbol("$ion_symbol_table");
-            writer.stepOut();
-            writer.writeSymbol("abc");
-            writer.writeSymbol("def");
-            writer.setTypeAnnotations("$ion_symbol_table");
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("symbols");
-            writer.stepIn(IonType.LIST);
-            writer.writeString("orange");
-            writer.stepOut();
-            writer.stepOut();
-            writer.setTypeAnnotations("$ion_symbol_table");
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("symbols");
-            writer.stepIn(IonType.LIST);
-            writer.writeString("purple");
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbol("purple");
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multipleSymbolTablesBetweenValues(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            writer -> {
+                writer.setTypeAnnotations("$ion_symbol_table");
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("symbols");
+                writer.stepIn(IonType.LIST);
+                writer.writeString("abc");
+                writer.stepOut();
+                writer.stepOut();
+                writer.setTypeAnnotations("$ion_symbol_table");
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("symbols");
+                writer.stepIn(IonType.LIST);
+                writer.writeString("def");
+                writer.stepOut();
+                writer.setFieldName("imports");
+                writer.writeSymbol("$ion_symbol_table");
+                writer.stepOut();
+                writer.writeSymbol("abc");
+                writer.writeSymbol("def");
+                writer.setTypeAnnotations("$ion_symbol_table");
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("symbols");
+                writer.stepIn(IonType.LIST);
+                writer.writeString("orange");
+                writer.stepOut();
+                writer.stepOut();
+                writer.setTypeAnnotations("$ion_symbol_table");
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("symbols");
+                writer.stepIn(IonType.LIST);
+                writer.writeString("purple");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbol("purple");
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -604,31 +618,35 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void multipleIvmsBetweenValues() throws Exception  {
-        reader = readerFor((writer, out) -> {
-            writer.setTypeAnnotationSymbols(3);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(7);
-            writer.stepIn(IonType.LIST);
-            writer.writeString("abc");
-            writer.stepOut();
-            writer.stepOut();
-            writer.finish();
-            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
-            writer.setTypeAnnotationSymbols(3);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(7);
-            writer.stepIn(IonType.LIST);
-            writer.writeString("def");
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.finish();
-            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
-            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
-            writer.writeSymbolToken(4);
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multipleIvmsBetweenValues(boolean constructFromBytes) throws Exception  {
+        reader = readerFor(
+            (writer, out) -> {
+                writer.setTypeAnnotationSymbols(3);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(7);
+                writer.stepIn(IonType.LIST);
+                writer.writeString("abc");
+                writer.stepOut();
+                writer.stepOut();
+                writer.finish();
+                out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+                writer.setTypeAnnotationSymbols(3);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(7);
+                writer.stepIn(IonType.LIST);
+                writer.writeString("def");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.finish();
+                out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+                out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+                writer.writeSymbolToken(4);
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("def");
@@ -638,24 +656,28 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void invalidVersion() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void invalidVersion(boolean constructFromBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(bytes(0xE0, 0x01, 0x74, 0xEA, 0x20));
-        reader = readerFor(readerBuilder, out.toByteArray());
-        thrown.expect(IonException.class);
-        reader.next();
-        reader.close();
+        reader = readerFor(readerBuilder, constructFromBytes, out.toByteArray());
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.close();
+        });
     }
 
-    @Test
-    public void invalidVersionMarker() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void invalidVersionMarker(boolean constructFromBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(bytes(0xE0, 0x01, 0x00, 0xEB, 0x20));
-        reader = readerFor(readerBuilder, out.toByteArray());
-        thrown.expect(IonException.class);
-        reader.next();
-        reader.close();
+        reader = readerFor(readerBuilder, constructFromBytes, out.toByteArray());
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.close();
+        });
     }
 
     /**
@@ -758,8 +780,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         pipe.receive(_Private_IonConstants.BINARY_VERSION_MARKER_1_0[0]);
         // Because reader does not persist across load invocations, the loader must throw an exception if the reader
         // had an incomplete value buffered.
-        thrown.expect(IonException.class);
-        loader.load(pipe);
+        assertThrows(IonException.class, () -> loader.load(pipe));
     }
 
     private void incrementalMultipleValuesIterate(Iterator<IonValue> iterator, ResizingPipedInputStream pipe) {
@@ -817,8 +838,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Valid text Ion. Also hex 0x20, which is binary int 0. However, it is not preceded by the IVM, so it must be
         // interpreted as text. The binary reader must fail.
         pipe.receive(' ');
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
     }
 
     @Test
@@ -891,20 +911,24 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void lobsNewBytes() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void lobsNewBytes(boolean constructFromBytes) throws Exception {
         final byte[] blobBytes = "abcdef".getBytes(StandardCharsets.UTF_8);
         final byte[] clobBytes = "ghijklmnopqrstuv".getBytes(StandardCharsets.UTF_8);
-        reader = readerFor(writer -> {
-            writer.writeBlob(blobBytes);
-            writer.writeClob(clobBytes);
-            writer.setTypeAnnotations("foo");
-            writer.writeBlob(blobBytes);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("bar");
-            writer.writeClob(clobBytes);
-            writer.stepOut();
-        });
+        reader = readerFor(
+            writer -> {
+                writer.writeBlob(blobBytes);
+                writer.writeClob(clobBytes);
+                writer.setTypeAnnotations("foo");
+                writer.writeBlob(blobBytes);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("bar");
+                writer.writeClob(clobBytes);
+                writer.stepOut();
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.BLOB);
         assertArrayEquals(blobBytes, reader.newBytes());
@@ -924,20 +948,24 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void lobsGetBytes() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void lobsGetBytes(boolean constructFromBytes) throws Exception {
         final byte[] blobBytes = "abcdef".getBytes(StandardCharsets.UTF_8);
         final byte[] clobBytes = "ghijklmnopqrstuv".getBytes(StandardCharsets.UTF_8);
-        reader = readerFor(writer -> {
-            writer.writeBlob(blobBytes);
-            writer.writeClob(clobBytes);
-            writer.setTypeAnnotations("foo");
-            writer.writeBlob(blobBytes);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("bar");
-            writer.writeClob(clobBytes);
-            writer.stepOut();
-        });
+        reader = readerFor(
+            writer -> {
+                writer.writeBlob(blobBytes);
+                writer.writeClob(clobBytes);
+                writer.setTypeAnnotations("foo");
+                writer.writeBlob(blobBytes);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("bar");
+                writer.writeClob(clobBytes);
+                writer.stepOut();
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.BLOB);
         byte[] fullBlob = new byte[blobBytes.length];
@@ -965,9 +993,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void nopPad() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPad(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             // One byte no-op pad.
             0x00,
             // Two byte no-op pad.
@@ -1028,36 +1058,40 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithImportsThenSymbols() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithImportsThenSymbols(boolean constructFromBytes) throws Exception {
         SimpleCatalog catalog = new SimpleCatalog();
         catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
         readerBuilder = readerBuilder.withCatalog(catalog);
         writerBuilder = writerBuilder.withCatalog(catalog);
 
-        reader = readerFor(writer -> {
-            writer.setTypeAnnotations("$ion_symbol_table");
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("imports");
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldName("name");
-            writer.writeString("foo");
-            writer.setFieldName("version");
-            writer.writeInt(1);
-            writer.setFieldName("max_id");
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.setFieldName("symbols");
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbol("abc");
-            writer.writeSymbol("def");
-            writer.writeSymbol("ghi");
-        });
+        reader = readerFor(
+            writer -> {
+                writer.setTypeAnnotations("$ion_symbol_table");
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("imports");
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldName("name");
+                writer.writeString("foo");
+                writer.setFieldName("version");
+                writer.writeInt(1);
+                writer.setFieldName("max_id");
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.setFieldName("symbols");
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbol("abc");
+                writer.writeSymbol("def");
+                writer.writeSymbol("ghi");
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -1069,36 +1103,40 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithSymbolsThenImports() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithSymbolsThenImports(boolean constructFromBytes) throws Exception {
         SimpleCatalog catalog = new SimpleCatalog();
         catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
         readerBuilder = readerBuilder.withCatalog(catalog);
 
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.writeSymbolToken(11);
-            writer.writeSymbolToken(12);
-        });
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.writeSymbolToken(11);
+                writer.writeSymbolToken(12);
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -1110,42 +1148,46 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithManySymbolsThenImports() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithManySymbolsThenImports(boolean constructFromBytes) throws Exception {
         SimpleCatalog catalog = new SimpleCatalog();
         catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
         readerBuilder = readerBuilder.withCatalog(catalog);
 
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.writeString("jkl");
-            writer.writeString("mno");
-            writer.writeString("pqr");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.writeSymbolToken(11);
-            writer.writeSymbolToken(12);
-            writer.writeSymbolToken(13);
-            writer.writeSymbolToken(14);
-            writer.writeSymbolToken(15);
-        });
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.writeString("jkl");
+                writer.writeString("mno");
+                writer.writeString("pqr");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.writeSymbolToken(11);
+                writer.writeSymbolToken(12);
+                writer.writeSymbolToken(13);
+                writer.writeSymbolToken(14);
+                writer.writeSymbolToken(15);
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -1163,61 +1205,65 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void multipleSymbolTablesWithSymbolsThenImports() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multipleSymbolTablesWithSymbolsThenImports(boolean constructFromBytes) throws Exception {
         SimpleCatalog catalog = new SimpleCatalog();
         catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
         catalog.putTable(SYSTEM.newSharedSymbolTable("bar", 1, Collections.singletonList("baz").iterator()));
         readerBuilder = readerBuilder.withCatalog(catalog);
 
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.writeSymbolToken(11);
-            writer.writeSymbolToken(12);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("xyz");
-            writer.writeString("uvw");
-            writer.writeString("rst");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("bar");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(1);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.writeSymbolToken(11);
-            writer.writeSymbolToken(12);
-            writer.writeSymbolToken(13);
-        });
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.writeSymbolToken(11);
+                writer.writeSymbolToken(12);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("xyz");
+                writer.writeString("uvw");
+                writer.writeString("rst");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("bar");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(1);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.writeSymbolToken(11);
+                writer.writeSymbolToken(12);
+                writer.writeSymbolToken(13);
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -1243,39 +1289,43 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void ivmResetsImports() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void ivmResetsImports(boolean constructFromBytes) throws Exception {
         SimpleCatalog catalog = new SimpleCatalog();
         catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
         readerBuilder = readerBuilder.withCatalog(catalog);
 
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.writeSymbolToken(11);
-            writer.writeSymbolToken(12);
-            writer.close();
-            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
-            out.write(0x20);
-        });
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.writeSymbolToken(11);
+                writer.writeSymbolToken(12);
+                writer.close();
+                out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+                out.write(0x20);
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -1300,9 +1350,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertEquals(expectedText, actual.getText());
     }
 
-    @Test
-    public void symbolsAsTokens() throws Exception {
-        reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}");
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolsAsTokens(boolean constructFromBytes) throws Exception {
+        reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}", constructFromBytes);
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.SYMBOL);
@@ -1323,100 +1374,110 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void intNegativeZeroFails() throws Exception {
-        reader = readerFor(0x31, 0x00);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void intNegativeZeroFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x31, 0x00);
         reader.next();
-        thrown.expect(IonException.class);
-        reader.longValue();
+        assertThrows(IonException.class, () -> reader.longValue());
         reader.close();
     }
 
-    @Test
-    public void bigIntNegativeZeroFails() throws Exception {
-        reader = readerFor(0x31, 0x00);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void bigIntNegativeZeroFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x31, 0x00);
         reader.next();
-        thrown.expect(IonException.class);
-        reader.bigIntegerValue();
+        assertThrows(IonException.class, () -> reader.bigIntegerValue());
         reader.close();
     }
 
-    @Test
-    public void listWithLengthTooShortFails() throws Exception {
-        reader = readerFor(0xB1, 0x21, 0x01);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void listWithLengthTooShortFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xB1, 0x21, 0x01);
         nextExpect(IonType.LIST);
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void listWithContainerValueLengthTooShortFails() throws Exception {
-        reader = readerFor(0xB2, 0xB2, 0x21, 0x01);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void listWithContainerValueLengthTooShortFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xB2, 0xB2, 0x21, 0x01);
         nextExpect(IonType.LIST);
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void listWithVariableLengthTooShortFails() throws Exception {
-        reader = readerFor(0xBE, 0x81, 0x21, 0x01);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void listWithVariableLengthTooShortFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xBE, 0x81, 0x21, 0x01);
         nextExpect(IonType.LIST);
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test(expected = IonException.class)
-    public void noOpPadTooShort1() throws Exception {
-        reader = readerFor(0x37, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void noOpPadTooShort1(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x37, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01);
         nextExpect(IonType.INT);
-        nextExpect(null);
-        reader.close();
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.close();
+        });
     }
 
-    @Test(expected = IonException.class)
-    public void noOpPadTooShort2() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void noOpPadTooShort2(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0x0e, 0x90, 0x00, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         );
-        nextExpect(null);
-        reader.close();
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.close();
+        });
     }
 
-    @Test
-    public void nopPadOneByte() throws Exception {
-        reader = readerFor(0);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadOneByte(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0);
         nextExpect(null);
         closeAndCount();
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeStringValue() throws Exception {
-        reader = readerFor(0x71, 0x0A); // SID 10
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeStringValue(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x71, 0x0A); // SID 10
         nextExpect(IonType.SYMBOL);
-        thrown.expect(IonException.class);
-        reader.stringValue();
+        assertThrows(IonException.class, () -> reader.stringValue());
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeSymbolValue() throws Exception {
-        reader = readerFor(0x71, 0x0A); // SID 10
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeSymbolValue(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x71, 0x0A); // SID 10
         nextExpect(IonType.SYMBOL);
-        thrown.expect(IonException.class);
-        reader.symbolValue();
+        assertThrows(IonException.class, () -> reader.symbolValue());
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeFieldName() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeFieldName(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xD2, // Struct, length 2
             0x8A, // SID 10
             0x20 // int 0
@@ -1424,14 +1485,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.INT);
-        thrown.expect(IonException.class);
-        reader.getFieldName();
+        assertThrows(IonException.class, () -> reader.getFieldName());
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeFieldNameSymbol() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeFieldNameSymbol(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xD2, // Struct, length 2
             0x8A, // SID 10
             0x20 // int 0
@@ -1439,42 +1501,45 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.INT);
-        thrown.expect(IonException.class);
-        reader.getFieldNameSymbol();
+        assertThrows(IonException.class, () -> reader.getFieldNameSymbol());
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeAnnotation() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeAnnotation(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xE3, // Annotation wrapper, length 3
             0x81, // annotation SID length 1
             0x8A, // SID 10
             0x20 // int 0
         );
         nextExpect(IonType.INT);
-        thrown.expect(IonException.class);
-        reader.getTypeAnnotations();
+        assertThrows(IonException.class, () -> reader.getTypeAnnotations());
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeAnnotationSymbol() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeAnnotationSymbol(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xE3, // Annotation wrapper, length 3
             0x81, // annotation SID length 1
             0x8A, // SID 10
             0x20 // int 0
         );
         nextExpect(IonType.INT);
-        thrown.expect(IonException.class);
-        reader.getTypeAnnotationSymbols();
+        assertThrows(IonException.class, () -> reader.getTypeAnnotationSymbols());
         reader.close();
     }
 
-    @Test
-    public void localSidOutOfRangeIterateAnnotations() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void localSidOutOfRangeIterateAnnotations(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xE3, // Annotation wrapper, length 3
             0x81, // annotation SID length 1
             0x8A, // SID 10
@@ -1482,85 +1547,89 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         nextExpect(IonType.INT);
         Iterator<String> annotationIterator = reader.iterateTypeAnnotations();
-        thrown.expect(IonException.class);
-        annotationIterator.next();
+        assertThrows(IonException.class, annotationIterator::next);
         reader.close();
     }
 
-    @Test
-    public void stepInOnScalarFails() throws Exception {
-        reader = readerFor(0x20);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepInOnScalarFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x20);
         nextExpect(IonType.INT);
-        thrown.expect(IllegalStateException.class);
-        stepIn();
+        assertThrows(IllegalStateException.class, reader::stepIn);
         reader.close();
     }
 
-    @Test
-    public void stepInBeforeNextFails() throws Exception {
-        reader = readerFor(0xD2, 0x84, 0xD0);
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepInBeforeNextFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xD2, 0x84, 0xD0);
         reader.next();
         stepIn();
-        thrown.expect(IllegalStateException.class);
+        assertThrows(IllegalStateException.class, reader::stepIn);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepOutAtDepthZeroFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x20);
+        reader.next();
+        assertThrows(IllegalStateException.class, reader::stepOut);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void byteSizeNotOnLobFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x20);
+        reader.next();
+        assertThrows(IonException.class, () -> reader.byteSize());
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void doubleValueOnIntFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x20);
+        reader.next();
+        assertThrows(IllegalStateException.class, () -> reader.doubleValue());
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void floatWithInvalidLengthFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x43, 0x01, 0x02, 0x03);
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.close();
+        });
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void invalidTypeIdFFailsAtTopLevel(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xF0);
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.close();
+        });
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void invalidTypeIdFFailsBelowTopLevel(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xB1, 0xF0);
+        reader.next();
         stepIn();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void stepOutAtDepthZeroFails() throws Exception {
-        reader = readerFor(0x20);
-        reader.next();
-        thrown.expect(IllegalStateException.class);
-        stepOut();
-        reader.close();
-    }
-
-    @Test
-    public void byteSizeNotOnLobFails() throws Exception {
-        reader = readerFor(0x20);
-        reader.next();
-        thrown.expect(IonException.class);
-        reader.byteSize();
-        reader.close();
-    }
-
-    @Test
-    public void doubleValueOnIntFails() throws Exception {
-        reader = readerFor(0x20);
-        reader.next();
-        thrown.expect(IllegalStateException.class);
-        reader.doubleValue();
-        reader.close();
-    }
-
-    @Test
-    public void floatWithInvalidLengthFails() throws Exception {
-        reader = readerFor(0x43, 0x01, 0x02, 0x03);
-        thrown.expect(IonException.class);
-        reader.next();
-        reader.close();
-    }
-
-    @Test
-    public void invalidTypeIdFFailsAtTopLevel() throws Exception {
-        reader = readerFor(0xF0);
-        thrown.expect(IonException.class);
-        reader.next();
-        reader.close();
-    }
-
-    @Test
-    public void invalidTypeIdFFailsBelowTopLevel() throws Exception {
-        reader = readerFor(0xB1, 0xF0);
-        reader.next();
-        stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
-        reader.close();
-    }
-
-    @Test
-    public void reallyLargeString() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void reallyLargeString(boolean constructFromBytes) throws Exception {
         StringBuilder sb = new StringBuilder();
         // 8192 is a arbitrarily large; it requires a couple bytes of length, and it doesn't fit in the preallocated
         // string decoding buffer of size 4096.
@@ -1568,16 +1637,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
             sb.append('a');
         }
         String string = sb.toString();
-        reader = readerFor("\"" + string + "\"");
+        reader = readerFor("\"" + string + "\"", constructFromBytes);
         nextExpect(IonType.STRING);
         expectString(string);
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void nopPadInAnnotationWrapperFails() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadInAnnotationWrapperFails(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xB5, // list
             0xE4, // annotation wrapper
             0x81, // 1 byte of annotations
@@ -1587,14 +1658,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         reader.next();
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void nestedAnnotationWrapperFails() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nestedAnnotationWrapperFails(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xB5, // list
             0xE4, // annotation wrapper
             0x81, // 1 byte of annotations
@@ -1606,14 +1678,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         reader.next();
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void annotationWrapperLengthMismatchFails() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationWrapperLengthMismatchFails(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xB5, // list
             0xE4, // annotation wrapper
             0x81, // 1 byte of annotations
@@ -1623,14 +1696,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         reader.next();
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void annotationWrapperVariableLengthMismatchFails() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationWrapperVariableLengthMismatchFails(boolean constructFromBytes) throws Exception {
         reader = readerFor(
+            constructFromBytes,
             0xBE, // list
             0x90, // Length 16
             0xEE, // annotation wrapper
@@ -1644,103 +1718,112 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         reader.next();
         stepIn();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void multipleSymbolTableImportsFieldsFails() throws Exception {
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("bar");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(1);
-            writer.stepOut();
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multipleSymbolTableImportsFieldsFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("bar");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(1);
+                writer.stepOut();
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+            },
+            constructFromBytes
+        );
 
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void multipleSymbolTableSymbolsFieldsFails() throws Exception {
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("bar");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(1);
-            writer.stepOut();
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("ghi");
-            writer.stepOut();
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString("abc");
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-        });
-
-        thrown.expect(IonException.class);
-        reader.next();
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multipleSymbolTableSymbolsFieldsFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("bar");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(1);
+                writer.stepOut();
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("ghi");
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("abc");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+            },
+            constructFromBytes
+        );
+        
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
-    @Test
-    public void nonStringInSymbolsListCreatesNullSlot() throws Exception {
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
-            writer.stepIn(IonType.LIST);
-            writer.writeString(null);
-            writer.writeString("abc");
-            writer.writeInt(123);
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10);
-            writer.writeSymbolToken(11);
-            writer.writeSymbolToken(12);
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nonStringInSymbolsListCreatesNullSlot(boolean constructFromBytes) throws Exception {
+        reader = readerFor((
+            writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString(null);
+                writer.writeString("abc");
+                writer.writeInt(123);
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10);
+                writer.writeSymbolToken(11);
+                writer.writeSymbolToken(12);
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         SymbolToken symbolValue = reader.symbolValue();
@@ -1757,54 +1840,58 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithMultipleImportsCorrectlyAssignsImportLocations() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithMultipleImportsCorrectlyAssignsImportLocations(boolean constructFromBytes) throws Exception {
         SimpleCatalog catalog = new SimpleCatalog();
         catalog.putTable(SYSTEM.newSharedSymbolTable("foo", 1, Arrays.asList("abc", "def").iterator()));
         catalog.putTable(SYSTEM.newSharedSymbolTable("bar", 1, Arrays.asList("123", "456").iterator()));
         readerBuilder = readerBuilder.withCatalog(catalog);
 
-        reader = readerFor((writer, out) -> {
-            SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
-            writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
-            writer.stepIn(IonType.LIST);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(4); // The matching shared symbol table in the catalog only declares two symbols.
-            writer.stepOut();
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("bar");
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            // The matching shared symbol table in the catalog declares two symbols, but only one is used.
-            writer.writeInt(1);
-            writer.stepOut();
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(systemTable.findSymbol("name"));
-            writer.writeString("baz"); // There is no match in the catalog; all symbols have unknown text.
-            writer.setFieldNameSymbol(systemTable.findSymbol("version"));
-            writer.writeInt(1);
-            writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
-            writer.writeInt(2);
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepOut();
-            writer.writeSymbolToken(10); // abc
-            writer.writeSymbolToken(11); // def
-            writer.writeSymbolToken(12); // unknown text, import SID 3 (from foo)
-            writer.writeSymbolToken(13); // unknown text, import SID 4 (from foo)
-            writer.writeSymbolToken(14); // 123
-            writer.writeSymbolToken(15); // unknown text, import SID 1 (from baz)
-            writer.writeSymbolToken(16); // unknown text, import SID 2 (from baz)
-        });
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(4); // The matching shared symbol table in the catalog only declares two symbols.
+                writer.stepOut();
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("bar");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                // The matching shared symbol table in the catalog declares two symbols, but only one is used.
+                writer.writeInt(1);
+                writer.stepOut();
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("baz"); // There is no match in the catalog; all symbols have unknown text.
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(2);
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(10); // abc
+                writer.writeSymbolToken(11); // def
+                writer.writeSymbolToken(12); // unknown text, import SID 3 (from foo)
+                writer.writeSymbolToken(13); // unknown text, import SID 4 (from foo)
+                writer.writeSymbolToken(14); // 123
+                writer.writeSymbolToken(15); // unknown text, import SID 1 (from baz)
+                writer.writeSymbolToken(16); // unknown text, import SID 2 (from baz)
+            },
+            constructFromBytes
+        );
 
         nextExpect(IonType.SYMBOL);
         expectString("abc");
@@ -1828,9 +1915,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableSnapshotImplementsBasicMethods() throws Exception {
-        reader = readerFor("'abc'");
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableSnapshotImplementsBasicMethods(boolean constructFromBytes) throws Exception {
+        reader = readerFor("'abc'", constructFromBytes);
         reader.next();
         SymbolTable symbolTable = reader.getSymbolTable();
         assertNull(symbolTable.getName());
@@ -1844,8 +1932,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertEquals(10, symbolTable.getMaxId());
         assertEquals("abc", symbolTable.findKnownSymbol(10));
         assertNull(symbolTable.findKnownSymbol(symbolTable.getMaxId() + 1));
-        thrown.expect(IllegalArgumentException.class);
-        symbolTable.findKnownSymbol(-1);
+        assertThrows(IllegalArgumentException.class, () -> symbolTable.findKnownSymbol(-1));
         reader.close();
     }
 
@@ -1870,14 +1957,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
     /**
      * Creates a bounded incremental reader over the given binary Ion, constructing a reader either from byte array or
      * from InputStream depending on the value of the parameter 'constructFromBytes'.
+     * @param constructFromBytes whether to construct the reader from bytes or InputStream.
      * @param initialBufferSize the initial buffer size.
      * @param maximumBufferSize the maximum size to which the buffer may grow.
      * @param handler the unified handler for byte counting and oversized value handling.
      */
-    private IonReader boundedReaderFor(byte[] bytes, int initialBufferSize, int maximumBufferSize, UnifiedTestHandler handler) {
+    private IonReader boundedReaderFor(boolean constructFromBytes, byte[] bytes, int initialBufferSize, int maximumBufferSize, UnifiedTestHandler handler) {
         byteCounter.set(0);
         setBufferBounds(initialBufferSize, maximumBufferSize, handler);
-        return readerFor(readerBuilder, bytes);
+        return readerFor(readerBuilder, constructFromBytes, bytes);
     }
 
     /**
@@ -1895,9 +1983,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         return readerFor(stream);
     }
 
-    @Test
-    public void singleValueExceedsInitialBufferSize() throws Exception {
-        reader = boundedReaderFor(
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void singleValueExceedsInitialBufferSize(boolean constructFromBytes) throws Exception {
+        reader = boundedReaderFor(constructFromBytes, 
             toBinary("\"abcdefghijklmnopqrstuvwxyz\""),
             8,
             Integer.MAX_VALUE,
@@ -1918,8 +2007,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             .onOversizedValue(builder.getNoOpOversizedValueHandler())
             .onOversizedSymbolTable(builder.getNoOpOversizedSymbolTableHandler())
             .onData(builder.getNoOpDataHandler());
-        thrown.expect(IllegalArgumentException.class);
-        builder.build();
+        assertThrows(IllegalArgumentException.class, builder::build);
     }
 
     @Test
@@ -1928,8 +2016,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         builder
             .withMaximumBufferSize(9)
             .withInitialBufferSize(9);
-        thrown.expect(IllegalArgumentException.class);
-        builder.build();
+        assertThrows(IllegalArgumentException.class, builder::build);
     }
     
     private void expectOversized(int numberOfValues) {
@@ -2036,7 +2123,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             0x21, 0x7B, // int 123
             0x81, 'a' // String "a"
         );
-        reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);;
+        reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
 
         // The maximum buffer size is 5, which will be exceeded after the annotation wrapper type ID
         // (1 byte), the annotations length (1 byte), and the annotation SID 3 (3 bytes). The next byte is the wrapped
@@ -2573,8 +2660,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(null);
     }
 
-    @Test
-    public void flushBetweenStructs() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void flushBetweenStructs(boolean constructFromBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = _Private_IonManagedBinaryWriterBuilder
             .create(_Private_IonManagedBinaryWriterBuilder.AllocatorMode.BASIC)
@@ -2585,14 +2673,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         writeSecondStruct(writer);
         writer.close();
 
-        reader = boundedReaderFor(out.toByteArray(), 64, 64, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 64, 64, byteCountingHandler);
         assertFirstStruct(reader);
         assertSecondStruct(reader);
         closeAndCount();
     }
 
-    @Test
-    public void structsWithFloat32AndPreallocatedLength() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void structsWithFloat32AndPreallocatedLength(boolean constructFromBytes) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = _Private_IonManagedBinaryWriterBuilder
             .create(_Private_IonManagedBinaryWriterBuilder.AllocatorMode.BASIC)
@@ -2603,29 +2692,31 @@ public class IonReaderContinuableTopLevelBinaryTest {
         writeSecondStruct(writer);
         writer.close();
 
-        reader = boundedReaderFor(out.toByteArray(), 64, 64, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 64, 64, byteCountingHandler);
         assertFirstStruct(reader);
         assertSecondStruct(reader);
         assertBytesConsumed();
     }
 
-    @Test
-    public void nopPadThatFillsBufferFollowedByValueNotOversized() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadThatFillsBufferFollowedByValueNotOversized(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             0x03, 0x00, 0x00, 0x00, // 4 byte NOP pad.
             0x20 // Int 0.
         );
         // The IVM is 4 bytes and the NOP pad is 4 bytes. The first value is the 9th byte and should not be considered
         // oversize because the NOP pad can be discarded.
-        reader = boundedReaderFor(out.toByteArray(), 8, 8, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 8, 8, byteCountingHandler);
         nextExpect(IonType.INT);
         expectInt(0);
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void nopPadFollowedByValueThatOverflowsBufferNotOversized() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadFollowedByValueThatOverflowsBufferNotOversized(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             0x03, 0x00, 0x00, 0x00, // 4 byte NOP pad.
             0x21, 0x01 // Int 1.
@@ -2633,15 +2724,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // The IVM is 4 bytes and the NOP pad is 4 bytes. The first byte of the value is the 9th byte and fits in the
         // buffer. Even though there is a 10th byte, the value should not be considered oversize because the NOP pad
         // can be discarded.
-        reader = boundedReaderFor(out.toByteArray(), 9, 9, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 9, 9, byteCountingHandler);
         nextExpect(IonType.INT);
         expectInt(1);
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableFollowedByNopPadFollowedByValueThatOverflowsBufferNotOversized() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableFollowedByNopPadFollowedByValueThatOverflowsBufferNotOversized(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             // Symbol table with the symbol 'hello'.
             0xEB, 0x81, 0x83, 0xD8, 0x87, 0xB6, 0x85, 'h', 'e', 'l', 'l', 'o',
@@ -2650,15 +2742,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         // The IVM is 4 bytes, the symbol table is 12 bytes, and the symbol value is 2 bytes (total 18). The 1-byte NOP
         // pad needs to be reclaimed to make space for the value. Once that is done, the value will fit.
-        reader = boundedReaderFor(out.toByteArray(), 18, 18, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 18, 18, byteCountingHandler);
         nextExpect(IonType.SYMBOL);
         expectString("hello");
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void multipleNopPadsFollowedByValueThatOverflowsBufferNotOversized() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multipleNopPadsFollowedByValueThatOverflowsBufferNotOversized(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             // One byte no-op pad.
             0x00,
@@ -2683,7 +2776,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         );
 
-        reader = boundedReaderFor(out.toByteArray(), 11, 11, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 11, 11, byteCountingHandler);
         nextExpect(IonType.INT);
         expectInt(1);
         nextExpect(IonType.INT);
@@ -2692,8 +2785,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             // One byte no-op pad.
             0x00,
@@ -2715,15 +2809,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
 
         // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
-        reader = boundedReaderFor(out.toByteArray(), 22, 22, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 22, 22, byteCountingHandler);
         nextExpect(IonType.SYMBOL);
         expectString("hello");
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors2() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors2(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             // One byte no-op pad.
             0x00,
@@ -2745,15 +2840,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
 
         // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
-        reader = boundedReaderFor(out.toByteArray(), 22, 22, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 22, 22, byteCountingHandler);
         nextExpect(IonType.SYMBOL);
         expectString("hello");
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors3() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadsInterspersedWithSystemValuesDoNotCauseOversizedErrors3(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             // One byte no-op pad.
             0x00,
@@ -2775,15 +2871,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
 
         // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
-        reader = boundedReaderFor(out.toByteArray(), 22, 22, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 22, 22, byteCountingHandler);
         nextExpect(IonType.SYMBOL);
         expectString("hello");
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void nopPadSurroundingSymbolTableThatFitsInBuffer() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadSurroundingSymbolTableThatFitsInBuffer(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             // 14-byte no-op pad.
             0x0E, 0x8C,
@@ -2800,7 +2897,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
 
         // Set the maximum size at IVM (4 bytes) + 14-byte NOP pad + the symbol table (12 bytes) + 2 value bytes.
-        reader = boundedReaderFor(out.toByteArray(), 32, 32, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 32, 32, byteCountingHandler);
         nextExpect(IonType.STRING);
         expectString("abcdefg");
         nextExpect(IonType.SYMBOL);
@@ -2809,15 +2906,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void nopPadInStructNonIncremental() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nopPadInStructNonIncremental(boolean constructFromBytes) throws Exception {
         TestUtils.BinaryIonAppender out = new TestUtils.BinaryIonAppender().append(
             0xD6, // Struct length 6
             0x80, // Field name SID 0
             0x04, 0x00, 0x00, 0x00, 0x00 // 5-byte NOP pad.
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
-        reader = boundedReaderFor(out.toByteArray(), 5, Integer.MAX_VALUE, byteCountingHandler);
+        reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 5, Integer.MAX_VALUE, byteCountingHandler);
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(null);
@@ -2845,9 +2943,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertEquals(expected.size(), numberOfElements);
     }
 
-    @Test
-    public void annotationIteratorReuse() throws Exception {
-        reader = readerFor("foo::bar::123 baz::456");
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationIteratorReuse(boolean constructFromBytes) throws Exception {
+        reader = readerFor("foo::bar::123 baz::456", constructFromBytes);
         nextExpect(IonType.INT);
         Iterator<String> firstValueAnnotationIterator = reader.iterateTypeAnnotations();
         expectInt(123);
@@ -2860,8 +2959,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test(expected = IonException.class)
-    public void failsOnMalformedSymbolTable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void failsOnMalformedSymbolTable(boolean constructFromBytes) throws Exception {
         byte[] data = bytes(
             0xE0, 0x01, 0x00, 0xEA, // Binary IVM
             0xE6, // 6-byte annotation wrapper
@@ -2873,33 +2973,36 @@ public class IonReaderContinuableTopLevelBinaryTest {
             0x81, // Junk byte to fill the 6 bytes of the annotation wrapper and 3 bytes of the struct.
             0x20  // Next top-level value (int 0).
         );
-        reader = boundedReaderFor(data, 1024, 1024, byteCountingHandler);
-        nextExpect(null);
-        nextExpect(null);
+        reader = boundedReaderFor(constructFromBytes, data, 1024, 1024, byteCountingHandler);
+        assertThrows(IonException.class, () -> nextExpect(null));
         reader.close();
     }
 
-    @Test
-    public void multiByteSymbolTokens() throws Exception {
-        reader = readerFor((writer, out) -> {
-            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
-            writer.stepIn(IonType.LIST);
-            for (int i = SystemSymbols.ION_1_0_MAX_ID ; i < 332; i++) {
-                writer.writeNull(IonType.STRING);
-            }
-            writer.writeString("a");
-            writer.writeString("b");
-            writer.writeString("c");
-            writer.stepOut();
-            writer.stepOut();
-            writer.stepIn(IonType.STRUCT);
-            writer.addTypeAnnotationSymbol(333);
-            writer.setFieldNameSymbol(334);
-            writer.writeSymbolToken(335);
-            writer.stepOut();
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void multiByteSymbolTokens(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+                writer.stepIn(IonType.LIST);
+                for (int i = SystemSymbols.ION_1_0_MAX_ID ; i < 332; i++) {
+                    writer.writeNull(IonType.STRING);
+                }
+                writer.writeString("a");
+                writer.writeString("b");
+                writer.writeString("c");
+                writer.stepOut();
+                writer.stepOut();
+                writer.stepIn(IonType.STRUCT);
+                writer.addTypeAnnotationSymbol(333);
+                writer.setFieldNameSymbol(334);
+                writer.writeSymbolToken(335);
+                writer.stepOut();
+            },
+            constructFromBytes
+        );
         nextExpect(IonType.STRUCT);
         stepIn();
         nextExpect(IonType.SYMBOL);
@@ -2917,60 +3020,72 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithOpenContentImportsListField() throws Exception {
-        reader = readerFor((writer, out) -> {
-            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(SystemSymbols.NAME_SID);
-            writer.writeInt(123);
-            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
-            writer.stepIn(IonType.LIST);
-            writer.writeString("a");
-            writer.stepOut();
-            writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
-            writer.writeString("foo");
-            writer.stepOut();
-            writer.writeSymbolToken(SystemSymbols.ION_1_0_MAX_ID + 1);
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithOpenContentImportsListField(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(SystemSymbols.NAME_SID);
+                writer.writeInt(123);
+                writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+                writer.stepIn(IonType.LIST);
+                writer.writeString("a");
+                writer.stepOut();
+                writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
+                writer.writeString("foo");
+                writer.stepOut();
+                writer.writeSymbolToken(SystemSymbols.ION_1_0_MAX_ID + 1);
+            },
+            constructFromBytes
+        );
         nextExpect(IonType.SYMBOL);
         expectString("a");
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithOpenContentImportsSymbolField() throws Exception {
-        reader = readerFor((writer, out) -> {
-            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
-            writer.stepIn(IonType.LIST);
-            writer.writeString("a");
-            writer.stepOut();
-            writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
-            writer.writeSymbolToken(SystemSymbols.NAME_SID);
-            writer.stepOut();
-            writer.writeSymbolToken(SystemSymbols.ION_1_0_MAX_ID + 1);
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithOpenContentImportsSymbolField(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+                writer.stepIn(IonType.LIST);
+                writer.writeString("a");
+                writer.stepOut();
+                writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
+                writer.writeSymbolToken(SystemSymbols.NAME_SID);
+                writer.stepOut();
+                writer.writeSymbolToken(SystemSymbols.ION_1_0_MAX_ID + 1);
+            },
+            constructFromBytes
+        );
         nextExpect(IonType.SYMBOL);
         expectString("a");
         nextExpect(null);
         closeAndCount();
     }
 
-    @Test
-    public void symbolTableWithOpenContentSymbolField() throws Exception {
-        reader = readerFor((writer, out) -> {
-            writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
-            writer.stepIn(IonType.STRUCT);
-            writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
-            writer.writeString("foo");
-            writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
-            writer.writeSymbolToken(SystemSymbols.NAME_SID);
-            writer.stepOut();
-            writer.writeSymbolToken(SystemSymbols.VERSION_SID);
-        });
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableWithOpenContentSymbolField(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                writer.addTypeAnnotationSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(SystemSymbols.SYMBOLS_SID);
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(SystemSymbols.IMPORTS_SID);
+                writer.writeSymbolToken(SystemSymbols.NAME_SID);
+                writer.stepOut();
+                writer.writeSymbolToken(SystemSymbols.VERSION_SID);
+            },
+            constructFromBytes
+        );
         nextExpect(IonType.SYMBOL);
         expectString(SystemSymbols.VERSION);
         nextExpect(null);
@@ -2994,8 +3109,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Early step out. Not enough bytes to complete the value. Throw if the reader attempts
         // to advance the cursor.
         stepOut();
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
@@ -3008,8 +3122,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(new ByteArrayInputStream(bytes));
         nextExpect(IonType.STRING);
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
@@ -3075,10 +3188,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(null);
     }
 
-    @Test
-    public void incompleteContainerNonContinuable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void incompleteContainerNonContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(false);
-        reader = readerFor(0xB6, 0x20);
+        reader = readerFor(constructFromBytes, 0xB6, 0x20);
         // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
@@ -3088,37 +3202,38 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader.close();
     }
 
-    @Test
-    public void incompleteContainerContinuable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void incompleteContainerContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(true);
-        reader = readerFor(0xB6, 0x20);
+        reader = readerFor(constructFromBytes, 0xB6, 0x20);
         // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
         // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
         // or skip the value with the guarantee that no unexpected EOF exception can occur.
         nextExpect(null);
         // When closed, the reader must throw an exception for unexpected EOF to disambiguate clean stream end from
         // incomplete value.
-        thrown.expect(IonException.class);
-        reader.close();
+        assertThrows(IonException.class, () -> reader.close());
     }
 
-    @Test
-    public void skipIncompleteContainerNonContinuable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipIncompleteContainerNonContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(false);
-        reader = readerFor(0xB6, 0x20);
+        reader = readerFor(constructFromBytes, 0xB6, 0x20);
         // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values.
         nextExpect(IonType.LIST);
         // Attempting to skip past the value, results in an unexpected EOF exception.
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
     }
 
-    @Test
-    public void skipIncompleteContainerContinuable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipIncompleteContainerContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(true);
-        reader = readerFor(0xB6, 0x20);
+        reader = readerFor(constructFromBytes, 0xB6, 0x20);
         // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
         // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
         // or skip the value with the guarantee that no unexpected EOF exception can occur.
@@ -3127,14 +3242,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
         nextExpect(null);
         // When closed, the reader must throw an exception for unexpected EOF to disambiguate clean stream end from
         // incomplete value.
-        thrown.expect(IonException.class);
-        reader.close();
+        assertThrows(IonException.class, () -> reader.close());
     }
 
-    @Test
-    public void completeValueInIncompleteContainerNonContinuable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void completeValueInIncompleteContainerNonContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(false);
-        reader = readerFor(0xB6, 0x20);
+        reader = readerFor(constructFromBytes, 0xB6, 0x20);
         // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
@@ -3149,10 +3264,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader.close();
     }
 
-    @Test
-    public void incompleteValueInIncompleteContainerNonContinuable() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void incompleteValueInIncompleteContainerNonContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(false);
-        reader = readerFor(0xB6, 0x21);
+        reader = readerFor(constructFromBytes, 0xB6, 0x21);
         // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
@@ -3161,21 +3277,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         stepIn();
         nextExpect(IonType.INT);
         // Attempting to skip past the incomplete value results in an error.
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, () -> reader.next());
     }
 
-    @Test
-    public void earlyStepOutNonIncremental() throws Exception {
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutNonIncremental(boolean constructFromBytes) throws Exception {
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
-        reader = readerFor(0xB4, 0x20); // List length 4 followed by a single byte
+        reader = readerFor(constructFromBytes, 0xB4, 0x20); // List length 4 followed by a single byte
         nextExpect(IonType.LIST);
         stepIn();
         // Early step-out. The reader could choose to fail here, but it is expensive to check for EOF on every stepOut.
         stepOut();
         // However, the reader *must* fail if the user requests the next value, because the stream is incomplete.
-        thrown.expect(IonException.class); // Unexpected EOF
-        nextExpect(null);
+        assertThrows(IonException.class, () -> reader.next()); // Unexpected EOF
     }
-
 }
