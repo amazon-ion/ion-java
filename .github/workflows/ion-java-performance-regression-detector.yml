@@ -11,140 +11,110 @@ on:
 permissions:
   contents: read
 
+env:
+  data_size: '50000'
+  test_data_id: 'generated-test-data'
+
 jobs:
+  generate-test-data:
+    name: Generate Test Data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ion-data-generator
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        with:
+          repository: amazon-ion/ion-data-generator
+          ref: main
+
+      - name: Build ion-data-generator
+        run: mvn clean install
+
+      - name: Generate test data
+        env:
+          jar_file: target/ion-data-generator-1.0-SNAPSHOT.jar
+          schema_dir: tst/com/amazon/ion/workflow
+        run: |
+          mkdir -p testData
+          for test in nestedStruct nestedList sexp realWorldDataSchema01 realWorldDataSchema02 realWorldDataSchema03
+          do
+          java -jar $jar_file generate -S ${{env.data_size}} --input-ion-schema $schema_dir/${test}.isl testData/${test}.10n
+          done
+
+      - name: Upload test Ion Data to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.test_data_id}}
+          path: testData
+
   detect-regression:
     name: Detect Regression
     runs-on: ubuntu-latest
+    needs: generate-test-data
+    strategy:
+      matrix:
+        test-data: ['nestedStruct', 'nestedList', 'sexp', 'realWorldDataSchema01', 'realWorldDataSchema02', 'realWorldDataSchema03']
+        usage-patterns: [' read --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api streaming ',' read --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api dom ', ' write --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api streaming --io-type buffer --ion-length-preallocation 1 ', ' write --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api dom --io-type buffer --ion-length-preallocation 1 ']
+      fail-fast: false
 
     steps:
       - name: Set up JDK 11
-        uses: actions/setup-java@0ab4596768b603586c0de567f2430c30f5b0d2b0 # v3.13.0
+        uses: actions/setup-java@v3
         with:
           distribution: 'corretto'
           java-version: 11
 
-      - name: Checkout ion-java from the new commit.
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: ion-java-new
-
-      - name: Build ion-java from the new commit
-        run: cd ion-java-new && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
-
       - name: Checkout ion-java-benchmark-cli
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           repository: amazon-ion/ion-java-benchmark-cli
           ref: master
           path: ion-java-benchmark-cli
 
-      - name: Build ion-java-benchmark-cli
-        run: cd ion-java-benchmark-cli && mvn clean install
-
-      - name: Checkout ion-data-generator
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
+      - name: Checkout ion-java from the previous commit
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
-          repository: amazon-ion/ion-data-generator
-          ref: main
-          path: ion-data-generator
+          ref: ${{ github.base_ref }}
+          path: baseline
 
-      - name: Build ion-data-generator
-        run: cd ion-data-generator && mvn clean install
-
-      - name: Check the version of ion-java.
-        run: java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar --version
-
-      - name: Generate test Ion Data
-        run: |
-          mkdir -p testData
-          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/nestedStruct.isl testData/testStructs.10n
-          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/nestedList.isl testData/testLists.10n
-          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/sexp.isl testData/testSexps.10n
-          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema01.isl testData/realWorldData01.10n
-          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema02.isl testData/realWorldData02.10n
-          java -jar ion-data-generator/target/ion-data-generator-1.0-SNAPSHOT.jar  generate -S 50000 --input-ion-schema ion-data-generator/tst/com/amazon/ion/workflow/realWorldDataSchema03.isl testData/realWorldData03.10n
-
-      - name: Upload test Ion Data to artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      - name: Checkout ion-java from the new commit.
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
-          name: test Ion Data
-          path: testData
-
-      - name: Benchmark ion-java from the new commit
-        run: |
-          mkdir -p benchmarkResults
-          cd ion-java-benchmark-cli && java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar run-suite --test-ion-data /home/runner/work/ion-java/ion-java/testData --benchmark-options-combinations tst/com/amazon/ion/benchmark/optionsCombinations.ion /home/runner/work/ion-java/ion-java/benchmarkResults
-
-      - name: Upload benchmark results to artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
-        with:
-          name: Benchmark result
-          path: benchmarkResults
-
-      - name: Clean maven dependencies repository
-        run : rm -r /home/runner/.m2
-
-      - name: Checkout the current commit
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.6.0
-        with:
-          repository: amazon-ion/ion-java
-          ref: master
-          path: ion-java
-
-      - name: Build ion-java from the previous commit
-        run: cd ion-java && git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
-
-      - name: Build ion-java-benchmark-cli
-        run: cd ion-java-benchmark-cli && mvn clean install
-
-      - name: Check the version of ion-java
-        run: java -jar ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar --version
-
-      - name: Create directories for test data and benchmark results
-        run: |
-          mkdir -p benchmarkResults
-          mkdir -p testData
+          ref: ${{ github.head_ref }}
+          path: new
 
       - name: Download test Ion Data from artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        uses: actions/download-artifact@v3
         with:
-          name: test Ion Data
+          name: generated-test-data
           path: testData
 
-      - name: Download benchmark results of ion-java from the new commit from artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-        with:
-          name: Benchmark result
-          path: benchmarkResults
-
-      - name: Benchmark ion-java from the previous commit and add the generated benchmark results to the existing directories
-        run: cd ion-java-benchmark-cli && java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar run-suite --test-ion-data /home/runner/work/ion-java/ion-java/testData --benchmark-options-combinations tst/com/amazon/ion/benchmark/optionsCombinations.ion /home/runner/work/ion-java/ion-java/benchmarkResults
-
-      - name: Upload new benchmark results directory to artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
-        with:
-          name: Benchmark result
-          path: benchmarkResults
-
-      - name: Detect performance regression
-        id: regression_result
+      # Get the benchmark results from the base commit
+      - name: Build ion-java from the base commit
+        working-directory: baseline
         run: |
-          result=true
-          cd benchmarkResults && for FILE in *; do message=$(java -jar /home/runner/work/ion-java/ion-java/ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar compare --benchmark-result-previous $FILE/previous.ion --benchmark-result-new $FILE/new.ion $FILE/report.ion | tee /dev/stderr) && if [ "$message" != "no regression detected" ]; then result=false; fi; done
-          echo "::set-output name=regression-result::$result"
-          if [ "$result" = "true" ]; then echo "No regression detected!" >> $GITHUB_STEP_SUMMARY; fi
+          git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
 
-      - name: Upload comparison reports to the benchmark results directory
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
-        with:
-          name: Benchmark result
-          path: benchmarkResults
-
-      - name: Fail the workflow if regression happened
-        env:
-          regression_detect: ${{steps.regression_result.outputs.regression-result}}
-        if: ${{ env.regression_detect == 'false' }}
+      - name: Benchmark ion-java from the base commit
+        working-directory: ion-java-benchmark-cli
         run: |
-          cd benchmarkResults && echo "| Benchmark command | GC Allocation Rate | Heap Usage | Speed |" >> $GITHUB_STEP_SUMMARY && echo "| ----------- | ----------- |----------- | ----------- |" >> $GITHUB_STEP_SUMMARY && for FILE in *; do regressionDetection=$(java -jar /home/runner/work/ion-java/ion-java/ion-java-benchmark-cli/target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar compare --benchmark-result-previous $FILE/previous.ion --benchmark-result-new $FILE/new.ion $FILE/report.ion) && if [ "$regressionDetection" != "no regression detected" ]; then command=$(echo $FILE | sed "s/_/ /g") && read gc heapUsage speed <<< $( echo ${regressionDetection} | awk -F", " '{print $1" "$2" "$3}' ) && echo "|$command|$gc|$heapUsage|$speed|" >> $GITHUB_STEP_SUMMARY; fi; done
-          exit 1
+          mvn clean install
+          mkdir /home/runner/work/ion-java/ion-java/benchmarkresults
+          java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar ${{matrix.usage-patterns}} -r ion -o /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion /home/runner/work/ion-java/ion-java/testData/${{matrix.test-data}}.10n 
+
+      - name: Build ion-java from the new commit
+        working-directory: new
+        run: |
+          git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
+
+      - name: Benchmark ion-java from the new commit
+        working-directory: ion-java-benchmark-cli
+        run: |
+          mvn clean install
+          java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar ${{matrix.usage-patterns}} -r ion -o /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion /home/runner/work/ion-java/ion-java/testData/${{matrix.test-data}}.10n
+
+      #Detect regression
+      - name: Detect regression
+        working-directory: ion-java-benchmark-cli
+        run: |
+          a=$(java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar compare --benchmark-result-previous /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion --benchmark-result-new /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion)
+          if [ ! -z "$a" ]; then echo "${a}" >> $GITHUB_STEP_SUMMARY; exit 1; fi
