@@ -100,16 +100,18 @@ public class IonCursorTestUtilities {
     }
 
     /**
-     * Provides Expectations that verify that advancing the cursor positions it on a container value with a field name
-     * that matches the given expectation, and that the container's child values match the given expectations, without
-     * filling the container up-front.
+     * Provides Expectations that verify that advancing the cursor positions it on a container value that matches the
+     * given expectation, and that the container's child values match the given expectations, without filling the
+     * container up-front.
      */
     @SafeVarargs
     @SuppressWarnings("unchecked")
-    static <T extends IonCursorBinary> ExpectationProvider<T> containerField(Expectation<T> expectedField, ExpectationProvider<T>... expectations) {
+    static <T extends IonCursorBinary> ExpectationProvider<T> container(Expectation<T> expectedOnContainer, ExpectationProvider<T>... expectations) {
         return consumer -> {
             consumer.accept((Expectation<T>) CONTAINER_START);
-            consumer.accept(expectedField);
+            if (expectedOnContainer != NO_EXPECTATION) {
+                consumer.accept(expectedOnContainer);
+            }
             consumer.accept((Expectation<T>) STEP_IN);
             for (Consumer<Consumer<Expectation<T>>> expectation : expectations) {
                 expectation.accept(consumer);
@@ -125,18 +127,20 @@ public class IonCursorTestUtilities {
     @SafeVarargs
     @SuppressWarnings("unchecked")
     static <T extends IonCursorBinary> ExpectationProvider<T> container(ExpectationProvider<T>... expectations) {
-        return containerField((Expectation<T>) NO_EXPECTATION, expectations);
+        return container((Expectation<T>) NO_EXPECTATION, expectations);
     }
 
     /**
-     * Provides an Expectation that verifies that advancing the cursor positions it on a scalar value with a field name
-     * that matches the given expectation, without filling that scalar.
+     * Provides an Expectation that verifies that advancing the cursor positions it on a scalar value that matches the
+     * given expectation, without filling that scalar.
      */
     @SuppressWarnings("unchecked")
-    static <T extends IonCursorBinary> ExpectationProvider<T> scalarField(Expectation<T> expectedField) {
+    static <T extends IonCursorBinary> ExpectationProvider<T> scalar(Expectation<T> expectedOnScalar) {
         return consumer -> {
             consumer.accept((Expectation<T>) SCALAR);
-            consumer.accept(expectedField);
+            if (expectedOnScalar != NO_EXPECTATION) {
+                consumer.accept(expectedOnScalar);
+            }
         };
     }
 
@@ -146,14 +150,25 @@ public class IonCursorTestUtilities {
      */
     @SuppressWarnings("unchecked")
     static <T extends IonCursorBinary> ExpectationProvider<T> scalar() {
-        return scalarField((Expectation<T>) NO_EXPECTATION);
+        return scalar((Expectation<T>) NO_EXPECTATION);
+    }
+
+    /**
+     * Provides an Expectation that verifies that the value on which the cursor is currently positioned has the given
+     * type.
+     */
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> type(IonType expectedType) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("type(%s)", expectedType),
+            cursor -> assertEquals(expectedType, cursor.getType()))
+        );
     }
 
     /**
      * Provides Expectations that verify that advancing the cursor to the next value positions the cursor on a scalar
      * with type int and the given expected value.
      */
-    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> intValue(int expectedValue) {
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> fillIntValue(int expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("int(%d)", expectedValue),
             reader -> {
@@ -168,7 +183,7 @@ public class IonCursorTestUtilities {
      * Provides Expectations that verify that advancing the cursor to the next value positions the cursor on a scalar
      * with type string and the given expected value.
      */
-    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> stringValue(String expectedValue) {
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> fillStringValue(String expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("string(%s)", expectedValue),
             reader -> {
@@ -183,7 +198,7 @@ public class IonCursorTestUtilities {
      * Provides Expectations that verify that advancing the cursor to the next value positions the cursor on a scalar
      * with type symbol and the given expected value.
      */
-    static <T extends IonReaderContinuableApplicationBinary> ExpectationProvider<T> symbolValue(String expectedValue) {
+    static <T extends IonReaderContinuableApplicationBinary> ExpectationProvider<T> fillSymbolValue(String expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("symbol(%s)", expectedValue),
             reader -> {

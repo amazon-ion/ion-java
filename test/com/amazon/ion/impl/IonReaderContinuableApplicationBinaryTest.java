@@ -18,10 +18,10 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.assertSequence;
 import static com.amazon.ion.impl.IonCursorTestUtilities.container;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
-import static com.amazon.ion.impl.IonCursorTestUtilities.intValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.fillIntValue;
 import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
-import static com.amazon.ion.impl.IonCursorTestUtilities.scalarField;
-import static com.amazon.ion.impl.IonCursorTestUtilities.symbolValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
+import static com.amazon.ion.impl.IonCursorTestUtilities.fillSymbolValue;
 
 public class IonReaderContinuableApplicationBinaryTest {
 
@@ -63,7 +63,7 @@ public class IonReaderContinuableApplicationBinaryTest {
      * name, without filling the scalar.
      */
     private static ExpectationProvider<IonReaderContinuableApplicationBinary> scalarFieldName(String expectedFieldName) {
-        return scalarField(fieldName(expectedFieldName));
+        return IonCursorTestUtilities.scalar(fieldName(expectedFieldName));
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
@@ -79,7 +79,7 @@ public class IonReaderContinuableApplicationBinaryTest {
         assertSequence(
             reader,
             container(
-                scalarFieldName("name"), intValue(1),
+                scalarFieldName("name"), fillIntValue(1),
                 endContainer()
             ),
             endStream()
@@ -97,8 +97,8 @@ public class IonReaderContinuableApplicationBinaryTest {
         );
         assertSequence(
             reader,
-            scalar(), symbolValue("name"),
-            scalar(), symbolValue("version")
+            scalar(), fillSymbolValue("name"),
+            scalar(), fillSymbolValue("version")
         );
     }
 
@@ -121,8 +121,8 @@ public class IonReaderContinuableApplicationBinaryTest {
         );
         assertSequence(
             reader,
-            scalar(), symbolValue("A"),
-            scalar(), symbolValue("B")
+            scalar(), fillSymbolValue("A"),
+            scalar(), fillSymbolValue("B")
         );
     }
 

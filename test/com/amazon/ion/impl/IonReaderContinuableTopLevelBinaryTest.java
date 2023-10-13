@@ -48,10 +48,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.TestUtils.gzippedBytes;
+import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
+import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
+import static com.amazon.ion.impl.IonCursorTestUtilities.type;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -298,12 +302,153 @@ public class IonReaderContinuableTopLevelBinaryTest {
         return new IonReaderContinuableTopLevelBinary(readerBuilder, input, null, 0, 0);
     }
 
-    private void nextExpect(IonType type) {
-        assertEquals(type, reader.next());
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> next(IonType expectedType) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("next(%s)", expectedType),
+            reader -> {
+                assertEquals(expectedType, reader.next());
+                assertEquals(expectedType, reader.getType());
+            })
+        );
     }
 
-    private void typeExpect(IonType type) {
-        assertEquals(type, reader.getType());
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> next(String expectedFieldName, IonType expectedType) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("next(%s: %s)", expectedFieldName, expectedType),
+            reader -> {
+                assertEquals(expectedType, reader.next());
+                assertEquals(expectedType, reader.getType());
+                assertEquals(expectedFieldName, reader.getFieldName());
+            })
+        );
+    }
+
+    static final Expectation<IonReaderContinuableTopLevelBinary> STEP_IN_EXPECTATION = new Expectation<>("step_in", IonReader::stepIn);
+    static final Expectation<IonReaderContinuableTopLevelBinary> STEP_OUT_EXPECTATION = new Expectation<>("step_out", IonReader::stepOut);
+
+    static final ExpectationProvider<IonReaderContinuableTopLevelBinary> STEP_IN = consumer -> consumer.accept(STEP_IN_EXPECTATION);
+    static final ExpectationProvider<IonReaderContinuableTopLevelBinary> STEP_OUT = consumer -> consumer.accept(STEP_OUT_EXPECTATION);
+
+    @SafeVarargs
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> container(IonType expectedType, ExpectationProvider<IonReaderContinuableTopLevelBinary>... expectations) {
+        return consumer -> {
+            next(expectedType).accept(consumer);
+            STEP_IN.accept(consumer);
+            for (Consumer<Consumer<Expectation<IonReaderContinuableTopLevelBinary>>> expectation : expectations) {
+                expectation.accept(consumer);
+            }
+            STEP_OUT.accept(consumer);
+        };
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> intValue(int expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("int(%d)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.intValue())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> doubleValue(double expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("double(%f)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.doubleValue(), 1e-9)
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> decimalValue(BigDecimal expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("decimal(%s)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.decimalValue())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> stringValue(String expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("string(%s)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.stringValue())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> symbolValue(String expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("symbol(%s)", expectedValue),
+            reader -> assertSymbolEquals(expectedValue, reader.symbolValue())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> symbolValue(int expectedSid) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("symbol(%d)", expectedSid),
+            reader -> {
+                SymbolToken symbolValue = reader.symbolValue();
+                assertNull(symbolValue.getText());
+                assertEquals(expectedSid, symbolValue.getSid());
+            }
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> newBytesValue(byte[] expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("bytes(%s)", Arrays.toString(expectedValue)),
+            reader -> assertArrayEquals(expectedValue, reader.newBytes())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> getBytesValue(byte[] destination, int offset, int requestedLength, int expectedLength) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("getBytes(%d, %d)", offset, expectedLength),
+            reader -> assertEquals(expectedLength, reader.getBytes(destination, offset, requestedLength))
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> annotations(String... annotations) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("annotations(%s)", Arrays.toString(annotations)),
+            reader -> assertEquals(Arrays.asList(annotations), Arrays.asList(reader.getTypeAnnotations()))
+        ));
+    }
+
+    private static void assertSymbolEquals(
+        String expectedText,
+        SymbolToken actual
+    ) {
+        assertEquals(expectedText, actual.getText());
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> annotationSymbols(String... annotations) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("annotations(%s)", Arrays.toString(annotations)),
+            reader -> {
+                SymbolToken[] actualAnnotations = reader.getTypeAnnotationSymbols();
+                assertEquals(annotations.length, actualAnnotations.length);
+                for (int i = 0; i < annotations.length; i++) {
+                    assertSymbolEquals(annotations[i], actualAnnotations[i]);
+                }
+            }
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> fieldName(String fieldName) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("field(%s)", fieldName),
+            reader -> assertEquals(fieldName, reader.getFieldName())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> fieldNameSymbol(String fieldName) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("field(%s)", fieldName),
+            reader -> assertSymbolEquals(fieldName, reader.getFieldNameSymbol())
+        ));
+    }
+
+    @SafeVarargs
+    private final void assertSequence(ExpectationProvider<IonReaderContinuableTopLevelBinary>... providers) {
+        IonCursorTestUtilities.assertSequence((IonReaderContinuableTopLevelBinary) reader, providers);
+    }
+
+    private void nextExpect(IonType type) {
+        assertEquals(type, reader.next());
     }
 
     private void stepIn() {
@@ -312,22 +457,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     private void stepOut() {
         reader.stepOut();
-    }
-
-    private void expectAnnotations(String... annotations) {
-        assertEquals(Arrays.asList(annotations), Arrays.asList(reader.getTypeAnnotations()));
-    }
-
-    private void expectField(String name) {
-        assertEquals(name, reader.getFieldName());
-    }
-
-    private void expectInt(int value) {
-        assertEquals(value, reader.intValue());
-    }
-
-    private void expectString(String value) {
-        assertEquals(value, reader.stringValue());
     }
 
     private void closeAndCount() throws IOException {
@@ -342,30 +471,20 @@ public class IonReaderContinuableTopLevelBinaryTest {
             "[123] 456 {abc: foo::bar::123, def: baz::456} [123] 789 [foo::bar::123, baz::456] [123]",
             constructFromBytes
         );
-        nextExpect(IonType.LIST);
-        typeExpect(IonType.LIST);
-        nextExpect(IonType.INT);
-        typeExpect(IonType.INT);
-        nextExpect(IonType.STRUCT);
-        typeExpect(IonType.STRUCT);
-        nextExpect(IonType.LIST);
-        typeExpect(IonType.LIST);
-        stepIn();
-        typeExpect(null);
-        nextExpect(IonType.INT);
-        typeExpect(IonType.INT);
-        expectInt(123);
-        stepOut();
-        typeExpect(null);
-        nextExpect(IonType.INT);
-        typeExpect(IonType.INT);
-        expectInt(789);
-        nextExpect(IonType.LIST);
-        typeExpect(IonType.LIST);
-        nextExpect(IonType.LIST);
-        typeExpect(IonType.LIST);
-        nextExpect(null);
-        typeExpect(null);
+        assertSequence(
+            next(IonType.LIST),
+            next(IonType.INT),
+            next(IonType.STRUCT),
+            container(IonType.LIST,
+                type(null),
+                next(IonType.INT), intValue(123)
+            ),
+            type(null),
+            next(IonType.INT), intValue(789),
+            next(IonType.LIST),
+            next(IonType.LIST),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -373,23 +492,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void skipContainerAfterSteppingIn(boolean constructFromBytes) throws Exception {
         reader = readerFor("{abc: foo::bar::123, def: baz::456} 789", constructFromBytes);
-        nextExpect(IonType.STRUCT);
-        typeExpect(IonType.STRUCT);
-        stepIn();
-        typeExpect(null);
-        nextExpect(IonType.INT);
-        typeExpect(IonType.INT);
-        expectAnnotations("foo", "bar");
-        expectInt(123);
-        typeExpect(IonType.INT);
-        // Step out before completing the value.
-        stepOut();
-        typeExpect(null);
-        nextExpect(IonType.INT);
-        typeExpect(IonType.INT);
-        expectInt(789);
-        nextExpect(null);
-        typeExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                type(null),
+                next(IonType.INT), annotations("foo", "bar"), intValue(123), type(IonType.INT)
+                // Step out before completing the value
+            ),
+            type(null),
+            next(IonType.INT), intValue(789),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -397,16 +509,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void skipValueInContainer(boolean constructFromBytes) throws Exception {
         reader = readerFor("{foo: \"bar\", abc: 123, baz: a}", constructFromBytes);
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.STRING);
-        nextExpect(IonType.INT);
-        expectField("abc");
-        nextExpect(IonType.SYMBOL);
-        expectField("baz");
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.STRING),
+                next("abc", IonType.INT),
+                next("baz", IonType.SYMBOL),
+                next(null)
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -414,18 +525,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void symbolsAsStrings(boolean constructFromBytes) throws Exception {
         reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}", constructFromBytes);
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        expectField("foo");
-        expectAnnotations("uvw");
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectField("bar");
-        expectAnnotations("qrs", "xyz");
-        expectString("def");
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foo", IonType.SYMBOL), annotations("uvw"), stringValue("abc"),
+                next("bar", IonType.SYMBOL), annotations("qrs", "xyz"), stringValue("def")
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -448,25 +554,23 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        expectField("foo");
-        expectAnnotations("uvw");
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectField("bar");
-        expectAnnotations("qrs", "xyz");
-        expectString("def");
-        stepOut();
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foo", IonType.SYMBOL), annotations("uvw"), stringValue("abc"),
+                next("bar", IonType.SYMBOL), annotations("qrs", "xyz"), stringValue("def")
+            )
+        );
         SymbolTable preAppend = reader.getSymbolTable();
-        nextExpect(IonType.SYMBOL);
+        assertSequence(
+            next(IonType.SYMBOL)
+        );
         SymbolTable postAppend = reader.getSymbolTable();
-        expectString("orange");
+        assertSequence(
+            stringValue("orange"),
+            next(null)
+        );
         assertNull(preAppend.find("orange"));
         assertNotNull(postAppend.find("orange"));
-        nextExpect(null);
         closeAndCount();
     }
 
@@ -495,21 +599,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        expectField("foo");
-        expectAnnotations("uvw");
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectField("bar");
-        expectAnnotations("qrs", "xyz");
-        expectString("def");
-        stepOut();
-        nextExpect(IonType.SYMBOL);
-        expectString("orange");
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foo", IonType.SYMBOL), annotations("uvw"), stringValue("abc"),
+                next("bar", IonType.SYMBOL), annotations("qrs", "xyz"), stringValue("def")
+            ),
+            next(IonType.SYMBOL), stringValue("orange"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -532,21 +629,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        expectField("foo");
-        expectAnnotations("uvw");
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectField("bar");
-        expectAnnotations("qrs", "xyz");
-        expectString("def");
-        stepOut();
-        nextExpect(IonType.SYMBOL);
-        expectString("orange");
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foo", IonType.SYMBOL), annotations("uvw"), stringValue("abc"),
+                next("bar", IonType.SYMBOL), annotations("qrs", "xyz"), stringValue("def")
+            ),
+            next(IonType.SYMBOL), stringValue("orange"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -554,7 +644,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void ivmOnly(boolean constructFromBytes) throws Exception {
         reader = readerFor(constructFromBytes);
-        nextExpect(null);
+        assertSequence(next(null));
         closeAndCount();
     }
 
@@ -562,7 +652,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void twoIvmsOnly(boolean constructFromBytes) throws Exception {
         reader = readerFor(constructFromBytes, 0xE0, 0x01, 0x00, 0xEA);
-        nextExpect(null);
+        assertSequence(next(null));
         closeAndCount();
     }
 
@@ -608,13 +698,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
             constructFromBytes
         );
 
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("purple");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc"),
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("purple"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -648,11 +737,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
             constructFromBytes
         );
 
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("name");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("name"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -701,9 +790,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] bytes = toBinary("\"StringValueLong\"");
         totalBytesInStream = bytes.length;
         feedBytesOneByOne(bytes, pipe, reader);
-        nextExpect(IonType.STRING);
-        expectString("StringValueLong");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue("StringValueLong"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -714,22 +804,21 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] bytes = toBinary("value_type::\"StringValueLong\"");
         totalBytesInStream = bytes.length;
         feedBytesOneByOne(bytes, pipe, reader);
-        nextExpect(IonType.STRING);
-        expectString("StringValueLong");
-        expectAnnotations("value_type");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), annotations("value_type"), stringValue("StringValueLong"),
+            next(null)
+        );
         assertBytesConsumed();
         bytes = toBinary("{foobar: \"StringValueLong\"}");
         totalBytesInStream += bytes.length;
         feedBytesOneByOne(bytes, pipe, reader);
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.STRING);
-        expectField("foobar");
-        expectString("StringValueLong");
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foobar", IonType.STRING), stringValue("StringValueLong"),
+                next(null)
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -834,7 +923,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // we ensure that this fails quickly.
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(1);
         reader = readerBuilder.build(pipe);
-        nextExpect(null);
+        assertSequence(next(null));
         // Valid text Ion. Also hex 0x20, which is binary int 0. However, it is not preceded by the IVM, so it must be
         // interpreted as text. The binary reader must fail.
         pipe.receive(' ');
@@ -888,26 +977,22 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader = readerFor(pipe);
         feedBytesOneByOne(firstValue, pipe, reader);
         totalBytesInStream = firstValue.length;
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.STRING);
-        expectAnnotations("def");
-        expectField("abcdefghijklmnopqrstuvwxyz");
-        expectString("foo");
-        nextExpect(null);
-        stepOut();
+        assertSequence(
+            container(IonType.STRUCT,
+                next("abcdefghijklmnopqrstuvwxyz", IonType.STRING), annotations("def"), stringValue("foo"),
+                next(null)
+            )
+        );
         assertBytesConsumed();
         feedBytesOneByOne(secondValue, pipe, reader);
         totalBytesInStream += secondValue.length;
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.STRING);
-        expectString("fairlyLongString");
-        expectField("abcdefghijklmnopqrstuvwxyz");
-        expectAnnotations("foo", "bar");
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next("abcdefghijklmnopqrstuvwxyz", IonType.STRING), annotations("foo", "bar"), stringValue("fairlyLongString")    ,
+                next(null)
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -929,22 +1014,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.BLOB);
-        assertArrayEquals(blobBytes, reader.newBytes());
-        nextExpect(IonType.CLOB);
-        assertArrayEquals(clobBytes, reader.newBytes());
-        nextExpect(IonType.BLOB);
-        expectAnnotations("foo");
-        assertArrayEquals(blobBytes, reader.newBytes());
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.CLOB);
-        expectField("bar");
-        assertArrayEquals(clobBytes, reader.newBytes());
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            next(IonType.BLOB), newBytesValue(blobBytes),
+            next(IonType.CLOB), newBytesValue(clobBytes),
+            next(IonType.BLOB), annotations("foo"), newBytesValue(blobBytes),
+            container(IonType.STRUCT,
+                next("bar", IonType.CLOB), newBytesValue(clobBytes),
+                next(null)
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -967,29 +1046,27 @@ public class IonReaderContinuableTopLevelBinaryTest {
             constructFromBytes
         );
 
-        nextExpect(IonType.BLOB);
         byte[] fullBlob = new byte[blobBytes.length];
-        assertEquals(fullBlob.length, reader.getBytes(fullBlob, 0, fullBlob.length));
-        assertArrayEquals(blobBytes, fullBlob);
-        nextExpect(IonType.CLOB);
         byte[] partialClob = new byte[clobBytes.length];
-        assertEquals(3, reader.getBytes(partialClob, 0, 3));
-        assertEquals(clobBytes.length - 3, reader.getBytes(partialClob, 3, clobBytes.length - 3));
+        assertSequence(
+            next(IonType.BLOB), getBytesValue(fullBlob, 0, fullBlob.length, fullBlob.length)
+        );
+        assertArrayEquals(blobBytes, fullBlob);
+        assertSequence(
+            next(IonType.CLOB), getBytesValue(partialClob, 0, 3, 3), getBytesValue(partialClob, 3, clobBytes.length - 3, clobBytes.length - 3)
+        );
         assertArrayEquals(clobBytes, partialClob);
         Arrays.fill(fullBlob, (byte) 0);
-        nextExpect(IonType.BLOB);
-        assertEquals(fullBlob.length, reader.getBytes(fullBlob, 0, 100000));
-        expectAnnotations("foo");
-        nextExpect(IonType.STRUCT);
-        stepIn();
         Arrays.fill(partialClob, (byte) 0);
-        nextExpect(IonType.CLOB);
-        assertEquals(5, reader.getBytes(partialClob, 0, 5));
-        assertEquals(clobBytes.length - 5, reader.getBytes(partialClob, 5, 100000));
+        assertSequence(
+            next(IonType.BLOB), annotations("foo"), getBytesValue(fullBlob, 0, 100000, fullBlob.length),
+            container(IonType.STRUCT,
+                next(IonType.CLOB), getBytesValue(partialClob, 0, 5, 5), getBytesValue(partialClob, 5, 100000, clobBytes.length - 5),
+                next(null)
+            ),
+            next(null)
+        );
         assertArrayEquals(clobBytes, partialClob);
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
         closeAndCount();
     }
 
@@ -1035,26 +1112,21 @@ public class IonReaderContinuableTopLevelBinaryTest {
             0x0E, 0x8E,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         );
-
-        nextExpect(IonType.INT);
-        expectInt(0);
-        nextExpect(IonType.INT);
-        expectInt(1);
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.INT);
-        expectInt(-1);
-        nextExpect(null);
-        stepOut();
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(null);
-        stepOut();
-        nextExpect(IonType.LIST);
-        stepIn();
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            next(IonType.INT), intValue(0),
+            next(IonType.INT), intValue(1),
+            container(IonType.STRUCT,
+                next(IonType.INT), intValue(-1),
+                next(null)
+            ),
+            container(IonType.STRUCT,
+                next(null)
+            ),
+            container(IonType.LIST,
+                next(null)
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1092,14 +1164,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("ghi");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc"),
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("ghi"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1137,14 +1207,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("ghi");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc"),
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("ghi"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1188,20 +1256,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("ghi");
-        nextExpect(IonType.SYMBOL);
-        expectString("jkl");
-        nextExpect(IonType.SYMBOL);
-        expectString("mno");
-        nextExpect(IonType.SYMBOL);
-        expectString("pqr");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc"),
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("ghi"),
+            next(IonType.SYMBOL), stringValue("jkl"),
+            next(IonType.SYMBOL), stringValue("mno"),
+            next(IonType.SYMBOL), stringValue("pqr"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1264,28 +1327,27 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc")
+        );
         SymbolTable[] imports = reader.getSymbolTable().getImportedTables();
         assertEquals(1, imports.length);
         assertEquals("foo", imports[0].getName());
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("ghi");
-        nextExpect(IonType.SYMBOL);
-        expectString("baz");
-        nextExpect(IonType.SYMBOL);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("ghi"),
+            next(IonType.SYMBOL), stringValue("baz"),
+            next(IonType.SYMBOL)
+        );
         imports = reader.getSymbolTable().getImportedTables();
         assertEquals(1, imports.length);
         assertEquals("bar", imports[0].getName());
-        expectString("xyz");
-        nextExpect(IonType.SYMBOL);
-        expectString("uvw");
-        nextExpect(IonType.SYMBOL);
-        expectString("rst");
-        nextExpect(null);
+        assertSequence(
+            stringValue("xyz"),
+            next(IonType.SYMBOL), stringValue("uvw"),
+            next(IonType.SYMBOL), stringValue("rst"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1326,51 +1388,36 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc")
+        );
         SymbolTable[] imports = reader.getSymbolTable().getImportedTables();
         assertEquals(1, imports.length);
         assertEquals("foo", imports[0].getName());
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        expectString("ghi");
-        nextExpect(IonType.INT);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), stringValue("ghi"),
+            next(IonType.INT)
+        );
         assertTrue(reader.getSymbolTable().isSystemTable());
-        expectInt(0);
-        nextExpect(null);
+        assertSequence(
+            intValue(0),
+            next(null)
+        );
         closeAndCount();
-    }
-
-    private static void assertSymbolEquals(
-        String expectedText,
-        SymbolToken actual
-    ) {
-        assertEquals(expectedText, actual.getText());
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
     public void symbolsAsTokens(boolean constructFromBytes) throws Exception {
         reader = readerFor("{foo: uvw::abc, bar: qrs::xyz::def}", constructFromBytes);
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        assertSymbolEquals("foo", reader.getFieldNameSymbol());
-        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
-        assertEquals(1, annotations.length);
-        assertSymbolEquals("uvw", annotations[0]);
-        assertSymbolEquals("abc", reader.symbolValue());
-        nextExpect(IonType.SYMBOL);
-        assertSymbolEquals("bar", reader.getFieldNameSymbol());
-        annotations = reader.getTypeAnnotationSymbols();
-        assertEquals(2, annotations.length);
-        assertSymbolEquals("qrs", annotations[0]);
-        assertSymbolEquals("xyz", annotations[1]);
-        assertSymbolEquals("def", reader.symbolValue());
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.SYMBOL), fieldNameSymbol("foo"), annotationSymbols("uvw"), symbolValue("abc"),
+                next(IonType.SYMBOL), fieldNameSymbol("bar"), annotationSymbols("qrs", "xyz"), symbolValue("def")
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1450,7 +1497,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void nopPadOneByte(boolean constructFromBytes) throws Exception {
         reader = readerFor(constructFromBytes, 0);
-        nextExpect(null);
+        assertSequence(next(null));
         closeAndCount();
         reader.close();
     }
@@ -1638,9 +1685,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
         String string = sb.toString();
         reader = readerFor("\"" + string + "\"", constructFromBytes);
-        nextExpect(IonType.STRING);
-        expectString(string);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue(string),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1824,19 +1872,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-
-        nextExpect(IonType.SYMBOL);
-        SymbolToken symbolValue = reader.symbolValue();
-        assertNull(symbolValue.getText());
-        assertEquals(0, symbolValue.getSid());
-        nextExpect(IonType.SYMBOL);
-        symbolValue = reader.symbolValue();
-        assertEquals("abc", symbolValue.getText());
-        nextExpect(IonType.SYMBOL);
-        symbolValue = reader.symbolValue();
-        assertNull(symbolValue.getText());
-        assertEquals(0, symbolValue.getSid());
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), symbolValue(0),
+            next(IonType.SYMBOL), symbolValue("abc"),
+            next(IonType.SYMBOL), symbolValue(0),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1893,25 +1934,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
             constructFromBytes
         );
 
-        nextExpect(IonType.SYMBOL);
-        expectString("abc");
-        nextExpect(IonType.SYMBOL);
-        expectString("def");
-        nextExpect(IonType.SYMBOL);
-        SymbolToken symbolValue = reader.symbolValue();
-        assertNull(symbolValue.getText());
-        nextExpect(IonType.SYMBOL);
-        symbolValue = reader.symbolValue();
-        assertNull(symbolValue.getText());
-        nextExpect(IonType.SYMBOL);
-        assertEquals("123", reader.stringValue());
-        nextExpect(IonType.SYMBOL);
-        symbolValue = reader.symbolValue();
-        assertEquals(new SymbolTokenImpl(null, 15), symbolValue);
-        nextExpect(IonType.SYMBOL);
-        symbolValue = reader.symbolValue();
-        assertEquals(new SymbolTokenImpl(null, 16), symbolValue);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("abc"),
+            next(IonType.SYMBOL), stringValue("def"),
+            next(IonType.SYMBOL), symbolValue(null),
+            next(IonType.SYMBOL), symbolValue(null),
+            next(IonType.SYMBOL), stringValue("123"),
+            next(IonType.SYMBOL), symbolValue(15),
+            next(IonType.SYMBOL), symbolValue(16),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -1992,9 +2024,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
             Integer.MAX_VALUE,
             byteCountingHandler
         );
-        nextExpect(IonType.STRING);
-        expectString("abcdefghijklmnopqrstuvwxyz");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue("abcdefghijklmnopqrstuvwxyz"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2033,13 +2066,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
 
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 8, 16, byteAndOversizedValueCountingHandler);
-
-        nextExpect(IonType.STRING);
-        expectString("abc");
+        assertSequence(
+            next(IonType.STRING), stringValue("abc")
+        );
         expectOversized(1);
-        nextExpect(IonType.STRING);
-        expectString("def");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue("def"),
+            next(null)
+        );
         reader.close();
         expectOversized(2);
         totalBytesInStream = bytes.length;
@@ -2065,19 +2099,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
                 valueCounter++;
                 assertTrue(valueCounter < 3);
                 if (valueCounter == 1) {
-                    assertEquals(IonType.STRING, type);
-                    expectString("abc");
+                    assertSequence(type(IonType.STRING), stringValue("abc"));
                     expectOversized(1);
                 } else {
                     assertEquals(2, valueCounter);
-                    assertEquals(IonType.STRING, type);
-                    expectString("def");
+                    assertSequence(type(IonType.STRING), stringValue("def"));
                     expectOversized(2);
                 }
             }
         }
         assertEquals(2, valueCounter);
-        nextExpect(null);
+        assertSequence(next(null));
         reader.close();
         expectOversized(2);
         totalBytesInStream = bytes.length;
@@ -2090,7 +2122,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
 
         // The maximum buffer size is 5, which will be exceeded when attempting to fill the value with length 26.
-        nextExpect(null);
+        assertSequence(next(null));
         reader.close();
         expectOversized(1);
         totalBytesInStream = bytes.length;
@@ -2105,7 +2137,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader = boundedReaderFor(pipe, 5, 5, byteAndOversizedValueCountingHandler);
         feedBytesOneByOne(bytes, pipe, reader);
         // The maximum buffer size is 5, which will be exceeded when attempting to fill the value with length 26.
-        nextExpect(null);
+        assertSequence(next(null));
         reader.close();
         expectOversized(1);
         totalBytesInStream = bytes.length;
@@ -2128,10 +2160,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // The maximum buffer size is 5, which will be exceeded after the annotation wrapper type ID
         // (1 byte), the annotations length (1 byte), and the annotation SID 3 (3 bytes). The next byte is the wrapped
         // value type ID byte.
-        nextExpect(IonType.STRING);
-        expectString("a");
+        assertSequence(
+            next(IonType.STRING), stringValue("a")
+        );
         expectOversized(1);
-        nextExpect(null);
+        assertSequence(next(null));
         reader.close();
         totalBytesInStream = bytes.length;
         assertBytesConsumed();
@@ -2161,8 +2194,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // value type ID byte.
         feedBytesOneByOne(bytes, pipe, reader);
         expectOversized(1);
-        nextExpect(null);
-        nextExpect(null);
+        assertSequence(
+            next(null),
+            next(null)
+        );
         reader.close();
     }
 
@@ -2180,13 +2215,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // The string "12345678" requires 9 bytes, bringing the total to ~49, above the max of 48.
 
         reader = boundedReaderFor(new ByteArrayInputStream(out.toByteArray()), 8, 48, byteAndOversizedValueCountingHandler);
-        nextExpect(IonType.STRING);
+        assertSequence(
+            next(IonType.STRING)
+        );
         expectOversized(0);
-        expectString("12345678");
-        nextExpect(IonType.SYMBOL);
+        assertSequence(
+            stringValue("12345678"),
+            next(IonType.SYMBOL)
+        );
         expectOversized(0);
-        expectString("abcdefghijklmnopqrstuvwxyz");
-        nextExpect(null);
+        assertSequence(
+            stringValue("abcdefghijklmnopqrstuvwxyz"),
+            next(null)
+        );
         reader.close();
         expectOversized(0);
         totalBytesInStream = out.size();
@@ -2216,18 +2257,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
             if (type != null) {
                 valueCounter++;
                 if (valueCounter == 1) {
-                    assertEquals(IonType.STRING, type);
-                    expectString("12345678");
+                    assertSequence(type(IonType.STRING), stringValue("12345678"));
                     expectOversized(0);
                 } else if (valueCounter == 2) {
-                    assertEquals(IonType.SYMBOL, type);
-                    expectString("abcdefghijklmnopqrstuvwxyz");
+                    assertSequence(type(IonType.SYMBOL), stringValue("abcdefghijklmnopqrstuvwxyz"));
                     expectOversized(0);
                 }
             }
         }
         assertEquals(2, valueCounter);
-        nextExpect(null);
+        assertSequence(next(null));
         reader.close();
         expectOversized(0);
         totalBytesInStream = out.size();
@@ -2344,7 +2383,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         oversizedCounter.set(0);
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), maximumBufferSize, maximumBufferSize, byteAndOversizedSymbolTableCountingHandler);
-        nextExpect(null);
+        assertSequence(next(null));
         expectOversized(1);
         reader.close();
     }
@@ -2376,7 +2415,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(bytes.length);
         reader = boundedReaderFor(pipe, maximumBufferSize, maximumBufferSize, byteAndOversizedSymbolTableCountingHandler);
         feedBytesOneByOne(bytes, pipe, reader);
-        nextExpect(null);
+        assertSequence(next(null));
         expectOversized(1);
         reader.close();
     }
@@ -2406,9 +2445,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // The system values require ~40 bytes (4 IVM, 5 symtab struct header, 1 'symbols' sid, 2 list header, 2 + 26
         // for symbol 10.
         reader = boundedReaderFor(new ByteArrayInputStream(out.toByteArray()), 8, 25, byteAndOversizedSymbolTableCountingHandler);
-        nextExpect(IonType.STRING);
-        expectString("12345678");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue("12345678"),
+            next(null)
+        );
         expectOversized(1);
         reader.close();
     }
@@ -2432,14 +2472,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
             IonType type = reader.next();
             if (type != null) {
                 assertFalse(foundValue);
-                assertEquals(IonType.STRING, type);
-                expectString("12345678");
+                assertSequence(type(IonType.STRING), stringValue("12345678"));
                 foundValue = true;
             }
             pipe.receive(b);
         }
         assertTrue(foundValue);
-        nextExpect(null);
+        assertSequence(next(null));
         expectOversized(1);
         reader.close();
     }
@@ -2449,18 +2488,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] bytes = toBinary("[\"abcdefg\", 123]");
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
-        nextExpect(IonType.LIST);
-        stepIn();
+        assertSequence(next(IonType.LIST), STEP_IN);
         expectOversized(0);
         // This value is oversized, but since it is not filled, `onOversizedValue` does not need to be called.
-        nextExpect(IonType.STRING);
+        assertSequence(next(IonType.STRING));
         expectOversized(0);
-        nextExpect(IonType.INT);
+        assertSequence(next(IonType.INT));
         expectOversized(0);
-        expectInt(123);
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+                intValue(123),
+                next(null),
+            STEP_OUT,
+            next(null)
+        );
         reader.close();
         expectOversized(0);
         totalBytesInStream = bytes.length;
@@ -2472,10 +2512,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] bytes = toBinary("[\"abcdefg\", 123]");
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
-        nextExpect(IonType.LIST);
-        stepIn();
+        assertSequence(next(IonType.LIST), STEP_IN);
         expectOversized(0);
-        nextExpect(IonType.STRING);
+        assertSequence(next(IonType.STRING));
         // This value is oversized. Since the user attempts to consume it, `onOversizedValue` is called. An
         // OversizedValueException is called because the user attempted to force parsing of an oversized scalar
         // via an IonReader method that has no other way of conveying the failure.
@@ -2486,12 +2525,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
             // Continue
         }
         expectOversized(1);
-        nextExpect(IonType.INT);
+        assertSequence(next(IonType.INT));
         expectOversized(1);
-        expectInt(123);
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+                intValue(123),
+                next(null),
+            STEP_OUT,
+            next(null)
+        );
         reader.close();
         expectOversized(1);
         totalBytesInStream = bytes.length;
@@ -2509,15 +2550,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
-        nextExpect(IonType.SEXP);
-        stepIn();
+        assertSequence(next(IonType.SEXP), STEP_IN);
         expectOversized(0);
-        nextExpect(null);
+        assertSequence(next(null));
         expectOversized(1);
-        stepOut();
-        nextExpect(IonType.STRING);
-        expectString("a");
-        nextExpect(null);
+        assertSequence(
+            STEP_OUT,
+            next(IonType.STRING), stringValue("a"),
+            next(null)
+        );
         reader.close();
         expectOversized(1);
         totalBytesInStream = bytes.length;
@@ -2538,15 +2579,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
-        nextExpect(IonType.SEXP);
-        stepIn();
+        assertSequence(next(IonType.SEXP), STEP_IN);
         expectOversized(0);
-        nextExpect(null);
+        assertSequence(next(null));
         expectOversized(1);
-        stepOut();
-        nextExpect(IonType.STRING);
-        expectString("a");
-        nextExpect(null);
+        assertSequence(
+            STEP_OUT,
+            next(IonType.STRING), stringValue("a"),
+            next(null)
+        );
         reader.close();
         expectOversized(1);
         totalBytesInStream = bytes.length;
@@ -2568,25 +2609,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(new ByteArrayInputStream(bytes), 5, 5, byteAndOversizedValueCountingHandler);
-        nextExpect(IonType.STRING);
-        expectString("12");
-        nextExpect(IonType.SEXP);
-        stepIn();
-        nextExpect(IonType.SEXP);
-        stepIn();
-        nextExpect(IonType.SEXP);
-        stepIn();
-        expectOversized(0);
-        nextExpect(IonType.STRING);
-        expectOversized(0);
-        expectString("1234");
-        nextExpect(null);
-        stepOut();
-        stepOut();
-        stepOut();
-        nextExpect(IonType.INT);
-        expectInt(0);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue("12"),
+            container(IonType.SEXP,
+                container(IonType.SEXP,
+                    container(IonType.SEXP,
+                        next(IonType.STRING), stringValue("1234"),
+                        next(null)
+                    )
+                )
+            ),
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
         reader.close();
         expectOversized(0);
         totalBytesInStream = bytes.length;
@@ -2609,21 +2644,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         writer.stepOut();
     }
 
-    private void assertFirstStruct(IonReader reader) {
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        expectField("foo");
-        expectString("bar");
-        nextExpect(IonType.LIST);
-        expectField("abc");
-        stepIn();
-        nextExpect(IonType.INT);
-        expectInt(123);
-        nextExpect(IonType.INT);
-        expectInt(456);
-        stepOut();
-        stepOut();
+    private void assertFirstStruct() {
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foo", IonType.SYMBOL), stringValue("bar"),
+                next(IonType.LIST), fieldName("abc"), STEP_IN,
+                    next(IonType.INT), intValue(123),
+                    next(IonType.INT), intValue(456),
+                STEP_OUT
+            )
+        );
     }
 
     private static void writeSecondStruct(IonWriter writer) throws IOException {
@@ -2642,22 +2672,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
         writer.stepOut();
     }
 
-    private void assertSecondStruct(IonReader reader) {
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        expectField("foo");
-        expectString("baz");
-        nextExpect(IonType.LIST);
-        expectField("abc");
-        stepIn();
-        assertEquals(IonType.DECIMAL, reader.next());
-        assertEquals(new BigDecimal("42.0"), reader.decimalValue());
-        assertEquals(IonType.FLOAT, reader.next());
-        assertEquals(43., reader.doubleValue(), 1e-9);
-        stepOut();
-        stepOut();
-        nextExpect(null);
+    private void assertSecondStruct() {
+        assertSequence(
+            container(IonType.STRUCT,
+                next("foo", IonType.SYMBOL), stringValue("baz"),
+                next(IonType.LIST), fieldName("abc"), STEP_IN,
+                    next(IonType.DECIMAL), decimalValue(new BigDecimal("42.0")),
+                    next(IonType.FLOAT), doubleValue(43.),
+                STEP_OUT
+            ),
+            next(null)
+        );
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
@@ -2674,8 +2699,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
         writer.close();
 
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 64, 64, byteCountingHandler);
-        assertFirstStruct(reader);
-        assertSecondStruct(reader);
+        assertFirstStruct();
+        assertSecondStruct();
         closeAndCount();
     }
 
@@ -2693,8 +2718,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
         writer.close();
 
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 64, 64, byteCountingHandler);
-        assertFirstStruct(reader);
-        assertSecondStruct(reader);
+        assertFirstStruct();
+        assertSecondStruct();
         assertBytesConsumed();
     }
 
@@ -2708,9 +2733,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // The IVM is 4 bytes and the NOP pad is 4 bytes. The first value is the 9th byte and should not be considered
         // oversize because the NOP pad can be discarded.
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 8, 8, byteCountingHandler);
-        nextExpect(IonType.INT);
-        expectInt(0);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2725,9 +2751,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // buffer. Even though there is a 10th byte, the value should not be considered oversize because the NOP pad
         // can be discarded.
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 9, 9, byteCountingHandler);
-        nextExpect(IonType.INT);
-        expectInt(1);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.INT), intValue(1),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2743,9 +2770,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // The IVM is 4 bytes, the symbol table is 12 bytes, and the symbol value is 2 bytes (total 18). The 1-byte NOP
         // pad needs to be reclaimed to make space for the value. Once that is done, the value will fit.
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 18, 18, byteCountingHandler);
-        nextExpect(IonType.SYMBOL);
-        expectString("hello");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("hello"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2777,11 +2805,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
 
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 11, 11, byteCountingHandler);
-        nextExpect(IonType.INT);
-        expectInt(1);
-        nextExpect(IonType.INT);
-        expectInt(2);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.INT), intValue(1),
+            next(IonType.INT), intValue(2),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2810,9 +2838,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
         // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 22, 22, byteCountingHandler);
-        nextExpect(IonType.SYMBOL);
-        expectString("hello");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("hello"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2841,9 +2870,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
         // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 22, 22, byteCountingHandler);
-        nextExpect(IonType.SYMBOL);
-        expectString("hello");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("hello"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2872,9 +2902,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
         // Set the maximum size at 2 IVMs (8 bytes) + the symbol table (12 bytes) + the value (2 bytes).
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 22, 22, byteCountingHandler);
-        nextExpect(IonType.SYMBOL);
-        expectString("hello");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("hello"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2898,11 +2929,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
         // Set the maximum size at IVM (4 bytes) + 14-byte NOP pad + the symbol table (12 bytes) + 2 value bytes.
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 32, 32, byteCountingHandler);
-        nextExpect(IonType.STRING);
-        expectString("abcdefg");
-        nextExpect(IonType.SYMBOL);
-        expectString("hello");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.STRING), stringValue("abcdefg"),
+            next(IonType.SYMBOL), stringValue("hello"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2916,11 +2947,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(constructFromBytes, out.toByteArray(), 5, Integer.MAX_VALUE, byteCountingHandler);
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(null);
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(null)
+            ),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -2947,14 +2979,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(booleans = {true, false})
     public void annotationIteratorReuse(boolean constructFromBytes) throws Exception {
         reader = readerFor("foo::bar::123 baz::456", constructFromBytes);
-        nextExpect(IonType.INT);
+
+        assertSequence(next(IonType.INT));
         Iterator<String> firstValueAnnotationIterator = reader.iterateTypeAnnotations();
-        expectInt(123);
-        nextExpect(IonType.INT);
+        assertSequence(
+            intValue(123),
+            next(IonType.INT)
+        );
         compareIterator(Arrays.asList("foo", "bar"), firstValueAnnotationIterator);
         Iterator<String> secondValueAnnotationIterator = reader.iterateTypeAnnotations();
-        expectInt(456);
-        nextExpect(null);
+        assertSequence(
+            intValue(456),
+            next(null)
+        );
         compareIterator(Collections.singletonList("baz"), secondValueAnnotationIterator);
         closeAndCount();
     }
@@ -2974,7 +3011,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             0x20  // Next top-level value (int 0).
         );
         reader = boundedReaderFor(constructFromBytes, data, 1024, 1024, byteCountingHandler);
-        assertThrows(IonException.class, () -> nextExpect(null));
+        assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
 
@@ -3003,20 +3040,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-        nextExpect(IonType.STRUCT);
-        stepIn();
-        nextExpect(IonType.SYMBOL);
-        SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
-        assertEquals(1, annotations.length);
-        assertEquals("a", annotations[0].assumeText());
+        assertSequence(
+            next(IonType.STRUCT), STEP_IN,
+                next(IonType.SYMBOL), annotationSymbols("a")
+        );
         Iterator<String> annotationsIterator = reader.iterateTypeAnnotations();
         assertTrue(annotationsIterator.hasNext());
         assertEquals("a", annotationsIterator.next());
         assertFalse(annotationsIterator.hasNext());
-        assertEquals("b", reader.getFieldNameSymbol().assumeText());
-        assertEquals("c", reader.symbolValue().assumeText());
-        stepOut();
-        nextExpect(null);
+        assertSequence(
+                fieldNameSymbol("b"), symbolValue("c"),
+            STEP_OUT,
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -3040,9 +3076,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-        nextExpect(IonType.SYMBOL);
-        expectString("a");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("a"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -3064,9 +3101,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-        nextExpect(IonType.SYMBOL);
-        expectString("a");
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue("a"),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -3086,9 +3124,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-        nextExpect(IonType.SYMBOL);
-        expectString(SystemSymbols.VERSION);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue(SystemSymbols.VERSION),
+            next(null)
+        );
         closeAndCount();
     }
 
@@ -3102,13 +3141,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(new ByteArrayInputStream(bytes));
-        nextExpect(IonType.LIST);
-        stepIn();
-        nextExpect(IonType.INT);
-        expectInt(1);
-        // Early step out. Not enough bytes to complete the value. Throw if the reader attempts
-        // to advance the cursor.
-        stepOut();
+        assertSequence(
+            container(IonType.LIST,
+                next(IonType.INT), intValue(1)
+                // Early step out. Not enough bytes to complete the value. Throw if the reader attempts
+                // to advance the cursor.
+            )
+        );
         assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
@@ -3121,7 +3160,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(new ByteArrayInputStream(bytes));
-        nextExpect(IonType.STRING);
+        assertSequence(next(IonType.STRING));
         assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
@@ -3138,15 +3177,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // We must build the reader after the input stream has some content
         reader = readerFor(new GZIPInputStream(pipe));
         //  On next(), the GZIPInputStream will throw EOFException, which is handled by the reader.
-        nextExpect(null);
+        assertSequence(next(null));
         // Finish feeding the gzipped IVM payload
         pipe.receive(gzIVM, gzipHeaderLength, gzIVM.length - gzipHeaderLength);
         // Now feed the bytes for an Ion value, spanning the value across two GZIP payloads.
         pipe.receive(gzippedBytes(0x2E)); // Positive int with length subfield
         pipe.receive(gzippedBytes(0x81, 0x01)); // Length 1, value 1
-        nextExpect(IonType.INT);
-        expectInt(1);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.INT), intValue(1),
+            next(null)
+        );
     }
 
     @Test
@@ -3173,7 +3213,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // value is oversized because the buffer is already at its maximum size. Since the byte cannot be buffered,
         // the reader consumes it directly from the underlying InputStream using a single-byte read, which causes
         // GZIPInputStream to throw EOFException because the GZIP trailer is missing.
-        nextExpect(null);
+        assertSequence(next(null));
         // Now, finish the previous GZIP payload by appending the trailer, then append a concatenated GZIP payload
         // that contains the rest of the Ion value.
         pipe.receive(gzChunk, gzChunk.length - gzipTrailerLength, gzipTrailerLength);
@@ -3182,10 +3222,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // On this next, the reader will finish skipping the oversized value by calling skip() on the underlying
         // GZIPInputStream, which is able to complete the request successfully now that the GZIP trailer is available.
         // The following value (integer 0) is then read successfully.
-        nextExpect(IonType.INT);
-        expectInt(0);
+        assertSequence(
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
         assertEquals(1, oversizedCounter.get());
-        nextExpect(null);
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
@@ -3197,7 +3238,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
         // unexpected EOF exception.
-        nextExpect(IonType.LIST);
+        assertSequence(next(IonType.LIST));
         // Note: the legacy binary reader implementation did not throw in this case; that behavior remains.
         reader.close();
     }
@@ -3210,7 +3251,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
         // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
         // or skip the value with the guarantee that no unexpected EOF exception can occur.
-        nextExpect(null);
+        assertSequence(next(null));
         // When closed, the reader must throw an exception for unexpected EOF to disambiguate clean stream end from
         // incomplete value.
         assertThrows(IonException.class, () -> reader.close());
@@ -3224,7 +3265,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Because the reader is non-continuable, it can safely convey the incomplete value's type without making any
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values.
-        nextExpect(IonType.LIST);
+        assertSequence(next(IonType.LIST));
         // Attempting to skip past the value, results in an unexpected EOF exception.
         assertThrows(IonException.class, () -> reader.next());
     }
@@ -3234,12 +3275,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void skipIncompleteContainerContinuable(boolean constructFromBytes) throws Exception {
         readerBuilder.withIncrementalReadingEnabled(true);
         reader = readerFor(constructFromBytes, 0xB6, 0x20);
-        // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
-        // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
-        // or skip the value with the guarantee that no unexpected EOF exception can occur.
-        nextExpect(null);
-        // Attempting to skip past the incomplete value should still not raise an exception in continuable mode.
-        nextExpect(null);
+        assertSequence(
+            // Unlike the non-continuable case, the continuable reader cannot return LIST in this case because the
+            // value is not yet complete. If it returned LIST, it would indicate to the user that it is safe to consume
+            // or skip the value with the guarantee that no unexpected EOF exception can occur.
+            next(null),
+            // Attempting to skip past the incomplete value should still not raise an exception in continuable mode.
+            next(null)
+        );
         // When closed, the reader must throw an exception for unexpected EOF to disambiguate clean stream end from
         // incomplete value.
         assertThrows(IonException.class, () -> reader.close());
@@ -3254,12 +3297,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
         // unexpected EOF exception.
-        nextExpect(IonType.LIST);
-        // The incomplete container can be partially read until the bytes run out.
-        stepIn();
-        nextExpect(IonType.INT);
-        expectInt(0);
-        nextExpect(null);
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+                // The incomplete container can be partially read until the bytes run out.
+                next(IonType.INT), intValue(0),
+                next(null)
+        );
         // Note: the legacy binary reader implementation did not throw in this case; that behavior remains.
         reader.close();
     }
@@ -3273,9 +3316,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // guarantees about the completeness of the value. This allows users of the non-continuable reader to partially
         // read incomplete values. If the user attempts to consume or skip past the value, the reader will raise an
         // unexpected EOF exception.
-        nextExpect(IonType.LIST);
-        stepIn();
-        nextExpect(IonType.INT);
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+            next(IonType.INT)
+        );
         // Attempting to skip past the incomplete value results in an error.
         assertThrows(IonException.class, () -> reader.next());
     }
@@ -3285,10 +3329,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void earlyStepOutNonIncremental(boolean constructFromBytes) throws Exception {
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(constructFromBytes, 0xB4, 0x20); // List length 4 followed by a single byte
-        nextExpect(IonType.LIST);
-        stepIn();
-        // Early step-out. The reader could choose to fail here, but it is expensive to check for EOF on every stepOut.
-        stepOut();
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+            // Early step-out. The reader could choose to fail here, but it is expensive to check for EOF on every stepOut.
+            STEP_OUT
+        );
         // However, the reader *must* fail if the user requests the next value, because the stream is incomplete.
         assertThrows(IonException.class, () -> reader.next()); // Unexpected EOF
     }
