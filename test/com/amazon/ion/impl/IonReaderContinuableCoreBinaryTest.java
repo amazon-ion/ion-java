@@ -8,27 +8,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
-import java.util.function.Consumer;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
-import static com.amazon.ion.impl.IonCursorTestUtilities.STEP_IN;
-import static com.amazon.ion.impl.IonCursorTestUtilities.STEP_OUT;
 import static com.amazon.ion.impl.IonCursorTestUtilities.assertSequence;
 import static com.amazon.ion.impl.IonCursorTestUtilities.container;
-import static com.amazon.ion.impl.IonCursorTestUtilities.containerField;
+import static com.amazon.ion.impl.IonCursorTestUtilities.container;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fillContainer;
-import static com.amazon.ion.impl.IonCursorTestUtilities.intValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.fillIntValue;
 import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
-import static com.amazon.ion.impl.IonCursorTestUtilities.scalarField;
+import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
-import static com.amazon.ion.impl.IonCursorTestUtilities.stringValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.fillStringValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class IonReaderContinuableCoreBinaryTest {
@@ -68,7 +63,7 @@ public class IonReaderContinuableCoreBinaryTest {
      * SID, without filling the scalar.
      */
     private static ExpectationProvider<IonReaderContinuableCoreBinary> scalarFieldSid(int expectedFieldSid) {
-        return scalarField(fieldSid(expectedFieldSid));
+        return IonCursorTestUtilities.scalar(fieldSid(expectedFieldSid));
     }
 
 
@@ -79,7 +74,7 @@ public class IonReaderContinuableCoreBinaryTest {
      */
     @SafeVarargs
     private static ExpectationProvider<IonReaderContinuableCoreBinary> containerFieldSid(int expectedFieldSid, ExpectationProvider<IonReaderContinuableCoreBinary>... expectations) {
-        return containerField(fieldSid(expectedFieldSid), expectations);
+        return IonCursorTestUtilities.container(fieldSid(expectedFieldSid), expectations);
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
@@ -95,7 +90,7 @@ public class IonReaderContinuableCoreBinaryTest {
         assertSequence(
             reader,
             container(
-                scalarFieldSid(4), intValue(1),
+                scalarFieldSid(4), fillIntValue(1),
                 endContainer()
             ),
             endStream()
@@ -113,8 +108,8 @@ public class IonReaderContinuableCoreBinaryTest {
         );
         assertSequence(
             reader,
-            scalar(), stringValue("foo"),
-            scalar(), stringValue("bar"),
+            scalar(), fillStringValue("foo"),
+            scalar(), fillStringValue("bar"),
             endStream()
         );
     }
@@ -190,7 +185,7 @@ public class IonReaderContinuableCoreBinaryTest {
         assertSequence(
             reader,
             startContainer(),
-            scalar(), intValue(3),
+            scalar(), fillIntValue(3),
             endStream()
         );
     }
@@ -214,7 +209,7 @@ public class IonReaderContinuableCoreBinaryTest {
                 containerFieldSid(3,
                     scalar()
                 ),
-                scalar(), intValue(1)
+                scalar(), fillIntValue(1)
             ),
             endStream()
         );
@@ -239,7 +234,7 @@ public class IonReaderContinuableCoreBinaryTest {
                 containerFieldSid(3,
                     scalar()
                 ),
-                scalar(), intValue(1)
+                scalar(), fillIntValue(1)
             ),
             endStream()
         );
@@ -289,7 +284,7 @@ public class IonReaderContinuableCoreBinaryTest {
             reader,
             fillContainer(IonType.STRUCT),
             container(
-                scalar(), intValue(0),
+                scalar(), fillIntValue(0),
                 endContainer()
             ),
             endStream()
