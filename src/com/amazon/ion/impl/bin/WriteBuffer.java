@@ -1272,6 +1272,93 @@ import java.util.List;
         block.data[offset] = (byte) value;
     }
 
+    /** Get the length of FlexInt for the provided value. */
+    public static int flexIntLength(final long value) {
+        int numMagnitudeBitsRequired;
+        if (value < 0) {
+            int numLeadingOnes = Long.numberOfLeadingZeros(~value);
+            numMagnitudeBitsRequired = 64 - numLeadingOnes;
+        } else {
+            int numLeadingZeros = Long.numberOfLeadingZeros(value);
+            numMagnitudeBitsRequired = 64 - numLeadingZeros;
+        }
+        return numMagnitudeBitsRequired / 7 + 1;
+    }
+
+    /** Writes a FlexInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
+    public int writeFlexInt(final long value) {
+        int numBytes = flexIntLength(value);
+        return writeFlexIntOrUInt(value, numBytes);
+    }
+
+    /** Get the length of FlexUInt for the provided value. */
+    public static int flexUIntLength(final long value) {
+        int numLeadingZeros = Long.numberOfLeadingZeros(value);
+        int numMagnitudeBitsRequired = 64 - numLeadingZeros;
+        return (numMagnitudeBitsRequired - 1) / 7 + 1;
+    }
+
+    /** Writes a FlexUInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
+    public int writeFlexUInt(final long value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+        }
+        int numBytes = flexUIntLength(value);
+        return writeFlexIntOrUInt(value, numBytes);
+    }
+
+    /**
+     * Because the flex int and flex uint encodings are so similar, we can use this method to write either one as long
+     * as we provide the correct number of bytes needed to encode the value.
+     */
+    private int writeFlexIntOrUInt(final long value, final int numBytes) {
+        if (numBytes == 1) {
+            writeByte((byte) (0x01 | (byte)(value << 1)));
+        } else if (numBytes == 2) {
+            writeByte((byte) (0x02 | (byte)(value << 2)));
+            writeByte((byte) (value >> 6));
+        } else if (numBytes == 3) {
+            writeByte((byte) (0x04 | (byte)(value << 3)));
+            writeByte((byte) (value >> 5));
+            writeByte((byte) (value >> 13));
+        } else if (numBytes == 4) {
+            writeByte((byte) (0x08 | (byte)(value << 4)));
+            writeByte((byte) (value >> 4));
+            writeByte((byte) (value >> 12));
+            writeByte((byte) (value >> 20));
+        } else {
+            // Finally, fall back to a loop based approach.
+
+            int i = 0; // `i` gets incremented for every byte written.
+
+            // Start with leading zero bytes.
+            // If there's 1-8 total bytes, we need no leading zero-bytes.
+            // If there's 9-16 total bytes, we need one zero-byte
+            // If there's 17-24 total bytes, we need two zero-bytes, etc.
+            for (; i < (numBytes - 1)/8; i++) {
+                writeByte((byte) 0);
+            }
+
+            // Write the last length bits, possibly also containing some value bits.
+            int remainingLengthBits = (numBytes - 1) % 8;
+            byte lengthPart = (byte) (0x01 << remainingLengthBits);
+
+            int valueBitOffset = remainingLengthBits + 1;
+            byte valuePart = (byte) (value << valueBitOffset);
+
+            writeByte((byte) (valuePart | lengthPart));
+            i++;
+
+            int valueByteOffset = 1;
+            for (; i < numBytes; i++) {
+                writeByte((byte) (value >> (8 * valueByteOffset - valueBitOffset)));
+                valueByteOffset++;
+            }
+
+        }
+        return numBytes;
+    }
+
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
     {
