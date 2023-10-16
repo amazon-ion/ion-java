@@ -1359,6 +1359,77 @@ import java.util.List;
         return numBytes;
     }
 
+    /** Get the length of FixedInt for the provided value. */
+    public static int fixedIntLength(final long value) {
+        int numMagnitudeBitsRequired;
+        if (value < 0) {
+            int numLeadingOnes = Long.numberOfLeadingZeros(~value);
+            numMagnitudeBitsRequired = 64 - numLeadingOnes;
+        } else {
+            int numLeadingZeros = Long.numberOfLeadingZeros(value);
+            numMagnitudeBitsRequired = 64 - numLeadingZeros;
+        }
+        return numMagnitudeBitsRequired / 8 + 1;
+    }
+
+    /**
+     * Writes a FixedInt to this WriteBuffer, using the minimum number of bytes needed to represent the number.
+     * Returns the number of bytes that were needed to encode the value.
+     */
+    public int writeFixedInt(final long value) {
+        int numBytes = fixedIntLength(value);
+        return writeFixedIntOrUInt(value, numBytes);
+    }
+
+    /** Get the length of FixedUInt for the provided value. */
+    public static int fixedUIntLength(final long value) {
+        int numLeadingZeros = Long.numberOfLeadingZeros(value);
+        int numMagnitudeBitsRequired = 64 - numLeadingZeros;
+        return (numMagnitudeBitsRequired - 1) / 8 + 1;
+    }
+
+    /**
+     * Writes a FixedUInt to this WriteBuffer, using the minimum number of bytes needed to represent the number.
+     * Returns the number of bytes that were needed to encode the value.
+     */
+    public int writeFixedUInt(final long value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+        }
+        int numBytes = fixedUIntLength(value);
+        return writeFixedIntOrUInt(value, numBytes);
+    }
+
+    /**
+     * Because the fixed int and fixed uint encodings are so similar, we can use this method to write either one as long
+     * as we provide the correct number of bytes needed to encode the value.
+     */
+    private int writeFixedIntOrUInt(final long value, final int numBytes) {
+        writeByte((byte) value);
+        if (numBytes > 1) {
+            writeByte((byte) (value >> 8));
+            if (numBytes > 2) {
+                writeByte((byte) (value >> 8 * 2));
+                if (numBytes > 3) {
+                    writeByte((byte) (value >> 8 * 3));
+                    if (numBytes > 4) {
+                        writeByte((byte) (value >> 8 * 4));
+                        if (numBytes > 5) {
+                            writeByte((byte) (value >> 8 * 5));
+                            if (numBytes > 6) {
+                                writeByte((byte) (value >> 8 * 6));
+                                if (numBytes > 7) {
+                                    writeByte((byte) (value >> 8 * 7));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return numBytes;
+    }
+
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
     {
