@@ -114,7 +114,7 @@ public class IonEncoder_1_1 {
         if (value.compareTo(BIG_INT_LONG_MIN_VALUE) >= 0 && value.compareTo(BIG_INT_LONG_MAX_VALUE) <= 0) {
             return writeIntValue(buffer, value.longValue());
         }
-        buffer.writeByte(OpCodes.VARIABLE_LENGTH_INTEGER); // Arbitrary Precision Integer Op Code
+        buffer.writeByte(OpCodes.VARIABLE_LENGTH_INTEGER);
         byte[] intBytes = value.toByteArray();
         int totalBytes = 1 + intBytes.length + buffer.writeFlexUInt(intBytes.length);
         for (int i = intBytes.length; i > 0; i--) {

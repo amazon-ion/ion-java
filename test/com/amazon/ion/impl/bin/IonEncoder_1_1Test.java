@@ -1,7 +1,6 @@
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.IonType;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,23 +10,16 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.function.BiFunction;
 
 public class IonEncoder_1_1Test {
 
     private static BlockAllocator ALLOCATOR = BlockAllocatorProviders.basicProvider().vendAllocator(11);
     private WriteBuffer buf;
-    private ByteArrayOutputStream out;
 
     @BeforeEach
     public void setup() {
         buf = new WriteBuffer(ALLOCATOR);
-        out = new ByteArrayOutputStream();
-    }
-
-    @AfterEach
-    public void teardown() {
-        buf = null;
-        out.reset();
     }
 
     private byte[] bytes() {
@@ -38,6 +30,16 @@ public class IonEncoder_1_1Test {
             throw new IllegalStateException(e);
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Checks that the function writes the expected bytes and returns the expected
+     * count of written bytes for the given input value.
+     */
+    private <T> void assertWritingValue(String expectedBytes, T value, BiFunction<WriteBuffer, T, Integer> writeOperation) {
+        int numBytes = writeOperation.apply(buf, value);
+        Assertions.assertEquals(expectedBytes, byteArrayToHex(bytes()));
+        Assertions.assertEquals(byteLengthFromHexString(expectedBytes), numBytes);
     }
 
     @ParameterizedTest
@@ -57,10 +59,7 @@ public class IonEncoder_1_1Test {
             "   STRUCT, EB 0B",
     })
     public void testWriteNullValue(IonType value, String expectedBytes) {
-        int numBytes = IonEncoder_1_1.writeNullValue(buf, value);
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals(expectedBytes, actualBytes);
-        Assertions.assertEquals((expectedBytes.length() + 1)/3, numBytes);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeNullValue);
     }
 
     @Test
@@ -74,10 +73,7 @@ public class IonEncoder_1_1Test {
             "false, 5F",
     })
     public void testWriteBooleanValue(Boolean value, String expectedBytes) {
-        int numBytes = IonEncoder_1_1.writeBoolValue(buf, value);
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals(expectedBytes, actualBytes);
-        Assertions.assertEquals((expectedBytes.length() + 1)/3, numBytes);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeBoolValue);
     }
 
     @ParameterizedTest
@@ -111,10 +107,7 @@ public class IonEncoder_1_1Test {
             "-9223372036854775808, 58 00 00 00 00 00 00 00 80", // Long.MIN_VALUE
     })
     public void testWriteIntegerValue(long value, String expectedBytes) {
-        int numBytes = IonEncoder_1_1.writeIntValue(buf, value);
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals(expectedBytes, actualBytes);
-        Assertions.assertEquals((expectedBytes.length() + 1)/3, numBytes);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeIntValue);
     }
 
     @ParameterizedTest
@@ -152,17 +145,13 @@ public class IonEncoder_1_1Test {
             "-99999999999999999999999999999, F5 1B 01 00 00 60 35 E8 8D 92 51 F0 E1 BC FE",
     })
     public void testWriteIntegerValueForBigInteger(String value, String expectedBytes) {
-        int numBytes = IonEncoder_1_1.writeIntValue(buf, new BigInteger(value));
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals(expectedBytes, actualBytes);
-        Assertions.assertEquals((expectedBytes.length() + 1)/3, numBytes);
+        assertWritingValue(expectedBytes, new BigInteger(value), IonEncoder_1_1::writeIntValue);
     }
 
     @Test
     public void testWriteIntegerValueForNullBigInteger() {
         int numBytes = IonEncoder_1_1.writeIntValue(buf, null);
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals("EB 01", actualBytes);
+        Assertions.assertEquals("EB 01", byteArrayToHex(bytes()));
         Assertions.assertEquals(2, numBytes);
     }
 
@@ -186,10 +175,7 @@ public class IonEncoder_1_1Test {
             "      -Infinity, 5C FF 80 00 00",
     })
     public void testWriteFloatValue(float value, String expectedBytes) {
-        int numBytes = IonEncoder_1_1.writeFloat(buf, value);
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals(expectedBytes, actualBytes);
-        Assertions.assertEquals((expectedBytes.length() + 1)/3, numBytes);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloat);
     }
 
     @ParameterizedTest
@@ -216,10 +202,7 @@ public class IonEncoder_1_1Test {
             "                -Infinity, 5C FF 80 00 00",
     })
     public void testWriteFloatValueForDouble(double value, String expectedBytes) {
-        int numBytes = IonEncoder_1_1.writeFloat(buf, value);
-        String actualBytes = byteArrayToHex(bytes());
-        Assertions.assertEquals(expectedBytes, actualBytes);
-        Assertions.assertEquals((expectedBytes.length() + 1)/3, numBytes);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloat);
     }
 
     /**
@@ -231,5 +214,12 @@ public class IonEncoder_1_1Test {
             sb.append(String.format("%02X ", b));
         }
         return sb.toString().trim();
+    }
+
+    /**
+     * Determines the number of bytes needed to represent a series of hexadecimal digits.
+     */
+    private static int byteLengthFromHexString(String hexString) {
+        return (hexString.replaceAll("[^\\dA-F]", "").length() - 1) / 2 + 1;
     }
 }

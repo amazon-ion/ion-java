@@ -1383,6 +1383,7 @@ import java.util.List;
 
     private int writeFlexIntOrUIntForBigInteger(final BigInteger value, final int numBytes) {
         // TODO: Should we branch to the implementation for long if the number is small enough?
+        // https://github.com/amazon-ion/ion-java/issues/614
         byte[] valueBytes = value.toByteArray();
 
         int i = 0; // `i` gets incremented for every byte written.
