@@ -43,11 +43,6 @@ public class SpanReaderTest
     @Test
     public void testCallingCurrentSpan()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         String text =
             "null true 3 4e0 5.0 6666-06-06T '7' \"8\" {{\"\"}} {{}} [] () {}";
 
@@ -85,11 +80,6 @@ public class SpanReaderTest
     @Test
     public void testCurrentSpanWithinContainers()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read("{f:v,g:[c]} s");
 
         in.next();
@@ -120,11 +110,6 @@ public class SpanReaderTest
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanBeforeFirstTopLevel()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         read("foo");
         sp.currentSpan();
     }
@@ -132,11 +117,6 @@ public class SpanReaderTest
 
     private void callCurrentSpanBeforeFirstChild(String ionText)
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read(ionText);
         in.next();
         in.stepIn();
@@ -146,44 +126,24 @@ public class SpanReaderTest
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanBeforeFirstListChild()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         callCurrentSpanBeforeFirstChild("[v]");
     }
 
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanBeforeFirstSexpChild()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         callCurrentSpanBeforeFirstChild("(v)");
     }
 
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanBeforeFirstStructChild()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         callCurrentSpanBeforeFirstChild("{f:v}");
     }
 
 
     private void callCurrentSpanAfterLastChild(String ionText)
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read(ionText);
         in.next();
         in.stepIn();
@@ -195,33 +155,18 @@ public class SpanReaderTest
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanAfterLastListChild()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         callCurrentSpanAfterLastChild("[v]");
     }
 
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanAfterLastSexpChild()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         callCurrentSpanAfterLastChild("(v)");
     }
 
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanAfterLastStructChild()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         callCurrentSpanAfterLastChild("{f:v}");
     }
 
@@ -229,11 +174,6 @@ public class SpanReaderTest
     @Test(expected=IllegalStateException.class)
     public void testCurrentSpanAtEndOfStream()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            throw new IllegalStateException();
-        }
         read("foo");
         in.next();
         assertEquals(null, in.next());

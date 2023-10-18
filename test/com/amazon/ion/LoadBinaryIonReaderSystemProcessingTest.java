@@ -26,6 +26,6 @@ public class LoadBinaryIonReaderSystemProcessingTest
     protected int expectedLocalNullSlotSymbolId() {
         // The spec allows for implementations to treat these malformed symbols as "null slots", and all "null slots"
         // in local symbol tables as equivalent to symbol zero.
-        return getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL ? 0 : 10;
+        return 0;
     }
 }

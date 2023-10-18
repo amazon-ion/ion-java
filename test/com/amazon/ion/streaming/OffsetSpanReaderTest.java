@@ -55,11 +55,6 @@ public class OffsetSpanReaderTest
     @Test
     public void testCurrentSpan()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read("'''hello''' 1 2 3 4 5 6 7 8 9 10 '''Kumo the fluffy dog! He is so fluffy and yet so happy!'''");
         assertSame(IonType.STRING, in.next());
         checkCurrentSpan(4, 10, 0);
@@ -77,11 +72,6 @@ public class OffsetSpanReaderTest
 
     @Test
     public void testCurrentSpanFromStreamMed() throws IOException {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         final ByteArrayOutputStream buf = new ByteArrayOutputStream();
         final int count = 8000;
         for (int i = 0; i < count; i++) {

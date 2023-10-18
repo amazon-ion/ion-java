@@ -53,14 +53,6 @@ public class RawValueSpanReaderBasicTest
     }
 
     @Test
-    public void incrementalBinaryReaderReturnsNullFacet()
-    {
-        IonReader reader = IonReaderBuilder.standard().withIncrementalReadingEnabled(true).build(dummyData);
-        assertNull(reader.asFacet(RawValueSpanProvider.class));
-        assertNull(reader.asFacet(SeekableReader.class));
-    }
-
-    @Test
     public void testNonByteBackedReaderNotSupported()
     {
         IonReader reader = IonReaderBuilder.standard().build(new ByteArrayInputStream(dummyData));

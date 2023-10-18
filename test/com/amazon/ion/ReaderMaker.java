@@ -18,10 +18,15 @@ package com.amazon.ion;
 import static com.amazon.ion.TestUtils.ensureBinary;
 import static com.amazon.ion.TestUtils.ensureText;
 
+import com.amazon.ion.impl._Private_IonConstants;
+import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_Utils;
-import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.impl.bin.SystemSymbolResolvingIonRawBinaryWriter;
+import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
+import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -29,6 +34,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 /**
  * Abstracts the various ways that {@link IonReader}s can be created, so test
@@ -60,6 +66,11 @@ public enum ReaderMaker
             ionData = ensureBinary(system, ionData);
             return system.newReader(ionData);
         }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            return system.newReader(convertToBinaryVerbatim(system, ionText));
+        }
     },
 
 
@@ -89,6 +100,14 @@ public enum ReaderMaker
         public IonReader newReader(IonSystem system, byte[] ionData)
         {
             ionData = ensureBinary(system, ionData);
+            byte[] padded = new byte[ionData.length + 70];
+            System.arraycopy(ionData, 0, padded, 37, ionData.length);
+            return system.newReader(padded, 37, ionData.length);
+        }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            byte[] ionData = convertToBinaryVerbatim(system, ionText);
             byte[] padded = new byte[ionData.length + 70];
             System.arraycopy(ionData, 0, padded, 37, ionData.length);
             return system.newReader(padded, 37, ionData.length);
@@ -138,33 +157,10 @@ public enum ReaderMaker
             InputStream in = new ByteArrayInputStream(ionData);
             return system.newReader(in);
         }
-    },
-
-    FROM_INPUT_STREAM_BINARY_INCREMENTAL(Feature.BINARY, Feature.STREAM)
-    {
-        @Override
-        public IonReader newReader(IonSystem system, byte[] ionData,
-                                   InputStreamWrapper wrapper)
-            throws IOException
-        {
-            ionData = ensureBinary(system, ionData);
-            InputStream in = new ByteArrayInputStream(ionData);
-            InputStream wrapped = wrapper.wrap(in);
-            return newReader(system, wrapped);
-        }
 
         @Override
-        public IonReader newReader(IonSystem system, byte[] ionData)
-        {
-            ionData = ensureBinary(system, ionData);
-            InputStream in = new ByteArrayInputStream(ionData);
-            return newReader(system, in);
-        }
-
-        @Override
-        public IonReader newReader(IonSystem system, InputStream inputStream) {
-            IonCatalog catalog = system.getCatalog();
-            return IonReaderBuilder.standard().withIncrementalReadingEnabled(true).withCatalog(catalog).build(inputStream);
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            return system.newReader(new ByteArrayInputStream(convertToBinaryVerbatim(system, ionText)));
         }
     },
 
@@ -223,6 +219,18 @@ public enum ReaderMaker
             IonDatagram dg = system.getLoader().load(ionData);
             return system.newReader(dg);
         }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            Iterator<IonValue> systemIterator = ((_Private_IonSystem) system).systemIterate(
+                ((_Private_IonSystem) system).newSystemReader(ionText)
+            );
+            IonDatagram dg = system.newDatagram();
+            while (systemIterator.hasNext()) {
+                dg.add(systemIterator.next());
+            }
+            return system.newReader(dg);
+        }
     };
 
 
@@ -262,6 +270,45 @@ public enum ReaderMaker
         return newReader(system, utf8);
     }
 
+    /**
+     * Create a reader over an Ion stream that is identical to the given Ion text, even at the system level. In
+     * other words, symbol table boundaries and symbol ID assignments are preserved. Any symbol tables in the provided
+     * text are not parsed as system values, so open content is preserved. Note: certain aspects of the text encoding
+     * have no binary Ion 1.0 equivalent, such as symbol tokens not present in any symbol table. If such text is
+     * provided to this method, the output may not be valid when converted to binary.
+     * @param system an IonSystem instance.
+     * @param ionText the text Ion to read verbatim.
+     * @return a new IonReader.
+     */
+    public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+        // Note: this is the default implementation when the requested source type is text Ion; no conversion is
+        // necessary. Binary Ion and DOM sources override this method and perform a verbatim conversion.
+        return newReader(system, ionText);
+    }
+
+    /**
+     * Converts the given text Ion to a verbatim representation in binary.
+     * @param system an IonSystem instance.
+     * @param ionText the text Ion to convert verbatim.
+     * @return the converted binary Ion.
+     */
+    private static byte[] convertToBinaryVerbatim(IonSystem system, String ionText) {
+        IonReader reader = ((_Private_IonSystem) system).newSystemReader(ionText);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (IonWriter rawWriter = new SystemSymbolResolvingIonRawBinaryWriter(
+            _Private_IonManagedBinaryWriterBuilder
+                .create(_Private_IonManagedBinaryWriterBuilder.AllocatorMode.POOLED)
+                .newWriter(out)
+                .asFacet(_Private_IonManagedWriter.class)
+                .getRawWriter()
+        )) {
+            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            rawWriter.writeValues(reader);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+        return out.toByteArray();
+    }
 
     public IonReader newReader(IonSystem system, byte[] ionData)
     {

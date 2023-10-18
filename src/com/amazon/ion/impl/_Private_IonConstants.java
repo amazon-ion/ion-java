@@ -106,8 +106,7 @@ public final class _Private_IonConstants
                                                              (byte) 0xEA };
 
     /**
-     * The number of bytes in {@link #BINARY_VERSION_MARKER_1_0}
-     * ({@value #BINARY_VERSION_MARKER_SIZE}).
+     * The number of bytes in {@link #BINARY_VERSION_MARKER_1_0}.
      */
     public static final int BINARY_VERSION_MARKER_SIZE =
         BINARY_VERSION_MARKER_1_0.length;

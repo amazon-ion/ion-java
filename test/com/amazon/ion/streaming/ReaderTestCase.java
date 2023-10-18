@@ -47,20 +47,25 @@ public abstract class ReaderTestCase
 
     //========================================================================
 
-    void read(byte[] ionData)
+    protected void read(byte[] ionData)
     {
         in = myReaderMaker.newReader(system(), ionData);
     }
 
-    void read(byte[] ionData, InputStreamWrapper wrapper)
+    protected void read(byte[] ionData, InputStreamWrapper wrapper)
         throws IOException
     {
         in = myReaderMaker.newReader(system(), ionData, wrapper);
     }
 
-    void read(String ionText)
+    protected void read(String ionText)
     {
         in = myReaderMaker.newReader(system(), ionText);
+    }
+
+    protected void readVerbatim(String ionText)
+    {
+        in = myReaderMaker.newReaderVerbatim(system(), ionText);
     }
 
     //========================================================================

@@ -1288,7 +1288,7 @@ public class TimestampTest
 
 
     @Test
-    public void testTimestampWithNegativeFraction()
+    public void testTimestampWithNegativeZeroFraction()
     {
         BigDecimal frac = Decimal.negativeZero(3);
 
@@ -1296,10 +1296,27 @@ public class TimestampTest
         Timestamp expected = Timestamp.valueOf("2000-11-14T17:30:12.000Z");
         assertEquals(expected, ts);
         assertEquals(expected.hashCode(), ts.hashCode());
+    }
 
-        frac = new BigDecimal("-0.123");
-        ts = new Timestamp(2000, 11, 14, 17, 30, 12, frac, 0);
-        assertEquals("2000-11-14T17:30:12.123Z", ts.toString());
+    @Test
+    public void testTimestampWithNegativeFractionDecimalFromConstructorFails() {
+        thrown.expect(IllegalArgumentException.class);
+        new Timestamp(2000, 11, 14, 17, 30, 12, new BigDecimal("-0.123"), 0);
+    }
+
+    @Test
+    public void testTimestampWithNegativeFractionDecimalFromUtcFieldsFails() {
+        thrown.expect(IllegalArgumentException.class);
+        createFromUtcFields(FRACTION, 2000, 11, 14, 17, 30, 12, Decimal.valueOf("-0.123"),
+            UTC_OFFSET);
+    }
+
+    @Test
+    public void testTimestampWithNegativeFractionBigDecimalFromUtcFieldsFails() {
+        thrown.expect(IllegalArgumentException.class);
+        checkFraction(".123", new BigDecimal ("-0.123"));
+        createFromUtcFields(FRACTION, 2000, 11, 14, 17, 30, 12, new BigDecimal("-0.123"),
+            UTC_OFFSET);
     }
 
 
@@ -1326,9 +1343,6 @@ public class TimestampTest
 
         checkFraction(".345", Decimal.valueOf(".345"));
         checkFraction(".345", new BigDecimal (".345"));
-
-        checkFraction(".123", Decimal.valueOf("-0.123"));
-        checkFraction(".123", new BigDecimal ("-0.123"));
     }
 
     @Test
