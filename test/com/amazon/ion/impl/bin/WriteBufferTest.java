@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
@@ -1618,6 +1617,37 @@ public class WriteBufferTest
     @Test
     public void testWriteFixedUIntForNegativeNumber() {
         Assertions.assertThrows(IllegalArgumentException.class, () -> buf.writeFixedUInt(-1));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "                   0, 1, 00000000",
+            "                   0, 2, 00000000 00000000",
+            "                   0, 8, 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
+            "                   1, 1, 00000001",
+            "                   1, 2, 00000001 00000000",
+            "                   1, 8, 00000001 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
+            "                 255, 1, 11111111",
+            "                 255, 2, 11111111 00000000",
+            "                 255, 3, 11111111 00000000 00000000",
+            "                  -1, 1, 11111111",
+            "                  -1, 2, 11111111 11111111",
+            "                  -1, 8, 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111111",
+            // Long.MIN_VALUE and Long.MAX_VALUE
+            " 9223372036854775807, 8, 11111111 11111111 11111111 11111111 11111111 11111111 11111111 01111111",
+            "-9223372036854775808, 8, 00000000 00000000 00000000 00000000 00000000 00000000 00000000 10000000",
+    })
+    public void testWriteFixedIntOrUInt(long value, int numBytes, String expectedBits) {
+        int actualNumBytes = buf.writeFixedIntOrUInt(value, numBytes);
+        String actualBits = byteArrayToBitString(bytes());
+        Assertions.assertEquals(expectedBits, actualBits);
+        Assertions.assertEquals(numBytes, actualNumBytes);
+    }
+
+    @Test
+    public void testWriteFixedIntOrUIntThrowsExceptionWhenNumBytesIsOutOfBounds() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> buf.writeFixedIntOrUInt(0, -1));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> buf.writeFixedIntOrUInt(0, 9));
     }
 
     /**
