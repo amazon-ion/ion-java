@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
 import static com.amazon.ion.SystemSymbols.ION;
@@ -367,6 +368,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
                 @Override
                 public String next() {
+                    if (index >= idToText.length) {
+                        throw new NoSuchElementException();
+                    }
                     String symbol = idToText[index];
                     index++;
                     return symbol;
@@ -852,6 +856,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         }
                         readImportMaxId();
                         break;
+                    default: throw new IllegalStateException();
                 }
             }
         }
@@ -1010,7 +1015,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         @Override
         public String next() {
-            return null;
+            throw new NoSuchElementException();
         }
 
         @Override
