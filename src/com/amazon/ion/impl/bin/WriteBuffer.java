@@ -1438,7 +1438,7 @@ import java.util.List;
      */
     public int writeFixedInt(final long value) {
         int numBytes = fixedIntLength(value);
-        return writeFixedIntOrUInt(value, numBytes);
+        return _writeFixedIntOrUInt(value, numBytes);
     }
 
     /** Get the length of FixedUInt for the provided value. */
@@ -1454,17 +1454,40 @@ import java.util.List;
      */
     public int writeFixedUInt(final long value) {
         if (value < 0) {
-            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+            throw new IllegalArgumentException("Attempted to write a FixedUInt for " + value);
         }
         int numBytes = fixedUIntLength(value);
-        return writeFixedIntOrUInt(value, numBytes);
+        return _writeFixedIntOrUInt(value, numBytes);
     }
 
     /**
-     * Because the fixed int and fixed uint encodings are so similar, we can use this method to write either one as long
-     * as we provide the correct number of bytes needed to encode the value.
+     * Writes the bytes of a {@code long} as a {@code FixedInt} or {@code FixedUInt} using {@code numBytes} bytes.
+     * <p>
+     * {@code numBytes} should be an integer from 1 to 8 inclusive. If {@code numBytes} is out of bounds, that is a
+     * programmer error and will result in an IllegalArgumentException.
+     * <p>
+     * Because the {@code FixedInt} and {@code FixedUInt} encodings are so similar, we can use this method to write
+     * either one as long as we provide the correct number of bytes needed to encode the value.
+     * <p>
+     * Most of the time, you should not use this method. Instead, use {@link WriteBuffer#writeFixedInt} or
+     * {@link WriteBuffer#writeFixedUInt}, which calculate the minimum number of required bytes to represent the value.
+     * <p>
+     * You <i>should</i> use this method when the spec requires a {@code FixedInt} or {@code FixedUInt} of a specific
+     * size when it's possible that the value could fit in a smaller FixedInt or FixedUInt than the size required in
+     * the spec.
      */
-    private int writeFixedIntOrUInt(final long value, final int numBytes) {
+    public int writeFixedIntOrUInt(final long value, final int numBytes) {
+        if (0 > numBytes || numBytes > 8) {
+            throw new IllegalArgumentException("numBytes is out of bounds; was " + numBytes);
+        }
+        return _writeFixedIntOrUInt(value, numBytes);
+    }
+
+    /**
+     * Because the {@code FixedInt} and {@code FixedUInt} encodings are so similar, we can use this method to write
+     * either one as long as we provide the correct number of bytes needed to encode the value.
+     */
+    private int _writeFixedIntOrUInt(final long value, final int numBytes) {
         writeByte((byte) value);
         if (numBytes > 1) {
             writeByte((byte) (value >> 8));
