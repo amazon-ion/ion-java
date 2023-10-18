@@ -6,7 +6,7 @@ name: Ion Java performance regression detector
 on:
   pull_request:
     paths:
-      - 'src/*'
+      - 'src/**'
 
 permissions:
   contents: read
