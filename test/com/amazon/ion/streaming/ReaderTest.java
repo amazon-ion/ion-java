@@ -51,16 +51,57 @@ public class ReaderTest
             read("null.int");
             assertEquals(IonType.INT, in.next());
             assertTrue(in.isNullValue());
-            assertEquals(null, in.bigIntegerValue());
+            assertNull(in.bigIntegerValue());
+            assertThrows(Exception.class, () -> in.intValue());
+            assertThrows(Exception.class, () -> in.longValue());
         }
         {
             for (final String hex : Arrays.asList("E0 01 00 EA 2F", "E0 01 00 EA 3F")) {
                 read(BinaryTest.hexToBytes(hex));
                 assertEquals(IonType.INT, in.next());
                 assertTrue(in.isNullValue());
-                assertEquals(null, in.bigIntegerValue());
+                assertNull(in.bigIntegerValue());
             }
         }
+    }
+
+    @Test
+    public void testNullFloat()
+    {
+        read("null.float");
+        assertEquals(IonType.FLOAT, in.next());
+        assertTrue(in.isNullValue());
+        assertNull(in.bigIntegerValue());
+        assertThrows(Exception.class, () -> in.intValue());
+        assertThrows(Exception.class, () -> in.longValue());
+        assertThrows(Exception.class, () -> in.doubleValue());
+    }
+
+    @Test
+    public void testNullBool()
+    {
+        read("null.bool");
+        assertEquals(IonType.BOOL, in.next());
+        assertTrue(in.isNullValue());
+        assertThrows(Exception.class, () -> in.booleanValue());
+    }
+
+    @Test
+    public void testNullBlob() {
+        testNullLob(IonType.BLOB);
+    }
+
+    @Test
+    public void testNullClob() {
+        testNullLob(IonType.CLOB);
+    }
+
+    public void testNullLob(IonType type) {
+        read("null." + type.name().toLowerCase());
+        assertEquals(type, in.next());
+        assertTrue(in.isNullValue());
+        assertThrows(Exception.class, () -> in.newBytes());
+        assertThrows(Exception.class, () -> in.getBytes(new byte[0], 0, 0));
     }
 
     @Test
@@ -248,12 +289,7 @@ public class ReaderTest
     @Test
     public void testReadingDecimalAsBigInteger()
     {
-        try {
-            readBigInteger("0.");
-            Assert.fail();
-        } catch (Exception e) {
-            // Pass
-        }
+        assertThrows(IllegalStateException.class, () -> readBigInteger("0."));
     }
 
     @Test

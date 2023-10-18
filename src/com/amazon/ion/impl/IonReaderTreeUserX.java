@@ -127,7 +127,9 @@ final class IonReaderTreeUserX
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
-                    IonReader reader = new IonReaderTreeUserX(_next, _catalog, _lstFactory);
+                    IonReaderTreeUserX reader = new IonReaderTreeUserX(_next, _catalog, _lstFactory);
+                    // The child reader's symbol table is the symbol table that was active when the value began.
+                    reader._symbols = _symbols;
                     SymbolTable symtab = _lstFactory.newLocalSymtab(_catalog, reader, false);
                     _symbols = symtab;
                     push_symbol_table(symtab);

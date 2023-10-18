@@ -17,14 +17,20 @@ package com.amazon.ion.streaming;
 
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.Span;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+
+import com.amazon.ion.system.IonBinaryWriterBuilder;
+import com.amazon.ion.system.SimpleCatalog;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -58,11 +64,6 @@ public class SeekableReaderTest
     @Test
     public void testTrivialSpan()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         String text = "null";
         read(text);
         in.next();
@@ -78,11 +79,6 @@ public class SeekableReaderTest
     @Test
     public void testWalkingBackwards()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         String text =
             "null true 3 4e0 5.0 6666-06-06T '7' \"8\" {{\"\"}} {{}} [] () {}";
 
@@ -123,11 +119,6 @@ public class SeekableReaderTest
     @Test
     public void testHoistingWithinContainers()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read("{f:v,g:[c, (d), e], /* h */ $0:null} s");
 
         in.next();
@@ -203,11 +194,6 @@ public class SeekableReaderTest
     @Test
     public void testHoistingLongValue()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         // This value is "long" in that it has a length subfield in the prefix.
         String text = " \"123456789012345\" ";
         read(text);
@@ -225,11 +211,6 @@ public class SeekableReaderTest
     public void testHoistingOrderedStruct()
     throws IOException
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         File file = getTestdataFile("good/structOrdered.10n");
         byte[] binary = _Private_Utils.loadFileBytes(file);
 
@@ -249,11 +230,6 @@ public class SeekableReaderTest
     public void testHoistingAnnotatedTopLevelValue()
         throws IOException
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read("a::v");
         in.next();
         Span span = sr.currentSpan();
@@ -271,11 +247,6 @@ public class SeekableReaderTest
     public void testHoistingAnnotatedContainedValue()
         throws IOException
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         read("[a::v]");
         in.next();
         in.stepIn();
@@ -288,6 +259,71 @@ public class SeekableReaderTest
         assertSame(IonType.SYMBOL, in.next());
         expectTopLevel();
         Assert.assertArrayEquals(new String[]{"a"}, in.getTypeAnnotations());
+        expectTopEof();
+    }
+
+    @Test
+    public void testHoistingAcrossSymbolTableBoundary()
+        throws IOException
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (IonWriter writer = IonBinaryWriterBuilder.standard().withLocalSymbolTableAppendEnabled().build(out)) {
+            writer.writeInt(123);
+            writer.finish();
+            writer.writeSymbol("abc");
+            writer.finish();
+            writer.writeSymbol("def");
+            writer.flush();
+            writer.writeSymbol("ghi");
+            writer.writeSymbol("jkl");
+            writer.finish();
+            writer.writeSymbol("mno");
+        }
+        if (myReaderMaker.sourceIsText()) {
+            read(out.toByteArray());
+        } else {
+            in = getStreamingMode().newIonReader(new SimpleCatalog(), out.toByteArray());
+            initFacets();
+        }
+
+        in.next();
+        Span integer = sp.currentSpan();
+        in.next();
+        Span abc = sp.currentSpan();
+        in.next();
+        Span def = sp.currentSpan();
+        in.next();
+        Span ghi = sp.currentSpan();
+        in.next();
+        Span jkl = sp.currentSpan();
+        in.next();
+        Span mno = sp.currentSpan();
+        in.next();
+
+        hoist(jkl);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("jkl", in.stringValue());
+
+        hoist(ghi);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("ghi", in.stringValue());
+
+        hoist(integer);
+        assertSame(IonType.INT, in.next());
+        assertEquals(123, in.intValue());
+
+        hoist(def);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("def", in.stringValue());
+
+        hoist(mno);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("mno", in.stringValue());
+
+        hoist(abc);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("abc", in.stringValue());
+
         expectTopEof();
     }
 

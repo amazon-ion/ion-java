@@ -15,6 +15,7 @@
 
 package com.amazon.ion.system;
 
+import static com.amazon.ion.TestUtils.gzippedBytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -29,6 +30,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.impl.ResizingPipedInputStream;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 
 import java.io.ByteArrayInputStream;
@@ -168,7 +170,7 @@ public class IonReaderBuilderTest
     }
 
     @Test
-    public void testIncrementalReadingDoesNotSupportAutoGzip() throws IOException
+    public void testIncrementalReadingSupportsAutoGzip() throws IOException
     {
         IonReaderBuilder builder = IonReaderBuilder.standard();
         builder.withIncrementalReadingEnabled(true);
@@ -177,18 +179,39 @@ public class IonReaderBuilderTest
         gzip.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
         gzip.write(0x20); // int 0.
         gzip.close();
-        try {
-            builder.build(data.toByteArray());
-            fail();
-        } catch (IllegalArgumentException e) {
-            // Expected; non-incremental readers do not support auto-deflate of GZIP.
-        }
-        try {
-            builder.build(new ByteArrayInputStream(data.toByteArray()));
-            fail();
-        } catch (IllegalArgumentException e) {
-            // Expected; non-incremental readers do not support auto-deflate of GZIP.
-        }
+        IonReader reader1 = builder.build(data.toByteArray());
+        assertEquals(IonType.INT, reader1.next());
+        assertEquals(0, reader1.intValue());
+        reader1.close();
+        IonReader reader2 = builder.build(new ByteArrayInputStream(data.toByteArray()));
+        assertEquals(IonType.INT, reader2.next());
+        assertEquals(0, reader2.intValue());
+        reader2.close();
+    }
+
+    @Test
+    public void concatenatedAfterGZIPHeader() throws Exception {
+        // Tests that a stream that initially contains only a GZIP header can be read successfully if more data
+        // is later made available.
+        IonReaderBuilder builder = IonReaderBuilder.standard();
+        builder.withIncrementalReadingEnabled(true);
+        final int gzipHeaderLength = 10; // Length of the GZIP header, as defined by the GZIP spec.
+        byte[] gzIVM = gzippedBytes(0xE0, 0x01, 0x00, 0xEA);  // IVM
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        // First, feed just the GZIP header bytes.
+        pipe.receive(gzIVM, 0, gzipHeaderLength); // Just the GZIP header
+        // We must build the reader after the input stream has some content
+        IonReader reader = builder.build(pipe);
+        //  On next(), the GZIPInputStream will throw EOFException, which is handled by the reader.
+        assertNull(reader.next());
+        // Finish feeding the gzipped IVM payload
+        pipe.receive(gzIVM, gzipHeaderLength, gzIVM.length - gzipHeaderLength);
+        // Now feed the bytes for an Ion value, spanning the value across two GZIP payloads.
+        pipe.receive(gzippedBytes(0x2E)); // Positive int with length subfield
+        pipe.receive(gzippedBytes(0x81, 0x01)); // Length 1, value 1
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+        assertNull(reader.next());
     }
 
 }

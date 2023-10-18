@@ -76,6 +76,8 @@ public final class Timestamp
 {
     private static final boolean APPLY_OFFSET_YES = true;
     private static final boolean APPLY_OFFSET_NO = false;
+    private static final boolean CHECK_FRACTION_YES = true;
+    private static final boolean CHECK_FRACTION_NO = false;
 
     private static final int NO_MONTH = 0;
     private static final int NO_DAY = 0;
@@ -444,7 +446,7 @@ public final class Timestamp
      */
     private Timestamp(int zyear)
     {
-        this(Precision.YEAR, zyear, NO_MONTH, NO_DAY, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
+        this(Precision.YEAR, zyear, NO_MONTH, NO_DAY, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO, CHECK_FRACTION_NO);
     }
 
     /**
@@ -454,7 +456,7 @@ public final class Timestamp
      */
     private Timestamp(int zyear, int zmonth)
     {
-        this(Precision.MONTH, zyear, zmonth, NO_DAY, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
+        this(Precision.MONTH, zyear, zmonth, NO_DAY, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO, CHECK_FRACTION_NO);
     }
 
     /**
@@ -467,7 +469,7 @@ public final class Timestamp
     @Deprecated
     public Timestamp(int zyear, int zmonth, int zday)
     {
-        this(Precision.DAY, zyear, zmonth, zday, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO);
+        this(Precision.DAY, zyear, zmonth, zday, NO_HOURS, NO_MINUTES, NO_SECONDS, NO_FRACTIONAL_SECONDS, UNKNOWN_OFFSET, APPLY_OFFSET_NO, CHECK_FRACTION_NO);
     }
 
 
@@ -490,7 +492,7 @@ public final class Timestamp
                      int hour, int minute,
                      Integer offset)
     {
-        this(Precision.MINUTE, year, month, day, hour, minute, NO_SECONDS, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES);
+        this(Precision.MINUTE, year, month, day, hour, minute, NO_SECONDS, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES, CHECK_FRACTION_NO);
     }
 
     /**
@@ -512,7 +514,7 @@ public final class Timestamp
                      int hour, int minute, int second,
                      Integer offset)
     {
-        this(Precision.SECOND, year, month, day, hour, minute, second, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES);
+        this(Precision.SECOND, year, month, day, hour, minute, second, NO_FRACTIONAL_SECONDS, offset, APPLY_OFFSET_YES, CHECK_FRACTION_NO);
     }
 
     /**
@@ -541,7 +543,7 @@ public final class Timestamp
                      int hour, int minute, int second, BigDecimal frac,
                      Integer offset)
     {
-        this(Precision.SECOND, year, month, day, hour, minute, second, frac, offset, APPLY_OFFSET_YES);
+        this(Precision.SECOND, year, month, day, hour, minute, second, frac, offset, APPLY_OFFSET_YES, CHECK_FRACTION_YES);
     }
 
     /**
@@ -564,7 +566,7 @@ public final class Timestamp
      */
     private Timestamp(Precision p, int zyear, int zmonth, int zday,
                       int zhour, int zminute, int zsecond, BigDecimal frac,
-                      Integer offset, boolean shouldApplyOffset)
+                      Integer offset, boolean shouldApplyOffset, boolean shouldCheckFraction)
     {
         boolean dayPrecision = false;
 
@@ -573,13 +575,22 @@ public final class Timestamp
             throw new IllegalArgumentException("invalid Precision passed to constructor");
         case FRACTION:
         case SECOND:
-            if (frac == null || frac.equals(BigDecimal.ZERO))
+            if (frac == null)
             {
                 _fraction = null;
             }
+            else if (shouldCheckFraction)
+            {
+                if (frac.equals(BigDecimal.ZERO)) {
+                    _fraction = null;
+                } else {
+                    checkFraction(p, frac);
+                    _fraction = frac;
+                }
+            }
             else
             {
-                _fraction = frac.abs();
+                _fraction = frac;
             }
             _second = checkAndCastSecond(zsecond);
         case MINUTE:
@@ -599,7 +610,7 @@ public final class Timestamp
             _day    = checkAndCastDay(zday, zyear, zmonth);
         }
 
-        _precision = checkFraction(p, _fraction);
+        _precision = p;
 
         if (shouldApplyOffset && offset != null) {
             apply_offset(offset);
@@ -662,7 +673,7 @@ public final class Timestamp
     {
         return new Timestamp(p, zyear, zmonth, zday,
                              zhour, zminute, zsecond, frac,
-                             offset, APPLY_OFFSET_NO);
+                             offset, APPLY_OFFSET_NO, CHECK_FRACTION_YES);
     }
 
     /**
@@ -1111,7 +1122,7 @@ public final class Timestamp
 
         Timestamp ts =
             new Timestamp(precision, year, month, day,
-                          hour, minute, seconds, fraction, offset, APPLY_OFFSET_YES);
+                          hour, minute, seconds, fraction, offset, APPLY_OFFSET_YES, CHECK_FRACTION_NO);
         return ts;
     }
 
@@ -1198,7 +1209,8 @@ public final class Timestamp
                              _second,
                              _fraction,
                              _offset,
-                             APPLY_OFFSET_NO);
+                             APPLY_OFFSET_NO,
+                             CHECK_FRACTION_NO);
     }
 
     /**
@@ -1229,7 +1241,8 @@ public final class Timestamp
                                             _second,
                                             _fraction,
                                             _offset,
-                                            APPLY_OFFSET_NO);
+                                            APPLY_OFFSET_NO,
+                                            CHECK_FRACTION_NO);
         // explicitly apply the local offset to the time field values
         localtime.apply_offset(-offset);
 
@@ -1344,7 +1357,8 @@ public final class Timestamp
         // Storing them separately is silly.
         int s = second.intValue();
         BigDecimal frac = second.subtract(BigDecimal.valueOf(s));
-        return new Timestamp(Precision.SECOND, year, month, day, hour, minute, s, frac, offset, APPLY_OFFSET_YES);
+        return new Timestamp(Precision.SECOND, year, month, day, hour, minute, s, frac, offset, APPLY_OFFSET_YES,
+                             CHECK_FRACTION_YES);
     }
 
 
