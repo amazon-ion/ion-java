@@ -97,6 +97,11 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             return null;
         }
         symbolTableLastTransferred = currentSymbolTable;
+        if (symbolTableLastTransferred.isLocalTable()) {
+            // This method is called when transferring the reader's symbol table to either a writer or an IonDatagram.
+            // Those cases require a mutable copy of the reader's symbol table.
+            return ((_Private_LocalSymbolTable) symbolTableLastTransferred).makeCopy();
+        }
         return symbolTableLastTransferred;
     }
 
