@@ -19,6 +19,7 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReaderMaker;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl._Private_Utils;
@@ -325,6 +326,22 @@ public class SeekableReaderTest
         assertEquals("abc", in.stringValue());
 
         expectTopEof();
+    }
+
+    @Test
+    public void testHoistingFromSpanCreatedByDifferentReaderBeforeNext()
+    {
+        read("foo bar");
+        in.next();
+        in.next();
+        Span barSpan = sr.currentSpan();
+
+        read("foo bar"); // Creates a new reader
+        initFacets();
+
+        hoist(barSpan);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("bar", in.stringValue());
     }
 
 

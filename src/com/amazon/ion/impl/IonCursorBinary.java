@@ -9,6 +9,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
+import com.amazon.ion.SystemSymbols;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -1786,8 +1787,9 @@ class IonCursorBinary implements IonCursor {
      * can be used to seek the reader to a "span" of bytes that represent a value in the stream.
      * @param offset the offset at which the slice will begin.
      * @param limit the slice's limit.
+     * @param ionVersionId the Ion version ID for the slice, e.g. $ion_1_0 for Ion 1.0.
      */
-    void slice(long offset, long limit) {
+    void slice(long offset, long limit, String ionVersionId) {
         peekIndex = offset;
         this.limit = limit;
         setCheckpointBeforeUnannotatedTypeId();
@@ -1795,6 +1797,14 @@ class IonCursorBinary implements IonCursor {
         event = Event.NEEDS_DATA;
         valueTid = null;
         containerIndex = -1; // Slices are treated as if they were at the top level.
+        if (SystemSymbols.ION_1_0.equals(ionVersionId)) {
+            typeIds = IonTypeID.TYPE_IDS_1_0;
+            majorVersion = 1;
+            minorVersion = 0;
+        } else {
+            // TODO changes are needed here to support Ion 1.1.
+            throw new IonException(String.format("Attempted to seek using an unsupported Ion version %s.", ionVersionId));
+        }
     }
 
     /**
