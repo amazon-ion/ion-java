@@ -23,6 +23,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
 import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 import com.amazon.ion.impl.bin._Private_IonRawWriter;
@@ -767,6 +768,36 @@ public class IonReaderContinuableTopLevelBinaryTest {
             reader.next();
             reader.close();
         });
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void unknownSymbolInFieldName(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xD3, 0x8A, 0x21, 0x01);
+        assertSequence(next(IonType.STRUCT), STEP_IN, next(IonType.INT));
+        assertThrows(UnknownSymbolException.class, reader::getFieldNameSymbol);
+        assertThrows(UnknownSymbolException.class, reader::getFieldName);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void unknownSymbolInAnnotation(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xE4, 0x81, 0x8A, 0x21, 0x01);
+        assertSequence(next(IonType.INT));
+        assertThrows(UnknownSymbolException.class, reader::getTypeAnnotationSymbols);
+        assertThrows(UnknownSymbolException.class, reader::getTypeAnnotations);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void unknownSymbolInValue(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x71, 0x0A);
+        assertSequence(next(IonType.SYMBOL));
+        assertThrows(UnknownSymbolException.class, reader::symbolValue);
+        assertThrows(UnknownSymbolException.class, reader::stringValue);
+        reader.close();
     }
 
     /**

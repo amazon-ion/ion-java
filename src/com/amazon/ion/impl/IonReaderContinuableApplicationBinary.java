@@ -214,7 +214,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     /**
      * Read-only snapshot of the local symbol table at the reader's current position.
      */
-    private class LocalSymbolTableSnapshot implements SymbolTable, SymbolTableAsStruct {
+    private class LocalSymbolTableSnapshot implements _Private_LocalSymbolTable, SymbolTableAsStruct {
 
         // The system symbol table.
         private final SymbolTable system = IonReaderContinuableApplicationBinary.this.getSystemSymbolTable();
@@ -425,6 +425,17 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
             return structCache.getIonRepresentation(valueFactory);
         }
+
+        @Override
+        public _Private_LocalSymbolTable makeCopy() {
+            // This is a mutable copy. LocalSymbolTable handles the mutability concerns.
+            return new LocalSymbolTable(importedTables, Arrays.asList(idToText));
+        }
+
+        @Override
+        public SymbolTable[] getImportedTablesNoCopy() {
+            return importedTables.getImportedTablesNoCopy();
+        }
     }
 
     /**
@@ -544,7 +555,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
         int localSymbolOffset = sid - firstLocalSymbolId;
         if (localSymbolOffset > localSymbolMaxOffset) {
-            throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
+            throw new UnknownSymbolException(sid);
         }
         return symbols[localSymbolOffset];
     }
@@ -565,7 +576,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
         }
         if (sid >= symbolTableSize) {
-            throw new IonException("Symbol ID exceeds the max ID of the symbol table.");
+            throw new UnknownSymbolException(sid);
         }
         SymbolToken token = symbolTokensById.get(sid);
         if (token == null) {
