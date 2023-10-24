@@ -3196,6 +3196,94 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader.close();
     }
 
+    /**
+     * An InputStream that returns less than the number of bytes requested from bulk reads.
+     */
+    private static class ThrottlingInputStream extends InputStream {
+
+        private final byte[] data;
+        private int offset = 0;
+
+        protected ThrottlingInputStream(byte[] data) {
+            this.data = data;
+        }
+
+        @Override
+        public int read() {
+            return data[offset++] & 0xFF;
+        }
+
+        private int calculateNumberOfBytesToReturn(int numberOfBytesRequested) {
+            int available = data.length - offset;
+            int numberOfBytesToReturn;
+            if (available > 1 && numberOfBytesRequested > 1) {
+                // Return fewer bytes than requested and fewer than are available, avoiding EOF.
+                numberOfBytesToReturn = Math.min(available - 1, numberOfBytesRequested - 1);
+            } else if (available <= 0) {
+                return -1; // EOF
+            } else {
+                // Only 1 byte is available, so return it as long as at least 1 byte was requested.
+                numberOfBytesToReturn = Math.min(numberOfBytesRequested, available);
+            }
+            return numberOfBytesToReturn;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) {
+            int numberOfBytesToReturn = calculateNumberOfBytesToReturn(len);
+            if (numberOfBytesToReturn < 0) {
+                return -1;
+            }
+            System.arraycopy(data, offset, b, off, numberOfBytesToReturn);
+            offset += numberOfBytesToReturn;
+            return numberOfBytesToReturn;
+        }
+
+        @Override
+        public long skip(long len) {
+            int numberOfBytesToSkip = calculateNumberOfBytesToReturn((int) len);
+            offset += numberOfBytesToSkip;
+            return numberOfBytesToSkip;
+        }
+    }
+
+    @ParameterizedTest(name = "incrementalReadingEnabled={0}")
+    @ValueSource(booleans = {true, false})
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEof(boolean incrementalReadingEnabled) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incrementalReadingEnabled)
+            .withBufferConfiguration(IonBufferConfiguration.Builder.standard().withInitialBufferSize(8).build());
+        reader = readerFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i')));
+        assertSequence(
+            next(IonType.STRING), stringValue("abcdefghi"),
+            next(null)
+        );
+        reader.close();
+    }
+
+    @Test
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofAndTheReaderSkipsTheValue() throws Exception {
+        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20)), 8, 8, byteAndOversizedValueCountingHandler);
+        assertSequence(
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+    }
+
+    @Test
+    public void shouldNotFailWhenGZIPBoundaryIsEncounteredInStringValue() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        // The following lines create a GZIP payload boundary (trailer/header) in the middle of an Ion string value.
+        pipe.receive(gzippedBytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b'));
+        pipe.receive(gzippedBytes('c', 'd', 'e', 'f', 'g', 'h', 'i'));
+        reader = readerFor(new GZIPInputStream(pipe));
+        assertSequence(
+            next(IonType.STRING), stringValue("abcdefghi"),
+            next(null)
+        );
+    }
+
     @Test
     public void concatenatedAfterGZIPHeader() throws Exception {
         // Tests that a stream that initially contains only a GZIP header can be read successfully if more data
