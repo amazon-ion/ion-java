@@ -3348,6 +3348,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertEquals(1, oversizedCounter.get());
     }
 
+    @Test
+    public void shouldNotFailWhenProvidedWithAnEmptyByteArrayInputStream() throws Exception {
+        reader = IonReaderBuilder.standard().build(new ByteArrayInputStream(new byte[]{}));
+        assertSequence(next(null));
+        reader.close();
+        // The following ByteArrayInputStream is weird, but not disallowed. Its available() method will return -1.
+        reader = IonReaderBuilder.standard().build(new ByteArrayInputStream(new byte[]{}, 1, 1));
+        assertSequence(next(null));
+        reader.close();
+    }
+
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
     public void incompleteContainerNonContinuable(boolean constructFromBytes) throws Exception {
