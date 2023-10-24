@@ -1,5 +1,6 @@
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 
@@ -156,6 +157,50 @@ public class IonEncoder_1_1 {
             buffer.writeUInt64(doubleToRawLongBits(value));
             return 9;
         }
+    }
+
+    public static int writeDecimalValue(WriteBuffer buffer, final BigDecimal value) {
+        if (value == null) {
+            return writeNullValue(buffer, IonType.DECIMAL);
+        }
+
+        int exponent = -value.scale();
+
+        if (BigDecimal.ZERO.compareTo(value) == 0 && !Decimal.isNegativeZero(value)) {
+            if (exponent == 0) {
+                buffer.writeByte(OpCodes.DECIMAL_ZERO_LENGTH);
+                return 1;
+            } else {
+                // A decimal with a coefficient of +0 is encoded using opcode 6F.
+                // The opcode is followed by a FlexInt representing the exponent.
+                buffer.writeByte(OpCodes.POSITIVE_ZERO_DECIMAL);
+                return 1 + buffer.writeFlexInt(exponent);
+            }
+        }
+
+        BigInteger coefficient = value.unscaledValue();
+        int numCoefficientBytes = WriteBuffer.flexIntLength(coefficient);
+
+        int numExponentBytes = 0;
+        if (exponent != 0) {
+            numExponentBytes = WriteBuffer.fixedIntLength(exponent);
+        }
+
+        int opCodeAndLengthBytes = 1;
+        if (numExponentBytes + numCoefficientBytes < 15) {
+            int opCode = OpCodes.DECIMAL_ZERO_LENGTH + numExponentBytes + numCoefficientBytes;
+            buffer.writeByte((byte) opCode);
+        } else {
+            // Decimal values that require more than 14 bytes can be encoded using the variable-length decimal opcode: 0xF6.
+            buffer.writeByte(OpCodes.VARIABLE_LENGTH_DECIMAL);
+            opCodeAndLengthBytes += buffer.writeFlexUInt(numExponentBytes + numCoefficientBytes);
+        }
+        buffer.writeFlexInt(coefficient);
+        if (exponent != 0) {
+            buffer.writeFixedInt(exponent);
+        }
+
+        return opCodeAndLengthBytes + numCoefficientBytes + numExponentBytes;
     }
 
     /**

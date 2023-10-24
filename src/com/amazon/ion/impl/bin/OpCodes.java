@@ -18,7 +18,7 @@ public class OpCodes {
 
     public static final byte DECIMAL_ZERO_LENGTH = 0x60;
     // 0x61-0x6E are additional lengths of decimals.
-    public static final byte NEGATIVE_ZERO_DECIMAL = 0x6F;
+    public static final byte POSITIVE_ZERO_DECIMAL = 0x6F;
 
     public static final byte TIMESTAMP_YEAR_PRECISION = 0x70;
     public static final byte TIMESTAMP_MONTH_PRECISION = 0x71;
@@ -39,5 +39,6 @@ public class OpCodes {
     public static final byte NULL_TYPED = (byte) 0xEB;
 
     public static final byte VARIABLE_LENGTH_INTEGER = (byte) 0xF5;
+    public static final byte VARIABLE_LENGTH_DECIMAL = (byte) 0xF6;
     public static final byte VARIABLE_LENGTH_TIMESTAMP = (byte) 0xF7;
 }
