@@ -18,6 +18,7 @@ package com.amazon.ion.impl.bin;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -1356,6 +1357,64 @@ import java.util.List;
             }
 
         }
+        return numBytes;
+    }
+
+    public static int flexIntLength(final BigInteger value) {
+        return value.bitLength() / 7 + 1;
+    }
+
+    public static int flexUIntLength(final BigInteger value) {
+        return (value.bitLength() - 1) / 7 + 1;
+    }
+
+    public int writeFlexInt(final BigInteger value) {
+        int numBytes = flexIntLength(value);
+        return writeFlexIntOrUIntForBigInteger(value, numBytes);
+    }
+
+    public int writeFlexUInt(final BigInteger value) {
+        if (value.signum() < 0) {
+            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+        }
+        int numBytes = flexUIntLength(value);
+        return writeFlexIntOrUIntForBigInteger(value, numBytes);
+    }
+
+    private int writeFlexIntOrUIntForBigInteger(final BigInteger value, final int numBytes) {
+        // TODO: Should we branch to the implementation for long if the number is small enough?
+        // https://github.com/amazon-ion/ion-java/issues/614
+        byte[] valueBytes = value.toByteArray();
+
+        int i = 0; // `i` gets incremented for every byte written.
+
+        // Start with leading zero bytes.
+        // If there's 1-8 total bytes, we need no leading zero-bytes.
+        // If there's 9-16 total bytes, we need one zero-byte
+        // If there's 17-24 total bytes, we need two zero-bytes, etc.
+        for (; i < (numBytes - 1)/8; i++) {
+            writeByte((byte) 0);
+        }
+
+        // Write the last length bits, possibly also containing some value bits.
+        int remainingLengthBits = (numBytes - 1) % 8;
+        byte lengthPart = (byte) (0x01 << remainingLengthBits);
+        int valueBitOffset = remainingLengthBits + 1;
+        byte valuePart = (byte) (valueBytes[valueBytes.length - 1] << valueBitOffset);
+        writeByte((byte) (valuePart | lengthPart));
+        i++;
+
+        for (int valueByteOffset = valueBytes.length - 1; valueByteOffset > 0; valueByteOffset--) {
+            // Technically it's only a nibble if the bitOffset is 4, so we call it nibble-ish
+            byte highNibbleIsh = (byte) (valueBytes[valueByteOffset - 1] << (valueBitOffset));
+            byte lowNibbleIsh = (byte) ((valueBytes[valueByteOffset] & 0xFF) >> (8 - valueBitOffset));
+            writeByte((byte) (highNibbleIsh | lowNibbleIsh));
+            i++;
+        }
+        if (i < numBytes) {
+            writeByte((byte) ((valueBytes[0]) >> (8 - valueBitOffset)));
+        }
+
         return numBytes;
     }
 
