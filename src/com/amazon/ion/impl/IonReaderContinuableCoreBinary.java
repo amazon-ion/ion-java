@@ -51,11 +51,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // The number of bytes occupied by a Java long.
     private static final int LONG_SIZE_IN_BYTES = 8;
 
-    // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
-    private static final int MOST_SIGNIFICANT_BYTE_OF_MIN_LONG = 0x80;
+    // The smallest negative 8-byte integer that can fit in a long is 0x80_00_00_00_00_00_00_00 and the smallest
+    // negative 4-byte integer that can fit in an int is 0x80_00_00_00.
+    private static final int MOST_SIGNIFICANT_BYTE_OF_MIN_INTEGER = 0x80;
 
-    // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-    private static final int MOST_SIGNIFICANT_BYTE_OF_MAX_LONG = 0x7F;
+    // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF and the largest positive
+    // 4-byte integer that can fit in an int is 0x7F_FF_FF_FF.
+    private static final int MOST_SIGNIFICANT_BYTE_OF_MAX_INTEGER = 0x7F;
 
     // The second-most significant bit in the most significant byte of a VarInt is the sign.
     private static final int VAR_INT_SIGN_BITMASK = 0x40;
@@ -418,33 +420,29 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Determines whether the 8-byte integer starting at `valueMarker.startIndex` and ending at `valueMarker.endIndex`
-     * fits in a long, or requires a BigInteger.
-     * @return either `IntegerSize.LONG` or `IntegerSize.BIG_INTEGER`.
+     * Determines whether the integer starting at `valueMarker.startIndex` and ending at `valueMarker.endIndex`
+     * crosses a type boundary. Callers must only invoke this method when the integer's size is known to be either
+     * 4 or 8 bytes.
+     * @return true if the value fits in the Java integer type that matches its Ion serialized size; false if it
+     *  requires the next larger size.
      */
-    private IntegerSize classifyEightByteInt_1_0() {
+    private boolean classifyInteger_1_0() {
         if (valueTid.isNegativeInt) {
-            // The smallest negative 8-byte integer that can fit in a long is -0x80_00_00_00_00_00_00_00.
             int firstByte = buffer[(int)(valueMarker.startIndex)] & SINGLE_BYTE_MASK;
-            if (firstByte < MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
-                return IntegerSize.LONG;
-            } else if (firstByte > MOST_SIGNIFICANT_BYTE_OF_MIN_LONG) {
-                return IntegerSize.BIG_INTEGER;
+            if (firstByte < MOST_SIGNIFICANT_BYTE_OF_MIN_INTEGER) {
+                return true;
+            } else if (firstByte > MOST_SIGNIFICANT_BYTE_OF_MIN_INTEGER) {
+                return false;
             }
             for (long i = valueMarker.startIndex + 1; i < valueMarker.endIndex; i++) {
                 if (0x00 != buffer[(int)(i)]) {
-                    return IntegerSize.BIG_INTEGER;
+                    return false;
                 }
             }
-        } else {
-            // The largest positive 8-byte integer that can fit in a long is 0x7F_FF_FF_FF_FF_FF_FF_FF.
-            if ((buffer[(int)(valueMarker.startIndex)] & SINGLE_BYTE_MASK) > MOST_SIGNIFICANT_BYTE_OF_MAX_LONG) {
-                return IntegerSize.BIG_INTEGER;
-            }
+            return true;
         }
-        return IntegerSize.LONG;
+        return (buffer[(int) (valueMarker.startIndex)] & SINGLE_BYTE_MASK) <= MOST_SIGNIFICANT_BYTE_OF_MAX_INTEGER;
     }
-
 
     int readVarUInt_1_1() {
         throw new UnsupportedOperationException();
@@ -536,16 +534,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid.length < 0) {
             return IntegerSize.BIG_INTEGER;
         } else if (valueTid.length < INT_SIZE_IN_BYTES) {
-            // Note: this is conservative. Most integers of size 4 also fit in an int, but since exactly the
-            // same parsing code is used for ints and longs, there is no point wasting the time to determine the
-            // smallest possible type.
             return IntegerSize.INT;
+        } else if (valueTid.length == INT_SIZE_IN_BYTES) {
+            return (minorVersion != 0 || classifyInteger_1_0()) ? IntegerSize.INT : IntegerSize.LONG;
         } else if (valueTid.length < LONG_SIZE_IN_BYTES) {
             return IntegerSize.LONG;
         } else if (valueTid.length == LONG_SIZE_IN_BYTES) {
-            // Because creating BigIntegers is so expensive, it is worth it to look ahead and determine exactly
-            // which 8-byte integers can fit in a long.
-            return minorVersion == 0 ? classifyEightByteInt_1_0() : IntegerSize.LONG;
+            return (minorVersion != 0 || classifyInteger_1_0()) ? IntegerSize.LONG : IntegerSize.BIG_INTEGER;
         }
         return IntegerSize.BIG_INTEGER;
     }

@@ -142,11 +142,10 @@ public class ReaderIntegerSizeTest
     private void testGetIntegerSizeIntBoundary(int boundaryValue, long pastBoundary)
     {
         in.next();
-        // It's fine if IntegerSize recommends a larger-than-necessary type, just not a smaller one.
-        assertTrue(IntegerSize.INT == in.getIntegerSize() || IntegerSize.LONG == in.getIntegerSize());
+        assertEquals(IntegerSize.INT, in.getIntegerSize());
         assertEquals(boundaryValue, in.intValue());
         // assert nothing changes until next()
-        assertTrue(IntegerSize.INT == in.getIntegerSize() || IntegerSize.LONG == in.getIntegerSize());
+        assertEquals(IntegerSize.INT, in.getIntegerSize());
         in.next();
         assertEquals(IntegerSize.LONG, in.getIntegerSize());
         assertEquals(pastBoundary, in.longValue());
@@ -156,10 +155,9 @@ public class ReaderIntegerSizeTest
     private void testGetIntegerSizeLongBoundary(long boundaryValue, BigInteger pastBoundary)
     {
         in.next();
-        // It's fine if IntegerSize recommends a larger-than-necessary type, just not a smaller one.
-        assertTrue(IntegerSize.LONG == in.getIntegerSize() || IntegerSize.BIG_INTEGER == in.getIntegerSize());
+        assertEquals(IntegerSize.LONG, in.getIntegerSize());
         assertEquals(boundaryValue, in.longValue());
-        assertTrue(IntegerSize.LONG == in.getIntegerSize() || IntegerSize.BIG_INTEGER == in.getIntegerSize());
+        assertEquals(IntegerSize.LONG, in.getIntegerSize());
         in.next();
         assertEquals(IntegerSize.BIG_INTEGER, in.getIntegerSize());
         assertEquals(pastBoundary, in.bigIntegerValue());
