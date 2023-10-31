@@ -1470,7 +1470,7 @@ class IonCursorBinary implements IonCursor {
             if (slowSeek(parent.endIndex - offset)) {
                 return event;
             }
-            peekIndex = parent.endIndex;
+            peekIndex = offset;
         }
         setCheckpointBeforeUnannotatedTypeId();
         if (--containerIndex >= 0) {
