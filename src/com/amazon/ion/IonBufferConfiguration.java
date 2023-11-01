@@ -1,24 +1,24 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package com.amazon.ion;
 
-import com.amazon.ion.impl.IonReaderLookaheadBuffer;
-
 /**
- * Configures Ion lookahead buffers.
+ * Configures buffers that hold Ion data.
  */
 public final class IonBufferConfiguration extends BufferConfiguration<IonBufferConfiguration> {
 
     /**
      * Functional interface for handling oversized symbol tables.
      */
+    @FunctionalInterface
     public interface OversizedSymbolTableHandler {
         /**
          * Invoked when the user specifies a finite maximum buffer size and that size is exceeded by symbol table(s)
          * alone. Because symbol tables cannot be truncated without corrupting values that follow in the stream,
-         * this condition is not recoverable. After this method is called,
-         * {@link IonReaderLookaheadBuffer#fillInput()} has no effect.
-         * @throws Exception if handler logic fails.
+         * this condition is not recoverable.
          */
-        void onOversizedSymbolTable() throws Exception;
+        void onOversizedSymbolTable();
     }
 
     /**
@@ -34,41 +34,28 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
         /**
          * An OversizedValueHandler that does nothing.
          */
-        private static final OversizedValueHandler NO_OP_OVERSIZED_VALUE_HANDLER = new OversizedValueHandler() {
-
-            @Override
-            public void onOversizedValue() {
-                // If no maximum buffer size is configured, values cannot be considered oversized and this
-                // implementation will never be called.
-                // If a maximum buffer size is configured, a handler must also be configured. In that case,
-                // this implementation will only be called if the user provides it to the builder manually.
-            }
+        private static final OversizedValueHandler NO_OP_OVERSIZED_VALUE_HANDLER = () -> {
+            // If no maximum buffer size is configured, values cannot be considered oversized and this
+            // implementation will never be called.
+            // If a maximum buffer size is configured, a handler must also be configured. In that case,
+            // this implementation will only be called if the user provides it to the builder manually.
         };
 
         /**
          * A DataHandler that does nothing.
          */
-        private static final DataHandler NO_OP_DATA_HANDLER = new DataHandler() {
-
-            @Override
-            public void onData(int bytes) {
-                // Do nothing.
-            }
+        private static final DataHandler NO_OP_DATA_HANDLER = bytes -> {
+            // Do nothing.
         };
 
         /**
          * An OversizedSymbolTableHandler that does nothing.
          */
-        private static final OversizedSymbolTableHandler NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER
-            = new OversizedSymbolTableHandler() {
-
-            @Override
-            public void onOversizedSymbolTable() {
-                // If no maximum buffer size is configured, symbol tables cannot be considered oversized and this
-                // implementation will never be called.
-                // If a maximum buffer size is configured, a handler must also be configured. In that case,
-                // this implementation will only be called if the user provides it to the builder manually.
-            }
+        private static final OversizedSymbolTableHandler NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER = () -> {
+            // If no maximum buffer size is configured, symbol tables cannot be considered oversized and this
+            // implementation will never be called.
+            // If a maximum buffer size is configured, a handler must also be configured. In that case,
+            // this implementation will only be called if the user provides it to the builder manually.
         };
 
         /**

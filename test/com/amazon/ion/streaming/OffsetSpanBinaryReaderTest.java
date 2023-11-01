@@ -65,11 +65,6 @@ public class OffsetSpanBinaryReaderTest
     @Test
     public void testCurrentSpanBeyondMaxInt()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         IonDatagram dg = system().newDatagram();
         dg.add().newBlob(new byte[2000]);
         byte[] binary = dg.getBytes();
@@ -85,11 +80,6 @@ public class OffsetSpanBinaryReaderTest
     @Test
     public void testCurrentSpanBeyondMaxIntForOrderedStruct()
     {
-        if (getStreamingMode() == StreamingMode.NEW_STREAMING_INCREMENTAL) {
-            // TODO the incremental reader does not currently support the SpanProvider or SeekableReader facets.
-            //      See ion-java/issues/382 and ion-java/issues/383.
-            return;
-        }
         // Value is ordered-struct { name:{{ /* 1024 bytes */}} }
 
         byte[] data = hexToBytes("E0 01 00 EA "

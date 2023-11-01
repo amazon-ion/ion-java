@@ -24,6 +24,7 @@
 # See https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
 
 name: Prepare Release
+permissions: read-all
 on:
   # We have a branch protection rule for master, so all commits to master require
   # an approved PR. That means this workflow trigger is effectively equivalent to
@@ -43,7 +44,7 @@ jobs:
     outputs:
       should_create_draft: ${{ steps.inspect.outputs.is_valid_to_release }}
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.6.0
       - name: Get project version
         run: |
           echo "PROJECT_VERSION=$(<project.version)" >> $GITHUB_ENV
@@ -64,7 +65,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.6.0
       - name: Create a draft release
         shell: bash
         env:

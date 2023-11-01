@@ -16,13 +16,13 @@
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl._Private_IncrementalReader;
 import com.amazon.ion.impl._Private_IonWriterFactory;
 import com.amazon.ion.system.IonReaderBuilder;
 
@@ -85,6 +85,14 @@ final class IonLoaderLite
         IonDatagramLite datagram = new IonDatagramLite(_system, _catalog);
         IonWriter writer = _Private_IonWriterFactory.makeWriter(datagram);
         writer.writeValues(reader);
+        if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof IonCursor) {
+            // Force incremental readers to either disambiguate an incomplete value or raise an error.
+            if (((IonCursor) reader).endStream() != IonCursor.Event.NEEDS_DATA) {
+                // Only text readers can reach this case, because it indicates that completion of an ambiguous token
+                // was forced. Add the resulting value to the datagram.
+                writer.writeValue(reader);
+            }
+        }
         return datagram;
     }
 
@@ -148,22 +156,15 @@ final class IonLoaderLite
     public IonDatagram load(InputStream ionData)
         throws IonException, IOException
     {
-        IonReader reader = null;
         try {
-            reader = _readerBuilder.build(ionData);
-            return load(reader);
+            return load(_readerBuilder.build(ionData));
         }
         catch (IonException e) {
             IOException io = e.causeOfType(IOException.class);
             if (io != null) throw io;
             throw e;
-        } finally {
-            // If a value was incomplete, incremental readers will not yet have raised an error. Force an error
-            // to be raised in this case.
-            if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof _Private_IncrementalReader) {
-                ((_Private_IncrementalReader) reader).requireCompleteValue();
-            }
         }
+        // Note: the reader cannot be closed, as this would close the InputStream, which was provided by the user.
     }
 
     public IonDatagram load(IonReader reader) throws IonException

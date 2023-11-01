@@ -157,7 +157,7 @@ public class _Private_IonBinaryWriterBuilder
             if (symtab.isLocalTable())
             {
                 SymbolTable[] imports =
-                    ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
+                    ((_Private_LocalSymbolTable) symtab).getImportedTablesNoCopy();
                 for (SymbolTable imported : imports)
                 {
                     if (imported.isSubstitute())
@@ -353,7 +353,7 @@ public class _Private_IonBinaryWriterBuilder
             return myInitialSymbolTable;
         }
 
-        return ((LocalSymbolTable) myInitialSymbolTable).makeCopy();
+        return ((_Private_LocalSymbolTable) myInitialSymbolTable).makeCopy();
     }
 
 

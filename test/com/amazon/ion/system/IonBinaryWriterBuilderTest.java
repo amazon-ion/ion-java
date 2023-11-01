@@ -24,9 +24,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.amazon.ion.IonCatalog;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
+import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl.Symtabs;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_IonWriter;
@@ -34,6 +37,8 @@ import com.amazon.ion.impl._Private_Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -297,6 +302,40 @@ public class IonBinaryWriterBuilderTest
 
         writer = b.build(out);
         assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
+    }
+
+    @Test
+    public void testInitialSymtabFromReader()
+        throws Exception
+    {
+        SymbolTable lst;
+        try (IonReader reader = IonReaderBuilder.standard().build(TestUtils.ensureBinary(IonSystemBuilder.standard().build(), "foo".getBytes(StandardCharsets.UTF_8)))) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            lst = reader.getSymbolTable();
+        }
+
+        _Private_IonBinaryWriterBuilder b =
+            _Private_IonBinaryWriterBuilder.standard();
+        b.setInitialSymbolTable(lst);
+        assertSame(lst, b.getInitialSymbolTable());
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = b.build(out);
+        assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
+
+        writer = b.build(out);
+        assertTrue(symbolTableEquals(lst, writer.getSymbolTable()));
+
+        writer.writeSymbol("bar");
+        writer.writeSymbol("foo");
+        writer.close();
+
+        try (IonReader reader = IonReaderBuilder.standard().build(out.toByteArray())) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("bar", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.stringValue());
+        }
     }
 
     @Test(expected = UnsupportedOperationException.class)

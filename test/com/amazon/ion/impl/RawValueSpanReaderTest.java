@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -76,7 +77,8 @@ public class RawValueSpanReaderTest
         myTestFile = file;
     }
 
-    private IonReaderBinaryUserX reader;
+    private IonReader reader;
+    private byte[] inputBytes;
     private RawValueSpanProvider spanProvider;
     private SeekableReader seekableReader;
 
@@ -262,7 +264,17 @@ public class RawValueSpanReaderTest
         }
     }
 
-    private int countNopPad(int start) throws IOException
+    private int readVarUInt(int start) {
+        int currentByte = 0;
+        int result = 0;
+        while ((currentByte & 0x80) == 0) {
+            currentByte = inputBytes[start++];
+            result = (result << 7) | (currentByte & 0x7F);
+        }
+        return result;
+    }
+
+    private int countNopPad(int start)
     {
         int index = start;
         int len = 0;
@@ -274,13 +286,13 @@ public class RawValueSpanReaderTest
             len += index - start;
         }
 
-        int td = reader.getCurrentBuffer()[index] & 0xFF;
+        int td = inputBytes[index++] & 0xFF;
         int tid = _Private_IonConstants.getTypeCode(td);
         int typeLen = _Private_IonConstants.getLowNibble(td);
 
         if(tid == _Private_IonConstants.tidNull && typeLen != _Private_IonConstants.lnIsNull){
             if(typeLen == _Private_IonConstants.lnIsVarLen) {
-                len += reader.readVarUInt();
+                len += readVarUInt(index);
             }
             else {
                 len += 1;
@@ -310,7 +322,8 @@ public class RawValueSpanReaderTest
     public void testSpans() throws Exception
     {
         // Seeking currently only works over byte-backed IonReaders -- not InputStreams
-        reader = (IonReaderBinaryUserX) IonReaderBuilder.standard().build(readFileAsBytes(myTestFile));
+        inputBytes = readFileAsBytes(myTestFile);
+        reader = IonReaderBuilder.standard().build(inputBytes);
         spanProvider = reader.asFacet(RawValueSpanProvider.class);
         seekableReader = reader.asFacet(SeekableReader.class);
 

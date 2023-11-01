@@ -16,6 +16,8 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
+
+import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SymbolToken;
 import static com.amazon.ion.SystemSymbols.ION;
 import static com.amazon.ion.SystemSymbols.ION_1_0;
@@ -40,7 +42,6 @@ import com.amazon.ion.IonSexp;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonTestCase;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
@@ -48,6 +49,8 @@ import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.junit.Injected;
+import com.amazon.ion.streaming.ReaderTestCase;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
@@ -71,7 +74,7 @@ import org.junit.Test;
  */
 @SuppressWarnings("deprecation")
 public class SymbolTableTest
-    extends IonTestCase
+    extends ReaderTestCase
 {
     public static final String LocalSymbolTablePrefix = ION_SYMBOL_TABLE + "::";
     public static final String SharedSymbolTablePrefix = ION_SHARED_SYMBOL_TABLE + "::";
@@ -87,6 +90,9 @@ public class SymbolTableTest
         "  name:'''imported''', version:1," +
         "  symbols:['''imported 1''', '''imported 2''']" +
         "}";
+
+    @Injected.Inject("readerMaker")
+    public static final ReaderMaker[] READER_MAKERS = ReaderMaker.values();
 
 
     public SymbolTable registerImportedV1()
@@ -148,6 +154,22 @@ public class SymbolTableTest
         assertSame(shared, importedTable);
 
         return importedTable;
+    }
+
+    @Override
+    public IonValue oneValue(String text) {
+        readVerbatim(text);
+        return singleValue(system().iterate(in));
+    }
+
+    private IonDatagram allValues(String text) {
+        readVerbatim(text);
+        return loader().load(in);
+    }
+
+    private Iterator<IonValue> iterate(String text) {
+        readVerbatim(text);
+        return system().iterate(in);
     }
 
 
@@ -266,18 +288,16 @@ public class SymbolTableTest
                 "}\n" +
                 "null";
 
-        IonDatagram datagram = loader().load(text);
+        IonDatagram datagram = allValues(text);
 
-        SymbolTable symbolTable = datagram.get(0).getSymbolTable();
-        assertSame(symbolTable, datagram.get(1).getSymbolTable());
-        symbolTable.intern("o1");
-        symbolTable.intern("a1");
-
-        // new symbols don't influence SIDs for existing symbols; they are appended
-        checkSymbol("s11", systemMaxId() + 1, symbolTable);
-        checkSymbol("s21", systemMaxId() + 2, symbolTable);
-        checkSymbol("o1", systemMaxId() + 3, symbolTable);
-        checkSymbol("a1", systemMaxId() + 4, symbolTable);
+        SymbolTable symbolTable0 = datagram.get(0).getSymbolTable();
+        SymbolTable symbolTable1 = datagram.get(1).getSymbolTable();
+        // Note: previously, this test attempted to intern "o1" and "a1", symbols not yet present in the table. This should
+        // always have been explicitly disallowed when operating on a symbol table provided by an IonReader, as
+        // mutating the reader's symbol table while it may still be in use is unsafe.
+        checkSymbol("s11", systemMaxId() + 1, symbolTable0);
+        checkSymbol("s11", systemMaxId() + 1, symbolTable1);
+        checkSymbol("s21", systemMaxId() + 2, symbolTable1);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
@@ -303,7 +323,7 @@ public class SymbolTableTest
                 "   symbols:[\"s3\"]" +
                 "}\n" +
                 "$12"; // s2
-        IonDatagram datagram = loader().load(text);
+        IonDatagram datagram = allValues(text);
         datagram.add(1, system().newSymbol("abc"));
         datagram.add(system().newSymbol(new SymbolTokenImpl(null, 13))); // s3
         datagram.add(system().newSymbol(new SymbolTokenImpl(null, 10))); // Symbol with unknown text from "foo"
@@ -358,7 +378,7 @@ public class SymbolTableTest
         SymbolTable st = v.getSymbolTable();
         assertSame(systemTable, st.getSystemSymbolTable());
 
-        IonDatagram dg = loader().load(text);
+        IonDatagram dg = allValues(text);
         IonSymbol sysId = (IonSymbol) dg.systemGet(0);
         checkSymbol(ION_1_0, ION_1_0_SID, sysId);
         assertSame(systemTable, sysId.getSymbolTable());
@@ -424,9 +444,12 @@ public class SymbolTableTest
             "null";
 
         SymbolTable symbolTable = oneValue(text).getSymbolTable();
-        symbolTable.intern("baz");
+        // Note: previously, this test attempted to intern "baz", a symbol not yet present in the table. This should
+        // always have been explicitly disallowed when operating on a symbol table provided by an IonReader, as
+        // mutating the reader's symbol table while it may still be in use is unsafe.
+        symbolTable.intern("bar");
         symbolTable.makeReadOnly();
-        symbolTable.intern("baz");
+        symbolTable.intern("bar");
 
         try {
             symbolTable.intern("boo");
@@ -443,20 +466,52 @@ public class SymbolTableTest
 
         final int import1id = systemMaxId() + 1;
         final int local1id = systemMaxId() + IMPORTED_1_MAX_ID + 1;
-        final int local2id = local1id + 1;
 
         String importingText =
-            "$ion_1_0 "+
             LocalSymbolTablePrefix +
             "{" +
             "  symbols:[ '''local1''' ]," +
             "  imports:[{name:'''imported''', version:1, max_id:2}]," +
             "}\n" +
-            "local2\n" +  // This symbol is added to end of locals
-            "local1\n" +
-            "'imported 1'";
+            "$" + local1id + "\n" +
+            "$" + import1id;
 
-        Iterator<IonValue> scanner = system().iterate(importingText);
+        Iterator<IonValue> scanner = iterate(importingText);
+
+        IonValue value = scanner.next();
+        SymbolTable symtab = value.getSymbolTable();
+        checkLocalTable(symtab);
+        checkSymbol("local1", local1id, value);
+
+        value = scanner.next();
+        checkSymbol("imported 1", import1id, value);
+    }
+
+    @Test
+    public void testTextSymbolNotInLocalSymbolTable()
+    {
+        if (myReaderMaker.sourceIsBinary()) {
+            // This is skipped for binary because this case is not representable verbatim in binary, which requires
+            // every symbol token to be present in the symbol table.
+            return;
+        }
+        registerImportedV1();
+
+        final int import1id = systemMaxId() + 1;
+        final int local1id = systemMaxId() + IMPORTED_1_MAX_ID + 1;
+        final int local2id = local1id + 1;
+
+        String importingText =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  symbols:[ '''local1''' ]," +
+                "  imports:[{name:'''imported''', version:1, max_id:2}]," +
+                "}\n" +
+                "local2\n" +  // This symbol is added to end of locals
+                "local1\n" +
+                "'imported 1'";
+
+        Iterator<IonValue> scanner = iterate(importingText);
 
         IonValue value = scanner.next();
         SymbolTable symtab = value.getSymbolTable();
@@ -484,7 +539,7 @@ public class SymbolTableTest
             "}\n" +
             "null";
 
-        Iterator<IonValue> scanner = system().iterate(importingText);
+        Iterator<IonValue> scanner = iterate(importingText);
         IonValue v = scanner.next();
         SymbolTable symtab = v.getSymbolTable();
         assertTrue(symtab.isLocalTable());
@@ -501,19 +556,18 @@ public class SymbolTableTest
         final int import1DupId = systemMaxId() + importedTable.getMaxId() + 1;
 
         String importingText =
-            "$ion_1_0 "+
             LocalSymbolTablePrefix +
             "{" +
             "  imports:[{name:'''imported''', version:1, max_id:2}]," +
             "  symbols:[ '''imported 1''' ]," +
             "}\n" +
-            "'imported 1'\n" +
+            "$" + import1DupId + "\n" +
             "$" + import1id;
 
-        Iterator<IonValue> scanner = system().iterate(importingText);
+        Iterator<IonValue> scanner = iterate(importingText);
 
         IonValue value = scanner.next();
-        checkSymbol("imported 1", import1id, value);
+        checkSymbol("imported 1", value);
 
         SymbolTable symtab = value.getSymbolTable();
         checkLocalTable(symtab);
@@ -537,7 +591,7 @@ public class SymbolTableTest
             "  imports:[{name:'''imported''',version:1}],\n" +
             "}\n" +
             "null";
-        IonDatagram dg = loader().load(text);
+        IonDatagram dg = allValues(text);
 
         SymbolTable symbolTable = dg.get(0).getSymbolTable();
         checkLocalTable(symbolTable);
@@ -778,14 +832,20 @@ public class SymbolTableTest
         testMalformedImportsField("null");
         testMalformedImportsField("'''hello'''");
         testMalformedImportsField("imports");
-        testMalformedImportsField("a_symbol");
+        if (!myReaderMaker.sourceIsBinary()) {
+            // A SID-less symbol token cannot be represented verbatim in binary.
+            testMalformedImportsField("a_symbol");
+        }
 
 
         testMalformedImportsField("[{}]");
         testMalformedImportsField("[null.struct]");
         testMalformedImportsField("[null]");
         testMalformedImportsField("[1009]");
-        testMalformedImportsField("[a_symbol]");
+        if (!myReaderMaker.sourceIsBinary()) {
+            // A SID-less symbol token cannot be represented verbatim in binary.
+            testMalformedImportsField("[a_symbol]");
+        }
     }
 
     private void testMalformedImportsField(String value)
@@ -814,7 +874,10 @@ public class SymbolTableTest
         testImportWithMalformedName(importedV1, " \"\" ");  // empty string
         testImportWithMalformedName(importedV1, "null.string");
         testImportWithMalformedName(importedV1, "null");
-        testImportWithMalformedName(importedV1, "'syms'");  // symbol
+        if (!myReaderMaker.sourceIsBinary()) {
+            // A SID-less symbol token cannot be represented verbatim in binary.
+            testImportWithMalformedName(importedV1, "'syms'");  // symbol
+        }
         testImportWithMalformedName(importedV1, "123");
 
         // Cannot import system symtab
@@ -839,6 +902,47 @@ public class SymbolTableTest
         assertSame(importedV1, importedTables[0]);
         assertEquals(systemMaxId() + IMPORTED_1_MAX_ID,
                      symbolTable.getMaxId());
+    }
+
+    @Test
+    public void testImportWithBadVersion()
+    {
+        // From the spec: "The version field should be an int and at least 1. If the field is missing or has any other
+        // value, it is treated as if it were 1."
+        SymbolTable importedV1 = registerImportedV1();
+
+        testImportWithBadVersion(importedV1, "null.int");
+        testImportWithBadVersion(importedV1, "null");
+        if (!myReaderMaker.sourceIsBinary()) {
+            // A SID-less symbol token cannot be represented verbatim in binary.
+            testImportWithBadVersion(importedV1, "not_an_int");
+        }
+        testImportWithBadVersion(importedV1, "0");
+        testImportWithBadVersion(importedV1, "-1");
+        testImportWithBadVersion(importedV1, "-2223");
+
+        String text =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:[{name:\"imported\", max_id:2}]," +
+                "}\n" +
+                "null";
+        IonValue v = oneValue(text);
+        assertSame(importedV1, v.getSymbolTable().getImportedTables()[0]);
+    }
+
+    public void testImportWithBadVersion(SymbolTable expected, String versionText)
+    {
+        String text =
+            LocalSymbolTablePrefix +
+                "{" +
+                "  imports:[{name:\"imported\", version:" + versionText + "," +
+                "            max_id:2" +
+                "  }]," +
+                "}\n" +
+                "null";
+        IonValue v = oneValue(text);
+        assertSame(expected, v.getSymbolTable().getImportedTables()[0]);
     }
 
 
@@ -877,7 +981,10 @@ public class SymbolTableTest
 
         testImportWithBadMaxId(importedV1, "null.int");
         testImportWithBadMaxId(importedV1, "null");
-        testImportWithBadMaxId(importedV1, "not_an_int");
+        if (!myReaderMaker.sourceIsBinary()) {
+            // A SID-less symbol token cannot be represented verbatim in binary.
+            testImportWithBadMaxId(importedV1, "not_an_int");
+        }
 //        testImportWithBadMaxId(importedV1, "0");  Zero isn't bad, its zero!
         testImportWithBadMaxId(importedV1, "-1");
         testImportWithBadMaxId(importedV1, "-2223");
@@ -908,6 +1015,21 @@ public class SymbolTableTest
             "null";
         IonValue v = oneValue(text);
         assertSame(expected, v.getSymbolTable().getImportedTables()[0]);
+    }
+
+    @Test(expected = IonException.class)
+    public void testImportWithInexactMatchAndUndefinedMaxId() {
+        registerSharedSymtab(IMPORTED_1_SERIALIZED);
+        String text =
+            LocalSymbolTablePrefix +
+            "{" +
+            "  imports:[{name:\"imported\", version:2}]," +
+            "}\n" +
+            "null";
+        // Version 1 is registered in the catalog, but the stream requests version 2. If the import declaration had
+        // included a max_id then this would be fine. However, when the declaration omits max_id, an exact match is
+        // required.
+        oneValue(text);
     }
 
 
@@ -1404,7 +1526,8 @@ public class SymbolTableTest
         writer.stepOut();
         writer.finish();
 
-        IonReader reader = system().newReader(baos.toByteArray());
+        read(baos.toByteArray());
+        IonReader reader = in;
         assertEquals(IonType.LIST, reader.next());
         reader.stepIn();
         assertEquals(IonType.NULL, reader.next());

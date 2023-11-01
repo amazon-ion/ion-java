@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonType;
@@ -23,8 +26,11 @@ final class IonTypeID {
     // does not have a type ID, so we will use it to mean 'annotation wrapper' instead.
     static final IonType ION_TYPE_ANNOTATION_WRAPPER = IonType.DATAGRAM;
 
-    // Lookup table from type ID to IonType. See https://amazon-ion.github.io/ion-docs/docs/binary.html#typed-value-formats
-    static final IonType[] ION_TYPES = new IonType[] {
+    // Lookup table from type ID to "binary token type", loosely represented by the IonType enum to avoid the need to
+    // define a completely new enum with translations between them. "Binary token types" are a superset of IonType,
+    // adding annotation wrapper and `null` (i.e., illegal).
+    // See https://amzn.github.io/ion-docs/docs/binary.html#typed-value-formats
+    static final IonType[] BINARY_TOKEN_TYPES_1_0 = new IonType[] {
         IonType.NULL,
         IonType.BOOL,
         IonType.INT,
@@ -43,28 +49,40 @@ final class IonTypeID {
         null // The 0xF type code is illegal in Ion 1.0.
     };
 
+    // Singleton invalid type ID.
+    private static final IonTypeID ALWAYS_INVALID_TYPE_ID = new IonTypeID((byte) 0xFF, 0);
+
     // Pre-compute all possible type ID bytes.
-    static final IonTypeID[] TYPE_IDS;
+    static final IonTypeID[] TYPE_IDS_NO_IVM;
+    static final IonTypeID[] TYPE_IDS_1_0;
     static {
-        TYPE_IDS = new IonTypeID[NUMBER_OF_BYTES];
+        TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
+        TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
         for (int b = 0x00; b < NUMBER_OF_BYTES; b++) {
-            TYPE_IDS[b] = new IonTypeID((byte) b);
+            TYPE_IDS_NO_IVM[b] = ALWAYS_INVALID_TYPE_ID;
+            TYPE_IDS_1_0[b] = new IonTypeID((byte) b, 0);
         }
     }
 
     final IonType type;
-    final byte length;
+    final int length;
     final boolean variableLength;
     final boolean isNull;
     final boolean isNopPad;
     final byte lowerNibble;
     final boolean isValid;
     final boolean isNegativeInt;
+    final boolean isTemplateInvocation; // Unused in Ion 1.0
+    final int templateId; // Unused in Ion 1.0
+    final boolean isDelimited; // Unused in Ion 1.0
+    // For structs, denotes whether field names are VarSyms. For symbols, denotes whether the text is inline.
+    // For annotation wrappers, denotes whether tokens are VarSyms.
+    final boolean isInlineable; // Unused in Ion 1.0
 
     /**
      * Determines whether the Ion spec allows this particular upperNibble/lowerNibble pair.
      */
-    private static boolean isValid(byte upperNibble, byte lowerNibble, IonType type) {
+    private static boolean isValid_1_0(byte upperNibble, byte lowerNibble, IonType type) {
         if (upperNibble == TYPE_CODE_INVALID) {
             // Type code F is unused in Ion 1.0.
             return false;
@@ -91,26 +109,47 @@ final class IonTypeID {
         return true;
     }
 
-    private IonTypeID(byte id) {
-        byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
-        this.lowerNibble = (byte) (id & LOW_NIBBLE_BITMASK);
-        this.type = ION_TYPES[upperNibble];
-        this.isValid = isValid(upperNibble, lowerNibble, type);
-        this.isNull = lowerNibble == NULL_VALUE_NIBBLE;
-        this.isNopPad = type == IonType.NULL && !isNull;
-        byte length = lowerNibble;
-        if ((type == IonType.NULL && !isNopPad) || type == IonType.BOOL || !isValid) {
-            variableLength = false;
-            length = 0;
-        } else if (type == IonType.STRUCT && length == ORDERED_STRUCT_NIBBLE) {
-            variableLength = true;
+    private IonTypeID(byte id, int minorVersion) {
+        if (minorVersion == 0) {
+            byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
+            this.lowerNibble = (byte) (id & LOW_NIBBLE_BITMASK);
+            if (upperNibble == 0 && lowerNibble != NULL_VALUE_NIBBLE) {
+                this.isNopPad = true;
+                this.type = null;
+            } else {
+                this.isNopPad = false;
+                this.type = BINARY_TOKEN_TYPES_1_0[upperNibble];
+            }
+            this.isValid = isValid_1_0(upperNibble, lowerNibble, type);
+            this.isNull = lowerNibble == NULL_VALUE_NIBBLE;
+            byte length = lowerNibble;
+            if (type == IonType.NULL || type == IonType.BOOL || !isValid) {
+                variableLength = false;
+                length = 0;
+            } else if (type == IonType.STRUCT && length == ORDERED_STRUCT_NIBBLE) {
+                variableLength = true;
+            } else {
+                variableLength = length == VARIABLE_LENGTH_NIBBLE;
+            }
+            if (isNull) {
+                length = 0;
+            }
+            this.isNegativeInt = type == IonType.INT && upperNibble == NEGATIVE_INT_TYPE_CODE;
+            this.length = length;
+            this.isTemplateInvocation = false;
+            this.templateId = -1;
+            this.isDelimited = false;
+            this.isInlineable = false;
         } else {
-            variableLength = length == VARIABLE_LENGTH_NIBBLE;
+            throw new IllegalStateException("Only Ion 1.0 is currently supported.");
         }
-        if (isNull) {
-            length = 0;
-        }
-        this.isNegativeInt = type == IonType.INT && upperNibble == NEGATIVE_INT_TYPE_CODE;
-        this.length = length;
+    }
+
+    /**
+     * @return a String representation of this object (for debugging).
+     */
+    @Override
+    public String toString() {
+        return String.format("%s(%s)", type, length);
     }
 }
