@@ -20,6 +20,10 @@ import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,6 +32,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CloneTest
@@ -259,6 +264,30 @@ public class CloneTest
         clonedList2.remove(0);
 
         assertNotEquals(original, clone);
+    }
+
+    @Test
+    public void readOnlyIonStructMultithreadedTest() {
+        // See: https://github.com/amazon-ion/ion-java/issues/629
+        String ionStr = "{a:1,b:2,c:3,d:4,e:5,f:6}";
+
+        IonStruct ionValue = (IonStruct)system().singleValue(ionStr);
+        ionValue.makeReadOnly();
+
+        for (int i=0; i<100; i++) {
+            IonStruct clone = ionValue.clone();
+            clone.makeReadOnly();
+
+            List<CompletableFuture<Void>> waiting = new ArrayList<>();
+            for (int j = 0; j < 4; j++) {
+                waiting.add(CompletableFuture.runAsync(() -> {
+                    for (int k = 0; k <= 100; k++) {
+                        assertNotNull(clone.get("a"));
+                    }
+                }));
+            }
+            waiting.forEach(CompletableFuture::join);
+        }
     }
 
     /**

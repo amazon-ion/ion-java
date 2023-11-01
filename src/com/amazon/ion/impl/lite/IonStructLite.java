@@ -101,6 +101,14 @@ final class IonStructLite
             _field_map.put(v._fieldName, ii); // this causes the map to have the largest index value stored
         }
     }
+
+    @Override
+    public void makeReadOnly() {
+        // Eagerly initialize the fields map to prevent potential data races https://github.com/amazon-ion/ion-java/issues/629
+        fieldMapIsActive(_child_count);
+        super.makeReadOnly();
+    }
+
     private void add_field(String fieldName, int newFieldIdx)
     {
         Integer idx = _field_map.get(fieldName);
