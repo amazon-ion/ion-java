@@ -178,9 +178,11 @@ public class IonEncoder_1_1 {
         }
 
         // Condition 2: The fractional seconds are a common precision.
-        int secondsScale = value.getDecimalSecond().scale();
-        if (secondsScale != 0 && secondsScale != 3 && secondsScale != 6 && secondsScale != 9) {
-            return writeLongFormTimestampValue(buffer, value);
+        if (value.getFractionalSecond() != null) {
+            int secondsScale = value.getFractionalSecond().scale();
+            if (secondsScale != 0 && secondsScale != 3 && secondsScale != 6 && secondsScale != 9) {
+                return writeLongFormTimestampValue(buffer, value);
+            }
         }
         // Condition 3: The local offset is either UTC, unknown, or falls between -14:00 to +14:00 and is divisible by 15 minutes.
         Integer offset = value.getLocalOffset();
