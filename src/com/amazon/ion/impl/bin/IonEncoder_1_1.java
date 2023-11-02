@@ -178,8 +178,8 @@ public class IonEncoder_1_1 {
         }
 
         // Condition 2: The fractional seconds are a common precision.
-        if (value.getFractionalSecond() != null) {
-            int secondsScale = value.getFractionalSecond().scale();
+        if (value.getZFractionalSecond() != null) {
+            int secondsScale = value.getZFractionalSecond().scale();
             if (secondsScale != 0 && secondsScale != 3 && secondsScale != 6 && secondsScale != 9) {
                 return writeLongFormTimestampValue(buffer, value);
             }
@@ -234,9 +234,12 @@ public class IonEncoder_1_1 {
 
             bits |= ((long) value.getSecond()) << S_U_TIMESTAMP_SECOND_BIT_OFFSET;
 
-            int secondsScale = value.getDecimalSecond().scale();
+            int secondsScale = 0;
+            if (value.getZFractionalSecond() != null) {
+                secondsScale = value.getZFractionalSecond().scale();
+            }
             if (secondsScale != 0) {
-                long fractionalSeconds = value.getDecimalSecond().remainder(BigDecimal.ONE).movePointRight(secondsScale).longValue();
+                long fractionalSeconds = value.getZFractionalSecond().unscaledValue().longValue();
                 bits |= fractionalSeconds << S_U_TIMESTAMP_FRACTION_BIT_OFFSET;
             }
             switch (secondsScale) {
@@ -275,9 +278,12 @@ public class IonEncoder_1_1 {
             // if there are nanoseconds (which is too much for one long) and the boundary between the seconds
             // and fractional seconds subfields conveniently aligns with a byte boundary.
             long fractionBits = 0;
-            int secondsScale = value.getDecimalSecond().scale();
+            int secondsScale = 0;
+            if (value.getZFractionalSecond() != null) {
+                secondsScale = value.getZFractionalSecond().scale();
+            }
             if (secondsScale != 0) {
-                fractionBits = value.getDecimalSecond().remainder(BigDecimal.ONE).movePointRight(secondsScale).longValue();
+                fractionBits = value.getZFractionalSecond().unscaledValue().longValue();
             }
             switch (secondsScale) {
                 case 0:
@@ -350,14 +356,17 @@ public class IonEncoder_1_1 {
 
 
         bits |= ((long) value.getSecond()) << L_TIMESTAMP_SECOND_BIT_OFFSET;
-        int secondsScale = value.getDecimalSecond().scale();
+        int secondsScale = 0;
+        if (value.getZFractionalSecond() != null) {
+            secondsScale = value.getZFractionalSecond().scale();
+        }
         if (secondsScale == 0) {
             buffer.writeFlexUInt(7);
             buffer.writeFixedIntOrUInt(bits, 7);
             return 9; // OpCode + FlexUInt + 7 bytes data
         }
 
-        BigDecimal fractionalSeconds = value.getDecimalSecond().remainder(BigDecimal.ONE);
+        BigDecimal fractionalSeconds = value.getZFractionalSecond();
         BigInteger coefficient = fractionalSeconds.unscaledValue();
         long exponent = fractionalSeconds.scale();
         int numCoefficientBytes = WriteBuffer.flexUIntLength(coefficient);
