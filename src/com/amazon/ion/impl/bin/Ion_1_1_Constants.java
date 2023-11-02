@@ -27,7 +27,7 @@ public class Ion_1_1_Constants {
     static final int L_TIMESTAMP_HOUR_BIT_OFFSET = 23;
     static final int L_TIMESTAMP_MINUTE_BIT_OFFSET = 28;
     static final int L_TIMESTAMP_OFFSET_BIT_OFFSET = 34;
-    static final int L_TIMESTAMP_SECOND_BIT_OFFSET = 44;
+    static final int L_TIMESTAMP_SECOND_BIT_OFFSET = 46;
     static final int L_TIMESTAMP_UNKNOWN_OFFSET_VALUE = 0b111111111111;
 
     //////// Bit masks ////////
