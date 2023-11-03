@@ -527,7 +527,7 @@ class IonCursorBinary implements IonCursor {
             refillableState.bytesRequested = numberOfBytes + (index - offset);
             if (ensureCapacity(refillableState.bytesRequested)) {
                 // Fill all the free space, not just the shortfall; this reduces I/O.
-                shortfall = refill(freeSpaceAt(limit), refillableState.bytesRequested);
+                shortfall = refill(refillableState.bytesRequested);
             } else {
                 // The request cannot be satisfied, but not because data was unavailable. Return normally; it is the
                 // caller's responsibility to recover.
@@ -650,12 +650,11 @@ class IonCursorBinary implements IonCursor {
     /**
      * Attempts to fill the buffer with up to the requested number of additional bytes. It is the caller's
      * responsibility to ensure that there is space in the buffer.
-     * @param numberOfBytesToFill the number of additional bytes to attempt to add to the buffer.
      * @param minimumNumberOfBytesRequired the minimum number of bytes requested to fill the current value.
      * @return the shortfall between the number of bytes that were filled and the minimum number requested. If less than
      *  1, then at least `minimumNumberOfBytesRequired` were filled.
      */
-    private long refill(long numberOfBytesToFill, long minimumNumberOfBytesRequired) {
+    private long refill(long minimumNumberOfBytesRequired) {
         int numberOfBytesFilled = -1;
         long shortfall;
         // Sometimes an InputStream implementation will return fewer than the number of bytes requested even
@@ -663,10 +662,11 @@ class IonCursorBinary implements IonCursor {
         // until either the shortfall is filled or EOF is reached.
         do {
             try {
-                numberOfBytesFilled = refillableState.inputStream.read(buffer, (int) limit, (int) numberOfBytesToFill);
+                numberOfBytesFilled = refillableState.inputStream.read(buffer, (int) limit, (int) freeSpaceAt(limit));
             } catch (EOFException e) {
                 // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
                 // to read than are currently available (e.g. if a header or trailer is incomplete).
+                numberOfBytesFilled = -1;
             } catch (IOException e) {
                 throwAsIonException(e);
             }
