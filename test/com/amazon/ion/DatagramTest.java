@@ -28,8 +28,11 @@ import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.impl._Private_IonValue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
+
+import com.amazon.ion.system.IonReaderBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -719,5 +722,26 @@ public class DatagramTest
         assertEquals("x", v1.stringValue());
         assertEquals(yID + 1, v1.symbolValue().getSid()); //now x has a mapping in the existing symbol table
 
+    }
+
+    @Test
+    public void modifySymbolsAfterLoadThenSerialize()
+        throws Exception
+    {
+        IonDatagram dg = system().getLoader().load(TestUtils.ensureBinary(system(), "{foo: bar::baz}".getBytes(StandardCharsets.UTF_8)));
+        IonStruct struct = (IonStruct) dg.get(0);
+        IonSymbol baz = (IonSymbol) struct.get("foo");
+        baz.setTypeAnnotations("bar", "abc");
+        byte[] serialized = dg.getBytes();
+        try (IonReader reader = IonReaderBuilder.standard().build(serialized)) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.getFieldName());
+            String[] annotations = reader.getTypeAnnotations();
+            assertEquals(2, annotations.length);
+            assertEquals("bar", annotations[0]);
+            assertEquals("abc", annotations[1]);
+        }
     }
 }

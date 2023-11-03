@@ -23,6 +23,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
 import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 import com.amazon.ion.impl.bin._Private_IonRawWriter;
@@ -33,10 +34,12 @@ import com.amazon.ion.system.SimpleCatalog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -767,6 +770,36 @@ public class IonReaderContinuableTopLevelBinaryTest {
             reader.next();
             reader.close();
         });
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void unknownSymbolInFieldName(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xD3, 0x8A, 0x21, 0x01);
+        assertSequence(next(IonType.STRUCT), STEP_IN, next(IonType.INT));
+        assertThrows(UnknownSymbolException.class, reader::getFieldNameSymbol);
+        assertThrows(UnknownSymbolException.class, reader::getFieldName);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void unknownSymbolInAnnotation(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0xE4, 0x81, 0x8A, 0x21, 0x01);
+        assertSequence(next(IonType.INT));
+        assertThrows(UnknownSymbolException.class, reader::getTypeAnnotationSymbols);
+        assertThrows(UnknownSymbolException.class, reader::getTypeAnnotations);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void unknownSymbolInValue(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes, 0x71, 0x0A);
+        assertSequence(next(IonType.SYMBOL));
+        assertThrows(UnknownSymbolException.class, reader::symbolValue);
+        assertThrows(UnknownSymbolException.class, reader::stringValue);
+        reader.close();
     }
 
     /**
@@ -1687,6 +1720,33 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader = readerFor("\"" + string + "\"", constructFromBytes);
         assertSequence(
             next(IonType.STRING), stringValue(string),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void skipReallyLargeStringInContainer(boolean constructFromBytes, boolean incremental) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        // 70000 is greater than twice the default buffer size of 32768. This ensures that the string, when skipped,
+        // will not be fully contained in the buffer.
+        for (int i = 0; i < 70000; i++) {
+            sb.append('a');
+        }
+        String string = sb.toString();
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incremental);
+        reader = readerFor("{foo: \"" + string + "\"}", constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.STRING)
+                // This is an early-step out that causes the string value to be skipped.
+            ),
             next(null)
         );
         closeAndCount();
@@ -3165,6 +3225,112 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader.close();
     }
 
+    /**
+     * An InputStream that returns less than the number of bytes requested from bulk reads.
+     */
+    private static class ThrottlingInputStream extends InputStream {
+
+        private final byte[] data;
+        private final boolean throwFromReadOnEof;
+        private int offset = 0;
+
+        /**
+         * @param data the data for the InputStream to provide.
+         * @param throwFromReadOnEof true if the stream should throw {@link java.io.EOFException} when read() is called
+         *                           at EOF. If false, simply returns -1.
+         */
+        protected ThrottlingInputStream(byte[] data, boolean throwFromReadOnEof) {
+            this.data = data;
+            this.throwFromReadOnEof = throwFromReadOnEof;
+        }
+
+        @Override
+        public int read() {
+            return data[offset++] & 0xFF;
+        }
+
+        private int calculateNumberOfBytesToReturn(int numberOfBytesRequested) {
+            int available = data.length - offset;
+            int numberOfBytesToReturn;
+            if (available > 1 && numberOfBytesRequested > 1) {
+                // Return fewer bytes than requested and fewer than are available, avoiding EOF.
+                numberOfBytesToReturn = Math.min(available - 1, numberOfBytesRequested - 1);
+            } else if (available <= 0) {
+                return -1; // EOF
+            } else {
+                // Only 1 byte is available, so return it as long as at least 1 byte was requested.
+                numberOfBytesToReturn = Math.min(numberOfBytesRequested, available);
+            }
+            return numberOfBytesToReturn;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (off + len > b.length) {
+                throw new IndexOutOfBoundsException();
+            }
+            int numberOfBytesToReturn = calculateNumberOfBytesToReturn(len);
+            if (numberOfBytesToReturn < 0) {
+                if (throwFromReadOnEof) {
+                    throw new EOFException();
+                }
+                return -1;
+            }
+            System.arraycopy(data, offset, b, off, numberOfBytesToReturn);
+            offset += numberOfBytesToReturn;
+            return numberOfBytesToReturn;
+        }
+
+        @Override
+        public long skip(long len) {
+            int numberOfBytesToSkip = calculateNumberOfBytesToReturn((int) len);
+            offset += numberOfBytesToSkip;
+            return numberOfBytesToSkip;
+        }
+    }
+
+    @ParameterizedTest(name = "incrementalReadingEnabled={0},throwOnEof={1}")
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEof(boolean incrementalReadingEnabled, boolean throwOnEof) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incrementalReadingEnabled)
+            .withBufferConfiguration(IonBufferConfiguration.Builder.standard().withInitialBufferSize(8).build());
+        reader = readerFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'), throwOnEof));
+        assertSequence(
+            next(IonType.STRING), stringValue("abcdefghi"),
+            next(null)
+        );
+        reader.close();
+    }
+
+    @Test
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofAndTheReaderSkipsTheValue() throws Exception {
+        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20), false), 8, 8, byteAndOversizedValueCountingHandler);
+        assertSequence(
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        reader.close();
+        assertEquals(1, oversizedCounter.get());
+    }
+
+    @Test
+    public void shouldNotFailWhenGZIPBoundaryIsEncounteredInStringValue() throws Exception {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        // The following lines create a GZIP payload boundary (trailer/header) in the middle of an Ion string value.
+        pipe.receive(gzippedBytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b'));
+        pipe.receive(gzippedBytes('c', 'd', 'e', 'f', 'g', 'h', 'i'));
+        reader = readerFor(new GZIPInputStream(pipe));
+        assertSequence(
+            next(IonType.STRING), stringValue("abcdefghi"),
+            next(null)
+        );
+    }
+
     @Test
     public void concatenatedAfterGZIPHeader() throws Exception {
         // Tests that a stream that initially contains only a GZIP header can be read successfully if more data
@@ -3227,6 +3393,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
             next(null)
         );
         assertEquals(1, oversizedCounter.get());
+    }
+
+    @Test
+    public void shouldNotFailWhenProvidedWithAnEmptyByteArrayInputStream() throws Exception {
+        reader = IonReaderBuilder.standard().build(new ByteArrayInputStream(new byte[]{}));
+        assertSequence(next(null));
+        reader.close();
+        // The following ByteArrayInputStream is weird, but not disallowed. Its available() method will return -1.
+        reader = IonReaderBuilder.standard().build(new ByteArrayInputStream(new byte[]{}, 1, 1));
+        assertSequence(next(null));
+        reader.close();
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")

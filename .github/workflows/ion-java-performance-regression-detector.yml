@@ -6,7 +6,7 @@ name: Ion Java performance regression detector
 on:
   pull_request:
     paths:
-      - 'src/*'
+      - 'src/**'
 
 permissions:
   contents: read
@@ -74,12 +74,15 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ github.base_ref }}
+          submodules: recursive
           path: baseline
 
       - name: Checkout ion-java from the new commit.
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
+          submodules: recursive
           path: new
 
       - name: Download test Ion Data from artifacts
@@ -92,7 +95,7 @@ jobs:
       - name: Build ion-java from the base commit
         working-directory: baseline
         run: |
-          git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
+          ./gradlew clean publishToMavenLocal
 
       - name: Benchmark ion-java from the base commit
         working-directory: ion-java-benchmark-cli
@@ -104,7 +107,7 @@ jobs:
       - name: Build ion-java from the new commit
         working-directory: new
         run: |
-          git submodule init && git submodule update && ./gradlew clean publishToMavenLocal
+          ./gradlew clean publishToMavenLocal
 
       - name: Benchmark ion-java from the new commit
         working-directory: ion-java-benchmark-cli

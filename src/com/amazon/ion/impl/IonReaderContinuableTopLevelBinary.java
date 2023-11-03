@@ -97,6 +97,11 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             return null;
         }
         symbolTableLastTransferred = currentSymbolTable;
+        if (symbolTableLastTransferred.isLocalTable()) {
+            // This method is called when transferring the reader's symbol table to either a writer or an IonDatagram.
+            // Those cases require a mutable copy of the reader's symbol table.
+            return ((_Private_LocalSymbolTable) symbolTableLastTransferred).makeCopy();
+        }
         return symbolTableLastTransferred;
     }
 
@@ -303,8 +308,8 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             // of the value to be the end of the stream, in order to comply with the SeekableReader contract. From
             // an implementation perspective, this is not necessary; if we leave the buffer's limit unchanged, the
             // reader can continue after processing the hoisted value.
-            slice(binarySpan.bufferOffset, binarySpan.bufferLimit);
             restoreSymbolTable(binarySpan.symbolTable);
+            slice(binarySpan.bufferOffset, binarySpan.bufferLimit, binarySpan.symbolTable.getIonVersionId());
             type = null;
         }
     }

@@ -800,7 +800,7 @@ public final class _Private_Utils
         }
 
         SymbolTable[] imports =
-            ((LocalSymbolTable) symtab).getImportedTablesNoCopy();
+            ((_Private_LocalSymbolTable) symtab).getImportedTablesNoCopy();
 
         // Iterate over each import, we assume that the list of imports
         // rarely exceeds 5.
@@ -816,7 +816,7 @@ public final class _Private_Utils
             }
         }
 
-        return ((LocalSymbolTable) symtab).makeCopy();
+        return ((_Private_LocalSymbolTable) symtab).makeCopy();
     }
 
     /**

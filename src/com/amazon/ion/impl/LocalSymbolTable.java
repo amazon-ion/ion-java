@@ -51,7 +51,7 @@ import java.util.NoSuchElementException;
  * Instances of this class are safe for use by multiple threads.
  */
 class LocalSymbolTable
-    implements SymbolTable
+    implements _Private_LocalSymbolTable
 {
 
     static class Factory implements _Private_LocalSymbolTableFactory
@@ -329,7 +329,8 @@ class LocalSymbolTable
         return new LocalSymbolTableImports(importsList);
     }
 
-    synchronized LocalSymbolTable makeCopy()
+    @Override
+    public synchronized _Private_LocalSymbolTable makeCopy()
     {
         return new LocalSymbolTable(this, getMaxId());
     }
@@ -604,19 +605,8 @@ class LocalSymbolTable
         return myImportsList.getImportedTables();
     }
 
-    /**
-     * Returns the imported symbol tables without making a copy.
-     * <p>
-     * <b>Note:</b> Callers must not modify the resulting SymbolTable array!
-     * This will violate the immutability property of this class.
-     *
-     * @return
-     *          the imported symtabs, as-is; the first element is a system
-     *          symtab, the rest are non-system shared symtabs
-     *
-     * @see #getImportedTables()
-     */
-    SymbolTable[] getImportedTablesNoCopy()
+    @Override
+    public SymbolTable[] getImportedTablesNoCopy()
     {
         return myImportsList.getImportedTablesNoCopy();
     }
