@@ -1470,7 +1470,7 @@ class IonCursorBinary implements IonCursor {
             if (slowSeek(parent.endIndex - offset)) {
                 return event;
             }
-            peekIndex = parent.endIndex;
+            peekIndex = offset;
         }
         setCheckpointBeforeUnannotatedTypeId();
         if (--containerIndex >= 0) {
@@ -1808,7 +1808,9 @@ class IonCursorBinary implements IonCursor {
         valueMarker.endIndex = -1;
         event = Event.NEEDS_DATA;
         valueTid = null;
-        containerIndex = -1; // Slices are treated as if they were at the top level.
+        // Slices are treated as if they were at the top level.
+        parent = null;
+        containerIndex = -1;
         if (SystemSymbols.ION_1_0.equals(ionVersionId)) {
             typeIds = IonTypeID.TYPE_IDS_1_0;
             majorVersion = 1;

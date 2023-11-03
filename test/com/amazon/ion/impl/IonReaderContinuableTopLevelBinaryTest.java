@@ -1725,6 +1725,33 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void skipReallyLargeStringInContainer(boolean constructFromBytes, boolean incremental) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        // 70000 is greater than twice the default buffer size of 32768. This ensures that the string, when skipped,
+        // will not be fully contained in the buffer.
+        for (int i = 0; i < 70000; i++) {
+            sb.append('a');
+        }
+        String string = sb.toString();
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incremental);
+        reader = readerFor("{foo: \"" + string + "\"}", constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.STRING)
+                // This is an early-step out that causes the string value to be skipped.
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
     public void nopPadInAnnotationWrapperFails(boolean constructFromBytes) throws Exception {
