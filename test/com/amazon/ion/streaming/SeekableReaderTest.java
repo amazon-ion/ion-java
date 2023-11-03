@@ -264,6 +264,29 @@ public class SeekableReaderTest
     }
 
     @Test
+    public void testHoistingNestedContainerWithoutSteppingOutOfParent()
+    {
+        read("{first: {foo: bar}, second: a::{baz: zar}, third: 123}");
+        in.next();
+        in.stepIn();
+        in.next();
+        in.next();
+        Span span = sr.currentSpan();
+        in.next();
+        // Note: we do not step out of the struct.
+
+        hoist(span);
+        assertSame(IonType.STRUCT, in.next());
+        expectTopLevel();
+        Assert.assertArrayEquals(new String[]{"a"}, in.getTypeAnnotations());
+        in.stepIn();
+        in.next();
+        assertEquals("zar", in.stringValue());
+        in.stepOut();
+        expectTopEof();
+    }
+
+    @Test
     public void testHoistingAcrossSymbolTableBoundary()
         throws IOException
     {
