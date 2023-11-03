@@ -389,7 +389,10 @@ class IonCursorBinary implements IonCursor {
         ByteArrayInputStream inputStream,
         int alreadyReadLen
     ) {
-        int fixedBufferSize = inputStream.available();
+        // Note: ByteArrayInputStream.available() can return a negative number because its constructor does
+        // not validate that the offset and length provided are actually within range of the provided byte array.
+        // Setting the result to 0 in this case avoids an error when looking up the fixed sized configuration.
+        int fixedBufferSize = Math.max(0, inputStream.available());
         if (alreadyReadLen > 0) {
             fixedBufferSize += alreadyReadLen;
         }
