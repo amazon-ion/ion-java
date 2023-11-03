@@ -39,6 +39,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -3230,10 +3231,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
     private static class ThrottlingInputStream extends InputStream {
 
         private final byte[] data;
+        private final boolean throwFromReadOnEof;
         private int offset = 0;
 
-        protected ThrottlingInputStream(byte[] data) {
+        /**
+         * @param data the data for the InputStream to provide.
+         * @param throwFromReadOnEof true if the stream should throw {@link java.io.EOFException} when read() is called
+         *                           at EOF. If false, simply returns -1.
+         */
+        protected ThrottlingInputStream(byte[] data, boolean throwFromReadOnEof) {
             this.data = data;
+            this.throwFromReadOnEof = throwFromReadOnEof;
         }
 
         @Override
@@ -3257,9 +3265,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
 
         @Override
-        public int read(byte[] b, int off, int len) {
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (off + len > b.length) {
+                throw new IndexOutOfBoundsException();
+            }
             int numberOfBytesToReturn = calculateNumberOfBytesToReturn(len);
             if (numberOfBytesToReturn < 0) {
+                if (throwFromReadOnEof) {
+                    throw new EOFException();
+                }
                 return -1;
             }
             System.arraycopy(data, offset, b, off, numberOfBytesToReturn);
@@ -3275,12 +3289,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
-    @ParameterizedTest(name = "incrementalReadingEnabled={0}")
-    @ValueSource(booleans = {true, false})
-    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEof(boolean incrementalReadingEnabled) throws Exception {
+    @ParameterizedTest(name = "incrementalReadingEnabled={0},throwOnEof={1}")
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEof(boolean incrementalReadingEnabled, boolean throwOnEof) throws Exception {
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(incrementalReadingEnabled)
             .withBufferConfiguration(IonBufferConfiguration.Builder.standard().withInitialBufferSize(8).build());
-        reader = readerFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i')));
+        reader = readerFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'), throwOnEof));
         assertSequence(
             next(IonType.STRING), stringValue("abcdefghi"),
             next(null)
@@ -3290,7 +3309,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @Test
     public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofAndTheReaderSkipsTheValue() throws Exception {
-        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20)), 8, 8, byteAndOversizedValueCountingHandler);
+        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20), false), 8, 8, byteAndOversizedValueCountingHandler);
         assertSequence(
             next(IonType.INT), intValue(0),
             next(null)
