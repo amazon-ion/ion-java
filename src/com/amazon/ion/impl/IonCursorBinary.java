@@ -9,6 +9,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
+import com.amazon.ion.SystemSymbols;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -388,7 +389,10 @@ class IonCursorBinary implements IonCursor {
         ByteArrayInputStream inputStream,
         int alreadyReadLen
     ) {
-        int fixedBufferSize = inputStream.available();
+        // Note: ByteArrayInputStream.available() can return a negative number because its constructor does
+        // not validate that the offset and length provided are actually within range of the provided byte array.
+        // Setting the result to 0 in this case avoids an error when looking up the fixed sized configuration.
+        int fixedBufferSize = Math.max(0, inputStream.available());
         if (alreadyReadLen > 0) {
             fixedBufferSize += alreadyReadLen;
         }
@@ -523,8 +527,7 @@ class IonCursorBinary implements IonCursor {
             refillableState.bytesRequested = numberOfBytes + (index - offset);
             if (ensureCapacity(refillableState.bytesRequested)) {
                 // Fill all the free space, not just the shortfall; this reduces I/O.
-                refill(freeSpaceAt(limit));
-                shortfall = refillableState.bytesRequested - availableAt(offset);
+                shortfall = refill(refillableState.bytesRequested);
             } else {
                 // The request cannot be satisfied, but not because data was unavailable. Return normally; it is the
                 // caller's responsibility to recover.
@@ -645,24 +648,34 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Fills the buffer with up to the requested number of additional bytes. It is the caller's responsibility to
-     * ensure that there is space in the buffer.
-     * @param numberOfBytesToFill the number of additional bytes to attempt to add to the buffer.
+     * Attempts to fill the buffer with up to the requested number of additional bytes. It is the caller's
+     * responsibility to ensure that there is space in the buffer.
+     * @param minimumNumberOfBytesRequired the minimum number of bytes requested to fill the current value.
+     * @return the shortfall between the number of bytes that were filled and the minimum number requested. If less than
+     *  1, then at least `minimumNumberOfBytesRequired` were filled.
      */
-    private void refill(long numberOfBytesToFill) {
+    private long refill(long minimumNumberOfBytesRequired) {
         int numberOfBytesFilled = -1;
-        try {
-            numberOfBytesFilled = refillableState.inputStream.read(buffer, (int) limit, (int) numberOfBytesToFill);
-        } catch (EOFException e) {
-            // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
-            // to read than are currently available (e.g. if a header or trailer is incomplete).
-        } catch (IOException e) {
-            throwAsIonException(e);
-        }
-        if (numberOfBytesFilled < 0) {
-            return;
-        }
-        limit += numberOfBytesFilled;
+        long shortfall;
+        // Sometimes an InputStream implementation will return fewer than the number of bytes requested even
+        // if the stream is not at EOF. If this happens and there is still a shortfall, keep requesting bytes
+        // until either the shortfall is filled or EOF is reached.
+        do {
+            try {
+                numberOfBytesFilled = refillableState.inputStream.read(buffer, (int) limit, (int) freeSpaceAt(limit));
+            } catch (EOFException e) {
+                // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
+                // to read than are currently available (e.g. if a header or trailer is incomplete).
+                numberOfBytesFilled = -1;
+            } catch (IOException e) {
+                throwAsIonException(e);
+            }
+            if (numberOfBytesFilled > 0) {
+                limit += numberOfBytesFilled;
+            }
+            shortfall = minimumNumberOfBytesRequired - availableAt(offset);
+        } while (shortfall > 0 && numberOfBytesFilled >= 0);
+        return shortfall;
     }
 
     /**
@@ -1457,7 +1470,7 @@ class IonCursorBinary implements IonCursor {
             if (slowSeek(parent.endIndex - offset)) {
                 return event;
             }
-            peekIndex = parent.endIndex;
+            peekIndex = offset;
         }
         setCheckpointBeforeUnannotatedTypeId();
         if (--containerIndex >= 0) {
@@ -1786,15 +1799,26 @@ class IonCursorBinary implements IonCursor {
      * can be used to seek the reader to a "span" of bytes that represent a value in the stream.
      * @param offset the offset at which the slice will begin.
      * @param limit the slice's limit.
+     * @param ionVersionId the Ion version ID for the slice, e.g. $ion_1_0 for Ion 1.0.
      */
-    void slice(long offset, long limit) {
+    void slice(long offset, long limit, String ionVersionId) {
         peekIndex = offset;
         this.limit = limit;
         setCheckpointBeforeUnannotatedTypeId();
         valueMarker.endIndex = -1;
         event = Event.NEEDS_DATA;
         valueTid = null;
-        containerIndex = -1; // Slices are treated as if they were at the top level.
+        // Slices are treated as if they were at the top level.
+        parent = null;
+        containerIndex = -1;
+        if (SystemSymbols.ION_1_0.equals(ionVersionId)) {
+            typeIds = IonTypeID.TYPE_IDS_1_0;
+            majorVersion = 1;
+            minorVersion = 0;
+        } else {
+            // TODO changes are needed here to support Ion 1.1.
+            throw new IonException(String.format("Attempted to seek using an unsupported Ion version %s.", ionVersionId));
+        }
     }
 
     /**

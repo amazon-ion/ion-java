@@ -19,6 +19,7 @@ import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReaderMaker;
+import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl._Private_Utils;
@@ -263,6 +264,29 @@ public class SeekableReaderTest
     }
 
     @Test
+    public void testHoistingNestedContainerWithoutSteppingOutOfParent()
+    {
+        read("{first: {foo: bar}, second: a::{baz: zar}, third: 123}");
+        in.next();
+        in.stepIn();
+        in.next();
+        in.next();
+        Span span = sr.currentSpan();
+        in.next();
+        // Note: we do not step out of the struct.
+
+        hoist(span);
+        assertSame(IonType.STRUCT, in.next());
+        expectTopLevel();
+        Assert.assertArrayEquals(new String[]{"a"}, in.getTypeAnnotations());
+        in.stepIn();
+        in.next();
+        assertEquals("zar", in.stringValue());
+        in.stepOut();
+        expectTopEof();
+    }
+
+    @Test
     public void testHoistingAcrossSymbolTableBoundary()
         throws IOException
     {
@@ -325,6 +349,22 @@ public class SeekableReaderTest
         assertEquals("abc", in.stringValue());
 
         expectTopEof();
+    }
+
+    @Test
+    public void testHoistingFromSpanCreatedByDifferentReaderBeforeNext()
+    {
+        read("foo bar");
+        in.next();
+        in.next();
+        Span barSpan = sr.currentSpan();
+
+        read("foo bar"); // Creates a new reader
+        initFacets();
+
+        hoist(barSpan);
+        assertSame(IonType.SYMBOL, in.next());
+        assertEquals("bar", in.stringValue());
     }
 
 
