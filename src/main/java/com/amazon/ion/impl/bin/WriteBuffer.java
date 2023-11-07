@@ -104,17 +104,6 @@ import java.util.List;
         return (((long) index) * allocator.getBlockSize()) + current.limit;
     }
 
-    private static final int OCTET_MASK = 0xFF;
-
-    /** Returns the octet at the logical position given. */
-    public int getUInt8At(final long position)
-    {
-        final int index = index(position);
-        final int offset = offset(position);
-        final Block block = blocks.get(index);
-        return block.data[offset] & OCTET_MASK;
-    }
-
     /** Writes a single octet to the buffer, expanding if necessary. */
     public void writeByte(final byte octet)
     {
@@ -1266,10 +1255,22 @@ import java.util.List;
     {
         final int index = index(position);
         final int offset = offset(position);
-
         // XXX we'll never overrun a block unless we're given a position past our block array
         final Block block = blocks.get(index);
         block.data[offset] = (byte) value;
+    }
+
+    /**
+     * Overwrite the lower nibble of the specified type descriptor byte with the length information.
+     * @param position represents the position of the byte that will be overwritten.
+     * @param value represents the length value of the container.
+     */
+    public void writeLowerNibbleAt(final long position, final long value) {
+        final int index = index(position);
+        final int offset = offset(position);
+        final Block block = blocks.get(index);
+        long bitValue = block.data[offset];
+        block.data[offset] = (byte) (bitValue & 0xF0 | value) ;
     }
 
     /** Get the length of FlexInt for the provided value. */
