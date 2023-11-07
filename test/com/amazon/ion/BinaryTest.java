@@ -17,9 +17,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 
 import org.junit.Test;
 

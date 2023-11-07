@@ -17,13 +17,11 @@ package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.ContainedValueException;
 import com.amazon.ion.IonSequence;
-import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.IonWriter;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl._Private_CurriedValueFactory;
 import com.amazon.ion.impl._Private_IonValue;
-import java.io.IOException;
+
 import java.lang.reflect.Array;
 import java.util.AbstractList;
 import java.util.ArrayList;
