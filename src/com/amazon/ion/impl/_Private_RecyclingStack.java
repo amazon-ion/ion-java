@@ -11,7 +11,7 @@ import java.util.NoSuchElementException;
  * @param <T> the type of elements stored.
  */
 public final class _Private_RecyclingStack<T> implements Iterable<T> {
-    private $Iterator stackIterator;
+    public  $Iterator stackIterator;
     @Override
     public ListIterator<T> iterator() {
         if (stackIterator != null) {
