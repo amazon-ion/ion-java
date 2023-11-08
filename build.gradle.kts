@@ -139,7 +139,6 @@ tasks {
         outputs.file(outputJarPath)
         dependsOn(shadowJar)
         dependsOn(configurations.runtimeClasspath)
-        build.get().dependsOn(this)
         classpath(r8Classpath)
 
         // These lines tell gradle how to run the task
@@ -152,6 +151,10 @@ tasks {
             "--lib", System.getProperty("java.home").toString(),
             "$inputJarPath",
         )
+    }
+
+    build {
+        dependsOn(minifyJar)
     }
 
     generateLicenseReport {
@@ -169,10 +172,9 @@ tasks {
     }
 
     // Task to check whether the THIRD_PARTY_LICENSES file is still up-to-date.
-    task("checkThirdPartyLicensesFile") {
+    val checkThirdPartyLicensesFile by register("checkThirdPartyLicensesFile") {
         val thirdPartyLicensesFileName = "THIRD_PARTY_LICENSES.md"
         val thirdPartyLicensesPath = "$rootDir/$thirdPartyLicensesFileName"
-        check.get().dependsOn(this)
         dependsOn(generateLicenseReport)
         inputs.file(thirdPartyLicensesPath)
         group = "verification"
@@ -196,6 +198,10 @@ tasks {
                 )
             }
         }
+    }
+
+    check {
+        dependsOn(checkThirdPartyLicensesFile)
     }
 
     javadoc {
