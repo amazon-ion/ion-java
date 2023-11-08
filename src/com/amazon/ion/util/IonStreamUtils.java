@@ -16,6 +16,7 @@
 package com.amazon.ion.util;
 
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
+import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_1;
 import static com.amazon.ion.util.GzipOrRawInputStream.GZIP_HEADER;
 
 import com.amazon.ion.IonException;
@@ -70,7 +71,8 @@ public class IonStreamUtils
      */
     public static boolean isIonBinary(byte[] buffer, int offset, int length)
     {
-        return cookieMatches(BINARY_VERSION_MARKER_1_0, buffer, offset, length);
+        return cookieMatches(BINARY_VERSION_MARKER_1_0, buffer, offset, length)
+            || cookieMatches(BINARY_VERSION_MARKER_1_1, buffer, offset, length);
     }
 
 
