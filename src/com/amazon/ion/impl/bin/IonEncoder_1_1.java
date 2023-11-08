@@ -263,7 +263,7 @@ public class IonEncoder_1_1 {
                     throw new IllegalStateException("This is unreachable!");
             }
         } else {
-            long localOffset = value.getLocalOffset().longValue() / 15;
+            long localOffset = (value.getLocalOffset().longValue() / 15) + (14 * 4);
             bits |= (localOffset & LEAST_SIGNIFICANT_7_BITS) << S_O_TIMESTAMP_OFFSET_BIT_OFFSET;
 
             if (value.getPrecision() == Timestamp.Precision.MINUTE) {
