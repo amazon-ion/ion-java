@@ -955,12 +955,50 @@ class IonCursorBinary implements IonCursor {
 
     /* ---- Ion 1.1 ---- */
 
-    private long uncheckedReadVarUInt_1_1() {
-        throw new UnsupportedOperationException();
+    /**
+     * Reads a FlexUInt. NOTE: the FlexUInt must fit in a `long`. This must only be called when it is known that the
+     * buffer already contains all the bytes in the FlexUInt.
+     * @return the value.
+     */
+    private long uncheckedReadFlexUInt_1_1() {
+        int currentByte = buffer[(int) peekIndex++] & 0xFF;
+        if ((currentByte & 1) == 1) { // TODO perf: analyze whether the special case check is a net positive
+            // Single-byte.
+            return currentByte >>> 1;
+        }
+        if (currentByte == 0) { // The first byte is 0, so there are at least 9 bytes.
+            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+        }
+        // TODO perf: try putting the rest in its own method
+        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
+        long result = currentByte >>> length;
+        for (byte i = 1; i < length; i++) {
+            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        }
+        return result;
     }
 
-    private long slowReadVarUInt_1_1() {
-        throw new UnsupportedOperationException();
+    /**
+     * Reads a FlexUInt, ensuring enough data is available in the buffer. NOTE: the FlexUInt must fit in a `long`.
+     * @return the value.
+     */
+    private long slowReadFlexUInt_1_1() {
+        // TODO perf: try 1-byte special case checks. Least-significant bits of 1 indicate 1-byte
+        int currentByte = slowPeekByte();
+        if (currentByte == 0) {
+            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+        }
+        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
+        long result = currentByte >>> length;
+        int numberOfBytesRead = 0;
+        while (numberOfBytesRead++ < length - 1) {
+            currentByte = slowReadByte();
+            if (currentByte < 0) {
+                return -1;
+            }
+            result |= ((long) currentByte << (8 * numberOfBytesRead - length));
+        }
+        return result;
     }
 
     private boolean uncheckedReadAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
@@ -971,8 +1009,29 @@ class IonCursorBinary implements IonCursor {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Calculates the end index for the given type ID and sets `event` based on the type of value encountered, if any.
+     * At the time of invocation, `peekIndex` must point to the first byte after the value's type ID byte. After return,
+     * `peekIndex` will point to the first byte in the value's representation, or, in the case of a NOP pad, the first
+     * byte that follows the pad.
+     * @param valueTid the type ID of the value.
+     * @param isAnnotated true if the value is annotated.
+     * @return the end index of the value or NOP pad.
+     */
     private long calculateEndIndex_1_1(IonTypeID valueTid, boolean isAnnotated) {
-        throw new UnsupportedOperationException();
+        if (valueTid.isDelimited) {
+            event = Event.START_CONTAINER;
+            return DELIMITED_MARKER;
+        }
+        long endIndex = (valueTid.variableLength ? uncheckedReadFlexUInt_1_1() : valueTid.length) + peekIndex;
+        if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
+            event = Event.START_CONTAINER;
+        } else if (valueTid.isNopPad) {
+            uncheckedSeekPastNopPad(endIndex, isAnnotated);
+        } else {
+            event = Event.START_SCALAR;
+        }
+        return endIndex;
     }
 
     private void uncheckedReadFieldName_1_1() {
@@ -1138,6 +1197,8 @@ class IonCursorBinary implements IonCursor {
         }
         if (minorVersion == 0) {
             typeIds = IonTypeID.TYPE_IDS_1_0;
+        } else if (minorVersion == 1) {
+            typeIds = IonTypeID.TYPE_IDS_1_1;
         } else {
             throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
         }
@@ -1313,7 +1374,7 @@ class IonCursorBinary implements IonCursor {
             if (!fillAt(peekIndex, 2)) {
                 return true;
             }
-            valueLength = minorVersion == 0 ? slowReadVarUInt_1_0() : slowReadVarUInt_1_1();
+            valueLength = minorVersion == 0 ? slowReadVarUInt_1_0() : slowReadFlexUInt_1_1();
             if (valueLength < 0) {
                 return true;
             }
