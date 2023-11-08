@@ -49,18 +49,40 @@ final class IonTypeID {
         null // The 0xF type code is illegal in Ion 1.0.
     };
 
+    private static final IonType[] BINARY_TOKEN_TYPES_1_1 = new IonType[] {
+        null, // 0: macro invocation
+        null, // 1: macro invocation
+        null, // 2: macro invocation
+        null, // 3: macro invocation
+        null, // 4: macro invocation
+        null, // 5: int, float, bool
+        IonType.DECIMAL,
+        IonType.TIMESTAMP,
+        IonType.STRING,
+        IonType.SYMBOL,
+        IonType.LIST,
+        IonType.SEXP,
+        IonType.STRUCT, // symbol ID field names
+        IonType.STRUCT, // FlexSym field names
+        null, // E: symbol ID, annotated value, NOP, null, system macro invocation
+        null  // F: variable length macro, variable length of all types, delimited start/end
+    };
+
     // Singleton invalid type ID.
     private static final IonTypeID ALWAYS_INVALID_TYPE_ID = new IonTypeID((byte) 0xFF, 0);
 
     // Pre-compute all possible type ID bytes.
     static final IonTypeID[] TYPE_IDS_NO_IVM;
     static final IonTypeID[] TYPE_IDS_1_0;
+    static final IonTypeID[] TYPE_IDS_1_1;
     static {
         TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
         TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
+        TYPE_IDS_1_1 = new IonTypeID[NUMBER_OF_BYTES];
         for (int b = 0x00; b < NUMBER_OF_BYTES; b++) {
             TYPE_IDS_NO_IVM[b] = ALWAYS_INVALID_TYPE_ID;
             TYPE_IDS_1_0[b] = new IonTypeID((byte) b, 0);
+            TYPE_IDS_1_1[b] = new IonTypeID((byte) b, 1);
         }
     }
 
@@ -72,15 +94,15 @@ final class IonTypeID {
     final byte lowerNibble;
     final boolean isValid;
     final boolean isNegativeInt;
-    final boolean isTemplateInvocation; // Unused in Ion 1.0
-    final int templateId; // Unused in Ion 1.0
-    final boolean isDelimited; // Unused in Ion 1.0
+    final boolean isMacroInvocation;
+    final int macroId;
+    final boolean isDelimited;
     // For structs, denotes whether field names are VarSyms. For symbols, denotes whether the text is inline.
     // For annotation wrappers, denotes whether tokens are VarSyms.
-    final boolean isInlineable; // Unused in Ion 1.0
+    final boolean isInlineable;
 
     /**
-     * Determines whether the Ion spec allows this particular upperNibble/lowerNibble pair.
+     * Determines whether the Ion 1.0 spec allows this particular upperNibble/lowerNibble pair.
      */
     private static boolean isValid_1_0(byte upperNibble, byte lowerNibble, IonType type) {
         if (upperNibble == TYPE_CODE_INVALID) {
@@ -107,6 +129,20 @@ final class IonTypeID {
             return lowerNibble >= ANNOTATION_WRAPPER_MIN_LENGTH && lowerNibble <= ANNOTATION_WRAPPER_MAX_LENGTH;
         }
         return true;
+    }
+
+    /**
+     * Determines whether the Ion 1.1 spec allows this particular upperNibble/lowerNibble pair.
+     */
+    private static boolean isValid_1_1(byte id) {
+        return !(
+            id == (byte) 0x59
+            || id == (byte) 0xC1
+            || id == (byte) 0xD0
+            || id == (byte) 0xD1
+            || id == (byte) 0xE0
+            || id == (byte) 0xEE
+        );
     }
 
     private IonTypeID(byte id, int minorVersion) {
@@ -136,12 +172,177 @@ final class IonTypeID {
             }
             this.isNegativeInt = type == IonType.INT && upperNibble == NEGATIVE_INT_TYPE_CODE;
             this.length = length;
-            this.isTemplateInvocation = false;
-            this.templateId = -1;
+            this.isMacroInvocation = false;
+            this.macroId = -1;
             this.isDelimited = false;
             this.isInlineable = false;
         } else {
-            throw new IllegalStateException("Only Ion 1.0 is currently supported.");
+            isValid = isValid_1_1(id);
+            byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
+            // For 0xF0 (delimited end byte) the entire byte is included. This avoids having to create a separate field
+            // just to identify this byte.
+            lowerNibble = (id == (byte) 0xF0) ? (byte) 0xF0 : (byte) (id & LOW_NIBBLE_BITMASK);
+            isNegativeInt = false; // Not applicable for Ion 1.1; sign is conveyed by the representation.
+            // 0xF4 is a length-prefixed macro invocation; 0xEF is a system macro invocation.
+            isMacroInvocation = upperNibble <= 0x4 || id == (byte) 0xF4 || id == (byte) 0xEF;
+            boolean isNopPad = false;
+            boolean isNull = false;
+            int length = -1;
+            if (isMacroInvocation) {
+                if (upperNibble == 0x4) {
+                    variableLength = true;
+                    // This isn't the whole macro ID, but it's all the relevant bits from the type ID byte (the 4
+                    // least-significant bits).
+                    macroId = lowerNibble;
+                } else if (upperNibble < 0x4){
+                    variableLength = false;
+                    macroId = id;
+                } else {
+                    // System or length-prefixed macro invocation.
+                    variableLength = upperNibble == 0xF;
+                    macroId = -1;
+                }
+                type = null;
+                isInlineable = false;
+            } else {
+                macroId = -1;
+                variableLength =
+                       (upperNibble == 0xF && lowerNibble >= 0x4) // Variable length, all types.
+                    || (upperNibble == 0x6 && lowerNibble == 0xF) // Decimal with negative-zero coefficient.
+                    || (upperNibble == 0xE && lowerNibble == 0x6) // Variable length annotation SIDs.
+                    || (upperNibble == 0xE && lowerNibble == 0x9) // Variable length annotation FlexSyms.
+                    || (upperNibble == 0xE && lowerNibble == 0xD); // Variable length NOP.
+                isInlineable =
+                       // struct with VarSym field names.
+                       (upperNibble == 0xD && lowerNibble >= 0x2)
+                       // Delimited struct, variable-length symbol, variable-length struct with FlexSym field names.
+                    || (upperNibble == 0xF && (lowerNibble == 0x3 || lowerNibble == 0x9 || lowerNibble == 0xD))
+                       // Annotation wrappers with VarSyms.
+                    || (upperNibble == 0xE && lowerNibble >= 0x7 && lowerNibble <= 9)
+                       // Symbol values with inline text.
+                    || upperNibble == 0x9;
+                IonType typeFromUpperNibble = BINARY_TOKEN_TYPES_1_1[upperNibble];
+                if (typeFromUpperNibble == null) {
+                    if (!isValid) {
+                        type = null;
+                    } else if (upperNibble == 0x5) {
+                        if (lowerNibble <= 0x8) {
+                            type = IonType.INT;
+                            length = lowerNibble;
+                        } else if (lowerNibble >= 0xE) {
+                            type = IonType.BOOL;
+                            length = 0;
+                        } else {
+                            type = IonType.FLOAT;
+                            if (lowerNibble == 0xA) {
+                                length = 0; // 0e0
+                            } else if (lowerNibble == 0xB) {
+                                length = 2;
+                            } else if (lowerNibble == 0xC) {
+                                length = 4;
+                            } else if (lowerNibble == 0xD) {
+                                length = 8;
+                            }
+                        }
+                    } else if (upperNibble == 0xE) {
+                        if (lowerNibble <= 0x3) {
+                            type = IonType.SYMBOL;
+                            length = lowerNibble == 0x3 ? -1 : lowerNibble;
+                        } else if (lowerNibble <= 0x9) {
+                            type = ION_TYPE_ANNOTATION_WRAPPER;
+                        } else if (lowerNibble == 0xA) {
+                            // null.null
+                            type = IonType.NULL;
+                            isNull = true;
+                            length = 0;
+                        } else if (lowerNibble == 0xB) {
+                            // Typed null. Type byte follows.
+                            type = null;
+                            isNull = true;
+                        } else if (lowerNibble <= 0xD) {
+                            isNopPad = true;
+                            type = null;
+                            length = variableLength ? -1 : 0;
+                        } else { // 0xF
+                            // System macro invocation.
+                            type = null;
+                        }
+                    } else { // 0xF
+                        if (lowerNibble == 0) {
+                            // Delimited end
+                            type = null;
+                            length = 0;
+                        } else if (lowerNibble == 0x3 || lowerNibble == 0xC || lowerNibble == 0xD) {
+                            type = IonType.STRUCT;
+                        } else if (lowerNibble == 0x5) {
+                            type = IonType.INT;
+                        } else if (lowerNibble == 0x6) {
+                            type = IonType.DECIMAL;
+                        } else if (lowerNibble == 0x7) {
+                            type = IonType.TIMESTAMP;
+                        } else if (lowerNibble == 0x9) {
+                            type = IonType.SYMBOL;
+                        } else if (lowerNibble == 0x8) {
+                            type = IonType.STRING;
+                        } else if (lowerNibble == 0xE) {
+                            type = IonType.BLOB;
+                        } else if (lowerNibble == 0xF) {
+                            type = IonType.CLOB;
+                        } else if (lowerNibble == 0x1 || lowerNibble == 0xA) {
+                            type = IonType.LIST;
+                        } else if  (lowerNibble == 0x2 || lowerNibble == 0xB) {
+                            type = IonType.SEXP;
+                        } else { // 0x4
+                            // Variable length macro invocation
+                            type = null;
+                        }
+                    }
+                } else {
+                    type = typeFromUpperNibble;
+                    if (type == IonType.TIMESTAMP) {
+                        // Short-form timestamps. Long-form timestamps use the upper nibble 0xF, forcing them to take
+                        // the previous branch.
+                        switch (lowerNibble) {
+                            case 0x0:
+                                length = 1;
+                                break;
+                            case 0x1:
+                            case 0x2:
+                                length = 2;
+                                break;
+                            case 0x3:
+                                length = 4;
+                                break;
+                            case 0x4:
+                            case 0x8:
+                            case 0x9:
+                                length = 5;
+                                break;
+                            case 0x5:
+                                length = 6;
+                                break;
+                            case 0x6:
+                            case 0xA:
+                                length = 7;
+                                break;
+                            case 0x7:
+                            case 0xB:
+                                length = 8;
+                                break;
+                            case 0xC:
+                                length = 9;
+                                break;
+                        }
+                    } else if (type != IonType.DECIMAL || lowerNibble != 0xF) {
+                        // Negative-zero coefficient decimals are always variable-length.
+                        length = lowerNibble;
+                    }
+                }
+            }
+            isDelimited = upperNibble == 0xF && lowerNibble <= 0x3;
+            this.isNopPad = isNopPad;
+            this.isNull = isNull;
+            this.length = length;
         }
     }
 
