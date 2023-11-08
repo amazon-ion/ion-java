@@ -139,6 +139,7 @@ public abstract class IonBinaryWriterBuilder
      */
     public abstract SymbolTable getInitialSymbolTable();
 
+    public abstract _Private_IonBinaryWriterBuilder withAutoFlushEnbaled(boolean autoFlushEnbaled);
 
     /**
      * Declares the symbol table to use for encoded data.

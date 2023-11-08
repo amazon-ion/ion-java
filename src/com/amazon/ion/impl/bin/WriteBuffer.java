@@ -30,11 +30,14 @@ import java.util.List;
     private final List<Block> blocks;
     private Block current;
     private int index;
+    private IonRawBinaryWriter rawBinaryWriter;
 
-    public WriteBuffer(final BlockAllocator allocator)
+
+    public WriteBuffer(final BlockAllocator allocator, IonRawBinaryWriter rawBinaryWriter)
     {
         this.allocator = allocator;
         this.blocks = new ArrayList<Block>();
+        this.rawBinaryWriter = rawBinaryWriter;
 
         // initial seed of the first block
         allocateNewBlock();
@@ -137,12 +140,14 @@ import java.util.List;
                 if (index == blocks.size() - 1)
                 {
                     allocateNewBlock();
+                    if (rawBinaryWriter.autoFlushEnabled){
+                        rawBinaryWriter.flushAfterCurrentValue = true;
+                    }
                 }
                 index++;
                 current = blocks.get(index);
             }
         }
-
     }
 
     /** Writes an array of bytes to the buffer expanding if necessary. */

@@ -24,12 +24,55 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
+import com.amazon.ion.system.IonBinaryWriterBuilder;
+import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("deprecation")
 public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
 {
+    private ByteArrayOutputStream source = new ByteArrayOutputStream();
+    private ByteArrayOutputStream expectedOut = new ByteArrayOutputStream();
+    private int flushTimes = 0;
+    @Before
+    public void generateTestData() throws IOException {
+        // Writing test data with continuous extending symbol table. After completing writing 3300th value, the local symbol table will stop growing.
+        IonWriter defaultWriter = IonBinaryWriterBuilder.standard().build(source);
+        int i = 0;
+        while (i < 3300) {
+            defaultWriter.stepIn(IonType.STRUCT);
+            defaultWriter.setFieldName("taco" + i);
+            defaultWriter.writeString("burrito");
+            defaultWriter.stepOut();
+            i++;
+        }
+        while (i >= 3300 && i < 3400) {
+            defaultWriter.stepIn(IonType.STRUCT);
+            defaultWriter.setFieldName("taco" + 3);
+            defaultWriter.writeString("burrito");
+            defaultWriter.stepOut();
+            i++;
+        }
+        defaultWriter.finish();
+        IonReader reader = system().newReader(source.toByteArray());
+        // While writing the 2990th data structure, the cumulative size of the written data will exceed the current block size.
+        // If auto-flush enabled, the flush() operation will be executed after completing the 2990th struct. The output should be the same as manually flush after writing the 2990th data.
+        int flushPeriod = 2990;
+        int index = 0;
+
+        IonWriter expectedWriter = IonBinaryWriterBuilder.standard().withLocalSymbolTableAppendEnabled().build(expectedOut);
+        while (reader.next() != null) {
+            expectedWriter.writeValue(reader);
+            index++;
+            if (index == flushPeriod) {
+                expectedWriter.flush();
+                index = 0;
+            }
+        }
+        expectedWriter.finish();
+    }
 
     @Test
     public void testSetStringAnnotations() throws Exception
@@ -102,6 +145,21 @@ public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
         assertEquals(3, dg.systemSize());
         assertEquals("$ion_symbol_table", ((IonStruct) dg.systemGet(1)).getTypeAnnotations()[0]);
         assertEquals("burrito", ((IonSymbol) dg.systemGet(2)).stringValue());
+    }
+
+    @Test
+    public void testAutoFlush() throws Exception{
+
+        IonReader reader = system().newReader(source.toByteArray());
+        ByteArrayOutputStream actual = new ByteArrayOutputStream();
+        IonWriter actualWriter = IonBinaryWriterBuilder.standard().withAutoFlushEnbaled(true).build(actual);
+        while (reader.next() != null) {
+            actualWriter.writeValue(reader);
+        }
+        actualWriter.finish();
+        if (lstAppendMode.isEnabled() && autoFlushMode.isEnabled()) {
+            assertArrayEquals(actual.toByteArray(), expectedOut.toByteArray());
+        }
     }
 
     @Test

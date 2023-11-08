@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
@@ -36,15 +37,36 @@ public class WriteBufferTest
 {
     // XXX make this a prime to make it more likely that we collide on the edges of the buffer
     private static BlockAllocator ALLOCATOR = BlockAllocatorProviders.basicProvider().vendAllocator(11);
+    private static BlockAllocatorProvider provider = BlockAllocatorProviders.basicProvider();
+    private ByteArrayOutputStream out;
+    private OutputStream outputStream = new ByteArrayOutputStream();
+    private IonRawBinaryWriter rawBinaryWriter;
+
+    {
+        try {
+            rawBinaryWriter = new IonRawBinaryWriter(
+                provider,
+                5,
+                outputStream,
+                AbstractIonWriter.WriteValueOptimization.NONE, // optimization is not relevant for the nested raw writer
+                IonRawBinaryWriter.StreamCloseMode.NO_CLOSE,
+                IonRawBinaryWriter.StreamFlushMode.NO_FLUSH,
+                IonRawBinaryWriter.PreallocationMode.PREALLOCATE_1,
+                false,
+                true,
+                null
+        );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private WriteBuffer buf;
 
-    private ByteArrayOutputStream out;
-
     @BeforeEach
-    public void setup()
+    public void setup() throws IOException
     {
-        buf = new WriteBuffer(ALLOCATOR);
+        buf = rawBinaryWriter.getCurrentBuffer();
         out = new ByteArrayOutputStream();
     }
 
