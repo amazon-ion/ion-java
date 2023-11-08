@@ -1,6 +1,5 @@
 package com.amazon.ion.impl.bin;
 
-import com.amazon.ion.BitUtils;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
@@ -8,19 +7,22 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.converter.ArgumentConversionException;
 import org.junit.jupiter.params.converter.ConvertWith;
-import org.junit.jupiter.params.converter.TypedArgumentConverter;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.BiFunction;
+
+import static com.amazon.ion.TestUtils.HexStringToByteArray;
+import static com.amazon.ion.TestUtils.StringToDecimal;
+import static com.amazon.ion.TestUtils.StringToTimestamp;
+import static com.amazon.ion.TestUtils.SymbolIdsToLongArray;
+import static com.amazon.ion.TestUtils.byteArrayToBitString;
+import static com.amazon.ion.TestUtils.byteArrayToHex;
+import static com.amazon.ion.TestUtils.byteLengthFromBitString;
+import static com.amazon.ion.TestUtils.byteLengthFromHexString;
 
 public class IonEncoder_1_1Test {
 
@@ -596,133 +598,4 @@ public class IonEncoder_1_1Test {
         Assertions.assertEquals(0, numBytes);
     }
 
-    /**
-     * Utility method to make it easier to write test cases that assert specific sequences of bytes.
-     */
-    private static String byteArrayToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X ", b));
-        }
-        return sb.toString().trim();
-    }
-
-    /**
-     * Determines the number of bytes needed to represent a series of hexadecimal digits.
-     */
-    private static int byteLengthFromHexString(String hexString) {
-        return (hexString.replaceAll("[^\\dA-F]", "").length()) / 2;
-    }
-
-    /**
-     * Converts a byte array to a string of bits, such as "00110110 10001001".
-     * The purpose of this method is to make it easier to read and write test assertions.
-     */
-    private static String byteArrayToBitString(byte[] bytes) {
-        StringBuilder s = new StringBuilder();
-        for (byte aByte : bytes) {
-            for (int bit = 7; bit >= 0; bit--) {
-                if (((0x01 << bit) & aByte) != 0) {
-                    s.append("1");
-                } else {
-                    s.append("0");
-                }
-            }
-            s.append(" ");
-        }
-        return s.toString().trim();
-    }
-
-    /**
-     * Determines the number of bytes needed to represent a series of hexadecimal digits.
-     */
-    private static int byteLengthFromBitString(String bitString) {
-        return (bitString.replaceAll("[^01]", "").length()) / 8;
-    }
-
-    /**
-     * Converts a String to a Timestamp for a @Parameterized test
-     */
-    static class StringToTimestamp extends TypedArgumentConverter<String, Timestamp> {
-        protected StringToTimestamp() {
-            super(String.class, Timestamp.class);
-        }
-
-        @Override
-        protected Timestamp convert(String source) throws ArgumentConversionException {
-            if (source == null) return null;
-            return Timestamp.valueOf(source);
-        }
-    }
-
-    /**
-     * Converts a String to a Decimal for a @Parameterized test
-     */
-    static class StringToDecimal extends TypedArgumentConverter<String, Decimal> {
-        protected StringToDecimal() {
-            super(String.class, Decimal.class);
-        }
-
-        @Override
-        protected Decimal convert(String source) throws ArgumentConversionException {
-            if (source == null) return null;
-            return Decimal.valueOf(source);
-        }
-    }
-
-    /**
-     * Converts a Hex String to a Byte Array for a @Parameterized test
-     */
-    static class HexStringToByteArray extends TypedArgumentConverter<String, byte[]> {
-
-        private static final CharsetEncoder ASCII_ENCODER =  StandardCharsets.US_ASCII.newEncoder();
-
-        protected HexStringToByteArray() {
-            super(String.class, byte[].class);
-        }
-
-        @Override
-        protected byte[] convert(String source) throws ArgumentConversionException {
-            if (source == null) return null;
-            if (source.trim().isEmpty()) return new byte[0];
-            String[] octets = source.split(" ");
-            byte[] result = new byte[octets.length];
-            for (int i = 0; i < octets.length; i++) {
-                if (octets[i].length() == 1) {
-                    char c = octets[i].charAt(0);
-                    if (!ASCII_ENCODER.canEncode(c)) {
-                        throw new IllegalArgumentException("Cannot convert non-ascii character: " + c);
-                    }
-                    result[i] = (byte) c;
-                } else {
-                    result[i] = (byte) Integer.parseInt(octets[i], 16);
-                }
-            }
-            return result;
-        }
-    }
-
-    /**
-     * Converts a String of symbol ids to a long[] for a @Parameterized test
-     */
-    static class SymbolIdsToLongArray extends TypedArgumentConverter<String, long[]> {
-        protected SymbolIdsToLongArray() {
-            super(String.class, long[].class);
-        }
-
-        @Override
-        protected long[] convert(String source) throws ArgumentConversionException {
-            if (source == null) return null;
-            int size = (int) source.chars().filter(i -> i == '$').count();
-            String[] sids = source.split("\\$");
-            long[] result = new long[size];
-            int i = 0;
-            for (String sid : sids) {
-                if (sid.isEmpty()) continue;
-                result[i] = Long.parseLong(sid.trim());
-                i++;
-            }
-            return result;
-        }
-    }
 }

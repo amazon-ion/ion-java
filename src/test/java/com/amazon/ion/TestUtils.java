@@ -21,6 +21,8 @@ import static com.amazon.ion.impl._Private_Utils.READER_HASNEXT_REMOVED;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.util.IonStreamUtils;
+import org.junit.jupiter.params.converter.ArgumentConversionException;
+import org.junit.jupiter.params.converter.TypedArgumentConverter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -29,6 +31,8 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -567,8 +571,18 @@ public class TestUtils
     public static class BinaryIonAppender {
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
+        public BinaryIonAppender(int minorVersion) throws Exception {
+            if (minorVersion == 0) {
+                out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            } else if (minorVersion == 1) {
+                out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_1);
+            } else {
+                throw new IllegalStateException();
+            }
+        }
+
         public BinaryIonAppender() throws Exception {
-            out.write(_Private_IonConstants.BINARY_VERSION_MARKER_1_0);
+            this(0);
         }
 
         public BinaryIonAppender append(int... data) throws Exception {
@@ -597,5 +611,147 @@ public class TestUtils
             gzip.write(bytes(bytes)); // IVM
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Utility method to make it easier to write test cases that assert specific sequences of bytes.
+     */
+    public static String byteArrayToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02X ", b));
+        }
+        return sb.toString().trim();
+    }
+
+    /**
+     * Determines the number of bytes needed to represent a series of hexadecimal digits.
+     */
+    public static int byteLengthFromHexString(String hexString) {
+        return (hexString.replaceAll("[^\\dA-F]", "").length()) / 2;
+    }
+
+    /**
+     * Converts a byte array to a string of bits, such as "00110110 10001001".
+     * The purpose of this method is to make it easier to read and write test assertions.
+     */
+    public static String byteArrayToBitString(byte[] bytes) {
+        StringBuilder s = new StringBuilder();
+        for (byte aByte : bytes) {
+            for (int bit = 7; bit >= 0; bit--) {
+                if (((0x01 << bit) & aByte) != 0) {
+                    s.append("1");
+                } else {
+                    s.append("0");
+                }
+            }
+            s.append(" ");
+        }
+        return s.toString().trim();
+    }
+
+    /**
+     * Determines the number of bytes needed to represent a series of hexadecimal digits.
+     */
+    public static int byteLengthFromBitString(String bitString) {
+        return (bitString.replaceAll("[^01]", "").length()) / 8;
+    }
+
+    /**
+     * Converts a string of bits, such as "00110110 10001001", to a byte array.
+     */
+    public static byte[] bitStringToByteArray(String bitString) {
+        String[] bytesAsBits = bitString.split(" ");
+        byte[] bytesAsBytes = new byte[bytesAsBits.length];
+        for (int i = 0; i < bytesAsBytes.length; i++) {
+            bytesAsBytes[i] = (byte) (Integer.parseInt(bytesAsBits[i], 2) & 0xFF);
+        }
+        return bytesAsBytes;
+    }
+
+    /**
+     * Converts a String to a Timestamp for a @Parameterized test
+     */
+    public static class StringToTimestamp extends TypedArgumentConverter<String, Timestamp> {
+        protected StringToTimestamp() {
+            super(String.class, Timestamp.class);
+        }
+
+        @Override
+        protected Timestamp convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            return Timestamp.valueOf(source);
+        }
+    }
+
+    /**
+     * Converts a String to a Decimal for a @Parameterized test
+     */
+    public static class StringToDecimal extends TypedArgumentConverter<String, Decimal> {
+        protected StringToDecimal() {
+            super(String.class, Decimal.class);
+        }
+
+        @Override
+        protected Decimal convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            return Decimal.valueOf(source);
+        }
+    }
+
+    /**
+     * Converts a Hex String to a Byte Array for a @Parameterized test
+     */
+    public static class HexStringToByteArray extends TypedArgumentConverter<String, byte[]> {
+
+        private static final CharsetEncoder ASCII_ENCODER =  StandardCharsets.US_ASCII.newEncoder();
+
+        protected HexStringToByteArray() {
+            super(String.class, byte[].class);
+        }
+
+        @Override
+        protected byte[] convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            if (source.trim().isEmpty()) return new byte[0];
+            String[] octets = source.split(" ");
+            byte[] result = new byte[octets.length];
+            for (int i = 0; i < octets.length; i++) {
+                if (octets[i].length() == 1) {
+                    char c = octets[i].charAt(0);
+                    if (!ASCII_ENCODER.canEncode(c)) {
+                        throw new IllegalArgumentException("Cannot convert non-ascii character: " + c);
+                    }
+                    result[i] = (byte) c;
+                } else {
+                    result[i] = (byte) Integer.parseInt(octets[i], 16);
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
+     * Converts a String of symbol ids to a long[] for a @Parameterized test
+     */
+    public static class SymbolIdsToLongArray extends TypedArgumentConverter<String, long[]> {
+        protected SymbolIdsToLongArray() {
+            super(String.class, long[].class);
+        }
+
+        @Override
+        protected long[] convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            int size = (int) source.chars().filter(i -> i == '$').count();
+            String[] sids = source.split("\\$");
+            long[] result = new long[size];
+            int i = 0;
+            for (String sid : sids) {
+                if (sid.isEmpty()) continue;
+                result[i] = Long.parseLong(sid.trim());
+                i++;
+            }
+            return result;
+        }
     }
 }
