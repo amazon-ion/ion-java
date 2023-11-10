@@ -1,11 +1,15 @@
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonText;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 import static java.lang.Double.doubleToRawLongBits;
@@ -428,4 +432,128 @@ public class IonEncoder_1_1 {
         return 1 + WriteBuffer.flexUIntLength(dataLength) + dataLength;
     }
 
+    /**
+     * Writes a String to the given WriteBuffer using the Ion 1.1 encoding for Ion Strings.
+     * @return the number of bytes written
+     */
+    public static int writeStringValue(WriteBuffer buffer, String value) {
+        return writeInlineText(buffer, value, IonType.STRING, OpCodes.STRING_ZERO_LENGTH, OpCodes.VARIABLE_LENGTH_STRING);
+    }
+
+    /**
+     * Writes an inline Symbol to the given WriteBuffer using the Ion 1.1 encoding for Ion Symbols.
+     * @return the number of bytes written
+     */
+    public static int writeSymbolValue(WriteBuffer buffer, String value) {
+        return writeInlineText(buffer, value, IonType.SYMBOL, OpCodes.INLINE_SYMBOL_ZERO_LENGTH, OpCodes.VARIABLE_LENGTH_INLINE_SYMBOL);
+    }
+
+    private static int writeInlineText(WriteBuffer buffer, String value, IonType type, byte zeroLengthOpCode, byte variableLengthOpCode) {
+        if (value == null) {
+            return writeNullValue(buffer, type);
+        }
+
+        // TODO: When merging into the Ion 1.1 raw writer, keep a single instance of the Utf8StringEncoder
+        //       instead of fetching one on every call.
+        Utf8StringEncoder.Result encoderResult = Utf8StringEncoderPool.getInstance().getOrCreate().encode(value);
+
+        byte[] utf8Buffer = encoderResult.getBuffer();
+        int numValueBytes = encoderResult.getEncodedLength();
+        int numLengthBytes = 0;
+
+        if (numValueBytes <= 0xF) {
+            buffer.writeByte((byte)(zeroLengthOpCode | numValueBytes));
+        } else {
+            buffer.writeByte(variableLengthOpCode);
+            numLengthBytes = buffer.writeFlexUInt(numValueBytes);
+        }
+        buffer.writeBytes(utf8Buffer, 0, numValueBytes);
+        return 1 + numLengthBytes + numValueBytes;
+    }
+
+    /**
+     * Writes an interned Symbol's address to the given WriteBuffer using the Ion 1.1 encoding for Ion Symbols.
+     * @return the number of bytes written
+     *
+     * TODO: Do we need to support Symbol Addresses greater than Long.MAX_VALUE?
+     */
+    public static int writeSymbolValue(WriteBuffer buffer, long value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Symbol Address cannot be negative; was: " + value);
+        } else if (value < FIRST_2_BYTE_SYMBOL_ADDRESS) {
+            buffer.writeByte(OpCodes.SYMBOL_ADDRESS_1_BYTE);
+            buffer.writeFixedUInt(value);
+            return 2;
+        } else if (value < FIRST_MANY_BYTE_SYMBOL_ADDRESS) {
+            buffer.writeByte(OpCodes.SYMBOL_ADDRESS_2_BYTES);
+            buffer.writeFixedIntOrUInt(value - FIRST_2_BYTE_SYMBOL_ADDRESS, 2);
+            return 3;
+        } else {
+            buffer.writeByte(OpCodes.SYMBOL_ADDRESS_MANY_BYTES);
+            int addressBytes = buffer.writeFlexUInt(value - FIRST_MANY_BYTE_SYMBOL_ADDRESS);
+            return 1 + addressBytes;
+        }
+    }
+
+    /**
+     * Writes a Blob to the given WriteBuffer using the Ion 1.1 encoding for Ion Blobs.
+     * @return the number of bytes written
+     */
+    public static int writeBlobValue(WriteBuffer buffer, byte[] value) {
+        if (value == null) {
+            return writeNullValue(buffer, IonType.BLOB);
+        }
+
+        buffer.writeByte(OpCodes.VARIABLE_LENGTH_BLOB);
+        int numLengthBytes = buffer.writeFlexUInt(value.length);
+        buffer.writeBytes(value);
+        return 1 + numLengthBytes + value.length;
+    }
+
+    /**
+     * Writes a Clob to the given WriteBuffer using the Ion 1.1 encoding for Ion Clobs.
+     * @return the number of bytes written
+     */
+    public static int writeClobValue(WriteBuffer buffer, byte[] value) {
+        if (value == null) {
+            return writeNullValue(buffer, IonType.CLOB);
+        }
+
+        buffer.writeByte(OpCodes.VARIABLE_LENGTH_CLOB);
+        int numLengthBytes = buffer.writeFlexUInt(value.length);
+        buffer.writeBytes(value);
+        return 1 + numLengthBytes + value.length;
+    }
+
+    // TODO: Implement FlexSym Annotations
+
+    /**
+     * Writes annotations using the given symbol addresses.
+     */
+    public static int writeAnnotations(WriteBuffer buffer, long[] annotations) {
+        if (annotations == null || annotations.length == 0) {
+            return 0;
+        }
+        if (annotations.length == 1) {
+            buffer.writeByte(OpCodes.ANNOTATIONS_1_SYMBOL_ADDRESS);
+            int numAddressBytes = buffer.writeFlexUInt(annotations[0]);
+            return 1 + numAddressBytes;
+        } else if (annotations.length == 2) {
+            buffer.writeByte(OpCodes.ANNOTATIONS_2_SYMBOL_ADDRESS);
+            int numAddressBytes = buffer.writeFlexUInt(annotations[0]);
+            numAddressBytes += buffer.writeFlexUInt(annotations[1]);
+            return 1 + numAddressBytes;
+        } else {
+            int numAddressBytes = 0;
+            for (long ann : annotations) {
+                numAddressBytes += WriteBuffer.flexUIntLength(ann);
+            }
+            buffer.writeByte(OpCodes.ANNOTATIONS_MANY_SYMBOL_ADDRESS);
+            int numLengthBytes = buffer.writeFlexUInt(numAddressBytes);
+            for (long ann : annotations) {
+                buffer.writeFlexUInt(ann);
+            }
+            return 1 + numLengthBytes + numAddressBytes;
+        }
+    }
 }
