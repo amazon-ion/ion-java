@@ -3,9 +3,19 @@ import com.github.jk1.license.render.InventoryMarkdownReportRenderer
 import com.github.jk1.license.render.TextReportRenderer
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
+import proguard.gradle.ProGuardTask
 import java.net.URI
 import java.time.Instant
 import java.util.Properties
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.guardsquare:proguard-gradle:7.1.0")
+    }
+}
 
 plugins {
     kotlin("jvm") version "1.9.0"
@@ -34,12 +44,6 @@ repositories {
     google()
 }
 
-/**
- * This is a configuration (like `testImplementation`) so that we can create a class path for
- * running the r8 jar.
- */
-val r8Classpath = configurations.create("r8Task")
-
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
 
@@ -49,8 +53,6 @@ dependencies {
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
-
-    r8Classpath("com.android.tools:r8:8.0.40")
 }
 
 group = "com.amazon.ion"
@@ -111,45 +113,51 @@ tasks {
     }
 
     // Creates a super jar of ion-java and its dependencies where all dependencies are shaded (moved)
-    // to com.amazon.ion_.shaded
+    // to com.amazon.ion_.shaded.are_you_sure_you_want_to_use_this
     shadowJar {
+        val newLocation = "com.amazon.ion.shaded_.are_you_sure_you_want_to_use_this"
         archiveClassifier.set("shaded")
         dependsOn(generateLicenseReport)
         from(generateLicenseReport.get().outputFolder)
-        relocate("kotlin", "com.amazon.ion_.shaded.kotlin")
-        relocate("org.jetbrains", "com.amazon.ion_.shaded.org.jetbrains")
-        minimize()
+        relocate("kotlin", "$newLocation.kotlin")
+        relocate("org.jetbrains", "$newLocation.org.jetbrains")
+        relocate("org.intellij", "$newLocation.org.intellij")
+        dependencies {
+            // Remove all Kotlin metadata so that it looks like an ordinary Java Jar
+            exclude("**/*.kotlin_metadata")
+            exclude("**/*.kotlin_module")
+            exclude("**/*.kotlin_builtins")
+            // Eliminate dependencies' pom files
+            exclude("**/pom.*")
+        }
     }
 
     /**
-     * The `minifyJar` task uses [R8](https://developer.android.com/build/shrink-code) to create a JAR
-     * that is smaller than the combined size of ion-java and its dependencies. This is the final JAR
-     * that is published to maven central.
+     * The `minifyJar` task uses Proguard to create a JAR that is smaller than the combined size of ion-java
+     * and its dependencies. This is the final JAR that is published to maven central.
      */
-    val minifyJar by register<JavaExec>("minifyJar") {
+    val minifyJar by register<ProGuardTask>("minifyJar") {
         group = "build"
-        val rulesPath = file("config/r8/rules.txt")
+        val rulesPath = file("config/proguard/rules.pro")
         val inputJarPath = shadowJar.get().outputs.files.singleFile
         val outputJarPath = "build/libs/ion-java-$version.jar"
 
-        // It looks like the inputs and outputs are repeated, but these lines
-        // just tells gradle about the inputs and outputs for the task.
         inputs.file(rulesPath)
         inputs.file(inputJarPath)
         outputs.file(outputJarPath)
         dependsOn(shadowJar)
         dependsOn(configurations.runtimeClasspath)
-        classpath(r8Classpath)
 
-        // These lines tell gradle how to run the task
-        mainClass.set("com.android.tools.r8.R8")
-        args = listOf(
-            "--release",
-            "--classfile",
-            "--output", outputJarPath,
-            "--pg-conf", "$rulesPath",
-            "--lib", System.getProperty("java.home").toString(),
-            "$inputJarPath",
+        injars(inputJarPath)
+        outjars(outputJarPath)
+        configuration(rulesPath)
+
+        val javaHome = System.getProperty("java.home")
+        // Automatically handle the Java version of this build, but we don't support lower than JDK 11
+        // See https://github.com/Guardsquare/proguard/blob/e76e47953f6f295350a3bb7eeb801b33aac34eae/examples/gradle-kotlin-dsl/build.gradle.kts#L48-L60
+        libraryjars(
+            mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class"),
+            "$javaHome/jmods/java.base.jmod"
         )
     }
 
@@ -309,7 +317,8 @@ tasks {
         }
     }
 
-    test {
+    fun Test.applyCommonTestConfig() {
+        group = "verification"
         maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
         maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
         useJUnitPlatform()
@@ -317,17 +326,22 @@ tasks {
         finalizedBy(jacocoTestReport)
     }
 
-    /**
-     * A task to run the JUnit test on the minified jar.
-     */
+    test {
+        applyCommonTestConfig()
+    }
+
+    /** Runs the JUnit test on the minified jar. */
     register<Test>("minifyTest") {
-        maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
-        maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
-        group = "verification"
-        testClassesDirs = project.sourceSets.test.get().output.classesDirs
+        applyCommonTestConfig()
         classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + minifyJar.outputs.files
         dependsOn(minifyJar)
-        useJUnitPlatform()
+    }
+
+    /** Runs the JUnit test on the shadow jar. */
+    register<Test>("shadowTest") {
+        applyCommonTestConfig()
+        classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + shadowJar.get().outputs.files
+        dependsOn(minifyJar)
     }
 
     withType<Sign> {

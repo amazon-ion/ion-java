@@ -1,9 +1,0 @@
--dontobfuscate
--keepattributes SourceFile, LineNumberTable, Signature
--keepclasseswithmembers class com.amazon.ion.*** {
-   *;
-}
--keep public class com.amazon.ion.***
--keep public interface com.amazon.ion.***
--keep public enum com.amazon.ion.***
--keeppackagenames ***
