@@ -1,5 +1,6 @@
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.BitUtils;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
@@ -15,6 +16,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -47,6 +50,16 @@ public class IonEncoder_1_1Test {
         int numBytes = writeOperation.apply(buf, value);
         Assertions.assertEquals(expectedBytes, byteArrayToHex(bytes()));
         Assertions.assertEquals(byteLengthFromHexString(expectedBytes), numBytes);
+    }
+
+    /**
+     * Checks that the function writes the expected bytes and returns the expected count of written bytes for the
+     * given input value. The expected bytes should be a string of space-separated hexadecimal pairs.
+     */
+    private <T> void assertWritingValue(byte[] expectedBytes, T value, BiFunction<WriteBuffer, T, Integer> writeOperation) {
+        int numBytes = writeOperation.apply(buf, value);
+        Assertions.assertEquals(expectedBytes, bytes());
+        Assertions.assertEquals(expectedBytes.length, numBytes);
     }
 
     /**
@@ -656,6 +669,9 @@ public class IonEncoder_1_1Test {
      * Converts a Hex String to a Byte Array for a @Parameterized test
      */
     static class HexStringToByteArray extends TypedArgumentConverter<String, byte[]> {
+
+        private static final CharsetEncoder ASCII_ENCODER =  StandardCharsets.US_ASCII.newEncoder();
+
         protected HexStringToByteArray() {
             super(String.class, byte[].class);
         }
@@ -667,7 +683,15 @@ public class IonEncoder_1_1Test {
             String[] octets = source.split(" ");
             byte[] result = new byte[octets.length];
             for (int i = 0; i < octets.length; i++) {
-                result[i] = (byte) Integer.parseInt(octets[i], 16);
+                if (octets[i].length() == 1) {
+                    char c = octets[i].charAt(0);
+                    if (!ASCII_ENCODER.canEncode(c)) {
+                        throw new IllegalArgumentException("Cannot convert non-ascii character: " + c);
+                    }
+                    result[i] = (byte) c;
+                } else {
+                    result[i] = (byte) Integer.parseInt(octets[i], 16);
+                }
             }
             return result;
         }
@@ -684,15 +708,14 @@ public class IonEncoder_1_1Test {
         @Override
         protected long[] convert(String source) throws ArgumentConversionException {
             if (source == null) return null;
-            List<Long> temp = new ArrayList<>();
+            int size = (int) source.chars().filter(i -> i == '$').count();
             String[] sids = source.split("\\$");
+            long[] result = new long[size];
+            int i = 0;
             for (String sid : sids) {
                 if (sid.isEmpty()) continue;
-                temp.add(Long.parseLong(sid.trim()));
-            }
-            long[] result = new long[temp.size()];
-            for (int i = 0; i < temp.size(); i++) {
-                result[i] = temp.get(i);
+                result[i] = Long.parseLong(sid.trim());
+                i++;
             }
             return result;
         }
