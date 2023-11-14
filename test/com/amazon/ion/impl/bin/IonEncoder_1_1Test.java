@@ -1,5 +1,6 @@
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.BitUtils;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
@@ -15,6 +16,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiFunction;
 
 public class IonEncoder_1_1Test {
@@ -45,6 +50,16 @@ public class IonEncoder_1_1Test {
         int numBytes = writeOperation.apply(buf, value);
         Assertions.assertEquals(expectedBytes, byteArrayToHex(bytes()));
         Assertions.assertEquals(byteLengthFromHexString(expectedBytes), numBytes);
+    }
+
+    /**
+     * Checks that the function writes the expected bytes and returns the expected count of written bytes for the
+     * given input value. The expected bytes should be a string of space-separated hexadecimal pairs.
+     */
+    private <T> void assertWritingValue(byte[] expectedBytes, T value, BiFunction<WriteBuffer, T, Integer> writeOperation) {
+        int numBytes = writeOperation.apply(buf, value);
+        Assertions.assertEquals(expectedBytes, bytes());
+        Assertions.assertEquals(expectedBytes.length, numBytes);
     }
 
     /**
@@ -455,6 +470,127 @@ public class IonEncoder_1_1Test {
         Assertions.assertEquals(2, numBytes);
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "'', 80",
+            "'a', 81 61",
+            "'ab', 82 61 62",
+            "'abc', 83 61 62 63",
+            "'fourteen bytes', 8E 66 6F 75 72 74 65 65 6E 20 62 79 74 65 73",
+            "'this has sixteen', F8 21 74 68 69 73 20 68 61 73 20 73 69 78 74 65 65 6E",
+            "'variable length encoding', F8 31 76 61 72 69 61 62 6C 65 20 6C 65 6E 67 74 68 20 65 6E 63 6F 64 69 6E 67",
+    })
+    public void testWriteStringValue(String value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeStringValue);
+    }
+
+    @Test
+    public void testWriteStringValueForNull() {
+        int numBytes = IonEncoder_1_1.writeStringValue(buf, null);
+        Assertions.assertEquals("EB 05", byteArrayToHex(bytes()));
+        Assertions.assertEquals(2, numBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'', 90",
+            "'a', 91 61",
+            "'ab', 92 61 62",
+            "'abc', 93 61 62 63",
+            "'fourteen bytes', 9E 66 6F 75 72 74 65 65 6E 20 62 79 74 65 73",
+            "'this has sixteen', F9 21 74 68 69 73 20 68 61 73 20 73 69 78 74 65 65 6E",
+            "'variable length encoding', F9 31 76 61 72 69 61 62 6C 65 20 6C 65 6E 67 74 68 20 65 6E 63 6F 64 69 6E 67",
+    })
+    public void testWriteSymbolValue(String value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeSymbolValue);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,                   E1 00",
+            "1,                   E1 01",
+            "255,                 E1 FF",
+            "256,                 E2 00 00",
+            "257,                 E2 01 00",
+            "512,                 E2 00 01",
+            "513,                 E2 01 01",
+            "65535,               E2 FF FE",
+            "65791,               E2 FF FF",
+            "65792,               E3 01",
+            "65793,               E3 03",
+            "65919,               E3 FF",
+            "65920,               E3 02 02",
+            "9223372036854775807, E3 00 FF FD FD FF FF FF FF FF"
+    })
+    public void testWriteSymbolValue(long value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeSymbolValue);
+    }
+
+    @Test
+    public void testWriteSymbolValueForNull() {
+        int numBytes = IonEncoder_1_1.writeSymbolValue(buf, null);
+        Assertions.assertEquals("EB 06", byteArrayToHex(bytes()));
+        Assertions.assertEquals(2, numBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'', FE 01", //
+            "20, FE 03 20",
+            "49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79, " +
+                    "FE 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
+    })
+    public void testWriteBlobValue(@ConvertWith(HexStringToByteArray.class) byte[] value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeBlobValue);
+    }
+
+    @Test
+    public void testWriteBlobValueForNull() {
+        int numBytes = IonEncoder_1_1.writeBlobValue(buf, null);
+        Assertions.assertEquals("EB 07", byteArrayToHex(bytes()));
+        Assertions.assertEquals(2, numBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'', FF 01",
+            "20, FF 03 20",
+            "49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79, " +
+                    "FF 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
+    })
+    public void testWriteClobValue(@ConvertWith(HexStringToByteArray.class) byte[] value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeClobValue);
+    }
+
+    @Test
+    public void testWriteClobValueForNull() {
+        int numBytes = IonEncoder_1_1.writeClobValue(buf, null);
+        Assertions.assertEquals("EB 08", byteArrayToHex(bytes()));
+        Assertions.assertEquals(2, numBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "            '', ''", // Empty array of annotations
+            "            $0, E4 01",
+            "           $10, E4 15",
+            "          $256, E4 02 04",
+            "       $10 $11, E5 15 17",
+            "     $256 $257, E5 02 04 06 04",
+            "   $10 $11 $12, E6 07 15 17 19",
+            "$256 $257 $258, E6 0D 02 04 06 04 0A 04",
+    })
+    public void testWriteAnnotations(@ConvertWith(SymbolIdsToLongArray.class) long[] value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeAnnotations);
+    }
+
+    @Test
+    public void testWriteAnnotationsForNull() {
+        int numBytes = IonEncoder_1_1.writeAnnotations(buf, null);
+        Assertions.assertEquals("", byteArrayToHex(bytes()));
+        Assertions.assertEquals(0, numBytes);
+    }
+
     /**
      * Utility method to make it easier to write test cases that assert specific sequences of bytes.
      */
@@ -470,7 +606,7 @@ public class IonEncoder_1_1Test {
      * Determines the number of bytes needed to represent a series of hexadecimal digits.
      */
     private static int byteLengthFromHexString(String hexString) {
-        return (hexString.replaceAll("[^\\dA-F]", "").length() - 1) / 2 + 1;
+        return (hexString.replaceAll("[^\\dA-F]", "").length()) / 2;
     }
 
     /**
@@ -496,7 +632,7 @@ public class IonEncoder_1_1Test {
      * Determines the number of bytes needed to represent a series of hexadecimal digits.
      */
     private static int byteLengthFromBitString(String bitString) {
-        return (bitString.replaceAll("[^01]", "").length() - 1) / 8 + 1;
+        return (bitString.replaceAll("[^01]", "").length()) / 8;
     }
 
     /**
@@ -526,6 +662,62 @@ public class IonEncoder_1_1Test {
         protected Decimal convert(String source) throws ArgumentConversionException {
             if (source == null) return null;
             return Decimal.valueOf(source);
+        }
+    }
+
+    /**
+     * Converts a Hex String to a Byte Array for a @Parameterized test
+     */
+    static class HexStringToByteArray extends TypedArgumentConverter<String, byte[]> {
+
+        private static final CharsetEncoder ASCII_ENCODER =  StandardCharsets.US_ASCII.newEncoder();
+
+        protected HexStringToByteArray() {
+            super(String.class, byte[].class);
+        }
+
+        @Override
+        protected byte[] convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            if (source.trim().isEmpty()) return new byte[0];
+            String[] octets = source.split(" ");
+            byte[] result = new byte[octets.length];
+            for (int i = 0; i < octets.length; i++) {
+                if (octets[i].length() == 1) {
+                    char c = octets[i].charAt(0);
+                    if (!ASCII_ENCODER.canEncode(c)) {
+                        throw new IllegalArgumentException("Cannot convert non-ascii character: " + c);
+                    }
+                    result[i] = (byte) c;
+                } else {
+                    result[i] = (byte) Integer.parseInt(octets[i], 16);
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
+     * Converts a String of symbol ids to a long[] for a @Parameterized test
+     */
+    static class SymbolIdsToLongArray extends TypedArgumentConverter<String, long[]> {
+        protected SymbolIdsToLongArray() {
+            super(String.class, long[].class);
+        }
+
+        @Override
+        protected long[] convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            int size = (int) source.chars().filter(i -> i == '$').count();
+            String[] sids = source.split("\\$");
+            long[] result = new long[size];
+            int i = 0;
+            for (String sid : sids) {
+                if (sid.isEmpty()) continue;
+                result[i] = Long.parseLong(sid.trim());
+                i++;
+            }
+            return result;
         }
     }
 }
