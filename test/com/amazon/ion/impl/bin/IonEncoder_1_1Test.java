@@ -1,5 +1,6 @@
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 import org.junit.jupiter.api.Assertions;
@@ -217,6 +218,61 @@ public class IonEncoder_1_1Test {
     })
     public void testWriteFloatValueForDouble(double value, String expectedBytes) {
         assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloat);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "                           0., 60",
+            "                          0e1, 6F 03",
+            "                         0e63, 6F 7F",
+            "                         0e99, 6F 8E 01",
+            "                          0.0, 6F FF",
+            "                         0.00, 6F FD",
+            "                        0.000, 6F FB",
+            "                        0e-64, 6F 81",
+            "                        0e-99, 6F 76 FE",
+            "                          -0., 61 01",
+            "                         -0e1, 62 01 01",
+            "                         -0e3, 62 01 03",
+            "                       -0e127, 62 01 7F",
+            "                       -0e199, 63 01 C7 00",
+            "                        -0e-1, 62 01 FF",
+            "                        -0e-2, 62 01 FE",
+            "                        -0e-3, 62 01 FD",
+            "                      -0e-127, 62 01 81",
+            "                      -0e-199, 63 01 39 FF",
+            "                         0.01, 62 03 FE",
+            "                          0.1, 62 03 FF",
+            "                            1, 61 03",
+            "                          1e1, 62 03 01",
+            "                          1e2, 62 03 02",
+            "                        1e127, 62 03 7F",
+            "                        1e128, 63 03 80 00",
+            "                      1e65536, 64 03 00 00 01",
+            "                            2, 61 05",
+            "                            7, 61 0F",
+            "                           14, 61 1D",
+            "                          1.0, 62 15 FF",
+            "                         1.00, 63 92 01 FE",
+            "                         1.27, 63 FE 01 FE",
+            "                        3.142, 63 1A 31 FD",
+            "                      3.14159, 64 7C 59 26 FB",
+            "                     3.141593, 65 98 FD FE 02 FA",
+            "                  3.141592653, 66 B0 C9 1C 68 17 F7",
+            "                3.14159265359, 67 E0 93 7D 56 49 12 F5",
+            "           3.1415926535897932, 69 80 4C 43 76 65 9E 9C 6F F0",
+            "  3.1415926535897932384626434, 6E 00 50 E0 DC F7 CC D6 08 48 99 92 3F 03 E7",
+            "3.141592653589793238462643383, F6 1F 00 E0 2D 8F A4 21 D0 E7 46 C0 87 AA 89 02 E5",
+    })
+    public void testWriteDecimalValue(@ConvertWith(StringToDecimal.class) Decimal value, String expectedBytes) {
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeDecimalValue);
+    }
+
+    @Test
+    public void testWriteDecimalValueForNull() {
+        int numBytes = IonEncoder_1_1.writeDecimalValue(buf, null);
+        Assertions.assertEquals("EB 03", byteArrayToHex(bytes()));
+        Assertions.assertEquals(2, numBytes);
     }
 
     // Because timestamp subfields are smeared across bytes, it's easier to reason about them in 1s and 0s
@@ -455,6 +511,21 @@ public class IonEncoder_1_1Test {
         protected Timestamp convert(String source) throws ArgumentConversionException {
             if (source == null) return null;
             return Timestamp.valueOf(source);
+        }
+    }
+
+    /**
+     * Converts a String to a Decimal for a @Parameterized test
+     */
+    static class StringToDecimal extends TypedArgumentConverter<String, Decimal> {
+        protected StringToDecimal() {
+            super(String.class, Decimal.class);
+        }
+
+        @Override
+        protected Decimal convert(String source) throws ArgumentConversionException {
+            if (source == null) return null;
+            return Decimal.valueOf(source);
         }
     }
 }
