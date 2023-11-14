@@ -6,6 +6,9 @@ package com.amazon.ion.impl.bin;
 public class Ion_1_1_Constants {
     private Ion_1_1_Constants() {}
 
+    static final int FIRST_2_BYTE_SYMBOL_ADDRESS = 256;
+    static final int FIRST_MANY_BYTE_SYMBOL_ADDRESS = 65792;
+
     //////// Timestamp Field Constants ////////
 
     // S_TIMESTAMP_* is applicable to all short-form timestamps
