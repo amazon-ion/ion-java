@@ -19,6 +19,8 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
+import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
+
 /**
  * An IonCursor capable of raw parsing of binary Ion streams.
  */
@@ -127,6 +129,22 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     };
 
     /**
+     * Returns a new or reused array of the requested size.
+     * @param requestedSize the size of the scratch space to retrieve.
+     * @return a byte array.
+     */
+    private byte[] getScratchForSize(int requestedSize) {
+        byte[] bytes = null;
+        if (requestedSize < scratchForSize.length) {
+            bytes = scratchForSize[requestedSize];
+        }
+        if (bytes == null) {
+            bytes = new byte[requestedSize];
+        }
+        return bytes;
+    }
+
+    /**
      * Copy the requested number of bytes from the buffer into a scratch buffer of exactly the requested length.
      * @param startIndex the start index from which to copy.
      * @param length the number of bytes to copy.
@@ -135,13 +153,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private byte[] copyBytesToScratch(long startIndex, int length) {
         // Note: using reusable scratch buffers makes reading ints and decimals 1-5% faster and causes much less
         // GC churn.
-        byte[] bytes = null;
-        if (length < scratchForSize.length) {
-            bytes = scratchForSize[length];
-        }
-        if (bytes == null) {
-            bytes = new byte[length];
-        }
+        byte[] bytes = getScratchForSize(length);
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
         System.arraycopy(buffer, (int) startIndex, bytes, 0, bytes.length);
@@ -444,8 +456,19 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return (buffer[(int) (valueMarker.startIndex)] & SINGLE_BYTE_MASK) <= MOST_SIGNIFICANT_BYTE_OF_MAX_INTEGER;
     }
 
-    int readVarUInt_1_1() {
-        throw new UnsupportedOperationException();
+    /**
+     * Reads a FlexUInt into an int. After this method returns, `peekIndex` points to the first byte after the end of
+     * the FlexUInt.
+     * @return the value.
+     */
+    long readFlexUInt_1_1() {
+        int currentByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
+        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
+        long result = currentByte >>> length;
+        for (byte i = 1; i < length; i++) {
+            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        }
+        return result;
     }
 
     private int readVarSym_1_1(Marker marker) {
@@ -468,8 +491,263 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Copies a FlexUInt into scratch space, converting it to its equivalent big-endian two's complement representation.
+     * @param firstByte the first (least-significant) byte in the FlexUInt representation.
+     * @param bitsToShiftRight the number of continuation bits that must be shifted out of every byte.
+     * @param startIndex the index of the second byte in the FlexUInt representation.
+     * @param length the number of bytes remaining in the FlexUInt representation.
+     * @return a byte[] (either new or reused) containing the big-endian two's complement representation of the value.
+     */
+    private byte[] copyFlexUIntAsTwosComplementBytes(int firstByte, int bitsToShiftRight, long startIndex, int length) {
+        // If the most significant bit is set, the value would be interpreted as a negative two's complement integer. To
+        // avoid that, make sure the most significant byte in the copy is 0 by over-allocating the destination buffer.
+        // Additionally, one more byte than 'length' is always required because 'length' does not include the first
+        // byte.
+        byte[] bytes = getScratchForSize(length + 1 + ((buffer[(int) startIndex + length - 1] < 0) ? 1 : 0));
+        bytes[0] = 0;
+        int copyIndex = bytes.length;
+        bytes[--copyIndex] = (byte) (firstByte >>> bitsToShiftRight);
+        int lowerBitsMask = ~(-1 << bitsToShiftRight);
+        for (int i = 0; i < length; i++) {
+            byte b = buffer[(int) startIndex + i];
+            // The following implements a byte-by-byte bit shift. The lower bits in each byte are or'd with the higher
+            // bits from the previous byte.
+            bytes[copyIndex] |= (byte) ((b & lowerBitsMask) << (8 - bitsToShiftRight));
+            bytes[--copyIndex] = (byte) ((b & SINGLE_BYTE_MASK) >>> bitsToShiftRight);
+        }
+        peekIndex = startIndex + length;
+        return bytes;
+    }
+
+    /**
+     * Reads an FlexUInt value into a BigInteger.
+     * @return the value as a BigInteger.
+     */
+    private BigInteger readFlexUIntAsBigInteger_1_1() {
+        BigInteger value;
+        int currentByte = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
+        int length = 0;
+        while (currentByte == 0) {
+            // Each byte of continuation bits without a set bit adds 8 to the length of the FlexUInt, but since the
+            // length includes the continuation byte(s), each empty byte adds a net 7 to the total length.
+            length += 7;
+            currentByte = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
+        }
+        int numberOfLengthBits = Integer.numberOfTrailingZeros(currentByte);
+        length += numberOfLengthBits;
+        if (length > 0) {
+            // NOTE: copying into scratch space is required because the encoded bytes, which are unsigned little-endian,
+            // need to be translated into two's complement big-endian bytes as required by this BigInteger constructor.
+            // This is expensive, but is cheaper than using arithmetic operations on a BigInteger directly, as this
+            // would require a new BigInteger to be allocated for each intermediate step.
+            value = new BigInteger(copyFlexUIntAsTwosComplementBytes(currentByte, numberOfLengthBits + 1, peekIndex, length));
+        } else {
+            value = BigInteger.ZERO;
+        }
+        return value;
+    }
+
+    /**
+     * Reads the fraction component of an Ion 1.1 long form timestamp.
+     * @return the value as a BigDecimal.
+     */
+    private BigDecimal readTimestampFraction_1_1() {
+        // The fractional seconds are encoded as a (coefficient, scale) pair,
+        // which is similar to a decimal. The primary difference is that the scale represents a negative
+        // exponent because it is illegal for the fractional seconds value to be greater than or equal to 1.0
+        // or less than 0.0. The coefficient is encoded as a FlexUInt (instead of FlexInt) to prevent the
+        // encoding of fractional seconds less than 0.0. The scale is encoded as a FixedUInt (instead of FixedInt)
+        // to discourage the encoding of decimal numbers greater than 1.0.
+        BigDecimal value;
+        peekIndex = valueMarker.startIndex + L_TIMESTAMP_SECOND_BYTE_LENGTH;
+        if (buffer[(int) peekIndex] != 0) {
+            // No need to allocate a BigInteger to hold the coefficient.
+            value = BigDecimal.valueOf(readFlexUInt_1_1(), (int) readFixedUInt_1_1(peekIndex, valueMarker.endIndex));
+        } else {
+            // The coefficient may overflow a long, so a BigInteger is required.
+            value = new BigDecimal(readFlexUIntAsBigInteger_1_1(), (int) readFixedUInt_1_1(peekIndex, valueMarker.endIndex));
+        }
+        if (BigDecimal.ONE.compareTo(value) < 1) {
+            throw new IllegalArgumentException(String.format("Fractional seconds %s must be greater than or equal to 0 and less than 1", value));
+        }
+        return value;
+    }
+
+    /**
+     * Reads an Ion 1.1 long form timestamp.
+     * @return the value.
+     */
+    private Timestamp readTimestampLongForm_1_1() {
+        int year;
+        int month = 0;
+        int day = 0;
+        int hour = 0;
+        int minute = 0;
+        int second = 0;
+        BigDecimal fractionalSecond = null;
+        boolean isOffsetUnknown = true;
+        int offset = 0;
+        int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
+        if (length > L_TIMESTAMP_SECOND_BYTE_LENGTH) {
+            // Fractional component.
+            fractionalSecond = readTimestampFraction_1_1();
+            length = L_TIMESTAMP_SECOND_BYTE_LENGTH;
+        }
+        Timestamp.Precision precision = L_TIMESTAMP_PRECISION_FOR_LENGTH[length];
+        long bits = 0;
+        for (int i = length - 1; i >= 0 ; i--) {
+            bits = (bits << 8) | (buffer[i + (int) valueMarker.startIndex] & SINGLE_BYTE_MASK);
+        }
+        switch (length) {
+            case L_TIMESTAMP_SECOND_BYTE_LENGTH:
+                second = (int) ((bits & L_TIMESTAMP_SECOND_MASK) >>> L_TIMESTAMP_SECOND_BIT_OFFSET);
+            case L_TIMESTAMP_MINUTE_BYTE_LENGTH:
+                offset = (int) ((bits & L_TIMESTAMP_OFFSET_MASK) >>> L_TIMESTAMP_OFFSET_BIT_OFFSET);
+                if ((offset ^ TWELVE_BIT_MASK) != 0) {
+                    isOffsetUnknown = false;
+                    offset -= L_TIMESTAMP_OFFSET_BIAS;
+                }
+                minute = (int) ((bits & L_TIMESTAMP_MINUTE_MASK) >>> L_TIMESTAMP_MINUTE_BIT_OFFSET);
+                hour = (int) (bits & L_TIMESTAMP_HOUR_MASK) >>> L_TIMESTAMP_HOUR_BIT_OFFSET;
+            case L_TIMESTAMP_DAY_OR_MONTH_BYTE_LENGTH:
+                day = (int) (bits & L_TIMESTAMP_DAY_MASK) >>> L_TIMESTAMP_DAY_BIT_OFFSET;
+                if (length == L_TIMESTAMP_DAY_OR_MONTH_BYTE_LENGTH) {
+                    // Month and Day precision share the same length. If the day subfield is 0, the timestamp has
+                    // month precision. Otherwise, it has day precision.
+                    precision = day == 0 ? Timestamp.Precision.MONTH : Timestamp.Precision.DAY;
+                }
+                month = (int) (bits & L_TIMESTAMP_MONTH_MASK) >>> L_TIMESTAMP_MONTH_BIT_OFFSET;
+            case L_TIMESTAMP_YEAR_BYTE_LENGTH:
+                year = (int) (bits & L_TIMESTAMP_YEAR_MASK);
+                break;
+            default:
+                throw new IonException("Illegal timestamp encoding.");
+        }
+        try {
+            return Timestamp._private_createFromLocalTimeFieldsUnchecked(
+                precision,
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second,
+                fractionalSecond,
+                isOffsetUnknown ? null : offset
+            );
+        } catch (IllegalArgumentException e) {
+            throw new IonException("Illegal timestamp encoding. ", e);
+        }
+    }
+
+    /**
+     * Reads an Ion 1.1 timestamp in either the long or short form.
+     * @return the value.
+     */
     private Timestamp readTimestamp_1_1() {
-        throw new UnsupportedOperationException();
+        if (valueTid.variableLength) {
+            return readTimestampLongForm_1_1();
+        }
+        Timestamp.Precision precision = S_TIMESTAMP_PRECISION_FOR_TYPE_ID_OFFSET[valueTid.lowerNibble];
+        int year = 0;
+        int month = 0;
+        int day = 0;
+        int hour = 0;
+        int minute = 0;
+        int second = 0;
+        BigDecimal fractionalSecond = null;
+        Integer offset = null;
+        long bits = 0;
+        for (int i = (int) Math.min(valueMarker.endIndex, valueMarker.startIndex + 8) - 1; i >= valueMarker.startIndex ; i--) {
+            bits = (bits << 8) | (buffer[i] & SINGLE_BYTE_MASK);
+        }
+        switch (precision) {
+            case FRACTION:
+            case SECOND:
+                int unscaledValue = -1;
+                int scale = -1;
+                int bound = -1;
+                switch (valueTid.lowerNibble) {
+                    case S_O_TIMESTAMP_NANOSECOND_LOWER_NIBBLE:
+                        // The least-significant 24 bits of the nanoseconds field are contained in the long.
+                        unscaledValue = (int) ((bits & S_O_TIMESTAMP_NANOSECOND_EIGHTH_BYTE_MASK) >>> S_O_TIMESTAMP_FRACTION_BIT_OFFSET);
+                        // The most-significant 6 bits of the nanoseconds field are contained in the ninth byte.
+                        unscaledValue |= (int) ((buffer[(int) valueMarker.endIndex - 1] & S_O_TIMESTAMP_NANOSECOND_NINTH_BYTE_MASK)) << S_O_TIMESTAMP_NANOSECOND_BITS_IN_EIGHTH_BYTE;
+                        bound = MAX_NANOSECONDS;
+                        scale = NANOSECOND_SCALE;
+                        break;
+                    case S_U_TIMESTAMP_NANOSECOND_LOWER_NIBBLE:
+                        unscaledValue = (int) ((bits & S_U_TIMESTAMP_NANOSECOND_MASK) >>> S_U_TIMESTAMP_FRACTION_BIT_OFFSET);
+                        bound = MAX_NANOSECONDS;
+                        scale = NANOSECOND_SCALE;
+                        break;
+                    case S_O_TIMESTAMP_MICROSECOND_LOWER_NIBBLE:
+                        unscaledValue = (int) ((bits & S_O_TIMESTAMP_MICROSECOND_MASK) >>> S_O_TIMESTAMP_FRACTION_BIT_OFFSET);
+                        bound = MAX_MICROSECONDS;
+                        scale = MICROSECOND_SCALE;
+                        break;
+                    case S_U_TIMESTAMP_MICROSECOND_LOWER_NIBBLE:
+                        unscaledValue = (int) ((bits & S_U_TIMESTAMP_MICROSECOND_MASK) >>> S_U_TIMESTAMP_FRACTION_BIT_OFFSET);
+                        bound = MAX_MICROSECONDS;
+                        scale = MICROSECOND_SCALE;
+                        break;
+                    case S_O_TIMESTAMP_MILLISECOND_LOWER_NIBBLE:
+                        unscaledValue = (int) ((bits & S_O_TIMESTAMP_MILLISECOND_MASK) >>> S_O_TIMESTAMP_FRACTION_BIT_OFFSET);
+                        bound = MAX_MILLISECONDS;
+                        scale = MILLISECOND_SCALE;
+                        break;
+                    case S_U_TIMESTAMP_MILLISECOND_LOWER_NIBBLE:
+                        unscaledValue = (int) ((bits & S_U_TIMESTAMP_MILLISECOND_MASK) >>> S_U_TIMESTAMP_FRACTION_BIT_OFFSET);
+                        bound = MAX_MILLISECONDS;
+                        scale = MILLISECOND_SCALE;
+                        break;
+                    default:
+                        // Second.
+                        break;
+                }
+                if (unscaledValue >= 0) {
+                    if (unscaledValue > bound) {
+                        throw new IonException("Timestamp fraction must be between 0 and 1.");
+                    }
+                    fractionalSecond = BigDecimal.valueOf(unscaledValue, scale);
+                }
+                if (valueTid.lowerNibble >= S_O_TIMESTAMP_MINUTE_LOWER_NIBBLE) {
+                    second = (int) ((bits & S_O_TIMESTAMP_SECOND_MASK) >>> S_O_TIMESTAMP_SECOND_BIT_OFFSET);
+                } else {
+                    second = (int) ((bits & S_U_TIMESTAMP_SECOND_MASK) >>> S_U_TIMESTAMP_SECOND_BIT_OFFSET);
+                }
+            case MINUTE:
+                if (valueTid.lowerNibble >= S_O_TIMESTAMP_MINUTE_LOWER_NIBBLE) {
+                    offset = (int) (((bits & S_O_TIMESTAMP_OFFSET_MASK) >>> S_O_TIMESTAMP_OFFSET_BIT_OFFSET) - S_O_TIMESTAMP_OFFSET_BIAS) * S_O_TIMESTAMP_OFFSET_INCREMENT;
+                } else {
+                    offset = (bits & S_U_TIMESTAMP_UTC_FLAG) == 0 ? null : 0;
+                }
+                minute = (int) (bits & S_TIMESTAMP_MINUTE_MASK) >>> S_TIMESTAMP_MINUTE_BIT_OFFSET;
+                hour = (int) (bits & S_TIMESTAMP_HOUR_MASK) >>> S_TIMESTAMP_HOUR_BIT_OFFSET;
+            case DAY:
+                day = (int) (bits & S_TIMESTAMP_DAY_MASK) >>> S_TIMESTAMP_DAY_BIT_OFFSET;
+            case MONTH:
+                month = (int) (bits & S_TIMESTAMP_MONTH_MASK) >>> S_TIMESTAMP_MONTH_BIT_OFFSET;
+            case YEAR:
+                // Year is encoded as the number of years since 1970.
+                year = S_TIMESTAMP_YEAR_BIAS + (int) (bits & S_TIMESTAMP_YEAR_MASK);
+        }
+        try {
+            return Timestamp._private_createFromLocalTimeFieldsUnchecked(
+                precision,
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second,
+                fractionalSecond,
+                offset
+            );
+        } catch (IllegalArgumentException e) {
+            throw new IonException("Illegal timestamp encoding. ", e);
+        }
     }
 
     private boolean readBoolean_1_1() {
@@ -499,7 +777,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
 
     /**
-     * Reads a UInt.
+     * Reads a UInt (big-endian).
      * @param startIndex the index of the first byte in the UInt value.
      * @param endIndex the index of the first byte after the end of the UInt value.
      * @return the value.
@@ -508,6 +786,20 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         long result = 0;
         for (long i = startIndex; i < endIndex; i++) {
             result = (result << VALUE_BITS_PER_UINT_BYTE) | buffer[(int) i] & SINGLE_BYTE_MASK;
+        }
+        return result;
+    }
+
+    /**
+     * Reads a FixedUInt (little-endian).
+     * @param startIndex the index of the first byte in the FixedUInt value.
+     * @param endIndex the index of the first byte after the end of the FixedUInt value.
+     * @return the value.
+     */
+    private long readFixedUInt_1_1(long startIndex, long endIndex) {
+        long result = 0;
+        for (int i = (int) startIndex; i < endIndex; i++) {
+            result |= ((long) (buffer[i] & SINGLE_BYTE_MASK) << ((i - startIndex) * VALUE_BITS_PER_UINT_BYTE));
         }
         return result;
     }
@@ -771,7 +1063,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
         } else {
             while (peekIndex < annotationSequenceMarker.endIndex) {
-                annotationSids.add(readVarUInt_1_1());
+                annotationSids.add((int) readFlexUInt_1_1());
             }
         }
         peekIndex = savedPeekIndex;
