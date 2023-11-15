@@ -677,6 +677,19 @@ public final class Timestamp
     }
 
     /**
+     * @return a new Timestamp from the given components in local time, without validating the fractional seconds.
+     */
+    @Deprecated
+    public static Timestamp _private_createFromLocalTimeFieldsUnchecked(Precision p, int year, int month, int day,
+                                                                        int hour, int minute, int second,
+                                                                        BigDecimal frac, Integer offset)
+    {
+        return new Timestamp(p, year, month, day,
+                             hour, minute, second, frac,
+                             offset, APPLY_OFFSET_YES, CHECK_FRACTION_NO);
+    }
+
+    /**
      * Creates a new Timestamp from a {@link Calendar}, preserving the
      * {@link Calendar}'s precision and local offset from UTC.
      * <p>
