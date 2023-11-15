@@ -1,7 +1,6 @@
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.IonText;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
@@ -9,7 +8,6 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 import static java.lang.Double.doubleToRawLongBits;
@@ -313,7 +311,7 @@ public class IonEncoder_1_1 {
             }
         } else {
             long localOffset = (value.getLocalOffset().longValue() / 15) + (14 * 4);
-            bits |= (localOffset & LEAST_SIGNIFICANT_7_BITS) << S_O_TIMESTAMP_OFFSET_BIT_OFFSET;
+            bits |= (localOffset & SEVEN_BIT_MASK) << S_O_TIMESTAMP_OFFSET_BIT_OFFSET;
 
             if (value.getPrecision() == Timestamp.Precision.MINUTE) {
                 buffer.writeByte(OpCodes.TIMESTAMP_MINUTE_PRECISION_WITH_OFFSET);
