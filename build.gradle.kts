@@ -115,7 +115,7 @@ tasks {
     // Creates a super jar of ion-java and its dependencies where all dependencies are shaded (moved)
     // to com.amazon.ion_.shaded.are_you_sure_you_want_to_use_this
     shadowJar {
-        val newLocation = "com.amazon.ion.shaded_.are_you_sure_you_want_to_use_this"
+        val newLocation = "com.amazon.ion.shaded_.do_not_use"
         archiveClassifier.set("shaded")
         dependsOn(generateLicenseReport)
         from(generateLicenseReport.get().outputFolder)

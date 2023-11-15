@@ -31,6 +31,10 @@ jobs:
       - uses: gradle/gradle-build-action@842c587ad8aa4c68eeba24c396e15af4c2e9f30a # v2.9.0
         with:
           arguments: build
+      - name: Test minified JAR
+        uses: gradle/gradle-build-action@842c587ad8aa4c68eeba24c396e15af4c2e9f30a # v2.9.0
+        with:
+          arguments: minifyTest
       - run: ./ion-test-driver-run version
       - if: ${{ matrix.upload_reports }}
         uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
