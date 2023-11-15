@@ -317,7 +317,7 @@ public class IonEncoder_1_1 {
             }
         } else {
             long localOffset = (value.getLocalOffset().longValue() / 15) + (14 * 4);
-            bits |= (localOffset & LEAST_SIGNIFICANT_7_BITS) << S_O_TIMESTAMP_OFFSET_BIT_OFFSET;
+            bits |= (localOffset & SEVEN_BIT_MASK) << S_O_TIMESTAMP_OFFSET_BIT_OFFSET;
 
             if (value.getPrecision() == Timestamp.Precision.MINUTE) {
                 buffer.writeByte(OpCodes.TIMESTAMP_MINUTE_PRECISION_WITH_OFFSET);
