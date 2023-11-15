@@ -880,7 +880,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     boolean startsWithIonSymbolTable() {
         long savedPeekIndex = peekIndex;
         peekIndex = annotationSequenceMarker.startIndex;
-        int sid = minorVersion == 0 ? readVarUInt_1_0() : readVarUInt_1_1();
+        int sid = minorVersion == 0 ? readVarUInt_1_0() : (int) readFlexUInt_1_1();
         peekIndex = savedPeekIndex;
         return ION_SYMBOL_TABLE_SID == sid;
     }
