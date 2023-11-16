@@ -75,6 +75,7 @@ final class IonTypeID {
     static final IonTypeID[] TYPE_IDS_NO_IVM;
     static final IonTypeID[] TYPE_IDS_1_0;
     static final IonTypeID[] TYPE_IDS_1_1;
+    static final IonTypeID[] NULL_TYPE_IDS_1_1;
     static {
         TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
         TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
@@ -84,6 +85,24 @@ final class IonTypeID {
             TYPE_IDS_1_0[b] = new IonTypeID((byte) b, 0);
             TYPE_IDS_1_1[b] = new IonTypeID((byte) b, 1);
         }
+        // In Ion 1.1, typed nulls are represented by the type ID 0xEB followed by a 1-byte UInt indicating the type.
+        // Therefore, the type of the typed null cannot be precomputed in Ion 1.1. In order to avoid adding more hot
+        // path branching to the reader, we create IonTypeIDs that mimic precomputed typed nulls in Ion 1.1 by reusing
+        // the typed null type IDs from Ion 1.0. When the type of the typed null is determined, the reader's current
+        // IonTypeID will be replaced with one of these. The index is the one-byte value that follows 0xEB.
+        NULL_TYPE_IDS_1_1 = new IonTypeID[12];
+        NULL_TYPE_IDS_1_1[0x0] = TYPE_IDS_1_0[0x1F]; // null.bool
+        NULL_TYPE_IDS_1_1[0x1] = TYPE_IDS_1_0[0x2F]; // null.int
+        NULL_TYPE_IDS_1_1[0x2] = TYPE_IDS_1_0[0x4F]; // null.float
+        NULL_TYPE_IDS_1_1[0x3] = TYPE_IDS_1_0[0x5F]; // null.decimal
+        NULL_TYPE_IDS_1_1[0x4] = TYPE_IDS_1_0[0x6F]; // null.timestamp
+        NULL_TYPE_IDS_1_1[0x5] = TYPE_IDS_1_0[0x8F]; // null.string
+        NULL_TYPE_IDS_1_1[0x6] = TYPE_IDS_1_0[0x7F]; // null.symbol
+        NULL_TYPE_IDS_1_1[0x7] = TYPE_IDS_1_0[0xAF]; // null.blob
+        NULL_TYPE_IDS_1_1[0x8] = TYPE_IDS_1_0[0x9F]; // null.clob
+        NULL_TYPE_IDS_1_1[0x9] = TYPE_IDS_1_0[0xBF]; // null.list
+        NULL_TYPE_IDS_1_1[0xA] = TYPE_IDS_1_0[0xCF]; // null.sexp
+        NULL_TYPE_IDS_1_1[0xB] = TYPE_IDS_1_0[0xDF]; // null.struct
     }
 
     final IonType type;
@@ -259,6 +278,7 @@ final class IonTypeID {
                             // Typed null. Type byte follows.
                             type = null;
                             isNull = true;
+                            length = 1;
                         } else if (lowerNibble <= 0xD) {
                             isNopPad = true;
                             type = null;
