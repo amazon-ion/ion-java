@@ -194,6 +194,12 @@ public abstract class IonBinaryWriterBuilder
      */
     public abstract IonBinaryWriterBuilder withLocalSymbolTableAppendDisabled();
 
+    /**
+     * Specify the default block size for write buffer.
+     * @param size represent the specified block size in bytes.
+     * If this functionality is not set, the default block size is 32768 bytes.
+     */
+    public abstract IonBinaryWriterBuilder withDefaultBlockSize(int size);
 
     /**
      * Enables or disables writing Binary32 (4-byte, single precision,
