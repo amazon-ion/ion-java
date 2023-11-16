@@ -5,6 +5,8 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonType;
 
+import static com.amazon.ion.impl.bin.OpCodes.*;
+
 /**
  * Holds pre-computed information about a binary Ion type ID byte.
  */
@@ -200,10 +202,9 @@ final class IonTypeID {
             byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
             // For 0xF0 (delimited end byte) the entire byte is included. This avoids having to create a separate field
             // just to identify this byte.
-            lowerNibble = (id == (byte) 0xF0) ? (byte) 0xF0 : (byte) (id & LOW_NIBBLE_BITMASK);
+            lowerNibble = (id == DELIMITED_END_MARKER) ? DELIMITED_END_MARKER : (byte) (id & LOW_NIBBLE_BITMASK);
             isNegativeInt = false; // Not applicable for Ion 1.1; sign is conveyed by the representation.
-            // 0xF4 is a length-prefixed macro invocation; 0xEF is a system macro invocation.
-            isMacroInvocation = upperNibble <= 0x4 || id == (byte) 0xF4 || id == (byte) 0xEF;
+            isMacroInvocation = upperNibble <= 0x4 || id == LENGTH_PREFIXED_MACRO_INVOCATION || id == SYSTEM_MACRO_INVOCATION;
             boolean isNopPad = false;
             boolean isNull = false;
             int length = -1;
@@ -227,17 +228,19 @@ final class IonTypeID {
                 macroId = -1;
                 variableLength =
                        (upperNibble == 0xF && lowerNibble >= 0x4) // Variable length, all types.
-                    || (upperNibble == 0x6 && lowerNibble == 0xF) // Decimal with negative-zero coefficient.
-                    || (upperNibble == 0xE && lowerNibble == 0x6) // Variable length annotation SIDs.
-                    || (upperNibble == 0xE && lowerNibble == 0x9) // Variable length annotation FlexSyms.
-                    || (upperNibble == 0xE && lowerNibble == 0xD); // Variable length NOP.
+                    || id == POSITIVE_ZERO_DECIMAL
+                    || id == ANNOTATIONS_MANY_SYMBOL_ADDRESS
+                    || id == ANNOTATIONS_MANY_FLEX_SYM
+                    || id == VARIABLE_LENGTH_NOP;
                 isInlineable =
                        // struct with VarSym field names.
                        (upperNibble == 0xD && lowerNibble >= 0x2)
-                       // Delimited struct, variable-length symbol, variable-length struct with FlexSym field names.
-                    || (upperNibble == 0xF && (lowerNibble == 0x3 || lowerNibble == 0x9 || lowerNibble == 0xD))
-                       // Annotation wrappers with VarSyms.
-                    || (upperNibble == 0xE && lowerNibble >= 0x7 && lowerNibble <= 9)
+                    || id == DELIMITED_STRUCT
+                    || id == VARIABLE_LENGTH_INLINE_SYMBOL
+                    || id == VARIABLE_LENGTH_STRUCT_WITH_FLEXSYMS
+                    || id == ANNOTATIONS_1_FLEX_SYM
+                    || id == ANNOTATIONS_2_FLEX_SYM
+                    || id == ANNOTATIONS_MANY_FLEX_SYM
                        // Symbol values with inline text.
                     || upperNibble == 0x9;
                 IonType typeFromUpperNibble = BINARY_TOKEN_TYPES_1_1[upperNibble];
@@ -248,38 +251,37 @@ final class IonTypeID {
                         if (lowerNibble <= 0x8) {
                             type = IonType.INT;
                             length = lowerNibble;
-                        } else if (lowerNibble >= 0xE) {
+                        } else if (id == BOOLEAN_TRUE || id == BOOLEAN_FALSE) {
                             type = IonType.BOOL;
                             length = 0;
                         } else {
                             type = IonType.FLOAT;
-                            if (lowerNibble == 0xA) {
+                            if (id == FLOAT_ZERO_LENGTH) {
                                 length = 0; // 0e0
-                            } else if (lowerNibble == 0xB) {
+                            } else if (id == FLOAT_16) {
                                 length = 2;
-                            } else if (lowerNibble == 0xC) {
+                            } else if (id == FLOAT_32) {
                                 length = 4;
-                            } else if (lowerNibble == 0xD) {
+                            } else if (id == FLOAT_64) {
                                 length = 8;
                             }
                         }
                     } else if (upperNibble == 0xE) {
-                        if (lowerNibble <= 0x3) {
+                        if (id == SYMBOL_ADDRESS_1_BYTE || id == SYMBOL_ADDRESS_2_BYTES || id == SYMBOL_ADDRESS_MANY_BYTES) {
                             type = IonType.SYMBOL;
-                            length = lowerNibble == 0x3 ? -1 : lowerNibble;
+                            length = id == SYMBOL_ADDRESS_MANY_BYTES ? -1 : lowerNibble;
                         } else if (lowerNibble <= 0x9) {
                             type = ION_TYPE_ANNOTATION_WRAPPER;
-                        } else if (lowerNibble == 0xA) {
-                            // null.null
+                        } else if (id == NULL_UNTYPED) {
                             type = IonType.NULL;
                             isNull = true;
                             length = 0;
-                        } else if (lowerNibble == 0xB) {
+                        } else if (id == NULL_TYPED) {
                             // Typed null. Type byte follows.
                             type = null;
                             isNull = true;
                             length = 1;
-                        } else if (lowerNibble <= 0xD) {
+                        } else if (id == ONE_BYTE_NOP || id == VARIABLE_LENGTH_NOP) {
                             isNopPad = true;
                             type = null;
                             length = variableLength ? -1 : 0;
@@ -288,29 +290,28 @@ final class IonTypeID {
                             type = null;
                         }
                     } else { // 0xF
-                        if (lowerNibble == 0) {
-                            // Delimited end
+                        if (id == DELIMITED_END_MARKER) {
                             type = null;
                             length = 0;
-                        } else if (lowerNibble == 0x3 || lowerNibble == 0xC || lowerNibble == 0xD) {
+                        } else if (id == DELIMITED_STRUCT || id == VARIABLE_LENGTH_STRUCT_WITH_SIDS || id == VARIABLE_LENGTH_STRUCT_WITH_FLEXSYMS) {
                             type = IonType.STRUCT;
-                        } else if (lowerNibble == 0x5) {
+                        } else if (id == VARIABLE_LENGTH_INTEGER) {
                             type = IonType.INT;
-                        } else if (lowerNibble == 0x6) {
+                        } else if (id == VARIABLE_LENGTH_DECIMAL) {
                             type = IonType.DECIMAL;
-                        } else if (lowerNibble == 0x7) {
+                        } else if (id == VARIABLE_LENGTH_TIMESTAMP) {
                             type = IonType.TIMESTAMP;
-                        } else if (lowerNibble == 0x9) {
+                        } else if (id == VARIABLE_LENGTH_INLINE_SYMBOL) {
                             type = IonType.SYMBOL;
-                        } else if (lowerNibble == 0x8) {
+                        } else if (id == VARIABLE_LENGTH_STRING) {
                             type = IonType.STRING;
-                        } else if (lowerNibble == 0xE) {
+                        } else if (id == VARIABLE_LENGTH_BLOB) {
                             type = IonType.BLOB;
-                        } else if (lowerNibble == 0xF) {
+                        } else if (id == VARIABLE_LENGTH_CLOB) {
                             type = IonType.CLOB;
-                        } else if (lowerNibble == 0x1 || lowerNibble == 0xA) {
+                        } else if (id == DELIMITED_LIST || id == VARIABLE_LENGTH_LIST) {
                             type = IonType.LIST;
-                        } else if  (lowerNibble == 0x2 || lowerNibble == 0xB) {
+                        } else if  (id == DELIMITED_SEXP || id == VARIABLE_LENGTH_SEXP) {
                             type = IonType.SEXP;
                         } else { // 0x4
                             // Variable length macro invocation
@@ -322,34 +323,34 @@ final class IonTypeID {
                     if (type == IonType.TIMESTAMP) {
                         // Short-form timestamps. Long-form timestamps use the upper nibble 0xF, forcing them to take
                         // the previous branch.
-                        switch (lowerNibble) {
-                            case 0x0:
+                        switch (id) {
+                            case TIMESTAMP_YEAR_PRECISION:
                                 length = 1;
                                 break;
-                            case 0x1:
-                            case 0x2:
+                            case TIMESTAMP_MONTH_PRECISION:
+                            case TIMESTAMP_DAY_PRECISION:
                                 length = 2;
                                 break;
-                            case 0x3:
+                            case TIMESTAMP_MINUTE_PRECISION:
                                 length = 4;
                                 break;
-                            case 0x4:
-                            case 0x8:
-                            case 0x9:
+                            case TIMESTAMP_SECOND_PRECISION:
+                            case TIMESTAMP_MINUTE_PRECISION_WITH_OFFSET:
+                            case TIMESTAMP_SECOND_PRECISION_WITH_OFFSET:
                                 length = 5;
                                 break;
-                            case 0x5:
+                            case TIMESTAMP_MILLIS_PRECISION:
                                 length = 6;
                                 break;
-                            case 0x6:
-                            case 0xA:
+                            case TIMESTAMP_MICROS_PRECISION:
+                            case TIMESTAMP_MILLIS_PRECISION_WITH_OFFSET:
                                 length = 7;
                                 break;
-                            case 0x7:
-                            case 0xB:
+                            case TIMESTAMP_NANOS_PRECISION:
+                            case TIMESTAMP_MICROS_PRECISION_WITH_OFFSET:
                                 length = 8;
                                 break;
-                            case 0xC:
+                            case TIMESTAMP_NANOS_PRECISION_WITH_OFFSET:
                                 length = 9;
                                 break;
                         }
@@ -359,7 +360,7 @@ final class IonTypeID {
                     }
                 }
             }
-            isDelimited = upperNibble == 0xF && lowerNibble <= 0x3;
+            isDelimited = id == DELIMITED_LIST || id == DELIMITED_SEXP || id == DELIMITED_STRUCT;
             this.isNopPad = isNopPad;
             this.isNull = isNull;
             this.length = length;
