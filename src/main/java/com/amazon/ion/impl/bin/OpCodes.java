@@ -50,15 +50,25 @@ public class OpCodes {
     public static final byte ANNOTATIONS_MANY_FLEX_SYM = (byte) 0xE9;
     public static final byte NULL_UNTYPED = (byte) 0xEA;
     public static final byte NULL_TYPED = (byte) 0xEB;
-    // 0xEC, 0xED NOP
+    public static final byte ONE_BYTE_NOP = (byte) 0xEC;
+    public static final byte VARIABLE_LENGTH_NOP = (byte) 0xED;
     // 0xEE Reserved
-    // 0xEF System Macro Invocation
+    public static final byte SYSTEM_MACRO_INVOCATION = (byte) 0xEF;
 
+    public static final byte DELIMITED_END_MARKER = (byte) 0xF0;
+    public static final byte DELIMITED_LIST = (byte) 0xF1;
+    public static final byte DELIMITED_SEXP = (byte) 0xF2;
+    public static final byte DELIMITED_STRUCT = (byte) 0xF3;
+    public static final byte LENGTH_PREFIXED_MACRO_INVOCATION = (byte) 0xF4;
     public static final byte VARIABLE_LENGTH_INTEGER = (byte) 0xF5;
     public static final byte VARIABLE_LENGTH_DECIMAL = (byte) 0xF6;
     public static final byte VARIABLE_LENGTH_TIMESTAMP = (byte) 0xF7;
     public static final byte VARIABLE_LENGTH_STRING = (byte) 0xF8;
     public static final byte VARIABLE_LENGTH_INLINE_SYMBOL = (byte) 0xF9;
+    public static final byte VARIABLE_LENGTH_LIST = (byte) 0xFA;
+    public static final byte VARIABLE_LENGTH_SEXP = (byte) 0xFB;
+    public static final byte VARIABLE_LENGTH_STRUCT_WITH_SIDS = (byte) 0xFC;
+    public static final byte VARIABLE_LENGTH_STRUCT_WITH_FLEXSYMS = (byte) 0xFD;
     public static final byte VARIABLE_LENGTH_BLOB = (byte) 0xFE;
     public static final byte VARIABLE_LENGTH_CLOB = (byte) 0xFF;
 }
