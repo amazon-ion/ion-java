@@ -68,11 +68,7 @@ lateinit var javadocArtifact: PublishArtifact
 
 sourceSets {
     main {
-        java.srcDir("src")
         resources.srcDir(generatedResourcesDir)
-    }
-    test {
-        java.srcDir("test")
     }
 }
 
