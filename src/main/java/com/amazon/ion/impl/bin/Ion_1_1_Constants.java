@@ -14,7 +14,7 @@ public class Ion_1_1_Constants {
     public static final int NANOSECOND_SCALE = 9;
     public static final int MAX_MICROSECONDS = 999999;
     public static final int MICROSECOND_SCALE = 6;
-    public static final short MAX_MILLISECONDS = 999;
+    public static final int MAX_MILLISECONDS = 999;
     public static final int MILLISECOND_SCALE = 3;
 
     //////// Timestamp Field Constants ////////
