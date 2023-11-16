@@ -16,7 +16,7 @@
 package com.amazon.ion;
 
 import static com.amazon.ion.TestUtils.US_ASCII_CHARSET;
-import static com.amazon.ion.impl._Private_Utils.encode;
+
 import com.amazon.ion.impl._Private_Utils;
 import java.io.IOException;
 import java.io.InputStream;

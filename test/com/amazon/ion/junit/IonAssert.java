@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
-import static com.amazon.ion.impl._Private_IonConstants.UNKNOWN_SYMBOL_TEXT_PREFIX;
 import static com.amazon.ion.util.IonTextUtils.printSymbol;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;

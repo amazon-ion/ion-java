@@ -17,10 +17,8 @@ package com.amazon.ion.impl;
 
 import static org.junit.Assert.*;
 
-import org.junit.Assert;
 import org.junit.Test;
 import com.amazon.ion.Decimal;
-import static org.junit.Assert.*;
 
 public class _Private_ScalarConversionsTest {
     private long decimalToLong(final Decimal d) {

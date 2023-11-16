@@ -4,8 +4,6 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
-import com.amazon.ion.Decimal;
-import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -22,7 +20,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
 import com.amazon.ion.impl.bin._Private_IonManagedWriter;
@@ -43,7 +40,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;

@@ -15,7 +15,6 @@
 
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
