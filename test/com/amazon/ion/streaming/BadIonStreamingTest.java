@@ -26,8 +26,7 @@ import com.amazon.ion.TestUtils;
 import com.amazon.ion.impl._Private_Utils;
 import com.amazon.ion.junit.Injected.Inject;
 import java.io.File;
-import java.io.IOException;
-import org.junit.Ignore;
+
 import org.junit.Test;
 
 public class BadIonStreamingTest

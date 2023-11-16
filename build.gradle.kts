@@ -1,17 +1,38 @@
+import com.github.jk1.license.filter.LicenseBundleNormalizer
+import com.github.jk1.license.render.InventoryMarkdownReportRenderer
+import com.github.jk1.license.render.TextReportRenderer
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
+import proguard.gradle.ProGuardTask
 import java.net.URI
 import java.time.Instant
 import java.util.Properties
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.guardsquare:proguard-gradle:7.4.0")
+    }
+}
 
 plugins {
+    kotlin("jvm") version "1.9.0"
     java
     `maven-publish`
     jacoco
     signing
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+
     id("org.cyclonedx.bom") version "1.7.2"
     id("com.github.spotbugs") version "5.0.13"
+    id("org.jlleitschuh.gradle.ktlint") version "11.3.2"
     // TODO: more static analysis. E.g.:
     // id("com.diffplug.spotless") version "6.11.0"
+
+    // Used for generating the third party attribution document
+    id("com.github.jk1.dependency-license-report") version "2.5"
 }
 
 jacoco {
@@ -20,9 +41,12 @@ jacoco {
 
 repositories {
     mavenCentral()
+    google()
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testCompileOnly("junit:junit:4.13")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
@@ -38,18 +62,36 @@ version = File(project.rootDir.path + "/project.version").readLines().single()
 description = "A Java implementation of the Amazon Ion data notation."
 
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
-val generatedJarInfoDir = "${buildDir}/generated/jar-info"
+val generatedResourcesDir = "$buildDir/generated/main/resources"
 lateinit var sourcesArtifact: PublishArtifact
 lateinit var javadocArtifact: PublishArtifact
 
 sourceSets {
     main {
         java.srcDir("src")
-        resources.srcDir(generatedJarInfoDir)
+        resources.srcDir(generatedResourcesDir)
     }
     test {
         java.srcDir("test")
     }
+}
+
+licenseReport {
+    // Because of the current gradle project structure, we must explicitly exclude ion-java-cli, even
+    // though ion-java does not depend on ion-java-cli. By default, the license report generator includes
+    // the current project (ion-java) and all its subprojects.
+    projects = arrayOf(project)
+    outputDir = "$buildDir/reports/licenses"
+    renderers = arrayOf(InventoryMarkdownReportRenderer(), TextReportRenderer())
+    // Dependencies use inconsistent titles for Apache-2.0, so we need to specify mappings
+    filters = arrayOf(
+        LicenseBundleNormalizer(
+            mapOf(
+                "The Apache License, Version 2.0" to "Apache-2.0",
+                "The Apache Software License, Version 2.0" to "Apache-2.0",
+            )
+        )
+    )
 }
 
 tasks {
@@ -58,6 +100,116 @@ tasks {
         // Because we set the `release` option, you can no longer build ion-java using JDK 8. However, we continue to
         // emit JDK 8 compatible classes due to widespread use of this library with JDK 8.
         options.release.set(8)
+    }
+    withType<KotlinCompile<KotlinJvmOptions>> {
+        kotlinOptions {
+            // Kotlin jvmTarget must match the JavaCompile release version
+            jvmTarget = "1.8"
+        }
+    }
+
+    jar {
+        archiveClassifier.set("original")
+    }
+
+    // Creates a super jar of ion-java and its dependencies where all dependencies are shaded (moved)
+    // to com.amazon.ion_.shaded.are_you_sure_you_want_to_use_this
+    shadowJar {
+        val newLocation = "com.amazon.ion.shaded_.do_not_use"
+        archiveClassifier.set("shaded")
+        dependsOn(generateLicenseReport)
+        from(generateLicenseReport.get().outputFolder)
+        relocate("kotlin", "$newLocation.kotlin")
+        relocate("org.jetbrains", "$newLocation.org.jetbrains")
+        relocate("org.intellij", "$newLocation.org.intellij")
+        dependencies {
+            // Remove all Kotlin metadata so that it looks like an ordinary Java Jar
+            exclude("**/*.kotlin_metadata")
+            exclude("**/*.kotlin_module")
+            exclude("**/*.kotlin_builtins")
+            // Eliminate dependencies' pom files
+            exclude("**/pom.*")
+        }
+    }
+
+    /**
+     * The `minifyJar` task uses Proguard to create a JAR that is smaller than the combined size of ion-java
+     * and its dependencies. This is the final JAR that is published to maven central.
+     */
+    val minifyJar by register<ProGuardTask>("minifyJar") {
+        group = "build"
+        val rulesPath = file("config/proguard/rules.pro")
+        val inputJarPath = shadowJar.get().outputs.files.singleFile
+        val outputJarPath = "build/libs/ion-java-$version.jar"
+
+        inputs.file(rulesPath)
+        inputs.file(inputJarPath)
+        outputs.file(outputJarPath)
+        dependsOn(shadowJar)
+        dependsOn(configurations.runtimeClasspath)
+
+        injars(inputJarPath)
+        outjars(outputJarPath)
+        configuration(rulesPath)
+
+        val javaHome = System.getProperty("java.home")
+        // Automatically handle the Java version of this build, but we don't support lower than JDK 11
+        // See https://github.com/Guardsquare/proguard/blob/e76e47953f6f295350a3bb7eeb801b33aac34eae/examples/gradle-kotlin-dsl/build.gradle.kts#L48-L60
+        libraryjars(
+            mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class"),
+            "$javaHome/jmods/java.base.jmod"
+        )
+    }
+
+    build {
+        dependsOn(minifyJar)
+    }
+
+    generateLicenseReport {
+        doLast {
+            // We don't want the time in the generated markdown report because that makes it unstable for
+            // our verification of the THIRD_PARTY_LICENSES file.
+            val markdownReport = outputs.files.single().walk().single { it.path.endsWith(".md") }
+            val dateRegex = Regex("^_\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} \\w+_$")
+            // Reads the content of the markdown report, replacing the date line with an empty line, and
+            // trimming extra whitespace from the end of all other lines.
+            val newMarkdownContent = markdownReport.readLines()
+                .joinToString("\n") { if (it.matches(dateRegex)) "" else it.trimEnd() }
+            markdownReport.writeText(newMarkdownContent)
+        }
+    }
+
+    // Task to check whether the THIRD_PARTY_LICENSES file is still up-to-date.
+    val checkThirdPartyLicensesFile by register("checkThirdPartyLicensesFile") {
+        val thirdPartyLicensesFileName = "THIRD_PARTY_LICENSES.md"
+        val thirdPartyLicensesPath = "$rootDir/$thirdPartyLicensesFileName"
+        dependsOn(generateLicenseReport)
+        inputs.file(thirdPartyLicensesPath)
+        group = "verification"
+        description = "Verifies that $thirdPartyLicensesFileName is up-to-date."
+        doLast {
+            val generatedMarkdownReport = generateLicenseReport.get().outputs.files.single()
+                .walk().single { it.path.endsWith(".md") }
+            val generatedMarkdownReportContent = generatedMarkdownReport.readLines()
+                .filter { it.isNotBlank() }
+                .joinToString("\n")
+
+            val sourceControlledMarkdownReport = File(thirdPartyLicensesPath)
+            val sourceControlledMarkdownReportContent = sourceControlledMarkdownReport.readLines()
+                .filter { it.isNotBlank() }
+                .joinToString("\n")
+
+            if (sourceControlledMarkdownReportContent != generatedMarkdownReportContent) {
+                throw IllegalStateException(
+                    "$thirdPartyLicensesPath is out of date.\n" +
+                        "Please replace the file content with the content of $generatedMarkdownReport."
+                )
+            }
+        }
+    }
+
+    check {
+        dependsOn(checkThirdPartyLicensesFile)
     }
 
     javadoc {
@@ -70,6 +222,11 @@ tasks {
             // Stops jquery from being included as a bundled dependency
             this.noIndex(true)
         }
+    }
+
+    ktlint {
+        version.set("0.40.0")
+        outputToConsole.set(true)
     }
 
     // spotbugs-gradle-plugin creates a :spotbugsTest task by default, but we don't want it
@@ -110,7 +267,7 @@ tasks {
                             "xsltproc",
                             "--output", spotbugsBaselineFile,
                             "$rootDir/config/spotbugs/baseline.xslt",
-                            outputLocation.get().toString()
+                            "${outputLocation.get()}/spotBugs"
                         )
                     }
                 }
@@ -136,15 +293,15 @@ tasks {
      * for why this is done with a properties file rather than the Jar manifest.
      */
     val generateJarInfo by creating<Task> {
+        val propertiesFile = File("$generatedResourcesDir/${project.name}.properties")
         doLast {
-            val propertiesFile = File("$generatedJarInfoDir/${project.name}.properties")
             propertiesFile.parentFile.mkdirs()
             val properties = Properties()
             properties.setProperty("build.version", version.toString())
             properties.setProperty("build.time", Instant.now().toString())
             properties.store(propertiesFile.writer(), null)
         }
-        outputs.dir(generatedJarInfoDir)
+        outputs.file(propertiesFile)
     }
 
     processResources { dependsOn(generateJarInfo) }
@@ -160,12 +317,31 @@ tasks {
         }
     }
 
-    test {
+    fun Test.applyCommonTestConfig() {
+        group = "verification"
         maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
         maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
         useJUnitPlatform()
         // report is always generated after tests run
         finalizedBy(jacocoTestReport)
+    }
+
+    test {
+        applyCommonTestConfig()
+    }
+
+    /** Runs the JUnit test on the minified jar. */
+    register<Test>("minifyTest") {
+        applyCommonTestConfig()
+        classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + minifyJar.outputs.files
+        dependsOn(minifyJar)
+    }
+
+    /** Runs the JUnit test on the shadow jar. */
+    register<Test>("shadowTest") {
+        applyCommonTestConfig()
+        classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + shadowJar.get().outputs.files
+        dependsOn(minifyJar)
     }
 
     withType<Sign> {

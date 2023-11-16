@@ -21,7 +21,6 @@ import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSymbol;
 import com.amazon.ion.IonType;

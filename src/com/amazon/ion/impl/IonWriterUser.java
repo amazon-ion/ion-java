@@ -16,7 +16,6 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
