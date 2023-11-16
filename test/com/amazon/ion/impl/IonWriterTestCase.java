@@ -48,10 +48,8 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.UnknownSymbolException;
-import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 import com.amazon.ion.junit.IonAssert;
-import com.amazon.ion.system.IonSystemBuilder;
-import java.io.ByteArrayInputStream;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;

@@ -1,21 +1,13 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonReader;
-import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
-import com.amazon.ion.util.RepeatInputStream;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.SequenceInputStream;
-import java.math.BigDecimal;
 
-import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
 import static org.junit.Assert.assertEquals;
 
 public class IonReaderBinaryRawStringTest {

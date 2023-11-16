@@ -19,13 +19,12 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 import java.util.ListIterator;
-import org.junit.Assert;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonSequence;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.impl.lite.BaseIonSequenceLiteSublistTestCase;
 import com.amazon.ion.junit.Injected;
 import com.amazon.ion.junit.Injected.Inject;
 
