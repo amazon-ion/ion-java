@@ -353,8 +353,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             offset = readVarInt_1_0(firstByte);
         }
         int year = readVarUInt_1_0();
-        int month = 0;
-        int day = 0;
+        int month = 1;
+        int day = 1;
         int hour = 0;
         int minute = 0;
         int second = 0;
@@ -619,8 +619,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     private Timestamp readTimestampLongForm_1_1() {
         int year;
-        int month = 0;
-        int day = 0;
+        int month = 1;
+        int day = 1;
         int hour = 0;
         int minute = 0;
         int second = 0;
@@ -690,8 +690,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
         Timestamp.Precision precision = S_TIMESTAMP_PRECISION_FOR_TYPE_ID_OFFSET[valueTid.lowerNibble];
         int year = 0;
-        int month = 0;
-        int day = 0;
+        int month = 1;
+        int day = 1;
         int hour = 0;
         int minute = 0;
         int second = 0;
