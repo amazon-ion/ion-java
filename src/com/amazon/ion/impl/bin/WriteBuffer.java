@@ -18,6 +18,7 @@ package com.amazon.ion.impl.bin;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -1360,6 +1361,64 @@ import java.util.List;
         return numBytes;
     }
 
+    public static int flexIntLength(final BigInteger value) {
+        return value.bitLength() / 7 + 1;
+    }
+
+    public static int flexUIntLength(final BigInteger value) {
+        return (value.bitLength() - 1) / 7 + 1;
+    }
+
+    public int writeFlexInt(final BigInteger value) {
+        int numBytes = flexIntLength(value);
+        return writeFlexIntOrUIntForBigInteger(value, numBytes);
+    }
+
+    public int writeFlexUInt(final BigInteger value) {
+        if (value.signum() < 0) {
+            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+        }
+        int numBytes = flexUIntLength(value);
+        return writeFlexIntOrUIntForBigInteger(value, numBytes);
+    }
+
+    private int writeFlexIntOrUIntForBigInteger(final BigInteger value, final int numBytes) {
+        // TODO: Should we branch to the implementation for long if the number is small enough?
+        // https://github.com/amazon-ion/ion-java/issues/614
+        byte[] valueBytes = value.toByteArray();
+
+        int i = 0; // `i` gets incremented for every byte written.
+
+        // Start with leading zero bytes.
+        // If there's 1-8 total bytes, we need no leading zero-bytes.
+        // If there's 9-16 total bytes, we need one zero-byte
+        // If there's 17-24 total bytes, we need two zero-bytes, etc.
+        for (; i < (numBytes - 1)/8; i++) {
+            writeByte((byte) 0);
+        }
+
+        // Write the last length bits, possibly also containing some value bits.
+        int remainingLengthBits = (numBytes - 1) % 8;
+        byte lengthPart = (byte) (0x01 << remainingLengthBits);
+        int valueBitOffset = remainingLengthBits + 1;
+        byte valuePart = (byte) (valueBytes[valueBytes.length - 1] << valueBitOffset);
+        writeByte((byte) (valuePart | lengthPart));
+        i++;
+
+        for (int valueByteOffset = valueBytes.length - 1; valueByteOffset > 0; valueByteOffset--) {
+            // Technically it's only a nibble if the bitOffset is 4, so we call it nibble-ish
+            byte highNibbleIsh = (byte) (valueBytes[valueByteOffset - 1] << (valueBitOffset));
+            byte lowNibbleIsh = (byte) ((valueBytes[valueByteOffset] & 0xFF) >> (8 - valueBitOffset));
+            writeByte((byte) (highNibbleIsh | lowNibbleIsh));
+            i++;
+        }
+        if (i < numBytes) {
+            writeByte((byte) ((valueBytes[0]) >> (8 - valueBitOffset)));
+        }
+
+        return numBytes;
+    }
+
     /** Get the length of FixedInt for the provided value. */
     public static int fixedIntLength(final long value) {
         int numMagnitudeBitsRequired;
@@ -1379,7 +1438,7 @@ import java.util.List;
      */
     public int writeFixedInt(final long value) {
         int numBytes = fixedIntLength(value);
-        return writeFixedIntOrUInt(value, numBytes);
+        return _writeFixedIntOrUInt(value, numBytes);
     }
 
     /** Get the length of FixedUInt for the provided value. */
@@ -1395,17 +1454,40 @@ import java.util.List;
      */
     public int writeFixedUInt(final long value) {
         if (value < 0) {
-            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+            throw new IllegalArgumentException("Attempted to write a FixedUInt for " + value);
         }
         int numBytes = fixedUIntLength(value);
-        return writeFixedIntOrUInt(value, numBytes);
+        return _writeFixedIntOrUInt(value, numBytes);
     }
 
     /**
-     * Because the fixed int and fixed uint encodings are so similar, we can use this method to write either one as long
-     * as we provide the correct number of bytes needed to encode the value.
+     * Writes the bytes of a {@code long} as a {@code FixedInt} or {@code FixedUInt} using {@code numBytes} bytes.
+     * <p>
+     * {@code numBytes} should be an integer from 1 to 8 inclusive. If {@code numBytes} is out of bounds, that is a
+     * programmer error and will result in an IllegalArgumentException.
+     * <p>
+     * Because the {@code FixedInt} and {@code FixedUInt} encodings are so similar, we can use this method to write
+     * either one as long as we provide the correct number of bytes needed to encode the value.
+     * <p>
+     * Most of the time, you should not use this method. Instead, use {@link WriteBuffer#writeFixedInt} or
+     * {@link WriteBuffer#writeFixedUInt}, which calculate the minimum number of required bytes to represent the value.
+     * <p>
+     * You <i>should</i> use this method when the spec requires a {@code FixedInt} or {@code FixedUInt} of a specific
+     * size when it's possible that the value could fit in a smaller FixedInt or FixedUInt than the size required in
+     * the spec.
      */
-    private int writeFixedIntOrUInt(final long value, final int numBytes) {
+    public int writeFixedIntOrUInt(final long value, final int numBytes) {
+        if (0 > numBytes || numBytes > 8) {
+            throw new IllegalArgumentException("numBytes is out of bounds; was " + numBytes);
+        }
+        return _writeFixedIntOrUInt(value, numBytes);
+    }
+
+    /**
+     * Because the {@code FixedInt} and {@code FixedUInt} encodings are so similar, we can use this method to write
+     * either one as long as we provide the correct number of bytes needed to encode the value.
+     */
+    private int _writeFixedIntOrUInt(final long value, final int numBytes) {
         writeByte((byte) value);
         if (numBytes > 1) {
             writeByte((byte) (value >> 8));
