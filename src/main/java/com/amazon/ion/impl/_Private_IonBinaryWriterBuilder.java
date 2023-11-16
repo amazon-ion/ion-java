@@ -224,6 +224,13 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     @Override
+    public _Private_IonBinaryWriterBuilder withDefaultBlockSize(int size) {
+        _Private_IonBinaryWriterBuilder b = mutable();
+        b.setDefaultBlockSize(size);
+        return b;
+    }
+
+    @Override
     public void setIsFloatBinary32Enabled(boolean enabled) {
         mutationCheck();
         if (enabled)
@@ -275,6 +282,9 @@ public class _Private_IonBinaryWriterBuilder
 
     //=========================================================================
 
+    public void setDefaultBlockSize(int size) {
+        myBinaryWriterBuilder.withUserBlockSize(size);
+    }
 
     /**
      * Fills all properties and returns an immutable builder.
