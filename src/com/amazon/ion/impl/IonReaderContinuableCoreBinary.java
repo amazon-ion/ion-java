@@ -475,6 +475,58 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Reads a FixedInt into a long. After this method returns, `peekIndex` points to the first byte after the end of
+     * the FixedInt.
+     * @return the value.
+     */
+    private long readFixedInt_1_1() {
+        if (peekIndex >= valueMarker.endIndex) {
+            return 0;
+        }
+        long startIndex = peekIndex;
+        peekIndex = valueMarker.endIndex;
+        // Note: the following line performs sign extension via the cast to long without masking with 0xFF.
+        long value = buffer[(int) --peekIndex];
+        while (peekIndex > startIndex) {
+            value = (value << 8) | (buffer[(int) --peekIndex] & SINGLE_BYTE_MASK);
+        }
+        peekIndex = valueMarker.endIndex;
+        return value;
+    }
+
+    /**
+     * Copies a FixedInt into scratch space, converting it to its equivalent big-endian two's complement representation.
+     * @param startIndex the index of the second byte in the FixedInt representation.
+     * @param length the number of bytes remaining in the FixedInt representation.
+     * @return a byte[] (either new or reused) containing the big-endian two's complement representation of the value.
+     */
+    private byte[] copyFixedIntAsTwosComplementBytes(long startIndex, int length) {
+        // FixedInt is a little-endian two's complement representation. Simply reverse the bytes.
+        byte[] bytes = getScratchForSize(length);
+        int copyIndex = bytes.length;
+        for (int i = 0; i < length; i++) {
+            bytes[--copyIndex] = buffer[(int) startIndex + i];
+        }
+        peekIndex = startIndex + length;
+        return bytes;
+    }
+
+    /**
+     * Reads a FixedInt value into a BigInteger.
+     * @param length the length of the value.
+     * @return the value.
+     */
+     private BigInteger readFixedIntAsBigInteger_1_1(int length) {
+         BigInteger value;
+         if (length > 0) {
+             value = new BigInteger(copyFixedIntAsTwosComplementBytes(peekIndex, length));
+         } else {
+             value = BigInteger.ZERO;
+         }
+         return value;
+     }
+
     private BigDecimal readBigDecimal_1_1() {
         throw new UnsupportedOperationException();
     }
@@ -483,12 +535,22 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Reads the FixedInt bounded by `valueMarker` into a `long`.
+     * @return the value.
+     */
     private long readLong_1_1() {
-        throw new UnsupportedOperationException();
+        peekIndex = valueMarker.startIndex;
+        return readFixedInt_1_1();
     }
 
+    /**
+     * Reads the FixedInt bounded by `valueMarker` into a BigInteger.
+     * @return the value.
+     */
     private BigInteger readBigInteger_1_1() {
-        throw new UnsupportedOperationException();
+        peekIndex = valueMarker.startIndex;
+        return readFixedIntAsBigInteger_1_1((int) (valueMarker.endIndex - peekIndex));
     }
 
     /**
@@ -750,8 +812,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
     }
 
+    /**
+     * Reads the boolean value using the type ID of the current value.
+     * @return the value.
+     */
     private boolean readBoolean_1_1() {
-        throw new UnsupportedOperationException();
+        // Boolean 'true' is 0x5E; 'false' is 0x5F.
+        return valueTid.lowerNibble == 0xE;
     }
 
     @Override
@@ -823,15 +890,16 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return null;
         }
         prepareScalar();
-        if (valueTid.length < 0) {
+        int length = valueTid.variableLength ? ((int) (valueMarker.endIndex - valueMarker.startIndex)) : valueTid.length;
+        if (length < 0) {
             return IntegerSize.BIG_INTEGER;
-        } else if (valueTid.length < INT_SIZE_IN_BYTES) {
+        } else if (length < INT_SIZE_IN_BYTES) {
             return IntegerSize.INT;
-        } else if (valueTid.length == INT_SIZE_IN_BYTES) {
+        } else if (length == INT_SIZE_IN_BYTES) {
             return (minorVersion != 0 || classifyInteger_1_0()) ? IntegerSize.INT : IntegerSize.LONG;
-        } else if (valueTid.length < LONG_SIZE_IN_BYTES) {
+        } else if (length < LONG_SIZE_IN_BYTES) {
             return IntegerSize.LONG;
-        } else if (valueTid.length == LONG_SIZE_IN_BYTES) {
+        } else if (length == LONG_SIZE_IN_BYTES) {
             return (minorVersion != 0 || classifyInteger_1_0()) ? IntegerSize.LONG : IntegerSize.BIG_INTEGER;
         }
         return IntegerSize.BIG_INTEGER;
