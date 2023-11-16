@@ -632,6 +632,28 @@ public class TestUtils
     }
 
     /**
+     * Converts a string of octets in the given radix to a byte array. Octets must be separated by a space.
+     * @param octetString the string of space-separated octets.
+     * @param radix the radix of the octets in the string.
+     * @return a new byte array.
+     */
+    private static byte[] octetStringToByteArray(String octetString, int radix) {
+        String[] bytesAsStrings = octetString.split(" ");
+        byte[] bytesAsBytes = new byte[bytesAsStrings.length];
+        for (int i = 0; i < bytesAsBytes.length; i++) {
+            bytesAsBytes[i] = (byte) (Integer.parseInt(bytesAsStrings[i], radix) & 0xFF);
+        }
+        return bytesAsBytes;
+    }
+
+    /**
+     * Converts a string of hex octets, such as "BE EF", to a byte array.
+     */
+    public static byte[] hexStringToByteArray(String hexString) {
+        return octetStringToByteArray(hexString, 16);
+    }
+
+    /**
      * Converts a byte array to a string of bits, such as "00110110 10001001".
      * The purpose of this method is to make it easier to read and write test assertions.
      */
@@ -661,12 +683,7 @@ public class TestUtils
      * Converts a string of bits, such as "00110110 10001001", to a byte array.
      */
     public static byte[] bitStringToByteArray(String bitString) {
-        String[] bytesAsBits = bitString.split(" ");
-        byte[] bytesAsBytes = new byte[bytesAsBits.length];
-        for (int i = 0; i < bytesAsBytes.length; i++) {
-            bytesAsBytes[i] = (byte) (Integer.parseInt(bytesAsBits[i], 2) & 0xFF);
-        }
-        return bytesAsBytes;
+        return octetStringToByteArray(bitString, 2);
     }
 
     /**

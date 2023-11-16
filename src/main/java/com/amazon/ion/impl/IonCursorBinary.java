@@ -1296,6 +1296,9 @@ class IonCursorBinary implements IonCursor {
             if (endIndex > limit) {
                 isValueIncomplete = true;
             }
+            if (minorVersion == 1 && valueTid.isNull && valueTid.length > 0) {
+                valueTid = IonTypeID.NULL_TYPE_IDS_1_1[buffer[(int)(peekIndex++) & SINGLE_BYTE_MASK]];
+            }
         }
         markerToSet.typeId = valueTid;
         if (event == Event.START_CONTAINER) {
@@ -1339,6 +1342,13 @@ class IonCursorBinary implements IonCursor {
                 markerToSet.typeId = valueTid;
             }
             return true;
+        }
+        if (minorVersion == 1 && valueTid.isNull && valueTid.length > 0) {
+            int nullTypeIndex = slowReadByte();
+            if (nullTypeIndex < 0) {
+                return true;
+            }
+            valueTid = IonTypeID.NULL_TYPE_IDS_1_1[nullTypeIndex];
         }
         markerToSet.typeId = valueTid;
         if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
