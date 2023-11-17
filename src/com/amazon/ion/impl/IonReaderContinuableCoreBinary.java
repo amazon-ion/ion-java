@@ -496,31 +496,38 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Copies a FixedInt into scratch space, converting it to its equivalent big-endian two's complement representation.
-     * @param startIndex the index of the second byte in the FixedInt representation.
-     * @param length the number of bytes remaining in the FixedInt representation.
+     * Copies a FixedInt or FixedUInt into scratch space, converting it to its equivalent big-endian two's complement
+     * representation. If the provided length is longer than the actual length of the value, the most significant
+     * byte in the two's complement representation will be zero.
+     * @param startIndex the index of the second byte in the FixedInt or FixedUInt representation.
+     * @param length the number of bytes remaining in the FixedInt or FixedUInt representation.
      * @return a byte[] (either new or reused) containing the big-endian two's complement representation of the value.
      */
-    private byte[] copyFixedIntAsTwosComplementBytes(long startIndex, int length) {
+    private byte[] copyFixedIntOrFixedUIntAsTwosComplementBytes(long startIndex, int length) {
         // FixedInt is a little-endian two's complement representation. Simply reverse the bytes.
         byte[] bytes = getScratchForSize(length);
+        // Clear the most significant byte in case the scratch space is padded to accommodate an unsigned value with
+        // its highest bit set.
+        bytes[0] = 0;
         int copyIndex = bytes.length;
-        for (int i = 0; i < length; i++) {
-            bytes[--copyIndex] = buffer[(int) startIndex + i];
+        for (long i = startIndex; i < valueMarker.endIndex; i++) {
+            bytes[--copyIndex] = buffer[(int) i];
         }
-        peekIndex = startIndex + length;
+        peekIndex = valueMarker.endIndex;
         return bytes;
     }
 
     /**
-     * Reads a FixedInt value into a BigInteger.
-     * @param length the length of the value.
+     * Reads a FixedInt or FixedUInt value into a BigInteger.
+     * @param length the length of the two's complement representation of the value. For FixedInts, this is always
+     *               equal to the length of the value; for FixedUInts, this is one byte larger than the length of the
+     *               value if the highest bit in the unsigned representation is set.
      * @return the value.
      */
-     private BigInteger readFixedIntAsBigInteger_1_1(int length) {
+     private BigInteger readFixedIntOrFixedUIntAsBigInteger_1_1(int length) {
          BigInteger value;
          if (length > 0) {
-             value = new BigInteger(copyFixedIntAsTwosComplementBytes(peekIndex, length));
+             value = new BigInteger(copyFixedIntOrFixedUIntAsTwosComplementBytes(peekIndex, length));
          } else {
              value = BigInteger.ZERO;
          }
@@ -550,64 +557,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     private BigInteger readBigInteger_1_1() {
         peekIndex = valueMarker.startIndex;
-        return readFixedIntAsBigInteger_1_1((int) (valueMarker.endIndex - peekIndex));
-    }
-
-    /**
-     * Copies a FlexUInt into scratch space, converting it to its equivalent big-endian two's complement representation.
-     * @param firstByte the first (least-significant) byte in the FlexUInt representation.
-     * @param bitsToShiftRight the number of continuation bits that must be shifted out of every byte.
-     * @param startIndex the index of the second byte in the FlexUInt representation.
-     * @param length the number of bytes remaining in the FlexUInt representation.
-     * @return a byte[] (either new or reused) containing the big-endian two's complement representation of the value.
-     */
-    private byte[] copyFlexUIntAsTwosComplementBytes(int firstByte, int bitsToShiftRight, long startIndex, int length) {
-        // If the most significant bit is set, the value would be interpreted as a negative two's complement integer. To
-        // avoid that, make sure the most significant byte in the copy is 0 by over-allocating the destination buffer.
-        // Additionally, one more byte than 'length' is always required because 'length' does not include the first
-        // byte.
-        byte[] bytes = getScratchForSize(length + 1 + ((buffer[(int) startIndex + length - 1] < 0) ? 1 : 0));
-        bytes[0] = 0;
-        int copyIndex = bytes.length;
-        bytes[--copyIndex] = (byte) (firstByte >>> bitsToShiftRight);
-        int lowerBitsMask = ~(-1 << bitsToShiftRight);
-        for (int i = 0; i < length; i++) {
-            byte b = buffer[(int) startIndex + i];
-            // The following implements a byte-by-byte bit shift. The lower bits in each byte are or'd with the higher
-            // bits from the previous byte.
-            bytes[copyIndex] |= (byte) ((b & lowerBitsMask) << (8 - bitsToShiftRight));
-            bytes[--copyIndex] = (byte) ((b & SINGLE_BYTE_MASK) >>> bitsToShiftRight);
-        }
-        peekIndex = startIndex + length;
-        return bytes;
-    }
-
-    /**
-     * Reads an FlexUInt value into a BigInteger.
-     * @return the value as a BigInteger.
-     */
-    private BigInteger readFlexUIntAsBigInteger_1_1() {
-        BigInteger value;
-        int currentByte = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
-        int length = 0;
-        while (currentByte == 0) {
-            // Each byte of continuation bits without a set bit adds 8 to the length of the FlexUInt, but since the
-            // length includes the continuation byte(s), each empty byte adds a net 7 to the total length.
-            length += 7;
-            currentByte = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
-        }
-        int numberOfLengthBits = Integer.numberOfTrailingZeros(currentByte);
-        length += numberOfLengthBits;
-        if (length > 0) {
-            // NOTE: copying into scratch space is required because the encoded bytes, which are unsigned little-endian,
-            // need to be translated into two's complement big-endian bytes as required by this BigInteger constructor.
-            // This is expensive, but is cheaper than using arithmetic operations on a BigInteger directly, as this
-            // would require a new BigInteger to be allocated for each intermediate step.
-            value = new BigInteger(copyFlexUIntAsTwosComplementBytes(currentByte, numberOfLengthBits + 1, peekIndex, length));
-        } else {
-            value = BigInteger.ZERO;
-        }
-        return value;
+        return readFixedIntOrFixedUIntAsBigInteger_1_1((int) (valueMarker.endIndex - peekIndex));
     }
 
     /**
@@ -615,20 +565,30 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value as a BigDecimal.
      */
     private BigDecimal readTimestampFraction_1_1() {
-        // The fractional seconds are encoded as a (coefficient, scale) pair,
+        // The fractional seconds are encoded as a (scale, coefficient) pair,
         // which is similar to a decimal. The primary difference is that the scale represents a negative
         // exponent because it is illegal for the fractional seconds value to be greater than or equal to 1.0
-        // or less than 0.0. The coefficient is encoded as a FlexUInt (instead of FlexInt) to prevent the
-        // encoding of fractional seconds less than 0.0. The scale is encoded as a FixedUInt (instead of FixedInt)
+        // or less than 0.0. The coefficient is encoded as a FixedUInt (instead of FixedInt) to prevent the
+        // encoding of fractional seconds less than 0.0. The scale is encoded as a FlexUInt (instead of FlexInt)
         // to discourage the encoding of decimal numbers greater than 1.0.
         BigDecimal value;
         peekIndex = valueMarker.startIndex + L_TIMESTAMP_SECOND_BYTE_LENGTH;
-        if (buffer[(int) peekIndex] != 0) {
+        int scale = (int) readFlexUInt_1_1();
+        if (peekIndex >= valueMarker.endIndex) {
+            return BigDecimal.valueOf(0, scale);
+        }
+        int length = (int) (valueMarker.endIndex - peekIndex);
+        // Since the coefficient is stored in a FixedUInt, some 8-byte values cannot fit in a signed 8-byte long.
+        // Take the quick path for values up to 7 bytes rather than performing additional checks. This should cover
+        // almost all real-world timestamp fractions.
+        if (length <= 7) {
             // No need to allocate a BigInteger to hold the coefficient.
-            value = BigDecimal.valueOf(readFlexUInt_1_1(), (int) readFixedUInt_1_1(peekIndex, valueMarker.endIndex));
+            value = BigDecimal.valueOf(readFixedUInt_1_1(peekIndex, valueMarker.endIndex), scale);
         } else {
             // The coefficient may overflow a long, so a BigInteger is required.
-            value = new BigDecimal(readFlexUIntAsBigInteger_1_1(), (int) readFixedUInt_1_1(peekIndex, valueMarker.endIndex));
+            // If the most-significant bit is set, pad the length by one byte so that the value remains unsigned.
+            length += (buffer[(int) valueMarker.endIndex - 1] < 0) ? 1 : 0;
+            value = new BigDecimal(readFixedIntOrFixedUIntAsBigInteger_1_1(length), scale);
         }
         if (BigDecimal.ONE.compareTo(value) < 1) {
             throw new IllegalArgumentException(String.format("Fractional seconds %s must be greater than or equal to 0 and less than 1", value));
