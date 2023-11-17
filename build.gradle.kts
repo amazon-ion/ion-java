@@ -63,8 +63,9 @@ description = "A Java implementation of the Amazon Ion data notation."
 
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 val generatedResourcesDir = "$buildDir/generated/main/resources"
-lateinit var sourcesArtifact: PublishArtifact
-lateinit var javadocArtifact: PublishArtifact
+lateinit var sourcesJar: AbstractArchiveTask
+lateinit var javadocJar: AbstractArchiveTask
+lateinit var minifyJar: ProGuardTask
 
 sourceSets {
     main {
@@ -132,7 +133,7 @@ tasks {
      * The `minifyJar` task uses Proguard to create a JAR that is smaller than the combined size of ion-java
      * and its dependencies. This is the final JAR that is published to maven central.
      */
-    val minifyJar by register<ProGuardTask>("minifyJar") {
+    minifyJar = create<ProGuardTask>("minifyJar") proguardTask@{
         group = "build"
         val rulesPath = file("config/proguard/rules.pro")
         val inputJarPath = shadowJar.get().outputs.files.singleFile
@@ -271,16 +272,14 @@ tasks {
         }
     }
 
-    create<Jar>("sourcesJar") sourcesJar@{
+    sourcesJar = create<Jar>("sourcesJar") sourcesJar@{
         archiveClassifier.set("sources")
         from(sourceSets["main"].java.srcDirs)
-        artifacts { sourcesArtifact = archives(this@sourcesJar) }
     }
 
-    create<Jar>("javadocJar") javadocJar@{
+    javadocJar = create<Jar>("javadocJar") javadocJar@{
         archiveClassifier.set("javadoc")
         from(javadoc)
-        artifacts { javadocArtifact = archives(this@javadocJar) }
     }
 
     /**
@@ -352,9 +351,11 @@ tasks {
 
 publishing {
     publications.create<MavenPublication>("IonJava") {
-        from(components["java"])
-        artifact(sourcesArtifact)
-        artifact(javadocArtifact)
+        artifact(sourcesJar)
+        artifact(javadocJar)
+        artifact(minifyJar.outJarFiles.single()) {
+            builtBy(minifyJar)
+        }
 
         pom {
             name.set("Ion Java")
