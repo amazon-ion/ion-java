@@ -171,7 +171,7 @@ public class IonEncoder_1_1 {
         int exponent = -value.scale();
         int numExponentBytes =  WriteBuffer.flexIntLength(exponent);
 
-        byte[] coefficientBytes = value.unscaledValue().toByteArray();
+        byte[] coefficientBytes = null;
         int numCoefficientBytes;
         if (BigDecimal.ZERO.compareTo(value) == 0) {
             if (Decimal.isNegativeZero(value)) {
@@ -183,6 +183,7 @@ public class IonEncoder_1_1 {
                 numCoefficientBytes = 0;
             }
         } else {
+            coefficientBytes = value.unscaledValue().toByteArray();
             numCoefficientBytes = coefficientBytes.length;
         }
 
@@ -197,8 +198,14 @@ public class IonEncoder_1_1 {
         }
 
         buffer.writeFlexInt(exponent);
-        if (numCoefficientBytes != 0) {
-            buffer.writeFixedIntOrUInt(coefficientBytes);
+        if (numCoefficientBytes > 0) {
+            if (coefficientBytes != null) {
+                buffer.writeFixedIntOrUInt(coefficientBytes);
+            } else if (numCoefficientBytes == 1){
+                buffer.writeByte((byte) 0);
+            } else {
+                throw new IllegalStateException("Unreachable! coefficientBytes should not be null when numCoefficientBytes > 1");
+            }
         }
 
         return opCodeAndLengthBytes + numCoefficientBytes + numExponentBytes;
