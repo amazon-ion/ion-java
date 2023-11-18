@@ -4207,6 +4207,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "                             1, 51 01",
         "                            17, 51 11",
         "                           127, 51 7F",
+        "                           127, 52 7F 00",
+        "                           127, 54 7F 00 00 00",
+        "                           127, 58 7F 00 00 00 00 00 00 00",
         "                           128, 52 80 00",
         "                          5555, 52 B3 15",
         "                         32767, 52 FF 7F",
@@ -4238,6 +4241,30 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertLongCorrectlyParsed(false, expectedValue, inputBytes);
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "                             0, F5 01",
+        "                             1, F5 03 01",
+        "                            17, F5 03 11",
+        "                           127, F5 03 7F",
+        "                           128, F5 05 80 00",
+        "                    2147483647, F5 09 FF FF FF 7F", // Integer.MAX_VALUE
+        "             72624976668147840, F5 11 80 40 20 10 08 04 02 01",
+        "           9223372036854775807, F5 11 FF FF FF FF FF FF FF 7F", // Long.MAX_VALUE
+        "                            -1, F5 03 FF",
+        "                            -2, F5 03 FE",
+        "                           -14, F5 03 F2",
+        "                          -128, F5 03 80",
+        "                          -129, F5 05 7F FF",
+        "                   -2147483648, F5 09 00 00 00 80", // Integer.MIN_VALUE
+        "            -72624976668147841, F5 11 7F BF DF EF F7 FB FD FE",
+        "          -9223372036854775808, F5 11 00 00 00 00 00 00 00 80", // Long.MIN_VALUE
+    })
+    public void readLongValueFromVariableLengthEncoding(long expectedValue, String inputBytes) throws Exception {
+        assertLongCorrectlyParsed(true, expectedValue, inputBytes);
+        assertLongCorrectlyParsed(false, expectedValue, inputBytes);
+    }
+
     /**
      * Checks that the reader reads the expected BigInteger from the given input bits.
      */
@@ -4256,6 +4283,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "                             1, 51 01",
         "                            17, 51 11",
         "                           127, 51 7F",
+        "                           127, 52 7F 00",
+        "                           127, 54 7F 00 00 00",
+        "                           127, 58 7F 00 00 00 00 00 00 00",
         "                           128, 52 80 00",
         "                          5555, 52 B3 15",
         "                         32767, 52 FF 7F",
@@ -4306,25 +4336,44 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @CsvSource({
         "                      0.0, 5A",
+        "                      0.0, 5B 00 00",
+        "                      0.0, 5C 00 00 00 00",
+        "                      0.0, 5D 00 00 00 00 00 00 00 00",
+        "                     -0.0, 5B 80 00",
+        "                     -0.0, 5C 80 00 00 00",
+        "                     -0.0, 5D 80 00 00 00 00 00 00 00",
+        "                      1.0, 5B 3C 00",
         "                      1.0, 5C 3F 80 00 00",
+        "                      1.0, 5D 3F F0 00 00 00 00 00 00",
         "                      1.5, 5C 3F C0 00 00",
+        "         0.00006103515625, 5B 04 00", // Smallest positive normal half-precision float
+        "           0.333251953125, 5B 35 55", // Nearest half-precision representation of one third
         "        3.141592653589793, 5D 40 09 21 FB 54 44 2D 18",
         "            4.00537109375, 5C 40 80 2C 00",
         "            4.11111111111, 5D 40 10 71 C7 1C 71 C2 39",
+        "                    65504, 5B 7B FF", // Largest normal half-precision float
         "             423542.09375, 5C 48 CE CE C3",
         "         8236423542.09375, 5D 41 FE AE DD 97 61 80 00",
         " 1.79769313486231570e+308, 5D 7F EF FF FF FF FF FF FF", // Double.MAX_VALUE
         "                     -1.0, 5C BF 80 00 00",
         "                     -1.5, 5C BF C0 00 00",
+        "                       -2, 5B C0 00",
         "       -3.141592653589793, 5D C0 09 21 FB 54 44 2D 18",
         "           -4.00537109375, 5C C0 80 2C 00",
         "           -4.11111111111, 5D C0 10 71 C7 1C 71 C2 39",
+        "                   -65504, 5B FB FF", // Smallest normal half-precision float
         "            -423542.09375, 5C C8 CE CE C3",
         "        -8236423542.09375, 5D C1 FE AE DD 97 61 80 00",
         "-1.79769313486231570e+308, 5D FF EF FF FF FF FF FF FF", // Double.MIN_VALUE
+        "                      NaN, 5B 7C 01",
+        "                 Infinity, 5B 7C 00",
+        "                -Infinity, 5B FC 00",
         "                      NaN, 5C 7F C0 00 00",
         "                 Infinity, 5C 7F 80 00 00",
         "                -Infinity, 5C FF 80 00 00",
+        "                      NaN, 5D 7F F0 00 00 00 00 00 01",
+        "                 Infinity, 5D 7F F0 00 00 00 00 00 00",
+        "                -Infinity, 5D FF F0 00 00 00 00 00 00",
     })
     public void readDoubleValue(double expectedValue, String inputBytes) throws Exception {
         assertDoubleCorrectlyParsed(true, expectedValue, inputBytes);
