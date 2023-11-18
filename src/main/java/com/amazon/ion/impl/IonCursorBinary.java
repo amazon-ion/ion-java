@@ -963,7 +963,10 @@ class IonCursorBinary implements IonCursor {
      */
     private long slowReadFlexUInt_1_1() {
         // TODO perf: try 1-byte special case checks. Least-significant bits of 1 indicate 1-byte
-        int currentByte = slowPeekByte();
+        int currentByte = slowReadByte();
+        if (currentByte < 0) {
+            return -1;
+        }
         if (currentByte == 0) {
             throw new IonException("Found a VarUInt that was too large to fit in a `long`");
         }
@@ -1354,11 +1357,6 @@ class IonCursorBinary implements IonCursor {
         if (valueTid.isDelimited) {
             endIndex = DELIMITED_MARKER;
         } else if (valueTid.variableLength) {
-            // At this point the value must be at least 2 more bytes: 1 for the smallest-possible value length
-            // and 1 for the smallest-possible value representation.
-            if (!fillAt(peekIndex, 2)) {
-                return true;
-            }
             valueLength = minorVersion == 0 ? slowReadVarUInt_1_0() : slowReadFlexUInt_1_1();
             if (valueLength < 0) {
                 return true;

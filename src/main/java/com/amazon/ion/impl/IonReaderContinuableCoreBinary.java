@@ -33,6 +33,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private static final int LOWER_SEVEN_BITS_BITMASK = 0x7F;
 
     private static final int SINGLE_BYTE_MASK = 0xFF;
+    private static final int TWO_BYTE_MASK = 0xFFFF;
 
     // Isolates the lowest six bits in a byte.
     private static final int LOWER_SIX_BITS_BITMASK = 0x3F;
@@ -64,7 +65,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // The second-most significant bit in the most significant byte of a VarInt is the sign.
     private static final int VAR_INT_SIGN_BITMASK = 0x40;
 
-    // 32-bit floats must declare length 4.
+    private static final int FLOAT_16_BYTE_LENGTH = 2;
+
     private static final int FLOAT_32_BYTE_LENGTH = 4;
 
     // Initial capacity of the ArrayList used to hold the symbol IDs of the annotations on the current value.
@@ -1013,6 +1015,49 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return (int) longValue();
     }
 
+    // IEEE-754 half-precision (s=sign, e=exponent, f=fraction): seee_eeff_ffff_ffff
+    private static final int FLOAT_16_SIGN_MASK              = 0b1000_0000_0000_0000;
+    private static final int FLOAT_16_EXPONENT_MASK          = 0b0111_1100_0000_0000;
+    private static final int FLOAT_16_FRACTION_MASK          = 0b0000_0011_1111_1111;
+
+    // float64 bias: 1023; float16 bias: 15. Shift left to align with the masked exponent bits.
+    private static final int FLOAT_16_TO_64_EXPONENT_BIAS_CONVERSION = (1023 - 15) << Integer.numberOfTrailingZeros(FLOAT_16_EXPONENT_MASK);
+    // The float16 sign bit has bit index 15; the float64 sign bit has bit index 63.
+    private static final int FLOAT_16_TO_64_SIGN_SHIFT = 63 - 15;
+    // The 5 float16 exponent bits start at index 10; the 11 float64 exponent bits start at index 52.
+    private static final int FLOAT_16_TO_64_EXPONENT_SHIFT = 52 - 10;
+    // The most significant float16 fraction bit is at index 9; the most significant float64 fraction bit is at index 51.
+    private static final int FLOAT_16_TO_64_FRACTION_SHIFT = 51 - 9;
+
+    /**
+     * Reads the next two bytes from the given ByteBuffer as a 16-bit float, returning the value as a Java double.
+     * @param byteBuffer a buffer positioned at the first byte of the 16-bit float.
+     * @return the value.
+     */
+    private static double readFloat16(ByteBuffer byteBuffer) {
+        int bits = byteBuffer.getShort() & TWO_BYTE_MASK;
+        int sign = bits & FLOAT_16_SIGN_MASK;
+        int exponent = bits & FLOAT_16_EXPONENT_MASK;
+        int fraction = bits & FLOAT_16_FRACTION_MASK;
+        if (exponent == 0) {
+            if (fraction == 0) {
+                return sign == 0 ? -0e0 : 0e0;
+            }
+            // Denormalized
+            throw new UnsupportedOperationException("Support for denormalized half-precision floats not yet added.");
+        } else if ((exponent ^ FLOAT_16_EXPONENT_MASK) == 0) {
+            if (fraction == 0) {
+                return sign == 0 ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
+            }
+            return Double.NaN;
+        }
+        return Double.longBitsToDouble(
+              ((long) sign << FLOAT_16_TO_64_SIGN_SHIFT)
+            | ((long) (exponent + FLOAT_16_TO_64_EXPONENT_BIAS_CONVERSION) << FLOAT_16_TO_64_EXPONENT_SHIFT)
+            | ((long) fraction << FLOAT_16_TO_64_FRACTION_SHIFT)
+        );
+    }
+
     @Override
     public double doubleValue() {
         double value;
@@ -1026,7 +1071,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 return 0.0d;
             }
             ByteBuffer bytes = prepareByteBuffer(valueMarker.startIndex, valueMarker.endIndex);
-            if (length == FLOAT_32_BYTE_LENGTH) {
+            if (length == FLOAT_16_BYTE_LENGTH) {
+                if (minorVersion == 0) {
+                    throw new IonException("Ion 1.0 floats may may only have length 0, 4, or 8.");
+                }
+                value = readFloat16(bytes);
+            } else if (length == FLOAT_32_BYTE_LENGTH) {
                 value = bytes.getFloat();
             } else {
                 // Note: there is no need to check for other lengths here; the type ID byte is validated during next().
