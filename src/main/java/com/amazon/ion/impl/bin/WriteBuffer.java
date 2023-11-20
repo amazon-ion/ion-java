@@ -1516,6 +1516,18 @@ import java.util.List;
         return numBytes;
     }
 
+    /**
+     * Writes a FixedInt or FixedUInt for an arbitrarily large integer that is represented
+     * as a byte array in which the most significant byte is the first in the array, and the least
+     * significant byte is the last in the array.
+     */
+    public int writeFixedIntOrUInt(final byte[] value) {
+        for (int i = value.length - 1; i >= 0; i--) {
+            writeByte(value[i]);
+        }
+        return value.length;
+    }
+
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
     {
