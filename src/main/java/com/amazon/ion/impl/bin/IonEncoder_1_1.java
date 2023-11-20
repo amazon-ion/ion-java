@@ -169,39 +169,43 @@ public class IonEncoder_1_1 {
         }
 
         int exponent = -value.scale();
+        int numExponentBytes =  WriteBuffer.flexIntLength(exponent);
 
-        if (BigDecimal.ZERO.compareTo(value) == 0 && !Decimal.isNegativeZero(value)) {
-            if (exponent == 0) {
+        byte[] coefficientBytes = null;
+        int numCoefficientBytes;
+        if (BigDecimal.ZERO.compareTo(value) == 0) {
+            if (Decimal.isNegativeZero(value)) {
+                numCoefficientBytes = 1;
+            } else if (exponent == 0) {
                 buffer.writeByte(OpCodes.DECIMAL_ZERO_LENGTH);
                 return 1;
             } else {
-                // A decimal with a coefficient of +0 is encoded using opcode 6F.
-                // The opcode is followed by a FlexInt representing the exponent.
-                buffer.writeByte(OpCodes.POSITIVE_ZERO_DECIMAL);
-                return 1 + buffer.writeFlexInt(exponent);
+                numCoefficientBytes = 0;
             }
-        }
-
-        BigInteger coefficient = value.unscaledValue();
-        int numCoefficientBytes = WriteBuffer.flexIntLength(coefficient);
-
-        int numExponentBytes = 0;
-        if (exponent != 0) {
-            numExponentBytes = WriteBuffer.fixedIntLength(exponent);
+        } else {
+            coefficientBytes = value.unscaledValue().toByteArray();
+            numCoefficientBytes = coefficientBytes.length;
         }
 
         int opCodeAndLengthBytes = 1;
-        if (numExponentBytes + numCoefficientBytes < 15) {
+        if (numExponentBytes + numCoefficientBytes < 16) {
             int opCode = OpCodes.DECIMAL_ZERO_LENGTH + numExponentBytes + numCoefficientBytes;
             buffer.writeByte((byte) opCode);
         } else {
-            // Decimal values that require more than 14 bytes can be encoded using the variable-length decimal opcode: 0xF6.
+            // Decimal values that require more than 15 bytes can be encoded using the variable-length decimal opcode: 0xF6.
             buffer.writeByte(OpCodes.VARIABLE_LENGTH_DECIMAL);
             opCodeAndLengthBytes += buffer.writeFlexUInt(numExponentBytes + numCoefficientBytes);
         }
-        buffer.writeFlexInt(coefficient);
-        if (exponent != 0) {
-            buffer.writeFixedInt(exponent);
+
+        buffer.writeFlexInt(exponent);
+        if (numCoefficientBytes > 0) {
+            if (coefficientBytes != null) {
+                buffer.writeFixedIntOrUInt(coefficientBytes);
+            } else if (numCoefficientBytes == 1){
+                buffer.writeByte((byte) 0);
+            } else {
+                throw new IllegalStateException("Unreachable! coefficientBytes should not be null when numCoefficientBytes > 1");
+            }
         }
 
         return opCodeAndLengthBytes + numCoefficientBytes + numExponentBytes;
@@ -403,7 +407,6 @@ public class IonEncoder_1_1 {
             return 8; // OpCode + FlexUInt + 6 bytes data
         }
 
-
         bits |= ((long) value.getSecond()) << L_TIMESTAMP_SECOND_BIT_OFFSET;
         int secondsScale = 0;
         if (value.getZFractionalSecond() != null) {
@@ -416,20 +419,29 @@ public class IonEncoder_1_1 {
         }
 
         BigDecimal fractionalSeconds = value.getZFractionalSecond();
-        BigInteger coefficient = fractionalSeconds.unscaledValue();
+
         long exponent = fractionalSeconds.scale();
-        int numCoefficientBytes = WriteBuffer.flexUIntLength(coefficient);
-        int numExponentBytes = WriteBuffer.fixedUIntLength(exponent);
+        int numExponentBytes = WriteBuffer.flexUIntLength(exponent);
+
+        BigInteger coefficient = fractionalSeconds.unscaledValue();
+        byte[] coefficientBytes = null;
+        int numCoefficientBytes = 0;
+        if (!coefficient.equals(BigInteger.ZERO)) {
+            coefficientBytes = coefficient.toByteArray();
+            numCoefficientBytes = coefficientBytes.length;
+        }
+
         // Years-seconds data (7 bytes) + fraction coefficient + fraction exponent
         int dataLength = 7 + numCoefficientBytes + numExponentBytes;
 
-        buffer.writeFlexUInt(dataLength);
+        int numLengthBytes = buffer.writeFlexUInt(dataLength);
         buffer.writeFixedIntOrUInt(bits, 7);
-        buffer.writeFlexUInt(coefficient);
-        buffer.writeFixedUInt(exponent);
-
+        buffer.writeFlexUInt(exponent);
+        if (coefficientBytes != null) {
+            buffer.writeFixedIntOrUInt(coefficientBytes);
+        }
         // OpCode + FlexUInt length + dataLength
-        return 1 + WriteBuffer.flexUIntLength(dataLength) + dataLength;
+        return 1 + numLengthBytes + dataLength;
     }
 
     /**
