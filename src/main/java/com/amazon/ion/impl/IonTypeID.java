@@ -228,7 +228,6 @@ final class IonTypeID {
                 macroId = -1;
                 variableLength =
                        (upperNibble == 0xF && lowerNibble >= 0x4) // Variable length, all types.
-                    || id == POSITIVE_ZERO_DECIMAL
                     || id == ANNOTATIONS_MANY_SYMBOL_ADDRESS
                     || id == ANNOTATIONS_MANY_FLEX_SYM
                     || id == VARIABLE_LENGTH_NOP;
@@ -354,8 +353,7 @@ final class IonTypeID {
                                 length = 9;
                                 break;
                         }
-                    } else if (type != IonType.DECIMAL || lowerNibble != 0xF) {
-                        // Negative-zero coefficient decimals are always variable-length.
+                    } else {
                         length = lowerNibble;
                     }
                 }
