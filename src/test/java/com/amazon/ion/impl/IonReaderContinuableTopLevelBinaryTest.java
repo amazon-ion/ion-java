@@ -4656,4 +4656,148 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertIonTimestampCorrectlyParsed(true, expectedValue, inputBits);
         assertIonTimestampCorrectlyParsed(false, expectedValue, inputBits);
     }
+
+    /**
+     * Checks that the reader reads the expected string value from the given input bits.
+     */
+    private void assertIonStringCorrectlyParsed(boolean constructFromBytes, String expected, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        assertSequence(
+            next(IonType.STRING), stringValue(expected),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', 80",
+        "'', F8 01",
+        "'a', 81 61",
+        "'a', F8 03 61",
+        "'ab', 82 61 62",
+        "'abc', 83 61 62 63",
+        "'fourteen bytes', 8E 66 6F 75 72 74 65 65 6E 20 62 79 74 65 73",
+        "'fourteen bytes', F8 1D 66 6F 75 72 74 65 65 6E 20 62 79 74 65 73",
+        "'this has sixteen', F8 21 74 68 69 73 20 68 61 73 20 73 69 78 74 65 65 6E",
+        "'variable length encoding', F8 31 76 61 72 69 61 62 6C 65 20 6C 65 6E 67 74 68 20 65 6E 63 6F 64 69 6E 67",
+    })
+    public void readStringValue(String expectedValue, String inputBytes) throws Exception {
+        assertIonStringCorrectlyParsed(true, expectedValue, inputBytes);
+        assertIonStringCorrectlyParsed(false, expectedValue, inputBytes);
+    }
+
+    /**
+     * Checks that the reader reads the expected symbol text from the given input bits.
+     */
+    private void assertIonSymbolCorrectlyParsed(boolean constructFromBytes, String expected, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        assertSequence(
+            next(IonType.SYMBOL), stringValue(expected),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', 90",
+        "'', F9 01",
+        "'a', 91 61",
+        "'a', F9 03 61",
+        "'ab', 92 61 62",
+        "'abc', 93 61 62 63",
+        "'fourteen bytes', 9E 66 6F 75 72 74 65 65 6E 20 62 79 74 65 73",
+        "'fourteen bytes', F9 1D 66 6F 75 72 74 65 65 6E 20 62 79 74 65 73",
+        "'this has sixteen', F9 21 74 68 69 73 20 68 61 73 20 73 69 78 74 65 65 6E",
+        "'variable length encoding', F9 31 76 61 72 69 61 62 6C 65 20 6C 65 6E 67 74 68 20 65 6E 63 6F 64 69 6E 67",
+    })
+    public void readSymbolValueWithInlineText(String expectedValue, String inputBytes) throws Exception {
+        assertIonSymbolCorrectlyParsed(true, expectedValue, inputBytes);
+        assertIonSymbolCorrectlyParsed(false, expectedValue, inputBytes);
+    }
+
+    /**
+     * Checks that the reader reads the expected clob or blob value from the given input bits, using IonReader.newBytes.
+     */
+    private void assertIonLobCorrectlyParsedViaNewBytes(
+        boolean constructFromBytes,
+        IonType lobType,
+        byte[] expected,
+        String inputBytes
+    ) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        assertSequence(
+            next(lobType), newBytesValue(expected),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', FE 01",
+        "20, FE 03 20",
+        "49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79, " +
+            "FE 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
+    })
+    public void readBlobValueViaNewBytes(@ConvertWith(TestUtils.HexStringToByteArray.class) byte[] expectedBytes, String inputBytes) throws Exception {
+        assertIonLobCorrectlyParsedViaNewBytes(true, IonType.BLOB, expectedBytes, inputBytes);
+        assertIonLobCorrectlyParsedViaNewBytes(false, IonType.BLOB, expectedBytes, inputBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', FF 01",
+        "20, FF 03 20",
+        "49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79, " +
+            "FF 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
+    })
+    public void readClobValueViaNewBytes(@ConvertWith(TestUtils.HexStringToByteArray.class) byte[] expectedBytes, String inputBytes) throws Exception {
+        assertIonLobCorrectlyParsedViaNewBytes(true, IonType.CLOB, expectedBytes, inputBytes);
+        assertIonLobCorrectlyParsedViaNewBytes(false, IonType.CLOB, expectedBytes, inputBytes);
+    }
+
+    /**
+     * Checks that the reader reads the expected clob or blob value from the given input bits, using IonReader.getBytes.
+     */
+    private void assertIonLobCorrectlyParsedViaGetBytes(
+        boolean constructFromBytes,
+        IonType lobType,
+        byte[] expected,
+        String inputBytes
+    ) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        byte[] shiftedBytes = new byte[expected.length + 7];
+        System.arraycopy(expected, 0, shiftedBytes, 3, expected.length);
+        assertSequence(
+            next(lobType), getBytesValue(shiftedBytes, 3, expected.length, expected.length),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', FE 01",
+        "20, FE 03 20",
+        "49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79, " +
+            "FE 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
+    })
+    public void readBlobValueViaGetBytes(@ConvertWith(TestUtils.HexStringToByteArray.class) byte[] expectedBytes, String inputBytes) throws Exception {
+        assertIonLobCorrectlyParsedViaGetBytes(true, IonType.BLOB, expectedBytes, inputBytes);
+        assertIonLobCorrectlyParsedViaGetBytes(false, IonType.BLOB, expectedBytes, inputBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', FF 01",
+        "20, FF 03 20",
+        "49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79, " +
+            "FF 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
+    })
+    public void readClobValueViaGetBytes(@ConvertWith(TestUtils.HexStringToByteArray.class) byte[] expectedBytes, String inputBytes) throws Exception {
+        assertIonLobCorrectlyParsedViaGetBytes(true, IonType.CLOB, expectedBytes, inputBytes);
+        assertIonLobCorrectlyParsedViaGetBytes(false, IonType.CLOB, expectedBytes, inputBytes);
+    }
 }
