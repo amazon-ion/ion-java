@@ -1184,17 +1184,25 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return minorVersion == 0 ? readBoolean_1_0() : readBoolean_1_1();
     }
 
-    @Override
-    public String stringValue() {
-        if (valueTid == null || IonType.STRING != valueTid.type) {
-            throwDueToInvalidType(IonType.STRING);
-        }
+    /**
+     * Decodes the UTF-8 bytes between `valueMarker.startIndex` and `valueMarker.endIndex` into a String.
+     * @return the value.
+     */
+    String readString() {
         if (valueTid.isNull) {
             return null;
         }
         prepareScalar();
         ByteBuffer utf8InputBuffer = prepareByteBuffer(valueMarker.startIndex, valueMarker.endIndex);
         return utf8Decoder.decode(utf8InputBuffer, (int) (valueMarker.endIndex - valueMarker.startIndex));
+    }
+
+    @Override
+    public String stringValue() {
+        if (valueTid == null || IonType.STRING != valueTid.type) {
+            throwDueToInvalidType(IonType.STRING);
+        }
+        return readString();
     }
 
     @Override
