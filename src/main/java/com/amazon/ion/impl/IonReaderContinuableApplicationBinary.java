@@ -938,16 +938,20 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         String value;
         IonType type = super.getType();
         if (type == IonType.STRING) {
-            value = super.stringValue();
+            value = readString();
         } else if (type == IonType.SYMBOL) {
-            int sid = symbolValueId();
-            if (sid < 0) {
-                // The raw reader uses this to denote null.symbol.
-                return null;
-            }
-            value = getSymbol(sid);
-            if (value == null) {
-                throw new UnknownSymbolException(sid);
+            if (valueTid.isInlineable) {
+                value = readString();
+            } else {
+                int sid = symbolValueId();
+                if (sid < 0) {
+                    // The raw reader uses this to denote null.symbol.
+                    return null;
+                }
+                value = getSymbol(sid);
+                if (value == null) {
+                    throw new UnknownSymbolException(sid);
+                }
             }
         } else {
             throw new IllegalStateException("Invalid type requested.");
