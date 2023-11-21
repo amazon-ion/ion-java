@@ -4346,6 +4346,112 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     /**
+     * Checks that the reader reads the expected Decimal or BigDecimal from the given input bits.
+     */
+    private void assertDecimalCorrectlyParsed(
+        boolean constructFromBytes,
+        BigDecimal expectedValue,
+        String inputBytes,
+        Function<BigDecimal, ExpectationProvider<IonReaderContinuableTopLevelBinary>> expectationProviderFunction
+    ) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        assertSequence(
+            next(IonType.DECIMAL), expectationProviderFunction.apply(expectedValue),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "                                 0., 60",
+        "                                0e1, 61 03",
+        "                               0e63, 61 7F",
+        "                               0e64, 62 02 01",
+        "                               0e99, 62 8E 01",
+        "                                0.0, 61 FF",
+        "                               0.00, 61 FD",
+        "                              0.000, 61 FB",
+        "                              0e-64, 61 81",
+        "                              0e-99, 62 76 FE",
+        "                                -0., 62 01 00",
+        "                               -0e1, 62 03 00",
+        "                               -0e3, 62 07 00",
+        "                              -0e63, 62 7F 00",
+        "                             -0e199, 63 1E 03 00",
+        "                              -0e-1, 62 FF 00",
+        "                              -0e-2, 62 FD 00",
+        "                              -0e-3, 62 FB 00",
+        "                             -0e-63, 62 83 00",
+        "                             -0e-64, 62 81 00",
+        "                             -0e-65, 63 FE FE 00",
+        "                            -0e-199, 63 E6 FC 00",
+        "                               0.01, 62 FD 01",
+        "                                0.1, 62 FF 01",
+        "                                  1, 62 01 01",
+        "                                1e1, 62 03 01",
+        "                                1e2, 62 05 01",
+        "                               1e63, 62 7F 01",
+        "                               1e64, 63 02 01 01",
+        "                            1e65536, 64 04 00 08 01",
+        "                                  2, 62 01 02",
+        "                                  7, 62 01 07",
+        "                                 14, 62 01 0E",
+        "                                 14, 63 02 00 0E", // overpadded exponent
+        "                                 14, 64 01 0E 00 00", // Overpadded coefficient
+        "                                 14, 65 02 00 0E 00 00", // Overpadded coefficient and exponent
+        "                                1.0, 62 FF 0A",
+        "                               1.00, 62 FD 64",
+        "                               1.27, 62 FD 7F",
+        "                               1.28, 63 FD 80 00",
+        "                              3.142, 63 FB 46 0C",
+        "                            3.14159, 64 F7 2F CB 04",
+        "                          3.1415927, 65 F3 77 5E DF 01",
+        "                        3.141592653, 66 EF 4D E6 40 BB 00",
+        "                     3.141592653590, 67 E9 16 9F 83 75 DB 02",
+        "                3.14159265358979323, 69 DF FB A0 9E F6 2F 1E 5C 04",
+        "           3.1415926535897932384626, 6B D5 72 49 64 CC AF EF 8F 0F A7 06",
+        "      3.141592653589793238462643383, 6D CB B7 3C 92 86 40 9F 1B 01 1F AA 26 0A",
+        " 3.14159265358979323846264338327950, 6F C1 8E 29 E5 E3 56 D5 DF C5 10 8F 55 3F 7D 0F",
+        "3.141592653589793238462643383279503, F6 21 BF 8F 9F F3 E6 64 55 BE BA A7 96 57 79 E4 9A 00",
+    })
+    public void readDecimalValue(@ConvertWith(TestUtils.StringToDecimal.class) Decimal expectedValue, String inputBytes) throws Exception {
+        assertDecimalCorrectlyParsed(true, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::decimalValue);
+        assertDecimalCorrectlyParsed(false, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::decimalValue);
+        assertDecimalCorrectlyParsed(true, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::bigDecimalValue);
+        assertDecimalCorrectlyParsed(false, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::bigDecimalValue);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "                                 0., F6 01",
+        "                               0e99, F6 05 8E 01",
+        "                                0.0, F6 03 FF",
+        "                               0.00, F6 03 FD",
+        "                              0e-99, F6 05 76 FE",
+        "                                -0., F6 05 01 00",
+        "                             -0e199, F6 07 1E 03 00",
+        "                              -0e-1, F6 05 FF 00",
+        "                             -0e-65, F6 07 FE FE 00",
+        "                               0.01, F6 05 FD 01",
+        "                                  1, F6 05 01 01",
+        "                            1e65536, F6 09 04 00 08 01",
+        "                                1.0, F6 05 FF 0A",
+        "                               1.28, F6 07 FD 80 00",
+        "                     3.141592653590, F6 0F E9 16 9F 83 75 DB 02",
+        "                3.14159265358979323, F6 13 DF FB A0 9E F6 2F 1E 5C 04",
+        "           3.1415926535897932384626, F6 17 D5 72 49 64 CC AF EF 8F 0F A7 06",
+        "      3.141592653589793238462643383, F6 1B CB B7 3C 92 86 40 9F 1B 01 1F AA 26 0A",
+        " 3.14159265358979323846264338327950, F6 1F C1 8E 29 E5 E3 56 D5 DF C5 10 8F 55 3F 7D 0F",
+    })
+    public void readDecimalValueFromVariableLengthEncoding(@ConvertWith(TestUtils.StringToDecimal.class) Decimal expectedValue, String inputBytes) throws Exception {
+        assertDecimalCorrectlyParsed(true, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::decimalValue);
+        assertDecimalCorrectlyParsed(false, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::decimalValue);
+        assertDecimalCorrectlyParsed(true, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::bigDecimalValue);
+        assertDecimalCorrectlyParsed(false, expectedValue, inputBytes, IonReaderContinuableTopLevelBinaryTest::bigDecimalValue);
+    }
+
+    /**
      * Checks that the reader reads the expected timestamp value from the given input bits.
      */
     private void assertIonTimestampCorrectlyParsed(boolean constructFromBytes, Timestamp expected, String inputBits) throws Exception {
@@ -4511,7 +4617,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "2048-01-01T01:01+00:02,              11110111 00001101 00000000 01001000 10000100 00010000 10001000 00010110",
         "2048-01-01T01:01+23:59,              11110111 00001101 00000000 01001000 10000100 00010000 11111100 00101100",
     })
-    public void testWriteTimestampValueLongForm(@ConvertWith(StringToTimestamp.class) Timestamp expectedValue, String inputBits) throws Exception {
+    public void readTimestampValueLongForm(@ConvertWith(StringToTimestamp.class) Timestamp expectedValue, String inputBits) throws Exception {
         assertIonTimestampCorrectlyParsed(true, expectedValue, inputBits);
         assertIonTimestampCorrectlyParsed(false, expectedValue, inputBits);
     }
