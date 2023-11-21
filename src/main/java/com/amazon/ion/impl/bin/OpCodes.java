@@ -17,8 +17,6 @@ public class OpCodes {
     public static final byte BOOLEAN_FALSE = 0x5F;
 
     public static final byte DECIMAL_ZERO_LENGTH = 0x60;
-    // 0x61-0x6E are additional lengths of decimals.
-    public static final byte POSITIVE_ZERO_DECIMAL = 0x6F;
 
     public static final byte TIMESTAMP_YEAR_PRECISION = 0x70;
     public static final byte TIMESTAMP_MONTH_PRECISION = 0x71;
