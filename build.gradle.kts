@@ -46,6 +46,7 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.6")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testCompileOnly("junit:junit:4.13")
