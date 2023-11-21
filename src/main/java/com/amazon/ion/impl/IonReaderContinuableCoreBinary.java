@@ -459,7 +459,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Reads a FlexUInt into an int. After this method returns, `peekIndex` points to the first byte after the end of
+     * Reads a FlexUInt into a long. After this method returns, `peekIndex` points to the first byte after the end of
      * the FlexUInt.
      * @return the value.
      */
@@ -469,6 +469,25 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         long result = currentByte >>> length;
         for (byte i = 1; i < length; i++) {
             result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        }
+        return result;
+    }
+
+    /**
+     * Reads a FlexInt into a long. After this method returns, `peekIndex` points to the first byte after the end of
+     * the FlexInt.
+     * @return the value.
+     */
+    long readFlexInt_1_1() {
+        int currentByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
+        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
+        long result = currentByte >>> length;
+        for (byte i = 1; i < length; i++) {
+            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        }
+        if (buffer[(int) peekIndex - 1] < 0) {
+            // Sign extension.
+            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
         }
         return result;
     }
@@ -536,12 +555,47 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          return value;
      }
 
+    /**
+     * Reads into a BigDecimal the decimal value that begins at `peekIndex` and ends at `valueMarker.endIndex`.
+     * @return the value.
+     */
     private BigDecimal readBigDecimal_1_1() {
-        throw new UnsupportedOperationException();
+        int scale = (int) -readFlexInt_1_1();
+        BigDecimal value;
+        int length = (int) (valueMarker.endIndex - peekIndex);
+        if (length <= LONG_SIZE_IN_BYTES) {
+            // No need to allocate a BigInteger to hold the coefficient.
+            value = BigDecimal.valueOf(readFixedInt_1_1(), scale);
+        } else {
+            // The coefficient may overflow a long, so a BigInteger is required.
+            value = new BigDecimal(readFixedIntOrFixedUIntAsBigInteger_1_1(length), scale);
+        }
+        return value;
     }
 
+    /**
+     * Reads into a Decimal the decimal value that begins at `peekIndex` and ends at `valueMarker.endIndex`.
+     * @return the value.
+     */
     private Decimal readDecimal_1_1() {
-        throw new UnsupportedOperationException();
+        int scale = (int) -readFlexInt_1_1();
+        BigInteger coefficient;
+        int length = (int) (valueMarker.endIndex - peekIndex);
+        if (length > 0) {
+            // NOTE: there is a BigInteger.valueOf(long unscaledValue, int scale) factory method that avoids allocating
+            // a BigInteger for coefficients that fit in a long. See its use in readBigDecimal() above. Unfortunately,
+            // it is not possible to use this for Decimal because the necessary BigDecimal constructor is
+            // package-private. If a compatible BigDecimal constructor is added in a future JDK revision, a
+            // corresponding factory method should be added to Decimal to enable this optimization.
+            coefficient = readFixedIntOrFixedUIntAsBigInteger_1_1(length);
+            if (coefficient.signum() == 0) {
+                return Decimal.negativeZero(scale);
+            }
+        }
+        else {
+            coefficient = BigInteger.ZERO;
+        }
+        return Decimal.valueOf(coefficient, scale);
     }
 
     /**
