@@ -383,7 +383,9 @@ tasks {
             }
         )
 
-        val spotbugsBaselineFile = "$rootDir/config/spotbugs/baseline.xml"
+        val spotbugsConfigDir = "$rootDir/config/spotbugs"
+        excludeFilter.set(file("$spotbugsConfigDir/exclude.xml"))
+        val spotbugsBaselineFile = "$spotbugsConfigDir/baseline.xml"
 
         val baselining = project.hasProperty("baseline") // e.g. `./gradlew :spotbugsMain -Pbaseline`
 
@@ -415,7 +417,7 @@ tasks {
                         commandLine(
                             "xsltproc",
                             "--output", spotbugsBaselineFile,
-                            "$rootDir/config/spotbugs/baseline.xslt",
+                            "$spotbugsConfigDir/baseline.xslt",
                             "${outputLocation.get()}"
                         )
                     }
