@@ -1,12 +1,12 @@
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryMarkdownReportRenderer
 import com.github.jk1.license.render.TextReportRenderer
-import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
-import proguard.gradle.ProGuardTask
 import java.net.URI
 import java.time.Instant
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
+import proguard.gradle.ProGuardTask
 
 buildscript {
     repositories {
@@ -86,8 +86,8 @@ licenseReport {
             mapOf(
                 "The Apache License, Version 2.0" to "Apache-2.0",
                 "The Apache Software License, Version 2.0" to "Apache-2.0",
-            )
-        )
+            ),
+        ),
     )
 }
 
@@ -154,7 +154,7 @@ tasks {
         // See https://github.com/Guardsquare/proguard/blob/e76e47953f6f295350a3bb7eeb801b33aac34eae/examples/gradle-kotlin-dsl/build.gradle.kts#L48-L60
         libraryjars(
             mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class"),
-            "$javaHome/jmods/java.base.jmod"
+            "$javaHome/jmods/java.base.jmod",
         )
     }
 
@@ -199,7 +199,7 @@ tasks {
             if (sourceControlledMarkdownReportContent != generatedMarkdownReportContent) {
                 throw IllegalStateException(
                     "$thirdPartyLicensesPath is out of date.\n" +
-                        "Please replace the file content with the content of $generatedMarkdownReport."
+                        "Please replace the file content with the content of $generatedMarkdownReport.",
                 )
             }
         }
@@ -222,7 +222,7 @@ tasks {
     }
 
     ktlint {
-        version.set("0.40.0")
+        version.set("0.45.2")
         outputToConsole.set(true)
     }
 
@@ -262,9 +262,10 @@ tasks {
                     exec {
                         commandLine(
                             "xsltproc",
-                            "--output", spotbugsBaselineFile,
+                            "--output",
+                            spotbugsBaselineFile,
                             "$rootDir/config/spotbugs/baseline.xslt",
-                            "${outputLocation.get()}/spotBugs"
+                            "${outputLocation.get()}/spotBugs",
                         )
                     }
                 }
