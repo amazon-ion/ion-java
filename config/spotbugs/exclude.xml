@@ -1,0 +1,28 @@
+
+
+<!-- This file specifies a spotbugs filter for excluding reports that
+     should not be considered errors.
+
+     The format of this file is documented at:
+
+       https://spotbugs.readthedocs.io/en/latest/filter.html
+
+     When possible, please specify the full names of the bug codes,
+     using the pattern attribute, to make it clearer what reports are
+     being suppressed.  You can find a listing of codes at:
+
+       https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html
+  -->
+
+<FindBugsFilter>
+    <Match>
+        <Match>
+            <!--
+                Ignore Kotlin files, because SpotBugs doesn't provide specific Kotlin support,
+                so it raises warnings for things that might look dodgy in the byte code, but
+                were compiled from perfectly safe Kotlin code.
+            -->
+            <Source name="~.*\.kt"/>
+        </Match>
+    </Match>
+</FindBugsFilter>
