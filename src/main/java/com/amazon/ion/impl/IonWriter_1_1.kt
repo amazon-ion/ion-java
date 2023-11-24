@@ -13,7 +13,7 @@ import java.time.LocalDate
  *
  * This interface allows the user to write Ion data without being concerned about which output format is being used.
  */
-interface Ion11Writer {
+interface IonWriter_1_1 {
 
     /**
      * Indicates that writing is completed and all buffered data should be written and flushed as if this were the end
@@ -39,7 +39,7 @@ interface Ion11Writer {
     /** Returns true if the writer is currently in a struct (indicating that field names are required). */
     fun isInStruct(): Boolean
 
-    /** Returns the current depth of containers the writer is at.  This is 0 if the writer is at top-level. */
+    /** Returns the current depth of containers the writer is at. This is 0 if the writer is at top-level. */
     fun depth(): Int
 
     /**
@@ -48,29 +48,47 @@ interface Ion11Writer {
      */
     fun writeIVM()
 
-    /** Writes one annotation for the next value. */
+    /**
+     * Writes one annotation for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
     fun writeAnnotations(annotation0: Long)
 
-    /** Writes two annotations for the next value. */
+    /**
+     * Writes two annotations for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
     fun writeAnnotations(annotation0: Long, annotation1: Long)
 
-    /** Writes three or more annotations for the next value. */
+    /**
+     * Writes three or more annotations for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
     fun writeAnnotations(annotation0: Long, annotation1: Long, vararg annotations: Long)
 
-    /** Writes one annotation for the next value. */
-    fun writeAnnotations(annotation0: String)
+    /**
+     * Writes one annotation for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
+    fun writeAnnotations(annotation0: CharSequence)
 
-    /** Writes two annotations for the next value. */
-    fun writeAnnotations(annotation0: String, annotation1: String)
+    /**
+     * Writes two annotations for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
+    fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence)
 
-    /** Writes three or more annotations for the next value. */
-    fun writeAnnotations(annotation0: String, annotation1: String, vararg annotations: String)
+    /**
+     * Writes three or more annotations for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
+    fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence, vararg annotations: CharSequence)
 
     /**
      * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
      * @throws com.amazon.ion.IonException if annotations are already written for the value or if not in a struct.
      */
-    fun writeFieldName(text: String)
+    fun writeFieldName(text: CharSequence)
 
     /**
      * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
@@ -78,15 +96,28 @@ interface Ion11Writer {
      */
     fun writeFieldName(sid: Long)
 
+    /**
+     * Steps into a List.
+     *
+     * The [delimited] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
+     * particular implementation. All implementations must document their specific behavior for this method.
+     */
     fun stepInList(delimited: Boolean)
+
+    /**
+     * Steps into a SExp.
+     *
+     * The [delimited] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
+     * particular implementation. All implementations must document their specific behavior for this method.
+     */
     fun stepInSExp(delimited: Boolean)
 
     /**
-     * Delimited struct with FlexSym field names
-     * Variable length struct with symbol address field names
-     * Variable length struct with FlexSym field names
+     * Steps into a Struct.
      *
-     * @throws com.amazon.ion.IonException if delimited is true and useFlexSym is false.
+     * The [delimited] and [useFlexSym] parameters are suggestions. Implementations may ignore these parameters if they
+     * are not relevant for that particular implementation. All implementations must document their specific behavior
+     * for this method.
      */
     fun stepInStruct(delimited: Boolean, useFlexSym: Boolean)
 
@@ -100,7 +131,7 @@ interface Ion11Writer {
      * Writes a macro invocation for the given macro name.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(name: String)
+    fun stepInEExp(name: CharSequence)
 
     /**
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
