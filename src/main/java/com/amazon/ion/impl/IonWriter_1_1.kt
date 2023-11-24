@@ -52,19 +52,19 @@ interface IonWriter_1_1 {
      * Writes one annotation for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
-    fun writeAnnotations(annotation0: Long)
+    fun writeAnnotations(annotation0: Int)
 
     /**
      * Writes two annotations for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
-    fun writeAnnotations(annotation0: Long, annotation1: Long)
+    fun writeAnnotations(annotation0: Int, annotation1: Int)
 
     /**
      * Writes three or more annotations for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
-    fun writeAnnotations(annotation0: Long, annotation1: Long, vararg annotations: Long)
+    fun writeAnnotations(annotation0: Int, annotation1: Int, vararg annotations: Int)
 
     /**
      * Writes one annotation for the next value.
@@ -94,7 +94,7 @@ interface IonWriter_1_1 {
      * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
      * @throws com.amazon.ion.IonException if annotations are already written for the value or if not in a struct.
      */
-    fun writeFieldName(sid: Long)
+    fun writeFieldName(sid: Int)
 
     /**
      * Steps into a List.
@@ -137,7 +137,7 @@ interface IonWriter_1_1 {
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(id: Long)
+    fun stepInEExp(id: Int)
 
     /**
      * Steps out of the current container.
@@ -152,7 +152,6 @@ interface IonWriter_1_1 {
     fun writeBool(value: Boolean)
 
     fun writeInt(value: Byte)
-    fun writeInt(value: Short)
     fun writeInt(value: Int)
     fun writeInt(value: Long)
     fun writeInt(value: BigInteger)
@@ -163,6 +162,17 @@ interface IonWriter_1_1 {
     fun writeDecimal(value: BigDecimal)
     fun writeDecimal(value: Decimal)
 
+    /**
+     * TODO: Consider adding a function for writing a timestamp that doesn't require creating a [Timestamp] instance, so
+     *       that users don't have to allocate an intermediate between their data type and the Ion writer. E.g.:
+     * ```
+     * fun writeTimestamp(precision: Timestamp.Precision,
+     *                    year: Int, month: Int?, day: Int?,
+     *                    hour: Int?, minute: Int?, second: Int?,
+     *                    fractionalSeconds: BigDecimal?,
+     *                    offsetMinutes: Int?)
+     * ```
+     */
     fun writeTimestamp(value: Timestamp)
 
     /** Writes an Ion timestamp with Days precision */
@@ -171,7 +181,7 @@ interface IonWriter_1_1 {
     /** Writes an Ion timestamp with 0 offset (UTC) and nanosecond precision. */
     fun writeTimestamp(value: Instant)
 
-    fun writeSymbol(id: Long)
+    fun writeSymbol(id: Int)
     fun writeSymbol(text: CharSequence)
 
     fun writeString(value: CharSequence)
