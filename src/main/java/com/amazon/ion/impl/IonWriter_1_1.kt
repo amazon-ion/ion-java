@@ -6,7 +6,6 @@ import com.amazon.ion.Timestamp
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.time.Instant
-import java.time.LocalDate
 
 /**
  * Writes Ion 1.1 data to an output source.
@@ -174,9 +173,6 @@ interface IonWriter_1_1 {
      * ```
      */
     fun writeTimestamp(value: Timestamp)
-
-    /** Writes an Ion timestamp with Days precision */
-    fun writeTimestamp(value: LocalDate)
 
     /** Writes an Ion timestamp with 0 offset (UTC) and nanosecond precision. */
     fun writeTimestamp(value: Instant)
