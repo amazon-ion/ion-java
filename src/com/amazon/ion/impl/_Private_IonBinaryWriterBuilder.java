@@ -284,6 +284,10 @@ public class _Private_IonBinaryWriterBuilder
 
     public void setBlockSize(int size) {
         myBinaryWriterBuilder.withUserBlockSize(size);
+        // Adjust the symbol table block size when the user block size is smaller than the default, because in most cases, the symbol table is smaller than the data.
+        if (size < myBinaryWriterBuilder.DEFAULT_BLOCK_SIZE) {
+            myBinaryWriterBuilder.withSymbolsBlockSize(size);
+        }
     }
 
     /**
