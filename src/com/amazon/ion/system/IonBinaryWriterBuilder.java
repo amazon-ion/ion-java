@@ -199,7 +199,7 @@ public abstract class IonBinaryWriterBuilder
      * @param size represent the specified block size in bytes.
      * If this functionality is not set, the default block size is 32768 bytes.
      */
-    public abstract IonBinaryWriterBuilder withDefaultBlockSize(int size);
+    public abstract IonBinaryWriterBuilder withBlockSize(int size);
 
     /**
      * Enables or disables writing Binary32 (4-byte, single precision,
