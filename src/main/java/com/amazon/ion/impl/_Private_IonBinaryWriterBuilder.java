@@ -224,9 +224,9 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     @Override
-    public _Private_IonBinaryWriterBuilder withDefaultBlockSize(int size) {
+    public _Private_IonBinaryWriterBuilder withBlockSize(int size) {
         _Private_IonBinaryWriterBuilder b = mutable();
-        b.setDefaultBlockSize(size);
+        b.setBlockSize(size);
         return b;
     }
 
@@ -282,7 +282,7 @@ public class _Private_IonBinaryWriterBuilder
 
     //=========================================================================
 
-    public void setDefaultBlockSize(int size) {
+    public void setBlockSize(int size) {
         myBinaryWriterBuilder.withUserBlockSize(size);
     }
 
