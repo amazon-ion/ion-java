@@ -966,8 +966,11 @@ class IonCursorBinary implements IonCursor {
             // Single-byte.
             return currentByte >>> 1;
         }
-        if (currentByte == 0) { // The first byte is 0, so there are at least 9 bytes.
-            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+        if (currentByte == 0) {
+            // Note: this is conservative, as 9-byte FlexUInts (with a continuation bit in the second byte) can fit
+            // in a long. However, the FlexUInt parsing methods in this class are only used to calculate value length,
+            // and the added complexity is not warranted to increase the maximum value size above 2^56 - 1 (72 PB).
+            throw new IonException("Found a FlexUInt that was too large to fit in a `long`");
         }
         // TODO perf: try putting the rest in its own method
         byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
@@ -989,7 +992,10 @@ class IonCursorBinary implements IonCursor {
             return -1;
         }
         if (currentByte == 0) {
-            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+            // Note: this is conservative, as 9-byte FlexUInts (with a continuation bit in the second byte) can fit
+            // in a long. However, the FlexUInt parsing methods in this class are only used to calculate value length,
+            // and the added complexity is not warranted to increase the maximum value size above 2^56 - 1 (72 PB).
+            throw new IonException("Found a FlexUInt that was too large to fit in a `long`");
         }
         byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
         long result = currentByte >>> length;
