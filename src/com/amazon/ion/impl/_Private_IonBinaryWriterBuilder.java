@@ -194,7 +194,7 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     @Override
-    public _Private_IonBinaryWriterBuilder withAutoFlushEnbaled(boolean autoFlushEnabled) {
+    public _Private_IonBinaryWriterBuilder withAutoFlushEnabled(boolean autoFlushEnabled) {
         _Private_IonBinaryWriterBuilder b = mutable();
         b.setAutoFlushEnabled(autoFlushEnabled);
         return b;

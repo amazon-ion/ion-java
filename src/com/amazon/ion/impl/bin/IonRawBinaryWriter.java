@@ -122,7 +122,6 @@ import java.util.ListIterator;
 
     private static final byte VARINT_NEG_ZERO   = (byte) 0xC0;
 
-    private IonManagedBinaryWriter managedBinaryWriter;
 
     final Utf8StringEncoder utf8StringEncoder = Utf8StringEncoderPool
             .getInstance()
@@ -362,9 +361,13 @@ import java.util.ListIterator;
     private boolean                     hasTopLevelSymbolTableAnnotation;
 
     private boolean                     closed;
-    public boolean autoFlushEnabled;
-    public boolean flushAfterCurrentValue = false;
+    boolean autoFlushEnabled;
+    boolean flushAfterCurrentValue;
+    Runnable action;
 
+    public void endOfBlockSizeReached() {
+        flushAfterCurrentValue = autoFlushEnabled;
+    }
 
     /*package*/ IonRawBinaryWriter(final BlockAllocatorProvider provider,
                                    final int blockSize,
@@ -374,7 +377,8 @@ import java.util.ListIterator;
                                    final StreamFlushMode streamFlushMode,
                                    final PreallocationMode preallocationMode,
                                    final boolean isFloatBinary32Enabled,
-                                   final boolean isAutoFlushEnabled, final IonManagedBinaryWriter managedBinaryWriter)
+                                   final boolean isAutoFlushEnabled,
+                                   Runnable action)
                                    throws IOException
     {
         super(optimization);
@@ -387,7 +391,7 @@ import java.util.ListIterator;
         this.streamFlushMode   = streamFlushMode;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
-        this.buffer            = new WriteBuffer(allocator, this);
+        this.buffer            = new WriteBuffer(allocator, this::endOfBlockSizeReached);
         this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
         this.containers        = new _Private_RecyclingStack<ContainerInfo>(
             10,
@@ -406,8 +410,9 @@ import java.util.ListIterator;
         this.hasTopLevelSymbolTableAnnotation = false;
         this.closed = false;
         this.autoFlushEnabled = isAutoFlushEnabled;
-        this.managedBinaryWriter = managedBinaryWriter;
+        this.action = action;
     }
+
 
     /** Always returns {@link Symbols#systemSymbolTable()}. */
     public SymbolTable getSymbolTable()
@@ -427,7 +432,7 @@ import java.util.ListIterator;
         setFieldNameSymbol(name.getSid());
     }
 
-    public WriteBuffer getCurrentBuffer() {
+    WriteBuffer getCurrentBuffer() {
         return buffer;
     }
 
@@ -742,7 +747,7 @@ import java.util.ListIterator;
         hasWrittenValuesSinceFinished = true;
         hasWrittenValuesSinceConstructed = true;
         if (this.flushAfterCurrentValue && depth == 0) {
-            managedBinaryWriter.flush();
+            action.run();
             this.flushAfterCurrentValue = false;
         }
     }

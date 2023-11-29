@@ -678,7 +678,7 @@ import java.util.Map;
             builder.preallocationMode,
             builder.isFloatBinary32Enabled,
             false,
-            this
+            this::flush
         );
         this.user = new IonRawBinaryWriter(
             builder.provider,
@@ -690,7 +690,7 @@ import java.util.Map;
             builder.preallocationMode,
             builder.isFloatBinary32Enabled,
             builder.isAutoFlushEnabled,
-            this
+            this::flush
         );
 
         this.catalog = builder.catalog;
@@ -1104,11 +1104,15 @@ import java.util.Map;
 
     // Stream Terminators
 
-    public void flush() throws IOException
+    public void flush()
     {
         if (getDepth() == 0 && !user.hasAnnotations() && (localsLocked || lstAppendEnabled))
         {
-            unsafeFlush();
+            try {
+                unsafeFlush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

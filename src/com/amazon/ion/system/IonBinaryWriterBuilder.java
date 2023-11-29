@@ -139,13 +139,16 @@ public abstract class IonBinaryWriterBuilder
      */
     public abstract SymbolTable getInitialSymbolTable();
 
-    public abstract _Private_IonBinaryWriterBuilder withAutoFlushEnbaled(boolean autoFlushEnbaled);
+    /**
+     * Enables the automatic execution of flush operations. This functionality disabled by default.
+     * @param autoFlushEnabled A boolean parameter indicating whether this functionality is enabled or not.
+     */
+    public abstract IonBinaryWriterBuilder withAutoFlushEnabled(boolean autoFlushEnabled);
 
     /**
      * Declares the symbol table to use for encoded data.
      * To avoid conflicts between different data streams, if the given instance
      * is mutable, it will be copied when {@code build()} is called.
-     *
      * @param symtab must be a local or system symbol table.
      * May be null, in which case the initial symbol table is that of
      * {@code $ion_1_0}.
