@@ -437,16 +437,60 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
+     * Reads a 3+ byte FlexUInt into a long. After this method returns, `peekIndex` points to the first byte after the
+     * end of the FlexUInt.
+     * @param firstByte the first byte of the FlexUInt.
+     * @return the value.
+     */
+    private long readLargeFlexUInt_1_1(int firstByte) {
+        if (firstByte == 0) {
+            // Note: this is conservative, as 9-byte flex subfields (with a continuation bit in the second byte) can fit
+            // in a long. However, the flex subfields parsed by the methods in this class are used only in cases that
+            // require an int anyway (symbol IDs, decimal scale), so the added complexity is not warranted.
+            throw new IonException("Flex subfield exceeds the length of a long.");
+        }
+        byte length = (byte) (Integer.numberOfTrailingZeros(firstByte) + 1);
+        long result = firstByte >>> length;
+        for (byte i = 1; i < length; i++) {
+            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        }
+        return result;
+    }
+
+    /**
      * Reads a FlexUInt into a long. After this method returns, `peekIndex` points to the first byte after the end of
      * the FlexUInt.
      * @return the value.
      */
     long readFlexUInt_1_1() {
+        // Up-cast to int, ensuring the most significant bit in the byte is not treated as the sign.
         int currentByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
-        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
-        long result = currentByte >>> length;
-        for (byte i = 1; i < length; i++) {
-            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        if ((currentByte & 1) == 1) {
+            // Single byte; shift out the continuation bit.
+            return currentByte >>> 1;
+        }
+        if ((currentByte & 2) != 0) {
+            // Two bytes; upcast the second byte to int, ensuring the most significant bit is not treated as the sign.
+            // Make room for the six value bits in the first byte. Or with those six value bits after shifting out the
+            // two continuation bits.
+            return ((buffer[(int) peekIndex++] & SINGLE_BYTE_MASK) << 6 ) | (currentByte >>> 2);
+        }
+        return readLargeFlexUInt_1_1(currentByte);
+    }
+
+    /**
+     * Reads a 3+ byte FlexInt into a long. After this method returns, `peekIndex` points to the first byte after the
+     * end of the FlexInt.
+     * @return the value.
+     */
+    long readLargeFlexInt_1_1(int firstByte) {
+        firstByte &= SINGLE_BYTE_MASK;
+        // FlexInts are essentially just FlexUInts that interpret the most significant bit as a sign that needs to be
+        // extended.
+        long result = readLargeFlexUInt_1_1(firstByte);
+        if (buffer[(int) peekIndex - 1] < 0) {
+            // Sign extension.
+            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
         }
         return result;
     }
@@ -457,17 +501,18 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     long readFlexInt_1_1() {
-        int currentByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
-        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
-        long result = currentByte >>> length;
-        for (byte i = 1; i < length; i++) {
-            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        // The following up-cast to int performs sign extension, if applicable.
+        int currentByte = buffer[(int)(peekIndex++)];
+        if ((currentByte & 1) == 1) {
+            // Single byte; shift out the continuation bit while preserving the sign.
+            return currentByte >> 1;
         }
-        if (buffer[(int) peekIndex - 1] < 0) {
-            // Sign extension.
-            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
+        if ((currentByte & 2) != 0) {
+            // Two bytes; up-cast the second byte to int, thereby performing sign extension. Make room for the six
+            // value bits in the first byte. Or with those six value bits after shifting out the two continuation bits.
+            return buffer[(int) peekIndex++] << 6 | ((currentByte & SINGLE_BYTE_MASK) >>> 2);
         }
-        return result;
+        return readLargeFlexInt_1_1(currentByte);
     }
 
     private int readVarSym_1_1(Marker marker) {
@@ -495,40 +540,38 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Copies a FixedInt or FixedUInt into scratch space, converting it to its equivalent big-endian two's complement
-     * representation. If the provided length is longer than the actual length of the value, the most significant
-     * byte in the two's complement representation will be zero.
-     * @param startIndex the index of the second byte in the FixedInt or FixedUInt representation.
+     * Reads a FixedInt or FixedUInt as a BigInteger, first copying the value into scratch space and converting it to
+     * its equivalent big-endian two's complement representation. If the provided length is longer than the actual
+     * length of the value, the most significant byte in the two's complement representation will be zero, maintaining
+     * a positive sign.
      * @param length the number of bytes remaining in the FixedInt or FixedUInt representation.
-     * @return a byte[] (either new or reused) containing the big-endian two's complement representation of the value.
+     * @return a new BigInteger that represents the value.
      */
-    private byte[] copyFixedIntOrFixedUIntAsTwosComplementBytes(long startIndex, int length) {
+    private BigInteger readLargeFixedIntOrFixedUIntAsBigInteger(int length) {
         // FixedInt is a little-endian two's complement representation. Simply reverse the bytes.
         byte[] bytes = getScratchForSize(length);
         // Clear the most significant byte in case the scratch space is padded to accommodate an unsigned value with
         // its highest bit set.
         bytes[0] = 0;
         int copyIndex = bytes.length;
-        for (long i = startIndex; i < valueMarker.endIndex; i++) {
+        for (long i = peekIndex; i < valueMarker.endIndex; i++) {
             bytes[--copyIndex] = buffer[(int) i];
         }
         peekIndex = valueMarker.endIndex;
-        return bytes;
+        return new BigInteger(bytes);
     }
 
     /**
-     * Reads a FixedInt or FixedUInt value into a BigInteger.
-     * @param length the length of the two's complement representation of the value. For FixedInts, this is always
-     *               equal to the length of the value; for FixedUInts, this is one byte larger than the length of the
-     *               value if the highest bit in the unsigned representation is set.
+     * Reads a FixedInt value into a BigInteger.
      * @return the value.
      */
-     private BigInteger readFixedIntOrFixedUIntAsBigInteger_1_1(int length) {
+     private BigInteger readFixedIntAsBigInteger_1_1() {
          BigInteger value;
-         if (length > 0) {
-             value = new BigInteger(copyFixedIntOrFixedUIntAsTwosComplementBytes(peekIndex, length));
+         int length = (int) (valueMarker.endIndex - peekIndex);
+         if (length <= LONG_SIZE_IN_BYTES) {
+             value = BigInteger.valueOf(readFixedInt_1_1());
          } else {
-             value = BigInteger.ZERO;
+             value = readLargeFixedIntOrFixedUIntAsBigInteger(length);
          }
          return value;
      }
@@ -546,7 +589,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             value = BigDecimal.valueOf(readFixedInt_1_1(), scale);
         } else {
             // The coefficient may overflow a long, so a BigInteger is required.
-            value = new BigDecimal(readFixedIntOrFixedUIntAsBigInteger_1_1(length), scale);
+            value = new BigDecimal(readLargeFixedIntOrFixedUIntAsBigInteger(length), scale);
         }
         return value;
     }
@@ -558,14 +601,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private Decimal readDecimal_1_1() {
         int scale = (int) -readFlexInt_1_1();
         BigInteger coefficient;
-        int length = (int) (valueMarker.endIndex - peekIndex);
-        if (length > 0) {
-            // NOTE: there is a BigInteger.valueOf(long unscaledValue, int scale) factory method that avoids allocating
+        if (valueMarker.endIndex > peekIndex) {
+            // NOTE: there is a BigDecimal.valueOf(long unscaledValue, int scale) factory method that avoids allocating
             // a BigInteger for coefficients that fit in a long. See its use in readBigDecimal() above. Unfortunately,
             // it is not possible to use this for Decimal because the necessary BigDecimal constructor is
             // package-private. If a compatible BigDecimal constructor is added in a future JDK revision, a
             // corresponding factory method should be added to Decimal to enable this optimization.
-            coefficient = readFixedIntOrFixedUIntAsBigInteger_1_1(length);
+            coefficient = readFixedIntAsBigInteger_1_1();
             if (coefficient.signum() == 0) {
                 return Decimal.negativeZero(scale);
             }
@@ -591,7 +633,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     private BigInteger readBigInteger_1_1() {
         peekIndex = valueMarker.startIndex;
-        return readFixedIntOrFixedUIntAsBigInteger_1_1((int) (valueMarker.endIndex - peekIndex));
+        return readFixedIntAsBigInteger_1_1();
     }
 
     /**
@@ -608,21 +650,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         BigDecimal value;
         peekIndex = valueMarker.startIndex + L_TIMESTAMP_SECOND_BYTE_LENGTH;
         int scale = (int) readFlexUInt_1_1();
-        if (peekIndex >= valueMarker.endIndex) {
-            return BigDecimal.valueOf(0, scale);
-        }
         int length = (int) (valueMarker.endIndex - peekIndex);
-        // Since the coefficient is stored in a FixedUInt, some 8-byte values cannot fit in a signed 8-byte long.
-        // Take the quick path for values up to 7 bytes rather than performing additional checks. This should cover
-        // almost all real-world timestamp fractions.
-        if (length <= 7) {
-            // No need to allocate a BigInteger to hold the coefficient.
-            value = BigDecimal.valueOf(readFixedUInt_1_1(peekIndex, valueMarker.endIndex), scale);
+        if (length >= LONG_SIZE_IN_BYTES) {
+            if (buffer[(int) valueMarker.endIndex - 1] < 0) {
+                // The most-significant bit is set; pad the length by one byte so that the value remains unsigned.
+                length += 1;
+            }
+            value = new BigDecimal(readLargeFixedIntOrFixedUIntAsBigInteger(length), scale);
+        } else if (length > 0) {
+            value = BigDecimal.valueOf(readFixedUInt_1_1(), scale);
         } else {
-            // The coefficient may overflow a long, so a BigInteger is required.
-            // If the most-significant bit is set, pad the length by one byte so that the value remains unsigned.
-            length += (buffer[(int) valueMarker.endIndex - 1] < 0) ? 1 : 0;
-            value = new BigDecimal(readFixedIntOrFixedUIntAsBigInteger_1_1(length), scale);
+            value = BigDecimal.valueOf(0, scale);
         }
         if (BigDecimal.ONE.compareTo(value) < 1) {
             throw new IllegalArgumentException(String.format("Fractional seconds %s must be greater than or equal to 0 and less than 1", value));
@@ -852,15 +890,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Reads a FixedUInt (little-endian).
-     * @param startIndex the index of the first byte in the FixedUInt value.
-     * @param endIndex the index of the first byte after the end of the FixedUInt value.
+     * Reads a FixedUInt (little-endian), starting at `peekIndex` and ending at `valueMarker.endIndex`.
      * @return the value.
      */
-    private long readFixedUInt_1_1(long startIndex, long endIndex) {
+    private long readFixedUInt_1_1() {
         long result = 0;
-        for (int i = (int) startIndex; i < endIndex; i++) {
-            result |= ((long) (buffer[i] & SINGLE_BYTE_MASK) << ((i - startIndex) * VALUE_BITS_PER_UINT_BYTE));
+        for (int i = (int) peekIndex; i < valueMarker.endIndex; i++) {
+            result |= ((long) (buffer[i] & SINGLE_BYTE_MASK) << ((i - peekIndex) * VALUE_BITS_PER_UINT_BYTE));
         }
         return result;
     }
