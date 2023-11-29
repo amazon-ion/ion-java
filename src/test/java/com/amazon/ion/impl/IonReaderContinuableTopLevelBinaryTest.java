@@ -4586,6 +4586,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "1947-12-23T23:59:00.9999999Z,        11110111 00011001 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00001111 01111111 10010110 10011000 00000000",
         "1947-12-23T23:59:00.99999999Z,       11110111 00011001 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00010001 11111111 11100000 11110101 00000101",
 
+        "1947-12-23T23:59:00.36028797018963968Z, " +  // 7-byte coefficient, most-significant bit set
+            "11110111 00011111 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00100011 00000000 00000000 00000000 00000000 00000000 00000000 10000000",
+
+        "1947-12-23T23:59:00.36028797018963967Z, " +  // 7-byte coefficient, most-significant bit set
+            "11110111 00011111 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00100011 11111111 11111111 11111111 11111111 11111111 11111111 01111111",
+
+        "1947-12-23T23:59:00.72057594037927935Z, " +  // 7-byte coefficient, all bits set
+            "11110111 00011111 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00100011 11111111 11111111 11111111 11111111 11111111 11111111 11111111",
+
         "1947-12-23T23:59:00.9223372036854775807Z, " + // Long.MAX_VALUE
             "11110111 00100001 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00100111 11111111 11111111 11111111 11111111 11111111 11111111 11111111 01111111",
 
@@ -4620,6 +4629,27 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void readTimestampValueLongForm(@ConvertWith(StringToTimestamp.class) Timestamp expectedValue, String inputBits) throws Exception {
         assertIonTimestampCorrectlyParsed(true, expectedValue, inputBits);
         assertIonTimestampCorrectlyParsed(false, expectedValue, inputBits);
+    }
+
+    /**
+     * Verifies that the reader fails to parse a value as a timestamp.
+     */
+    private void failOnInvalidTimestamp(String inputBits, boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bitStringToByteArray(inputBits), constructFromBytes);
+        assertSequence(next(IonType.TIMESTAMP));
+        assertThrows(IllegalArgumentException.class, () -> reader.timestampValue());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        // YYYYYYYY MMYYYYYY HDDDDDMM mmmmHHHH oooooomm ssoooooo ....ssss Scale+ Coefficient
+        // 1947-12-23T23:59:00.128d-2 (fraction greater than 1)
+          "11110111 00010011 10011011 00000111 11011111 10111011 10000011 00010110 00000000 00000101 10000000",
+
+    })
+    public void failOnInvalidLongFormTimestamp(String inputBits) throws Exception {
+        failOnInvalidTimestamp(inputBits, true);
+        failOnInvalidTimestamp(inputBits, false);
     }
 
     /**
