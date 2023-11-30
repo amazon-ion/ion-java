@@ -1104,15 +1104,10 @@ import java.util.Map;
 
     // Stream Terminators
 
-    public void flush()
-    {
+    public void flush() throws IOException {
         if (getDepth() == 0 && !user.hasAnnotations() && (localsLocked || lstAppendEnabled))
         {
-            try {
-                unsafeFlush();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+           unsafeFlush();
         }
     }
 

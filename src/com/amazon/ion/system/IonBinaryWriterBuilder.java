@@ -140,7 +140,13 @@ public abstract class IonBinaryWriterBuilder
     public abstract SymbolTable getInitialSymbolTable();
 
     /**
-     * Enables the automatic execution of flush operations. This functionality disabled by default.
+     * Auto-flush enables automatic execution of flush operations during the write process. When auto-flush is enabled and a new block allocation becomes necessary while writing the top-level value, a new block will be allocated.
+     * The data writing process will then continue uninterrupted until the top-level value is complete. After completing the top-level value that crosses the block boundary, the flush operation will be executed.
+     * This feature optimizes performance of the writing of long data streams by reducing block allocations.
+     * Additionally, setting a larger block size can further tune performance when auto-flush is enabled.
+     * A larger block size leads to fewer block allocations and reduces the frequency of flush operations when auto-flush is enabled. {@link #withBlockSize(int) Here} is where you can set up the
+     * block size of write buffer.
+     * Auto-flush disabled by default and the default block size is 32K.
      * @param autoFlushEnabled A boolean parameter indicating whether this functionality is enabled or not.
      */
     public abstract IonBinaryWriterBuilder withAutoFlushEnabled(boolean autoFlushEnabled);

@@ -263,18 +263,17 @@ public class WriteBufferTest
         assertBuffer(bytes);
     }
 
+    /**
+     * Test if the method endOfBufferReached is invoked appropriately, the size of bytes written into the buffer overflow the current block size.
+     * @throws UnsupportedEncodingException
+     */
     @Test
     public void testEndOfBufferReachedInvoked() throws UnsupportedEncodingException {
         buf.writeBytes("taco".getBytes("UTF-8"));
-        buf.writeBytes("_burrito".getBytes("UTF-8"));
-        assertTrue(endOfBufferReached.get());
-    }
-
-    @Test
-    public void testEndOfBufferReachedNotInvoked() throws UnsupportedEncodingException {
-        buf.writeBytes("taco".getBytes("UTF-8"));
         buf.writeBytes("burrito".getBytes("UTF-8"));
         assertFalse(endOfBufferReached.get());
+        buf.writeBytes("_".getBytes("UTF-8"));
+        assertTrue(endOfBufferReached.get());
     }
 
     @Test

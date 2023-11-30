@@ -363,10 +363,15 @@ import java.util.ListIterator;
     private boolean                     closed;
     boolean autoFlushEnabled;
     boolean flushAfterCurrentValue;
-    Runnable action;
+    ThrowingRunnable autoFlush;
 
     public void endOfBlockSizeReached() {
         flushAfterCurrentValue = autoFlushEnabled;
+    }
+
+    @FunctionalInterface
+    interface ThrowingRunnable {
+        void run() throws IOException;
     }
 
     /*package*/ IonRawBinaryWriter(final BlockAllocatorProvider provider,
@@ -378,7 +383,7 @@ import java.util.ListIterator;
                                    final PreallocationMode preallocationMode,
                                    final boolean isFloatBinary32Enabled,
                                    final boolean isAutoFlushEnabled,
-                                   Runnable action)
+                                   ThrowingRunnable autoFlush)
                                    throws IOException
     {
         super(optimization);
@@ -410,8 +415,9 @@ import java.util.ListIterator;
         this.hasTopLevelSymbolTableAnnotation = false;
         this.closed = false;
         this.autoFlushEnabled = isAutoFlushEnabled;
-        this.action = action;
+        this.autoFlush = autoFlush;
     }
+
 
 
     /** Always returns {@link Symbols#systemSymbolTable()}. */
@@ -747,7 +753,7 @@ import java.util.ListIterator;
         hasWrittenValuesSinceFinished = true;
         hasWrittenValuesSinceConstructed = true;
         if (this.flushAfterCurrentValue && depth == 0) {
-            action.run();
+            autoFlush.run();
             this.flushAfterCurrentValue = false;
         }
     }
