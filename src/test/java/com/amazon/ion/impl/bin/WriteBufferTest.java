@@ -1117,12 +1117,21 @@ public class WriteBufferTest
     }
 
     @Test
-    public void reserveShouldSkipTheRequestedNumberOfBytesAcrossBlocks() {
+    public void reserveShouldSkipTheRequestedNumberOfBytesAcrossOneBlock() {
         assertEquals(11, ALLOCATOR.getBlockSize());
         buf.reserve(15);
         buf.writeBytes("A".getBytes());
         // WARNING: In testing, the reserved bytes do happen to be 0, but you cannot assume that is true in the general case.
         assertBuffer("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0A".getBytes());
+    }
+
+    @Test
+    public void reserveShouldSkipTheRequestedNumberOfBytesAcrossManyBlock() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.reserve(40);
+        buf.writeBytes("A".getBytes());
+        // WARNING: In testing, the reserved bytes do happen to be 0, but you cannot assume that is true in the general case.
+        assertBuffer("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0A".getBytes());
     }
 
     /**

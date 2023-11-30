@@ -110,21 +110,25 @@ import java.util.List;
      * There is no guarantee as to what values the reserved bytes will have.
      * Only use this method if you will overwrite the bytes later with valid data, or if you have already written dato
      * to these bytes.
-     * This method cannot allocate an arbitrary number of blocks, so it should not be used to move forward more than one
-     * block worth of data.
      */
-    public void reserve(final int numBytes) {
+    public void reserve(int numBytes) {
         if (numBytes < current.remaining()) {
             current.limit += numBytes;
-        } else {
-            int newBlockLimit = numBytes - current.remaining();
-            current.limit = current.capacity();
-            if (index == blocks.size() - 1) {
-                allocateNewBlock();
+            return;
+        }
+
+        while (numBytes > 0) {
+            int numBytesInThisBlock = Math.min(current.remaining(), numBytes);
+            current.limit += numBytesInThisBlock;
+            numBytes -= numBytesInThisBlock;
+
+            if (current.remaining() == 0) {
+                if (index == blocks.size() - 1) {
+                    allocateNewBlock();
+                }
+                index++;
+                current = blocks.get(index);
             }
-            index++;
-            current = blocks.get(index);
-            current.limit = newBlockLimit;
         }
     }
 
@@ -1345,7 +1349,7 @@ import java.util.List;
      * Because the flex int and flex uint encodings are so similar, we can use this method to write either one as long
      * as we provide the correct number of bytes needed to encode the value.
      *
-     * If the allocator's block size is ever less than 12 bytes, this may throw an IndexOutOfBoundsException.
+     * If the allocator's block size is ever less than 10 bytes, this may throw an IndexOutOfBoundsException.
      */
     public void writeFlexIntOrUIntAt(final long position, final long value, final int numBytes) {
         int index = index(position);
