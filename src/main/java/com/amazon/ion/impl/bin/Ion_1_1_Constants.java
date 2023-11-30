@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Timestamp;
@@ -7,6 +9,8 @@ import com.amazon.ion.Timestamp;
  */
 public class Ion_1_1_Constants {
     private Ion_1_1_Constants() {}
+
+    static final byte[] IVM = new byte[] { (byte) 0xE0, 0x01, 0x01, (byte) 0xEA };
 
     static final int FIRST_2_BYTE_SYMBOL_ADDRESS = 256;
     static final int FIRST_MANY_BYTE_SYMBOL_ADDRESS = 65792;
