@@ -18,11 +18,7 @@ package com.amazon.ion.impl.bin;
 import static com.amazon.ion.TestUtils.hexDump;
 import static com.amazon.ion.impl.bin.WriteBuffer.varUIntLength;
 import static com.amazon.ion.impl.bin.WriteBuffer.writeVarUIntTo;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -79,9 +75,15 @@ public class WriteBufferTest
 
         final byte[] actual = bytes();
         assertArrayEquals(
-            "Bytes don't match!\nEXPECTED:\n" + hexDump(expected) + "\nACTUAL:\n" + hexDump(actual) + "\n",
-            expected, actual
+                expected, actual,
+                "Bytes don't match!\nEXPECTED:\n" + hexDump(expected) + "\nACTUAL:\n" + hexDump(actual) + "\n"
         );
+    }
+
+    @Test
+    public void testConstructorThrowsWhenBlockSizeTooSmall() {
+        BlockAllocator ba = BlockAllocatorProviders.basicProvider().vendAllocator(9);
+        assertThrows(IllegalArgumentException.class, () -> new WriteBuffer(ba, () -> {}));
     }
 
     @Test
@@ -1121,6 +1123,32 @@ public class WriteBufferTest
         assertBuffer("0123456789".getBytes());
     }
 
+    @Test
+    public void reserveShouldSkipTheRequestedNumberOfBytes() {
+        buf.reserve(5);
+        buf.writeBytes("A".getBytes());
+        // WARNING: In testing, the reserved bytes do happen to be 0, but you cannot assume that is true in the general case.
+        assertBuffer("\0\0\0\0\0A".getBytes());
+    }
+
+    @Test
+    public void reserveShouldSkipTheRequestedNumberOfBytesAcrossOneBlock() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.reserve(15);
+        buf.writeBytes("A".getBytes());
+        // WARNING: In testing, the reserved bytes do happen to be 0, but you cannot assume that is true in the general case.
+        assertBuffer("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0A".getBytes());
+    }
+
+    @Test
+    public void reserveShouldSkipTheRequestedNumberOfBytesAcrossManyBlock() {
+        assertEquals(11, ALLOCATOR.getBlockSize());
+        buf.reserve(40);
+        buf.writeBytes("A".getBytes());
+        // WARNING: In testing, the reserved bytes do happen to be 0, but you cannot assume that is true in the general case.
+        assertBuffer("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0A".getBytes());
+    }
+
     /**
      * Test if the method 'writeVarUIntTo' writes the expected bytes to the output stream.
      * @throws Exception if there is an error occurred while writing data to the output stream.
@@ -1386,6 +1414,25 @@ public class WriteBufferTest
         Assertions.assertEquals((expectedBits.length() + 1)/9, numBytes);
     }
 
+    @Test
+    public void testWriteFlexIntAcrossBlocks() {
+        long value = Long.MIN_VALUE;
+        String expectedNumberBits = "00000000 00000010 00000000 00000000 00000000 00000000 00000000 00000000 00000000 11111110";
+
+        for (int i = 0; i < ALLOCATOR.getBlockSize(); i++) {
+            buf.reset();
+            StringBuilder expectedBits = new StringBuilder();
+            for (int j = 0; j < i; j++) {
+                buf.writeByte((byte) 0x55);
+                expectedBits.append("01010101 ");
+            }
+            expectedBits.append(expectedNumberBits);
+            buf.writeFlexInt(value);
+            String actualBits = byteArrayToBitString(bytes());
+            Assertions.assertEquals(expectedBits.toString(), actualBits);
+        }
+    }
+
     @ParameterizedTest
     @CsvSource({
             "                 0, 00000001",
@@ -1422,6 +1469,25 @@ public class WriteBufferTest
         String actualBits = byteArrayToBitString(bytes());
         Assertions.assertEquals(expectedBits, actualBits);
         Assertions.assertEquals((expectedBits.length() + 1)/9, numBytes);
+    }
+
+    @Test
+    public void testWriteFlexUIntAcrossBlocks() {
+        long value = Long.MAX_VALUE;
+        String expectedNumberBits = "00000000 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111111";
+
+        for (int i = 0; i < ALLOCATOR.getBlockSize(); i++) {
+            buf.reset();
+            StringBuilder expectedBits = new StringBuilder();
+            for (int j = 0; j < i; j++) {
+                buf.writeByte((byte) 0x55);
+                expectedBits.append("01010101 ");
+            }
+            expectedBits.append(expectedNumberBits);
+            buf.writeFlexUInt(value);
+            String actualBits = byteArrayToBitString(bytes());
+            Assertions.assertEquals(expectedBits.toString(), actualBits);
+        }
     }
 
     @Test
@@ -1486,13 +1552,31 @@ public class WriteBufferTest
             // Long.MIN_VALUE
             "-9223372036854775808, 00000000 00000010 00000000 00000000 00000000 00000000 00000000 00000000 00000000 11111110",
             "-9223372036854775809, 00000000 11111110 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111101",
-
     })
     public void testWriteFlexIntForBigInteger(String value, String expectedBits) {
         int numBytes = buf.writeFlexInt(new BigInteger(value));
         String actualBits = byteArrayToBitString(bytes());
         Assertions.assertEquals(expectedBits, actualBits);
         Assertions.assertEquals((expectedBits.length() + 1)/9, numBytes);
+    }
+
+    @Test
+    public void testWriteFlexIntForBigIntegerAcrossBlocks() {
+        BigInteger value = new BigInteger("-9223372036854775809");
+        String expectedNumberBits = "00000000 11111110 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111101";
+
+        for (int i = 0; i < ALLOCATOR.getBlockSize(); i++) {
+            buf.reset();
+            StringBuilder expectedBits = new StringBuilder();
+            for (int j = 0; j < i; j++) {
+                buf.writeByte((byte) 0x55);
+                expectedBits.append("01010101 ");
+            }
+            expectedBits.append(expectedNumberBits);
+            buf.writeFlexInt(value);
+            String actualBits = byteArrayToBitString(bytes());
+            Assertions.assertEquals(expectedBits.toString(), actualBits);
+        }
     }
 
     @ParameterizedTest
@@ -1532,6 +1616,25 @@ public class WriteBufferTest
         String actualBits = byteArrayToBitString(bytes());
         Assertions.assertEquals(expectedBits, actualBits);
         Assertions.assertEquals((expectedBits.length() + 1)/9, numBytes);
+    }
+
+    @Test
+    public void testWriteFlexUIntForBigIntegerAcrossBlocks() {
+        BigInteger value = new BigInteger("9223372036854775808");
+        String expectedNumberBits = "00000000 00000010 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000010";
+
+        for (int i = 0; i < ALLOCATOR.getBlockSize(); i++) {
+            buf.reset();
+            StringBuilder expectedBits = new StringBuilder();
+            for (int j = 0; j < i; j++) {
+                buf.writeByte((byte) 0x55);
+                expectedBits.append("01010101 ");
+            }
+            expectedBits.append(expectedNumberBits);
+            buf.writeFlexUInt(value);
+            String actualBits = byteArrayToBitString(bytes());
+            Assertions.assertEquals(expectedBits.toString(), actualBits);
+        }
     }
 
     @Test

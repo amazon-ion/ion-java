@@ -167,7 +167,7 @@ public class IonEncoder_1_1 {
         }
 
         int exponent = -value.scale();
-        int numExponentBytes =  WriteBuffer.flexIntLength(exponent);
+        int numExponentBytes =  FlexInt.flexIntLength(exponent);
 
         byte[] coefficientBytes = null;
         int numCoefficientBytes;
@@ -419,7 +419,7 @@ public class IonEncoder_1_1 {
         BigDecimal fractionalSeconds = value.getZFractionalSecond();
 
         long exponent = fractionalSeconds.scale();
-        int numExponentBytes = WriteBuffer.flexUIntLength(exponent);
+        int numExponentBytes = FlexInt.flexUIntLength(exponent);
 
         BigInteger coefficient = fractionalSeconds.unscaledValue();
         byte[] coefficientBytes = null;
@@ -556,7 +556,7 @@ public class IonEncoder_1_1 {
         } else {
             int numAddressBytes = 0;
             for (long ann : annotations) {
-                numAddressBytes += WriteBuffer.flexUIntLength(ann);
+                numAddressBytes += FlexInt.flexUIntLength(ann);
             }
             buffer.writeByte(OpCodes.ANNOTATIONS_MANY_SYMBOL_ADDRESS);
             int numLengthBytes = buffer.writeFlexUInt(numAddressBytes);
