@@ -37,6 +37,8 @@ public class OpCodes {
 
     public static final byte INLINE_SYMBOL_ZERO_LENGTH = (byte) 0x90;
 
+    public static final byte LIST_ZERO_LENGTH = (byte) 0xA0;
+
     public static final byte SYMBOL_ADDRESS_1_BYTE = (byte) 0xE1;
     public static final byte SYMBOL_ADDRESS_2_BYTES = (byte) 0xE2;
     public static final byte SYMBOL_ADDRESS_MANY_BYTES = (byte) 0xE3;
