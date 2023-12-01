@@ -57,7 +57,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.ListIterator;
-import java.util.NoSuchElementException;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -293,39 +292,6 @@ import java.util.NoSuchElementException;
         public String toString()
         {
             return "(CI " + type + " pos:" + position + " len:" + length + " patch:"+patchIndex+")";
-        }
-    }
-
-    private static class PatchPoint
-    {
-        /** position of the data being patched out. */
-        public long oldPosition;
-        /** length of the data being patched out.*/
-        public int oldLength;
-        /** size of the container data or annotations.*/
-        public long length;
-        public PatchPoint()
-        {
-            oldPosition = -1;
-            oldLength = -1;
-            length = -1;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "(PP old::(" + oldPosition + " " + oldLength + ") patch::(" + length + ")";
-        }
-
-        public PatchPoint initialize(final long oldPosition, final int oldLength, final long length) {
-            this.oldPosition = oldPosition;
-            this.oldLength = oldLength;
-            this.length = length;
-            return this;
-        }
-
-        public PatchPoint clear() {
-            return initialize(-1, -1, -1);
         }
     }
 
