@@ -110,11 +110,17 @@ import java.util.List;
      * There is no guarantee as to what values the reserved bytes will have.
      * Only use this method if you will overwrite the bytes later with valid data, or if you have already written dato
      * to these bytes.
+     *
+     * Returns the position of the first reserved byte.
      */
-    public void reserve(int numBytes) {
+    public long reserve(int numBytes) {
+        long startOfReservedBytes = position();
+        // It would also fit in the current block if numBytes == current.remaining(), but then we would have to
+        // increment `index` and check whether to allocate a new block. So, we'll optimize the early return for the most
+        // common situation, and lump the == case into the slower path.
         if (numBytes < current.remaining()) {
             current.limit += numBytes;
-            return;
+            return startOfReservedBytes;
         }
 
         while (numBytes > 0) {
@@ -130,6 +136,7 @@ import java.util.List;
                 current = blocks.get(index);
             }
         }
+        return startOfReservedBytes;
     }
 
     /** Returns the amount of capacity left in the current block. */
@@ -1316,8 +1323,9 @@ import java.util.List;
     /** Writes a FlexInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
     public int writeFlexInt(final long value) {
         int numBytes = FlexInt.flexIntLength(value);
-        writeFlexIntOrUIntAt(position(), value, numBytes);
-        reserve(numBytes);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
         return numBytes;
     }
 
@@ -1327,8 +1335,9 @@ import java.util.List;
             throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
         }
         int numBytes = FlexInt.flexUIntLength(value);
-        writeFlexIntOrUIntAt(position(), value, numBytes);
-        reserve(numBytes);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
         return numBytes;
     }
 
@@ -1338,8 +1347,9 @@ import java.util.List;
             throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
         }
         int numBytes = FlexInt.flexUIntLength(value);
-        writeFlexIntOrUIntAt(position(), value, numBytes);
-        reserve(numBytes);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
         return numBytes;
     }
 

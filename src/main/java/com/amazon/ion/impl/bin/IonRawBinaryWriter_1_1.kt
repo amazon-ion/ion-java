@@ -111,7 +111,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     override fun writeIVM() {
         confirm(currentContainer.type == Top) { "IVM can only be written at the top level of an Ion stream." }
         confirm(numAnnotations == 0) { "Cannot write an IVM with annotations" }
-        buffer.writeBytes(Ion_1_1_Constants.IVM)
+        buffer.writeBytes(_Private_IonConstants.BINARY_VERSION_MARKER_1_1)
     }
 
     override fun writeAnnotations(annotation0: Int) {
@@ -299,7 +299,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     if (contentLength <= 0xF) {
                         // Clean up any unused space that was pre-allocated.
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
-                        buffer.writeUInt8At(currentContainer.position, 0xA0L or contentLength)
+                        buffer.writeUInt8At(currentContainer.position, OpCodes.LIST_ZERO_LENGTH + contentLength)
                     } else {
                         val lengthPrefixBytesRequired = FlexInt.flexUIntLength(contentLength)
                         thisContainerTotalLength += lengthPrefixBytesRequired
