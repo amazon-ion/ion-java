@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class IonRawBinaryWriterTest_1_1 {
 
-    private inline fun writeAsHexString(block: IonRawBinaryWriter_1_1.() -> Unit): String {
+    private inline fun writeAsHexString(autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit): String {
         val baos = ByteArrayOutputStream()
         val rawWriter = IonRawBinaryWriter_1_1(
             out = baos,
@@ -22,56 +22,61 @@ class IonRawBinaryWriterTest_1_1 {
             lengthPrefixPreallocation = 1,
         )
         block.invoke(rawWriter)
+        if (autoClose) rawWriter.close()
         @OptIn(ExperimentalStdlibApi::class)
         return baos.toByteArray().joinToString(" ") { it.toHexString(HexFormat.UpperCase) }
     }
 
-    private inline fun assertWriterOutputEquals(hexBytes: String, block: IonRawBinaryWriter_1_1.() -> Unit) {
-        assertEquals(hexBytes, writeAsHexString(block))
+    private inline fun assertWriterOutputEquals(hexBytes: String, autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit) {
+        assertEquals(hexBytes, writeAsHexString(autoClose, block))
+    }
+
+    private inline fun assertWriterThrows(block: IonRawBinaryWriter_1_1.() -> Unit) {
+        val baos = ByteArrayOutputStream()
+        val rawWriter = IonRawBinaryWriter_1_1(
+            out = baos,
+            buffer = WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(32)),
+            lengthPrefixPreallocation = 1,
+        )
+        assertThrows<IonException> {
+            block.invoke(rawWriter)
+        }
     }
 
     @Test
     fun `calling close while in a container should throw IonException`() {
-        assertThrows<IonException> {
-            writeAsHexString {
-                stepInList(false)
-                close()
-            }
+        assertWriterThrows {
+            stepInList(false)
+            close()
         }
     }
 
     @Test
     fun `calling finish while in a container should throw IonException`() {
-        assertThrows<IonException> {
-            writeAsHexString {
-                stepInList(true)
-                finish()
-            }
+        assertWriterThrows {
+            stepInList(true)
+            finish()
         }
     }
 
     @Test
     fun `calling stepOut while not in a container should throw IonException`() {
-        assertThrows<IonException> {
-            writeAsHexString {
-                stepOut()
-            }
+        assertWriterThrows {
+            stepOut()
         }
     }
 
     @Test
     fun `calling writeIVM when in a container should throw IonException`() {
-        assertThrows<IonException> {
-            writeAsHexString {
-                stepInList(false)
-                writeIVM()
-            }
+        assertWriterThrows {
+            stepInList(false)
+            writeIVM()
         }
     }
 
     @Test
     fun `calling finish should cause the buffered data to be written to the output stream`() {
-        val actual = writeAsHexString {
+        val actual = writeAsHexString(autoClose = false) {
             writeIVM()
             finish()
         }
@@ -84,7 +89,6 @@ class IonRawBinaryWriterTest_1_1 {
         val actual = writeAsHexString {
             finish()
             writeIVM()
-            close()
         }
         // Just checking that data is written, not asserting the content.
         assertTrue(actual.isNotBlank())
@@ -92,7 +96,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `calling close should cause the buffered data to be written to the output stream`() {
-        val actual = writeAsHexString {
+        val actual = writeAsHexString(autoClose = false) {
             writeIVM()
             close()
         }
@@ -118,14 +122,12 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write the IVM`() {
         assertWriterOutputEquals("E0 01 01 EA") {
             writeIVM()
-            close()
         }
     }
 
     @Test
     fun `write nothing`() {
         assertWriterOutputEquals("") {
-            close()
         }
     }
 
@@ -133,7 +135,6 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a null`() {
         assertWriterOutputEquals("EA") {
             writeNull()
-            close()
         }
     }
 
@@ -142,7 +143,6 @@ class IonRawBinaryWriterTest_1_1 {
         // Just checking one type. The full range of types are checked in IonEncoder_1_1Test
         assertWriterOutputEquals("EB 00") {
             writeNull(IonType.BOOL)
-            close()
         }
     }
 
@@ -151,7 +151,6 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a boolean`(value: Boolean, hexBytes: String) {
         assertWriterOutputEquals(hexBytes) {
             writeBool(value)
-            close()
         }
     }
 
@@ -162,7 +161,6 @@ class IonRawBinaryWriterTest_1_1 {
             writeBool(true)
             writeBool(false)
             stepOut()
-            close()
         }
     }
 
@@ -173,7 +171,6 @@ class IonRawBinaryWriterTest_1_1 {
             writeBool(true)
             writeBool(false)
             stepOut()
-            close()
         }
     }
 
@@ -184,7 +181,6 @@ class IonRawBinaryWriterTest_1_1 {
             repeat(16) { writeBool(true) }
             stepOut()
             finish()
-            close()
         }
     }
 
@@ -194,7 +190,6 @@ class IonRawBinaryWriterTest_1_1 {
             stepInList(false)
             repeat(128) { writeBool(true) }
             stepOut()
-            close()
         }
     }
 
@@ -203,7 +198,6 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterOutputEquals("A4 A3 A2 A1 A0") {
             repeat(5) { stepInList(false) }
             repeat(5) { stepOut() }
-            close()
         }
     }
 
@@ -212,7 +206,6 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterOutputEquals("F1 F1 F1 F1 F0 F0 F0 F0") {
             repeat(4) { stepInList(true) }
             repeat(4) { stepOut() }
-            close()
         }
     }
 
@@ -224,7 +217,6 @@ class IonRawBinaryWriterTest_1_1 {
                 stepInList(false)
             }
             repeat(8) { stepOut() }
-            close()
         }
     }
 }
