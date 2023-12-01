@@ -24,6 +24,10 @@ import java.util.List;
 
 /**
  * A facade over {@link Block} management and low-level Ion encoding concerns for the {@link IonRawBinaryWriter}.
+ *
+ * The allocator must always have a block size of at least 10 bytes, otherwise writing a FlexInt or FlexUInt may result
+ * in an IndexOutOfBoundsException. The number 10 is chosen because it is the maximum number of bytes required to write
+ * a long value as a FlexInt or VarInt.
  */
 /*package*/ final class WriteBuffer implements Closeable
 {
@@ -32,11 +36,16 @@ import java.util.List;
     private Block current;
     private int index;
     private Runnable endOfBlockCallBack;
-
+    private byte[] scratch = new byte[32];
 
     public WriteBuffer(final BlockAllocator allocator, Runnable endOfBlockCallBack)
     {
         this.allocator = allocator;
+
+        if (allocator.getBlockSize() < 10) {
+            throw new IllegalArgumentException("WriteBuffer requires an allocator with a block size of at least 10.");
+        }
+
         this.blocks = new ArrayList<Block>();
 
         // initial seed of the first block
@@ -94,6 +103,41 @@ import java.util.List;
         this.index = index;
         block.limit = offset;
         current = block;
+    }
+
+    /**
+     * Moves forward without writing any data.
+     *
+     * There is no guarantee as to what values the reserved bytes will have.
+     * Only use this method if you will overwrite the bytes later with valid data, or if you have already written dato
+     * to these bytes.
+     *
+     * Returns the position of the first reserved byte.
+     */
+    public long reserve(int numBytes) {
+        long startOfReservedBytes = position();
+        // It would also fit in the current block if numBytes == current.remaining(), but then we would have to
+        // increment `index` and check whether to allocate a new block. So, we'll optimize the early return for the most
+        // common situation, and lump the == case into the slower path.
+        if (numBytes < current.remaining()) {
+            current.limit += numBytes;
+            return startOfReservedBytes;
+        }
+
+        while (numBytes > 0) {
+            int numBytesInThisBlock = Math.min(current.remaining(), numBytes);
+            current.limit += numBytesInThisBlock;
+            numBytes -= numBytesInThisBlock;
+
+            if (current.remaining() == 0) {
+                if (index == blocks.size() - 1) {
+                    allocateNewBlock();
+                }
+                index++;
+                current = blocks.get(index);
+            }
+        }
+        return startOfReservedBytes;
     }
 
     /** Returns the amount of capacity left in the current block. */
@@ -1277,30 +1321,25 @@ import java.util.List;
         block.data[offset] = (byte) (bitValue & 0xF0 | value) ;
     }
 
-    /** Get the length of FlexInt for the provided value. */
-    public static int flexIntLength(final long value) {
-        int numMagnitudeBitsRequired;
-        if (value < 0) {
-            int numLeadingOnes = Long.numberOfLeadingZeros(~value);
-            numMagnitudeBitsRequired = 64 - numLeadingOnes;
-        } else {
-            int numLeadingZeros = Long.numberOfLeadingZeros(value);
-            numMagnitudeBitsRequired = 64 - numLeadingZeros;
-        }
-        return numMagnitudeBitsRequired / 7 + 1;
-    }
-
     /** Writes a FlexInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
     public int writeFlexInt(final long value) {
-        int numBytes = flexIntLength(value);
-        return writeFlexIntOrUInt(value, numBytes);
+        int numBytes = FlexInt.flexIntLength(value);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
+        return numBytes;
     }
 
-    /** Get the length of FlexUInt for the provided value. */
-    public static int flexUIntLength(final long value) {
-        int numLeadingZeros = Long.numberOfLeadingZeros(value);
-        int numMagnitudeBitsRequired = 64 - numLeadingZeros;
-        return (numMagnitudeBitsRequired - 1) / 7 + 1;
+    /** Writes a FlexUInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
+    public int writeFlexUInt(final int value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+        }
+        int numBytes = FlexInt.flexUIntLength(value);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
+        return numBytes;
     }
 
     /** Writes a FlexUInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
@@ -1308,117 +1347,70 @@ import java.util.List;
         if (value < 0) {
             throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
         }
-        int numBytes = flexUIntLength(value);
-        return writeFlexIntOrUInt(value, numBytes);
+        int numBytes = FlexInt.flexUIntLength(value);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
+        return numBytes;
     }
 
     /**
+     * Writes a FlexInt or FlexUInt to this WriteBuffer at the specified position.
+     *
      * Because the flex int and flex uint encodings are so similar, we can use this method to write either one as long
      * as we provide the correct number of bytes needed to encode the value.
+     *
+     * If the allocator's block size is ever less than 10 bytes, this may throw an IndexOutOfBoundsException.
      */
-    private int writeFlexIntOrUInt(final long value, final int numBytes) {
-        if (numBytes == 1) {
-            writeByte((byte) (0x01 | (byte)(value << 1)));
-        } else if (numBytes == 2) {
-            writeByte((byte) (0x02 | (byte)(value << 2)));
-            writeByte((byte) (value >> 6));
-        } else if (numBytes == 3) {
-            writeByte((byte) (0x04 | (byte)(value << 3)));
-            writeByte((byte) (value >> 5));
-            writeByte((byte) (value >> 13));
-        } else if (numBytes == 4) {
-            writeByte((byte) (0x08 | (byte)(value << 4)));
-            writeByte((byte) (value >> 4));
-            writeByte((byte) (value >> 12));
-            writeByte((byte) (value >> 20));
+    public void writeFlexIntOrUIntAt(final long position, final long value, final int numBytes) {
+        int index = index(position);
+        Block block = blocks.get(index);
+        int dataOffset = offset(position);
+        if (dataOffset + numBytes < block.capacity()) {
+            FlexInt.writeFlexIntOrUIntInto(block.data, dataOffset, value, numBytes);
         } else {
-            // Finally, fall back to a loop based approach.
-
-            int i = 0; // `i` gets incremented for every byte written.
-
-            // Start with leading zero bytes.
-            // If there's 1-8 total bytes, we need no leading zero-bytes.
-            // If there's 9-16 total bytes, we need one zero-byte
-            // If there's 17-24 total bytes, we need two zero-bytes, etc.
-            for (; i < (numBytes - 1)/8; i++) {
-                writeByte((byte) 0);
+            FlexInt.writeFlexIntOrUIntInto(scratch, 0, value, numBytes);
+            if (index == blocks.size() - 1) {
+                allocateNewBlock();
             }
-
-            // Write the last length bits, possibly also containing some value bits.
-            int remainingLengthBits = (numBytes - 1) % 8;
-            byte lengthPart = (byte) (0x01 << remainingLengthBits);
-
-            int valueBitOffset = remainingLengthBits + 1;
-            byte valuePart = (byte) (value << valueBitOffset);
-
-            writeByte((byte) (valuePart | lengthPart));
-            i++;
-
-            int valueByteOffset = 1;
-            for (; i < numBytes; i++) {
-                writeByte((byte) (value >> (8 * valueByteOffset - valueBitOffset)));
-                valueByteOffset++;
+            for (int i = 0; i < numBytes; i++) {
+                writeUInt8At(position + i, scratch[i]);
             }
+        }
+    }
 
+    /** Writes a FlexInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
+    public int writeFlexInt(final BigInteger value) {
+        int numBytes = FlexInt.flexIntLength(value);
+        if (numBytes > current.remaining()) {
+            if (scratch.length < numBytes) {
+                scratch = new byte[numBytes];
+            }
+            FlexInt.writeFlexIntOrUIntInto(scratch, 0, value, numBytes);
+            writeBytesSlow(scratch, 0, numBytes);
+        } else {
+            FlexInt.writeFlexIntOrUIntInto(current.data, current.limit, value, numBytes);
+            current.limit += numBytes;
         }
         return numBytes;
     }
 
-    public static int flexIntLength(final BigInteger value) {
-        return value.bitLength() / 7 + 1;
-    }
-
-    public static int flexUIntLength(final BigInteger value) {
-        return (value.bitLength() - 1) / 7 + 1;
-    }
-
-    public int writeFlexInt(final BigInteger value) {
-        int numBytes = flexIntLength(value);
-        return writeFlexIntOrUIntForBigInteger(value, numBytes);
-    }
-
+    /** Writes a FlexUInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
     public int writeFlexUInt(final BigInteger value) {
         if (value.signum() < 0) {
             throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
         }
-        int numBytes = flexUIntLength(value);
-        return writeFlexIntOrUIntForBigInteger(value, numBytes);
-    }
-
-    private int writeFlexIntOrUIntForBigInteger(final BigInteger value, final int numBytes) {
-        // TODO: Should we branch to the implementation for long if the number is small enough?
-        // https://github.com/amazon-ion/ion-java/issues/614
-        byte[] valueBytes = value.toByteArray();
-
-        int i = 0; // `i` gets incremented for every byte written.
-
-        // Start with leading zero bytes.
-        // If there's 1-8 total bytes, we need no leading zero-bytes.
-        // If there's 9-16 total bytes, we need one zero-byte
-        // If there's 17-24 total bytes, we need two zero-bytes, etc.
-        for (; i < (numBytes - 1)/8; i++) {
-            writeByte((byte) 0);
+        int numBytes = FlexInt.flexUIntLength(value);
+        if (numBytes > current.remaining()) {
+            if (scratch.length < numBytes) {
+                scratch = new byte[numBytes];
+            }
+            FlexInt.writeFlexIntOrUIntInto(scratch, 0, value, numBytes);
+            writeBytesSlow(scratch, 0, numBytes);
+        } else {
+            FlexInt.writeFlexIntOrUIntInto(current.data, current.limit, value, numBytes);
+            current.limit += numBytes;
         }
-
-        // Write the last length bits, possibly also containing some value bits.
-        int remainingLengthBits = (numBytes - 1) % 8;
-        byte lengthPart = (byte) (0x01 << remainingLengthBits);
-        int valueBitOffset = remainingLengthBits + 1;
-        byte valuePart = (byte) (valueBytes[valueBytes.length - 1] << valueBitOffset);
-        writeByte((byte) (valuePart | lengthPart));
-        i++;
-
-        for (int valueByteOffset = valueBytes.length - 1; valueByteOffset > 0; valueByteOffset--) {
-            // Technically it's only a nibble if the bitOffset is 4, so we call it nibble-ish
-            byte highNibbleIsh = (byte) (valueBytes[valueByteOffset - 1] << (valueBitOffset));
-            byte lowNibbleIsh = (byte) ((valueBytes[valueByteOffset] & 0xFF) >> (8 - valueBitOffset));
-            writeByte((byte) (highNibbleIsh | lowNibbleIsh));
-            i++;
-        }
-        if (i < numBytes) {
-            writeByte((byte) ((valueBytes[0]) >> (8 - valueBitOffset)));
-        }
-
         return numBytes;
     }
 

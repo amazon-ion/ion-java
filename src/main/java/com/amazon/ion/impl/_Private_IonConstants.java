@@ -114,7 +114,7 @@ public final class _Private_IonConstants
                                                              (byte) 0xEA };
 
     /**
-     * The byte sequence indicating use of Ion 1.0 binary format.
+     * The byte sequence indicating use of Ion 1.1 binary format.
      */
     public static final byte[] BINARY_VERSION_MARKER_1_1 = { (byte) 0xE0,
                                                              (byte) 0x01,
