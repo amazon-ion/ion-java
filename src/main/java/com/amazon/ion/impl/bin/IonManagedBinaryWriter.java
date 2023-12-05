@@ -51,7 +51,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 /** Wraps {@link IonRawBinaryWriter} with symbol table management. */
 @SuppressWarnings("deprecation")
 /*package*/ final class IonManagedBinaryWriter extends AbstractIonWriter implements _Private_IonManagedWriter
@@ -677,7 +676,9 @@ import java.util.Map;
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             builder.preallocationMode,
-            builder.isFloatBinary32Enabled
+            builder.isFloatBinary32Enabled,
+            false,
+            this::flush
         );
         this.user = new IonRawBinaryWriter(
             builder.provider,
@@ -687,7 +688,9 @@ import java.util.Map;
             StreamCloseMode.CLOSE,
             StreamFlushMode.FLUSH,
             builder.preallocationMode,
-            builder.isFloatBinary32Enabled
+            builder.isFloatBinary32Enabled,
+            builder.isAutoFlushEnabled,
+            this::flush
         );
 
         this.catalog = builder.catalog;
@@ -1101,11 +1104,10 @@ import java.util.Map;
 
     // Stream Terminators
 
-    public void flush() throws IOException
-    {
+    public void flush() throws IOException {
         if (getDepth() == 0 && !user.hasAnnotations() && (localsLocked || lstAppendEnabled))
         {
-            unsafeFlush();
+           unsafeFlush();
         }
     }
 

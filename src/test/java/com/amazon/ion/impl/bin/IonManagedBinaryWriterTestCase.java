@@ -64,12 +64,27 @@ public class IonManagedBinaryWriterTestCase extends IonRawBinaryWriterTest {
         public boolean isEnabled() { return this == LST_APPEND_ENABLED; }
     }
 
+    protected enum AutoFlushMode
+    {
+        AUTO_FLUSH_ENABLED,
+        AUTO_FLUSH_DISABLED;
+        public boolean isEnabled() { return this == AUTO_FLUSH_ENABLED; }
+    }
+
     @Injected.Inject("lstAppendMode")
     public static final LSTAppendMode[] LST_APPEND_ENABLED_DIMENSIONS = LSTAppendMode.values();
     protected LSTAppendMode lstAppendMode;
+    @Injected.Inject("autoFlushMode")
+    public static final AutoFlushMode[] AUTO_FLUSH_MODES = AutoFlushMode.values();
+    protected AutoFlushMode autoFlushMode;
     public void setLstAppendMode(final LSTAppendMode mode)
     {
         this.lstAppendMode = mode;
+    }
+
+    public void setAutoFlushMode(final AutoFlushMode mode)
+    {
+        this.autoFlushMode = mode;
     }
 
     private void checkSymbolTokenAgainstImport(final SymbolToken token)
@@ -140,6 +155,12 @@ public class IonManagedBinaryWriterTestCase extends IonRawBinaryWriterTest {
             builder.withLocalSymbolTableAppendEnabled();
         } else {
             builder.withLocalSymbolTableAppendDisabled();
+        }
+
+        if (autoFlushMode.isEnabled()) {
+            builder.withAutoFlushEnabled();
+        } else {
+            builder.withAutoFlushDisabled();
         }
 
         final IonWriter writer = builder.newWriter(out);

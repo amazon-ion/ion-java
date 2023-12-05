@@ -98,7 +98,6 @@ import java.util.NoSuchElementException;
         NULLS[STRUCT.ordinal()]         = (byte) 0xDF;
     }
     private static final byte NULL_NULL = NULLS[NULL.ordinal()];
-
     private static final byte BOOL_FALSE        = (byte) 0x10;
     private static final byte BOOL_TRUE         = (byte) 0x11;
 
@@ -123,6 +122,7 @@ import java.util.NoSuchElementException;
     private static final BigInteger BIG_INT_LONG_MIN_VALUE = BigInteger.valueOf(Long.MIN_VALUE);
 
     private static final byte VARINT_NEG_ZERO   = (byte) 0xC0;
+
 
     final Utf8StringEncoder utf8StringEncoder = Utf8StringEncoderPool
             .getInstance()
@@ -362,6 +362,18 @@ import java.util.NoSuchElementException;
     private boolean                     hasTopLevelSymbolTableAnnotation;
 
     private boolean                     closed;
+    boolean autoFlushEnabled;
+    boolean flushAfterCurrentValue;
+    ThrowingRunnable autoFlush;
+
+    public void endOfBlockSizeReached() {
+        flushAfterCurrentValue = autoFlushEnabled;
+    }
+
+    @FunctionalInterface
+    interface ThrowingRunnable {
+        void run() throws IOException;
+    }
 
     /*package*/ IonRawBinaryWriter(final BlockAllocatorProvider provider,
                                    final int blockSize,
@@ -370,7 +382,9 @@ import java.util.NoSuchElementException;
                                    final StreamCloseMode streamCloseMode,
                                    final StreamFlushMode streamFlushMode,
                                    final PreallocationMode preallocationMode,
-                                   final boolean isFloatBinary32Enabled)
+                                   final boolean isFloatBinary32Enabled,
+                                   final boolean isAutoFlushEnabled,
+                                   ThrowingRunnable autoFlush)
                                    throws IOException
     {
         super(optimization);
@@ -383,7 +397,7 @@ import java.util.NoSuchElementException;
         this.streamFlushMode   = streamFlushMode;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
-        this.buffer            = new WriteBuffer(allocator);
+        this.buffer            = new WriteBuffer(allocator, this::endOfBlockSizeReached);
         this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
         this.containers        = new _Private_RecyclingStack<ContainerInfo>(
             10,
@@ -401,7 +415,11 @@ import java.util.NoSuchElementException;
         this.currentAnnotationSids            = new IntList();
         this.hasTopLevelSymbolTableAnnotation = false;
         this.closed = false;
+        this.autoFlushEnabled = isAutoFlushEnabled;
+        this.autoFlush = autoFlush;
     }
+
+
 
     /** Always returns {@link Symbols#systemSymbolTable()}. */
     public SymbolTable getSymbolTable()
@@ -419,6 +437,10 @@ import java.util.NoSuchElementException;
     public void setFieldNameSymbol(final SymbolToken name)
     {
         setFieldNameSymbol(name.getSid());
+    }
+
+    WriteBuffer getCurrentBuffer() {
+        return buffer;
     }
 
     public void setFieldNameSymbol(int sid)
@@ -722,7 +744,7 @@ import java.util.NoSuchElementException;
     }
 
     /** Closes out annotations. */
-    private void finishValue()
+    private void finishValue() throws IOException
     {
         if (!containers.isEmpty() && containers.peek().type == ContainerType.ANNOTATION)
         {
@@ -731,6 +753,10 @@ import java.util.NoSuchElementException;
         }
         hasWrittenValuesSinceFinished = true;
         hasWrittenValuesSinceConstructed = true;
+        if (this.flushAfterCurrentValue && depth == 0) {
+            autoFlush.run();
+            this.flushAfterCurrentValue = false;
+        }
     }
 
     // Container Manipulation
@@ -1365,7 +1391,6 @@ import java.util.NoSuchElementException;
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
         }
-
         if (patchPoints.isEmpty())
         {
             // nothing to patch--write 'em out!

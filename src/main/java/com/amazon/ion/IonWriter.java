@@ -126,7 +126,6 @@ public interface IonWriter
      */
     public void flush() throws IOException;
 
-
     /**
      * Indicates that writing is completed and all buffered data should be
      * written and flushed as if this were the end of the Ion data stream.
