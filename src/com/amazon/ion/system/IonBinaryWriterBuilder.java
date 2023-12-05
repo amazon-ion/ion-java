@@ -146,7 +146,7 @@ public abstract class IonBinaryWriterBuilder
      * Additionally, setting a larger block size can further tune performance when auto-flush is enabled.
      * A larger block size leads to fewer block allocations and reduces the frequency of flush operations when auto-flush is enabled. {@link #withBlockSize(int) Here} is where you can set up the
      * block size of write buffer.
-     * Auto-flush disabled by default and the default block size is 32K.
+     * Auto-flush is disabled by default and the default block size is 32K.
      * @param autoFlushEnabled A boolean parameter indicating whether this functionality is enabled or not.
      */
     public abstract IonBinaryWriterBuilder withAutoFlushEnabled(boolean autoFlushEnabled);
