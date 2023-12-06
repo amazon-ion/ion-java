@@ -31,8 +31,10 @@ import java.util.List;
     private final List<Block> blocks;
     private Block current;
     private int index;
+    private Runnable endOfBlockCallBack;
 
-    public WriteBuffer(final BlockAllocator allocator)
+
+    public WriteBuffer(final BlockAllocator allocator, Runnable endOfBlockCallBack)
     {
         this.allocator = allocator;
         this.blocks = new ArrayList<Block>();
@@ -42,6 +44,7 @@ import java.util.List;
 
         this.index = 0;
         this.current = blocks.get(0);
+        this.endOfBlockCallBack = endOfBlockCallBack;
     }
 
     private void allocateNewBlock()
@@ -138,12 +141,12 @@ import java.util.List;
                 if (index == blocks.size() - 1)
                 {
                     allocateNewBlock();
+                    endOfBlockCallBack.run();
                 }
                 index++;
                 current = blocks.get(index);
             }
         }
-
     }
 
     /** Writes an array of bytes to the buffer expanding if necessary. */

@@ -194,6 +194,22 @@ public class _Private_IonBinaryWriterBuilder
     }
 
     @Override
+    public _Private_IonBinaryWriterBuilder withAutoFlushEnabled(boolean autoFlushEnabled) {
+        _Private_IonBinaryWriterBuilder b = mutable();
+        b.setAutoFlushEnabled(autoFlushEnabled);
+        return b;
+    }
+
+    public void setAutoFlushEnabled(boolean autoFlushEnabled) {
+        mutationCheck();
+        if (autoFlushEnabled) {
+            myBinaryWriterBuilder.withAutoFlushEnabled();
+            myBinaryWriterBuilder.withLocalSymbolTableAppendEnabled();
+        } else {
+            myBinaryWriterBuilder.withAutoFlushDisabled();
+        }
+    }
+    @Override
     public void setLocalSymbolTableAppendEnabled(boolean enabled)
     {
         mutationCheck();
@@ -220,6 +236,13 @@ public class _Private_IonBinaryWriterBuilder
     {
         _Private_IonBinaryWriterBuilder b = mutable();
         b.setLocalSymbolTableAppendEnabled(false);
+        return b;
+    }
+
+    @Override
+    public _Private_IonBinaryWriterBuilder withBlockSize(int size) {
+        _Private_IonBinaryWriterBuilder b = mutable();
+        b.setBlockSize(size);
         return b;
     }
 
@@ -275,6 +298,13 @@ public class _Private_IonBinaryWriterBuilder
 
     //=========================================================================
 
+    public void setBlockSize(int size) {
+        myBinaryWriterBuilder.withUserBlockSize(size);
+        // Adjust the symbol table block size when the user block size is smaller than the default, because in most cases, the symbol table is smaller than the data.
+        if (size < myBinaryWriterBuilder.DEFAULT_BLOCK_SIZE) {
+            myBinaryWriterBuilder.withSymbolsBlockSize(size);
+        }
+    }
 
     /**
      * Fills all properties and returns an immutable builder.
