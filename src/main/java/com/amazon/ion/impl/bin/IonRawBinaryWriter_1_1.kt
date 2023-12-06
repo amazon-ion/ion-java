@@ -57,6 +57,18 @@ class IonRawBinaryWriter_1_1 internal constructor(
         }
     }
 
+    companion object {
+        /** Flag to indicate that annotations need to be written using FlexSyms */
+        private const val FLEX_SYMS_REQUIRED = -1
+
+        /**
+         * Annotations container always requires at least one length prefix byte. In practice, it's almost certain to
+         * never require more than one byte for SID annotations. We assume that it will infrequently require more than
+         * one byte for FlexSym annotations.
+         */
+        private const val ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE = 1
+    }
+
     private val utf8StringEncoder = Utf8StringEncoderPool.getInstance().getOrCreate()
 
     private var annotationsTextBuffer = arrayOfNulls<CharSequence>(8)
@@ -68,7 +80,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * and type of annotations required.
      */
     private var annotationFlexSymFlag = 0
-    private val FLEX_SYMS_REQUIRED = -1
 
     private var hasFieldName = false
 
@@ -261,20 +272,20 @@ class IonRawBinaryWriter_1_1 internal constructor(
         }
         if (annotationFlexSymFlag == FLEX_SYMS_REQUIRED) {
             buffer.writeByte(OpCodes.ANNOTATIONS_MANY_FLEX_SYM)
-            buffer.reserve(lengthPrefixPreallocation)
+            buffer.reserve(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
             for (i in 0 until numAnnotations) {
                 currentContainer.length += writeFlexSymFromAnnotationsBuffer(i)
             }
         } else {
             buffer.writeByte(OpCodes.ANNOTATIONS_MANY_SYMBOL_ADDRESS)
-            buffer.reserve(lengthPrefixPreallocation)
+            buffer.reserve(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
             for (i in 0 until numAnnotations) {
                 currentContainer.length += buffer.writeFlexUInt(annotationsIdBuffer[i])
             }
         }
 
         val numAnnotationsBytes = currentContainer.length
-        val numLengthPrefixBytes = writeCurrentContainerLength()
+        val numLengthPrefixBytes = writeCurrentContainerLength(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
 
         // Set the new current container
         containerStack.pop()
@@ -432,7 +443,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
                         buffer.writeUInt8At(currentContainer.position, OpCodes.LIST_ZERO_LENGTH + contentLength)
                     } else {
-                        thisContainerTotalLength += writeCurrentContainerLength()
+                        thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     }
                 }
                 SExp -> TODO()
@@ -455,9 +466,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * Writes the length of the current container and returns the number of bytes needed to do so.
      * Transparently handles PatchPoints as necessary.
      */
-    private fun writeCurrentContainerLength(): Int {
+    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int): Int {
         val lengthPrefixBytesRequired = FlexInt.flexUIntLength(currentContainer.length)
-        if (lengthPrefixBytesRequired == lengthPrefixPreallocation) {
+        if (lengthPrefixBytesRequired == numPreAllocatedLengthPrefixBytes) {
             // We have enough space, so write in the correct length.
             buffer.writeFlexIntOrUIntAt(currentContainer.position + 1, currentContainer.length, lengthPrefixBytesRequired)
         } else {
@@ -465,7 +476,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
             // All ContainerInfos are in the stack, so we know that its patchPoint is non-null.
             currentContainer.patchPoint.assumeNotNull().apply {
                 oldPosition = currentContainer.position + 1
-                oldLength = lengthPrefixPreallocation
+                oldLength = numPreAllocatedLengthPrefixBytes
                 length = currentContainer.length
             }
         }

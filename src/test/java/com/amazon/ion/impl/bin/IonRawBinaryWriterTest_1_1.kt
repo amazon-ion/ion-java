@@ -312,6 +312,14 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
+    fun `write sid 0 annotation`() {
+        assertWriterOutputEquals("E4 01 5E") {
+            writeAnnotations(0)
+            writeBool(true)
+        }
+    }
+
+    @Test
     fun `write one inline annotation`() {
         val expectedBytes = "E7 FB 66 6F 6F 5F"
         assertWriterOutputEquals(expectedBytes) {
@@ -341,25 +349,34 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write three inline annotations`() {
-        val expectedBytes = "E6 09 07 09 02 04 5E"
+        val expectedBytes = "E9 19 FB 66 6F 6F FB 62 61 72 FB 62 61 7A 5F"
         assertWriterOutputEquals(expectedBytes) {
-            writeAnnotations(3)
-            writeAnnotations(4)
-            writeAnnotations(256)
-            writeBool(true)
+            writeAnnotations("foo")
+            writeAnnotations("bar")
+            writeAnnotations("baz")
+            writeBool(false)
         }
         assertWriterOutputEquals(expectedBytes) {
-            writeAnnotations(3)
-            writeAnnotations(4, 256)
-            writeBool(true)
+            writeAnnotations("foo")
+            writeAnnotations("bar", "baz")
+            writeBool(false)
         }
         assertWriterOutputEquals(expectedBytes) {
-            writeAnnotations(intArrayOf(3, 4))
-            writeAnnotations(256)
-            writeBool(true)
+            writeAnnotations(arrayOf("foo", "bar"))
+            writeAnnotations("baz")
+            writeBool(false)
         }
         assertWriterOutputEquals(expectedBytes) {
-            writeAnnotations(intArrayOf(3, 4, 256))
+            writeAnnotations(arrayOf("foo", "bar", "baz"))
+            writeBool(false)
+        }
+    }
+
+    @Test
+    fun `write empty text and sid 0 annotations`() {
+        assertWriterOutputEquals("E8 01 70 01 80 5E") {
+            writeAnnotations(0)
+            writeAnnotations("")
             writeBool(true)
         }
     }
@@ -395,13 +412,15 @@ class IonRawBinaryWriterTest_1_1 {
         val opCode = "E7"
         val length = "C6 FD"
         val text = "41 6D 61 7A 6F 6E 20 49 6F 6E 20 69 73 20 61 20 72 69 63 68 6C 79 2D 74 79 70 65 64 2C 20 73 65 " +
-                "6C 66 2D 64 65 73 63 72 69 62 69 6E 67 2C 20 68 69 65 72 61 72 63 68 69 63 61 6C 20 64 61 74 61 20 " +
-                "73 65 72 69 61 6C 69 7A 61 74 69 6F 6E 20 66 6F 72 6D 61 74 20 6F 66 66 65 72 69 6E 67 20 69 6E 74 " +
-                "65 72 63 68 61 6E 67 65 61 62 6C 65 20 62 69 6E 61 72 79 20 61 6E 64 20 74 65 78 74 20 72 65 70 72 " +
-                "65 73 65 6E 74 61 74 69 6F 6E 73 2E 5F"
+            "6C 66 2D 64 65 73 63 72 69 62 69 6E 67 2C 20 68 69 65 72 61 72 63 68 69 63 61 6C 20 64 61 74 61 20 " +
+            "73 65 72 69 61 6C 69 7A 61 74 69 6F 6E 20 66 6F 72 6D 61 74 20 6F 66 66 65 72 69 6E 67 20 69 6E 74 " +
+            "65 72 63 68 61 6E 67 65 61 62 6C 65 20 62 69 6E 61 72 79 20 61 6E 64 20 74 65 78 74 20 72 65 70 72 " +
+            "65 73 65 6E 74 61 74 69 6F 6E 73 2E 5F"
         assertWriterOutputEquals("$opCode $length $text") {
-            writeAnnotations("Amazon Ion is a richly-typed, self-describing, hierarchical data serialization " +
-                    "format offering interchangeable binary and text representations.")
+            writeAnnotations(
+                "Amazon Ion is a richly-typed, self-describing, hierarchical data serialization " +
+                    "format offering interchangeable binary and text representations."
+            )
             writeBool(false)
         }
     }
