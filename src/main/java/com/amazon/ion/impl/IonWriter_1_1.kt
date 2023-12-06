@@ -114,11 +114,10 @@ interface IonWriter_1_1 {
     /**
      * Steps into a Struct.
      *
-     * The [delimited] and [useFlexSym] parameters are suggestions. Implementations may ignore these parameters if they
-     * are not relevant for that particular implementation. All implementations must document their specific behavior
-     * for this method.
+     * The [delimited] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
+     * particular implementation. All implementations must document their specific behavior for this method.
      */
-    fun stepInStruct(delimited: Boolean, useFlexSym: Boolean)
+    fun stepInStruct(delimited: Boolean)
 
     /**
      * Steps into a stream.

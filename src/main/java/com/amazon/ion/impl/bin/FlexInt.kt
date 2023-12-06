@@ -13,6 +13,11 @@ import java.math.BigInteger
  */
 object FlexInt {
 
+    /**
+     * A byte representing zero, encoded as a FlexInt (or FlexUInt).
+     */
+    const val ZERO: Byte = 0x01
+
     /** Determine the length of FlexUInt for the provided value.  */
     @JvmStatic
     fun flexUIntLength(value: Long): Int {
