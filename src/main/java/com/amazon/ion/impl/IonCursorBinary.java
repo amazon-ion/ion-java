@@ -10,6 +10,7 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
 import com.amazon.ion.SystemSymbols;
+import com.amazon.ion.impl.bin.OpCodes;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -179,6 +180,12 @@ class IonCursorBinary implements IonCursor {
      * the current value, the startIndex will be negative.
      */
     final Marker annotationSequenceMarker = new Marker(-1, 0);
+
+    /**
+     * Holds both inline text markers and symbol IDs. If representing a symbol ID, the symbol ID value will
+     * be contained in the endIndex field, and the startIndex field will be -1.
+     */
+    final MarkerList annotationTokenMarkers = new MarkerList(8);
 
     /**
      * Indicates whether the current value is annotated.
@@ -650,6 +657,15 @@ class IonCursorBinary implements IonCursor {
             annotationSequenceMarker.startIndex -= shiftAmount;
             annotationSequenceMarker.endIndex -= shiftAmount;
         }
+        if (!annotationTokenMarkers.isEmpty()) {
+            for (int i = 0; i < annotationTokenMarkers.size(); i++) {
+                Marker marker = annotationTokenMarkers.get(i);
+                if (marker.startIndex > -1) {
+                    marker.startIndex -= shiftAmount;
+                    marker.endIndex -= shiftAmount;
+                }
+            }
+        }
         shiftContainerEnds(shiftAmount);
         refillableState.totalDiscardedBytes += shiftAmount;
     }
@@ -935,25 +951,65 @@ class IonCursorBinary implements IonCursor {
     /* ---- Ion 1.1 ---- */
 
     /**
+     * Reads a 3+ byte FlexUInt into a long. After this method returns, `peekIndex` points to the first byte after the
+     * end of the FlexUInt.
+     * @param firstByte the first byte of the FlexUInt.
+     * @return the value.
+     */
+    private long uncheckedReadLargeFlexUInt_1_1(int firstByte) {
+        if (firstByte == 0) {
+            // Note: this is conservative, as 9-byte flex subfields (with a continuation bit in the second byte) can fit
+            // in a long. However, the flex subfields parsed by the methods in this class are used only in cases that
+            // require an int anyway (symbol IDs, decimal scale), so the added complexity is not warranted.
+            throw new IonException("Flex subfield exceeds the length of a long.");
+        }
+        byte length = (byte) (Integer.numberOfTrailingZeros(firstByte) + 1);
+        long result = firstByte >>> length;
+        for (byte i = 1; i < length; i++) {
+            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+        }
+        return result;
+    }
+
+    /**
      * Reads a FlexUInt. NOTE: the FlexUInt must fit in a `long`. This must only be called when it is known that the
      * buffer already contains all the bytes in the FlexUInt.
      * @return the value.
      */
     private long uncheckedReadFlexUInt_1_1() {
-        int currentByte = buffer[(int) peekIndex++] & 0xFF;
-        if ((currentByte & 1) == 1) { // TODO perf: analyze whether the special case check is a net positive
-            // Single-byte.
+        // Up-cast to int, ensuring the most significant bit in the byte is not treated as the sign.
+        int currentByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
+        if ((currentByte & 1) == 1) { // TODO perf: analyze whether these special case checks are a net positive
+            // Single byte; shift out the continuation bit.
             return currentByte >>> 1;
         }
-        if (currentByte == 0) {
+        if ((currentByte & 2) != 0) {
+            // Two bytes; upcast the second byte to int, ensuring the most significant bit is not treated as the sign.
+            // Make room for the six value bits in the first byte. Or with those six value bits after shifting out the
+            // two continuation bits.
+            return ((buffer[(int) peekIndex++] & SINGLE_BYTE_MASK) << 6) | (currentByte >>> 2);
+        }
+        return uncheckedReadLargeFlexUInt_1_1(currentByte);
+    }
+
+    /**
+     * Reads a multi-byte FlexUInt into a long, ensuring enough data is available in the buffer. After this method
+     * returns, `peekIndex` points to the first byte after the end of the FlexUInt.
+     * @param firstByte the first byte of the FlexUInt.
+     * @return the value.
+     */
+    private long slowReadLargeFlexUInt_1_1(int firstByte) {
+        if (firstByte == 0) {
             // Note: this is conservative, as 9-byte FlexUInts (with a continuation bit in the second byte) can fit
             // in a long. However, the FlexUInt parsing methods in this class are only used to calculate value length,
             // and the added complexity is not warranted to increase the maximum value size above 2^56 - 1 (72 PB).
             throw new IonException("Found a FlexUInt that was too large to fit in a `long`");
         }
-        // TODO perf: try putting the rest in its own method
-        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
-        long result = currentByte >>> length;
+        byte length = (byte) (Integer.numberOfTrailingZeros(firstByte) + 1);
+        if (!fillAt(peekIndex, length - 1)) {
+            return -1;
+        }
+        long result = firstByte >>> length;
         for (byte i = 1; i < length; i++) {
             result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
         }
@@ -965,36 +1021,143 @@ class IonCursorBinary implements IonCursor {
      * @return the value.
      */
     private long slowReadFlexUInt_1_1() {
-        // TODO perf: try 1-byte special case checks. Least-significant bits of 1 indicate 1-byte
         int currentByte = slowReadByte();
         if (currentByte < 0) {
             return -1;
         }
-        if (currentByte == 0) {
-            // Note: this is conservative, as 9-byte FlexUInts (with a continuation bit in the second byte) can fit
-            // in a long. However, the FlexUInt parsing methods in this class are only used to calculate value length,
-            // and the added complexity is not warranted to increase the maximum value size above 2^56 - 1 (72 PB).
-            throw new IonException("Found a FlexUInt that was too large to fit in a `long`");
+        if ((currentByte & 1) == 1) {
+            return currentByte >>> 1;
         }
-        byte length = (byte) (Integer.numberOfTrailingZeros(currentByte) + 1);
-        long result = currentByte >>> length;
-        int numberOfBytesRead = 0;
-        while (numberOfBytesRead++ < length - 1) {
-            currentByte = slowReadByte();
-            if (currentByte < 0) {
-                return -1;
-            }
-            result |= ((long) currentByte << (8 * numberOfBytesRead - length));
-        }
-        return result;
+        return slowReadLargeFlexUInt_1_1(currentByte);
     }
 
+    /**
+     * Reads the header of an Ion 1.1 annotation wrapper. This must only be called when it is known that the buffer
+     * already contains all the bytes in the header. Sets `valueMarker` with the start and end indices of the wrapped
+     * value. Sets `annotationSequenceMarker` with the start and end indices of the sequence of annotation SIDs, if
+     * applicable, or fills `annotationTokenMarkers` if the annotation wrapper contains FlexSyms. After
+     * successful return, `peekIndex` will point at the type ID byte of the wrapped value.
+     * @param valueTid the type ID of the annotation wrapper.
+     * @return true if the length of the wrapped value extends beyond the bytes currently buffered; otherwise, false.
+     */
     private boolean uncheckedReadAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
-        throw new UnsupportedOperationException();
+        annotationTokenMarkers.clear();
+        if (valueTid.variableLength) {
+            // Opcodes 0xE6 (variable-length annotation SIDs) and 0xE9 (variable-length annotation FlexSyms)
+            int annotationsLength = (int) uncheckedReadFlexUInt_1_1();
+            annotationSequenceMarker.typeId = valueTid;
+            annotationSequenceMarker.startIndex = peekIndex;
+            annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
+            peekIndex = annotationSequenceMarker.endIndex;
+        } else {
+            if (valueTid.isInlineable) {
+                // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
+                Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
+                uncheckedReadFlexSym_1_1(provisionalMarker);
+                if (provisionalMarker.endIndex < 0) {
+                    return true;
+                }
+                if (valueTid.lowerNibble == 8) {
+                    // Opcode 0xE8 (two annotation FlexSyms)
+                    provisionalMarker = annotationTokenMarkers.provisionalElement();
+                    uncheckedReadFlexSym_1_1(provisionalMarker);
+                    if (provisionalMarker.endIndex < 0) {
+                        return true;
+                    }
+                    annotationTokenMarkers.commit();
+                }
+                annotationTokenMarkers.commit();
+            } else {
+                // Opcodes 0xE4 (one annotation SID) and 0xE5 (two annotation SIDs)
+                int annotationSid = (int) uncheckedReadFlexUInt_1_1();
+                annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
+                if (valueTid.lowerNibble == 5) {
+                    // Opcode 0xE5 (two annotation SIDs)
+                    annotationSid = (int) uncheckedReadFlexUInt_1_1();
+                    annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
+                    annotationTokenMarkers.commit();
+                }
+                annotationTokenMarkers.commit();
+            }
+        }
+        return false;
     }
 
+    /**
+     * Reads the header of an Ion 1.1 annotation wrapper, ensuring enough data is available in the buffer. Sets
+     * `valueMarker` with the start and end indices of the wrapped value. Sets `annotationSequenceMarker` with the start
+     * and end indices of the sequence of annotation SIDs, if applicable, or fills `annotationTokenMarkers` if the
+     * annotation wrapper contains FlexSyms. After successful return, `peekIndex` will point at the type ID byte of the
+     * wrapped value.
+     * @param valueTid the type ID of the annotation wrapper.
+     * @return true if there are not enough bytes in the stream to complete the value; otherwise, false.
+     */
     private boolean slowReadAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
-        throw new UnsupportedOperationException();
+        annotationTokenMarkers.clear();
+        if (valueTid.variableLength) {
+            // Opcodes 0xE6 (variable-length annotation SIDs) and 0xE9 (variable-length annotation FlexSyms)
+            // At this point the value must be at least 3 more bytes: one for the smallest-possible annotations
+            // length, one for the smallest-possible annotation, and 1 for the smallest-possible value
+            // representation.
+            if (!fillAt(peekIndex, 3)) {
+                return true;
+            }
+            int annotationsLength = (int) slowReadFlexUInt_1_1();
+            if (annotationsLength < 0) {
+                return true;
+            }
+            if (!fillAt(peekIndex, annotationsLength)) {
+                return true;
+            }
+            annotationSequenceMarker.typeId = valueTid;
+            annotationSequenceMarker.startIndex = peekIndex;
+            annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
+            peekIndex = annotationSequenceMarker.endIndex;
+        } else {
+            // At this point the value must have at least one more byte for each annotation VarSym (one for lower
+            // nibble 7, two for lower nibble 8), plus one for the smallest-possible value representation.
+            if (!fillAt(peekIndex, (valueTid.lowerNibble == 7 || valueTid.lowerNibble == 4) ? 2 : 3)) {
+                return true;
+            }
+
+            if (valueTid.isInlineable) {
+                // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
+                Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
+                slowReadFlexSym_1_1(provisionalMarker);
+                if (provisionalMarker.endIndex < 0) {
+                    return true;
+                }
+                if (valueTid.lowerNibble == 8) {
+                    // Opcode 0xE8 (two annotation FlexSyms)
+                    provisionalMarker = annotationTokenMarkers.provisionalElement();
+                    slowReadFlexSym_1_1(provisionalMarker);
+                    if (provisionalMarker.endIndex < 0) {
+                        return true;
+                    }
+                    annotationTokenMarkers.commit();
+                }
+                annotationTokenMarkers.commit();
+            } else {
+                // Opcodes 0xE4 (one annotation SID) and 0xE5 (two annotation SIDs)
+                int annotationSid = (int) slowReadFlexUInt_1_1();
+                if (annotationSid < 0) {
+                    return true;
+                }
+                annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
+                if (valueTid.lowerNibble == 5) {
+                    // Opcode 0xE5 (two annotation SIDs)
+                    annotationSid = (int) slowReadFlexUInt_1_1();
+                    if (annotationSid < 0) {
+                        return true;
+                    }
+                    annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
+                    annotationTokenMarkers.commit();
+                }
+                annotationTokenMarkers.commit();
+            }
+
+        }
+        return false;
     }
 
     /**
@@ -1024,6 +1187,151 @@ class IonCursorBinary implements IonCursor {
 
     private void uncheckedReadFieldName_1_1() {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Reads a 3+ byte FlexInt into a long. After this method returns, `peekIndex` points to the first byte after the
+     * end of the FlexUInt.
+     * @param firstByte the first byte of the FlexInt.
+     * @return the value.
+     */
+    private long uncheckedReadLargeFlexInt_1_1(int firstByte) {
+        firstByte &= SINGLE_BYTE_MASK;
+        // FlexInts are essentially just FlexUInts that interpret the most significant bit as a sign that needs to be
+        // extended.
+        long result = uncheckedReadLargeFlexUInt_1_1(firstByte);
+        if (buffer[(int) peekIndex - 1] < 0) {
+            // Sign extension.
+            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
+        }
+        return result;
+    }
+
+    /**
+     * Reads a FlexInt into a long. After this method returns, `peekIndex` points to the first byte after the
+     * end of the FlexUInt.
+     * @return the value.
+     */
+    private long uncheckedReadFlexInt_1_1() {
+        // The following up-cast to int performs sign extension, if applicable.
+        int currentByte = buffer[(int)(peekIndex++)];
+        if ((currentByte & 1) == 1) {
+            // Single byte; shift out the continuation bit while preserving the sign.
+            return currentByte >> 1;
+        }
+        if ((currentByte & 2) != 0) {
+            // Two bytes; up-cast the second byte to int, thereby performing sign extension. Make room for the six
+            // value bits in the first byte. Or with those six value bits after shifting out the two continuation bits.
+            return buffer[(int) peekIndex++] << 6 | ((currentByte & SINGLE_BYTE_MASK) >>> 2);
+        }
+        return uncheckedReadLargeFlexInt_1_1(currentByte);
+    }
+
+    /**
+     * Reads a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
+     * When the FlexSym contains inline text, the given Marker's start and end indices are populated with the start and
+     * end of the UTF-8 byte sequence, and this method returns -1. When the FlexSym contains a symbol ID, the given
+     * Marker's endIndex is set to the symbol ID value and its startIndex is not set. When this FlexSym wraps a
+     * delimited end marker, neither the Marker's startIndex nor its endIndex is set.
+     * @param markerToSet the marker to populate.
+     * @return the symbol ID value if one was present, otherwise -1.
+     */
+    private long uncheckedReadFlexSym_1_1(Marker markerToSet) {
+        long result = uncheckedReadFlexInt_1_1();
+        if (result == 0) {
+            int nextByte = buffer[(int)(peekIndex++)];
+            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
+                // Symbol zero.
+                markerToSet.endIndex = 0;
+                return 0;
+            }
+            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
+                // Inline symbol with zero length.
+                markerToSet.startIndex = peekIndex;
+                markerToSet.endIndex = peekIndex;
+            } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
+                throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
+            }
+            return -1;
+        } else if (result < 0) {
+            markerToSet.startIndex = peekIndex;
+            markerToSet.endIndex = peekIndex - result;
+            peekIndex = markerToSet.endIndex;
+            return -1;
+        } else {
+            markerToSet.endIndex = result;
+        }
+        return result;
+    }
+
+    /**
+     * Reads a FlexInt into a long, ensuring enough space is available in the buffer. After this method returns,
+     * `peekIndex` points to the first byte after the end of the FlexUInt.
+     * @return the value.
+     */
+    private long slowReadLargeFlexInt_1_1(int firstByte) {
+        firstByte &= SINGLE_BYTE_MASK;
+        // FlexInts are essentially just FlexUInts that interpret the most significant bit as a sign that needs to be
+        // extended.
+        long result = slowReadLargeFlexUInt_1_1(firstByte);
+        if (buffer[(int) peekIndex - 1] < 0) {
+            // Sign extension.
+            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
+        }
+        return result;
+    }
+
+    /**
+     * Reads a FlexInt into a long, ensuring enough space is available in the buffer. After this method returns,
+     * `peekIndex` points to the first byte after the end of the FlexUInt.
+     * @return the value.
+     */
+    private long slowReadFlexInt_1_1() {
+        // The following up-cast to int performs sign extension, if applicable.
+        int currentByte = (byte) slowReadByte();
+        if ((currentByte & 1) == 1) {
+            // Single byte; shift out the continuation bit while preserving the sign.
+            return currentByte >> 1;
+        }
+        return slowReadLargeFlexInt_1_1(currentByte);
+    }
+
+    /**
+     * Reads a FlexSym, ensuring enough space is available in the buffer. After this method returns, `peekIndex`
+     * points to the first byte after the end of the FlexSym. When the FlexSym contains inline text, the given Marker's
+     * start and end indices are populated with the start and end of the UTF-8 byte sequence, and this method returns
+     * -1. When the FlexSym contains a symbol ID, the given Marker's endIndex is set to the symbol ID value and its
+     * startIndex is not set. When this FlexSym wraps a delimited end marker, neither the Marker's startIndex nor its
+     * endIndex is set.
+     * @param markerToSet the marker to populate.
+     * @return the symbol ID value if one was present, otherwise -1.
+     */
+    private long slowReadFlexSym_1_1(Marker markerToSet) {
+        long result = slowReadFlexInt_1_1();
+        if (result == 0) {
+            int nextByte = (byte) slowReadByte();
+            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
+                // Symbol zero.
+                markerToSet.endIndex = 0;
+                return 0;
+            }
+            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
+                // Inline symbol with zero length.
+                markerToSet.startIndex = peekIndex;
+                markerToSet.endIndex = peekIndex;
+            } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
+                throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
+            }
+            return -1;
+        } else if (result < 0) {
+            markerToSet.startIndex = peekIndex;
+            markerToSet.endIndex = peekIndex - result;
+            peekIndex = markerToSet.endIndex;
+            return -1;
+        } else {
+            markerToSet.endIndex = result;
+        }
+        return result;
     }
 
     private boolean slowReadFieldName_1_1() {
