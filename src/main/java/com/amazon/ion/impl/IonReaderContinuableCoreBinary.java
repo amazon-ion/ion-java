@@ -11,6 +11,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl.bin.IntList;
+import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 
@@ -178,6 +179,25 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             currentByte = buffer[(int)(peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
+        return result;
+    }
+
+    /**
+     * Reads a 2+ byte VarUInt, given the first byte. When called, `peekIndex` must point at the second byte in the
+     * VarUInt. When this method returns, `peekIndex` will point at the first byte that follows the VarUInt.
+     * NOTE: the VarUInt must fit in an `int`.
+     * @param currentByte the first byte in the VarUInt.
+     * @return the value.
+     */
+    int readVarUInt_1_0(byte currentByte) {
+        int result = currentByte & LOWER_SEVEN_BITS_BITMASK;
+        do {
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+            }
+            currentByte = buffer[(int) (peekIndex++)];
+            result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+        } while (currentByte >= 0);
         return result;
     }
 
@@ -516,8 +536,42 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return readLargeFlexInt_1_1(currentByte);
     }
 
-    private int readVarSym_1_1(Marker marker) {
-        throw new UnsupportedOperationException();
+    /**
+     * Reads a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
+     * When the FlexSym contains inline text, the given Marker's start and end indices are populated with the start and
+     * end of the UTF-8 byte sequence, and this method returns -1. When the FlexSym contains a symbol ID, the given
+     * Marker's endIndex is set to the symbol ID value and its startIndex is not set. When this FlexSym wraps a
+     * delimited end marker, neither the Marker's startIndex nor its endIndex is set.
+     * @param markerToSet the marker to populate.
+     * @return the symbol ID value if one was present, otherwise -1.
+     */
+    private long readFlexSym_1_1(Marker markerToSet) {
+        // TODO find a factoring that reduces duplication with IonCursorBinary, taking into account performance.
+        long result = readFlexInt_1_1();
+        if (result == 0) {
+            int nextByte = buffer[(int)(peekIndex++)];
+            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
+                // Symbol zero.
+                markerToSet.endIndex = 0;
+                return 0;
+            }
+            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
+                // Inline symbol with zero length.
+                markerToSet.startIndex = peekIndex;
+                markerToSet.endIndex = peekIndex;
+            } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
+                throw new IonException("VarSyms may only wrap symbol zero, empty string, or delimited end.");
+            }
+            return -1;
+        } else if (result < 0) {
+            markerToSet.startIndex = peekIndex;
+            markerToSet.endIndex = peekIndex - result;
+            peekIndex = markerToSet.endIndex;
+            return -1;
+        } else {
+            markerToSet.endIndex = result;
+        }
+        return result;
     }
 
     /**
@@ -1285,6 +1339,28 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             annotationArray[i] = annotationSids.get(i);
         }
         return annotationArray;
+    }
+
+    /**
+     * Gets the annotation markers for the current value, reading them from the buffer first if necessary.
+     * @return the annotation markers, or an empty list if the current value is not annotated.
+     */
+    MarkerList getAnnotationMarkerList() {
+        annotationTokenMarkers.clear();
+        long savedPeekIndex = peekIndex;
+        peekIndex = annotationSequenceMarker.startIndex;
+        while (peekIndex < annotationSequenceMarker.endIndex) {
+            Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
+            int annotationSid = (int) readFlexSym_1_1(provisionalMarker);
+            if (annotationSid >= 0) {
+                provisionalMarker.endIndex = annotationSid;
+            } else if (provisionalMarker.endIndex < 0) {
+                break;
+            }
+            annotationTokenMarkers.commit();
+        }
+        peekIndex = savedPeekIndex;
+        return annotationTokenMarkers;
     }
 
     @Override
