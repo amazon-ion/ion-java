@@ -60,10 +60,10 @@ interface IonWriter_1_1 {
     fun writeAnnotations(annotation0: Int, annotation1: Int)
 
     /**
-     * Writes three or more annotations for the next value.
+     * Writes any number of annotations for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
-    fun writeAnnotations(annotation0: Int, annotation1: Int, vararg annotations: Int)
+    fun writeAnnotations(annotations: IntArray)
 
     /**
      * Writes one annotation for the next value.
@@ -78,10 +78,10 @@ interface IonWriter_1_1 {
     fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence)
 
     /**
-     * Writes three or more annotations for the next value.
+     * Writes any number of annotations for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
-    fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence, vararg annotations: CharSequence)
+    fun writeAnnotations(annotations: Array<CharSequence>)
 
     /**
      * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
