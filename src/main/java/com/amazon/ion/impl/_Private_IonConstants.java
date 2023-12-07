@@ -16,6 +16,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion._private.SuppressFBWarnings;
 
 /**
  * NOT FOR APPLICATION USE!
@@ -108,6 +109,7 @@ public final class _Private_IonConstants
     /**
      * The byte sequence indicating use of Ion 1.0 binary format.
      */
+    @SuppressFBWarnings("MS_MUTABLE_ARRAY")
     public static final byte[] BINARY_VERSION_MARKER_1_0 = { (byte) 0xE0,
                                                              (byte) 0x01,
                                                              (byte) 0x00,
@@ -116,6 +118,7 @@ public final class _Private_IonConstants
     /**
      * The byte sequence indicating use of Ion 1.1 binary format.
      */
+    @SuppressFBWarnings("MS_MUTABLE_ARRAY")
     public static final byte[] BINARY_VERSION_MARKER_1_1 = { (byte) 0xE0,
                                                              (byte) 0x01,
                                                              (byte) 0x01,
