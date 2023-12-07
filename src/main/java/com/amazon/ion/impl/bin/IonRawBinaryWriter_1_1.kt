@@ -5,6 +5,7 @@ package com.amazon.ion.impl.bin
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.*
+import com.amazon.ion.impl.bin.utf8.*
 import com.amazon.ion.util.*
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
@@ -33,18 +34,53 @@ class IonRawBinaryWriter_1_1 internal constructor(
          * TODO: Test if performance is better if we just check currentContainer for nullness.
          */
         Top,
+        /**
+         * Represents a group of annotations. May only contain FlexSyms or FlexUInt symbol IDs.
+         */
+        Annotations,
     }
 
     private data class ContainerInfo(
         var type: ContainerType? = null,
         var isDelimited: Boolean = false,
         var position: Long = -1,
-        var length: Long = -1,
+        var length: Long = 0,
         // TODO: Test if performance is better with an Object Reference or an index into the PatchPoint queue.
         var patchPoint: PatchPoint? = null,
-    )
+    ) {
+        fun clear() {
+            type = null
+            isDelimited = false
+            position = -1
+            length = 0
+            patchPoint = null
+        }
+    }
 
+    companion object {
+        /** Flag to indicate that annotations need to be written using FlexSyms */
+        private const val FLEX_SYMS_REQUIRED = -1
+
+        /**
+         * Annotations container always requires at least one length prefix byte. In practice, it's almost certain to
+         * never require more than one byte for SID annotations. We assume that it will infrequently require more than
+         * one byte for FlexSym annotations.
+         */
+        private const val ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE = 1
+    }
+
+    private val utf8StringEncoder = Utf8StringEncoderPool.getInstance().getOrCreate()
+
+    private var annotationsTextBuffer = arrayOfNulls<CharSequence>(8)
+    private var annotationsIdBuffer = IntArray(8)
     private var numAnnotations = 0
+    /**
+     * Flag indicating whether to use FlexSyms to write the annotations. When FlexSyms are required, the flag should be
+     * set to `-1` so that we can `xor` it with [numAnnotations] to get a distinct integer that represents the number
+     * and type of annotations required.
+     */
+    private var annotationFlexSymFlag = 0
+
     private var hasFieldName = false
 
     private var closed = false
@@ -57,6 +93,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     override fun finish() {
         if (closed) return
         confirm(depth() == 0) { "Cannot call finish() while in a container" }
+        confirm(numAnnotations == 0) { "Cannot call finish with dangling annotations" }
 
         if (patchPoints.isEmpty) {
             // nothing to patch--write 'em out!
@@ -114,40 +151,147 @@ class IonRawBinaryWriter_1_1 internal constructor(
         buffer.writeBytes(_Private_IonConstants.BINARY_VERSION_MARKER_1_1)
     }
 
+    /**
+     * Ensures that there is enough space in the annotation buffers for [n] annotations.
+     * If more space is needed, it over-allocates by 8 to ensure that we're not continually allocating when annotations
+     * are being added one by one.
+     */
+    private inline fun ensureAnnotationSpace(n: Int) {
+        if (annotationsIdBuffer.size < n || annotationsTextBuffer.size < n) {
+            val oldIds = annotationsIdBuffer
+            annotationsIdBuffer = IntArray(n + 8)
+            oldIds.copyInto(annotationsIdBuffer)
+            val oldText = annotationsTextBuffer
+            annotationsTextBuffer = arrayOfNulls(n + 8)
+            oldText.copyInto(annotationsTextBuffer)
+        }
+    }
+
     override fun writeAnnotations(annotation0: Int) {
-        TODO("Not yet implemented")
+        ensureAnnotationSpace(numAnnotations + 1)
+        annotationsIdBuffer[numAnnotations++] = annotation0
     }
 
     override fun writeAnnotations(annotation0: Int, annotation1: Int) {
-        TODO("Not yet implemented")
+        ensureAnnotationSpace(numAnnotations + 2)
+        annotationsIdBuffer[numAnnotations++] = annotation0
+        annotationsIdBuffer[numAnnotations++] = annotation1
     }
 
-    override fun writeAnnotations(annotation0: Int, annotation1: Int, vararg annotations: Int) {
-        TODO("Not yet implemented")
+    override fun writeAnnotations(annotations: IntArray) {
+        ensureAnnotationSpace(numAnnotations + annotations.size)
+        annotations.copyInto(annotationsIdBuffer, numAnnotations)
+        numAnnotations += annotations.size
     }
 
     override fun writeAnnotations(annotation0: CharSequence) {
-        TODO("Not yet implemented")
+        ensureAnnotationSpace(numAnnotations + 1)
+        annotationsTextBuffer[numAnnotations++] = annotation0
+        annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
 
     override fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence) {
-        TODO("Not yet implemented")
+        ensureAnnotationSpace(numAnnotations + 2)
+        annotationsTextBuffer[numAnnotations++] = annotation0
+        annotationsTextBuffer[numAnnotations++] = annotation1
+        annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
 
-    override fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence, vararg annotations: CharSequence) {
-        TODO("Not yet implemented")
+    override fun writeAnnotations(annotations: Array<CharSequence>) {
+        if (annotations.isEmpty()) return
+        ensureAnnotationSpace(numAnnotations + annotations.size)
+        annotations.copyInto(annotationsTextBuffer, numAnnotations)
+        numAnnotations += annotations.size
+        annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
 
     /**
      * Helper function for handling annotations and field names when starting a value.
      */
     private inline fun openValue(valueWriterExpression: () -> Unit) {
-        if (numAnnotations > 0) {
-            TODO("Actually write out the annotations.")
+
+        // Start at 1, assuming there's an annotations OpCode byte.
+        // We'll clear this if there are no annotations.
+        var annotationsTotalLength = 1L
+
+        // Effect of the xor: if annotationsFlexSymFlag is -1, then we're matching `-1 * numAnnotations - 1`
+        when (numAnnotations xor annotationFlexSymFlag) {
+            0, -1 -> annotationsTotalLength = 0
+            1 -> {
+                buffer.writeByte(OpCodes.ANNOTATIONS_1_SYMBOL_ADDRESS)
+                annotationsTotalLength += buffer.writeFlexUInt(annotationsIdBuffer[0])
+            }
+            2 -> {
+                buffer.writeByte(OpCodes.ANNOTATIONS_2_SYMBOL_ADDRESS)
+                annotationsTotalLength += buffer.writeFlexUInt(annotationsIdBuffer[0])
+                annotationsTotalLength += buffer.writeFlexUInt(annotationsIdBuffer[1])
+            }
+            -2 -> {
+                // If there's only one annotation, and we know that at least one has text, we don't need to check
+                // whether this is SID.
+                buffer.writeByte(OpCodes.ANNOTATIONS_1_FLEX_SYM)
+                annotationsTotalLength += buffer.writeFlexSym(utf8StringEncoder.encode(annotationsTextBuffer[0].toString()))
+                annotationsTextBuffer[0] = null
+            }
+            -3 -> {
+                buffer.writeByte(OpCodes.ANNOTATIONS_2_FLEX_SYM)
+                annotationsTotalLength += writeFlexSymFromAnnotationsBuffer(0)
+                annotationsTotalLength += writeFlexSymFromAnnotationsBuffer(1)
+            }
+            else -> annotationsTotalLength += writeManyAnnotations()
         }
+        currentContainer.length += annotationsTotalLength
+
         numAnnotations = 0
+        annotationFlexSymFlag = 0
         hasFieldName = false
         valueWriterExpression()
+    }
+
+    /**
+     * Writes a FlexSym annotation for the specified position in the annotations buffers.
+     */
+    private fun writeFlexSymFromAnnotationsBuffer(i: Int): Int {
+        val annotationText = annotationsTextBuffer[i]
+        return if (annotationText != null) {
+            annotationsTextBuffer[i] = null
+            buffer.writeFlexSym(utf8StringEncoder.encode(annotationText.toString()))
+        } else {
+            buffer.writeFlexSym(annotationsIdBuffer[i])
+        }
+    }
+
+    /**
+     * Writes 3 or more annotations for SIDs or FlexSyms
+     */
+    private fun writeManyAnnotations(): Long {
+        currentContainer = containerStack.push {
+            it.clear()
+            it.type = Annotations
+            it.position = buffer.position()
+        }
+        if (annotationFlexSymFlag == FLEX_SYMS_REQUIRED) {
+            buffer.writeByte(OpCodes.ANNOTATIONS_MANY_FLEX_SYM)
+            buffer.reserve(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
+            for (i in 0 until numAnnotations) {
+                currentContainer.length += writeFlexSymFromAnnotationsBuffer(i)
+            }
+        } else {
+            buffer.writeByte(OpCodes.ANNOTATIONS_MANY_SYMBOL_ADDRESS)
+            buffer.reserve(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
+            for (i in 0 until numAnnotations) {
+                currentContainer.length += buffer.writeFlexUInt(annotationsIdBuffer[i])
+            }
+        }
+
+        val numAnnotationsBytes = currentContainer.length
+        val numLengthPrefixBytes = writeCurrentContainerLength(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
+
+        // Set the new current container
+        containerStack.pop()
+        currentContainer = containerStack.peek()
+
+        return numLengthPrefixBytes + numAnnotationsBytes
     }
 
     /**
@@ -155,9 +299,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
      */
     private inline fun closeScalar(valueWriterExpression: () -> Int) {
         val numBytesWritten = valueWriterExpression()
-
-        // Update the container length (unless it's Top)
-        if (currentContainer.type != Top) currentContainer.length += numBytesWritten
+        currentContainer.length += numBytesWritten
     }
 
     /**
@@ -244,10 +386,10 @@ class IonRawBinaryWriter_1_1 internal constructor(
     override fun stepInList(delimited: Boolean) {
         openValue {
             currentContainer = containerStack.push {
+                it.clear()
                 it.type = List
                 it.position = buffer.position()
                 it.isDelimited = delimited
-                it.length = 0
             }
             if (delimited) {
                 buffer.writeByte(OpCodes.DELIMITED_LIST)
@@ -301,27 +443,14 @@ class IonRawBinaryWriter_1_1 internal constructor(
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
                         buffer.writeUInt8At(currentContainer.position, OpCodes.LIST_ZERO_LENGTH + contentLength)
                     } else {
-                        val lengthPrefixBytesRequired = FlexInt.flexUIntLength(contentLength)
-                        thisContainerTotalLength += lengthPrefixBytesRequired
-
-                        if (lengthPrefixBytesRequired == lengthPrefixPreallocation) {
-                            // We have enough space, so write in the correct length.
-                            buffer.writeFlexIntOrUIntAt(currentContainer.position + 1, currentContainer.length, lengthPrefixBytesRequired)
-                        } else {
-                            addPatchPointsToStack()
-                            // currentContainer is in containerStack, so we know that its patchPoint is non-null.
-                            currentContainer.patchPoint.assumeNotNull().apply {
-                                oldPosition = currentContainer.position + 1
-                                oldLength = lengthPrefixPreallocation
-                                length = currentContainer.length
-                            }
-                        }
+                        thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     }
                 }
                 SExp -> TODO()
                 Struct -> TODO()
                 Macro -> TODO()
                 Stream -> TODO()
+                Annotations -> TODO("Unreachable.")
                 Top -> throw IonException("Nothing to step out of.")
             }
         }
@@ -330,7 +459,28 @@ class IonRawBinaryWriter_1_1 internal constructor(
         containerStack.pop()
         currentContainer = containerStack.peek()
         // Update the length of the new current container to include the length of the container that we just stepped out of.
-        if (currentContainer.type != Top) currentContainer.length += thisContainerTotalLength
+        currentContainer.length += thisContainerTotalLength
+    }
+
+    /**
+     * Writes the length of the current container and returns the number of bytes needed to do so.
+     * Transparently handles PatchPoints as necessary.
+     */
+    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int): Int {
+        val lengthPrefixBytesRequired = FlexInt.flexUIntLength(currentContainer.length)
+        if (lengthPrefixBytesRequired == numPreAllocatedLengthPrefixBytes) {
+            // We have enough space, so write in the correct length.
+            buffer.writeFlexIntOrUIntAt(currentContainer.position + 1, currentContainer.length, lengthPrefixBytesRequired)
+        } else {
+            addPatchPointsToStack()
+            // All ContainerInfos are in the stack, so we know that its patchPoint is non-null.
+            currentContainer.patchPoint.assumeNotNull().apply {
+                oldPosition = currentContainer.position + 1
+                oldLength = numPreAllocatedLengthPrefixBytes
+                length = currentContainer.length
+            }
+        }
+        return lengthPrefixBytesRequired
     }
 
     private fun addPatchPointsToStack() {

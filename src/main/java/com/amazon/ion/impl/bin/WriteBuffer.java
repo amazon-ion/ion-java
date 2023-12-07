@@ -15,6 +15,8 @@
 
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -1519,6 +1521,34 @@ import java.util.List;
         }
         return value.length;
     }
+
+    /**
+     * Writes a FlexSym with a symbol id.
+     */
+    public int writeFlexSym(int sid) {
+        if (sid != 0) {
+            return writeFlexInt(sid);
+        } else {
+            writeByte((byte) 0x01);
+            writeByte((byte) 0x90);
+            return 2;
+        }
+    }
+
+    /**
+     * Writes a FlexSym with inline text.
+     */
+    public int writeFlexSym(Utf8StringEncoder.Result text) {
+    if (text.getEncodedLength() == 0) {
+        writeByte((byte) 0x01);
+        writeByte((byte) 0x80);
+        return 2;
+    } else {
+        int numLengthBytes = writeFlexInt(-text.getEncodedLength());
+        writeBytes(text.getBuffer(), 0, text.getEncodedLength());
+        return numLengthBytes + text.getEncodedLength();
+    }
+}
 
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
