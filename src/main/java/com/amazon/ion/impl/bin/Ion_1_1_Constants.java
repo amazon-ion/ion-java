@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Timestamp;
+import com.amazon.ion._private.SuppressFBWarnings;
 
 /**
  * Contains constants (other than OpCodes) which are generally applicable to both reading and writing binary Ion 1.1
@@ -63,7 +64,7 @@ public class Ion_1_1_Constants {
     public static final int L_TIMESTAMP_OFFSET_BIAS = 1440; // 24 hours * 60 min/hour
 
     //////// Lookup tables ////////
-
+    @SuppressFBWarnings("MS_MUTABLE_ARRAY")
     public static final Timestamp.Precision[] S_TIMESTAMP_PRECISION_FOR_TYPE_ID_OFFSET = new Timestamp.Precision[] {
         Timestamp.Precision.YEAR, // 0x70
         Timestamp.Precision.MONTH, // 0x71
@@ -80,6 +81,7 @@ public class Ion_1_1_Constants {
         Timestamp.Precision.SECOND, // 0x7C (nanosecond offset)
     };
 
+    @SuppressFBWarnings("MS_MUTABLE_ARRAY")
     public static final Timestamp.Precision[] L_TIMESTAMP_PRECISION_FOR_LENGTH = new Timestamp.Precision[] {
         null, // Length 0: illegal
         null, // Length 1: illegal
