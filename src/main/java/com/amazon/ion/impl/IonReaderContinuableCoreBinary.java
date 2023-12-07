@@ -11,6 +11,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl.bin.IntList;
+import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 
@@ -538,8 +539,42 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return readLargeFlexInt_1_1(currentByte);
     }
 
-    private int readVarSym_1_1(Marker marker) {
-        throw new UnsupportedOperationException();
+    /**
+     * Reads a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
+     * When the FlexSym contains inline text, the given Marker's start and end indices are populated with the start and
+     * end of the UTF-8 byte sequence, and this method returns -1. When the FlexSym contains a symbol ID, the given
+     * Marker's endIndex is set to the symbol ID value and its startIndex is not set. When this FlexSym wraps a
+     * delimited end marker, neither the Marker's startIndex nor its endIndex is set.
+     * @param markerToSet the marker to populate.
+     * @return the symbol ID value if one was present, otherwise -1.
+     */
+    private long readFlexSym_1_1(Marker markerToSet) {
+        // TODO find a factoring that reduces duplication with IonCursorBinary, taking into account performance.
+        long result = readFlexInt_1_1();
+        if (result == 0) {
+            int nextByte = buffer[(int)(peekIndex++)];
+            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
+                // Symbol zero.
+                markerToSet.endIndex = 0;
+                return 0;
+            }
+            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
+                // Inline symbol with zero length.
+                markerToSet.startIndex = peekIndex;
+                markerToSet.endIndex = peekIndex;
+            } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
+                throw new IonException("VarSyms may only wrap symbol zero, empty string, or delimited end.");
+            }
+            return -1;
+        } else if (result < 0) {
+            markerToSet.startIndex = peekIndex;
+            markerToSet.endIndex = peekIndex - result;
+            peekIndex = markerToSet.endIndex;
+            return -1;
+        } else {
+            markerToSet.endIndex = result;
+        }
+        return result;
     }
 
     /**
@@ -1257,6 +1292,28 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             annotationArray[i] = annotationSids.get(i);
         }
         return annotationArray;
+    }
+
+    /**
+     * Gets the annotation markers for the current value, reading them from the buffer first if necessary.
+     * @return the annotation markers, or an empty list if the current value is not annotated.
+     */
+    MarkerList getAnnotationMarkerList() {
+        annotationTokenMarkers.clear();
+        long savedPeekIndex = peekIndex;
+        peekIndex = annotationSequenceMarker.startIndex;
+        while (peekIndex < annotationSequenceMarker.endIndex) {
+            Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
+            int annotationSid = (int) readFlexSym_1_1(provisionalMarker);
+            if (annotationSid >= 0) {
+                provisionalMarker.endIndex = annotationSid;
+            } else if (provisionalMarker.endIndex < 0) {
+                break;
+            }
+            annotationTokenMarkers.commit();
+        }
+        peekIndex = savedPeekIndex;
+        return annotationTokenMarkers;
     }
 
     @Override
