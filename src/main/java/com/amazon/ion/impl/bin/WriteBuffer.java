@@ -1529,7 +1529,7 @@ import java.util.List;
             return writeFlexInt(sid);
         } else {
             writeByte((byte) 0x01);
-            writeByte((byte) 0x70);
+            writeByte((byte) 0x90);
             return 2;
         }
     }

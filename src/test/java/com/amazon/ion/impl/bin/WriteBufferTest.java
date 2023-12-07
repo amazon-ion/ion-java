@@ -1760,7 +1760,7 @@ public class WriteBufferTest
 
     @ParameterizedTest
     @CsvSource({
-            " 0, 00000001 01110000",
+            " 0, 00000001 10010000",
             " 1, 00000011",
             " 2, 00000101",
             "63, 01111111",

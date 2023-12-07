@@ -374,7 +374,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write empty text and sid 0 annotations`() {
-        assertWriterOutputEquals("E8 01 70 01 80 5E") {
+        assertWriterOutputEquals("E8 01 90 01 80 5E") {
             writeAnnotations(0)
             writeAnnotations("")
             writeBool(true)
