@@ -22,6 +22,7 @@ import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -89,7 +90,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private SymbolTable cachedReadOnlySymbolTable = null;
 
     // The reusable annotation iterator.
-    private final AnnotationSequenceIterator annotationIterator = new AnnotationSequenceIterator();
+    private final AnnotationMarkerIterator annotationTextIterator = new AnnotationMarkerIterator();
 
     // ------
 
@@ -167,37 +168,80 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     /**
      * Reusable iterator over the annotations on the current value.
      */
-    private class AnnotationSequenceIterator implements Iterator<String> {
+    private class AnnotationMarkerIterator implements Iterator<String> {
 
-        // All of the annotation SIDs on the current value.
-        private IntList annotationSids;
-        // The index into `annotationSids` containing the next annotation to be returned.
-        private int index = 0;
+        // TODO perf: try splitting into separate iterators for SIDs and FlexSyms
+        boolean isSids;
+        // The byte position of the annotation to return from the next call to next().
+        long nextAnnotationPeekIndex;
 
-        void reset() {
-            index = 0;
-            annotationSids = getAnnotationSidList();
-        }
+        long target;
 
         @Override
         public boolean hasNext() {
-            return index < annotationSids.size();
+            return nextAnnotationPeekIndex < target;
         }
 
         @Override
         public String next() {
-            int sid = annotationSids.get(index);
-            String annotation = getSymbol(sid);
-            if (annotation == null) {
-                throw new UnknownSymbolException(sid);
+            if (isSids) {
+                long savedPeekIndex = peekIndex;
+                peekIndex = nextAnnotationPeekIndex;
+                int sid;
+                if (minorVersion == 0) {
+                    byte b = buffer[(int) peekIndex++];
+                    if (b < 0) {
+                        sid = b & 0x7F;
+                    } else {
+                        sid = readVarUInt_1_0(b);
+                    }
+                } else {
+                    sid = (int) readFlexInt_1_1();
+                }
+                nextAnnotationPeekIndex = peekIndex;
+                peekIndex = savedPeekIndex;
+                return convertToString(sid);
             }
-            index++;
-            return annotation;
+            Marker marker = annotationTokenMarkers.get((int) nextAnnotationPeekIndex++);
+            if (marker.startIndex < 0) {
+                // This means the endIndex represents the token's symbol ID.
+                return convertToString((int) marker.endIndex);
+            }
+            // The token is inline UTF-8 text.
+            java.nio.ByteBuffer utf8InputBuffer = prepareByteBuffer(marker.startIndex, marker.endIndex);
+            return utf8Decoder.decode(utf8InputBuffer, (int) (marker.endIndex - marker.startIndex));
+        }
+
+        SymbolToken nextSymbolToken() {
+            if (isSids) {
+                long savedPeekIndex = peekIndex;
+                peekIndex = nextAnnotationPeekIndex;
+                int sid = minorVersion == 0 ? readVarUInt_1_0() : (int) readFlexInt_1_1();
+                nextAnnotationPeekIndex = peekIndex;
+                peekIndex = savedPeekIndex;
+                return getSymbolToken(sid);
+            }
+            Marker marker = annotationTokenMarkers.get((int) nextAnnotationPeekIndex++);
+            if (marker.startIndex < 0) {
+                // This means the endIndex represents the token's symbol ID.
+                return getSymbolToken((int) marker.endIndex);
+            }
+            // The token is inline UTF-8 text.
+            ByteBuffer utf8InputBuffer = prepareByteBuffer(marker.startIndex, marker.endIndex);
+            return new SymbolTokenImpl(utf8Decoder.decode(utf8InputBuffer, (int) (marker.endIndex - marker.startIndex)), -1);
         }
 
         @Override
         public void remove() {
             throw new UnsupportedOperationException("This iterator does not support element removal.");
+        }
+
+        private String convertToString(int symbolId) {
+            String annotation = getSymbol(symbolId);
+            if (annotation == null) {
+                throw new UnknownSymbolException(symbolId);
+            }
+            return annotation;
         }
     }
 
@@ -997,14 +1041,28 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         if (!hasAnnotations) {
             return _Private_Utils.EMPTY_STRING_ARRAY;
         }
-        IntList annotationSids = getAnnotationSidList();
-        String[] annotationArray = new String[annotationSids.size()];
-        for (int i = 0; i < annotationArray.length; i++) {
-            String symbol = getSymbol(annotationSids.get(i));
-            if (symbol == null) {
-                throw new UnknownSymbolException(annotationSids.get(i));
+        if (annotationSequenceMarker.startIndex >= 0) {
+            if (annotationSequenceMarker.typeId != null && annotationSequenceMarker.typeId.isInlineable) {
+                getAnnotationMarkerList();
+            } else {
+                IntList annotationSids = getAnnotationSidList();
+                String[] annotationArray = new String[annotationSids.size()];
+                for (int i = 0; i < annotationArray.length; i++) {
+                    String symbol = getSymbol(annotationSids.get(i));
+                    if (symbol == null) {
+                        throw new UnknownSymbolException(annotationSids.get(i));
+                    }
+                    annotationArray[i] = symbol;
+                }
+                return annotationArray;
             }
-            annotationArray[i] = symbol;
+        }
+        String[] annotationArray = new String[annotationTokenMarkers.size()];
+        annotationTextIterator.nextAnnotationPeekIndex = 0;
+        annotationTextIterator.target = annotationTokenMarkers.size();
+        annotationTextIterator.isSids = false;
+        while (annotationTextIterator.hasNext()) {
+            annotationArray[(int) annotationTextIterator.nextAnnotationPeekIndex] = annotationTextIterator.next();
         }
         return annotationArray;
     }
@@ -1014,10 +1072,24 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         if (!hasAnnotations) {
             return SymbolToken.EMPTY_ARRAY;
         }
-        IntList annotationSids = getAnnotationSidList();
-        SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
-        for (int i = 0; i < annotationArray.length; i++) {
-            annotationArray[i] = getSymbolToken(annotationSids.get(i));
+        if (annotationSequenceMarker.startIndex >= 0) {
+            if (annotationSequenceMarker.typeId != null && annotationSequenceMarker.typeId.isInlineable) {
+                getAnnotationMarkerList();
+            } else {
+                IntList annotationSids = getAnnotationSidList();
+                SymbolToken[] annotationArray = new SymbolToken[annotationSids.size()];
+                for (int i = 0; i < annotationArray.length; i++) {
+                    annotationArray[i] = getSymbolToken(annotationSids.get(i));
+                }
+                return annotationArray;
+            }
+        }
+        SymbolToken[] annotationArray = new SymbolToken[annotationTokenMarkers.size()];
+        annotationTextIterator.nextAnnotationPeekIndex = 0;
+        annotationTextIterator.target = annotationTokenMarkers.size();
+        annotationTextIterator.isSids = false;
+        while (annotationTextIterator.hasNext()) {
+            annotationArray[(int) annotationTextIterator.nextAnnotationPeekIndex] = annotationTextIterator.nextSymbolToken();
         }
         return annotationArray;
     }
@@ -1045,8 +1117,21 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         if (!hasAnnotations) {
             return EMPTY_ITERATOR;
         }
-        annotationIterator.reset();
-        return annotationIterator;
+        if (annotationSequenceMarker.startIndex >= 0) {
+            if (annotationSequenceMarker.typeId != null && annotationSequenceMarker.typeId.isInlineable) {
+                // Note: this could be made more efficient by parsing from the marker sequence iteratively.
+                getAnnotationMarkerList();
+            } else {
+                annotationTextIterator.nextAnnotationPeekIndex = annotationSequenceMarker.startIndex;
+                annotationTextIterator.target = annotationSequenceMarker.endIndex;
+                annotationTextIterator.isSids = true;
+                return annotationTextIterator;
+            }
+        }
+        annotationTextIterator.nextAnnotationPeekIndex = 0;
+        annotationTextIterator.target = annotationTokenMarkers.size();
+        annotationTextIterator.isSids = false;
+        return annotationTextIterator;
     }
 
     @Override
