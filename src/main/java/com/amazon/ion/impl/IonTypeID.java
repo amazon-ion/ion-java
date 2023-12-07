@@ -352,6 +352,8 @@ final class IonTypeID {
                             case TIMESTAMP_NANOS_PRECISION_WITH_OFFSET:
                                 length = 9;
                                 break;
+                            default:
+                                // Unreachable
                         }
                     } else {
                         length = lowerNibble;

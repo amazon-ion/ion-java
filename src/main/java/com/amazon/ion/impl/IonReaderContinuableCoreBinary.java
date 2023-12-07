@@ -9,6 +9,7 @@ import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
@@ -672,6 +673,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * Reads an Ion 1.1 long form timestamp.
      * @return the value.
      */
+    @SuppressFBWarnings("SF_SWITCH_FALLTHROUGH")
     private Timestamp readTimestampLongForm_1_1() {
         int year;
         int month = 1;
@@ -739,6 +741,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * Reads an Ion 1.1 timestamp in either the long or short form.
      * @return the value.
      */
+    @SuppressFBWarnings("SF_SWITCH_FALLTHROUGH")
     private Timestamp readTimestamp_1_1() {
         if (valueTid.variableLength) {
             return readTimestampLongForm_1_1();
