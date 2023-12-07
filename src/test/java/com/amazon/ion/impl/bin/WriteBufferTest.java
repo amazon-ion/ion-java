@@ -23,7 +23,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -1753,6 +1756,42 @@ public class WriteBufferTest
     public void testWriteFixedIntOrUIntThrowsExceptionWhenNumBytesIsOutOfBounds() {
         Assertions.assertThrows(IllegalArgumentException.class, () -> buf.writeFixedIntOrUInt(0, -1));
         Assertions.assertThrows(IllegalArgumentException.class, () -> buf.writeFixedIntOrUInt(0, 9));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            " 0, 00000001 10010000",
+            " 1, 00000011",
+            " 2, 00000101",
+            "63, 01111111",
+            "64, 00000010 00000001",
+    })
+    public void testWriteSidFlexSym(int value, String expectedBits) {
+        int numBytes = buf.writeFlexSym(value);
+        String actualBits = byteArrayToBitString(bytes());
+        Assertions.assertEquals(expectedBits, actualBits);
+        Assertions.assertEquals((expectedBits.length() + 1)/9, numBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'', 00000001 10000000",
+            "a, 11111111 01100001",
+            "abc, 11111011 01100001 01100010 01100011",
+            "this is a very very very very very long symbol, " +
+                    "10100101 01110100 01101000 01101001 01110011 00100000 01101001 01110011 00100000 01100001 00100000 " +
+                    "01110110 01100101 01110010 01111001 00100000 01110110 01100101 01110010 01111001 00100000 01110110 " +
+                    "01100101 01110010 01111001 00100000 01110110 01100101 01110010 01111001 00100000 01110110 01100101 " +
+                    "01110010 01111001 00100000 01101100 01101111 01101110 01100111 00100000 01110011 01111001 01101101 " +
+                    "01100010 01101111 01101100",
+    })
+    public void testWriteTextFlexSym(String value, String expectedBits) {
+        // This is a sloppy way to construct a Result, but it works for this test because we only have ascii characters.
+        Utf8StringEncoder.Result encoded = new Utf8StringEncoder.Result(value.length(), value.getBytes(StandardCharsets.US_ASCII));
+        int numBytes = buf.writeFlexSym(encoded);
+        String actualBits = byteArrayToBitString(bytes());
+        Assertions.assertEquals(expectedBits, actualBits);
+        Assertions.assertEquals((expectedBits.length() + 1)/9, numBytes);
     }
 
     /**
