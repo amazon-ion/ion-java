@@ -169,7 +169,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         .onOversizedValue(byteCountingHandler)
         .onData(byteCountingHandler)
         .build();
-    
+
     @BeforeEach
     public void setup() {
         byteCounter = new AtomicLong();
@@ -467,6 +467,20 @@ public class IonReaderContinuableTopLevelBinaryTest {
         ));
     }
 
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> annotationsIterator(String... annotations) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("annotations(%s)", Arrays.toString(annotations)),
+            reader -> {
+                Iterator<String> annotationIterator = reader.iterateTypeAnnotations();
+                int numberOfAnnotations = 0;
+                while (annotationIterator.hasNext()) {
+                    assertEquals(annotations[numberOfAnnotations++], annotationIterator.next());
+                }
+                assertEquals(annotations.length, numberOfAnnotations);
+            }
+        ));
+    }
+
     private static void assertSymbolEquals(
         String expectedText,
         SymbolToken actual
@@ -475,6 +489,29 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     static ExpectationProvider<IonReaderContinuableTopLevelBinary> annotationSymbols(String... annotations) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("annotations(%s)", Arrays.toString(annotations)),
+            reader -> {
+                SymbolToken[] actualAnnotations = reader.getTypeAnnotationSymbols();
+                assertEquals(annotations.length, actualAnnotations.length);
+                for (int i = 0; i < annotations.length; i++) {
+                    assertSymbolEquals(annotations[i], actualAnnotations[i]);
+                }
+            }
+        ));
+    }
+
+    private static void assertSymbolEquals(
+        SymbolToken expected,
+        SymbolToken actual
+    ) {
+        assertEquals(expected.getText(), actual.getText());
+        if (expected.getText() == null) {
+            assertEquals(expected.getSid(), actual.getSid());
+        }
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> annotationSymbols(SymbolToken... annotations) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("annotations(%s)", Arrays.toString(annotations)),
             reader -> {
@@ -1962,7 +1999,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             },
             constructFromBytes
         );
-        
+
         assertThrows(IonException.class, () -> reader.next());
         reader.close();
     }
@@ -2134,7 +2171,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
     public void singleValueExceedsInitialBufferSize(boolean constructFromBytes) throws Exception {
-        reader = boundedReaderFor(constructFromBytes, 
+        reader = boundedReaderFor(constructFromBytes,
             toBinary("\"abcdefghijklmnopqrstuvwxyz\""),
             8,
             Integer.MAX_VALUE,
@@ -2167,7 +2204,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             .withInitialBufferSize(9);
         assertThrows(IllegalArgumentException.class, builder::build);
     }
-    
+
     private void expectOversized(int numberOfValues) {
         assertEquals(numberOfValues, oversizedCounter.get());
     }
@@ -4322,5 +4359,81 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertIonLobCorrectlyParsedViaGetBytes(true, IonType.CLOB, expectedBytes, inputBytes);
         assertIonLobCorrectlyParsedViaGetBytes(false, IonType.CLOB, expectedBytes, inputBytes);
     }
+
+    /**
+     * Checks that the reader reads the expected annotations and values, using the provided method for retrieving the
+     * annotations.
+     */
+    private void assertAnnotationsCorrectlyParsed(
+        boolean constructFromBytes,
+        Function<String[], ExpectationProvider<IonReaderContinuableTopLevelBinary>> expectation,
+        String inputBytes
+    ) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        assertSequence(
+            next(IonType.INT), expectation.apply(new String[] {"name"}), intValue(0),
+            next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
+            next(IonType.INT), expectation.apply(new String[] {"name", "symbols", "imports"}), intValue(0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "E4 09 50 E5 0F 09 50 E6 07 09 0F 0D 50", // SIDs
+        "E7 F9 6E 61 6D 65 50 E8 0F F9 6E 61 6D 65 50 E9 1D F9 6E 61 6D 65 0F F3 69 6D 70 6F 72 74 73 50", // FlexSyms
+        "E4 12 00 50 E5 0F 24 00 00 50 E6 0E 00 09 0F 0D 50", // SIDs (multi-byte FlexUInts)
+        "E7 F2 FF 6E 61 6D 65 50 E8 3C 00 00 F9 6E 61 6D 65 50 E9 F8 00 00 00 F9 6E 61 6D 65 0F E6 FF 69 6D 70 6F 72 74 73 50", // Multi-byte FlexSyms
+    })
+    public void readAnnotations_1_1(String inputBytes) throws Exception {
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
+    }
+
+    /**
+     * Checks that the reader correctly reads as annotations symbol 0 and inline empty text, which require special
+     * FlexSyms.
+     */
+    private void readAnnotationsWithSpecialFlexSyms_1_1(boolean constructFromBytes, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        SymbolToken emptyText = new SymbolTokenImpl("", -1);
+        SymbolToken symbolZero = new SymbolTokenImpl(null, 0);
+        assertSequence(
+            next(IonType.INT), annotations(""), intValue(0),
+            next(IonType.INT), annotationSymbols(symbolZero), intValue(0),
+            next(IonType.INT), annotationSymbols(emptyText, symbolZero), intValue(0),
+            next(IonType.INT), annotationSymbols(symbolZero, emptyText), intValue(0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "E7 01 80 50 E7 01 90 50 E8 01 80 01 90 50 E9 09 01 90 01 80 50",
+        "E7 02 00 80 50 E7 04 00 00 90 50 E8 08 00 00 00 80 02 00 90 50 E9 90 00 00 00 00 01 90 01 80 50"
+    })
+    public void readAnnotationsWithSpecialFlexSyms_1_1(String inputBytes) throws Exception {
+        readAnnotationsWithSpecialFlexSyms_1_1(true, inputBytes);
+        readAnnotationsWithSpecialFlexSyms_1_1(false, inputBytes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true", "false"})
+    public void getAnnotationsAsStringFailsWhenTextIsUndefined(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray("E7 01 90 50"), constructFromBytes);
+        assertSequence(next(IonType.INT), intValue(0));
+        assertThrows(IonException.class, () -> reader.getTypeAnnotations());
+        assertThrows(IonException.class, () -> reader.iterateTypeAnnotations().next());
+        assertSequence(next(null));
+        closeAndCount();
+    }
+
+    // TODO add tests for incrementally reading Ion 1.1 annotations.
 
 }
