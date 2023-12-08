@@ -123,7 +123,9 @@ public class IonRawBinaryWriterTest extends Assert
             StreamCloseMode.NO_CLOSE,
             StreamFlushMode.NO_FLUSH,
             preallocationMode,
-            true
+            true,
+            false,
+            null
         );
     }
 

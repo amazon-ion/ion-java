@@ -20,12 +20,17 @@ import static com.amazon.ion.impl.bin.WriteBuffer.varUIntLength;
 import static com.amazon.ion.impl.bin.WriteBuffer.writeVarUIntTo;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,15 +42,14 @@ public class WriteBufferTest
 {
     // XXX make this a prime to make it more likely that we collide on the edges of the buffer
     private static BlockAllocator ALLOCATOR = BlockAllocatorProviders.basicProvider().vendAllocator(11);
-
-    private WriteBuffer buf;
-
     private ByteArrayOutputStream out;
+    private WriteBuffer buf;
+    private AtomicBoolean endOfBufferReached = new AtomicBoolean(false);
 
     @BeforeEach
-    public void setup()
+    public void setup() throws IOException
     {
-        buf = new WriteBuffer(ALLOCATOR);
+        buf = new WriteBuffer(ALLOCATOR, () -> endOfBufferReached.set(true));
         out = new ByteArrayOutputStream();
     }
 
@@ -258,6 +262,19 @@ public class WriteBufferTest
             bytes[i + 6] = (byte) (pos >>   0);
         }
         assertBuffer(bytes);
+    }
+
+    /**
+     * Test if the method endOfBufferReached is invoked appropriately, the size of bytes written into the buffer overflow the current block size.
+     * @throws UnsupportedEncodingException
+     */
+    @Test
+    public void testEndOfBufferReachedInvoked() throws UnsupportedEncodingException {
+        buf.writeBytes("taco".getBytes("UTF-8"));
+        buf.writeBytes("burrito".getBytes("UTF-8"));
+        assertFalse(endOfBufferReached.get());
+        buf.writeBytes("_".getBytes("UTF-8"));
+        assertTrue(endOfBufferReached.get());
     }
 
     @Test
