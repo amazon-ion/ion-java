@@ -79,6 +79,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
     /*package*/ volatile SymbolTable            initialSymbolTable;
     /*package*/ volatile boolean                isLocalSymbolTableAppendEnabled;
     /*package*/ volatile boolean                isFloatBinary32Enabled;
+     volatile boolean                           isAutoFlushEnabled;
 
     private _Private_IonManagedBinaryWriterBuilder(final BlockAllocatorProvider provider)
     {
@@ -91,6 +92,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
         this.optimization = WriteValueOptimization.NONE;
         this.isLocalSymbolTableAppendEnabled = false;
         this.isFloatBinary32Enabled = false;
+        this.isAutoFlushEnabled = false;
     }
 
     private _Private_IonManagedBinaryWriterBuilder(final _Private_IonManagedBinaryWriterBuilder other)
@@ -105,6 +107,7 @@ public final class _Private_IonManagedBinaryWriterBuilder
         this.initialSymbolTable = other.initialSymbolTable;
         this.isLocalSymbolTableAppendEnabled = other.isLocalSymbolTableAppendEnabled;
         this.isFloatBinary32Enabled = other.isFloatBinary32Enabled;
+        this.isAutoFlushEnabled = other.isAutoFlushEnabled;
     }
 
     public _Private_IonManagedBinaryWriterBuilder copy()
@@ -165,6 +168,18 @@ public final class _Private_IonManagedBinaryWriterBuilder
     public _Private_IonManagedBinaryWriterBuilder withFlatImports(final List<SymbolTable> tables)
     {
         return withImports(ImportedSymbolResolverMode.FLAT, tables);
+    }
+
+    public _Private_IonManagedBinaryWriterBuilder withAutoFlushEnabled()
+    {
+        this.isAutoFlushEnabled = true;
+        return this;
+    }
+
+    public _Private_IonManagedBinaryWriterBuilder withAutoFlushDisabled()
+    {
+        this.isAutoFlushEnabled = false;
+        return this;
     }
 
     /*package*/ _Private_IonManagedBinaryWriterBuilder withImports(final ImportedSymbolResolverMode mode, final List<SymbolTable> tables) {

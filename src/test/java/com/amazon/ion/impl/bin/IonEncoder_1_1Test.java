@@ -29,7 +29,7 @@ public class IonEncoder_1_1Test {
 
     @BeforeEach
     public void setup() {
-        buf = new WriteBuffer(ALLOCATOR);
+        buf = new WriteBuffer(ALLOCATOR, () -> {});
     }
 
     private byte[] bytes() {

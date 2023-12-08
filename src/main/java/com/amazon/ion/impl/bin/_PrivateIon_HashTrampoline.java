@@ -40,7 +40,9 @@ public class _PrivateIon_HashTrampoline
                 IonRawBinaryWriter.StreamCloseMode.CLOSE,
                 IonRawBinaryWriter.StreamFlushMode.FLUSH,
                 IonRawBinaryWriter.PreallocationMode.PREALLOCATE_0,
-                false     // force floats to be encoded as binary64
+                false,    // force floats to be encoded as binary64
+                false,
+                null
         );
     }
 }
