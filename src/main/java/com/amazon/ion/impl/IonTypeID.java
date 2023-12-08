@@ -236,7 +236,7 @@ final class IonTypeID {
                        (upperNibble == 0xD && lowerNibble >= 0x2)
                     || id == DELIMITED_STRUCT
                     || id == VARIABLE_LENGTH_INLINE_SYMBOL
-                    || id == VARIABLE_LENGTH_STRUCT_WITH_FLEXSYMS
+                    || id == VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS
                     || id == ANNOTATIONS_1_FLEX_SYM
                     || id == ANNOTATIONS_2_FLEX_SYM
                     || id == ANNOTATIONS_MANY_FLEX_SYM
@@ -292,7 +292,7 @@ final class IonTypeID {
                         if (id == DELIMITED_END_MARKER) {
                             type = null;
                             length = 0;
-                        } else if (id == DELIMITED_STRUCT || id == VARIABLE_LENGTH_STRUCT_WITH_SIDS || id == VARIABLE_LENGTH_STRUCT_WITH_FLEXSYMS) {
+                        } else if (id == DELIMITED_STRUCT || id == VARIABLE_LENGTH_STRUCT_WITH_SIDS || id == VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS) {
                             type = IonType.STRUCT;
                         } else if (id == VARIABLE_LENGTH_INTEGER) {
                             type = IonType.INT;

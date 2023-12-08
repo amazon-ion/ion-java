@@ -27,7 +27,13 @@ class IonRawBinaryWriterTest_1_1 {
         return baos.toByteArray().joinToString(" ") { it.toHexString(HexFormat.UpperCase) }
     }
 
+    /**
+     * @param hexBytes a string containing white-space delimited pairs of hex digits representing the expected output.
+     *                 The string may contain multiple lines. Anything after a `|` character on a line is ignored, so
+     *                 you can use `|` to add comments.
+     */
     private inline fun assertWriterOutputEquals(hexBytes: String, autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit) {
+        val hexBytes = hexBytes.replace(Regex("\\s+(\\|.*\\n)?\\s+"), " ").trim().uppercase()
         assertEquals(hexBytes, writeAsHexString(autoClose, block))
     }
 
@@ -201,7 +207,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a variable-length prefixed list`() {
-        assertWriterOutputEquals("FA 21${" 5E".repeat(16)}") {
+        assertWriterOutputEquals("FA 21 ${" 5E".repeat(16)}") {
             stepInList(false)
             repeat(16) { writeBool(true) }
             stepOut()
@@ -211,7 +217,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a prefixed list that is so long it requires patch points`() {
-        assertWriterOutputEquals("FA 02 02${" 5E".repeat(128)}") {
+        assertWriterOutputEquals("FA 02 02 ${" 5E".repeat(128)}") {
             stepInList(false)
             repeat(128) { writeBool(true) }
             stepOut()
@@ -242,6 +248,374 @@ class IonRawBinaryWriterTest_1_1 {
                 stepInList(false)
             }
             repeat(8) { stepOut() }
+        }
+    }
+
+    @Test
+    fun `write a delimited sexp`() {
+        assertWriterOutputEquals("F2 5E 5F F0") {
+            stepInSExp(true)
+            writeBool(true)
+            writeBool(false)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a prefixed sexp`() {
+        assertWriterOutputEquals("B2 5E 5F") {
+            stepInSExp(false)
+            writeBool(true)
+            writeBool(false)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a variable-length prefixed sexp`() {
+        assertWriterOutputEquals("FB 21 ${" 5E".repeat(16)}") {
+            stepInSExp(false)
+            repeat(16) { writeBool(true) }
+            stepOut()
+            finish()
+        }
+    }
+
+    @Test
+    fun `write a prefixed sexp that is so long it requires patch points`() {
+        assertWriterOutputEquals("FB 02 02 ${" 5E".repeat(128)}") {
+            stepInSExp(false)
+            repeat(128) { writeBool(true) }
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write multiple nested prefixed sexps`() {
+        assertWriterOutputEquals("B4 B3 B2 B1 B0") {
+            repeat(5) { stepInSExp(false) }
+            repeat(5) { stepOut() }
+        }
+    }
+
+    @Test
+    fun `write multiple nested delimited sexps`() {
+        assertWriterOutputEquals("F2 F2 F2 F2 F0 F0 F0 F0") {
+            repeat(4) { stepInSExp(true) }
+            repeat(4) { stepOut() }
+        }
+    }
+
+    @Test
+    fun `write multiple nested delimited and prefixed sexps`() {
+        assertWriterOutputEquals("F2 B9 F2 B6 F2 B3 F2 B0 F0 F0 F0 F0") {
+            repeat(4) {
+                stepInSExp(true)
+                stepInSExp(false)
+            }
+            repeat(8) { stepOut() }
+        }
+    }
+
+    @Test
+    fun `write a prefixed struct`() {
+        assertWriterOutputEquals(
+            """
+            C4  | Struct Length = 4
+            17  | SID 11
+            5E  | true
+            19  | SID 12
+            5F  | false
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(11)
+            writeBool(true)
+            writeFieldName(12)
+            writeBool(false)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a variable length prefixed struct`() {
+        assertWriterOutputEquals(
+            """
+            FC      | Variable Length SID Struct
+            21      | Length = 16
+            ${"17 5E ".repeat(8)}
+            """
+        ) {
+            stepInStruct(false)
+            repeat(8) {
+                writeFieldName(11)
+                writeBool(true)
+            }
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a struct so long it requires patch points`() {
+        assertWriterOutputEquals(
+            """
+            FC      | Variable Length SID Struct
+            02 02   | Length = 128
+            ${"17 5E ".repeat(64)}
+            """
+        ) {
+            stepInStruct(false)
+            repeat(64) {
+                writeFieldName(11)
+                writeBool(true)
+            }
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write multiple nested prefixed structs`() {
+        assertWriterOutputEquals(
+            """
+            C8  | Struct Length = 8
+            17  | SID 11
+            C6  | Struct Length = 6
+            17  | SID 11
+            C4  | Struct Length = 4
+            17  | SID 11
+            C2  | Struct Length = 2
+            17  | SID 11
+            C0  | Struct Length = 0
+            """
+        ) {
+            stepInStruct(false)
+            repeat(4) {
+                writeFieldName(11)
+                stepInStruct(false)
+            }
+            repeat(5) {
+                stepOut()
+            }
+        }
+    }
+
+    @Test
+    fun `write multiple nested delimited structs`() {
+        assertWriterOutputEquals(
+            """
+            F3                      | Begin delimited struct
+            17                      | FlexSym SID 11
+            F3                      | Begin delimited struct
+            17 F3 17 F3 17 F3       | etc.
+            01 F0                   | End delimited struct
+            01 F0 01 F0 01 F0 01 F0 | etc.
+            """
+        ) {
+            stepInStruct(true)
+            repeat(4) {
+                writeFieldName(11)
+                stepInStruct(true)
+            }
+            repeat(5) {
+                stepOut()
+            }
+        }
+    }
+
+    @Test
+    fun `write empty prefixed struct`() {
+        assertWriterOutputEquals("C0") {
+            stepInStruct(false)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write delimited struct`() {
+        assertWriterOutputEquals(
+            """
+            F3          | Begin delimited struct
+            17          | SID 11
+            5E          | true
+            FB 66 6F 6F | FlexSym 'foo'
+            5E          | true
+            02 01       | FlexSym SID 64
+            5E          | true
+            01 F0       | End delimited struct
+            """
+        ) {
+            stepInStruct(true)
+            writeFieldName(11)
+            writeBool(true)
+            writeFieldName("foo")
+            writeBool(true)
+            writeFieldName(64)
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write empty delimited struct`() {
+        assertWriterOutputEquals(
+            """
+            F3          | Begin delimited struct
+            01 F0       | End delimited struct
+            """
+        ) {
+            stepInStruct(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write prefixed struct with a single flex sym field`() {
+        assertWriterOutputEquals(
+            """
+            FD          | Variable length FlexSym Struct
+            0B          | Length = 5
+            FB 66 6F 6F | FlexSym 'foo'
+            5E          | true
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName("foo")
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write prefixed struct with multiple fields and flex syms`() {
+        assertWriterOutputEquals(
+            """
+            FD           | Variable length FlexSym Struct
+            1F           | Length = 15
+            FB 66 6F 6F  | FlexSym 'foo'
+            5E           | true
+            FB 62 61 72  | FlexSym 'bar'
+            5E           | true
+            FB 62 61 7A  | FlexSym 'baz'
+            5E           | true
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName("foo")
+            writeBool(true)
+            writeFieldName("bar")
+            writeBool(true)
+            writeFieldName("baz")
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write prefixed struct that starts with sids and switches partway through to use flex syms`() {
+        assertWriterOutputEquals(
+            """
+            FC             | Variable length SID Struct
+            17             | Length = 11
+            81             | SID 64
+            5E             | true
+            00             | switch to FlexSym encoding
+            FB 66 6F 6F    | FlexSym 'foo'
+            5E             | true
+            02 01          | FlexSym SID 64
+            5E             | true
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(64)
+            writeBool(true)
+            writeFieldName("foo")
+            writeBool(true)
+            writeFieldName(64)
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write prefixed struct with sid 0`() {
+        assertWriterOutputEquals(
+            """
+            FD     | Variable length FlexSym Struct
+            07     | Length = 3
+            01 90  | FlexSym SID 0
+            5E     | true
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(0)
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write prefixed struct with sid 0 after another value`() {
+        assertWriterOutputEquals(
+            """
+            FC      | Variable length SID struct
+            17      | Length = FlexUInt 11
+            03      | SID 1
+            5E      | true
+            00      | switch to FlexSym encoding
+            01 90   | FlexSym SID 0
+            5E      | true
+            05      | FlexSym SID 2
+            5E      | true
+            01 90   | FlexSym SID 0
+            5E      | true
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(1)
+            writeBool(true)
+            writeFieldName(0)
+            writeBool(true)
+            writeFieldName(2)
+            writeBool(true)
+            writeFieldName(0)
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `writing a value in a struct with no field name should throw an exception`() {
+        assertWriterThrows {
+            stepInStruct(true)
+            writeBool(true)
+        }
+        assertWriterThrows {
+            stepInStruct(false)
+            writeBool(true)
+        }
+    }
+
+    @Test
+    fun `calling writeFieldName outside of a struct should throw an exception`() {
+        assertWriterThrows {
+            writeFieldName(12)
+        }
+        assertWriterThrows {
+            writeFieldName("foo")
+        }
+    }
+
+    @Test
+    fun `calling stepOut with a dangling field name should throw an exception`() {
+        assertWriterThrows {
+            stepInStruct(false)
+            writeFieldName(12)
+            stepOut()
+        }
+        assertWriterThrows {
+            stepInStruct(true)
+            writeFieldName("foo")
+            stepOut()
         }
     }
 
