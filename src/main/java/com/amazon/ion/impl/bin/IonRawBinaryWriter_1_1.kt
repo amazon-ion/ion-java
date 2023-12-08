@@ -5,6 +5,7 @@ package com.amazon.ion.impl.bin
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.*
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.bin.utf8.*
 import com.amazon.ion.util.*
 import java.io.ByteArrayOutputStream
@@ -43,15 +44,20 @@ class IonRawBinaryWriter_1_1 internal constructor(
     private data class ContainerInfo(
         var type: ContainerType? = null,
         var isDelimited: Boolean = false,
+        var usesFlexSym: Boolean = false,
         var position: Long = -1,
         var length: Long = 0,
         // TODO: Test if performance is better with an Object Reference or an index into the PatchPoint queue.
         var patchPoint: PatchPoint? = null,
     ) {
-        fun clear() {
-            type = null
-            isDelimited = false
-            position = -1
+        /**
+         * Clears this [ContainerInfo] of old data and initializes it with the given new data.
+         */
+        fun reset(type: ContainerType? = null, position: Long = -1, isDelimited: Boolean = false) {
+            this.type = type
+            this.isDelimited = isDelimited
+            this.position = position
+            usesFlexSym = false
             length = 0
             patchPoint = null
         }
@@ -88,7 +94,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     private val patchPoints = _Private_RecyclingQueue(512) { PatchPoint() }
     private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
 
-    private var currentContainer: ContainerInfo = containerStack.push { it.type = Top }
+    private var currentContainer: ContainerInfo = containerStack.push { it.reset(Top, 0L) }
 
     override fun finish() {
         if (closed) return
@@ -210,6 +216,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
      */
     private inline fun openValue(valueWriterExpression: () -> Unit) {
 
+        if (isInStruct()) confirm(hasFieldName) { "Values in a struct must have a field name." }
+
         // Start at 1, assuming there's an annotations OpCode byte.
         // We'll clear this if there are no annotations.
         var annotationsTotalLength = 1L
@@ -265,11 +273,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * Writes 3 or more annotations for SIDs or FlexSyms
      */
     private fun writeManyAnnotations(): Long {
-        currentContainer = containerStack.push {
-            it.clear()
-            it.type = Annotations
-            it.position = buffer.position()
-        }
+        currentContainer = containerStack.push { it.reset(Annotations, position = buffer.position()) }
         if (annotationFlexSymFlag == FLEX_SYMS_REQUIRED) {
             buffer.writeByte(OpCodes.ANNOTATIONS_MANY_FLEX_SYM)
             buffer.reserve(ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE)
@@ -310,11 +314,35 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun writeFieldName(sid: Int) {
-        TODO("Not implemented yet.")
+        confirm(currentContainer.type == Struct) { "Can only write a field name inside of a struct." }
+        if (sid == 0 && !currentContainer.usesFlexSym) switchToFlexSym()
+
+        currentContainer.length += if (currentContainer.usesFlexSym) {
+            buffer.writeFlexSym(sid)
+        } else {
+            buffer.writeFlexUInt(sid)
+        }
+        hasFieldName = true
     }
 
     override fun writeFieldName(text: CharSequence) {
-        TODO("Not implemented yet.")
+        confirm(currentContainer.type == Struct) { "Can only write a field name inside of a struct." }
+        if (!currentContainer.usesFlexSym) switchToFlexSym()
+
+        currentContainer.length += buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
+        hasFieldName = true
+    }
+
+    private fun switchToFlexSym() {
+        // To switch, we need to insert the sid-to-flexsym switch marker, unless...
+        // if no fields have been written yet, we can just switch the op code of the struct.
+        if (currentContainer.length == 0L) {
+            buffer.writeUInt8At(currentContainer.position, OpCodes.VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS.toLong())
+        } else {
+            buffer.writeByte(SID_TO_FLEX_SYM_SWITCH_MARKER)
+            currentContainer.length += 1
+        }
+        currentContainer.usesFlexSym = true
     }
 
     override fun writeNull() = writeScalar { IonEncoder_1_1.writeNullValue(buffer, IonType.NULL) }
@@ -385,12 +413,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun stepInList(delimited: Boolean) {
         openValue {
-            currentContainer = containerStack.push {
-                it.clear()
-                it.type = List
-                it.position = buffer.position()
-                it.isDelimited = delimited
-            }
+            currentContainer = containerStack.push { it.reset(List, buffer.position(), delimited) }
             if (delimited) {
                 buffer.writeByte(OpCodes.DELIMITED_LIST)
             } else {
@@ -401,11 +424,28 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun stepInSExp(delimited: Boolean) {
-        TODO("Not yet implemented")
+        openValue {
+            currentContainer = containerStack.push { it.reset(SExp, buffer.position(), delimited) }
+            if (delimited) {
+                buffer.writeByte(OpCodes.DELIMITED_SEXP)
+            } else {
+                buffer.writeByte(OpCodes.VARIABLE_LENGTH_SEXP)
+                buffer.reserve(lengthPrefixPreallocation)
+            }
+        }
     }
 
-    override fun stepInStruct(delimited: Boolean, useFlexSym: Boolean) {
-        TODO("Not yet implemented")
+    override fun stepInStruct(delimited: Boolean) {
+        openValue {
+            currentContainer = containerStack.push { it.reset(Struct, buffer.position(), delimited) }
+            if (delimited) {
+                buffer.writeByte(OpCodes.DELIMITED_STRUCT)
+                currentContainer.usesFlexSym = true
+            } else {
+                buffer.writeByte(OpCodes.VARIABLE_LENGTH_STRUCT_WITH_SIDS)
+                buffer.reserve(lengthPrefixPreallocation)
+            }
+        }
     }
 
     override fun stepInEExp(name: CharSequence) {
@@ -430,24 +470,32 @@ class IonRawBinaryWriter_1_1 internal constructor(
         // Write closing delimiter if we're in a delimited container.
         // Update length prefix if we're in a prefixed container.
         if (currentContainer.isDelimited) {
+            if (isInStruct()) {
+                // Need a 0 FlexInt before the end delimiter
+                buffer.writeByte(FlexInt.ZERO)
+                thisContainerTotalLength += 1
+            }
             thisContainerTotalLength += 1 // For the end marker
             buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
         } else {
             // currentContainer.type is non-null for any initialized ContainerInfo
             when (currentContainer.type.assumeNotNull()) {
-                List -> {
-                    // TODO: Possibly extract this so it can be reused for the other length-prefixed container types
+                List, SExp, Struct -> {
                     val contentLength = currentContainer.length
-                    if (contentLength <= 0xF) {
+                    if (contentLength <= 0xF && !currentContainer.usesFlexSym) {
                         // Clean up any unused space that was pre-allocated.
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
-                        buffer.writeUInt8At(currentContainer.position, OpCodes.LIST_ZERO_LENGTH + contentLength)
+                        val zeroLengthOpCode = when (currentContainer.type) {
+                            List -> OpCodes.LIST_ZERO_LENGTH
+                            SExp -> OpCodes.SEXP_ZERO_LENGTH
+                            Struct -> OpCodes.STRUCT_SID_ZERO_LENGTH
+                            else -> TODO("Unreachable")
+                        }
+                        buffer.writeUInt8At(currentContainer.position, zeroLengthOpCode + contentLength)
                     } else {
                         thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     }
                 }
-                SExp -> TODO()
-                Struct -> TODO()
                 Macro -> TODO()
                 Stream -> TODO()
                 Annotations -> TODO("Unreachable.")
