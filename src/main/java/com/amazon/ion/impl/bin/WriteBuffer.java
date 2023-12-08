@@ -1529,7 +1529,7 @@ import java.util.List;
         if (sid != 0) {
             return writeFlexInt(sid);
         } else {
-            writeByte((byte) 0x01);
+            writeByte(FlexInt.ZERO);
             writeByte((byte) 0x90);
             return 2;
         }
@@ -1540,7 +1540,7 @@ import java.util.List;
      */
     public int writeFlexSym(Utf8StringEncoder.Result text) {
     if (text.getEncodedLength() == 0) {
-        writeByte((byte) 0x01);
+        writeByte(FlexInt.ZERO);
         writeByte((byte) 0x80);
         return 2;
     } else {
