@@ -516,7 +516,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
             FC             | Variable length SID Struct
             17             | Length = 11
-            17             | SID 11
+            81             | SID 64
             5E             | true
             00             | switch to FlexSym encoding
             FB 66 6F 6F    | FlexSym 'foo'
@@ -526,7 +526,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
         ) {
             stepInStruct(false)
-            writeFieldName(11)
+            writeFieldName(64)
             writeBool(true)
             writeFieldName("foo")
             writeBool(true)
