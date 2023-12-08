@@ -34,10 +34,23 @@ public class OpCodes {
     // 0x7D-0x7F Reserved
 
     public static final byte STRING_ZERO_LENGTH = (byte) 0x80;
+    // 0x81-0x8F are additional lengths of strings.
 
     public static final byte INLINE_SYMBOL_ZERO_LENGTH = (byte) 0x90;
+    // 0x91-0x9F are additional lengths of symbols.
 
     public static final byte LIST_ZERO_LENGTH = (byte) 0xA0;
+    // 0xA1-0xAF are additional lengths of lists.
+
+    public static final byte SEXP_ZERO_LENGTH = (byte) 0xB0;
+    // 0xB1-0xBF are additional lengths of sexps.
+
+    public static final byte STRUCT_SID_ZERO_LENGTH = (byte) 0xC0;
+    // 0xC1 Reserved
+    // 0xC2-0xCF are additional lengths of structs.
+
+    // 0xD0-0xDF
+    // See https://github.com/amazon-ion/ion-docs/issues/292
 
     public static final byte SYMBOL_ADDRESS_1_BYTE = (byte) 0xE1;
     public static final byte SYMBOL_ADDRESS_2_BYTES = (byte) 0xE2;
@@ -68,7 +81,7 @@ public class OpCodes {
     public static final byte VARIABLE_LENGTH_LIST = (byte) 0xFA;
     public static final byte VARIABLE_LENGTH_SEXP = (byte) 0xFB;
     public static final byte VARIABLE_LENGTH_STRUCT_WITH_SIDS = (byte) 0xFC;
-    public static final byte VARIABLE_LENGTH_STRUCT_WITH_FLEXSYMS = (byte) 0xFD;
+    public static final byte VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS = (byte) 0xFD;
     public static final byte VARIABLE_LENGTH_BLOB = (byte) 0xFE;
     public static final byte VARIABLE_LENGTH_CLOB = (byte) 0xFF;
 }
