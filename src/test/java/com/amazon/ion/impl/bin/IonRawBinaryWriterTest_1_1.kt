@@ -542,7 +542,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
             FD     | Variable length FlexSym Struct
             07     | Length = 3
-            01 70  | FlexSym SID 0
+            01 90  | FlexSym SID 0
             5E     | true
             """
         ) {
@@ -562,11 +562,11 @@ class IonRawBinaryWriterTest_1_1 {
             03      | SID 1
             5E      | true
             00      | switch to FlexSym encoding
-            01 70   | FlexSym SID 0
+            01 90   | FlexSym SID 0
             5E      | true
             05      | FlexSym SID 2
             5E      | true
-            01 70   | FlexSym SID 0
+            01 90   | FlexSym SID 0
             5E      | true
             """
         ) {
