@@ -4,7 +4,9 @@ package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl.bin.IonEncoder_1_1.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.*
+import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.List
 import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.bin.utf8.*
 import com.amazon.ion.util.*
@@ -299,23 +301,20 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     /**
-     * Helper function for finishing scalar values. Similar concerns for containers are handled in [stepOut].
+     * Helper function for writing scalar values that builds on [openValue] and also includes updating
+     * the length of the current container.
+     *
+     * @param valueWriterExpression should be a function that writes the scalar value to the buffer, and
+     *                              returns the number of bytes that were written.
      */
-    private inline fun closeScalar(valueWriterExpression: () -> Int) {
+    private inline fun writeScalar(valueWriterExpression: () -> Int) = openValue {
         val numBytesWritten = valueWriterExpression()
         currentContainer.length += numBytesWritten
     }
 
-    /**
-     * Helper function for writing scalar values that composes both [openValue] and [closeScalar].
-     */
-    private inline fun writeScalar(valueWriterExpression: () -> Int) {
-        openValue { closeScalar(valueWriterExpression) }
-    }
-
     override fun writeFieldName(sid: Int) {
         confirm(currentContainer.type == Struct) { "Can only write a field name inside of a struct." }
-        if (sid == 0 && !currentContainer.usesFlexSym) switchToFlexSym()
+        if (sid == 0 && !currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
 
         currentContainer.length += if (currentContainer.usesFlexSym) {
             buffer.writeFlexSym(sid)
@@ -327,13 +326,13 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun writeFieldName(text: CharSequence) {
         confirm(currentContainer.type == Struct) { "Can only write a field name inside of a struct." }
-        if (!currentContainer.usesFlexSym) switchToFlexSym()
+        if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
 
         currentContainer.length += buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
         hasFieldName = true
     }
 
-    private fun switchToFlexSym() {
+    private fun switchCurrentStructToFlexSym() {
         // To switch, we need to insert the sid-to-flexsym switch marker, unless...
         // if no fields have been written yet, we can just switch the op code of the struct.
         if (currentContainer.length == 0L) {
@@ -345,71 +344,37 @@ class IonRawBinaryWriter_1_1 internal constructor(
         currentContainer.usesFlexSym = true
     }
 
-    override fun writeNull() = writeScalar { IonEncoder_1_1.writeNullValue(buffer, IonType.NULL) }
+    override fun writeNull() = writeScalar { writeNullValue(buffer, IonType.NULL) }
 
-    override fun writeNull(type: IonType) = writeScalar { IonEncoder_1_1.writeNullValue(buffer, type) }
+    override fun writeNull(type: IonType) = writeScalar { writeNullValue(buffer, type) }
 
-    override fun writeBool(value: Boolean) = writeScalar { IonEncoder_1_1.writeBoolValue(buffer, value) }
+    override fun writeBool(value: Boolean) = writeScalar { writeBoolValue(buffer, value) }
 
-    override fun writeInt(value: Byte) {
-        TODO("Not yet implemented")
-    }
+    override fun writeInt(value: Long) = writeScalar { writeIntValue(buffer, value) }
 
-    override fun writeInt(value: Int) {
-        TODO("Not yet implemented")
-    }
+    override fun writeInt(value: BigInteger) = writeScalar { writeIntValue(buffer, value) }
 
-    override fun writeInt(value: Long) {
-        TODO("Not yet implemented")
-    }
+    override fun writeFloat(value: Float) = writeScalar { writeFloatValue(buffer, value) }
 
-    override fun writeInt(value: BigInteger) {
-        TODO("Not yet implemented")
-    }
+    override fun writeFloat(value: Double) = writeScalar { writeFloatValue(buffer, value) }
 
-    override fun writeFloat(value: Float) {
-        TODO("Not yet implemented")
-    }
+    override fun writeDecimal(value: BigDecimal) = writeScalar { writeDecimalValue(buffer, value) }
 
-    override fun writeFloat(value: Double) {
-        TODO("Not yet implemented")
-    }
-
-    override fun writeDecimal(value: BigDecimal) {
-        TODO("Not yet implemented")
-    }
-
-    override fun writeDecimal(value: Decimal) {
-        TODO("Not yet implemented")
-    }
-
-    override fun writeTimestamp(value: Timestamp) {
-        TODO("Not yet implemented")
-    }
+    override fun writeTimestamp(value: Timestamp) = writeScalar { writeTimestampValue(buffer, value) }
 
     override fun writeTimestamp(value: Instant) {
         TODO("Not yet implemented")
     }
 
-    override fun writeSymbol(id: Int) {
-        TODO("Not yet implemented")
-    }
+    override fun writeSymbol(id: Int) = writeScalar { writeSymbolValue(buffer, id) }
 
-    override fun writeSymbol(text: CharSequence) {
-        TODO("Not yet implemented")
-    }
+    override fun writeSymbol(text: CharSequence) = writeScalar { writeSymbolValue(buffer, utf8StringEncoder.encode(text.toString())) }
 
-    override fun writeString(value: CharSequence) {
-        TODO("Not yet implemented")
-    }
+    override fun writeString(value: CharSequence) = writeScalar { writeStringValue(buffer, utf8StringEncoder.encode(value.toString())) }
 
-    override fun writeBlob(value: ByteArray, start: Int, length: Int) {
-        TODO("Not yet implemented")
-    }
+    override fun writeBlob(value: ByteArray, start: Int, length: Int) = writeScalar { writeBlobValue(buffer, value, start, length) }
 
-    override fun writeClob(value: ByteArray, start: Int, length: Int) {
-        TODO("Not yet implemented")
-    }
+    override fun writeClob(value: ByteArray, start: Int, length: Int) = writeScalar { writeClobValue(buffer, value, start, length) }
 
     override fun stepInList(delimited: Boolean) {
         openValue {
