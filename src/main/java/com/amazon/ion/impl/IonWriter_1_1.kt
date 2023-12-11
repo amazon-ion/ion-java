@@ -1,6 +1,5 @@
 package com.amazon.ion.impl
 
-import com.amazon.ion.Decimal
 import com.amazon.ion.IonType
 import com.amazon.ion.Timestamp
 import java.math.BigDecimal
@@ -149,8 +148,6 @@ interface IonWriter_1_1 {
 
     fun writeBool(value: Boolean)
 
-    fun writeInt(value: Byte)
-    fun writeInt(value: Int)
     fun writeInt(value: Long)
     fun writeInt(value: BigInteger)
 
@@ -158,7 +155,6 @@ interface IonWriter_1_1 {
     fun writeFloat(value: Double)
 
     fun writeDecimal(value: BigDecimal)
-    fun writeDecimal(value: Decimal)
 
     /**
      * TODO: Consider adding a function for writing a timestamp that doesn't require creating a [Timestamp] instance, so

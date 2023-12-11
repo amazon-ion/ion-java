@@ -3,6 +3,8 @@ package com.amazon.ion.impl.bin;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
+import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -207,7 +209,7 @@ public class IonEncoder_1_1Test {
             "      -Infinity, 5C FF 80 00 00",
     })
     public void testWriteFloatValue(float value, String expectedBytes) {
-        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloat);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloatValue);
     }
 
     @ParameterizedTest
@@ -234,7 +236,7 @@ public class IonEncoder_1_1Test {
             "                -Infinity, 5C FF 80 00 00",
     })
     public void testWriteFloatValueForDouble(double value, String expectedBytes) {
-        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloat);
+        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloatValue);
     }
 
     @ParameterizedTest
@@ -488,7 +490,8 @@ public class IonEncoder_1_1Test {
             "'variable length encoding', F8 31 76 61 72 69 61 62 6C 65 20 6C 65 6E 67 74 68 20 65 6E 63 6F 64 69 6E 67",
     })
     public void testWriteStringValue(String value, String expectedBytes) {
-        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeStringValue);
+        Utf8StringEncoder.Result result = Utf8StringEncoderPool.getInstance().getOrCreate().encode(value);
+        assertWritingValue(expectedBytes, result, IonEncoder_1_1::writeStringValue);
     }
 
     @Test
@@ -509,7 +512,8 @@ public class IonEncoder_1_1Test {
             "'variable length encoding', F9 31 76 61 72 69 61 62 6C 65 20 6C 65 6E 67 74 68 20 65 6E 63 6F 64 69 6E 67",
     })
     public void testWriteSymbolValue(String value, String expectedBytes) {
-        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeSymbolValue);
+        Utf8StringEncoder.Result result = Utf8StringEncoderPool.getInstance().getOrCreate().encode(value);
+        assertWritingValue(expectedBytes, result, IonEncoder_1_1::writeSymbolValue);
     }
 
     @ParameterizedTest
@@ -527,9 +531,9 @@ public class IonEncoder_1_1Test {
             "65793,               E3 03",
             "65919,               E3 FF",
             "65920,               E3 02 02",
-            "9223372036854775807, E3 00 FF FD FD FF FF FF FF FF"
+            "2147483647         , E3 F0 DF DF FF 0F"
     })
-    public void testWriteSymbolValue(long value, String expectedBytes) {
+    public void testWriteSymbolValue(int value, String expectedBytes) {
         assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeSymbolValue);
     }
 
@@ -548,12 +552,12 @@ public class IonEncoder_1_1Test {
                     "FE 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
     })
     public void testWriteBlobValue(@ConvertWith(HexStringToByteArray.class) byte[] value, String expectedBytes) {
-        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeBlobValue);
+        assertWritingValue(expectedBytes, value, (buffer, bytes) -> IonEncoder_1_1.writeBlobValue(buffer, bytes, 0, bytes.length));
     }
 
     @Test
     public void testWriteBlobValueForNull() {
-        int numBytes = IonEncoder_1_1.writeBlobValue(buf, null);
+        int numBytes = IonEncoder_1_1.writeBlobValue(buf, null, 0, 0);
         Assertions.assertEquals("EB 07", byteArrayToHex(bytes()));
         Assertions.assertEquals(2, numBytes);
     }
@@ -566,12 +570,12 @@ public class IonEncoder_1_1Test {
                     "FF 31 49 20 61 70 70 6C 61 75 64 20 79 6F 75 72 20 63 75 72 69 6F 73 69 74 79"
     })
     public void testWriteClobValue(@ConvertWith(HexStringToByteArray.class) byte[] value, String expectedBytes) {
-        assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeClobValue);
+        assertWritingValue(expectedBytes, value, (buffer, bytes) -> IonEncoder_1_1.writeClobValue(buffer, bytes, 0, bytes.length));
     }
 
     @Test
     public void testWriteClobValueForNull() {
-        int numBytes = IonEncoder_1_1.writeClobValue(buf, null);
+        int numBytes = IonEncoder_1_1.writeClobValue(buf, null, 0, 0);
         Assertions.assertEquals("EB 08", byteArrayToHex(bytes()));
         Assertions.assertEquals(2, numBytes);
     }
