@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin
 
-import com.amazon.ion.IonException
-import com.amazon.ion.IonType
+import com.amazon.ion.*
+import com.amazon.ion.impl.*
 import java.io.ByteArrayOutputStream
+import java.math.BigDecimal
+import java.math.BigInteger
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -33,8 +35,16 @@ class IonRawBinaryWriterTest_1_1 {
      *                 you can use `|` to add comments.
      */
     private inline fun assertWriterOutputEquals(hexBytes: String, autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit) {
-        val hexBytes = hexBytes.replace(Regex("\\s+(\\|.*\\n)?\\s+"), " ").trim().uppercase()
-        assertEquals(hexBytes, writeAsHexString(autoClose, block))
+        val commentRegex = Regex("\\|.*$")
+        val excessWhitespaceRegex = Regex("\\s+")
+        val cleanedHexBytes: String = hexBytes.lines()
+            .map { it.replace(commentRegex, "").trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .replace(excessWhitespaceRegex, " ")
+            .uppercase()
+            .trim()
+        assertEquals(cleanedHexBytes, writeAsHexString(autoClose, block))
     }
 
     private inline fun assertWriterThrows(block: IonRawBinaryWriter_1_1.() -> Unit) {
@@ -797,5 +807,213 @@ class IonRawBinaryWriterTest_1_1 {
             )
             writeBool(false)
         }
+    }
+
+    @Test
+    fun `write int`() {
+        assertWriterOutputEquals(
+            """
+            51 01
+            51 0A
+            """
+        ) {
+            writeInt(1)
+            writeInt(BigInteger.TEN)
+        }
+    }
+
+    @Test
+    fun `write float`() {
+        assertWriterOutputEquals(
+            """
+            5A
+            5C 40 48 F5 C3
+            5D 40 09 1E B8 51 EB 85 1F
+            """
+        ) {
+            writeFloat(0.0)
+            writeFloat(3.14f)
+            writeFloat(3.14)
+        }
+    }
+
+    @Test
+    fun `write decimal`() {
+        assertWriterOutputEquals(
+            """
+            60
+            62 01 00
+            """
+        ) {
+            writeDecimal(BigDecimal.ZERO)
+            writeDecimal(Decimal.NEGATIVE_ZERO)
+        }
+    }
+
+    @Test
+    fun `write timestamp`() {
+        assertWriterOutputEquals(
+            """
+            77 35 46 AF 7C 55 47 70 2D
+            F7 05 4B 08
+            """
+        ) {
+            writeTimestamp(Timestamp.valueOf("2023-12-08T15:37:23.190583253Z"))
+            writeTimestamp(Timestamp.valueOf("2123T"))
+        }
+    }
+
+    @Test
+    fun `write symbol`() {
+        assertWriterOutputEquals(
+            """
+            E1 00
+            E1 01
+            E2 39 2F
+            93 66 6F 6F
+            """
+        ) {
+            writeSymbol(0)
+            writeSymbol(1)
+            writeSymbol(12345)
+            writeSymbol("foo")
+        }
+    }
+
+    @Test
+    fun `write string`() {
+        assertWriterOutputEquals("83 66 6F 6F") {
+            writeString("foo")
+        }
+    }
+
+    @Test
+    fun `write blob`() {
+        assertWriterOutputEquals("FE 07 01 02 03") {
+            writeBlob(byteArrayOf(1, 2, 3), 0, 3)
+        }
+    }
+
+    @Test
+    fun `write clob`() {
+        assertWriterOutputEquals("FF 07 04 05 06") {
+            writeClob(byteArrayOf(4, 5, 6), 0, 3)
+        }
+    }
+
+    /**
+     * Writes this Ion, taken from https://amazon-ion.github.io/ion-docs/
+     * ```
+     * {
+     *   name: "Fido",
+     *   age: years::4,
+     *   birthday: 2012-03-01T,
+     *   toys: [ball, rope],
+     *   weight: pounds::41.2,
+     *   buzz: {{VG8gaW5maW5pdHkuLi4gYW5kIGJleW9uZCE=}},
+     * }
+     * ```
+     */
+    @Test
+    fun `write something complex`() {
+        assertWriterOutputEquals(
+            """
+            E0 01 01 EA                 | IVM
+            E4 07 FC 63                 | $3::{             // length=49
+            0F FA 5D                    |   $7: [           // length=46
+            84 6E 61 6D 65              |     "name",
+            83 61 67 65                 |     "age",
+            85 79 65 61 72 73           |     "years",
+            88 62 69 72 74 68 64 61 79  |     "birthday",
+            84 74 6F 79 73              |     "toys",
+            84 62 61 6C 6C              |     "ball",
+            86 77 65 69 67 68 74        |     "weight",
+            84 62 75 7A 7A              |     "buzz",
+                                        |   ]
+                                        | }
+            FC 85                       | {                 // length=66
+            15 84 46 69 64 6F           |   $10: "Fido",
+            17 E4 19 51 04              |   $11: $12::4,
+            1B 72 AA 09                 |   $13: 2012-03-01T
+            1D A7                       |   $14: [          // length=7
+            E1 0F                       |     $15,
+            94 72 6F 70 65              |     rope
+                                        |   ],
+            21                          |   $16:
+            E7 F5 70 6F 75 6E 64 73     |       pounds::
+            63 FF 9C 01                 |       41.2
+            23 FE 35                    |   $17: {{         // length=26
+            54 6F 20 69 6E 66 69 6E 69  |     VG8gaW5maW5p
+            74 79 2E 2E 2E 20 61 6E 64  |     dHkuLi4gYW5k
+            20 62 65 79 6F 6E 64 21     |     IGJleW9uZCE=
+                                        |   }}
+                                        | }
+            """
+        ) {
+            writeIVM()
+            writeAnnotations(3)
+            writeStruct {
+                writeFieldName(7)
+                writeList {
+                    writeString("name")
+                    writeString("age")
+                    writeString("years")
+                    writeString("birthday")
+                    writeString("toys")
+                    writeString("ball")
+                    writeString("weight")
+                    writeString("buzz")
+                }
+            }
+            writeStruct {
+                writeFieldName(10)
+                writeString("Fido")
+                writeFieldName(11)
+                writeAnnotations(12)
+                writeInt(4)
+                writeFieldName(13)
+                writeTimestamp(Timestamp.valueOf("2012-03-01T"))
+                writeFieldName(14)
+                writeList {
+                    writeSymbol(15)
+                    writeSymbol("rope")
+                }
+                writeFieldName(16)
+                writeAnnotations("pounds")
+                writeDecimal(BigDecimal.valueOf(41.2))
+                writeFieldName(17)
+                writeBlob(
+                    byteArrayOf(
+                        84, 111, 32, 105, 110, 102, 105, 110, 105,
+                        116, 121, 46, 46, 46, 32, 97, 110, 100,
+                        32, 98, 101, 121, 111, 110, 100, 33
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Helper function that steps into a struct, applies the contents of [block] to
+     * the writer, and then steps out of the struct.
+     * Using this function makes it easy for the indentation of the writer code to
+     * match the indentation of the equivalent pretty-printed Ion.
+     */
+    private inline fun IonWriter_1_1.writeStruct(block: IonWriter_1_1.() -> Unit) {
+        stepInStruct(false)
+        block()
+        stepOut()
+    }
+
+    /**
+     * Helper function that steps into a list, applies the contents of [block] to
+     * the writer, and then steps out of the list.
+     * Using this function makes it easy for the indentation of the writer code to
+     * match the indentation of the equivalent pretty-printed Ion.
+     */
+    private inline fun IonWriter_1_1.writeList(block: IonWriter_1_1.() -> Unit) {
+        stepInList(false)
+        block()
+        stepOut()
     }
 }
