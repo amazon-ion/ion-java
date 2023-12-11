@@ -1253,7 +1253,7 @@ class IonRawBinaryWriterTest_1_1 {
      * Using this function makes it easy for the indentation of the writer code to
      * match the indentation of the equivalent pretty-printed Ion.
      */
-    private inline fun IonWriter_1_1.writeStruct(block: IonWriter_1_1.() -> Unit) {
+    private inline fun IonRawWriter_1_1.writeStruct(block: IonRawWriter_1_1.() -> Unit) {
         stepInStruct(false)
         block()
         stepOut()
@@ -1265,7 +1265,7 @@ class IonRawBinaryWriterTest_1_1 {
      * Using this function makes it easy for the indentation of the writer code to
      * match the indentation of the equivalent pretty-printed Ion.
      */
-    private inline fun IonWriter_1_1.writeList(block: IonWriter_1_1.() -> Unit) {
+    private inline fun IonRawWriter_1_1.writeList(block: IonRawWriter_1_1.() -> Unit) {
         stepInList(false)
         block()
         stepOut()
