@@ -128,13 +128,13 @@ interface IonWriter_1_1 {
      * Writes a macro invocation for the given macro name.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(name: CharSequence)
+    fun stepInEExp(name: CharSequence, hasRestParams: Boolean)
 
     /**
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(id: Int)
+    fun stepInEExp(id: Int, hasRestParams: Boolean)
 
     /**
      * Steps out of the current container.

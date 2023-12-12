@@ -893,6 +893,169 @@ class IonRawBinaryWriterTest_1_1 {
         }
     }
 
+    @Test
+    fun `write an e-expression`() {
+        assertWriterOutputEquals("00") {
+            stepInEExp(0, false)
+            stepOut()
+        }
+        assertWriterOutputEquals("3F") {
+            stepInEExp(63, false)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression that accepts rest params`() {
+        assertWriterOutputEquals(
+            """
+            00         | Macro 0
+            5E         | true
+            F0         | End Macro
+            """
+        ) {
+            stepInEExp(0, hasRestParams = true)
+            writeBool(true)
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "      64, 40 01",
+        "      65, 41 01",
+        "      80, 40 03",
+        "    1211, 4B 8F",
+        "    2111, 4F FF",
+        "    2112, 40 02 02",
+        "   71376, 40 A6 45",
+        "  262207, 4F FE FF",
+        "  262208, 40 04 00 02",
+        "33554495, 4F FC FF FF",
+    )
+    fun `write an e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
+        assertWriterOutputEquals(expectedBytes) {
+            stepInEExp(id, false)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write nested e-expressions`() {
+        // E-Expressions don't have length prefixes, so we're putting them inside lists
+        // so that we can check that the length gets propagated correctly to the parent
+        assertWriterOutputEquals(
+            """
+            AC         | List Length 12
+            1F         | Macro 31
+            AA         | List Length 10
+            40 01      | Macro 64
+            A7         | List Length 7
+            43 03      | Macro 83
+            A3         | List Length 3
+            44 5A 02   | Macro 2468
+            F0         | End Delimiter for Macro 83
+            """
+        ) {
+            stepInList(false)
+            stepInEExp(31, false)
+            stepInList(false)
+            stepInEExp(64, false)
+            stepInList(false)
+            stepInEExp(83, hasRestParams = true)
+            stepInList(false)
+            stepInEExp(2468, false)
+            repeat(8) { stepOut() }
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the field name position of a sid struct`() {
+        assertWriterOutputEquals(
+            """
+            FC      | Variable Length SID Struct
+            11      | Length = 8
+            15      | SID 10
+            5E      | true
+            00      | switch to FlexSym encoding
+            01      | FlexSym Escape Byte
+            1F      | Macro 31 (0x1F)
+            01      | FlexSym Escape Byte
+            40 01   | Macro 64
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(10)
+            writeBool(true)
+            stepInEExp(31, false)
+            stepOut()
+            stepInEExp(64, false)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the field name position of a delimited struct`() {
+        assertWriterOutputEquals(
+            """
+            F3      | Begin Delimited Struct
+            01      | FlexSym Escape Byte
+            1F      | Macro 31 (0x1F)
+            01      | FlexSym Escape Byte
+            F0      | End Delimiter
+            """
+        ) {
+            stepInStruct(true)
+            stepInEExp(31, false)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the field name position of a variable length flex-sym struct`() {
+        assertWriterOutputEquals(
+            """
+            FD      | Variable Length FlexSym Struct
+            05      | Length = 2
+            01      | FlexSym Escape Byte
+            1F      | Macro 31 (0x1F)
+            """
+        ) {
+            stepInStruct(false)
+            stepInEExp(31, false)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the value position of a struct`() {
+        assertWriterOutputEquals(
+            """
+            C2      | Struct length 2
+            03      | SID 1
+            01      | Macro 1
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(1)
+            stepInEExp(1, false)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling stepInEExp(String) should throw NotImplementedError`() {
+        assertThrows<NotImplementedError> {
+            writeAsHexString {
+                stepInEExp("foo", false)
+            }
+        }
+    }
+
     /**
      * Writes this Ion, taken from https://amazon-ion.github.io/ion-docs/
      * ```

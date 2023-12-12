@@ -55,7 +55,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         /**
          * Clears this [ContainerInfo] of old data and initializes it with the given new data.
          */
-        fun reset(type: ContainerType? = null, position: Long = -1, isDelimited: Boolean = false) {
+        fun reset(type: ContainerType, position: Long, isDelimited: Boolean = false) {
             this.type = type
             this.isDelimited = isDelimited
             this.position = position
@@ -413,12 +413,31 @@ class IonRawBinaryWriter_1_1 internal constructor(
         }
     }
 
-    override fun stepInEExp(name: CharSequence) {
+    override fun stepInEExp(name: CharSequence, hasRestParams: Boolean) {
         TODO("Not supported by the raw binary writer.")
     }
 
-    override fun stepInEExp(id: Int) {
-        TODO("Not yet implemented")
+    override fun stepInEExp(id: Int, hasRestParams: Boolean) {
+        confirm(numAnnotations == 0) { "Cannot annotate an E-Expression" }
+
+        if (currentContainer.type == Struct && !hasFieldName) {
+            if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
+            buffer.writeByte(FLEX_SYM_ESCAPE_BYTE)
+            currentContainer.length++
+        }
+        currentContainer = containerStack.push { it.reset(Macro, buffer.position(), isDelimited = hasRestParams) }
+        if (id < 64) {
+            buffer.writeByte(id.toByte())
+        } else {
+            val biasedId = id - 64
+            val opCodeIdBits = FOUR_BIT_MASK and biasedId
+            val remainderOfId = biasedId shr 4
+            buffer.writeByte((OpCodes.BIASED_E_EXPRESSION + opCodeIdBits).toByte())
+            currentContainer.length += buffer.writeFlexUInt(remainderOfId)
+        }
+
+        // No need to clear any of the annotation fields because we already asserted that there are no annotations
+        hasFieldName = false
     }
 
     override fun stepInStream() {
@@ -448,6 +467,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 List, SExp, Struct -> {
                     val contentLength = currentContainer.length
                     if (contentLength <= 0xF && !currentContainer.usesFlexSym) {
+                        // TODO: Right now, this is skipped if we switch to FlexSym after starting a struct
+                        //       because we have now way to differentiate a struct that started as FlexSym
+                        //       from a struct that switched to FlexSym.
                         // Clean up any unused space that was pre-allocated.
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
                         val zeroLengthOpCode = when (currentContainer.type) {
@@ -461,7 +483,11 @@ class IonRawBinaryWriter_1_1 internal constructor(
                         thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     }
                 }
-                Macro -> TODO()
+                Macro -> {
+                    // No special action needed yet.
+                    // However, when tag-less types and grouped parameters are implemented,
+                    // we will need to go and update the presence bits
+                }
                 Stream -> TODO()
                 Annotations -> TODO("Unreachable.")
                 Top -> throw IonException("Nothing to step out of.")
@@ -503,7 +529,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
         // If we're adding a patch point we first need to ensure that all of our ancestors (containing values) already
         // have a patch point. No container can be smaller than the contents, so all outer layers also require patches.
-        // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and reset the cursor every time we track back to the ancestors.
+        // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and
+        // reset the cursor every time we track back to the ancestors.
         val stackIterator: ListIterator<ContainerInfo> = containerStack.iterator()
         // Walk down the stack until we find an ancestor which already has a patch point
         while (stackIterator.hasNext() && stackIterator.next().patchPoint == null);
