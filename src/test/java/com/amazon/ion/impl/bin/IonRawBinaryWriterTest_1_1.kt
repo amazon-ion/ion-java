@@ -1056,6 +1056,14 @@ class IonRawBinaryWriterTest_1_1 {
         }
     }
 
+    @Test
+    fun `calling stepInEExp with an annotation should throw IonException`() {
+        assertWriterThrows {
+            writeAnnotations("foo")
+            stepInEExp(1, false)
+        }
+    }
+
     /**
      * Writes this Ion, taken from https://amazon-ion.github.io/ion-docs/
      * ```
