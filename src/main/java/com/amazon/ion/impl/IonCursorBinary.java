@@ -208,6 +208,11 @@ class IonCursorBinary implements IonCursor {
     IonTypeID valueTid = null;
 
     /**
+     * Marker for the current inlineable field name.
+     */
+    final Marker fieldTextMarker = new Marker(-1, -1);
+
+    /**
      * The consumer to be notified when Ion version markers are encountered.
      */
     private IvmNotificationConsumer ivmConsumer = NO_OP_IVM_NOTIFICATION_CONSUMER;
@@ -1170,8 +1175,26 @@ class IonCursorBinary implements IonCursor {
         return endIndex;
     }
 
+    /**
+     * Reads the field name at `peekIndex`. After this method returns `peekIndex` points to the first byte of the
+     * value that follows the field name. If the field name contained a symbol ID, `fieldSid` is set to that symbol ID.
+     * If it contained inline text, `fieldSid` is set to -1, and the start and end indexes of the inline text are
+     * described by `fieldTextMarker`.
+     */
     private void uncheckedReadFieldName_1_1() {
-        throw new UnsupportedOperationException();
+        if (parent.typeId.isInlineable) {
+            fieldSid = (int) uncheckedReadFlexSym_1_1(fieldTextMarker);
+        } else {
+            // 0 in field name position of a SID struct indicates that all field names that follow are represented as
+            // using FlexSyms.
+            if (buffer[(int) peekIndex] == 0) {
+                peekIndex++;
+                parent.typeId = IonTypeID.STRUCT_WITH_FLEX_SYMS_ID;
+                fieldSid = (int) uncheckedReadFlexSym_1_1(fieldTextMarker);
+            } else {
+                fieldSid = (int) uncheckedReadFlexUInt_1_1();
+            }
+        }
     }
 
     /**
@@ -1216,7 +1239,7 @@ class IonCursorBinary implements IonCursor {
      * Reads a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
      * When the FlexSym contains inline text, the given Marker's start and end indices are populated with the start and
      * end of the UTF-8 byte sequence, and this method returns -1. When the FlexSym contains a symbol ID, the given
-     * Marker's endIndex is set to the symbol ID value and its startIndex is not set. When this FlexSym wraps a
+     * Marker's endIndex is set to the symbol ID value and its startIndex is set to -1. When this FlexSym wraps a
      * delimited end marker, neither the Marker's startIndex nor its endIndex is set.
      * @param markerToSet the marker to populate.
      * @return the symbol ID value if one was present, otherwise -1.
@@ -1244,6 +1267,7 @@ class IonCursorBinary implements IonCursor {
             peekIndex = markerToSet.endIndex;
             return -1;
         } else {
+            markerToSet.startIndex = -1;
             markerToSet.endIndex = result;
         }
         return result;
@@ -1286,7 +1310,7 @@ class IonCursorBinary implements IonCursor {
      * points to the first byte after the end of the FlexSym. When the FlexSym contains inline text, the given Marker's
      * start and end indices are populated with the start and end of the UTF-8 byte sequence, and this method returns
      * -1. When the FlexSym contains a symbol ID, the given Marker's endIndex is set to the symbol ID value and its
-     * startIndex is not set. When this FlexSym wraps a delimited end marker, neither the Marker's startIndex nor its
+     * startIndex is set to -1. When this FlexSym wraps a delimited end marker, neither the Marker's startIndex nor its
      * endIndex is set.
      * @param markerToSet the marker to populate.
      * @return the symbol ID value if one was present, otherwise -1.
@@ -1314,13 +1338,40 @@ class IonCursorBinary implements IonCursor {
             peekIndex = markerToSet.endIndex;
             return -1;
         } else {
+            markerToSet.startIndex = -1;
             markerToSet.endIndex = result;
         }
         return result;
     }
 
+    /**
+     * Reads the field name at `peekIndex`, ensuring enough bytes are available in the buffer. After this method returns
+     * `peekIndex` points to the first byte of the value that follows the field name. If the field name contained a
+     * symbol ID, `fieldSid` is set to that symbol ID. If it contained inline text, `fieldSid` is set to -1, and the
+     * start and end indexes of the inline text are described by `fieldTextMarker`.
+     */
     private boolean slowReadFieldName_1_1() {
-        throw new UnsupportedOperationException();
+        // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for
+        // the smallest-possible representation.
+        if (!fillAt(peekIndex, 2)) {
+            return true;
+        }
+        if (parent.typeId.isInlineable) {
+            fieldSid = (int) slowReadFlexSym_1_1(fieldTextMarker);
+            return fieldSid < 0 && fieldTextMarker.endIndex < 0;
+        } else {
+            // 0 in field name position of a SID struct indicates that all field names that follow are represented as
+            // using FlexSyms.
+            if (buffer[(int) peekIndex] == 0) {
+                peekIndex++;
+                parent.typeId = IonTypeID.STRUCT_WITH_FLEX_SYMS_ID;
+                fieldSid = (int) slowReadFlexSym_1_1(fieldTextMarker);
+                return fieldSid < 0 && fieldTextMarker.endIndex < 0;
+            } else {
+                fieldSid = (int) slowReadFlexUInt_1_1();
+                return fieldSid < 0;
+            }
+        }
     }
 
     private boolean uncheckedIsDelimitedEnd_1_1() {
