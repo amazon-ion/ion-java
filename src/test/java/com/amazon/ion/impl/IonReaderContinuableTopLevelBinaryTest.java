@@ -4889,7 +4889,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         Function<String[], ExpectationProvider<IonReaderContinuableTopLevelBinary>> expectation,
         String inputBytes
     ) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
         assertSequence(
             next(IonType.INT), expectation.apply(new String[] {"name"}), intValue(0),
             next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
@@ -4900,11 +4900,23 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "E4 09 50 E5 0F 09 50 E6 07 09 0F 0D 50", // SIDs
-        "E7 F9 6E 61 6D 65 50 E8 0F F9 6E 61 6D 65 50 E9 1D F9 6E 61 6D 65 0F F3 69 6D 70 6F 72 74 73 50", // FlexSyms
-        "E4 12 00 50 E5 0F 24 00 00 50 E6 0E 00 09 0F 0D 50", // SIDs (multi-byte FlexUInts)
-        "E7 F2 FF 6E 61 6D 65 50 E8 3C 00 00 F9 6E 61 6D 65 50 E9 F8 00 00 00 F9 6E 61 6D 65 0F E6 FF 69 6D 70 6F 72 74 73 50", // Multi-byte FlexSyms
+    @ValueSource(strings = {
+        // SIDs
+        "E4 09 50            | One annotation SID = 4 (name); value int 0 \n" +
+        "E5 0F 09 50         | Two annotation SIDs = 7 (symbols), 4 (name); value int 0 \n " +
+        "E6 07 09 0F 0D 50   | Variable length = 3 SIDs = 4 (name), 7 (symbols), 6 (imports); value int 0 \n",
+        // FlexSyms
+        "E7 F9 6E 61 6D 65 50                                | One annotation FlexSym text = name; value int 0 \n" +
+        "E8 0F F9 6E 61 6D 65 50                             | Two annotation FlexSyms SID = 7 (symbols), text = name; value int 0 \n" +
+        "E9 1D F9 6E 61 6D 65 0F F3 69 6D 70 6F 72 74 73 50  | Variable length = 14 FlexSyms text = name, SID = 7 (symbols), text = imports; value int 0 \n",
+        // SIDs (multi-byte FlexUInts)
+        "E4 12 00 50             | One annotation overpadded SID = 4 (name); value int 0 \n" +
+        "E5 0F 24 00 00 50       | Two annotation SID = 7 (symbols), overpadded SID = 4 (name); value int 0 \n " +
+        "E6 0E 00 09 0F 0D 50    | Variable overpadded length = 3 SIDs = 4 (name), 7 (symbols), 6 (imports); value int 0 \n",
+        // Multi-byte FlexSyms
+        "E7 F2 FF 6E 61 6D 65 50                                         | One annotation overpadded FlexSym text = name; value int 0 \n" +
+        "E8 3C 00 00 F9 6E 61 6D 65 50                                   | Two annotation FlexSyms = overpadded SID 7 (symbols),  text = name; value int 0 \n " +
+        "E9 F8 00 00 00 F9 6E 61 6D 65 0F E6 FF 69 6D 70 6F 72 74 73 50  | Variable overpadded length = 15 FlexSyms text = name, SID = 7 (symbols), overpadded text = imports; value int 0 \n",
     })
     public void readAnnotations_1_1(String inputBytes) throws Exception {
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
@@ -4920,7 +4932,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
      * FlexSyms.
      */
     private void readAnnotationsWithSpecialFlexSyms_1_1(boolean constructFromBytes, String inputBytes) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(inputBytes), constructFromBytes);
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
         SymbolToken emptyText = new SymbolTokenImpl("", -1);
         SymbolToken symbolZero = new SymbolTokenImpl(null, 0);
         assertSequence(
@@ -4934,9 +4946,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "E7 01 80 50 E7 01 90 50 E8 01 80 01 90 50 E9 09 01 90 01 80 50",
-        "E7 02 00 80 50 E7 04 00 00 90 50 E8 08 00 00 00 80 02 00 90 50 E9 90 00 00 00 00 01 90 01 80 50"
+    @ValueSource(strings = {
+        // Minimal representations
+        "E7 01 80 50            | One empty-text annotation; value int 0 \n" +
+        "E7 01 90 50            | One SID 0 annotation; value int 0 \n" +
+        "E8 01 80 01 90 50      | Two annotations: empty text, SID 0; value int 0 \n" +
+        "E9 09 01 90 01 80 50   | Variable length = 4 annotations: SID 0, empty text; value int 0 \n",
+        // Overpadded representations
+        "E7 02 00 80 50                    | One overpadded empty-text annotation; value int 0 \n" +
+        "E7 04 00 00 90 50                 | One overpadded SID 0 annotation; value int 0 \n" +
+        "E8 08 00 00 00 80 02 00 90 50     | Two overpadded annotations: empty text, SID 0; value int 0 \n" +
+        "E9 90 00 00 00 00 01 90 01 80 50  | Variable overpadded length = 4 annotations: SID 0, empty text; value int 0 \n"
     })
     public void readAnnotationsWithSpecialFlexSyms_1_1(String inputBytes) throws Exception {
         readAnnotationsWithSpecialFlexSyms_1_1(true, inputBytes);
@@ -5138,6 +5158,44 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void readStructWithEmptyInlineFieldName_1_1(String inputBytes) throws Exception {
         assertStructWithEmptyInlineFieldNamesCorrectlyParsed(true, inputBytes);
         assertStructWithEmptyInlineFieldNamesCorrectlyParsed(false, inputBytes);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void readMultipleNestedListsAndSexps_1_1(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "AA  | List Length = 10 \n" +
+            "FA  | Variable-length List \n" +
+            "11  | Length = 8 \n" +
+            "A7  | List Length = 7 \n" +
+            "A0  | List Length = 0 \n" +
+            "B5  | S-exp Length = 5 \n" +
+            "B4  | S-exp Length = 4 \n" +
+            "FB  | Variable-length S-exp \n" +
+            "05  | Length = 2 \n" +
+            "B0  | S-exp Length = 0 \n" +
+            "5F  | false"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.LIST,
+                container(IonType.LIST,
+                    container(IonType.LIST,
+                        container(IonType.LIST),
+                        container(IonType.SEXP,
+                            container(IonType.SEXP,
+                                container(IonType.SEXP,
+                                    container(IonType.SEXP),
+                                    next(IonType.BOOL), booleanValue(false)
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            next(null)
+        );
+        closeAndCount();
     }
 
     // TODO add tests for incrementally reading Ion 1.1 containers, including oversize values.
