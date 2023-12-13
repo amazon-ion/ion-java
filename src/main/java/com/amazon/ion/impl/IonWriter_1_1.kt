@@ -119,22 +119,22 @@ interface IonWriter_1_1 {
     fun stepInStruct(delimited: Boolean)
 
     /**
-     * Steps into a stream.
-     * A stream is not a container in the Ion data model, but it is a container from an encoding perspective.
+     * Steps into an expression group.
+     * An expression group is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInStream()
+    fun stepInExpressionGroup(delimited: Boolean)
 
     /**
      * Writes a macro invocation for the given macro name.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(name: CharSequence, hasRestParams: Boolean)
+    fun stepInEExp(name: CharSequence)
 
     /**
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(id: Int, hasRestParams: Boolean)
+    fun stepInEExp(id: Int)
 
     /**
      * Steps out of the current container.

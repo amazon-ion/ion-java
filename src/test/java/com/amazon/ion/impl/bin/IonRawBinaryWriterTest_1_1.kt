@@ -896,26 +896,11 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write an e-expression`() {
         assertWriterOutputEquals("00") {
-            stepInEExp(0, false)
+            stepInEExp(0)
             stepOut()
         }
         assertWriterOutputEquals("3F") {
-            stepInEExp(63, false)
-            stepOut()
-        }
-    }
-
-    @Test
-    fun `write an e-expression that accepts rest params`() {
-        assertWriterOutputEquals(
-            """
-            00         | Macro 0
-            5E         | true
-            F0         | End Macro
-            """
-        ) {
-            stepInEExp(0, hasRestParams = true)
-            writeBool(true)
+            stepInEExp(63)
             stepOut()
         }
     }
@@ -935,7 +920,7 @@ class IonRawBinaryWriterTest_1_1 {
     )
     fun `write an e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
         assertWriterOutputEquals(expectedBytes) {
-            stepInEExp(id, false)
+            stepInEExp(id)
             stepOut()
         }
     }
@@ -946,25 +931,24 @@ class IonRawBinaryWriterTest_1_1 {
         // so that we can check that the length gets propagated correctly to the parent
         assertWriterOutputEquals(
             """
-            AC         | List Length 12
+            AB         | List Length 11
             1F         | Macro 31
-            AA         | List Length 10
+            A9         | List Length 9
             40 01      | Macro 64
-            A7         | List Length 7
+            A6         | List Length 6
             43 03      | Macro 83
             A3         | List Length 3
             44 5A 02   | Macro 2468
-            F0         | End Delimiter for Macro 83
             """
         ) {
             stepInList(false)
-            stepInEExp(31, false)
+            stepInEExp(31)
             stepInList(false)
-            stepInEExp(64, false)
+            stepInEExp(64)
             stepInList(false)
-            stepInEExp(83, hasRestParams = true)
+            stepInEExp(83)
             stepInList(false)
-            stepInEExp(2468, false)
+            stepInEExp(2468)
             repeat(8) { stepOut() }
         }
     }
@@ -987,9 +971,9 @@ class IonRawBinaryWriterTest_1_1 {
             stepInStruct(false)
             writeFieldName(10)
             writeBool(true)
-            stepInEExp(31, false)
+            stepInEExp(31)
             stepOut()
-            stepInEExp(64, false)
+            stepInEExp(64)
             stepOut()
             stepOut()
         }
@@ -1007,7 +991,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
         ) {
             stepInStruct(true)
-            stepInEExp(31, false)
+            stepInEExp(31)
             stepOut()
             stepOut()
         }
@@ -1024,7 +1008,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
         ) {
             stepInStruct(false)
-            stepInEExp(31, false)
+            stepInEExp(31)
             stepOut()
             stepOut()
         }
@@ -1041,7 +1025,7 @@ class IonRawBinaryWriterTest_1_1 {
         ) {
             stepInStruct(false)
             writeFieldName(1)
-            stepInEExp(1, false)
+            stepInEExp(1)
             stepOut()
             stepOut()
         }
@@ -1051,7 +1035,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling stepInEExp(String) should throw NotImplementedError`() {
         assertThrows<NotImplementedError> {
             writeAsHexString {
-                stepInEExp("foo", false)
+                stepInEExp("foo")
             }
         }
     }
@@ -1060,7 +1044,114 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling stepInEExp with an annotation should throw IonException`() {
         assertWriterThrows {
             writeAnnotations("foo")
-            stepInEExp(1, false)
+            stepInEExp(1)
+        }
+    }
+
+    @Test
+    fun `write a delimited expression group`() {
+        assertWriterOutputEquals(
+            """
+            00      | Macro 0
+            01      | FlexUInt 0 (delimited expression group)
+            5E      | true
+            F0      | End of Expression Group
+            """
+        ) {
+            stepInEExp(0)
+            stepInExpressionGroup(true)
+            writeBool(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a prefixed expression group`() {
+        assertWriterOutputEquals(
+            """
+            00      | Macro 0
+            03      | Expression Group, Length = 1
+            5E      | true
+            """
+        ) {
+            stepInEExp(0)
+            stepInExpressionGroup(false)
+            writeBool(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a prefixed expression group so long that it requires a patch point`() {
+        assertWriterOutputEquals(
+            """
+            00      | Macro 0
+            FE 03   | Expression Group, Length = 255
+            ${"5E ".repeat(255)}
+            """
+        ) {
+            stepInEExp(0)
+            stepInExpressionGroup(false)
+            repeat(255) { writeBool(true) }
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an empty prefixed expression group`() {
+        // Regardless of whether we step in to a delimited or prefixed expression group, the empty expression group
+        // is always represented as a delimited expression group.
+        assertWriterOutputEquals("00 01 F0") {
+            stepInEExp(0)
+            stepInExpressionGroup(false)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an empty delimited expression group`() {
+        assertWriterOutputEquals("00 01 F0") {
+            stepInEExp(0)
+            stepInExpressionGroup(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling stepInExpressionGroup with an annotation should throw IonException`() {
+        assertWriterThrows {
+            stepInEExp(1)
+            writeAnnotations("foo")
+            stepInExpressionGroup(false)
+        }
+    }
+
+    @Test
+    fun `calling stepInExpressionGroup while not directly in a Macro container should throw IonException`() {
+        assertWriterThrows {
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInList(false)
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInSExp(false)
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInStruct(false)
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInEExp(123)
+            stepInExpressionGroup(false)
+            stepInExpressionGroup(false)
         }
     }
 
