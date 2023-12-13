@@ -59,6 +59,7 @@ import java.util.zip.GZIPInputStream;
 import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.TestUtils.StringToTimestamp;
 import static com.amazon.ion.TestUtils.bitStringToByteArray;
+import static com.amazon.ion.TestUtils.cleanCommentedHexBytes;
 import static com.amazon.ion.TestUtils.gzippedBytes;
 import static com.amazon.ion.TestUtils.hexStringToByteArray;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
@@ -535,6 +536,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("field(%s)", fieldName),
             reader -> assertSymbolEquals(fieldName, reader.getFieldNameSymbol())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> fieldNameSymbolZero() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "fieldSidZero",
+            reader -> {
+                SymbolToken field = reader.getFieldNameSymbol();
+                assertNull(field.getText());
+                assertEquals(0, field.getSid());
+            }
         ));
     }
 
@@ -4424,7 +4436,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"true", "false"})
+    @ValueSource(booleans = {true, false})
     public void getAnnotationsAsStringFailsWhenTextIsUndefined(boolean constructFromBytes) throws Exception {
         reader = readerForIon11(hexStringToByteArray("E7 01 90 50"), constructFromBytes);
         assertSequence(next(IonType.INT), intValue(0));
@@ -4435,5 +4447,191 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     // TODO add tests for incrementally reading Ion 1.1 annotations.
+
+    /**
+     * Checks that the reader correctly reads a struct with two fields: "name" and "imports".
+     */
+    private void assertSimpleStructCorrectlyParsed(boolean constructFromBytes, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.BOOL), fieldName("name"), booleanValue(true),
+                next(IonType.BOOL), fieldName("imports"), booleanValue(false),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        // Length-prefixed
+        "C4  | Struct Length = 4 \n" +
+        "09  | SID 4 \n" +
+        "5E  | true \n" +
+        "0D  | SID 6 \n " +
+        "5F  | false",
+        // FlexSym field names using SID type ID
+        "FC                       | Variable Length SID struct \n" +
+        "21                       | Length = 16 \n" +
+        "00                       | Switch to FlexSyms \n" +
+        "F9 6E 61 6D 65           | name \n" +
+        "5E                       | true \n" +
+        "F3 69 6D 70 6F 72 74 73  | imports \n " +
+        "5F                       | false",
+        // SID then FlexSym
+        "CC                       | Struct Length = 12 \n" +
+        "09                       | SID 4 \n" +
+        "5E                       | true \n" +
+        "00                       | Switch to FlexSyms \n" +
+        "F3 69 6D 70 6F 72 74 73  | imports \n " +
+        "5F                       | false",
+        // FlexSym then SID
+        "C9                       | Struct Length = 12 \n" +
+        "00                       | Switch to FlexSyms \n" +
+        "F9 6E 61 6D 65           | name \n" +
+        "5E                       | true \n" +
+        "0D                       | SID 6 \n " +
+        "5F                       | false",
+        // FlexSym field names using variable-length FlexSym type ID
+        "FD                       | Variable Length FlexSym struct \n" +
+        "1F                       | Length = 15 \n" +
+        "F9 6E 61 6D 65           | name \n" +
+        "5E                       | true \n" +
+        "F3 69 6D 70 6F 72 74 73  | imports \n " +
+        "5F                       | false",
+        // TODO delimited
+    })
+    public void readStruct_1_1(String inputBytes) throws Exception {
+        assertSimpleStructCorrectlyParsed(true, inputBytes);
+        assertSimpleStructCorrectlyParsed(false, inputBytes);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void readMultipleNestedPrefixedStructs_1_1(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "C8  | Struct Length = 8 \n" +
+            "17  | SID 11 \n" +
+            "C6  | Struct Length = 6 \n" +
+            "17  | SID 11 \n" +
+            "C4  | Struct Length = 4 \n" +
+            "17  | SID 11 \n" +
+            "C2  | Struct Length = 2 \n" +
+            "17  | SID 11 \n" +
+            "C0  | Struct Length = 0"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                container(IonType.STRUCT,
+                    container(IonType.STRUCT)
+                )
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    /**
+     * Checks that the reader correctly reads symbol zero, which requires a special FlexSym, as a field name.
+     */
+    private void assertStructWithSymbolZeroFieldNamesCorrectlyParsed(boolean constructFromBytes, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true),
+                next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true),
+                next(IonType.BOOL), fieldName("name"), booleanValue(true),
+                next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        // SID 0 in fixed-length SID struct
+        "C8      | Struct Length = 8 \n" +
+        "01      | SID 0 \n" +
+        "5E      | true \n" +
+        "01      | FlexSym SID 0 \n" +
+        "5E      | true \n" +
+        "09      | FlexSym SID 4 (name) \n" +
+        "5E      | true \n" +
+        "01      | FlexSym SID 0 \n" +
+        "5E      | true",
+        // SID 0 in variable-length FlexSym struct
+        "FD      | Variable length SID struct \n" +
+        "17      | Length = FlexUInt 11 \n" +
+        "01 90   | SID 0 \n" +
+        "5E      | true \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true \n" +
+        "09      | FlexSym SID 4 (name) \n" +
+        "5E      | true \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true",
+        // SID 0 before and after transitioning from SIDs to FlexSyms
+        "FC      | Variable length SID struct \n" +
+        "17      | Length = FlexUInt 11 \n" +
+        "01      | SID 0 \n" +
+        "5E      | true \n" +
+        "00      | switch to FlexSym encoding \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true \n" +
+        "09      | FlexSym SID 4 (name) \n" +
+        "5E      | true \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true"
+        // TODO delimited
+    })
+    public void readStructWithSymbolZeroFieldNames_1_1(String inputBytes) throws Exception {
+        assertStructWithSymbolZeroFieldNamesCorrectlyParsed(true, inputBytes);
+        assertStructWithSymbolZeroFieldNamesCorrectlyParsed(false, inputBytes);
+    }
+
+    /**
+     * Checks that the reader correctly reads empty inline text, which requires a special FlexSym, as a field name.
+     */
+    public void assertStructWithEmptyInlineFieldNamesCorrectlyParsed(boolean constructFromBytes, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.BOOL), fieldName(""), booleanValue(false)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        // Empty field name in fixed-length SID struct
+        "C4      | Struct Length = 4 \n" +
+        "00      | switch to FlexSym encoding \n" +
+        "01 80   | FlexSym empty text \n" +
+        "5F      | false",
+        // Empty field name in variable-length SID struct
+        "FC      | Variable length SID struct \n" +
+        "09      | Length = 4 \n" +
+        "00      | switch to FlexSym encoding \n" +
+        "01 80   | FlexSym empty text \n" +
+        "5F      | false",
+        // Empty field name in variable-length FlexSym struct
+        "FD      | Variable length FlexSym struct \n" +
+        "07      | Length = 3 \n" +
+        "01 80   | FlexSym empty text \n" +
+        "5F      | false",
+        // TODO delimited
+    })
+    public void readStructWithEmptyInlineFieldName_1_1(String inputBytes) throws Exception {
+        assertStructWithEmptyInlineFieldNamesCorrectlyParsed(true, inputBytes);
+        assertStructWithEmptyInlineFieldNamesCorrectlyParsed(false, inputBytes);
+    }
+
+    // TODO add tests for incrementally reading Ion 1.1 containers, including oversize values.
 
 }

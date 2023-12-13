@@ -1321,6 +1321,19 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return fieldSid;
     }
 
+    /**
+     * Reads the text for the current field name.
+     * @return the field name text.
+     */
+    String getFieldText() {
+        if (fieldTextMarker.typeId == null || fieldTextMarker.typeId.type == IonType.STRING) {
+            ByteBuffer utf8InputBuffer = prepareByteBuffer(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
+            return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
+        }
+        fieldSid = (int) readUInt(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
+        return null;
+    }
+
     @Override
     public boolean isInStruct() {
         return parent != null && parent.typeId.type == IonType.STRUCT;
