@@ -17,6 +17,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
 /**
@@ -1071,7 +1075,7 @@ class IonCursorBinary implements IonCursor {
                 if (provisionalMarker.endIndex < 0) {
                     return true;
                 }
-                if (valueTid.lowerNibble == 8) {
+                if (valueTid.lowerNibble == TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1) {
                     // Opcode 0xE8 (two annotation FlexSyms)
                     provisionalMarker = annotationTokenMarkers.provisionalElement();
                     uncheckedReadFlexSym_1_1(provisionalMarker);
@@ -1085,7 +1089,7 @@ class IonCursorBinary implements IonCursor {
                 // Opcodes 0xE4 (one annotation SID) and 0xE5 (two annotation SIDs)
                 int annotationSid = (int) uncheckedReadFlexUInt_1_1();
                 annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
-                if (valueTid.lowerNibble == 5) {
+                if (valueTid.lowerNibble == TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1) {
                     // Opcode 0xE5 (two annotation SIDs)
                     annotationSid = (int) uncheckedReadFlexUInt_1_1();
                     annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
@@ -1128,9 +1132,9 @@ class IonCursorBinary implements IonCursor {
             annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
             peekIndex = annotationSequenceMarker.endIndex;
         } else {
-            // At this point the value must have at least one more byte for each annotation VarSym (one for lower
+            // At this point the value must have at least one more byte for each annotation FlexSym (one for lower
             // nibble 7, two for lower nibble 8), plus one for the smallest-possible value representation.
-            if (!fillAt(peekIndex, (valueTid.lowerNibble == 7 || valueTid.lowerNibble == 4) ? 2 : 3)) {
+            if (!fillAt(peekIndex, (valueTid.lowerNibble == ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1 || valueTid.lowerNibble == ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1) ? 2 : 3)) {
                 return true;
             }
 
@@ -1141,7 +1145,7 @@ class IonCursorBinary implements IonCursor {
                 if (provisionalMarker.endIndex < 0) {
                     return true;
                 }
-                if (valueTid.lowerNibble == 8) {
+                if (valueTid.lowerNibble == TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1) {
                     // Opcode 0xE8 (two annotation FlexSyms)
                     provisionalMarker = annotationTokenMarkers.provisionalElement();
                     slowReadFlexSym_1_1(provisionalMarker);
@@ -1158,7 +1162,7 @@ class IonCursorBinary implements IonCursor {
                     return true;
                 }
                 annotationTokenMarkers.provisionalElement().endIndex = annotationSid;
-                if (valueTid.lowerNibble == 5) {
+                if (valueTid.lowerNibble == TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1) {
                     // Opcode 0xE5 (two annotation SIDs)
                     annotationSid = (int) slowReadFlexUInt_1_1();
                     if (annotationSid < 0) {
@@ -1282,7 +1286,7 @@ class IonCursorBinary implements IonCursor {
                 markerToSet.startIndex = peekIndex;
                 markerToSet.endIndex = peekIndex;
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
-                throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
+                throw new IonException("FlexSym 0 may only precede symbol zero, empty string, or delimited end.");
             }
             return -1;
         } else if (result < 0) {
@@ -1373,6 +1377,7 @@ class IonCursorBinary implements IonCursor {
      * `peekIndex` points to the first byte of the value that follows the field name. If the field name contained a
      * symbol ID, `fieldSid` is set to that symbol ID. If it contained inline text, `fieldSid` is set to -1, and the
      * start and end indexes of the inline text are described by `fieldTextMarker`.
+     * @return true if there are not enough bytes in the stream to complete the field name; otherwise, false.
      */
     private boolean slowReadFieldName_1_1() {
         // The value must have at least 2 more bytes: 1 for the smallest-possible field SID and 1 for

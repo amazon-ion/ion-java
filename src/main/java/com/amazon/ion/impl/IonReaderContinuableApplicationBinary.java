@@ -1114,10 +1114,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     @Override
     public String getFieldName() {
         if (fieldTextMarker.startIndex > -1) {
-            String fieldName = getFieldText();
-            if (fieldName != null) {
-                return fieldName;
-            }
+            return getFieldText();
         }
         if (fieldSid < 0) {
             return null;
@@ -1132,10 +1129,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     @Override
     public SymbolToken getFieldNameSymbol() {
         if (fieldTextMarker.startIndex > -1) {
-            String fieldName = getFieldText();
-            if (fieldName != null) {
-                return new SymbolTokenImpl(fieldName, -1);
-            }
+            return new SymbolTokenImpl(getFieldText(), -1);
         }
         if (fieldSid < 0) {
             return null;
