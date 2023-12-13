@@ -65,7 +65,7 @@ final class IonTypeID {
         IonType.LIST,
         IonType.SEXP,
         IonType.STRUCT, // symbol ID field names
-        IonType.STRUCT, // FlexSym field names
+        null, //IonType.STRUCT, // FlexSym field names // TODO see: https://github.com/amazon-ion/ion-docs/issues/292
         null, // E: symbol ID, annotated value, NOP, null, system macro invocation
         null  // F: variable length macro, variable length of all types, delimited start/end
     };
@@ -78,6 +78,7 @@ final class IonTypeID {
     static final IonTypeID[] TYPE_IDS_1_0;
     static final IonTypeID[] TYPE_IDS_1_1;
     static final IonTypeID[] NULL_TYPE_IDS_1_1;
+    static final IonTypeID STRUCT_WITH_FLEX_SYMS_ID;
     static {
         TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
         TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
@@ -105,6 +106,10 @@ final class IonTypeID {
         NULL_TYPE_IDS_1_1[0x9] = TYPE_IDS_1_0[0xBF]; // null.list
         NULL_TYPE_IDS_1_1[0xA] = TYPE_IDS_1_0[0xCF]; // null.sexp
         NULL_TYPE_IDS_1_1[0xB] = TYPE_IDS_1_0[0xDF]; // null.struct
+
+        // This is used as a dummy ID when a struct switches to using FlexSym field names in the middle. The key
+        // here is that the type is STRUCT and the isInlineable flag is true.
+        STRUCT_WITH_FLEX_SYMS_ID = TYPE_IDS_1_1[VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS & 0xFF];
     }
 
     final IonType type;
@@ -163,6 +168,7 @@ final class IonTypeID {
             || id == (byte) 0xD1
             || id == (byte) 0xE0
             || id == (byte) 0xEE
+            || (id & 0xF0) == 0xD0 // TODO see: https://github.com/amazon-ion/ion-docs/issues/292
         );
     }
 

@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
+import com.amazon.ion.TestUtils.*
 import com.amazon.ion.impl.*
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
@@ -35,16 +36,7 @@ class IonRawBinaryWriterTest_1_1 {
      *                 you can use `|` to add comments.
      */
     private inline fun assertWriterOutputEquals(hexBytes: String, autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit) {
-        val commentRegex = Regex("\\|.*$")
-        val excessWhitespaceRegex = Regex("\\s+")
-        val cleanedHexBytes: String = hexBytes.lines()
-            .map { it.replace(commentRegex, "").trim() }
-            .filter { it.isNotBlank() }
-            .joinToString(" ")
-            .replace(excessWhitespaceRegex, " ")
-            .uppercase()
-            .trim()
-        assertEquals(cleanedHexBytes, writeAsHexString(autoClose, block))
+        assertEquals(cleanCommentedHexBytes(hexBytes), writeAsHexString(autoClose, block))
     }
 
     private inline fun assertWriterThrows(block: IonRawBinaryWriter_1_1.() -> Unit) {
