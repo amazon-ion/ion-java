@@ -23,6 +23,12 @@ final class IonTypeID {
     private static final int ANNOTATION_WRAPPER_MAX_LENGTH = 0xE;
     static final int ORDERED_STRUCT_NIBBLE = 0x1;
 
+    // Ion 1.1 annotation wrapper lower nibbles (upper nibble 0xE)
+    static final int ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1 = 0x4;
+    static final int TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1 = 0x5;
+    static final int ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1 = 0x7;
+    static final int TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1 = 0x8;
+
     // NOTE: 'annotation wrapper' is not an IonType, but it is simplest to treat it as one for the purposes of this
     // implementation in order to have a direct mapping from binary type IDs to IonType enum values. IonType.DATAGRAM
     // does not have a type ID, so we will use it to mean 'annotation wrapper' instead.
@@ -117,7 +123,7 @@ final class IonTypeID {
     final boolean variableLength;
     final boolean isNull;
     final boolean isNopPad;
-    final byte lowerNibble;
+    final byte lowerNibble; // TODO consider storing the entire byte rather than just the lower nibble
     final boolean isValid;
     final boolean isNegativeInt;
     final boolean isMacroInvocation;
