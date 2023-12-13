@@ -37,6 +37,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 
@@ -143,7 +145,7 @@ public class TestUtils
     public static final FilenameFilter GLOBAL_SKIP_LIST =
         new And(
             // Skips documentation that accompanies some test vectors
-            NOT_MARKDOWN_FILTER,   
+            NOT_MARKDOWN_FILTER,
             new FileIsNot(
                       "bad/clobWithNullCharacter.ion"          // TODO amazon-ion/ion-java/43
                       ,"bad/emptyAnnotatedInt.10n"             // TODO amazon-ion/ion-java/55
@@ -154,7 +156,7 @@ public class TestUtils
                       ,"good/whitespace.ion"
                       ,"good/item1.10n"                        // TODO amazon-ion/ion-java#126 (roundtrip symbols with unknown text)
                       ,"bad/typecodes/type_6_length_0.10n"     // TODO amazon-ion/ion-java#272
-                      ,"good/typecodes/T7-large.10n"           // TODO amazon-ion/ion-java#273 
+                      ,"good/typecodes/T7-large.10n"           // TODO amazon-ion/ion-java#273
                       ,"good/equivs/clobNewlines.ion"          // TODO amazon-ion/ion-java#274
                       ,"bad/minLongWithLenTooSmall.10n"        // Note: The long itself is fine. The data ends with 0x01, a 2-byte NOP pad header. It is not worth adding the logic to detect this as unexpected EOF.
                       ,"bad/nopPadTooShort.10n"                // Note: There are fewer bytes than the NOP pad header declares. It is not worth adding the logic to detect this as unexpected EOF.
@@ -684,6 +686,21 @@ public class TestUtils
      */
     public static byte[] bitStringToByteArray(String bitString) {
         return octetStringToByteArray(bitString, 2);
+    }
+
+    /**
+     * @param hexBytes a string containing white-space delimited pairs of hex digits representing the expected output.
+     *                 The string may contain multiple lines. Anything after a `|` character on a line is ignored, so
+     *                 you can use `|` to add comments.
+     */
+    public static String cleanCommentedHexBytes(String hexBytes) {
+        return Stream.of(hexBytes.split("\n"))
+            .map(it -> it.replaceAll("\\|.*$", "").trim())
+            .filter(it -> !it.trim().isEmpty())
+            .collect(Collectors.joining(" "))
+            .replaceAll("\\s+", " ")
+            .toUpperCase()
+            .trim();
     }
 
     /**
