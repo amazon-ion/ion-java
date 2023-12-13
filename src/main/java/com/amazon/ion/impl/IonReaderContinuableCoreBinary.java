@@ -563,7 +563,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 markerToSet.startIndex = peekIndex;
                 markerToSet.endIndex = peekIndex;
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
-                throw new IonException("VarSyms may only wrap symbol zero, empty string, or delimited end.");
+                throw new IonException("FlexSym 0 may only precede symbol zero, empty string, or delimited end.");
             }
             return -1;
         } else if (result < 0) {
@@ -1326,12 +1326,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the field name text.
      */
     String getFieldText() {
-        if (fieldTextMarker.typeId == null || fieldTextMarker.typeId.type == IonType.STRING) {
-            ByteBuffer utf8InputBuffer = prepareByteBuffer(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
-            return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
-        }
-        fieldSid = (int) readUInt(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
-        return null;
+        ByteBuffer utf8InputBuffer = prepareByteBuffer(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
+        return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
     }
 
     @Override
