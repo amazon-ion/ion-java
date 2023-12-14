@@ -528,7 +528,7 @@ class IonRawBinaryWriterTest_1_1 {
             17             | Length = 11
             81             | SID 64
             5E             | true
-            00             | switch to FlexSym encoding
+            01             | switch to FlexSym encoding
             FB 66 6F 6F    | FlexSym 'foo'
             5E             | true
             02 01          | FlexSym SID 64
@@ -571,7 +571,7 @@ class IonRawBinaryWriterTest_1_1 {
             17      | Length = FlexUInt 11
             03      | SID 1
             5E      | true
-            00      | switch to FlexSym encoding
+            01      | switch to FlexSym encoding
             01 90   | FlexSym SID 0
             5E      | true
             05      | FlexSym SID 2
