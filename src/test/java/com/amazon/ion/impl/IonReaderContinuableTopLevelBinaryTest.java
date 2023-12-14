@@ -4495,7 +4495,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // FlexSym field names using SID type ID
         "FC                       | Variable Length SID struct \n" +
         "21                       | Length = 16 \n" +
-        "00                       | Switch to FlexSyms \n" +
+        "01                       | Switch to FlexSyms \n" +
         "F9 6E 61 6D 65           | name \n" +
         "5E                       | true \n" +
         "F3 69 6D 70 6F 72 74 73  | imports \n " +
@@ -4504,12 +4504,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "CC                       | Struct Length = 12 \n" +
         "09                       | SID 4 \n" +
         "5E                       | true \n" +
-        "00                       | Switch to FlexSyms \n" +
+        "01                       | Switch to FlexSyms \n" +
         "F3 69 6D 70 6F 72 74 73  | imports \n " +
         "5F                       | false",
         // FlexSym then SID
         "C9                       | Struct Length = 12 \n" +
-        "00                       | Switch to FlexSyms \n" +
+        "01                       | Switch to FlexSyms \n" +
         "F9 6E 61 6D 65           | name \n" +
         "5E                       | true \n" +
         "0D                       | SID 6 \n " +
@@ -4574,14 +4574,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @ValueSource(strings = {
         // SID 0 in fixed-length SID struct
-        "C8      | Struct Length = 8 \n" +
-        "01      | SID 0 \n" +
+        "CC      | Struct Length = 12 \n" +
+        "01      | Switch to FlexSyms \n" +
+        "01 90   | FlexSym 0 \n" +
         "5E      | true \n" +
-        "01      | FlexSym SID 0 \n" +
+        "01 90   | FlexSym SID 0 \n" +
         "5E      | true \n" +
         "09      | FlexSym SID 4 (name) \n" +
         "5E      | true \n" +
-        "01      | FlexSym SID 0 \n" +
+        "01 90   | FlexSym SID 0 \n" +
         "5E      | true",
         // SID 0 in variable-length FlexSym struct
         "FD      | Variable length SID struct \n" +
@@ -4594,12 +4595,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "5E      | true \n" +
         "01 90   | FlexSym SID 0 \n" +
         "5E      | true",
-        // SID 0 before and after transitioning from SIDs to FlexSyms
+        // SID 0 in variable-length SID to FlexSyms
         "FC      | Variable length SID struct \n" +
-        "17      | Length = FlexUInt 11 \n" +
-        "01      | SID 0 \n" +
+        "19      | Length = FlexUInt 12 \n" +
+        "01      | Switch to FlexSyms \n" +
+        "01 90   | SID 0 \n" +
         "5E      | true \n" +
-        "00      | switch to FlexSym encoding \n" +
         "01 90   | FlexSym SID 0 \n" +
         "5E      | true \n" +
         "09      | FlexSym SID 4 (name) \n" +
@@ -4611,6 +4612,33 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void readStructWithSymbolZeroFieldNames_1_1(String inputBytes) throws Exception {
         assertStructWithSymbolZeroFieldNamesCorrectlyParsed(true, inputBytes);
         assertStructWithSymbolZeroFieldNamesCorrectlyParsed(false, inputBytes);
+    }
+
+    /**
+     * Verifies that the reader considers the given input to be incomplete.
+     */
+    private void assertIncompleteInput(boolean constructFromBytes, String inputBytes) throws Exception {
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
+        // When closed without receiving input that completes an incomplete value, the reader throws.
+        assertSequence(next(null));
+        assertThrows(IonException.class, () -> reader.close());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        // FlexUInt 0 in a fixed-length SID struct
+        "C3    | Fixed-length 3 SID struct \n" +
+        "01    | FlexUInt 0 \n" +
+        "50    | This should not be parsed as int 0, but rather the first byte in a FlexSym field name",
+        // FlexUInt 0 in a variable-length SID struct
+        "FC    | Variable-length SID struct \n" +
+        "07    | FlexUInt length = 3 \n" +
+        "01    | FlexUInt 0 \n" +
+        "50    | This should not be parsed as int 0, but rather the first byte in a FlexSym field name"
+    })
+    public void symbolIdStructWithFlexUIntZeroInFieldNameIsNotTreatedAsSidZero(String inputBytes) throws Exception {
+        assertIncompleteInput(true, inputBytes);
+        assertIncompleteInput(false, inputBytes);
     }
 
     /**
@@ -4631,13 +4659,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ValueSource(strings = {
         // Empty field name in fixed-length SID struct
         "C4      | Struct Length = 4 \n" +
-        "00      | switch to FlexSym encoding \n" +
+        "01      | switch to FlexSym encoding \n" +
         "01 80   | FlexSym empty text \n" +
         "5F      | false",
         // Empty field name in variable-length SID struct
         "FC      | Variable length SID struct \n" +
         "09      | Length = 4 \n" +
-        "00      | switch to FlexSym encoding \n" +
+        "01      | switch to FlexSym encoding \n" +
         "01 80   | FlexSym empty text \n" +
         "5F      | false",
         // Empty field name in variable-length FlexSym struct
