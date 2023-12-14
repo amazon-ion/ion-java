@@ -9,6 +9,8 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
 import com.amazon.ion.SystemSymbols;
+import com.amazon.ion.impl.bin.FlexInt;
+import com.amazon.ion.impl.bin.Ion_1_1_Constants;
 import com.amazon.ion.impl.bin.OpCodes;
 
 import java.io.ByteArrayInputStream;
@@ -1215,7 +1217,7 @@ class IonCursorBinary implements IonCursor {
         } else {
             // 0 in field name position of a SID struct indicates that all field names that follow are represented as
             // using FlexSyms.
-            if (buffer[(int) peekIndex] == 0) {
+            if (buffer[(int) peekIndex] == FlexInt.ZERO) {
                 peekIndex++;
                 parent.typeId = IonTypeID.STRUCT_WITH_FLEX_SYMS_ID;
                 fieldSid = (int) uncheckedReadFlexSym_1_1(fieldTextMarker);
@@ -1391,7 +1393,7 @@ class IonCursorBinary implements IonCursor {
         } else {
             // 0 in field name position of a SID struct indicates that all field names that follow are represented as
             // using FlexSyms.
-            if (buffer[(int) peekIndex] == 0) {
+            if (buffer[(int) peekIndex] == FlexInt.ZERO) {
                 peekIndex++;
                 parent.typeId = IonTypeID.STRUCT_WITH_FLEX_SYMS_ID;
                 fieldSid = (int) slowReadFlexSym_1_1(fieldTextMarker);
