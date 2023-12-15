@@ -477,7 +477,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     val contentLength = currentContainer.length
                     if (contentLength <= 0xF && !currentContainer.usesFlexSym) {
                         // TODO: Right now, this is skipped if we switch to FlexSym after starting a struct
-                        //       because we have now way to differentiate a struct that started as FlexSym
+                        //       because we have no way to differentiate a struct that started as FlexSym
                         //       from a struct that switched to FlexSym.
                         // Clean up any unused space that was pre-allocated.
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
