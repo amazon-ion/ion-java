@@ -1033,7 +1033,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `calling stepInEExp(String) should throw NotImplementedError`() {
-        assertThrows<NotImplementedError> {
+        assertThrows<UnsupportedOperationException> {
             writeAsHexString {
                 stepInEExp("foo")
             }

@@ -415,7 +415,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun stepInEExp(name: CharSequence) {
-        TODO("Not supported by the raw binary writer.")
+        throw UnsupportedOperationException("Binary writer requires macros to be invoked by their ID.")
     }
 
     override fun stepInEExp(id: Int) {
