@@ -86,7 +86,7 @@ jobs:
           path: new
 
       - name: Download test Ion Data from artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: generated-test-data
           path: testData
