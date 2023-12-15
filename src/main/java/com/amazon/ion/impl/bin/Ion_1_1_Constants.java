@@ -17,7 +17,7 @@ public class Ion_1_1_Constants {
     /**
      * FlexSym byte that indicates an opcode is coming; it's value is the FlexInt encoding of 0.
      */
-    static final byte FLEX_SYM_ESCAPE_BYTE = 1;
+    static final byte FLEX_SYM_ESCAPE_BYTE = FlexInt.ZERO;
 
     static final byte SID_TO_FLEX_SYM_SWITCH_MARKER = FlexInt.ZERO;
 
