@@ -949,9 +949,25 @@ public class WriteBufferTest
     @Test
     public void testTruncate() throws IOException
     {
-        buf.writeBytes("ARGLEFOOBARGLEDOO".getBytes("UTF-8"));
+        buf.writeBytes("ARGLE".getBytes("UTF-8"));
         buf.truncate(3);
+        // Check that the expected bytes are present
         assertBuffer("ARG".getBytes("UTF-8"));
+        // ...and check that we can resume writing without any issues
+        buf.writeBytes("LEFOOBARGLEDOO".getBytes("UTF-8"));
+        assertBuffer("ARGLEFOOBARGLEDOO".getBytes("UTF-8"));
+    }
+
+    @Test
+    public void testTruncateAcrossBlocks() throws IOException
+    {
+        buf.writeBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes("UTF-8"));
+        buf.truncate(3);
+        // Check that the expected bytes are present
+        assertBuffer("ABC".getBytes("UTF-8"));
+        // ...and check that we can resume writing without any issues
+        buf.writeBytes("DEFGHIJKLMNOPQRSTUVWXYZ".getBytes("UTF-8"));
+        assertBuffer("ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes("UTF-8"));
     }
 
     @Test
