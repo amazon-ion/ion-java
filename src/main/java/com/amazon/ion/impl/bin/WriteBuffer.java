@@ -100,10 +100,11 @@ import java.util.List;
     {
         final int index = index(position);
         final int offset = offset(position);
-        final Block block = blocks.get(index);
-        this.index = index;
-        block.limit = offset;
-        current = block;
+        while (this.index != index) {
+            blocks.remove(this.index--);
+        }
+        current = blocks.get(index);
+        current.limit = offset;
     }
 
     /**
@@ -1272,7 +1273,7 @@ import java.util.List;
 
     public void writeVarUIntDirect1At(final long position, final long value)
     {
-        writeUInt8At(position, (value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
+        writeByteAt(position, (value & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
     }
 
     private void writeVarUIntDirect2StraddlingAt(final int index, final int offset, final long value)
@@ -1300,7 +1301,11 @@ import java.util.List;
         block.data[offset + 1] = (byte) ((value                            & VAR_INT_MASK) | VAR_INT_FINAL_OCTET_SIGNAL_MASK);
     }
 
-    public void writeUInt8At(final long position, final long value)
+    public void writeByteAt(final long position, final byte value) {
+        writeByteAt(position, (long) value);
+    }
+
+    public void writeByteAt(final long position, final long value)
     {
         final int index = index(position);
         final int offset = offset(position);
@@ -1375,7 +1380,7 @@ import java.util.List;
                 allocateNewBlock();
             }
             for (int i = 0; i < numBytes; i++) {
-                writeUInt8At(position + i, scratch[i]);
+                writeByteAt(position + i, scratch[i]);
             }
         }
     }

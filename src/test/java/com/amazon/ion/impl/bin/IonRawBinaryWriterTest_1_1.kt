@@ -893,6 +893,268 @@ class IonRawBinaryWriterTest_1_1 {
         }
     }
 
+    @Test
+    fun `write an e-expression`() {
+        assertWriterOutputEquals("00") {
+            stepInEExp(0)
+            stepOut()
+        }
+        assertWriterOutputEquals("3F") {
+            stepInEExp(63)
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "      64, 40 01",
+        "      65, 41 01",
+        "      80, 40 03",
+        "    1211, 4B 8F",
+        "    2111, 4F FF",
+        "    2112, 40 02 02",
+        "   71376, 40 A6 45",
+        "  262207, 4F FE FF",
+        "  262208, 40 04 00 02",
+        "33554495, 4F FC FF FF",
+    )
+    fun `write an e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
+        assertWriterOutputEquals(expectedBytes) {
+            stepInEExp(id)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write nested e-expressions`() {
+        // E-Expressions don't have length prefixes, so we're putting them inside lists
+        // so that we can check that the length gets propagated correctly to the parent
+        assertWriterOutputEquals(
+            """
+            AB         | List Length 11
+            1F         | Macro 31
+            A9         | List Length 9
+            40 01      | Macro 64
+            A6         | List Length 6
+            43 03      | Macro 83
+            A3         | List Length 3
+            44 5A 02   | Macro 2468
+            """
+        ) {
+            stepInList(false)
+            stepInEExp(31)
+            stepInList(false)
+            stepInEExp(64)
+            stepInList(false)
+            stepInEExp(83)
+            stepInList(false)
+            stepInEExp(2468)
+            repeat(8) { stepOut() }
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the field name position of a sid struct`() {
+        assertWriterOutputEquals(
+            """
+            FC      | Variable Length SID Struct
+            11      | Length = 8
+            15      | SID 10
+            5E      | true
+            01      | switch to FlexSym encoding
+            01      | FlexSym Escape Byte
+            1F      | Macro 31 (0x1F)
+            01      | FlexSym Escape Byte
+            40 01   | Macro 64
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(10)
+            writeBool(true)
+            stepInEExp(31)
+            stepOut()
+            stepInEExp(64)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the field name position of a delimited struct`() {
+        assertWriterOutputEquals(
+            """
+            F3      | Begin Delimited Struct
+            01      | FlexSym Escape Byte
+            1F      | Macro 31 (0x1F)
+            01      | FlexSym Escape Byte
+            F0      | End Delimiter
+            """
+        ) {
+            stepInStruct(true)
+            stepInEExp(31)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the field name position of a variable length flex-sym struct`() {
+        assertWriterOutputEquals(
+            """
+            FD      | Variable Length FlexSym Struct
+            05      | Length = 2
+            01      | FlexSym Escape Byte
+            1F      | Macro 31 (0x1F)
+            """
+        ) {
+            stepInStruct(false)
+            stepInEExp(31)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an e-expression in the value position of a struct`() {
+        assertWriterOutputEquals(
+            """
+            C2      | Struct length 2
+            03      | SID 1
+            01      | Macro 1
+            """
+        ) {
+            stepInStruct(false)
+            writeFieldName(1)
+            stepInEExp(1)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling stepInEExp(String) should throw NotImplementedError`() {
+        assertThrows<UnsupportedOperationException> {
+            writeAsHexString {
+                stepInEExp("foo")
+            }
+        }
+    }
+
+    @Test
+    fun `calling stepInEExp with an annotation should throw IonException`() {
+        assertWriterThrows {
+            writeAnnotations("foo")
+            stepInEExp(1)
+        }
+    }
+
+    @Test
+    fun `write a delimited expression group`() {
+        assertWriterOutputEquals(
+            """
+            00      | Macro 0
+            01      | FlexUInt 0 (delimited expression group)
+            5E      | true
+            F0      | End of Expression Group
+            """
+        ) {
+            stepInEExp(0)
+            stepInExpressionGroup(true)
+            writeBool(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a prefixed expression group`() {
+        assertWriterOutputEquals(
+            """
+            00      | Macro 0
+            03      | Expression Group, Length = 1
+            5E      | true
+            """
+        ) {
+            stepInEExp(0)
+            stepInExpressionGroup(false)
+            writeBool(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a prefixed expression group so long that it requires a patch point`() {
+        assertWriterOutputEquals(
+            """
+            00      | Macro 0
+            FE 03   | Expression Group, Length = 255
+            ${"5E ".repeat(255)}
+            """
+        ) {
+            stepInEExp(0)
+            stepInExpressionGroup(false)
+            repeat(255) { writeBool(true) }
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an empty prefixed expression group`() {
+        // Regardless of whether we step in to a delimited or prefixed expression group, the empty expression group
+        // is always represented as a delimited expression group.
+        assertWriterOutputEquals("00 01 F0") {
+            stepInEExp(0)
+            stepInExpressionGroup(false)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write an empty delimited expression group`() {
+        assertWriterOutputEquals("00 01 F0") {
+            stepInEExp(0)
+            stepInExpressionGroup(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling stepInExpressionGroup with an annotation should throw IonException`() {
+        assertWriterThrows {
+            stepInEExp(1)
+            writeAnnotations("foo")
+            stepInExpressionGroup(false)
+        }
+    }
+
+    @Test
+    fun `calling stepInExpressionGroup while not directly in a Macro container should throw IonException`() {
+        assertWriterThrows {
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInList(false)
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInSExp(false)
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInStruct(false)
+            stepInExpressionGroup(false)
+        }
+        assertWriterThrows {
+            stepInEExp(123)
+            stepInExpressionGroup(false)
+            stepInExpressionGroup(false)
+        }
+    }
+
     /**
      * Writes this Ion, taken from https://amazon-ion.github.io/ion-docs/
      * ```
