@@ -579,36 +579,67 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return length;
     }
 
+    /**
+     * Loads the scalar converter with an integer value that fits the Ion int on which the reader is positioned.
+     */
+    private void prepareToConvertIntValue() {
+        if (getIntegerSize() == IntegerSize.BIG_INTEGER) {
+            scalarConverter.addValue(bigIntegerValue());
+            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.bigInteger_value);
+        } else {
+            scalarConverter.addValue(longValue());
+            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.long_value);
+        }
+    }
+
     @Override
     public BigDecimal bigDecimalValue() {
-        if (valueTid == null || IonType.DECIMAL != valueTid.type) {
+        BigDecimal value = null;
+        if (valueTid.type == IonType.DECIMAL) {
+            if (valueTid.isNull) {
+                return null;
+            }
+            prepareScalar();
+            peekIndex = valueMarker.startIndex;
+            if (peekIndex >= valueMarker.endIndex) {
+                value = BigDecimal.ZERO;
+            } else {
+                value = minorVersion == 0 ? readBigDecimal_1_0() : readBigDecimal_1_1();
+            }
+        } else if (valueTid.type == IonType.INT) {
+            prepareToConvertIntValue();
+            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
+            value = scalarConverter.getBigDecimal();
+            scalarConverter.clear();
+        } else {
             throwDueToInvalidType(IonType.DECIMAL);
         }
-        if (valueTid.isNull) {
-            return null;
-        }
-        prepareScalar();
-        peekIndex = valueMarker.startIndex;
-        if (peekIndex >= valueMarker.endIndex) {
-            return BigDecimal.ZERO;
-        }
-        return minorVersion == 0 ? readBigDecimal_1_0() : readBigDecimal_1_1();
+        return value;
     }
 
     @Override
     public Decimal decimalValue() {
-        if (valueTid == null || IonType.DECIMAL != valueTid.type) {
+        Decimal value = null;
+        if (valueTid.type == IonType.DECIMAL) {
+            if (valueTid.isNull) {
+                return null;
+            }
+            prepareScalar();
+            peekIndex = valueMarker.startIndex;
+            if (peekIndex >= valueMarker.endIndex) {
+                value = Decimal.ZERO;
+            } else {
+                value = minorVersion == 0 ? readDecimal_1_0() : readDecimal_1_1();
+            }
+        } else if (valueTid.type == IonType.INT) {
+            prepareToConvertIntValue();
+            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
+            value = scalarConverter.getDecimal();
+            scalarConverter.clear();
+        } else {
             throwDueToInvalidType(IonType.DECIMAL);
         }
-        if (valueTid.isNull) {
-            return null;
-        }
-        prepareScalar();
-        peekIndex = valueMarker.startIndex;
-        if (peekIndex >= valueMarker.endIndex) {
-            return Decimal.ZERO;
-        }
-        return minorVersion == 0 ? readDecimal_1_0() : readDecimal_1_1();
+        return value;
     }
 
     @Override
@@ -689,9 +720,14 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 // Note: there is no need to check for other lengths here; the type ID byte is validated during next().
                 value = bytes.getDouble();
             }
-        }  else if (valueTid.type == IonType.DECIMAL) {
+        } else if (valueTid.type == IonType.DECIMAL) {
             scalarConverter.addValue(decimalValue());
             scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
+            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));
+            value = scalarConverter.getDouble();
+            scalarConverter.clear();
+        } else if (valueTid.type == IonType.INT) {
+            prepareToConvertIntValue();
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));
             value = scalarConverter.getDouble();
             scalarConverter.clear();
