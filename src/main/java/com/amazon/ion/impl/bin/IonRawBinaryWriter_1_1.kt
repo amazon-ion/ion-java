@@ -7,6 +7,7 @@ import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.IonEncoder_1_1.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.List
+import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.Macro
 import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.bin.utf8.*
 import com.amazon.ion.util.*
@@ -29,7 +30,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         SExp,
         Struct,
         Macro,
-        Stream,
+        ExpressionGroup,
         /**
          * Represents the top level stream. The [containerStack] always has [ContainerInfo] for [Top] at the bottom
          * of the stack so that we never have to check if [currentContainer] is null.
@@ -55,7 +56,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         /**
          * Clears this [ContainerInfo] of old data and initializes it with the given new data.
          */
-        fun reset(type: ContainerType? = null, position: Long = -1, isDelimited: Boolean = false) {
+        fun reset(type: ContainerType, position: Long, isDelimited: Boolean = false) {
             this.type = type
             this.isDelimited = isDelimited
             this.position = position
@@ -336,7 +337,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         // To switch, we need to insert the sid-to-flexsym switch marker, unless...
         // if no fields have been written yet, we can just switch the op code of the struct.
         if (currentContainer.length == 0L) {
-            buffer.writeUInt8At(currentContainer.position, OpCodes.VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS.toLong())
+            buffer.writeByteAt(currentContainer.position, OpCodes.VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS)
         } else {
             buffer.writeByte(SID_TO_FLEX_SYM_SWITCH_MARKER)
             currentContainer.length += 1
@@ -414,15 +415,42 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun stepInEExp(name: CharSequence) {
-        TODO("Not supported by the raw binary writer.")
+        throw UnsupportedOperationException("Binary writer requires macros to be invoked by their ID.")
     }
 
     override fun stepInEExp(id: Int) {
-        TODO("Not yet implemented")
+        confirm(numAnnotations == 0) { "Cannot annotate an E-Expression" }
+
+        if (currentContainer.type == Struct && !hasFieldName) {
+            if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
+            buffer.writeByte(FlexInt.ZERO)
+            currentContainer.length++
+        }
+        currentContainer = containerStack.push { it.reset(Macro, buffer.position()) }
+        if (id < 64) {
+            buffer.writeByte(id.toByte())
+        } else {
+            val biasedId = id - 64
+            val opCodeIdBits = FOUR_BIT_MASK and biasedId
+            val remainderOfId = biasedId shr 4
+            buffer.writeByte((OpCodes.BIASED_E_EXPRESSION + opCodeIdBits).toByte())
+            currentContainer.length += buffer.writeFlexUInt(remainderOfId)
+        }
+
+        // No need to clear any of the annotation fields because we already asserted that there are no annotations
+        hasFieldName = false
     }
 
-    override fun stepInStream() {
-        TODO("Not yet implemented")
+    override fun stepInExpressionGroup(delimited: Boolean) {
+        confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
+        confirm(currentContainer.type == Macro) { "Can only create an expression group in a macro invocation" }
+        currentContainer = containerStack.push { it.reset(ExpressionGroup, buffer.position(), delimited) }
+        if (delimited) {
+            buffer.writeByte(FlexInt.ZERO)
+        } else {
+            buffer.reserve(maxOf(1, lengthPrefixPreallocation))
+        }
+        // No need to clear any of the annotation fields because we already asserted that there are no annotations
     }
 
     override fun stepOut() {
@@ -448,6 +476,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 List, SExp, Struct -> {
                     val contentLength = currentContainer.length
                     if (contentLength <= 0xF && !currentContainer.usesFlexSym) {
+                        // TODO: Right now, this is skipped if we switch to FlexSym after starting a struct
+                        //       because we have no way to differentiate a struct that started as FlexSym
+                        //       from a struct that switched to FlexSym.
                         // Clean up any unused space that was pre-allocated.
                         buffer.shiftBytesLeft(currentContainer.length.toInt(), lengthPrefixPreallocation)
                         val zeroLengthOpCode = when (currentContainer.type) {
@@ -456,13 +487,31 @@ class IonRawBinaryWriter_1_1 internal constructor(
                             Struct -> OpCodes.STRUCT_SID_ZERO_LENGTH
                             else -> TODO("Unreachable")
                         }
-                        buffer.writeUInt8At(currentContainer.position, zeroLengthOpCode + contentLength)
+                        buffer.writeByteAt(currentContainer.position, zeroLengthOpCode + contentLength)
                     } else {
                         thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     }
                 }
-                Macro -> TODO()
-                Stream -> TODO()
+                Macro -> {
+                    // No special action needed yet.
+                    // However, when tag-less types and grouped parameters are implemented,
+                    // we will need to go and update the presence bits
+                }
+                ExpressionGroup -> {
+                    if (currentContainer.length == 0L) {
+                        // It is not always safe to truncate like this without clearing the patch points for the
+                        // truncated part of the buffer. However, it is safe to do so here because we can only get to
+                        // this particular branch if this expression group is empty, ergo it contains no patch points.
+                        buffer.truncate(currentContainer.position)
+                        // Since 0 represents a delimited expression group, we cannot write the length. We must switch
+                        // to an empty delimited expression group.
+                        buffer.writeByte(FlexInt.ZERO)
+                        buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
+                        thisContainerTotalLength = 2
+                    } else {
+                        thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation, relativePosition = 0)
+                    }
+                }
                 Annotations -> TODO("Unreachable.")
                 Top -> throw IonException("Nothing to step out of.")
             }
@@ -478,17 +527,23 @@ class IonRawBinaryWriter_1_1 internal constructor(
     /**
      * Writes the length of the current container and returns the number of bytes needed to do so.
      * Transparently handles PatchPoints as necessary.
+     *
+     * @param numPreAllocatedLengthPrefixBytes the number of bytes that were pre-allocated for the length prefix of the
+     *                                         current container.
+     * @param relativePosition the position to write the length relative to the start of the current container (which
+     *                         includes the opcode, if any).
      */
-    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int): Int {
+    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int, relativePosition: Long = 1): Int {
+        val lengthPosition = currentContainer.position + relativePosition
         val lengthPrefixBytesRequired = FlexInt.flexUIntLength(currentContainer.length)
         if (lengthPrefixBytesRequired == numPreAllocatedLengthPrefixBytes) {
             // We have enough space, so write in the correct length.
-            buffer.writeFlexIntOrUIntAt(currentContainer.position + 1, currentContainer.length, lengthPrefixBytesRequired)
+            buffer.writeFlexIntOrUIntAt(lengthPosition, currentContainer.length, lengthPrefixBytesRequired)
         } else {
             addPatchPointsToStack()
             // All ContainerInfos are in the stack, so we know that its patchPoint is non-null.
             currentContainer.patchPoint.assumeNotNull().apply {
-                oldPosition = currentContainer.position + 1
+                oldPosition = lengthPosition
                 oldLength = numPreAllocatedLengthPrefixBytes
                 length = currentContainer.length
             }
@@ -503,7 +558,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
         // If we're adding a patch point we first need to ensure that all of our ancestors (containing values) already
         // have a patch point. No container can be smaller than the contents, so all outer layers also require patches.
-        // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and reset the cursor every time we track back to the ancestors.
+        // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and
+        // reset the cursor every time we track back to the ancestors.
         val stackIterator: ListIterator<ContainerInfo> = containerStack.iterator()
         // Walk down the stack until we find an ancestor which already has a patch point
         while (stackIterator.hasNext() && stackIterator.next().patchPoint == null);
