@@ -961,7 +961,7 @@ class IonRawBinaryWriterTest_1_1 {
             11      | Length = 8
             15      | SID 10
             5E      | true
-            00      | switch to FlexSym encoding
+            01      | switch to FlexSym encoding
             01      | FlexSym Escape Byte
             1F      | Macro 31 (0x1F)
             01      | FlexSym Escape Byte
