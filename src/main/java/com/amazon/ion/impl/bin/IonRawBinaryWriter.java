@@ -1043,12 +1043,12 @@ import java.util.ListIterator;
         if (info.length <= 0xD)
         {
             // we fit -- overwrite the type byte
-            buffer.writeUInt8At(info.position - 1, type | info.length);
+            buffer.writeByteAt(info.position - 1, type | info.length);
         }
         else
         {
             // side patch
-            buffer.writeUInt8At(info.position - 1, type | 0xE);
+            buffer.writeByteAt(info.position - 1, type | 0xE);
             addPatchPoint(info, info.position, 0, info.length);
         }
     }

@@ -6,6 +6,8 @@ package com.amazon.ion.impl.bin;
 public class OpCodes {
     private OpCodes() {}
 
+    public static final byte BIASED_E_EXPRESSION = 0x40;
+
     public static final byte INTEGER_ZERO_LENGTH = 0x50;
     // 0x51-0x58 are additional lengths of integers.
     // 0x59 Reserved
