@@ -4,6 +4,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
+import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -41,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
@@ -358,6 +361,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("decimal(%s)", expectedValue),
             reader -> assertEquals(expectedValue, reader.decimalValue())
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> bigDecimalValue(BigDecimal expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("bigDecimal(%s)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.bigDecimalValue())
         ));
     }
 
@@ -1664,13 +1674,97 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader.close();
     }
 
+    /**
+     * Verifies that the reader can read Ion int values of all sizes into the Java type T.
+     */
+    @SafeVarargs
+    private final <T> void readIntsIntoOtherType(
+        boolean constructFromBytes,
+        Function<T, ExpectationProvider<IonReaderContinuableTopLevelBinary>> assertionFunction,
+        T... expectedValues
+    ) throws Exception {
+        reader = readerFor(
+        "0 " +
+            "1 " +
+            "-1 " +
+            "2147483647 " +
+            "2147483648 " +
+            "-2147483648 " +
+            "-2147483649 " +
+            "9223372036854775807 " +
+            "9223372036854775808 " +
+            "-9223372036854775808 " +
+            "-9223372036854775809",
+            constructFromBytes
+        );
+        List<ExpectationProvider<IonReaderContinuableTopLevelBinary>> assertions = new ArrayList<>();
+        for (T expectedValue : expectedValues) {
+            assertions.add(next(IonType.INT));
+            assertions.add(assertionFunction.apply(expectedValue));
+        }
+        assertions.add(next(null));
+        assertSequence(assertions.toArray(new ExpectationProvider[0]));
+        closeAndCount();
+    }
+
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
-    public void doubleValueOnIntFails(boolean constructFromBytes) throws Exception {
-        reader = readerFor(constructFromBytes, 0x20);
-        reader.next();
-        assertThrows(IllegalStateException.class, () -> reader.doubleValue());
-        reader.close();
+    public void doubleValueOnInt(boolean constructFromBytes) throws Exception {
+        readIntsIntoOtherType(
+            constructFromBytes,
+            IonReaderContinuableTopLevelBinaryTest::doubleValue,
+            0.0,
+            1.0,
+            -1.0,
+            (double) Integer.MAX_VALUE,
+            (double) (((long) Integer.MAX_VALUE) + 1),
+            (double) Integer.MIN_VALUE,
+            (double) (((long) Integer.MIN_VALUE) - 1),
+            (double) Long.MAX_VALUE,
+            ((double) Long.MAX_VALUE) + 1,
+            (double) Long.MIN_VALUE,
+            ((double) Long.MIN_VALUE) - 1
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void decimalValueOnInt(boolean constructFromBytes) throws Exception {
+        readIntsIntoOtherType(
+            constructFromBytes,
+            IonReaderContinuableTopLevelBinaryTest::decimalValue,
+            Decimal.ZERO,
+            Decimal.ONE,
+            Decimal.valueOf(-1),
+            Decimal.valueOf(Integer.MAX_VALUE),
+            Decimal.valueOf(((long) Integer.MAX_VALUE) + 1),
+            Decimal.valueOf(Integer.MIN_VALUE),
+            Decimal.valueOf(((long) Integer.MIN_VALUE) - 1),
+            Decimal.valueOf(Long.MAX_VALUE),
+            Decimal.valueOf(Long.MAX_VALUE).add(Decimal.ONE),
+            Decimal.valueOf(Long.MIN_VALUE),
+            Decimal.valueOf(Long.MIN_VALUE).subtract(Decimal.ONE)
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void bigDecimalValueOnInt(boolean constructFromBytes) throws Exception {
+        readIntsIntoOtherType(
+            constructFromBytes,
+            IonReaderContinuableTopLevelBinaryTest::bigDecimalValue,
+            BigDecimal.ZERO,
+            BigDecimal.ONE,
+            BigDecimal.valueOf(-1),
+            BigDecimal.valueOf(Integer.MAX_VALUE),
+            BigDecimal.valueOf(((long) Integer.MAX_VALUE) + 1),
+            BigDecimal.valueOf(Integer.MIN_VALUE),
+            BigDecimal.valueOf(((long) Integer.MIN_VALUE) - 1),
+            BigDecimal.valueOf(Long.MAX_VALUE),
+            BigDecimal.valueOf(Long.MAX_VALUE).add(BigDecimal.ONE),
+            BigDecimal.valueOf(Long.MIN_VALUE),
+            BigDecimal.valueOf(Long.MIN_VALUE).subtract(BigDecimal.ONE)
+        );
     }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
