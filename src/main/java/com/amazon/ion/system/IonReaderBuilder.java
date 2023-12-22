@@ -44,7 +44,7 @@ public abstract class IonReaderBuilder
 
     private IonCatalog catalog = null;
     private boolean isIncrementalReadingEnabled = false;
-    private IonBufferConfiguration bufferConfiguration = null;
+    private IonBufferConfiguration bufferConfiguration = IonBufferConfiguration.DEFAULT;
 
     protected IonReaderBuilder()
     {
@@ -249,6 +249,9 @@ public abstract class IonReaderBuilder
      */
     public void setBufferConfiguration(IonBufferConfiguration configuration) {
         mutationCheck();
+        if (configuration == null) {
+            throw new IllegalArgumentException("Configuration must not be null. To use the default configuration, provide IonBufferConfiguration.DEFAULT.");
+        }
         bufferConfiguration = configuration;
     }
 

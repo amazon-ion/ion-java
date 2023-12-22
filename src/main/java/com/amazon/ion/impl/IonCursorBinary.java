@@ -279,6 +279,16 @@ class IonCursorBinary implements IonCursor {
 
 
     /**
+     * @return the given configuration's DataHandler, or null if that DataHandler is a no-op.
+     */
+    private static BufferConfiguration.DataHandler getDataHandler(IonBufferConfiguration configuration) {
+        // Using null instead of a no-op handler enables a quick null check to skip calculating the amount of data
+        // processed, improving performance.
+        BufferConfiguration.DataHandler dataHandler = configuration.getDataHandler();
+        return dataHandler == IonBufferConfiguration.DEFAULT.getDataHandler() ? null : dataHandler;
+    }
+
+    /**
      * Constructs a new fixed (non-refillable) cursor from the given byte array.
      * @param configuration the configuration to use. The buffer size and oversized value configuration are unused, as
      *                      the given buffer is used directly.
@@ -292,7 +302,7 @@ class IonCursorBinary implements IonCursor {
         int offset,
         int length
     ) {
-        this.dataHandler = (configuration == null) ? null : configuration.getDataHandler();
+        this.dataHandler = getDataHandler(configuration);
         peekIndex = offset;
         valuePreHeaderIndex = offset;
         checkpoint = peekIndex;
@@ -309,12 +319,6 @@ class IonCursorBinary implements IonCursor {
         isSlowMode = false;
         refillableState = null;
     }
-
-    /**
-     * The standard {@link IonBufferConfiguration}. This will be used unless the user chooses custom settings.
-     */
-    private static final IonBufferConfiguration STANDARD_BUFFER_CONFIGURATION =
-        IonBufferConfiguration.Builder.standard().build();
 
     /**
      * @param value a non-negative number.
@@ -352,13 +356,13 @@ class IonCursorBinary implements IonCursor {
     private static final IonBufferConfiguration[] FIXED_SIZE_CONFIGURATIONS;
 
     static {
-        int maxBufferSizeExponent = logBase2(STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize());
+        int maxBufferSizeExponent = logBase2(IonBufferConfiguration.DEFAULT.getInitialBufferSize());
         FIXED_SIZE_CONFIGURATIONS = new IonBufferConfiguration[maxBufferSizeExponent + 1];
         for (int i = 0; i <= maxBufferSizeExponent; i++) {
             // Create a buffer configuration for buffers of size 2^i. The minimum size is 8: the smallest power of two
             // larger than the minimum buffer size allowed.
             int size = Math.max(8, (int) Math.pow(2, i));
-            FIXED_SIZE_CONFIGURATIONS[i] = IonBufferConfiguration.Builder.from(STANDARD_BUFFER_CONFIGURATION)
+            FIXED_SIZE_CONFIGURATIONS[i] = IonBufferConfiguration.Builder.from(IonBufferConfiguration.DEFAULT)
                 .withInitialBufferSize(size)
                 .withMaximumBufferSize(size)
                 .build();
@@ -370,6 +374,9 @@ class IonCursorBinary implements IonCursor {
      * @param configuration the configuration to validate.
      */
     private static void validate(IonBufferConfiguration configuration) {
+        if (configuration == null) {
+            throw new IllegalArgumentException("Buffer configuration must not be null.");
+        }
         if (configuration.getInitialBufferSize() < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
         }
@@ -396,10 +403,10 @@ class IonCursorBinary implements IonCursor {
         if (alreadyReadLen > 0) {
             fixedBufferSize += alreadyReadLen;
         }
-        if (STANDARD_BUFFER_CONFIGURATION.getInitialBufferSize() > fixedBufferSize) {
+        if (IonBufferConfiguration.DEFAULT.getInitialBufferSize() > fixedBufferSize) {
             return FIXED_SIZE_CONFIGURATIONS[logBase2(fixedBufferSize)];
         }
-        return STANDARD_BUFFER_CONFIGURATION;
+        return IonBufferConfiguration.DEFAULT;
     }
 
     /**
@@ -416,19 +423,18 @@ class IonCursorBinary implements IonCursor {
         int alreadyReadOff,
         int alreadyReadLen
     ) {
-        this.dataHandler = (configuration == null) ? null : configuration.getDataHandler();
-        if (configuration == null) {
+        if (configuration == IonBufferConfiguration.DEFAULT) {
+            dataHandler = null;
             if (inputStream instanceof ByteArrayInputStream) {
                 // ByteArrayInputStreams are fixed-size streams. Clamp the reader's internal buffer size at the size of
                 // the stream to avoid wastefully allocating extra space that will never be needed. It is still
                 // preferable for the user to manually specify the buffer size if it's less than the default, as doing
                 // so allows this branch to be skipped.
                 configuration = getFixedSizeConfigurationFor((ByteArrayInputStream) inputStream, alreadyReadLen);
-            } else {
-                configuration = STANDARD_BUFFER_CONFIGURATION;
             }
         } else {
             validate(configuration);
+            dataHandler = getDataHandler(configuration);
         }
         peekIndex = 0;
         checkpoint = 0;
