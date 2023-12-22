@@ -38,6 +38,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
@@ -3603,5 +3605,145 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         // However, the reader *must* fail if the user requests the next value, because the stream is incomplete.
         assertThrows(IonException.class, () -> reader.next()); // Unexpected EOF
+    }
+
+    /**
+     * Verifies that the reader throws IonException when the provided code is executed over the given input.
+     * @param constructFromBytes whether to provide bytes (true) or an InputStream (false) to the reader.
+     * @param codeExpectedToThrow the code expected to throw IonException.
+     * @param input the input data.
+     */
+    private void expectIonException(
+        boolean constructFromBytes,
+        Consumer<IonReader> codeExpectedToThrow,
+        int... input
+    ) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false).withBufferConfiguration(IonBufferConfiguration.DEFAULT);
+        reader = readerFor(constructFromBytes, input);
+        assertThrows(IonException.class, () -> codeExpectedToThrow.accept(reader));
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void scalarValueLargerThan2GB(boolean constructFromBytes) throws Exception {
+        expectIonException(
+            constructFromBytes,
+            reader -> {
+                reader.next();
+                reader.longValue();
+            },
+            0x2E, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF // Int with length larger than 2GB
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void scalarValueLargerThan2GBWithinSymbolTable(boolean constructFromBytes) throws Exception {
+        expectIonException(
+            constructFromBytes,
+            IonReader::next,
+            0xEB, 0x81, 0x83, // Annotation wrapper length 11 with one annotation: 3 ($ion_symbol_table)
+            0xD8, // Struct length 8
+            0x87, 0x2E, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF // Field name 7 (symbols), int with length larger than 2GB
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void possibleSymbolTableStructDeclaresLengthLargerThan2GB(boolean constructFromBytes) throws Exception {
+        expectIonException(
+            constructFromBytes,
+            IonReader::next,
+            0xEB, 0x81, 0x83, // Annotation wrapper length 11 with one annotation: 3 ($ion_symbol_table)
+            0xDE, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF, // Struct with length larger than 2GB
+            0x87, 0x20 // Field name 7 (symbols), int 0
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void possibleSymbolTableAnnotationDeclaresLengthLargerThan2GB(boolean constructFromBytes) throws Exception {
+        expectIonException(
+            constructFromBytes,
+            IonReader::next,
+            0xEE, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF, // Annotation wrapper with length larger than 2GB
+            0x81, 0x83, // One annotation: 3 ($ion_symbol_table)
+            0xDE, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7C, // Struct with length larger than 2GB
+            0x87, 0x20 // Field name 7 (symbols), int 0
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationSequenceLengthThatOverflowsBufferThrowsIonException(boolean constructFromBytes) throws Exception {
+        // This emulates a bad byte (0x52) replacing the annotation sequence length VarUInt in a symbol table annotation
+        // wrapper. This results in a declared annotation sequence length much larger than the total length of the
+        // stream. This should be detected and raised as an IonException.
+        expectIonException(
+            constructFromBytes,
+            IonReader::next,
+            0xEE, 0x9A, 0x52, 0x83, 0xDE, 0x96, 0x87
+        );
+    }
+
+    /**
+     * Verifies that corrupting each byte in the input data results in IonException, or nothing.
+     * @param constructFromBytes whether to provide bytes (true) or an InputStream (false) to the reader.
+     * @param incrementalReadingEnabled whether to enable incremental reading.
+     * @param emptyBufferConfiguration whether to set the buffer configuration to null (true), or use the standard test configuration (false).
+     */
+    private void corruptEachByteThrowsIonException(
+        boolean constructFromBytes,
+        boolean incrementalReadingEnabled,
+        boolean emptyBufferConfiguration
+    ) {
+        IonReaderBuilder builder = readerBuilder.copy();
+        builder = builder.withIncrementalReadingEnabled(incrementalReadingEnabled);
+        if (emptyBufferConfiguration) {
+            builder = builder.withBufferConfiguration(IonBufferConfiguration.DEFAULT);
+        }
+        // The following data begins with a symbol table, contains nested containers with length subfields, and
+        // contains a string, an integer, and blobs.
+        byte[] original = toBinary(
+            "{\n" +
+            "  C:\"CRDR\",\n" +
+            "  V:3,\n" +
+            "  DR:{\n" +
+            "    P:\"dummyPartitionKey\",\n" +
+            "    D:{{ dGVzdERhdGE= }},\n" +
+            "    S:{{ AeJA }},\n" +
+            "    DC:{{ brzdAsJNBCzI3S63zno7Uw== }},\n" +
+            "    HC:{{ f5C7STBM1f2S4SFkJWgbIizTYBE= }}\n" +
+            "  }\n" +
+            "}"
+        );
+        byte[] corrupted = new byte[original.length];
+        for (int i = 0; i < corrupted.length; i++) {
+            // Fill with the original data
+            System.arraycopy(original, 0, corrupted, 0, original.length);
+            // Corrupt the byte at index i
+            corrupted[i] = 0x52;
+            // Ensure the corruption results in IonException or nothing.
+            reader = readerFor(builder, constructFromBytes, corrupted);
+            try {
+                TestUtils.deepRead(reader);
+                // Successful parsing is possible because the input contains blobs whose content is not inspected for corruption.
+                reader.close();
+            } catch (IonException e) {
+                // This is expected to be thrown when corruption is detected.
+            } catch (Exception f) {
+                fail("Expected IonException to be thrown, but was: ", f);
+            }
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void corruptEachByteThrowsIonException(boolean constructFromBytes) {
+        corruptEachByteThrowsIonException(constructFromBytes, true, true);
+        corruptEachByteThrowsIonException(constructFromBytes, true, false);
+        corruptEachByteThrowsIonException(constructFromBytes, false, true);
+        corruptEachByteThrowsIonException(constructFromBytes, false, false);
     }
 }

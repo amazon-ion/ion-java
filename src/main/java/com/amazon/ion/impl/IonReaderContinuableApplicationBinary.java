@@ -3,6 +3,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;

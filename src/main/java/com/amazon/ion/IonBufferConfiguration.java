@@ -9,6 +9,12 @@ package com.amazon.ion;
 public final class IonBufferConfiguration extends BufferConfiguration<IonBufferConfiguration> {
 
     /**
+     * The standard configuration. This will be used unless the user chooses custom settings.
+     */
+    public static final IonBufferConfiguration DEFAULT =
+        IonBufferConfiguration.Builder.standard().build();
+
+    /**
      * Functional interface for handling oversized symbol tables.
      */
     @FunctionalInterface
@@ -30,6 +36,16 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
          * 4-byte IVM + 1 byte user value.
          */
         private static final int MINIMUM_MAX_VALUE_SIZE = 5;
+
+        private static void throwDueToUnexpectedOversizedValue() {
+            throw new IonException("An oversized value was found even though no maximum size was configured. " +
+                "This is either due to data corruption or encountering a scalar larger than 2 GB. In the latter case, " +
+                "an IonBufferConfiguration can be configured to allow the reader to skip the oversized scalar."
+            );
+        }
+
+        private static final OversizedValueHandler THROWING_OVERSIZED_VALUE_HANDLER = Builder::throwDueToUnexpectedOversizedValue;
+        private static final OversizedSymbolTableHandler THROWING_OVERSIZED_SYMBOL_TABLE_HANDLER = Builder::throwDueToUnexpectedOversizedValue;
 
         /**
          * An OversizedValueHandler that does nothing.
@@ -121,6 +137,11 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
         }
 
         @Override
+        public OversizedValueHandler getThrowingOversizedValueHandler() {
+            return THROWING_OVERSIZED_VALUE_HANDLER;
+        }
+
+        @Override
         public DataHandler getNoOpDataHandler() {
             return NO_OP_DATA_HANDLER;
         }
@@ -130,6 +151,13 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
          */
         public OversizedSymbolTableHandler getNoOpOversizedSymbolTableHandler() {
             return NO_OP_OVERSIZED_SYMBOL_TABLE_HANDLER;
+        }
+
+        /**
+         * @return an OversizedSymbolTableHandler that always throws {@link IonException}.
+         */
+        public OversizedSymbolTableHandler getThrowingOversizedSymbolTableHandler() {
+            return THROWING_OVERSIZED_SYMBOL_TABLE_HANDLER;
         }
 
         @Override
@@ -151,7 +179,7 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
         super(builder);
         if (builder.getOversizedSymbolTableHandler() == null) {
             requireUnlimitedBufferSize();
-            oversizedSymbolTableHandler = builder.getNoOpOversizedSymbolTableHandler();
+            oversizedSymbolTableHandler = builder.getThrowingOversizedSymbolTableHandler();
         } else {
             oversizedSymbolTableHandler = builder.getOversizedSymbolTableHandler();
         }

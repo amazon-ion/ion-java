@@ -162,6 +162,11 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         public abstract OversizedValueHandler getNoOpOversizedValueHandler();
 
         /**
+         * @return an {@link OversizedValueHandler} that always throws a runtime exception.
+         */
+        public abstract OversizedValueHandler getThrowingOversizedValueHandler();
+
+        /**
          * @return the no-op {@link DataHandler} for the type of BufferConfiguration that this Builder builds.
          */
         public abstract DataHandler getNoOpDataHandler();
@@ -210,7 +215,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         }
         if (builder.getOversizedValueHandler() == null) {
             requireUnlimitedBufferSize();
-            oversizedValueHandler = builder.getNoOpOversizedValueHandler();
+            oversizedValueHandler = builder.getThrowingOversizedValueHandler();
         } else {
             oversizedValueHandler = builder.getOversizedValueHandler();
         }
