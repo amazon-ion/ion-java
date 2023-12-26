@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -160,13 +161,19 @@ public class IonReaderBuilderTest
         IonBufferConfiguration configuration1 = IonBufferConfiguration.Builder.standard().build();
         IonBufferConfiguration configuration2 = IonBufferConfiguration.Builder.standard().build();
         IonReaderBuilder builder = IonReaderBuilder.standard();
-        assertNull(builder.getBufferConfiguration());
+        assertSame(IonBufferConfiguration.DEFAULT, builder.getBufferConfiguration());
         builder.withBufferConfiguration(configuration1);
         assertSame(configuration1, builder.getBufferConfiguration());
         builder.setBufferConfiguration(configuration2);
         assertSame(configuration2, builder.getBufferConfiguration());
-        builder.withBufferConfiguration(null);
-        assertNull(builder.getBufferConfiguration());
+        builder.withBufferConfiguration(IonBufferConfiguration.DEFAULT);
+        assertSame(IonBufferConfiguration.DEFAULT, builder.getBufferConfiguration());
+    }
+
+    @Test
+    public void testNullBufferConfigurationThrows() {
+        IonReaderBuilder builder = IonReaderBuilder.standard();
+        assertThrows(IllegalArgumentException.class, () -> builder.withBufferConfiguration(null));
     }
 
     @Test
