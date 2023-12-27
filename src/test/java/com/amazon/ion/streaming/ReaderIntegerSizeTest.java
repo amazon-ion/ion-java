@@ -105,6 +105,7 @@ public class ReaderIntegerSizeTest
              + "[] "
              + "() "
             );
+        assertNull(in.getIntegerSize());
         while (in.next() != null)
         {
             assertNull(in.getIntegerSize());

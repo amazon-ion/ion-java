@@ -527,7 +527,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public IntegerSize getIntegerSize() {
-        if (valueTid.type != IonType.INT || valueTid.isNull) {
+        if (valueTid == null || valueTid.type != IonType.INT || valueTid.isNull) {
             return null;
         }
         prepareScalar();
