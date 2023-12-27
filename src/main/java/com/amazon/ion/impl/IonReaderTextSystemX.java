@@ -75,11 +75,11 @@ class IonReaderTextSystemX
     // into a base class (the *Value() methods also share a lot of similarity).
     public IntegerSize getIntegerSize()
     {
-        load_once();
         if (_value_type != IonType.INT || _v.isNull())
         {
             return null;
         }
+        load_once();
         return _Private_ScalarConversions.getIntegerSize(_v.getAuthoritativeType());
     }
 
