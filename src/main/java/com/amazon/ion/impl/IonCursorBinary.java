@@ -733,12 +733,9 @@ class IonCursorBinary implements IonCursor {
     private long uncheckedReadVarUInt_1_0(byte currentByte) {
         long result = currentByte & LOWER_SEVEN_BITS_BITMASK;
         do {
-            // Note: if the varUInt  is malformed such that it extends beyond the declared length of the value *and*
-            // beyond the end of the buffer, this will result in IndexOutOfBoundsException because only the declared
-            // value length has been filled. Preventing this is simple: if (peekIndex >= limit) throw
-            // new IonException(); However, we choose not to perform that check here because it is not worth sacrificing
-            // performance in this inner-loop code in order to throw one type of exception over another in case of
-            // malformed data.
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+            }
             currentByte = buffer[(int) (peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         } while (currentByte >= 0);
@@ -778,6 +775,9 @@ class IonCursorBinary implements IonCursor {
     private boolean uncheckedReadAnnotationWrapperHeader_1_0(IonTypeID valueTid) {
         long endIndex;
         if (valueTid.variableLength) {
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+            }
             byte b = buffer[(int) peekIndex++];
             if (b < 0) {
                 endIndex = (b & LOWER_SEVEN_BITS_BITMASK);
@@ -790,7 +790,7 @@ class IonCursorBinary implements IonCursor {
         endIndex += peekIndex;
         setMarker(endIndex, valueMarker);
         if (endIndex > limit) {
-            return true;
+            throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
         }
         byte b = buffer[(int) peekIndex++];
         int annotationsLength;
@@ -886,6 +886,9 @@ class IonCursorBinary implements IonCursor {
     private long calculateEndIndex_1_0(IonTypeID valueTid, boolean isAnnotated) {
         long endIndex;
         if (valueTid.variableLength) {
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+            }
             byte b = buffer[(int) peekIndex++];
             if (b < 0) {
                 endIndex = (b & LOWER_SEVEN_BITS_BITMASK);

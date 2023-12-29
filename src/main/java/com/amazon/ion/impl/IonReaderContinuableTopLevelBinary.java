@@ -208,11 +208,12 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
     void prepareScalar() {
         if (!isValueIncomplete) {
             if (!isSlowMode || event == IonCursor.Event.VALUE_READY) {
-                // Nothing to do.
+                super.prepareScalar();
                 return;
             }
             if (isFillRequired) {
                 if (fillValue() == Event.VALUE_READY) {
+                    super.prepareScalar();
                     return;
                 }
                 if (event == Event.NEEDS_INSTRUCTION) {
