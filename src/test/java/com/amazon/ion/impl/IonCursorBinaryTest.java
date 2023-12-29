@@ -4,6 +4,8 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCursor;
+import com.amazon.ion.IonException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -26,6 +28,7 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
 import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class IonCursorBinaryTest {
 
@@ -298,5 +301,100 @@ public class IonCursorBinaryTest {
             ),
             endStream()
         );
+    }
+
+    @Test
+    public void expectMalformedListHeaderToFailCleanly() {
+        // The following test is expected to fail because the VarUInt length would extend beyond the end of the buffer.
+        // Since a byte array is provided as the input source, no additional input can be provided, so this must be
+        // treated as an error.
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xBE, // List with VarUInt length
+            0x01  // Non-terminal VarUInt byte
+        );
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectMissingListLengthToFailCleanly() {
+        // The following test is expected to fail because the VarUInt length is missing.
+        // Since a byte array is provided as the input source, no additional input can be provided, so this must be
+        // treated as an error.
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xBE // List with VarUInt length, no length follows
+        );
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectMalformedStructFieldNameToFailCleanly() {
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xD2, // Struct length 2
+            0x01, // Non-terminal VarUInt byte
+            0x01, // Non-terminal VarUInt byte
+            0x01  // Non-terminal VarUInt byte
+        );
+        cursor.nextValue();
+        cursor.stepIntoContainer();
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectMissingAnnotationWrapperLengthToFailCleanly() {
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE // Annotation wrapper with VarUInt length, no length follows
+        );
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectMalformedAnnotationWrapperHeaderToFailCleanly() {
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE, // Annotation wrapper with VarUInt length
+            0x01  // Non-terminal VarUInt byte
+        );
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectMalformedAnnotationWrapperAnnotationLengthToFailCleanly() {
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE, // Annotation wrapper with VarUInt length
+            0x83, // VarUInt length 3
+            0x01, // Non-terminal VarUInt byte
+            0x01, // Non-terminal VarUInt byte
+            0x01  // Non-terminal VarUInt byte
+        );
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectMissingAnnotationWrapperAnnotationLengthToFailCleanly() {
+        IonCursorBinary cursor = initializeCursor(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE, // Annotation wrapper with VarUInt length
+            0x83  // VarUInt length 3, no annotation length follows
+        );
+        assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
     }
 }

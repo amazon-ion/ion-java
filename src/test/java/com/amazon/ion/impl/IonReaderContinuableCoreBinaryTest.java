@@ -3,7 +3,9 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -25,6 +27,7 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fillStringValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class IonReaderContinuableCoreBinaryTest {
 
@@ -289,5 +292,103 @@ public class IonReaderContinuableCoreBinaryTest {
             ),
             endStream()
         );
+    }
+
+    @Test
+    public void expectMalformedDecimalScaleToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x51, // Decimal length 1
+            0x01  // Non-terminal VarInt byte
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::decimalValue);
+        assertThrows(IonException.class, reader::bigDecimalValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectMissingDecimalScaleToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x51 // Decimal length 1, missing scale
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::decimalValue);
+        assertThrows(IonException.class, reader::bigDecimalValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectMalformedDecimalHeaderToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x53, // Decimal length 3, only 2 bytes follow
+            0xC1, // VarInt -1
+            0x01  // Non-terminal VarInt byte
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::decimalValue);
+        assertThrows(IonException.class, reader::bigDecimalValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectMalformedIntHeaderToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x21 // Int length 1
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::intValue);
+        assertThrows(IonException.class, reader::bigIntegerValue);
+        assertThrows(IonException.class, reader::getIntegerSize);
+        reader.close();
+    }
+
+    @Test
+    public void expectMalformedTimestampOffsetToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x63, // Timestamp length 3
+            0x01, // Non-terminal VarInt byte
+            0x01, // Non-terminal VarInt byte
+            0x01 // Non-terminal VarInt byte
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::timestampValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectMalformedTimestampYearToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x63, // Timestamp length 3
+            0xC0, // VarInt -0 (unknown offset)
+            0x01, // Non-terminal VarUInt byte
+            0x01 // Non-terminal VarUInt byte
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::timestampValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectMissingTimestampBodyToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x63 // Timestamp length 3, missing body
+        );
+        reader.nextValue();
+        assertThrows(IonException.class, reader::timestampValue);
+        reader.close();
     }
 }
