@@ -25,6 +25,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.amazon.ion.BitUtils;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -42,6 +43,8 @@ import java.util.zip.GZIPOutputStream;
 import com.amazon.ion.impl._Private_IonConstants;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.rules.ExpectedException;
 
 /**
@@ -149,8 +152,10 @@ public class IonReaderBuilderTest
             // Expected; this is a non-incremental reader, but a complete value was not available.
         }
         builder.withIncrementalReadingEnabled(true);
+        // Even though incremental reading is enabled, when a byte array is provided an error should be raised on the
+        // incomplete input because additional data can never be provided.
         IonReader reader2 = builder.build(data.toByteArray());
-        assertNull(reader2.next());
+        assertThrows(IonException.class, reader2::next);
         IonReader reader3 = builder.build(new ByteArrayInputStream(data.toByteArray()));
         assertNull(reader3.next());
     }
@@ -219,6 +224,14 @@ public class IonReaderBuilderTest
         assertEquals(IonType.INT, reader.next());
         assertEquals(1, reader.intValue());
         assertNull(reader.next());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void incompleteIvmFailsCleanly(boolean isIncremental) throws Exception {
+        IonReader reader = IonReaderBuilder.standard().withIncrementalReadingEnabled(isIncremental).build(BitUtils.bytes(0xE0, 0x01, 0x00));
+        assertThrows(IonException.class, reader::next);
+        reader.close();
     }
 
 }

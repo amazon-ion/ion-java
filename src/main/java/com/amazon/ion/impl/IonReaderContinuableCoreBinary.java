@@ -157,31 +157,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         int currentByte = 0;
         int result = 0;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+            }
             currentByte = buffer[(int)(peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
-        return result;
-    }
-
-    /**
-     * Reads a 2+ byte VarUInt, given the first byte. When called, `peekIndex` must point at the second byte in the
-     * VarUInt. When this method returns, `peekIndex` will point at the first byte that follows the VarUInt.
-     * NOTE: the VarUInt must fit in an `int`.
-     * @param currentByte the first byte in the VarUInt.
-     * @return the value.
-     */
-    int readVarUInt_1_0(byte currentByte) {
-        int result = currentByte & LOWER_SEVEN_BITS_BITMASK;
-        do {
-            // Note: if the varUInt is malformed such that it extends beyond the declared length of the value *and*
-            // beyond the end of the buffer, this will result in IndexOutOfBoundsException because only the declared
-            // value length has been filled. Preventing this is simple: if (peekIndex >= valueMarker.endIndex) throw
-            // new IonException(); However, we choose not to perform that check here because it is not worth sacrificing
-            // performance in this inner-loop code in order to throw one type of exception over another in case of
-            // malformed data.
-            currentByte = buffer[(int) (peekIndex++)];
-            result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
-        } while (currentByte >= 0);
         return result;
     }
 
@@ -197,12 +178,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         int sign = (currentByte & VAR_INT_SIGN_BITMASK) == 0 ? 1 : -1;
         int result = currentByte & LOWER_SIX_BITS_BITMASK;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
-            // Note: if the varInt is malformed such that it extends beyond the declared length of the value *and*
-            // beyond the end of the buffer, this will result in IndexOutOfBoundsException because only the declared
-            // value length has been filled. Preventing this is simple: if (peekIndex >= valueMarker.endIndex) throw
-            // new IonException(); However, we choose not to perform that check here because it is not worth sacrificing
-            // performance in this inner-loop code in order to throw one type of exception over another in case of
-            // malformed data.
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+            }
             currentByte = buffer[(int)(peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
@@ -518,11 +496,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Performs any logic necessary to prepare a scalar value for parsing. In general nothing needs to be done, but
-     * subclasses may wish to provide different behavior, such as ensuring that the value is present in the buffer.
+     * Performs any logic necessary to prepare a scalar value for parsing. Subclasses may wish to provide additional
+     * logic, such as ensuring that the value is present in the buffer.
      */
     void prepareScalar() {
-        // May be overridden.
+        if (valueMarker.endIndex > limit) {
+            throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+        }
     }
 
     @Override
