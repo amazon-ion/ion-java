@@ -11,7 +11,7 @@ import java.time.Instant
  *
  * This interface allows the user to write Ion data without being concerned about which output format is being used.
  */
-interface IonWriter_1_1 {
+interface IonRawWriter_1_1 {
 
     /**
      * Indicates that writing is completed and all buffered data should be written and flushed as if this were the end

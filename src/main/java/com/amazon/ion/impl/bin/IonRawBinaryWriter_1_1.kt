@@ -20,7 +20,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     private val out: ByteArrayOutputStream,
     private val buffer: WriteBuffer,
     private val lengthPrefixPreallocation: Int,
-) : IonWriter_1_1 {
+) : IonRawWriter_1_1 {
 
     /**
      * Types of encoding containers.
