@@ -21,6 +21,10 @@ class IonRawTextWriter_1_1 internal constructor(
     private val output: _Private_IonTextAppender,
 ) : IonRawWriter_1_1 {
 
+    companion object {
+        const val IVM = "\$ion_1_1"
+    }
+
     enum class ContainerType {
         List,
         SExp,
@@ -39,8 +43,8 @@ class IonRawTextWriter_1_1 internal constructor(
     private var isPendingSeparator = false
     private var isPendingLeadingWhitespace = false
 
-    private var fieldNameTextBuffer: CharSequence? = null
-    private var fieldNameIdBuffer: Int = -1
+    private var fieldNameText: CharSequence? = null
+    private var fieldNameId: Int = -1
     private var hasFieldName = false
 
     private var annotationsTextBuffer = arrayOfNulls<CharSequence>(8)
@@ -74,17 +78,17 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingSeparator = false
 
         if (hasFieldName) {
-            if (fieldNameTextBuffer != null) {
-                output.printSymbol(fieldNameTextBuffer)
+            if (fieldNameText != null) {
+                output.printSymbol(fieldNameText)
                 output.appendAscii(':')
                 if (options.isPrettyPrintOn) output.appendAscii(" ")
-                fieldNameTextBuffer = null
+                fieldNameText = null
             } else {
                 output.appendAscii("$")
-                output.printInt(fieldNameIdBuffer.toLong())
+                output.printInt(fieldNameId.toLong())
                 output.appendAscii(":")
                 if (options.isPrettyPrintOn) output.appendAscii(" ")
-                fieldNameIdBuffer = -1
+                fieldNameId = -1
             }
         }
 
@@ -134,7 +138,7 @@ class IonRawTextWriter_1_1 internal constructor(
     override fun writeIVM() {
         confirm(currentContainer == Top) { "IVM can only be written at the top level of an Ion stream." }
         confirm(numAnnotations == 0) { "Cannot write an IVM with annotations" }
-        output.appendAscii("\$ion_1_1")
+        output.appendAscii(IVM)
         isPendingSeparator = true
     }
 
@@ -197,14 +201,14 @@ class IonRawTextWriter_1_1 internal constructor(
     override fun writeFieldName(sid: Int) {
         confirm(currentContainer == Struct) { "Cannot write field name outside of a struct." }
         confirm(!hasFieldName) { "Field name already set." }
-        fieldNameIdBuffer = sid
+        fieldNameId = sid
         hasFieldName = true
     }
 
     override fun writeFieldName(text: CharSequence) {
         confirm(currentContainer == Struct) { "Cannot write field name outside of a struct." }
         confirm(!hasFieldName) { "Field name already set." }
-        fieldNameTextBuffer = text
+        fieldNameText = text
         hasFieldName = true
     }
 
@@ -276,7 +280,13 @@ class IonRawTextWriter_1_1 internal constructor(
         output.printInt(id.toLong())
     }
 
-    override fun writeSymbol(text: CharSequence) = writeScalar { output.printSymbol(text) }
+    override fun writeSymbol(text: CharSequence) = writeScalar {
+        when (IonTextUtils.symbolVariant(text)) {
+            IonTextUtils.SymbolVariant.IDENTIFIER -> output.appendAscii(text)
+            IonTextUtils.SymbolVariant.OPERATOR -> if (currentContainer == SExp) output.appendAscii(text) else output.printQuotedSymbol(text)
+            IonTextUtils.SymbolVariant.QUOTED -> output.printQuotedSymbol(text)
+        }
+    }
 
     override fun writeString(value: CharSequence) = writeScalar { output.printString(value) }
 

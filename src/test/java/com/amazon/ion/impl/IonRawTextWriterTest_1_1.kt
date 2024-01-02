@@ -15,12 +15,11 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class IonRawTextWriterTest_1_1 {
 
-    private inline fun writeAsString(
+    private inline fun ionWriter(
+        out: StringBuilder = StringBuilder(),
         builderConfigurator: IonTextWriterBuilder.() -> Unit = { /* noop */ },
-        autoClose: Boolean = true,
         block: IonRawTextWriter_1_1.() -> Unit,
-    ): String {
-        val out = StringBuilder()
+    ): IonRawTextWriter_1_1 {
         val b = IonTextWriterBuilder.standard()
             .apply(builderConfigurator)
             // Always use LF because the tests' expected data uses LF.
@@ -31,6 +30,16 @@ class IonRawTextWriterTest_1_1 {
             output = _Private_IonTextAppender.forAppendable(out)
         )
         block.invoke(rawWriter)
+        return rawWriter
+    }
+
+    private inline fun writeAsString(
+        builderConfigurator: IonTextWriterBuilder.() -> Unit = { /* noop */ },
+        autoClose: Boolean = true,
+        block: IonRawTextWriter_1_1.() -> Unit,
+    ): String {
+        val out = StringBuilder()
+        val rawWriter = ionWriter(out, builderConfigurator, block)
         if (autoClose) rawWriter.close()
         return out.toString()
     }
@@ -44,70 +53,59 @@ class IonRawTextWriterTest_1_1 {
         assertEquals(text, writeAsString(builderConfigurator, autoClose, block))
     }
 
-    private inline fun assertWriterThrows(block: IonRawTextWriter_1_1.() -> Unit) {
-        val out = StringBuilder()
-        val rawWriter = IonRawTextWriter_1_1(
-            options = _Private_IonTextWriterBuilder.STANDARD,
-            output = _Private_IonTextAppender.forAppendable(out)
-        )
-        assertThrows<IonException> {
-            block.invoke(rawWriter)
-        }
-    }
-
     @Test
     fun `calling close while in a container should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             stepInList(false)
-            close()
+            assertThrows<IonException> { close() }
         }
     }
 
     @Test
     fun `calling finish while in a container should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             stepInList(true)
-            finish()
+            assertThrows<IonException> { finish() }
         }
     }
 
     @Test
     fun `calling finish with a dangling annotation should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             writeAnnotations(10)
-            finish()
+            assertThrows<IonException> { finish() }
         }
     }
 
     @Test
     fun `calling stepOut while not in a container should throw IonException`() {
-        assertWriterThrows {
-            stepOut()
+        ionWriter {
+            assertThrows<IonException> { stepOut() }
         }
     }
 
     @Test
     fun `calling stepOut with a dangling annotation should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             stepInList(true)
             writeAnnotations(10)
-            stepOut()
+            assertThrows<IonException> { stepOut() }
         }
     }
 
     @Test
     fun `calling writeIVM when in a container should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             stepInList(false)
-            writeIVM()
+            assertThrows<IonException> { writeIVM() }
         }
     }
 
     @Test
     fun `calling writeIVM with a dangling annotation should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             writeAnnotations(10)
-            writeIVM()
+            assertThrows<IonException> { writeIVM() }
         }
     }
 
@@ -320,28 +318,12 @@ class IonRawTextWriterTest_1_1 {
     }
 
     @Test
-    fun `write prefixed struct with a single flex sym field`() {
+    fun `write prefixed struct with a single text field name`() {
         assertWriterOutputEquals(
             """{foo:true}"""
         ) {
             stepInStruct(false)
             writeFieldName("foo")
-            writeBool(true)
-            stepOut()
-        }
-    }
-
-    @Test
-    fun `write prefixed struct with multiple fields and flex syms`() {
-        assertWriterOutputEquals(
-            """{foo:true,bar:true,baz:true}"""
-        ) {
-            stepInStruct(false)
-            writeFieldName("foo")
-            writeBool(true)
-            writeFieldName("bar")
-            writeBool(true)
-            writeFieldName("baz")
             writeBool(true)
             stepOut()
         }
@@ -369,37 +351,37 @@ class IonRawTextWriterTest_1_1 {
 
     @Test
     fun `writing a value in a struct with no field name should throw an exception`() {
-        assertWriterThrows {
+        ionWriter {
             stepInStruct(true)
-            writeBool(true)
+            assertThrows<IonException> { writeBool(true) }
         }
-        assertWriterThrows {
+        ionWriter {
             stepInStruct(false)
-            writeBool(true)
+            assertThrows<IonException> { writeBool(true) }
         }
     }
 
     @Test
     fun `calling writeFieldName outside of a struct should throw an exception`() {
-        assertWriterThrows {
-            writeFieldName(12)
+        ionWriter {
+            assertThrows<IonException> { writeFieldName(12) }
         }
-        assertWriterThrows {
-            writeFieldName("foo")
+        ionWriter {
+            assertThrows<IonException> { writeFieldName("foo") }
         }
     }
 
     @Test
     fun `calling stepOut with a dangling field name should throw an exception`() {
-        assertWriterThrows {
+        ionWriter {
             stepInStruct(false)
             writeFieldName(12)
-            stepOut()
+            assertThrows<IonException> { stepOut() }
         }
-        assertWriterThrows {
+        ionWriter {
             stepInStruct(true)
             writeFieldName("foo")
-            stepOut()
+            assertThrows<IonException> { stepOut() }
         }
     }
 
@@ -478,7 +460,7 @@ class IonRawTextWriterTest_1_1 {
     }
 
     @Test
-    fun `write one inline annotation`() {
+    fun `write one text annotation`() {
         val expectedBytes = "foo::false"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations("foo")
@@ -609,14 +591,48 @@ class IonRawTextWriterTest_1_1 {
     @Test
     fun `write symbol`() {
         assertWriterOutputEquals(
-            "\$0 \$1 \$12345 foo 'null' 'bat\\'leth'"
+            "\$0 \$1 \$12345 foo 'null' 'null.int' 'bat\\'leth' '$99' 'true' 'false' 'nan' \$ion_1_1 '+' '==' '.'"
         ) {
             writeSymbol(0)
             writeSymbol(1)
             writeSymbol(12345)
             writeSymbol("foo")
             writeSymbol("null")
+            writeSymbol("null.int")
             writeSymbol("bat'leth")
+            writeSymbol("$99")
+            writeSymbol("true")
+            writeSymbol("false")
+            writeSymbol("nan")
+            writeSymbol("\$ion_1_1")
+            writeSymbol("+")
+            writeSymbol("==")
+            writeSymbol(".")
+        }
+    }
+
+    @Test
+    fun `write symbols in a sexp`() {
+        assertWriterOutputEquals(
+            "(\$0 \$1 \$12345 foo 'null' 'null.int' 'bat\\'leth' '$99' 'true' 'false' 'nan' \$ion_1_1 + == .)"
+        ) {
+            writeSexp {
+                writeSymbol(0)
+                writeSymbol(1)
+                writeSymbol(12345)
+                writeSymbol("foo")
+                writeSymbol("null")
+                writeSymbol("null.int")
+                writeSymbol("bat'leth")
+                writeSymbol("$99")
+                writeSymbol("true")
+                writeSymbol("false")
+                writeSymbol("nan")
+                writeSymbol("\$ion_1_1")
+                writeSymbol("+")
+                writeSymbol("==")
+                writeSymbol(".")
+            }
         }
     }
 
@@ -699,20 +715,40 @@ class IonRawTextWriterTest_1_1 {
 
     @Test
     fun `calling stepInExpressionGroup with an annotation should throw IonException`() {
-        assertWriterThrows {
+        ionWriter {
             stepInEExp(1)
             writeAnnotations("foo")
-            stepInExpressionGroup(false)
+            assertThrows<IonException> { stepInExpressionGroup(false) }
         }
     }
 
     @Test
     fun `calling stepInExpressionGroup while not directly in a Macro container should throw IonException`() {
-        assertWriterThrows { stepInExpressionGroup(true) }
-        assertWriterThrows { writeList { stepInExpressionGroup(true) } }
-        assertWriterThrows { writeSexp { stepInExpressionGroup(true) } }
-        assertWriterThrows { writeStruct { stepInExpressionGroup(true) } }
-        assertWriterThrows { writeEExp(123) { writeExpressionGroup { stepInExpressionGroup(true) } } }
+        ionWriter {
+            assertThrows<IonException> { stepInExpressionGroup(true) }
+        }
+        ionWriter {
+            writeList {
+                assertThrows<IonException> { stepInExpressionGroup(true) }
+            }
+        }
+        ionWriter {
+            writeSexp {
+                assertThrows<IonException> { stepInExpressionGroup(true) }
+            }
+        }
+        ionWriter {
+            writeStruct {
+                assertThrows<IonException> { stepInExpressionGroup(true) }
+            }
+        }
+        ionWriter {
+            writeEExp(123) {
+                writeExpressionGroup {
+                    assertThrows<IonException> { stepInExpressionGroup(true) }
+                }
+            }
+        }
     }
 
     /**
