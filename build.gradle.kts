@@ -33,6 +33,10 @@ plugins {
 
     // Used for generating the third party attribution document
     id("com.github.jk1.dependency-license-report") version "2.5"
+
+    // Used for generating OSGi bundle information
+    // We cannot use the latest version since it targets JDK 17, and we don't want to force building with JDK 17
+    id("biz.aQute.bnd.builder") version "6.4.0"
 }
 
 jacoco {
@@ -107,6 +111,34 @@ tasks {
 
     jar {
         archiveClassifier.set("original")
+        manifest {
+            attributes(
+                "Automatic-Module-Name" to "com.amazon.ion",
+                "Main-Class" to "com.amazon.ion.impl._Private_CommandLine",
+            )
+        }
+        // Sets OSGi bundle attributes
+        // See https://en.wikipedia.org/wiki/OSGi#Bundles for a minimal introduction to the bundle manifest
+        // See https://enroute.osgi.org/FAQ/520-bnd.html for a high level of what is the "bnd" tool
+        // If we ever expose any shaded classes, then the bundle info will need to be added after the shadow step.
+        // For now, though, generating the bundle info here results
+        bundle {
+            bnd(
+                "Bundle-License: https://www.apache.org/licenses/LICENSE-2.0.txt",
+                // These must be specified manually to keep the values the same as the pre-v1.9.5 values.
+                // What will happen if they change? I don't know, but possibly some sort of compatibility problem.
+                "Bundle-Name: com.amazon.ion:ion-java",
+                "Bundle-SymbolicName: com.amazon.ion.java",
+                // Exclusions must come first when specifying exports.
+                // We exclude the `apps`, `impl`, and `shaded_` packages and expose everything else.
+                "Export-Package: !com.amazon.ion.apps.*,!com.amazon.ion.impl.*,!com.amazon.ion.shaded_.*,com.amazon.ion.*",
+                // Limit imports to only this package so that we don't add in any kotlin imports.
+                // This line is not necessary if we create bundle info after shading (but that is more complex).
+                "Import-Package: com.amazon.ion.*",
+                // Removing the 'Private-Package' header because it is optional and was not present prior to v1.9.5
+                "-removeheaders: Private-Package",
+            )
+        }
     }
 
     // Creates a super jar of ion-java and its dependencies where all dependencies are shaded (moved)
@@ -114,6 +146,7 @@ tasks {
     shadowJar {
         val newLocation = "com.amazon.ion.shaded_.do_not_use"
         archiveClassifier.set("shaded")
+        dependsOn(jar) // For the manifest
         dependsOn(generateLicenseReport)
         from(generateLicenseReport.get().outputFolder)
         relocate("kotlin", "$newLocation.kotlin")
@@ -127,6 +160,7 @@ tasks {
             // Eliminate dependencies' pom files
             exclude("**/pom.*")
         }
+        manifest.inheritFrom(jar.get().manifest.effectiveManifest)
     }
 
     /**
