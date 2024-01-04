@@ -36,7 +36,9 @@ plugins {
 
     // Used for generating OSGi bundle information
     // We cannot use the latest version since it targets JDK 17, and we don't want to force building with JDK 17
-    id("biz.aQute.bnd.builder") version "6.4.0"
+    // Without `apply false`, the plugin is automatically applied to the main "jar" task, which somehow interferes with
+    // the "spotbugsMain" task, causing it to fail. Instead, we will create a separate task to generate the bundle info.
+    id("biz.aQute.bnd.builder") version "6.4.0" apply false
 }
 
 jacoco {
@@ -111,6 +113,13 @@ tasks {
 
     jar {
         archiveClassifier.set("original")
+    }
+
+    val generateManifest = create<aQute.bnd.gradle.Bundle>("generateManifest") {
+        from(jar.get().source)
+        archiveClassifier.set("tmp")
+        doLast { delete(this.outputs.files.singleFile) }
+
         manifest {
             attributes(
                 "Automatic-Module-Name" to "com.amazon.ion",
@@ -146,8 +155,7 @@ tasks {
     shadowJar {
         val newLocation = "com.amazon.ion.shaded_.do_not_use"
         archiveClassifier.set("shaded")
-        dependsOn(jar) // For the manifest
-        dependsOn(generateLicenseReport)
+        dependsOn(generateManifest, generateLicenseReport)
         from(generateLicenseReport.get().outputFolder)
         relocate("kotlin", "$newLocation.kotlin")
         relocate("org.jetbrains", "$newLocation.org.jetbrains")
@@ -160,7 +168,7 @@ tasks {
             // Eliminate dependencies' pom files
             exclude("**/pom.*")
         }
-        manifest.inheritFrom(jar.get().manifest.effectiveManifest)
+        manifest.inheritFrom(generateManifest.manifest.effectiveManifest)
     }
 
     /**
