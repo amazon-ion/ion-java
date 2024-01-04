@@ -699,17 +699,22 @@ class IonCursorBinary implements IonCursor {
             return false;
         }
         offset = limit;
+        long shortfall;
         long skipped = 0;
-        try {
-            skipped = refillableState.inputStream.skip(unbufferedBytesToSkip);
-        } catch (EOFException e) {
-            // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
-            // to skip than are currently available (e.g. if a header or trailer is incomplete).
-        } catch (IOException e) {
-            throwAsIonException(e);
-        }
-        refillableState.totalDiscardedBytes += skipped;
-        long shortfall = numberOfBytes - (skipped + size);
+        do {
+            try {
+                skipped = refillableState.inputStream.skip(unbufferedBytesToSkip);
+            } catch (EOFException e) {
+                // Certain InputStream implementations (e.g. GZIPInputStream) throw EOFException if more bytes are requested
+                // to skip than are currently available (e.g. if a header or trailer is incomplete).
+                skipped = 0;
+            } catch (IOException e) {
+                throwAsIonException(e);
+            }
+            refillableState.totalDiscardedBytes += skipped;
+            shortfall = unbufferedBytesToSkip - skipped;
+            unbufferedBytesToSkip = shortfall;
+        } while (shortfall > 0 && skipped > 0);
         if (shortfall <= 0) {
             refillableState.bytesRequested = 0;
             refillableState.state = State.READY;

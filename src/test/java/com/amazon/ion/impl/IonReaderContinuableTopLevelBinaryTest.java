@@ -38,7 +38,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -52,7 +51,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
@@ -3376,6 +3374,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         @Override
         public long skip(long len) {
             int numberOfBytesToSkip = calculateNumberOfBytesToReturn((int) len);
+            if (numberOfBytesToSkip < 0) {
+                // The contract for InputStream.skip() does not use -1 to indicate EOF. It always returns the actual
+                // number of bytes skipped.
+                return 0;
+            }
             offset += numberOfBytesToSkip;
             return numberOfBytesToSkip;
         }
@@ -3399,15 +3402,57 @@ public class IonReaderContinuableTopLevelBinaryTest {
         reader.close();
     }
 
-    @Test
-    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofAndTheReaderSkipsTheValue() throws Exception {
-        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20), false), 8, 8, byteAndOversizedValueCountingHandler);
+    @ParameterizedTest(name = "throwOnEof={0}")
+    @ValueSource(booleans = {true, false})
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofAndTheIncrementalReaderSkipsTheValue(boolean throwOnEof) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(true);
+        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20), throwOnEof), 8, 8, byteAndOversizedValueCountingHandler);
         assertSequence(
+            // The string value is oversized, and is automatically skipped to comply with the incremental reader's
+            // guarantee that next() results in a fully-buffered top-level value.
             next(IonType.INT), intValue(0),
             next(null)
         );
         reader.close();
         assertEquals(1, oversizedCounter.get());
+    }
+
+    @ParameterizedTest(name = "throwOnEof={0}")
+    @ValueSource(booleans = {true, false})
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofAndTheNonIcrementalReaderSkipsTheValue(boolean throwOnEof) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20), throwOnEof), 8, 8, byteAndOversizedValueCountingHandler);
+        assertSequence(
+            // The string value is oversized, but since the reader is non-incremental, an error is only surfaced if the
+            // user tries to materialize it.
+            next(IonType.STRING),
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        reader.close();
+        assertEquals(0, oversizedCounter.get());
+    }
+
+    @ParameterizedTest(name = "incrementalReadingEnabled={0},throwOnEof={1}")
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void shouldNotFailWhenAnInputStreamProvidesFewerBytesThanRequestedWithoutReachingEofWithAnUnboundedBufferAndTheReaderSkipsTheValue(boolean incrementalReadingEnabled, boolean throwOnEof) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incrementalReadingEnabled);
+        // The reader's buffer size is unbounded, but the string value is larger than the initial buffer size. Skipping
+        // the value therefore causes some of its bytes to be skipped without ever being buffered, by calling
+        // InputStream.skip().
+        reader = boundedReaderFor(new ThrottlingInputStream(bytes(0xE0, 0x01, 0x00, 0xEA, 0x89, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 0x20), throwOnEof), 6, Integer.MAX_VALUE, byteAndOversizedValueCountingHandler);
+        assertSequence(
+            next(IonType.STRING), // skip the string value, causing unbuffered bytes to be skipped
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        reader.close();
+        assertEquals(0, oversizedCounter.get());
     }
 
     @Test
