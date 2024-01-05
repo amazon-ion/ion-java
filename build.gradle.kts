@@ -1,6 +1,8 @@
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryMarkdownReportRenderer
 import com.github.jk1.license.render.TextReportRenderer
+import org.gradle.kotlin.dsl.support.unzipTo
+import org.gradle.kotlin.dsl.support.zipTo
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import proguard.gradle.ProGuardTask
@@ -116,14 +118,16 @@ tasks {
     }
 
     val generateManifest = create<aQute.bnd.gradle.Bundle>("generateManifest") {
+        // Create the manifest using the same sources as the regular jar.
         from(jar.get().source)
-        archiveClassifier.set("tmp")
-        doLast { delete(this.outputs.files.singleFile) }
+        archiveClassifier.set("manifest")
 
         manifest {
             attributes(
                 "Automatic-Module-Name" to "com.amazon.ion",
                 "Main-Class" to "com.amazon.ion.impl._Private_CommandLine",
+                "Build-Time" to "${Instant.now()}",
+                "Build-Version" to "$version",
             )
         }
         // Sets OSGi bundle attributes
@@ -148,6 +152,13 @@ tasks {
                 "-removeheaders: Private-Package",
             )
         }
+        // This is not strictly necessary, but it is nice to make the output of this task into a manifest-only jar.
+        doLast {
+            val temp = temporaryDir
+            unzipTo(temp, outputs.files.singleFile)
+            delete(fileTree(temp).matching { excludes.add("META-INF/MANIFEST.MF") })
+            zipTo(outputs.files.singleFile, temp)
+        }
     }
 
     // Creates a super jar of ion-java and its dependencies where all dependencies are shaded (moved)
@@ -168,7 +179,7 @@ tasks {
             // Eliminate dependencies' pom files
             exclude("**/pom.*")
         }
-        manifest.inheritFrom(generateManifest.manifest.effectiveManifest)
+        manifest.inheritFrom(generateManifest.manifest)
     }
 
     /**
