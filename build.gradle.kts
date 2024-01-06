@@ -102,9 +102,11 @@ licenseReport {
 tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-        // Because we set the `release` option, you can no longer build ion-java using JDK 8. However, we continue to
-        // emit JDK 8 compatible classes due to widespread use of this library with JDK 8.
-        options.release.set(8)
+        // The `release` option is not available for the Java 8 compiler, but if we're building with Java 8 we don't
+        // need it anyway.
+        if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+            options.release.set(8)
+        }
     }
     withType<KotlinCompile<KotlinJvmOptions>> {
         kotlinOptions {
@@ -203,12 +205,15 @@ tasks {
         configuration(rulesPath)
 
         val javaHome = System.getProperty("java.home")
-        // Automatically handle the Java version of this build, but we don't support lower than JDK 11
-        // See https://github.com/Guardsquare/proguard/blob/e76e47953f6f295350a3bb7eeb801b33aac34eae/examples/gradle-kotlin-dsl/build.gradle.kts#L48-L60
-        libraryjars(
-            mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class"),
-            "$javaHome/jmods/java.base.jmod"
-        )
+        if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
+            libraryjars("$javaHome/lib/jce.jar")
+            libraryjars("$javaHome/lib/rt.jar")
+        } else {
+            libraryjars(
+                mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class"),
+                "$javaHome/jmods/java.base.jmod"
+            )
+        }
     }
 
     build {
