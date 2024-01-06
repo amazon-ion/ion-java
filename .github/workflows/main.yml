@@ -14,6 +14,7 @@ jobs:
     strategy:
       matrix:
         include:
+          - java: 8
           - java: 11
             upload_reports: true
           - java: 17
