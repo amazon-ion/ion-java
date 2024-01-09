@@ -3455,6 +3455,207 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertEquals(0, oversizedCounter.get());
     }
 
+    @ParameterizedTest(name = "incrementalReadingEnabled={0},throwOnEof={1}")
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void shouldNotFailWhenAnUnbufferedNestedContainerIsSkipped(boolean incrementalReadingEnabled, boolean throwOnEof) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incrementalReadingEnabled);
+        // The reader's buffer size is unbounded, but the nested container value is larger than the initial buffer size.
+        // Skipping the nested container therefore causes some of its bytes to be skipped without ever being buffered,
+        // by calling InputStream.skip().
+        reader = boundedReaderFor(
+            new ThrottlingInputStream(
+                bytes(
+                    0xE0, 0x01, 0x00, 0xEA, // IVM
+                    0xB9, // List, length 9
+                    0xB7, // List, length 7
+                    0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // 7 int 0 values
+                    0x20, // int 0 value
+                    0x20 // Int 0 value
+                ),
+                throwOnEof
+            ),
+            5,
+            Integer.MAX_VALUE,
+            byteAndOversizedValueCountingHandler
+        );
+        assertSequence(
+            container(IonType.LIST,
+                next(IonType.LIST),
+                next(IonType.INT)
+            ),
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "incrementalReadingEnabled={0},throwOnEof={1}")
+    @CsvSource({
+        "true, true",
+        "true, false",
+        "false, true",
+        "false, false"
+    })
+    public void shouldNotFailWhenAnUnbufferedNestedContainerIsSteppedOutEarly(boolean incrementalReadingEnabled, boolean throwOnEof) throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(incrementalReadingEnabled);
+        // The reader's buffer size is unbounded, but the nested container value is larger than the initial buffer size.
+        // Stepping out of the nested container early therefore causes some of its bytes to be skipped without ever
+        // being buffered, by calling InputStream.skip().
+        reader = boundedReaderFor(
+            new ThrottlingInputStream(
+                bytes(
+                    0xE0, 0x01, 0x00, 0xEA, // IVM
+                    0xB9, // List, length 9
+                        0xB7, // List, length 7
+                            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // 7 int 0 values
+                        0x20, // int 0 value
+                    0x20 // Int 0 value
+                ),
+                throwOnEof
+            ),
+            5,
+            Integer.MAX_VALUE,
+            byteAndOversizedValueCountingHandler
+        );
+        assertSequence(
+            container(IonType.LIST,
+                next(IonType.LIST), STEP_IN, STEP_OUT
+            ),
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        reader.close();
+    }
+
+    @Test
+    public void nestedNullContainerIsParsedSuccessfully() throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        reader = readerFor(pipe);
+        pipe.receive(bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xB5, // List, length 5
+                0xB3, // List, length 3
+                    0xBF, 0xCF // Null list, null s-exp
+        ));
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST),
+            next(IonType.SEXP)
+        );
+        pipe.receive(bytes(
+                    0xDF, // Null struct
+                0x20 // Int 0
+        ));
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_OUT,
+            next(IonType.INT), intValue(0),
+            STEP_OUT,
+            next(null)
+        );
+        reader.close();
+    }
+
+    @Test
+    public void nestedEmptyContainerIsParsedSuccessfully() throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        reader = readerFor(pipe);
+        pipe.receive(bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xB5, // List, length 5
+                0xB3, // List, length 3
+                    0xB0, 0xC0 // Empty list, empty s-exp
+        ));
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST),
+            next(IonType.SEXP)
+        );
+        pipe.receive(bytes(
+                    0xD0, // empty struct
+                0x20 // Int 0
+        ));
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_OUT,
+            next(IonType.INT), intValue(0),
+            STEP_OUT,
+            next(null)
+        );
+        reader.close();
+    }
+
+    @Test
+    public void nestedContainerIsSkippedSuccessfully() throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        reader = readerFor(pipe);
+        pipe.receive(bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xB5, // List, length 5
+                0xB3, // List, length 3
+                    0xB2,  // List, length 2
+                        0xC0  // Empty s-exp
+        ));
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST)
+        );
+        pipe.receive(bytes(
+                        0xD0, // Empty struct
+                0x20 // Int 0
+        ));
+        assertSequence(
+            next(null), // Skip the list
+            STEP_OUT,
+            next(IonType.INT), intValue(0),
+            STEP_OUT,
+            next(null)
+        );
+        reader.close();
+    }
+
+    @Test
+    public void nestedContainerIsSteppedOutEarlySuccessfully() throws Exception {
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
+        reader = readerFor(pipe);
+        pipe.receive(bytes(
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xB5, // List, length 5
+                0xB3, // List, length 3
+                    0xB2,  // List, length 2
+                        0xC0  // Empty s-exp
+        ));
+        assertSequence(
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST), STEP_IN,
+            next(IonType.LIST), STEP_IN
+        );
+        pipe.receive(bytes(
+                        0xD0, // Empty struct
+            0x20 // Int 0
+        ));
+        assertSequence(
+            STEP_OUT, // Step out early
+            STEP_OUT, // Step out early
+            next(IonType.INT), intValue(0),
+            STEP_OUT,
+            next(null)
+        );
+        reader.close();
+    }
+
     @Test
     public void shouldNotFailWhenGZIPBoundaryIsEncounteredInStringValue() throws Exception {
         ResizingPipedInputStream pipe = new ResizingPipedInputStream(128);
