@@ -712,6 +712,7 @@ class IonCursorBinary implements IonCursor {
                 throwAsIonException(e);
             }
             refillableState.totalDiscardedBytes += skipped;
+            shiftContainerEnds(skipped);
             shortfall = unbufferedBytesToSkip - skipped;
             unbufferedBytesToSkip = shortfall;
         } while (shortfall > 0 && skipped > 0);
@@ -1154,12 +1155,6 @@ class IonCursorBinary implements IonCursor {
             event = Event.NEEDS_DATA;
             return true;
         }
-        if (offset < (peekIndex + valueLength)) {
-            // Some of the bytes of the NOP pad had to be skipped without buffering to keep the buffer within its
-            // maximum size. Therefore, any parent container end indices need to be shifted by the number of bytes
-            // that were never buffered.
-            shiftContainerEnds(peekIndex + valueLength - offset);
-        }
         peekIndex = offset;
         setCheckpointBeforeUnannotatedTypeId();
         if (parent != null) {
@@ -1323,9 +1318,6 @@ class IonCursorBinary implements IonCursor {
             validateAnnotationWrapperEndIndex(endIndex);
         }
         setMarker(endIndex, markerToSet);
-        if (event == Event.START_CONTAINER && endIndex > DELIMITED_MARKER && endIndex <= limit) {
-            refillableState.fillDepth = containerIndex + 1;
-        }
         return false;
     }
 
@@ -1403,7 +1395,11 @@ class IonCursorBinary implements IonCursor {
     public Event stepIntoContainer() {
         if (isSlowMode) {
             if (containerIndex != refillableState.fillDepth - 1) {
-                return slowStepIntoContainer();
+                if (valueMarker.endIndex > DELIMITED_MARKER && valueMarker.endIndex <= limit) {
+                    refillableState.fillDepth = containerIndex + 1;
+                } else {
+                    return slowStepIntoContainer();
+                }
             }
             isSlowMode = false;
         }
@@ -1664,9 +1660,6 @@ class IonCursorBinary implements IonCursor {
         }
         peekIndex = offset;
         valuePreHeaderIndex = peekIndex;
-        if (peekIndex < valueMarker.endIndex) {
-            shiftContainerEnds(valueMarker.endIndex - peekIndex);
-        }
         if (refillableState.fillDepth > containerIndex) {
             // This value was filled, but was skipped. Reset the fillDepth so that the reader does not think the
             // next value was filled immediately upon encountering it.
@@ -1702,10 +1695,10 @@ class IonCursorBinary implements IonCursor {
             refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
             peekIndex = offset;
             // peekIndex now points at the first byte after the value. If any bytes were skipped directly from
-            // the input stream, peekIndex will be less than the value's pre-calculated endIndex. This requires
-            // the end indices for all parent containers to be shifted left by the number of bytes that were
-            // skipped without buffering.
-            shiftContainerEnds(valueMarker.endIndex - peekIndex);
+            // the input stream before the 'slowSeek', peekIndex will be less than the value's pre-calculated endIndex.
+            // This requires the end indices for all parent containers to be shifted left by the number of bytes that
+            // were skipped without buffering.
+            shiftContainerEnds(refillableState.individualBytesSkippedWithoutBuffering);
             setCheckpointBeforeUnannotatedTypeId();
         }
         refillableState.isSkippingCurrentValue = false;
