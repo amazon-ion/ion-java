@@ -1898,6 +1898,9 @@ class IonCursorBinary implements IonCursor {
                 throwAsIonException(e);
             }
         }
+        buffer = null;
+        containerStack = null;
+        byteBuffer = null;
     }
 
     /* ---- End: version-agnostic parsing, utility, and public API methods ---- */
