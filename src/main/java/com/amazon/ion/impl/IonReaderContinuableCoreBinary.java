@@ -587,6 +587,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 value = minorVersion == 0 ? readBigDecimal_1_0() : readBigDecimal_1_1();
             }
         } else if (valueTid.type == IonType.INT) {
+            if (valueTid.isNull) {
+                return null;
+            }
             prepareToConvertIntValue();
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
             value = scalarConverter.getBigDecimal();
@@ -612,6 +615,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 value = minorVersion == 0 ? readDecimal_1_0() : readDecimal_1_1();
             }
         } else if (valueTid.type == IonType.INT) {
+            if (valueTid.isNull) {
+                return null;
+            }
             prepareToConvertIntValue();
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
             value = scalarConverter.getDecimal();
@@ -625,7 +631,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public long longValue() {
         long value;
-        if (valueTid.type == IonType.INT && !valueTid.isNull) {
+        if (valueTid.isNull) {
+            throwDueToInvalidType(IonType.INT);
+        }
+        if (valueTid.type == IonType.INT) {
             if (valueTid.length == 0) {
                 return 0;
             }
@@ -644,7 +653,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             value = scalarConverter.getLong();
             scalarConverter.clear();
         } else {
-            throw new IllegalStateException("longValue() may only be called on values of type int, float, or decimal.");
+            throw new IllegalStateException("longValue() may only be called on non-null values of type int, float, or decimal.");
         }
         return value;
     }
@@ -687,7 +696,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public double doubleValue() {
         double value;
-        if (valueTid.type == IonType.FLOAT && !valueTid.isNull) {
+        if (valueTid.isNull) {
+            throwDueToInvalidType(IonType.FLOAT);
+        }
+        if (valueTid.type == IonType.FLOAT) {
             prepareScalar();
             int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
             if (length == 0) {
@@ -712,7 +724,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             value = scalarConverter.getDouble();
             scalarConverter.clear();
         } else {
-            throw new IllegalStateException("doubleValue() may only be called on values of type float or decimal.");
+            throw new IllegalStateException("doubleValue() may only be called on non-null values of type float or decimal.");
         }
         return value;
     }
