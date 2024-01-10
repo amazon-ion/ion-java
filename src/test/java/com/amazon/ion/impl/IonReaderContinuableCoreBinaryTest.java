@@ -27,6 +27,7 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fillStringValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class IonReaderContinuableCoreBinaryTest {
@@ -389,6 +390,94 @@ public class IonReaderContinuableCoreBinaryTest {
         );
         reader.nextValue();
         assertThrows(IonException.class, reader::timestampValue);
+        reader.close();
+    }
+
+    private static void assertReaderThrowsForAllPrimitives(IonReaderContinuableCoreBinary reader) {
+        // Note: ideally these would throw IonException instead of IllegalStateException, but there is long-standing
+        // precedent in IonJava for throwing IllegalStateException when these methods are used improperly. We maintain
+        // that convention for consistency.
+        assertThrows(IllegalStateException.class, reader::booleanValue);
+        assertThrows(IllegalStateException.class, reader::intValue);
+        assertThrows(IllegalStateException.class, reader::longValue);
+        assertThrows(IllegalStateException.class, reader::doubleValue);
+    }
+
+    @Test
+    public void expectAttemptToParseNullNullAsJavaPrimitiveToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x0F // null.null
+        );
+        reader.nextValue();
+        assertEquals(IonType.NULL, reader.getType());
+        assertReaderThrowsForAllPrimitives(reader);
+        reader.close();
+    }
+
+    @Test
+    public void expectAttemptToParseNullBoolAsJavaPrimitiveToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x1F // null.bool
+        );
+        reader.nextValue();
+        assertEquals(IonType.BOOL, reader.getType());
+        assertReaderThrowsForAllPrimitives(reader);
+        reader.close();
+    }
+
+    @Test
+    public void expectAttemptToParseNullIntAsJavaPrimitiveToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x2F, // null.int
+            0x3F // null.int
+        );
+        reader.nextValue();
+        assertEquals(IonType.INT, reader.getType());
+        assertReaderThrowsForAllPrimitives(reader);
+        assertNull(reader.bigIntegerValue());
+        assertNull(reader.decimalValue());
+        assertNull(reader.bigDecimalValue());
+        reader.nextValue();
+        assertEquals(IonType.INT, reader.getType());
+        assertReaderThrowsForAllPrimitives(reader);
+        assertNull(reader.bigIntegerValue());
+        assertNull(reader.decimalValue());
+        assertNull(reader.bigDecimalValue());
+        reader.close();
+    }
+
+    @Test
+    public void expectAttemptToParseNullFloatAsJavaPrimitiveToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x4F // null.float
+        );
+        reader.nextValue();
+        assertEquals(IonType.FLOAT, reader.getType());
+        assertReaderThrowsForAllPrimitives(reader);
+        assertNull(reader.bigIntegerValue());
+        reader.close();
+    }
+
+    @Test
+    public void expectAttemptToParseNullDecimalAsJavaPrimitiveToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x5F  // null.decimal
+        );
+        reader.nextValue();
+        assertEquals(IonType.DECIMAL, reader.getType());
+        assertNull(reader.decimalValue());
+        assertNull(reader.bigDecimalValue());
+        assertReaderThrowsForAllPrimitives(reader);
         reader.close();
     }
 }
