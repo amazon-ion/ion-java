@@ -43,7 +43,7 @@ jobs:
           files: build/reports/jacoco/test/jacocoTestReport.xml
       - uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
-          name: spotbugs-report
+          name: spotbugs-report-${{ matrix.runs-on }}-java-${{ matrix.java }}
           path: build/reports/spotbugs/
 
   check-version:
