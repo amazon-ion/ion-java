@@ -45,7 +45,7 @@ jobs:
           --replace ion-java,https://github.com/amazon-ion/ion-java.git,$main
 
       - name: Upload result
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           name: ion-test-driver-result.ion
           path: output/results/ion-test-driver-results.ion
@@ -60,7 +60,7 @@ jobs:
           ion-java,$main ion-java,$cur output/results/ion-test-driver-results.ion
 
       - name: Upload analysis report
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           name: analysis-report.ion
           path: result.ion
