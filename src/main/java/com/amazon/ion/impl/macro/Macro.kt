@@ -1,7 +1,7 @@
 package com.amazon.ion.impl.macro
 
 /**
- * Marker interface for Macros
+ * A [Macro] is either a [SystemMacro] or a [TemplateMacro].
  */
 sealed interface Macro {
     val signature: List<Parameter>

@@ -50,8 +50,9 @@ class MacroCompiler(private val reader: IonReader) {
             nextAndCheckType(IonType.SEXP, "macro signature")
             confirmNoAnnotations("macro signature")
             readSignature()
-
-            forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
+            confirm(next() != null) { "Macro definition is missing a template body expression." }
+            compileTemplateBodyExpression(isQuoted = false)
+            confirm(next() == null) { "Unexpected $type after template body expression." }
         }
         return TemplateMacro(signature.toList(), expressions.toList())
     }
@@ -96,9 +97,8 @@ class MacroCompiler(private val reader: IonReader) {
      * If called when the reader is not positioned on any value, throws [IllegalStateException].
      */
     private fun compileTemplateBodyExpression(isQuoted: Boolean) {
-        // TODO: Could typeAnnotations ever be an array of nulls?
         // NOTE: `toList()` does not allocate for an empty list.
-        val annotations = reader.typeAnnotationSymbols.toList()
+        val annotations: List<SymbolToken> = reader.typeAnnotationSymbols.toList()
 
         if (reader.isNullValue) {
             expressions.add(NullValue(annotations, reader.type))
@@ -139,7 +139,7 @@ class MacroCompiler(private val reader: IonReader) {
             }
             IonType.STRUCT -> compileStruct(annotations, isQuoted)
             // IonType.NULL, IonType.DATAGRAM, null
-            else -> TODO("Unreachable.")
+            else -> throw IllegalStateException("Found ${reader.type}; this should be unreachable.")
         }
     }
 

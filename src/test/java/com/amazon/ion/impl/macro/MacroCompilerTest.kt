@@ -35,7 +35,6 @@ class MacroCompilerTest {
     private infix fun String.shouldCompileTo(macro: TemplateMacro) = MacroSourceAndTemplate(this, macro)
 
     private fun testCases() = listOf(
-        "(macro empty ())" shouldCompileTo TemplateMacro(emptyList(), emptyList()),
         "(macro identity (x) x)" shouldCompileTo TemplateMacro(
             listOf(Parameter("x", Tagged, grouped = false)),
             listOf(Variable(0)),
@@ -48,9 +47,9 @@ class MacroCompilerTest {
             signature = emptyList(),
             body = listOf(DecimalValue(emptyList(), BigDecimal("3.141592653589793")))
         ),
-        "(macro group_test ([x]))" shouldCompileTo TemplateMacro(
+        "(macro group_test ([x]) x)" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, grouped = true)),
-            body = emptyList()
+            body = listOf(Variable(0))
         ),
         // Outer 'values' call allows multiple expressions in the body
         // The second `values` is a macro call that has a single argument: the variable `x`
@@ -66,21 +65,22 @@ class MacroCompilerTest {
                 SymbolValue(emptyList(), FakeSymbolToken("x", -1)),
             ),
         ),
-        "(macro each_type () null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" (quote bar) [] (quote ()) {} {{}} {{\"\"}} )" shouldCompileTo TemplateMacro(
+        "(macro each_type () (values null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" (quote bar) [] (quote ()) {} {{}} {{\"\"}} ))" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
+                MacroInvocation(ByName("values"), 0, 14),
                 NullValue(emptyList(), IonType.NULL),
                 BoolValue(emptyList(), true),
                 IntValue(emptyList(), 1),
                 BigIntValue(emptyList(), BigInteger("9".repeat(50))),
                 FloatValue(emptyList(), 1.0),
-                DecimalValue(emptyList(), BigDecimal.ONE),
+                DecimalValue(emptyList(), Decimal.ONE),
                 TimestampValue(emptyList(), Timestamp.valueOf("2024-01-16T")),
                 StringValue(emptyList(), "foo"),
                 SymbolValue(emptyList(), FakeSymbolToken("bar", -1)),
-                ListValue(emptyList(), startInclusive = 9, endInclusive = 9),
-                SExpValue(emptyList(), startInclusive = 10, endInclusive = 10),
-                StructValue(emptyList(), startInclusive = 11, endInclusive = 11, templateStructIndex = emptyMap()),
+                ListValue(emptyList(), startInclusive = 10, endInclusive = 10),
+                SExpValue(emptyList(), startInclusive = 11, endInclusive = 11),
+                StructValue(emptyList(), startInclusive = 12, endInclusive = 12, templateStructIndex = emptyMap()),
                 BlobValue(emptyList(), ByteArray(0)),
                 ClobValue(emptyList(), ByteArray(0))
             )
@@ -192,6 +192,7 @@ class MacroCompilerTest {
             """("macro" pi () 3.141592653589793)""", // 'macro' must be a symbol
             "(pi () 3.141592653589793)", // doesn't start with 'macro'
             "(macaroon pi () 3.141592653589793)", // doesn't start with 'macro'
+            "(macroeconomics pi () 3.141592653589793)", // will the demand for digits of pi ever match the supply?
             "(macro pi::pi () 3.141592653589793)", // Illegal annotation on macro name
             "(macro () 3.141592653589793)", // No macro name
             "(macro 2.5 () 3.141592653589793)", // Macro name is not a symbol
@@ -210,10 +211,12 @@ class MacroCompilerTest {
             """(macro identity ("x") x)""", // Parameter name must be a symbol, not a string
 
             // Problems in the body
+            "(macro empty ())", // No body expression
             "(macro transform (x) y)", // Unknown variable
             "(macro transform (x) foo::x)", // Variable cannot be annotated
             "(macro transform (x) foo::(quote x))", // Macro invocation cannot be annotated
             """(macro transform (x) ("quote" x))""", // Macro invocation must start with a symbol or integer id
+            "(macro transform (x) 1 2)", // Template body must be one expression
         ]
     )
     fun assertCompilationFails(source: String) {

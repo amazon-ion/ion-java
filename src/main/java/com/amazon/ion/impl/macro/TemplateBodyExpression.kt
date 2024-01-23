@@ -3,9 +3,7 @@
 
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.IonType
-import com.amazon.ion.SymbolToken
-import com.amazon.ion.Timestamp
+import com.amazon.ion.*
 import java.math.BigDecimal
 import java.math.BigInteger
 
