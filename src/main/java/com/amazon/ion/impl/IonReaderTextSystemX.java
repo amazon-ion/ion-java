@@ -606,9 +606,7 @@ class IonReaderTextSystemX
         load_or_cast_cached_value(AS_TYPE.string_value);
         String text = _v.getString();
         if (text == null) {
-            assert _value_type == IonType.SYMBOL;
             int sid = _v.getInt();
-            assert sid > 0;
             throw new UnknownSymbolException(sid);
         }
         return text;
