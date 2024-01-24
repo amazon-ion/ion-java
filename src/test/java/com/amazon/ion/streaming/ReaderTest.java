@@ -25,6 +25,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.junit.Injected.Inject;
 import com.amazon.ion.junit.IonAssert;
 import java.io.IOException;
@@ -191,6 +192,14 @@ public class ReaderTest
             }
             catch (IllegalStateException e) { }
         }
+    }
+
+    @Test
+    public void testStringValueOnSymbolWithUndefinedText()
+    {
+        read("$0");
+        assertEquals(IonType.SYMBOL, in.next());
+        assertThrows(UnknownSymbolException.class, () -> in.stringValue());
     }
 
     @Test
