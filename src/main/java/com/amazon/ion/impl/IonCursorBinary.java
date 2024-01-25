@@ -898,17 +898,16 @@ class IonCursorBinary implements IonCursor {
             }
             byte b = buffer[(int) peekIndex++];
             if (b < 0) {
-                endIndex = (b & LOWER_SEVEN_BITS_BITMASK);
+                endIndex = (b & LOWER_SEVEN_BITS_BITMASK) + peekIndex;
             } else {
-                endIndex = uncheckedReadVarUInt_1_0(b);
+                endIndex = uncheckedReadVarUInt_1_0(b) + peekIndex;
                 if (endIndex < 0) {
                     throw new IonException("Unsupported value: declared length is too long.");
                 }
             }
         } else {
-            endIndex = valueTid.length;
+            endIndex = valueTid.length + peekIndex;
         }
-        endIndex += peekIndex;
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
             event = Event.START_CONTAINER;
         } else if (valueTid.isNopPad) {
@@ -1308,13 +1307,19 @@ class IonCursorBinary implements IonCursor {
             setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
             event = Event.START_SCALAR;
         }
-        if (refillableState.isSkippingCurrentValue) {
-            // Any bytes that were skipped directly from the input must still be included in the logical endIndex so
-            // that the rest of the oversized value's bytes may be skipped.
-            endIndex = endIndex == DELIMITED_MARKER ? DELIMITED_MARKER : (peekIndex + valueLength + refillableState.individualBytesSkippedWithoutBuffering);
-        } else {
-            endIndex = endIndex == DELIMITED_MARKER ? DELIMITED_MARKER : (peekIndex + valueLength);
+        if (endIndex != DELIMITED_MARKER) {
+            if (refillableState.isSkippingCurrentValue) {
+                // Any bytes that were skipped directly from the input must still be included in the logical endIndex so
+                // that the rest of the oversized value's bytes may be skipped.
+                endIndex = peekIndex + valueLength + refillableState.individualBytesSkippedWithoutBuffering;
+            } else {
+                endIndex = peekIndex + valueLength;
+            }
+            if (endIndex < 0) {
+                throw new IonException("Unsupported value: declared length is too long.");
+            }
         }
+
         if (isAnnotated) {
             validateAnnotationWrapperEndIndex(endIndex);
         }

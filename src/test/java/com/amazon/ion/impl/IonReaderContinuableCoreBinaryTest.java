@@ -480,4 +480,20 @@ public class IonReaderContinuableCoreBinaryTest {
         assertReaderThrowsForAllPrimitives(reader);
         reader.close();
     }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectLobWithOverflowingEndIndexToFailCleanly(boolean constructFromBytes) {
+        // This test exercises the case where a value's length itself does not overflow a java long, but its end index
+        // (calculated by adding the reader's current index in the buffer to the value's length) does.
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xAE, // blob with length VarUInt to follow
+            0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFE, // 9-byte VarUInt with value just below Long.MAX_VALUE
+            0xAF // The first byte of the blob
+        );
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
 }
