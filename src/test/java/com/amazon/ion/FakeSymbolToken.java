@@ -45,4 +45,28 @@ public class FakeSymbolToken
     {
         return mySid;
     }
+
+    @Override
+    public String toString()
+    {
+        return "SymbolToken::{text:" + myText + ",id:" + mySid + "}";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || !(o instanceof SymbolToken)) return false;
+
+        SymbolToken other = (SymbolToken) o;
+        if(getText() == null || other.getText() == null){
+            return getText() == other.getText();
+        }
+        return getText().equals(other.getText());
+    }
+
+    @Override
+    public int hashCode() {
+        if(getText() != null) return getText().hashCode();
+        return 0;
+    }
 }
