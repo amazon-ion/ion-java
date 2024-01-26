@@ -152,7 +152,7 @@ public class ResizingPipedInputStream extends InputStream {
         if (initialBufferSize < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
         }
-        if (initialBufferSize > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+        if (maximumBufferSize > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
             throw new IllegalArgumentException("Initial buffer size must be at most " + _Private_IonConstants.ARRAY_MAXIMUM_SIZE + ".");
         }
         if (maximumBufferSize < initialBufferSize) {
