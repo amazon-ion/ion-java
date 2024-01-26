@@ -20,6 +20,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import java.io.BufferedInputStream;
@@ -65,7 +66,7 @@ abstract class BaseApp
         throws FileNotFoundException, IOException
     {
         long len = file.length();
-        if (len < 0 || len > Integer.MAX_VALUE)
+        if (len < 0 || len > Integer.MAX_VALUE - 8)
         {
             throw new IllegalArgumentException("File too long: " + file);
         }

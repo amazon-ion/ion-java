@@ -22,6 +22,13 @@ import com.amazon.ion.IonException;
  */
 public final class _Private_IonConstants
 {
+    // Arrays in Java must be indexed by integers (JLS 10.4), but the true maximum array size may be less than
+    // Integer.MAX_VALUE. True maximum array size is a JVM implementation detail, and varies by type and by JVM.
+    // We have this pinned at Integer.MAX_VALUE - 8 because that's a fairly common value in the JDK itself, in
+    // classes such as ConcurrentHashMap, InputStream, Hashtable, ByteArrayChannel, etc.
+    // In testing against a variety of JVMs and types the smallest maximum size I've seen is Integer.MAX_VALUE - 6
+    public static final int ARRAY_MAXIMUM_SIZE = Integer.MAX_VALUE - 8;
+
     private _Private_IonConstants() { }
 
 

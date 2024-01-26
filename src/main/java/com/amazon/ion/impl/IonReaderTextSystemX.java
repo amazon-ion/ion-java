@@ -744,7 +744,7 @@ class IonReaderTextSystemX
         }
         if (_lob_loaded == LOB_STATE.READ) {
             long raw_size =  _current_value_save_point.length();
-            if (raw_size < 0 || raw_size > Integer.MAX_VALUE) {
+            if (raw_size < 0 || raw_size > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
                 load_lob_length_overflow_error(raw_size);
             }
             _lob_bytes = new byte[(int)raw_size];

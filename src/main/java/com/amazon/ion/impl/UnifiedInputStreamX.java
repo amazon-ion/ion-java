@@ -564,6 +564,7 @@ abstract class UnifiedInputStreamX
             _is_byte_data = false;
             _is_stream = true;
             _reader = reader;
+            // If this page size ever becomes configurable watch out for _Private_IonConstants.ARRAY_MAXIMUM_SIZE
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.CHARS, DEFAULT_PAGE_SIZE);
             super.init();
             _limit = refill();
@@ -601,6 +602,7 @@ static class FromByteArray extends UnifiedInputStreamX
             _is_byte_data = true;
             _is_stream = true;
             _stream = stream;
+            // If this page size ever becomes configurable watch out for _Private_IonConstants.ARRAY_MAXIMUM_SIZE
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.BYTES, DEFAULT_PAGE_SIZE);
             super.init();
             _limit = refill();

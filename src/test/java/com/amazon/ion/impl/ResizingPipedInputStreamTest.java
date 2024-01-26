@@ -94,7 +94,7 @@ public class ResizingPipedInputStreamTest {
 
     @Before
     public void setup() {
-        input = new ResizingPipedInputStream(bufferSize, Integer.MAX_VALUE, useBoundary);
+        input = new ResizingPipedInputStream(bufferSize, _Private_IonConstants.ARRAY_MAXIMUM_SIZE, useBoundary);
         knownCapacity = input.capacity();
     }
 
