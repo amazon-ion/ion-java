@@ -15,14 +15,17 @@
 
 package com.amazon.ion.impl;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-public class UnifiedInputStreamXTest extends Assert {
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+public class UnifiedInputStreamXTest {
+
     @Test
     public void testReadExactlyAvailable() throws Exception {
         class TestInputStream extends InputStream {
