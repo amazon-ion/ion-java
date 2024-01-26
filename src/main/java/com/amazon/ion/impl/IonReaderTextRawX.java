@@ -1113,64 +1113,70 @@ abstract class IonReaderTextRawX
         }
         else {
             _scanner.save_point_start(_current_value_save_point);
-            switch (token_type) {
-            case IonTokenConstsX.TOKEN_UNKNOWN_NUMERIC:
-            case IonTokenConstsX.TOKEN_INT:
-            case IonTokenConstsX.TOKEN_BINARY:
-            case IonTokenConstsX.TOKEN_HEX:
-            case IonTokenConstsX.TOKEN_FLOAT:
-            case IonTokenConstsX.TOKEN_DECIMAL:
-            case IonTokenConstsX.TOKEN_TIMESTAMP:
-                _value_type = _scanner.load_number(sb);
-                break;
-            case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
-                _scanner.load_symbol_identifier(sb);
-                _value_type = IonType.SYMBOL;
-                break;
-            case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
-                _scanner.load_symbol_operator(sb);
-                _value_type = IonType.SYMBOL;
-                break;
-            case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
-                clob_chars_only = (IonType.CLOB == _value_type);
-                c = _scanner.load_single_quoted_string(sb, clob_chars_only);
-                if (c == UnifiedInputStreamX.EOF) {
-                    //String message = "EOF encountered before closing single quote";
-                    //parse_error(message);
-                    _scanner.unexpected_eof();
+            try {
+                switch (token_type) {
+                    case IonTokenConstsX.TOKEN_UNKNOWN_NUMERIC:
+                    case IonTokenConstsX.TOKEN_INT:
+                    case IonTokenConstsX.TOKEN_BINARY:
+                    case IonTokenConstsX.TOKEN_HEX:
+                    case IonTokenConstsX.TOKEN_FLOAT:
+                    case IonTokenConstsX.TOKEN_DECIMAL:
+                    case IonTokenConstsX.TOKEN_TIMESTAMP:
+                        _value_type = _scanner.load_number(sb);
+                        break;
+                    case IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER:
+                        _scanner.load_symbol_identifier(sb);
+                        _value_type = IonType.SYMBOL;
+                        break;
+                    case IonTokenConstsX.TOKEN_SYMBOL_OPERATOR:
+                        _scanner.load_symbol_operator(sb);
+                        _value_type = IonType.SYMBOL;
+                        break;
+                    case IonTokenConstsX.TOKEN_SYMBOL_QUOTED:
+                        clob_chars_only = (IonType.CLOB == _value_type);
+                        c = _scanner.load_single_quoted_string(sb, clob_chars_only);
+                        if (c == UnifiedInputStreamX.EOF) {
+                            //String message = "EOF encountered before closing single quote";
+                            //parse_error(message);
+                            _scanner.unexpected_eof();
+                        }
+                        _value_type = IonType.SYMBOL;
+                        break;
+                    case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
+                        clob_chars_only = (IonType.CLOB == _value_type);
+                        c = _scanner.load_double_quoted_string(sb, clob_chars_only);
+                        if (c == UnifiedInputStreamX.EOF) {
+                            // String message = "EOF encountered before closing single quote";
+                            // parse_error(message);
+                            _scanner.unexpected_eof();
+                        }
+                        _value_type = IonType.STRING;
+                        break;
+                    case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
+                        clob_chars_only = (IonType.CLOB == _value_type);
+                        c = _scanner.load_triple_quoted_string(sb, clob_chars_only);
+                        if (c == UnifiedInputStreamX.EOF) {
+                            //String message = "EOF encountered before closing single quote";
+                            //parse_error(message);
+                            _scanner.unexpected_eof();
+                        }
+                        _value_type = IonType.STRING;
+                        break;
+                    default:
+                        String message = "unexpected token "
+                            + IonTokenConstsX.getTokenName(token_type)
+                            + " encountered";
+                        throw new IonException(message);
                 }
-                _value_type = IonType.SYMBOL;
-                break;
-            case IonTokenConstsX.TOKEN_STRING_DOUBLE_QUOTE:
-                clob_chars_only = (IonType.CLOB == _value_type);
-                c = _scanner.load_double_quoted_string(sb, clob_chars_only);
-                if (c == UnifiedInputStreamX.EOF) {
-                    // String message = "EOF encountered before closing single quote";
-                    // parse_error(message);
-                    _scanner.unexpected_eof();
-                }
-                _value_type = IonType.STRING;
-                break;
-            case IonTokenConstsX.TOKEN_STRING_TRIPLE_QUOTE:
-                clob_chars_only = (IonType.CLOB == _value_type);
-                c = _scanner.load_triple_quoted_string(sb, clob_chars_only);
-                if (c == UnifiedInputStreamX.EOF) {
-                    //String message = "EOF encountered before closing single quote";
-                    //parse_error(message);
-                    _scanner.unexpected_eof();
-                }
-                _value_type = IonType.STRING;
-                break;
-            default:
-                String message = "unexpected token "
-                               + IonTokenConstsX.getTokenName(token_type)
-                               + " encountered";
-                throw new IonException(message);
+                _current_value_save_point.markEnd();
+                _current_value_save_point_loaded = true;
+                _current_value_buffer_loaded = true;
+                tokenValueIsFinished();
+            } catch (IonException e) {
+                _current_value_save_point.clear();
+                _current_value_save_point_loaded = false;
+                throw e;
             }
-            _current_value_save_point.markEnd();
-            _current_value_save_point_loaded = true;
-            _current_value_buffer_loaded = true;
-            tokenValueIsFinished();
         }
         return sb;
     }
