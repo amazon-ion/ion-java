@@ -18,7 +18,10 @@ package com.amazon.ion.util;
 import com.amazon.ion.BlobTest;
 import com.amazon.ion.BlobTest.TestData;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTestCase;
+import com.amazon.ion.IonType;
 import com.amazon.ion.impl._Private_IonTextAppender;
 import java.math.BigDecimal;
 import org.junit.Test;
@@ -247,5 +250,23 @@ public class TextTest
         checkClob("null.clob", null);
         checkClob("{{\"\"}}", new byte[0]);
         checkClob("{{\"\\0a\\xff\"}}", new byte[]{ 0, 'a', (byte) 0xff });
+    }
+
+    @Test
+    public void testAttemptedRecoveryOnMalformedDataFailsCleanly()
+        throws Exception
+    {
+        // `\0` is not a valid character in unquoted Ion text.
+        try (IonReader reader = system().newReader("0x2\0")) {
+            // Note: the reader does not fail on next() because it only needs to read `0x` to determine that the value that
+            // follows must be an int.
+            assertEquals(IonType.INT, reader.next());
+            // Now, the reader attempts to read to the end of the int in order to determine its size. This will raise an
+            // error due to the invalid character. Ignore this error and attempt to recover.
+            assertThrows(IonException.class, reader::getIntegerSize);
+            // Recovery will not be possible, but the following should throw IonException and not a different unchecked
+            // exception.
+            assertThrows(IonException.class, reader::intValue);
+        }
     }
 }
