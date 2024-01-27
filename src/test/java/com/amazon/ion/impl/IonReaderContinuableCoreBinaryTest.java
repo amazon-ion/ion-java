@@ -3,6 +3,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import org.junit.jupiter.api.Test;
@@ -493,6 +494,76 @@ public class IonReaderContinuableCoreBinaryTest {
             0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFE, // 9-byte VarUInt with value just below Long.MAX_VALUE
             0xAF // The first byte of the blob
         );
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectIncompleteContainerToFailCleanlyAfterFieldSid() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xDC, // Struct, length 12
+            0x9A  // Field SID 26
+            // The struct ends unexpectedly
+        );
+        assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+        assertEquals(IonType.STRUCT, reader.getType());
+        reader.stepIntoContainer();
+        // This is an unexpected EOF, so the reader should fail cleanly.
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectIncompleteContainerToFailCleanlyAfterTwoByteFieldSid() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xDC, // Struct, length 12
+            0x00, // First byte of overpadded 2-byte field SID
+            0x9A  // Field SID 26
+            // The struct ends unexpectedly
+        );
+        assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+        assertEquals(IonType.STRUCT, reader.getType());
+        reader.stepIntoContainer();
+        // This is an unexpected EOF, so the reader should fail cleanly.
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectIncompleteContainerToFailCleanlyAfterAnnotationHeader() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xDC, // Struct, length 12
+            0x9A, // Field SID 26
+            0xE4, // Annotation wrapper length 4
+            0x00, 0x81, // VarUInt length 1 (overpadded by 1 byte)
+            0x00, 0x84  // VarUInt SID 4 (overpadded by 1 byte)
+            // The value ends unexpectedly
+        );
+        assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+        assertEquals(IonType.STRUCT, reader.getType());
+        reader.stepIntoContainer();
+        // This is an unexpected EOF, so the reader should fail cleanly.
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @Test
+    public void expectIncompleteAnnotationHeaderToFailCleanly() {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0xE4, // Annotation wrapper length 5
+            0x81, // VarUInt length 1
+            0x84  // VarUInt SID 4
+            // The value ends unexpectedly
+        );
+        // This is an unexpected EOF, so the reader should fail cleanly.
         assertThrows(IonException.class, reader::nextValue);
         reader.close();
     }
