@@ -1574,6 +1574,9 @@ class IonCursorBinary implements IonCursor {
             if (uncheckedNextContainedToken()) {
                 return false;
             }
+            if (peekIndex >= limit) {
+                throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the container.");
+            }
             b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         }
         if (uncheckedReadHeader(b, false, valueMarker)) {
