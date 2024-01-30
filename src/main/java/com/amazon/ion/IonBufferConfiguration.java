@@ -178,7 +178,7 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
     private IonBufferConfiguration(Builder builder) {
         super(builder);
         if (builder.getOversizedSymbolTableHandler() == null) {
-            requireUnlimitedBufferSize();
+            requireMaximumBufferSize();
             oversizedSymbolTableHandler = builder.getThrowingOversizedSymbolTableHandler();
         } else {
             oversizedSymbolTableHandler = builder.getOversizedSymbolTableHandler();

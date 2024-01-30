@@ -21,12 +21,11 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings("resource")
 @RunWith(Parameterized.class)
 public class ResizingPipedInputStreamTest {
 
@@ -94,7 +93,7 @@ public class ResizingPipedInputStreamTest {
 
     @Before
     public void setup() {
-        input = new ResizingPipedInputStream(bufferSize, Integer.MAX_VALUE, useBoundary);
+        input = new ResizingPipedInputStream(bufferSize, _Private_IonConstants.ARRAY_MAXIMUM_SIZE, useBoundary);
         knownCapacity = input.capacity();
     }
 
@@ -469,16 +468,20 @@ public class ResizingPipedInputStreamTest {
         assertEquals(0, input.available());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void errorsOnInvalidInitialBufferSize() {
-        new ResizingPipedInputStream(0);
+        assertThrows(IllegalArgumentException.class, () -> new ResizingPipedInputStream(0));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
+    public void errorsOnMaximumBufferSizeSmallerThanInitialSize() {
+        assertThrows(IllegalArgumentException.class, () -> new ResizingPipedInputStream(10, 9, useBoundary));
+    }
+
+    @Test
     public void errorsOnInvalidMaximumBufferSize() {
-        new ResizingPipedInputStream(10, 9, useBoundary);
+        assertThrows(IllegalArgumentException.class, () -> new ResizingPipedInputStream(10, Integer.MAX_VALUE, useBoundary));
     }
-
     @Test
     public void initialBufferSizeAndCapacity() {
         assertEquals(bufferSize, input.getInitialBufferSize());

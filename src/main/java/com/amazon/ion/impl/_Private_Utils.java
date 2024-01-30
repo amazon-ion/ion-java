@@ -578,7 +578,7 @@ public final class _Private_Utils
         throws IOException
     {
         long len = file.length();
-        if (len < 0 || len > Integer.MAX_VALUE) {
+        if (len < 0 || len > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
             throw new IllegalArgumentException("File too long: " + file);
         }
 

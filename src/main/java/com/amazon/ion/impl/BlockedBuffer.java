@@ -1282,7 +1282,7 @@ static final boolean test_with_no_version_checking = false;
         @Override
         public final long skip(long n) throws IOException
         {
-            if (n < 0 || n > Integer.MAX_VALUE) throw new IllegalArgumentException("we only handle buffer less than "+Integer.MAX_VALUE+" bytes in length");
+            if (n < 0 || n > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) throw new IllegalArgumentException("we only handle buffer less than "+_Private_IonConstants.ARRAY_MAXIMUM_SIZE+" bytes in length");
             if (_buf == null) throw new IOException("stream is closed");
             fail_on_version_change();
             if (_pos >= _buf.size()) return -1;

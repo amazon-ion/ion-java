@@ -3,6 +3,7 @@
 
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,8 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
 import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -395,6 +398,33 @@ public class IonCursorBinaryTest {
             0x83  // VarUInt length 3, no annotation length follows
         );
         assertThrows(IonException.class, cursor::nextValue);
+        cursor.close();
+    }
+
+    @Test
+    public void expectValueLargerThanIntMaxToFailCleanly() {
+        int[] data = new int[] {
+                0xE0, 0x01, 0x00, 0xEA,
+                0x2E, // Integer with VarUInt length, because that's clearly a reasonable thing to find
+                0x07, 0x7f, 0x7f, 0x7f, 0xf9 // VarUInt length 2147483647 (Integer.MAX_LENGTH)
+        };
+        ByteArrayInputStream in = new ByteArrayInputStream(bytes(data));
+
+        // We need a custom initial buffer size so that the cursor doesn't know there are fewer bytes remaining
+        // than the value header promises
+        IonBufferConfiguration config = IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(8)
+                .build();
+
+        IonCursorBinary cursor = new IonCursorBinary(config, in, null, 0, 0);
+
+        cursor.nextValue(); // Position cursor on unreal oversized value
+
+        // Try to get all the value bytes, and fail because arrays can't be that large
+        IonException ie = assertThrows(IonException.class, cursor::fillValue);
+        assertThat(ie.getMessage(),
+                containsString("An oversized value was found even though no maximum size was configured."));
+
         cursor.close();
     }
 }

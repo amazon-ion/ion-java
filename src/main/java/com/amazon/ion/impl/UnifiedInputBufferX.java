@@ -67,6 +67,8 @@ abstract class UnifiedInputBufferX
     private UnifiedInputBufferX(int initialPageSize) {
         if (initialPageSize < 0) {
             throw new IllegalArgumentException("page size must be > 0");
+        } else if (initialPageSize > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+            throw new IllegalArgumentException("page size must be < " + _Private_IonConstants.ARRAY_MAXIMUM_SIZE);
         }
         _page_size = initialPageSize;
         _buffers = new UnifiedDataPageX[10];
