@@ -458,6 +458,7 @@ class IonCursorBinary implements IonCursor {
             configuration.getInitialBufferSize(),
             configuration.getMaximumBufferSize()
         );
+        registerOversizedValueHandler(configuration.getOversizedValueHandler());
     }
 
     /*
