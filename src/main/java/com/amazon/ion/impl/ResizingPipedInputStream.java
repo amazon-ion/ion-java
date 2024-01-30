@@ -129,7 +129,7 @@ public class ResizingPipedInputStream extends InputStream {
      *                          such that growth is expected to occur rarely, if ever.
      */
     public ResizingPipedInputStream(final int initialBufferSize) {
-        this(initialBufferSize, Integer.MAX_VALUE, false);
+        this(initialBufferSize, _Private_IonConstants.ARRAY_MAXIMUM_SIZE, false);
     }
 
     /**
@@ -151,6 +151,9 @@ public class ResizingPipedInputStream extends InputStream {
     ResizingPipedInputStream(final int initialBufferSize, final int maximumBufferSize, final boolean useBoundary) {
         if (initialBufferSize < 1) {
             throw new IllegalArgumentException("Initial buffer size must be at least 1.");
+        }
+        if (maximumBufferSize > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+            throw new IllegalArgumentException("Initial buffer size must be at most " + _Private_IonConstants.ARRAY_MAXIMUM_SIZE + ".");
         }
         if (maximumBufferSize < initialBufferSize) {
             throw new IllegalArgumentException("Maximum buffer size cannot be less than the initial buffer size.");

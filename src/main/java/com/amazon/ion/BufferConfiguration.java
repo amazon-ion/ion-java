@@ -3,6 +3,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl._Private_IonConstants;
+
 /**
  * Provides logic common to all BufferConfiguration implementations.
  * @param <Configuration> the type of the concrete subclass of this BufferConfiguration.
@@ -60,7 +62,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         /**
          * The maximum number of bytes that will be buffered.
          */
-        private int maximumBufferSize = Integer.MAX_VALUE;
+        private int maximumBufferSize = _Private_IonConstants.ARRAY_MAXIMUM_SIZE;
 
         /**
          * The handler that will be notified when oversized values are encountered.
@@ -133,7 +135,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
          * Set the maximum size of the buffer. For binary Ion, the minimum value is 5 because all valid binary Ion data
          * begins with a 4-byte Ion version marker and the smallest value is 1 byte. For text Ion, the minimum value is
          * 2 because the smallest text Ion value is 1 byte and the smallest delimiter is 1 byte.
-         * Default: Integer.MAX_VALUE.
+         * Default: Near to the maximum size of an array.
          *
          * @param maximumBufferSizeInBytes the value.
          * @return this builder.
@@ -214,7 +216,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
             ));
         }
         if (builder.getOversizedValueHandler() == null) {
-            requireUnlimitedBufferSize();
+            requireMaximumBufferSize();
             oversizedValueHandler = builder.getThrowingOversizedValueHandler();
         } else {
             oversizedValueHandler = builder.getOversizedValueHandler();
@@ -229,10 +231,10 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
     /**
      * Requires that the maximum buffer size not be limited.
      */
-    protected void requireUnlimitedBufferSize() {
-        if (maximumBufferSize < Integer.MAX_VALUE) {
+    protected void requireMaximumBufferSize() {
+        if (maximumBufferSize < _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
             throw new IllegalArgumentException(
-                "Must specify an OversizedValueHandler when a maximum buffer size is specified."
+                "Must specify an OversizedValueHandler when a custom maximum buffer size is specified."
             );
         }
     }
