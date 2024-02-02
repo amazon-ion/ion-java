@@ -402,12 +402,12 @@ public class IonCursorBinaryTest {
     }
 
     @Test
-    public void expectValueLargerThanIntMaxToFailCleanly() {
-        int[] data = new int[] {
-                0xE0, 0x01, 0x00, 0xEA,
-                0x2E, // Integer with VarUInt length, because that's clearly a reasonable thing to find
-                0x07, 0x7f, 0x7f, 0x7f, 0xf9 // VarUInt length 2147483647 (Integer.MAX_LENGTH)
-        };
+    public void expectValueLargerThanMaxArraySizeToFailCleanly() {
+        int[] data = new int[]{
+                0xE0, 0x01, 0x00, 0xEA,      // Ion 1.0 IVM
+                0x2E,                        // Int with VarUInt length, 6 bytes total
+                0x07, 0x7f, 0x7f, 0x7f, 0xf9 // VarUInt length (Integer.MAX_LENGTH - 6)
+        };                                   // Because that's clearly a reasonable thing to find
         ByteArrayInputStream in = new ByteArrayInputStream(bytes(data));
 
         // We need a custom initial buffer size so that the cursor doesn't know there are fewer bytes remaining
