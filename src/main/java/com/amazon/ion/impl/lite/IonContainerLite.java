@@ -743,7 +743,7 @@ abstract class IonContainerLite
     }
 
     /**
-     * This is overriden in {@link IonStructLite} to add the {@link HashMap} of
+     * This is overridden in {@link IonStructLite} to add the {@link HashMap} of
      * field names when the struct becomes moderately large.
      *
      * @param size
@@ -751,6 +751,13 @@ abstract class IonContainerLite
     void transitionToLargeSize(int size)
     {
         return;
+    }
+
+    /**
+     * Force any lazy state to be materialized (if applicable).
+     */
+    void forceMaterializationOfLazyState() {
+
     }
 
     public final int get_child_count() {

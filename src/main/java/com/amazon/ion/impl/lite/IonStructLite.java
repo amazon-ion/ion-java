@@ -100,10 +100,8 @@ final class IonStructLite
     }
 
     @Override
-    public void makeReadOnly() {
-        // Eagerly initialize the fields map to prevent potential data races https://github.com/amazon-ion/ion-java/issues/629
+    void forceMaterializationOfLazyState() {
         fieldMapIsActive(_child_count);
-        super.makeReadOnly();
     }
 
     private void add_field(String fieldName, int newFieldIdx)
@@ -383,6 +381,7 @@ final class IonStructLite
     private boolean fieldMapIsActive(int proposedSize) {
         if (_field_map != null) return true;
         if (proposedSize <= STRUCT_INITIAL_SIZE) return false;
+        if (_isLocked()) return false;
         build_field_map();
         return true;
     }

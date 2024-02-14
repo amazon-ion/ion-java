@@ -18,11 +18,14 @@ package com.amazon.ion;
 import com.amazon.ion.impl._Private_IonSystem;
 import com.amazon.ion.junit.IonAssert;
 import com.amazon.ion.system.IonSystemBuilder;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static com.amazon.ion.impl._Private_Utils.newSymbolToken;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -34,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CloneTest
 {
@@ -266,28 +270,133 @@ public class CloneTest
         assertNotEquals(original, clone);
     }
 
-    @Test
-    public void readOnlyIonStructMultithreadedTest() {
+    /**
+     * Verifies that a read-only struct without nested values can be accessed via multiple threads concurrently.
+     * @param beforeMakingReadOnly logic to be applied to each struct before it is made read-only.
+     */
+    private void testReadOnlyIonStructMultithreadedAccess(Function<IonStruct, IonStruct> beforeMakingReadOnly) {
         // See: https://github.com/amazon-ion/ion-java/issues/629
         String ionStr = "{a:1,b:2,c:3,d:4,e:5,f:6}";
 
-        IonStruct ionValue = (IonStruct)system().singleValue(ionStr);
-        ionValue.makeReadOnly();
+        IonStruct struct = beforeMakingReadOnly.apply((IonStruct) system().singleValue(ionStr));
+        struct.makeReadOnly();
 
-        for (int i=0; i<100; i++) {
-            IonStruct clone = ionValue.clone();
-            clone.makeReadOnly();
-
-            List<CompletableFuture<Void>> waiting = new ArrayList<>();
-            for (int j = 0; j < 4; j++) {
-                waiting.add(CompletableFuture.runAsync(() -> {
-                    for (int k = 0; k <= 100; k++) {
-                        assertNotNull(clone.get("a"));
-                    }
-                }));
-            }
-            waiting.forEach(CompletableFuture::join);
+        int numberOfTasks = 2;
+        List<CompletableFuture<Void>> waiting = new ArrayList<>();
+        for (int task = 0; task < numberOfTasks; task++) {
+            waiting.add(CompletableFuture.runAsync(() -> assertNotNull(struct.get("a"))));
         }
+        waiting.forEach(CompletableFuture::join);
+    }
+
+    @RepeatedTest(20)
+    public void readOnlyIonStructMultithreadedAccessSucceeds() {
+        testReadOnlyIonStructMultithreadedAccess(s -> s);
+    }
+
+    @RepeatedTest(20)
+    public void readOnlyClonedIonStructMultithreadedAccessSucceeds() {
+        testReadOnlyIonStructMultithreadedAccess(IonStruct::clone);
+    }
+
+    /**
+     * Creates a new IonStruct with several children, including two large nested structs. The large children will
+     * take longer to clone and sequentially access, giving more time for race conditions to surface in multithreaded
+     * contexts if the code is insufficiently protected.
+     * @return a new IonStruct.
+     */
+    private IonStruct createIonStructWithLargeChildStructs() {
+        IonSystem ionSystem = system();
+        IonStruct attribute = ionSystem.newEmptyStruct();
+        attribute.put("a", ionSystem.newSymbol("foo"));
+        attribute.put("b", ionSystem.newSymbol("foo"));
+        attribute.put("c", ionSystem.newSymbol("foo"));
+        IonStruct struct = ionSystem.newEmptyStruct();
+        struct.put("a", ionSystem.newSymbol("foo"));
+        struct.put("b", ionSystem.newSymbol("foo"));
+        struct.put("c", ionSystem.newSymbol("foo"));
+        struct.put("number", ionSystem.newDecimal(1e-2));
+        IonStruct child1 = ionSystem.newEmptyStruct();
+        for (int i = 0; i < 8; i++) {
+            child1.put("field" + i, attribute.clone());
+        }
+        struct.put("child1", child1);
+        IonStruct child2 = ionSystem.newEmptyStruct();
+        for (int i = 0; i < 1000; i++) {
+            child2.put("beforeTarget" + i, attribute.clone());
+        }
+        child2.put("target", attribute);
+        for (int i = 0; i < 400; i++) {
+            child2.put("afterTarget" + i, attribute.clone());
+        }
+        struct.put("child2", child2);
+        return struct;
+    }
+
+    /**
+     * Verifies that a read-only struct's large nested struct can be accessed via multiple threads concurrently.
+     * @param prepareStruct logic to be applied to the struct. The returned struct's "child2" struct must be read-only.
+     */
+    private void testReadOnlyIonStructMultithreadedNestedAccess(Function<IonStruct, IonStruct> prepareStruct) {
+        IonStruct struct = prepareStruct.apply(createIonStructWithLargeChildStructs());
+        int numberOfTasks = 2;
+        AtomicInteger success = new AtomicInteger();
+        AtomicInteger error = new AtomicInteger();
+        List<CompletableFuture<Void>> tasks = new ArrayList<>();
+
+        for (int task = 0; task < numberOfTasks; task++) {
+            tasks.add(CompletableFuture.runAsync(
+                () -> {
+                    IonStruct child2 = (IonStruct) struct.get("child2");
+                    String value = child2 == null || child2.get("target") == null
+                        ? null
+                        : ((IonStruct) child2.get("target")).get("a").toString();
+
+                    if (value == null) {
+                        error.getAndIncrement();
+                    }
+                    success.getAndIncrement();
+                }
+            ));
+        }
+        tasks.forEach(CompletableFuture::join);
+
+        assertTrue(success.get() > 0);
+        assertEquals(0, error.get());
+    }
+
+    @RepeatedTest(20)
+    public void readOnlyIonStructMultithreadedNestedAccessSucceeds() {
+        testReadOnlyIonStructMultithreadedNestedAccess(s -> {
+            s.makeReadOnly();
+            return s;
+        });
+    }
+
+    @RepeatedTest(20)
+    public void readOnlyClonedIonStructMultithreadedNestedAccessSucceeds() {
+        testReadOnlyIonStructMultithreadedNestedAccess(s -> {
+            IonStruct clone = s.clone();
+            clone.makeReadOnly();
+            return clone;
+        });
+    }
+
+    @RepeatedTest(20)
+    public void readOnlyNestedIonStructMultithreadedAccessSucceeds() {
+        testReadOnlyIonStructMultithreadedNestedAccess(s -> {
+            s.get("child2").makeReadOnly();
+            return s;
+        });
+    }
+
+    @RepeatedTest(20)
+    public void readOnlyClonedNestedIonStructMultithreadedAccessSucceeds() {
+        testReadOnlyIonStructMultithreadedNestedAccess(s -> {
+            IonStruct clone = s.clone();
+            clone.get("child2").makeReadOnly();
+            return clone;
+        });
     }
 
     /**
