@@ -677,6 +677,7 @@ abstract class IonValueLite
                         holder.parent._isSymbolIdPresent(false);
                     }
                     if (readOnlyMode) {
+                        holder.parent.forceMaterializationOfLazyState();
                         holder.parent._isLocked(true);
                     }
                     // The end of the container has been reached. Pop from the stack and update the parent's flag.
