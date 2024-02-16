@@ -6,14 +6,18 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
@@ -35,21 +39,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class IonCursorBinaryTest {
 
-    private static IonCursorBinary initializeCursor(boolean constructFromBytes, int... data) {
+    private static IonCursorBinary initializeCursor(IonBufferConfiguration configuration, boolean constructFromBytes, int... data) {
         IonCursorBinary cursor;
         if (constructFromBytes) {
-            cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, bytes(data), 0, data.length);
+            cursor = new IonCursorBinary(configuration, bytes(data), 0, data.length);
         } else {
             cursor = new IonCursorBinary(
-                STANDARD_BUFFER_CONFIGURATION,
+                configuration,
                 new ByteArrayInputStream(bytes(data)),
                 null,
                 0,
                 0
             );
         }
-        cursor.registerOversizedValueHandler(STANDARD_BUFFER_CONFIGURATION.getOversizedValueHandler());
+        cursor.registerOversizedValueHandler(configuration.getOversizedValueHandler());
         return cursor;
+    }
+
+    private static IonCursorBinary initializeCursor(boolean constructFromBytes, int... data) {
+        return initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data);
     }
 
     /**
@@ -67,6 +75,33 @@ public class IonCursorBinaryTest {
                 assertEquals(expectedEnd, marker.endIndex);
             }
         ));
+    }
+
+    /**
+     * Provides Expectations that verify that advancing the cursor to the next value results in the given event, and
+     * attempting to fill that value results in NEEDS_INSTRUCTION, indicating that the value could not be filled due
+     * to being oversize.
+     */
+    private static ExpectationProvider<IonCursorBinary> fillIsOversize(IonCursor.Event expectedEvent, Supplier<Integer> oversizeCounter) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fillOversized(%s)", expectedEvent),
+            cursor -> {
+                assertEquals(expectedEvent, cursor.nextValue());
+                assertEquals(NEEDS_INSTRUCTION, cursor.fillValue());
+                assertEquals(1, oversizeCounter.get());
+            }
+        ));
+    }
+
+    /**
+     * Provides an Expectation that verifies that the value on which the cursor is currently positioned has the given
+     * type.
+     */
+    static <T extends IonCursorBinary> ExpectationProvider<T> type(IonType expectedType) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("type(%s)", expectedType),
+            cursor -> assertEquals(expectedType, cursor.getValueMarker().typeId.type))
+        );
     }
 
     /**
@@ -258,6 +293,36 @@ public class IonCursorBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void fillDelimitedContainerAtDepth0(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0x07, // Field SID 3
+            0xF1, // Delimited list, contents start at index 7
+            0x5A, // Float length 0
+            0xF0, // End delimited list
+            0x09, // Field SID 4
+            0x51, 0x01, // Int length 1, starting at byte index 11
+            0x01, 0xF0 // End delimited struct
+        );
+        assertSequence(
+            cursor,
+            // When reading from a fixed-size input source, the cursor does not need peek ahead to find the end of
+            // the delimited container during fill, so it remains -1 in that case. Otherwise, fill looks ahead to
+            // find the end index and stores in the index so that it does not need to be repetitively calculated.
+            fillContainer(5, constructFromBytes ? -1 : 14,
+                container(
+                    scalar()
+                ),
+                fillScalar(11, 12)
+            ),
+            endStream()
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void fillContainerAtDepth1(boolean constructFromBytes) {
         IonCursorBinary cursor = initializeCursor(
             constructFromBytes,
@@ -282,6 +347,78 @@ public class IonCursorBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void fillDelimitedContainerAtDepth1(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0x07, // Field SID 3
+            0xF1, // Delimited list, contents start at index 7
+            0x5A, // Float length 0
+            0xF0, // End delimited list
+            0x09, // Field SID 4
+            0x51, 0x01, // Int length 1, starting at byte index 11
+            0x01, 0xF0 // End delimited struct
+        );
+        assertSequence(
+            cursor,
+            container(
+                // When reading from a fixed-size input source, the cursor does not need peek ahead to find the end of
+                // the delimited container during fill, so it remains -1 in that case. Otherwise, fill looks ahead to
+                // find the end index and stores in the index so that it does not need to be repetitively calculated.
+                fillContainer(7, constructFromBytes ? -1 : 9,
+                    scalar(),
+                    endContainer()
+                )
+            )
+        );
+    }
+
+    @Test
+    public void skipOversizeDelimitedContainerAtDepth1() {
+        AtomicInteger oversizeValueCounter = new AtomicInteger(0);
+        AtomicInteger oversizeSymbolTableCounter = new AtomicInteger(0);
+        AtomicInteger byteCounter = new AtomicInteger(0);
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0x07, // Field SID 3
+            0xF1, // Delimited list, contents start at index 7
+            0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, // Five floats 0e0
+            0xF0, // End delimited list
+            0x09, // Field SID 4
+            0x51, 0x01, // Int length 1, starting at byte index 16
+            0x01, 0xF0 // End delimited struct
+        };
+        IonCursorBinary cursor = initializeCursor(
+            IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(5)
+                .withMaximumBufferSize(5)
+                .onData(byteCounter::addAndGet)
+                .onOversizedValue(oversizeValueCounter::incrementAndGet)
+                .onOversizedSymbolTable(oversizeSymbolTableCounter::incrementAndGet)
+                .build(),
+            false,
+            data
+        );
+        assertSequence(
+            cursor,
+            container(
+                // The oversize delimited list is skipped.
+                fillIsOversize(START_CONTAINER, oversizeValueCounter::get),
+                scalar(), type(IonType.INT),
+                endContainer()
+            ),
+            endStream()
+        );
+        cursor.close();
+        assertEquals(1, oversizeValueCounter.get());
+        assertEquals(0, oversizeSymbolTableCounter.get());
+        assertEquals(data.length, byteCounter.get());
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void fillContainerThenSkip(boolean constructFromBytes) {
         IonCursorBinary cursor = initializeCursor(
             constructFromBytes,
@@ -301,6 +438,38 @@ public class IonCursorBinaryTest {
             fill(START_CONTAINER, 5, 11),
             container(
                 fillScalar(14, 14)
+            ),
+            endStream()
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fillDelimitedContainerThenSkip(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0x07, // Field SID 3
+            0xF1, // Delimited list, contents start at index 7
+            0x5A, // Float length 0
+            0xF0, // End delimited list
+            0x09, // Field SID 4
+            0x51, 0x01, // Int length 1, starting at byte index 11
+            0x01, 0xF0, // End delimited struct
+            0xF3, // Delimited struct
+            0x09, // Field SID 4
+            0x50, // Int length 0, at byte index 17
+            0x01, 0xF0 // End delimited struct
+        );
+        assertSequence(
+            cursor,
+            // When reading from a fixed-size input source, the cursor does not need peek ahead to find the end of
+            // the delimited container during fill, so it remains -1 in that case. Otherwise, fill looks ahead to
+            // find the end index and stores in the index so that it does not need to be repetitively calculated.
+            fill(START_CONTAINER, 5, constructFromBytes ? -1 : 14),
+            container(
+                fillScalar(17, 17)
             ),
             endStream()
         );
