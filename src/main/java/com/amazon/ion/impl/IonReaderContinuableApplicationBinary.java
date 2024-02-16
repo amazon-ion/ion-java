@@ -922,11 +922,14 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
      *  false.
      */
     boolean startsWithIonSymbolTable() {
-        long savedPeekIndex = peekIndex;
-        peekIndex = annotationSequenceMarker.startIndex;
-        int sid = minorVersion == 0 ? readVarUInt_1_0() : (int) readFlexUInt_1_1();
-        peekIndex = savedPeekIndex;
-        return ION_SYMBOL_TABLE_SID == sid;
+        if (minorVersion == 0 || annotationTokenMarkers.isEmpty()) {
+            long savedPeekIndex = peekIndex;
+            peekIndex = annotationSequenceMarker.startIndex;
+            int sid = readVarUInt_1_0();
+            peekIndex = savedPeekIndex;
+            return ION_SYMBOL_TABLE_SID == sid;
+        }
+        return ION_SYMBOL_TABLE_SID == annotationTokenMarkers.get(0).endIndex;
     }
 
     /**
