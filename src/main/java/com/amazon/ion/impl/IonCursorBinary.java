@@ -10,7 +10,6 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.FlexInt;
-import com.amazon.ion.impl.bin.Ion_1_1_Constants;
 import com.amazon.ion.impl.bin.OpCodes;
 
 import java.io.ByteArrayInputStream;
@@ -19,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
@@ -112,9 +112,36 @@ class IonCursorBinary implements IonCursor {
         final int maximumBufferSize;
 
         /**
+         * The number of bytes shifted left in the buffer during the current operation to make room for more bytes. This
+         * is needed when rewinding to a previous location, as any saved indices at that location will need to be
+         * shifted by this amount.
+         */
+        long pendingShift = 0;
+
+        /**
          * The source of data, for refillable streams.
          */
         final InputStream inputStream;
+
+        /**
+         * Index of the first "pinned" byte in the buffer. Pinned bytes must be preserved in the buffer until un-pinned.
+         */
+        long pinOffset = -1;
+
+        /**
+         * True if the first byte of a special FlexSym in field name position was skipped due to the delimited struct
+         * being oversize. This is necessary because the only way to end a delimited struct is with a two-byte
+         * sequence. If the second byte in the sequence is not yet available, this flag reminds the cursor that the
+         * previous byte, which could not be buffered, began the special two-byte sequence.
+         * TODO: handling this case introduces some complexity; alternative solutions should be considered.
+         */
+        boolean isSpecialFlexSymPartiallyRead = false;
+
+        /**
+         * The target depth to which the reader should seek. This is used when a container is determined to be oversize
+         * while buffering one of its children.
+         */
+        int targetSeekDepth = -1;
 
         /**
          * Handler invoked when a single value would exceed `maximumBufferSize`.
@@ -526,6 +553,10 @@ class IonCursorBinary implements IonCursor {
         }
         int maximumFreeSpace = refillableState.maximumBufferSize;
         int startOffset = (int) offset;
+        if (refillableState.pinOffset > -1) {
+            maximumFreeSpace -=  (int) (offset - refillableState.pinOffset);
+            startOffset = (int) refillableState.pinOffset;
+        }
         if (minimumNumberOfBytesRequired > maximumFreeSpace) {
             refillableState.isSkippingCurrentValue = true;
             return false;
@@ -587,6 +618,9 @@ class IonCursorBinary implements IonCursor {
             shiftIndicesLeft(fromIndex);
         }
         offset = 0;
+        if (refillableState.pinOffset > 0) {
+            refillableState.pinOffset = 0;
+        }
         limit = size;
     }
 
@@ -684,6 +718,7 @@ class IonCursorBinary implements IonCursor {
             }
         }
         shiftContainerEnds(shiftAmount);
+        refillableState.pendingShift = shiftAmount;
         refillableState.totalDiscardedBytes += shiftAmount;
     }
 
@@ -1287,9 +1322,11 @@ class IonCursorBinary implements IonCursor {
                 // Inline symbol with zero length.
                 markerToSet.startIndex = peekIndex;
                 markerToSet.endIndex = peekIndex;
+                return -1;
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
                 throw new IonException("FlexSym 0 may only precede symbol zero, empty string, or delimited end.");
             }
+            markerToSet.typeId = IonTypeID.DELIMITED_END_ID;
             return -1;
         } else if (result < 0) {
             markerToSet.startIndex = peekIndex;
@@ -1358,9 +1395,11 @@ class IonCursorBinary implements IonCursor {
                 // Inline symbol with zero length.
                 markerToSet.startIndex = peekIndex;
                 markerToSet.endIndex = peekIndex;
+                return -1;
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
                 throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
             }
+            markerToSet.typeId = DELIMITED_END_ID;
             return -1;
         } else if (result < 0) {
             markerToSet.startIndex = peekIndex;
@@ -1405,36 +1444,248 @@ class IonCursorBinary implements IonCursor {
         }
     }
 
+    /**
+     * Determines whether the current delimited container has reached its end.
+     * @return true if the container is at its end; otherwise, false.
+     */
     private boolean uncheckedIsDelimitedEnd_1_1() {
-        throw new UnsupportedOperationException();
+        if (parent.typeId.type == IonType.STRUCT) {
+            uncheckedReadFieldName_1_1();
+            if (fieldSid < 0 && fieldTextMarker.typeId != null && fieldTextMarker.typeId.lowerNibble == OpCodes.DELIMITED_END_MARKER) {
+                parent.endIndex = peekIndex;
+                event = Event.END_CONTAINER;
+                return true;
+            }
+        } else if (buffer[(int) peekIndex] == OpCodes.DELIMITED_END_MARKER) {
+            peekIndex++;
+            parent.endIndex = peekIndex;
+            event = Event.END_CONTAINER;
+            return true;
+        }
+        return false;
     }
 
+    /**
+     * Determines whether the cursor is at the end of a delimited struct.
+     * @param currentByte the byte on which the cursor is currently positioned.
+     * @return true if the struct is at its end or if not enough data is available; otherwise, false.
+     */
+    private boolean slowIsDelimitedStructEnd_1_1(int currentByte) {
+        if (refillableState.isSpecialFlexSymPartiallyRead) {
+            // The delimited struct is oversized, and the first byte in a special FlexSym in field position (0x01)
+            // was already skipped. If the next byte is DELIMITED_END_MARKER, then the struct is at its end.
+            if (currentByte == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
+                event = Event.END_CONTAINER;
+                fieldSid = -1;
+                return true;
+            }
+            refillableState.isSpecialFlexSymPartiallyRead = false;
+        } else if (currentByte == FlexInt.ZERO) {
+            // This is a special FlexSym in field position. Determine whether the next byte is DELIMITED_END_MARKER.
+            currentByte = slowReadByte();
+            if (currentByte < 0) {
+                // If the struct is being skipped due to being oversized, then the first byte in the special FlexSym
+                // was skipped and is not present in the buffer. This needs to be recorded so that the struct can
+                // still terminate if additional bytes become available.
+                refillableState.isSpecialFlexSymPartiallyRead = refillableState.isSkippingCurrentValue;
+                return true;
+            }
+            if (currentByte == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
+                event = Event.END_CONTAINER;
+                valueTid = null;
+                fieldSid = -1;
+                return true;
+            }
+            // Note: slowReadByte() increments the peekIndex, but if the delimiter end is not found, the byte
+            // needs to remain available.
+            peekIndex--;
+        }
+        return false;
+    }
+
+    /**
+     * Determines whether the current delimited container has reached its end, ensuring enough bytes are available
+     * in the stream.
+     * @return true if the container is at its end or if not enough data is available; otherwise, false.
+     */
     private boolean slowIsDelimitedEnd_1_1() {
-        throw new UnsupportedOperationException();
+        int b = slowReadByte();
+        if (b < 0) {
+            return true;
+        }
+        if (parent.typeId.type == IonType.STRUCT && slowIsDelimitedStructEnd_1_1(b)) {
+            parent.endIndex = peekIndex;
+            return true;
+        } else if (b == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
+            parent.endIndex = peekIndex;
+            event = Event.END_CONTAINER;
+            valueTid = null;
+            fieldSid = -1;
+            return true;
+        }
+        // Note: slowReadByte() increments the peekIndex, but if the delimiter end is not found, the byte
+        // needs to remain available.
+        peekIndex--;
+        return false;
     }
 
+    /**
+     * Skips past the remaining elements of the current delimited container.
+     * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
+     */
     boolean skipRemainingDelimitedContainerElements_1_1() {
-        throw new UnsupportedOperationException();
+        while (event != Event.END_CONTAINER) {
+            nextValue();
+            if (event == Event.NEEDS_DATA) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    private void seekPastDelimitedContainer_1_1() {
-        throw new UnsupportedOperationException();
-    }
-
-    private boolean slowFindDelimitedEnd_1_1() {
-        throw new UnsupportedOperationException();
-    }
-
-    private boolean slowSeekToDelimitedEnd_1_1() {
-        throw new UnsupportedOperationException();
-    }
-
-    private boolean slowFillDelimitedContainer_1_1() {
-        throw new UnsupportedOperationException();
-    }
-
+    /**
+     * Skips past the remaining elements of the current delimited container, ensuring enough bytes are available in
+     * the stream.
+     * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
+     */
     private boolean slowSkipRemainingDelimitedContainerElements_1_1() {
-        throw new UnsupportedOperationException();
+        while (event != Event.END_CONTAINER) {
+            slowNextToken();
+            if (event == Event.START_CONTAINER && valueMarker.endIndex == DELIMITED_MARKER) {
+                seekPastDelimitedContainer_1_1();
+            }
+            if (event == Event.NEEDS_DATA) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Seek past a delimited container that was never stepped into.
+     */
+    private void seekPastDelimitedContainer_1_1() {
+        stepIntoContainer();
+        stepOutOfContainer();
+    }
+
+    /**
+     * Locates the end of the delimited container on which the reader is currently positioned.
+     * @return true if the end of the container was found; otherwise, false.
+     */
+    private boolean slowFindDelimitedEnd_1_1() {
+        // Save the cursor's current state so that it can return to this position after finding the delimited end.
+        long savedPeekIndex = peekIndex;
+        long savedStartIndex = valueMarker.startIndex;
+        long savedEndIndex = valueMarker.endIndex;
+        int savedFieldSid = fieldSid;
+        IonTypeID savedFieldTid = fieldTextMarker.typeId;
+        long savedFieldTextStartIndex = fieldTextMarker.startIndex;
+        long savedFieldTextEndIndex = fieldTextMarker.endIndex;
+        IonTypeID savedValueTid = valueMarker.typeId;
+        IonTypeID savedAnnotationTid = annotationSequenceMarker.typeId;
+        long savedAnnotationStartIndex = annotationSequenceMarker.startIndex;
+        long savedAnnotationsEndIndex = annotationSequenceMarker.endIndex;
+        CheckpointLocation savedCheckpointLocation = checkpointLocation;
+        long savedCheckpoint = checkpoint;
+        int savedContainerIndex = containerIndex;
+        Marker savedParent = parent;
+        // ------------
+
+        // TODO performance: the following line causes the end indexes of any child delimited containers that are not
+        //  contained within a length-prefixed container to be calculated. Currently these are thrown away, but storing
+        //  them in case those containers are later accessed could make them faster to skip. This would require some
+        //  additional complexity.
+        seekPastDelimitedContainer_1_1();
+
+        boolean isReady = event != Event.NEEDS_DATA;
+        if (refillableState.isSkippingCurrentValue) {
+            // This delimited container is oversized. The cursor must seek past it.
+            refillableState.state = State.SEEK_DELIMITED;
+            refillableState.targetSeekDepth = savedContainerIndex;
+            refillableState.pendingShift = 0;
+            return isReady;
+        }
+
+        // Restore the state of the cursor at the start of the delimited container.
+        long pendingShift = refillableState.pendingShift;
+        valueMarker.startIndex = savedStartIndex - pendingShift;
+        valueMarker.endIndex = (savedEndIndex == DELIMITED_MARKER) ? DELIMITED_MARKER : (savedEndIndex - pendingShift);
+        fieldSid = savedFieldSid;
+        valueMarker.typeId = savedValueTid;
+        valueTid = savedValueTid;
+        annotationSequenceMarker.typeId = savedAnnotationTid;
+        annotationSequenceMarker.startIndex = savedAnnotationStartIndex - pendingShift;
+        annotationSequenceMarker.endIndex = savedAnnotationsEndIndex - pendingShift;
+        fieldTextMarker.typeId = savedFieldTid;
+        fieldTextMarker.startIndex = savedFieldTextStartIndex - pendingShift;
+        fieldTextMarker.endIndex = savedFieldTextEndIndex - pendingShift;
+        checkpointLocation = savedCheckpointLocation;
+        checkpoint = savedCheckpoint - pendingShift;
+        containerIndex = savedContainerIndex;
+
+        savedPeekIndex -= pendingShift;
+        parent = savedParent;
+        if (parent == null) {
+            // At depth zero, there can not be any more upward recursive calls to which the shift needs to be
+            // conveyed.
+            refillableState.pendingShift = 0;
+        }
+        if (isReady) {
+            // Record the endIndex so that it does not need to be calculated repetitively.
+            valueMarker.endIndex = peekIndex;
+            event = Event.START_CONTAINER;
+            refillableState.state = State.READY;
+        } else {
+            // The fill is not complete, but there is currently no more data. The cursor will have to resume the fill
+            // before processing the next request.
+            refillableState.state = State.FILL_DELIMITED;
+        }
+
+        peekIndex = savedPeekIndex;
+        return isReady;
+    }
+
+    /**
+     * Seeks to the end of the delimited container at `refillableState.targetSeekDepth`.
+     * @return true if the end of the container was reached; otherwise, false.
+     */
+    private boolean slowSeekToDelimitedEnd_1_1() {
+        refillableState.state = State.READY;
+        refillableState.isSkippingCurrentValue = true;
+        while (containerIndex > refillableState.targetSeekDepth) {
+            stepOutOfContainer();
+            if (event == Event.NEEDS_DATA) {
+                refillableState.state = State.SEEK_DELIMITED;
+                refillableState.isSkippingCurrentValue = false;
+                return false;
+            }
+        }
+        // The end of the container has been reached. Report the number of bytes skipped and exit seek mode.
+        if (dataHandler != null) {
+            reportSkippedData();
+        }
+        refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
+        refillableState.individualBytesSkippedWithoutBuffering = 0;
+        refillableState.isSkippingCurrentValue = false;
+        event = Event.NEEDS_INSTRUCTION;
+        return true;
+    }
+
+    /**
+     * Fills all bytes in the delimited container on which the cursor is currently positioned.
+     * @return true if not enough data was available in the stream; otherwise, false.
+     */
+    private boolean slowFillDelimitedContainer_1_1() {
+        // Pin the current buffer offset so that all bytes encountered while finding the end of the delimited container
+        // are buffered.
+        refillableState.pinOffset = offset;
+        slowFindDelimitedEnd_1_1();
+        if (event == Event.NEEDS_DATA) {
+            return true;
+        }
+        refillableState.pinOffset = -1;
+        return false;
     }
 
     /* ---- End: version-dependent parsing methods ---- */
@@ -1539,6 +1790,10 @@ class IonCursorBinary implements IonCursor {
         valueMarker.endIndex = -1;
         fieldSid = -1;
         hasAnnotations = false;
+        if (refillableState != null) {
+            refillableState.isSpecialFlexSymPartiallyRead = false;
+            refillableState.pendingShift = 0;
+        }
     }
 
     /**
@@ -1993,6 +2248,15 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Reports the total number of bytes skipped without buffering since the last report.
+     */
+    private void reportSkippedData() {
+        long totalNumberOfBytesRead = getTotalOffset() + refillableState.individualBytesSkippedWithoutBuffering;
+        dataHandler.onData((int) (totalNumberOfBytesRead - lastReportedByteTotal));
+        lastReportedByteTotal = totalNumberOfBytesRead;
+    }
+
+    /**
      * Advances to the next token, seeking past the previous value if necessary. After return `event` will convey
      * the result (e.g. START_SCALAR, END_CONTAINER)
      * @return true if the next token was an Ion version marker or NOP pad; otherwise, false. If true, this method
@@ -2153,7 +2417,15 @@ class IonCursorBinary implements IonCursor {
      */
     private void seekPastOversizedValue() {
         refillableState.oversizedValueHandler.onOversizedValue();
-        if (refillableState.state != State.TERMINATED) {
+        if (refillableState.state == State.SEEK_DELIMITED) {
+            // Discard all buffered bytes.
+            slowSeek(availableAt(offset));
+            refillableState.pinOffset = -1;
+            refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
+            refillableState.state = State.SEEK_DELIMITED;
+            peekIndex = offset;
+            shiftContainerEnds(refillableState.individualBytesSkippedWithoutBuffering);
+        } else if (refillableState.state != State.TERMINATED) {
             slowSeek(valueMarker.endIndex - offset - refillableState.individualBytesSkippedWithoutBuffering);
             refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
             peekIndex = offset;

@@ -4129,14 +4129,23 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     /**
+     * Returns the given data prepended with an IVM for the requested 1.x minor version.
+     * @param minorVersion the IVM version to prepend.
+     * @param data the data.
+     * @return the data with an IVM prepended.
+     */
+    private static byte[] withIvm(int minorVersion, byte[] data) throws Exception {
+        return new TestUtils.BinaryIonAppender(minorVersion).append(data).toByteArray();
+    }
+
+    /**
      * Creates an IonReader over the given data, which will be prepended with a binary Ion 1.1 IVM.
      * @param data the data to read.
      * @param constructFromBytes whether to construct the reader from bytes or an InputStream.
      * @return a new reader.
      */
     private IonReader readerForIon11(byte[] data, boolean constructFromBytes) throws Exception {
-        byte[] inputBytes = new TestUtils.BinaryIonAppender(1).append(data).toByteArray();
-        reader = readerFor(readerBuilder, constructFromBytes, inputBytes);
+        reader = readerFor(readerBuilder, constructFromBytes, withIvm(1, data));
         byteCounter.set(0);
         return reader;
     }
@@ -4152,6 +4161,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
         closeAndCount();
     }
+
+    // TODO byte-by-byte incremental mode testing for all Ion 1.1 tests
 
     @ParameterizedTest
     @CsvSource({
@@ -5000,6 +5011,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "5E  | true \n" +
         "0D  | SID 6 \n " +
         "5F  | false",
+        // Delimited
+        "F3             | Delimited struct \n" +
+        "F9 6E 61 6D 65 | name \n" +
+        "5E             | true \n" +
+        "0D             | SID 6 \n" +
+        "5F             | false \n" +
+        "01 F0          | End delimited struct",
         // FlexSym field names using SID type ID
         "FC                       | Variable Length SID struct \n" +
         "21                       | Length = 16 \n" +
@@ -5029,7 +5047,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "5E                       | true \n" +
         "F3 69 6D 70 6F 72 74 73  | imports \n " +
         "5F                       | false",
-        // TODO delimited
     })
     public void readStruct_1_1(String inputBytes) throws Exception {
         assertSimpleStructCorrectlyParsed(true, inputBytes);
@@ -5114,8 +5131,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "09      | FlexSym SID 4 (name) \n" +
         "5E      | true \n" +
         "01 90   | FlexSym SID 0 \n" +
-        "5E      | true"
-        // TODO delimited
+        "5E      | true",
+        // SID 0 in delimited struct
+        "F3      | Delimited struct \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true \n" +
+        "09      | FlexSym SID 4 (name) \n" +
+        "5E      | true \n" +
+        "01 90   | FlexSym SID 0 \n" +
+        "5E      | true \n" +
+        "01 F0   | End delimited struct"
     })
     public void readStructWithSymbolZeroFieldNames_1_1(String inputBytes) throws Exception {
         assertStructWithSymbolZeroFieldNamesCorrectlyParsed(true, inputBytes);
@@ -5181,7 +5208,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "07      | Length = 3 \n" +
         "01 80   | FlexSym empty text \n" +
         "5F      | false",
-        // TODO delimited
+        // Empty field name in delimited struct
+        "F3      | Delimited struct \n" +
+        "01 80   | FlexSym empty text \n" +
+        "5F      | false \n" +
+        "01 F0   | End delimited struct"
     })
     public void readStructWithEmptyInlineFieldName_1_1(String inputBytes) throws Exception {
         assertStructWithEmptyInlineFieldNamesCorrectlyParsed(true, inputBytes);
@@ -5226,5 +5257,387 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    // TODO add tests for incrementally reading Ion 1.1 containers, including oversize values.
+    // TODO oversized Ion 1.1 annotation wrappers
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void delimitedListNestedWithinDelimitedStruct(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "F3 | Delimited struct\n" +
+            "09 | Field SID 4 (name)\n" +
+            "F1 | Delimited list\n" +
+            "F0 | Delimited end marker\n" +
+            "01 | Special FlexSym 0 in field name position\n" +
+            "F0 | Delimited end marker\n"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.STRUCT,
+                next("name", IonType.LIST), STEP_IN,
+                    next(null),
+                STEP_OUT
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void topLevelStepOverDelimitedListNestedWithinDelimitedStruct(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "F3 | Delimited struct\n" +
+            "09 | Field SID 4 (name)\n" +
+            "F1 | Delimited list\n" +
+            "F0 | Delimited end marker\n" +
+            "01 | Special FlexSym 0 in field name position\n" +
+            "F0 | Delimited end marker\n" +
+            "50 | Int 0\n"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            next(IonType.STRUCT),
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void topLevelStepOverDelimitedListNestedWithinDelimitedStructNonIncremental(boolean constructFromBytes) throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "F3 | Delimited struct\n" +
+            "09 | Field SID 4 (name)\n" +
+            "F1 | Delimited list\n" +
+            "F0 | Delimited end marker\n" +
+            "01 | Special FlexSym 0 in field name position\n" +
+            "F0 | Delimited end marker\n" +
+            "50 | Int 0\n"
+        )));
+        reader = readerFor(readerBuilder.withIncrementalReadingEnabled(false), constructFromBytes, input);
+        assertSequence(
+            next(IonType.STRUCT),
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void prefixedStructNestedWithinDelimitedSexp(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "F2 | Delimited s-expression\n" +
+            "C2 | Prefixed struct, length 2\n" +
+            "09 | Field SID 4 (name)\n" +
+            "50 | Int 0\n" +
+            "F0 | Delimited end marker\n"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.SEXP,
+                container(IonType.STRUCT,
+                    next("name", IonType.INT), intValue(0),
+                    next(null)
+                ),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepOverPrefixedStructNestedWithinDelimitedSexp(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "F2 | Delimited s-expression\n" +
+            "C2 | Prefixed struct, length 2\n" +
+            "09 | Field SID 4 (name)\n" +
+            "50 | Int 0\n" +
+            "F0 | Delimited end marker\n"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.SEXP,
+                next(IonType.STRUCT),
+                // The nested struct is skipped.
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void delimitedSexpNestedWithinPrefixedList(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "A4 | Prefixed list, length 4\n" +
+            "F2 | Delimited s-expression\n" +
+            "50 | Int 0\n" +
+            "F0 | Delimited end marker\n" +
+            "50 | Int 0\n"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.LIST,
+                container(IonType.SEXP,
+                    next(IonType.INT), intValue(0),
+                    next(null)
+                ),
+                next(IonType.INT), intValue(0),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepOverDelimitedSexpNestedWithinPrefixedList(boolean constructFromBytes) throws Exception {
+        byte[] input = hexStringToByteArray(cleanCommentedHexBytes(
+            "A4 | Prefixed list, length 4\n" +
+            "F2 | Delimited s-expression\n" +
+            "50 | Int 0\n" +
+            "F0 | Delimited end marker\n" +
+            "50 | Int 0\n"
+        ));
+        reader = readerForIon11(input, constructFromBytes);
+        assertSequence(
+            container(IonType.LIST,
+                next(IonType.SEXP),
+                // The nested s-expression is skipped.
+                next(IonType.INT), intValue(0),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void oversizeDelimitedContainer() throws Exception {
+        // The outer struct is determined to be oversize after the nested delimited list is processed.
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "F3 | Delimited struct\n" +
+            "09 | Field SID 4 (name)\n" +
+            "F1 | Delimited list\n" +
+            "50 | Int 0\n" +
+            "F0 | Delimited end marker\n" +
+            "01 | Special FlexSym 0 in field name position\n" +
+            "F0 | Delimited end marker\n" +
+            "50 | Int 0\n"
+        )));
+        reader = boundedReaderFor(false, input, 5, 5, byteAndOversizedValueCountingHandler);
+        assertSequence(
+            // The oversize delimited struct is skipped.
+            next(IonType.INT), intValue(0),
+            next(null)
+        );
+        expectOversized(1);
+        closeAndCount();
+    }
+
+    private byte[] delimitedListNestedWithinDelimitedStructFollowedByFloatZero() throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "F3 | Delimited struct\n" +
+            "09 | Field SID 4 (name)\n" +
+            "F1 | Delimited list\n" +
+            "50 | Int 0\n" +
+            "50 | Int 0\n" +
+            "50 | Int 0\n" +
+            "F0 | Delimited end marker\n" +
+            "01 | Special FlexSym 0 in field name position\n" +
+            "F0 | Delimited end marker\n" +
+            "5A | Float 0e0\n"
+        )));
+        totalBytesInStream = input.length;
+        return input;
+    }
+
+    @Test
+    public void oversizeNestedDelimitedContainer() throws Exception {
+        // This test differs from the previous one in that the outer struct is determined to be oversize in the
+        // middle of the nested delimited list.
+        byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
+        reader = boundedReaderFor(false, input, 5, 5, byteAndOversizedValueCountingHandler);
+        assertSequence(
+            // The oversize delimited struct is skipped.
+            next(IonType.FLOAT), doubleValue(0e0),
+            next(null)
+        );
+        expectOversized(1);
+        closeAndCount();
+    }
+
+    @Test
+    public void oversizeNestedDelimitedContainerIncremental() throws Exception {
+        byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
+        reader = boundedReaderFor(pipe, 5, 5, byteAndOversizedValueCountingHandler);
+        feedBytesOneByOne(input, pipe, reader);
+        assertSequence(
+            // The oversize delimited struct is skipped.
+            next(IonType.FLOAT), doubleValue(0e0),
+            next(null)
+        );
+        expectOversized(1);
+        closeAndCount();
+    }
+
+    @Test
+    public void skipDelimitedContainerIncremental() throws Exception {
+        byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
+        reader = readerFor(pipe);
+        for (int i = 0; i < input.length - 1; i++) {
+            nextExpect(null);
+            pipe.receive(input[i]);
+        }
+        nextExpect(IonType.STRUCT);
+        pipe.receive(input[input.length - 1]);
+        assertSequence(
+            // The delimited struct is skipped.
+            next(IonType.FLOAT), doubleValue(0e0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void skipNestedDelimitedContainerIncremental() throws Exception {
+        byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
+        reader = readerFor(pipe);
+        for (int i = 0; i < input.length - 1; i++) {
+            nextExpect(null);
+            pipe.receive(input[i]);
+        }
+        assertSequence(
+            container(IonType.STRUCT,
+                next("name", IonType.LIST), STEP_IN,
+                    next(IonType.INT), intValue(0),
+                STEP_OUT // Skips the last two ints
+            ),
+            next(null)
+        );
+        pipe.receive(input[input.length - 1]);
+        assertSequence(
+            next(IonType.FLOAT), doubleValue(0e0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void nestedDelimitedContainerIncremental() throws Exception {
+        byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
+        reader = readerFor(pipe);
+        for (int i = 0; i < input.length - 1; i++) {
+            nextExpect(null);
+            pipe.receive(input[i]);
+        }
+        assertSequence(
+            container(IonType.STRUCT,
+                next("name", IonType.LIST), STEP_IN,
+                    next(IonType.INT), intValue(0),
+                    next(IonType.INT), intValue(0),
+                    next(IonType.INT), intValue(0),
+                    next(null),
+                STEP_OUT
+            ),
+            next(null)
+        );
+        pipe.receive(input[input.length - 1]);
+        assertSequence(
+            next(IonType.FLOAT), doubleValue(0e0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void nestedDelimitedContainerInlineFieldNamesIncremental() throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "F3          | Delimited struct\n" +
+            "F9          | Inline field name, length 4\n" +
+            "6E 61 6D 65 | name\n" +
+            "F1          | Delimited list\n" +
+            "50          | Int 0\n" +
+            "50          | Int 0\n" +
+            "50          | Int 0\n" +
+            "F0          | Delimited end marker\n" +
+            "01          | Special FlexSym 0 in field name position\n" +
+            "F0          | Delimited end marker\n" +
+            "5A          | Float 0e0\n"
+        )));
+        totalBytesInStream = input.length;
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
+        reader = readerFor(pipe);
+        for (int i = 0; i < input.length - 1; i++) {
+            nextExpect(null);
+            pipe.receive(input[i]);
+        }
+        assertSequence(
+            container(IonType.STRUCT,
+                next("name", IonType.LIST), STEP_IN,
+                next(IonType.INT), intValue(0),
+                next(IonType.INT), intValue(0),
+                next(IonType.INT), intValue(0),
+                next(null),
+                STEP_OUT
+            ),
+            next(null)
+        );
+        pipe.receive(input[input.length - 1]);
+        assertSequence(
+            next(IonType.FLOAT), doubleValue(0e0),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    private byte[] delimitedSymbolTable() throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "E4 07                | Annotation symbol ID 3 ($ion_symbol_table)\n" +
+            "F3                   | Delimited struct\n" +
+            "0F                   | FlexSym SID 7 (symbols)\n" +
+            "F1                   | Delimited list\n" +
+            "86 66 6F 6F 62 61 72 | string foobar\n" +
+            "F0                   | End delimited list\n" +
+            "01 F0                | End delimited struct\n" +
+            "E1 0A                | Symbol ID 10"
+        )));
+        totalBytesInStream = input.length;
+        return input;
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void delimitedSymbolTable(boolean constructFromBytes) throws Exception {
+        reader = readerFor(readerBuilder, constructFromBytes, delimitedSymbolTable());
+        assertSequence(
+            // Note: this will fail if the Ion 1.1 system symbol table changes because SID 10 will point to something
+            // else. If that happens, change the input data to point to the first Ion 1.1 local symbol ID.
+            next(IonType.SYMBOL), symbolValue("foobar"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void oversizeDelimitedSymbolTableFailsCleanly() throws Exception {
+        reader = boundedReaderFor(false, delimitedSymbolTable(), 5, 5, byteAndOversizedSymbolTableCountingHandler);
+        assertNull(reader.next());
+        expectOversized(1);
+        reader.close();
+    }
+
+    // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)
 }
