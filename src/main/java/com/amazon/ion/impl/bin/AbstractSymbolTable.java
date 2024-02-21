@@ -35,7 +35,7 @@ import java.util.Iterator;
 /**
  * Provides the basic implementation bits for {@link SymbolTable}.
  */
-/*package*/ abstract class AbstractSymbolTable implements SymbolTable
+public abstract class AbstractSymbolTable implements SymbolTable
 {
     private final String name;
     private final int version;
