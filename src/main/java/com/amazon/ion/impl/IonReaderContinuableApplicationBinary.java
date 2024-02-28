@@ -80,10 +80,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     // The first lowest local symbol ID in the symbol table.
     private int firstLocalSymbolId = imports.getMaxId() + 1;
 
-    // A map of symbol ID to SymbolToken representation. Because most use cases only require symbol text, this
-    // is used only if necessary to avoid imposing the extra expense on all symbol lookups.
-    private List<SymbolToken> symbolTokensById = null;
-
     // The cached SymbolTable representation of the current local symbol table. Invalidated whenever a local
     // symbol table is encountered in the stream.
     private SymbolTable cachedReadOnlySymbolTable = null;
@@ -448,9 +444,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         Arrays.fill(symbols, 0, localSymbolMaxOffset + 1, null);
         localSymbolMaxOffset = -1;
         cachedReadOnlySymbolTable = null;
-        if (symbolTokensById != null) {
-            symbolTokensById.clear();
-        }
     }
 
     /**
@@ -479,9 +472,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             localSymbolMaxOffset = snapshot.maxId - firstLocalSymbolId;
             // Note: because `symbols` only grows, `snapshot.listView` will always fit within `symbols`.
             System.arraycopy(snapshot.idToText, 0, symbols, 0, snapshot.idToText.length);
-            if (symbolTokensById != null) {
-                symbolTokensById.clear();
-            }
         } else {
             // Note: this will only happen when `symbolTable` is the system symbol table.
             resetSymbolTable();
@@ -568,28 +558,15 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
      */
     private SymbolToken getSymbolToken(int sid) {
         int symbolTableSize = localSymbolMaxOffset + firstLocalSymbolId + 1; // +1 because the max ID is 0-indexed.
-        if (symbolTokensById == null) {
-            symbolTokensById = new ArrayList<>(symbolTableSize);
-        }
-        if (symbolTokensById.size() < symbolTableSize) {
-            for (int i = symbolTokensById.size(); i < symbolTableSize; i++) {
-                symbolTokensById.add(null);
-            }
-        }
         if (sid >= symbolTableSize) {
             throw new UnknownSymbolException(sid);
         }
-        SymbolToken token = symbolTokensById.get(sid);
-        if (token == null) {
-            String text = getSymbolString(sid, imports, symbols);
-            if (text == null && sid >= firstLocalSymbolId) {
-                // All symbols with unknown text in the local symbol range are equivalent to symbol zero.
-                sid = 0;
-            }
-            token = new SymbolTokenImpl(text, sid);
-            symbolTokensById.set(sid, token);
+        String text = getSymbolString(sid, imports, symbols);
+        if (text == null && sid >= firstLocalSymbolId) {
+            // All symbols with unknown text in the local symbol range are equivalent to symbol zero.
+            sid = 0;
         }
-        return token;
+        return new SymbolTokenImpl(text, sid);
     }
 
     /**
