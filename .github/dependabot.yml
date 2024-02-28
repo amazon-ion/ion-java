@@ -4,3 +4,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Only one PR at a time
+    open-pull-requests-limit: 1
+    # Group all updates together in one PR
+    # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#groups
+    groups:
+      # The name of the group, it will be used in PR titles and branch
+      github-action-dependencies:
+        patterns:
+          - '*'
