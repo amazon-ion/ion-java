@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: codebuild-ion-java-arm-3.0-large
     strategy:
       matrix:
         include:
@@ -45,6 +45,14 @@ jobs:
         with:
           name: spotbugs-report-${{ matrix.runs-on }}-java-${{ matrix.java }}
           path: build/reports/spotbugs/
+
+  dump-runner-info:
+    runs-on: codebuild-ion-java-arm-3.0-large
+    steps:
+      - run: |
+          echo "hostname: $HOSTNAME
+          os: $(uname -sr)"
+          lscpu
 
   check-version:
     # Ensures that the version is not a release (i.e. -SNAPSHOT) or if it is a release version,
