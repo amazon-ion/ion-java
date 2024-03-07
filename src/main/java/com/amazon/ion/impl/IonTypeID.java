@@ -85,6 +85,7 @@ final class IonTypeID {
     static final IonTypeID[] TYPE_IDS_1_1;
     static final IonTypeID[] NULL_TYPE_IDS_1_1;
     static final IonTypeID STRUCT_WITH_FLEX_SYMS_ID;
+    static final IonTypeID DELIMITED_END_ID;
     static {
         TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
         TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
@@ -116,6 +117,10 @@ final class IonTypeID {
         // This is used as a dummy ID when a struct switches to using FlexSym field names in the middle. The key
         // here is that the type is STRUCT and the isInlineable flag is true.
         STRUCT_WITH_FLEX_SYMS_ID = TYPE_IDS_1_1[VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS & 0xFF];
+
+        // This is used as a dummy ID when a delimited container reaches its end. The key here is that the type ID's
+        // lower nibble is OpCodes.DELIMITED_END_MARKER.
+        DELIMITED_END_ID = TYPE_IDS_1_1[DELIMITED_END_MARKER & 0xFF];
     }
 
     final IonType type;
