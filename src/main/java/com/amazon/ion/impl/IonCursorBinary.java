@@ -746,6 +746,9 @@ class IonCursorBinary implements IonCursor {
             currentByte = buffer[(int) (peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         } while (currentByte >= 0);
+        if (result < 0) {
+            throw new IonException("Found a VarUInt that was too large to fit in a `long`");
+        }
         return result;
     }
 
@@ -796,7 +799,7 @@ class IonCursorBinary implements IonCursor {
         }
         endIndex += peekIndex;
         setMarker(endIndex, valueMarker);
-        if (endIndex > limit) {
+        if (endIndex > limit || endIndex < 0) {
             throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
         }
         byte b = buffer[(int) peekIndex++];
