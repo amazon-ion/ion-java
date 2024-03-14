@@ -499,6 +499,70 @@ public class IonReaderContinuableCoreBinaryTest {
     }
 
     @Test
+    public void expectIncompleteAnnotationWrapperWithOverflowingEndIndexToFailCleanly() {
+        // This test exercises the case where an annotation wrapper's length itself does not overflow a java long,
+        // but its end index (calculated by adding the reader's current index in the buffer to the value's length) does.
+        // Note: this is only tested for fixed input sources because non-fixed sources will wait for more input
+        // to determine if the annotation wrapper is well-formed. The next test tests a similar failure case for
+        // both types of inputs.
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            true,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE,
+            0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFE // 9-byte VarUInt with value just below Long.MAX_VALUE
+        );
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectCompleteAnnotationWrapperWithOverflowingEndIndexToFailCleanly(boolean constructFromBytes) {
+        // This test exercises the case where an annotation wrapper's length itself does not overflow a java long,
+        // but its end index (calculated by adding the reader's current index in the buffer to the value's length) does.
+        // Unlike the previous test, this test contains the remaining bytes of the annotation wrapper, allowing the
+        // cursor to advance to a failure condition even when the input is not fixed.
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE,
+            0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFE, // 9-byte VarUInt with value just below Long.MAX_VALUE
+            0x81, 0x83
+        );
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectLobWithOverflowingLengthToFailCleanly(boolean constructFromBytes) {
+        // This test exercises the case where a value's length overflows a java long.
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA, // IVM
+            0x9E, // clob with length VarUInt
+            0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF, // 10-byte VarUInt with value that exceeds Long.MAX_VALUE
+            0x00 // The first byte of the clob
+        );
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectAnnotationWrapperWithOverflowingLengthToFailCleanly(boolean constructFromBytes) {
+        // This test exercises the case where an annotation wrapper's length overflows a java long.
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA,
+            0xEE,
+            0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF // 10-byte VarUInt with value that exceeds Long.MAX_VALUE
+        );
+        assertThrows(IonException.class, reader::nextValue);
+        reader.close();
+    }
+
+    @Test
     public void expectIncompleteContainerToFailCleanlyAfterFieldSid() {
         IonReaderContinuableCoreBinary reader = initializeReader(
             true,
