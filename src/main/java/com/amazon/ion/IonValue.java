@@ -169,6 +169,21 @@ import java.util.concurrent.CountDownLatch;
  * <code>latch</code> in this example provides a way to synchronize
  * when {@link #makeReadOnly()} happens in the first thread relative
  * to {@link #isNullValue()} being invoked on the second thread.
+ *
+ * <h2>Alternatives</h2>
+ *
+ * The Ion maintainers recommend using {@code IonElement} instead of {@code IonValue} whenever possible.
+ * <p>
+ * {@code IonElement} is a better choice than {@code IonValue} as long as you can work within its limitations.
+ * {@code IonElement} has significantly less memory overhead than {@code IonValue}. It is immutable and does not have a
+ * single-parent restriction, so it is always threadsafe, and unlike {@code IonValue} there is no need to make deep
+ * copies of {@code IonElement}. The limitations of {@code IonElement} are that it does not support symbols with unknown
+ * text, it will bring a dependency on the Kotlin Stdlib, and you may need to change some logic in your application if
+ * your logic relies on being able to access the parent container of an Ion value.
+ * <p>
+ * For more information, see
+ * "<a href="https://github.com/amazon-ion/ion-element-kotlin#user-content-why-is-ionelement-needed">Why is IonElement needed?</a>"
+ *
  */
 public interface IonValue
     extends Cloneable
@@ -278,7 +293,6 @@ public interface IonValue
      *
      * @throws UnsupportedOperationException if this is an {@link IonDatagram}.
      *
-
      */
     public IonValue topLevelValue();
 
@@ -300,7 +314,6 @@ public interface IonValue
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
      *
-
      */
     public SymbolToken[] getTypeAnnotationSymbols();
 
@@ -338,7 +351,6 @@ public interface IonValue
      * If null or empty array, then all annotations are removed.
      * Any duplicates are preserved.
      *
-
      */
     public void setTypeAnnotationSymbols(SymbolToken... annotations);
 
@@ -376,7 +388,6 @@ public interface IonValue
      * and performs a deep write, including the contents of
      * any containers encountered.
      *
-
      */
     public void writeTo(IonWriter writer);
 
@@ -479,7 +490,6 @@ public interface IonValue
      *
      * @return Ion text data equivalent to this value.
      *
-
      */
     public String toPrettyString();
 
@@ -493,7 +503,6 @@ public interface IonValue
      *
      * @return Ion text data equivalent to this value.
      *
-
      */
     public String toString(IonTextWriterBuilder writerBuilder);
 

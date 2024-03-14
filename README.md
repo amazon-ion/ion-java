@@ -67,3 +67,18 @@ to the official one.
 A great way to get started is to use the [Ion cookbook](https://amazon-ion.github.io/ion-docs/guides/cookbook.html).
 The [API documentation](http://www.javadoc.io/doc/com.amazon.ion/ion-java) will give a lot
 of detailed information about how to use the library.
+
+### Alternatives
+
+If you are looking for an in-memory Ion data model, this library provides `IonValue`, but you should consider 
+using `IonElement` from [`ion-element-kotlin`](https://github.com/amazon-ion/ion-element-kotlin) instead.
+
+`IonElement` is a better choice than `IonValue` as long as you can work within its limitations. `IonElement` has
+significantly less memory overhead than `IonValue`. It is immutable and does not have references to parent values, so
+it is always threadsafe, and unlike `IonValue` there is no need to make deep copies of `IonElement`.
+The limitations of `IonElement` are that it does not support symbols with unknown text, it will bring a dependency
+on the Kotlin Stdlib, and you may need to change some logic in your application if it relies on being able to access the
+parent container of an Ion value.
+
+The Ion maintainers recommend using `IonElement` instead of `IonValue` whenever possible. For more information, see 
+"[Why is IonElement needed?](https://github.com/amazon-ion/ion-element-kotlin#user-content-why-is-ionelement-needed)"
