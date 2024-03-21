@@ -23,10 +23,16 @@ import com.amazon.ion.impl._Private_IonValue;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -390,6 +396,8 @@ public class StructTest
         IonBool inserted = system().newNullBool();
         nested.put("c", inserted);
         assertSame(inserted, ((IonStruct)value.get("a")).get("c"));
+        testMultithreadedAccess(nested);
+        testMultithreadedAccess(value);
     }
 
     @Test
@@ -564,6 +572,8 @@ public class StructTest
         value.add("f", system().newInt(3));
         value.put("f", null);
         assertEquals(1, value.size());
+
+        testMultithreadedAccess(value);
     }
 
     @Test
@@ -700,6 +710,7 @@ public class StructTest
     {
         IonStruct value = (IonStruct) oneValue("{a:b,c:d,e:f}");
         testIteratorRemove(value);
+        testMultithreadedAccess(value);
     }
 
 
@@ -749,6 +760,8 @@ public class StructTest
         IonValue v = s2.get("b");
         s2.remove(v);
         assertNull(s2.get("b"));
+
+        testMultithreadedAccess(s2);
     }
 
     @Test
@@ -758,6 +771,8 @@ public class StructTest
 
         assertNotNull(struct2.remove("b"));
         assertFalse(struct2.containsKey("b"));
+
+        testMultithreadedAccess(struct2);
     }
 
     @Test
@@ -773,6 +788,8 @@ public class StructTest
         v1.addTypeAnnotation("hi");
         v2 = system().clone(v1);
         s.put("g", v2);
+
+        testMultithreadedAccess(s);
     }
 
 
@@ -805,6 +822,8 @@ public class StructTest
             fail("Expected NullPointerException");
         }
         catch (NullPointerException e) { }
+
+        testMultithreadedAccess(s);
 
         s = system().newEmptyStruct();
         assertNull(s.remove("something"));
@@ -888,6 +907,8 @@ public class StructTest
         }
         catch (NullPointerException e) { }
 
+        testMultithreadedAccess(s);
+
         s = system().newEmptyStruct();
         changed = s.removeAll((String[]) null);
         assertFalse(changed);
@@ -948,6 +969,8 @@ public class StructTest
         }
         catch (NullPointerException e) { }
 
+        testMultithreadedAccess(s);
+
         s = system().newEmptyStruct();
         changed = s.retainAll("holla");
         assertFalse(changed);
@@ -998,6 +1021,7 @@ public class StructTest
         i.next();
         i.remove();
         s.remove(v0);
+        testMultithreadedAccess(s);
     }
 
     @Test
@@ -1112,6 +1136,7 @@ public class StructTest
         assertSame(n1, c.iterator().next());
 
         assertEquals(null, n2.getContainer());
+        testMultithreadedAccess(c);
     }
 
     //-------------------------------------------------------------------------
@@ -1125,6 +1150,20 @@ public class StructTest
         assertEquals(expected, actual);
 
         assertEquals(struct("a::b::{}"), actual.cloneAndRemove("d"));
+        testMultithreadedAccess(actual);
+    }
+
+    @Test
+    public void testCloneAndRemoveWithManyFields()
+    {
+        // More than 5 fields in both the original and cloned structs, triggering the field map optimization.
+        IonStruct s1 = struct("a::b::{c:1,d:2,e:3,d:3,f:5,g:6}");
+        IonStruct actual = s1.cloneAndRemove("f");
+        IonStruct expected = struct("a::b::{c:1,d:2,e:3,d:3,g:6}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::b::{}"), actual.cloneAndRemove("c", "d", "e", "g"));
+        testMultithreadedAccess(actual);
     }
 
     @Test
@@ -1216,6 +1255,7 @@ public class StructTest
         // If we don't fail we should at least retain the SID.
         IonStruct expected = struct(SHARED_SYMBOL_TABLE + "$99::{d:2,d:3}");
         assertEquals(expected, actual);
+        testMultithreadedAccess(actual);
     }
 
     @Test
@@ -1234,6 +1274,7 @@ public class StructTest
         // If we don't fail we should at least retain the SID.
         expected = struct(SHARED_SYMBOL_TABLE + "a::{d:$99::2}");
         assertEquals(expected, actual);
+        testMultithreadedAccess(actual);
     }
 
     //-------------------------------------------------------------------------
@@ -1246,6 +1287,19 @@ public class StructTest
         assertEquals(expected, actual);
 
         assertEquals(struct("a::{}"), actual.cloneAndRetain("e"));
+        testMultithreadedAccess(actual);
+    }
+
+    @Test
+    public void testCloneAndRetainWithManyFields() {
+        // More than 5 fields in both the original and cloned structs, triggering the field map optimization.
+        IonStruct s1 = struct("a::{c:1,d:2,e:3,d:3,f:5,g:6}");
+        IonStruct actual = s1.cloneAndRetain("c", "d", "f", "g");
+        IonStruct expected = struct("a::{c:1,d:2,d:3,f:5,g:6}");
+        assertEquals(expected, actual);
+
+        assertEquals(struct("a::{}"), actual.cloneAndRetain("e"));
+        testMultithreadedAccess(actual);
     }
 
     @Test
@@ -1342,6 +1396,7 @@ public class StructTest
         // If we don't fail we should at least retain the SID.
         IonStruct expected = struct(SHARED_SYMBOL_TABLE + "$99::{c:1,e:3}");
         assertEquals(expected, actual);
+        testMultithreadedAccess(actual);
     }
 
     @Test
@@ -1359,6 +1414,7 @@ public class StructTest
         // If we don't fail we should at least retain the SID.
         expected = struct(SHARED_SYMBOL_TABLE + "a::{c:$99::1,e:3}");
         assertEquals(expected, actual);
+        testMultithreadedAccess(actual);
     }
 
 
@@ -1553,7 +1609,48 @@ public class StructTest
                 System.out.println("---");
             }
         }
+        // Now make sure the generated struct can be accessed concurrently by multiple threads after being made
+        // read-only.
+        testMultithreadedAccess(s1);
     }
+
+    /**
+     * Verifies that the givens struct can be accessed concurrently after it is made read-only.
+     * @param original the struct to test.
+     */
+    private void testMultithreadedAccess(IonStruct original) {
+        for (int i = 0; i < 2; i++) {
+            Map<String, List<IonValue>> results = new ConcurrentHashMap<>();
+            original.iterator().forEachRemaining(value -> results.put(value.getFieldName(), Collections.synchronizedList(new ArrayList<>())));
+            Set<String> fieldNames = results.keySet();
+            // One trial in which clone is performed first, the other in which it is not.
+            IonStruct struct = (i == 0) ? original : original.clone();
+            struct.makeReadOnly();
+            // Concurrently access all fields in the struct using many threads, recording the results in a concurrent
+            // multi-map.
+            int numberOfTasks = 100;
+            List<CompletableFuture<Void>> tasks = new ArrayList<>();
+            for (int task = 0; task < numberOfTasks; task++) {
+                tasks.add(CompletableFuture.runAsync(
+                    () -> {
+                        for (String fieldName : fieldNames) {
+                            List<IonValue> resultBucket = results.get(fieldName);
+                            resultBucket.add(struct.get(fieldName));
+                        }
+                    }
+                ));
+            }
+            tasks.forEach(CompletableFuture::join);
+            // Verify the results in a single thread.
+            for (Map.Entry<String, List<IonValue>> result : results.entrySet()) {
+                String fieldName = result.getKey();
+                for (IonValue value : result.getValue()) {
+                    assertEquals(original.get(fieldName), value);
+                }
+            }
+        }
+    }
+
     void dump(IonStruct s1_temp, ArrayList<TestField> s2) {
         _Private_IonValue s1 = ((_Private_IonValue)s1_temp);
         s1.dump(new PrintWriter(System.out));
