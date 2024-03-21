@@ -51,39 +51,9 @@ final class SharedSymbolTable
     implements SymbolTable
 {
     /**
-     * The array of system symbols as defined by Ion 1.0.
-     */
-    private static final String[] SYSTEM_SYMBOLS =
-    {
-        SystemSymbols.ION,
-        SystemSymbols.ION_1_0,
-        SystemSymbols.ION_SYMBOL_TABLE,
-        SystemSymbols.NAME,
-        SystemSymbols.VERSION,
-        SystemSymbols.IMPORTS,
-        SystemSymbols.SYMBOLS,
-        SystemSymbols.MAX_ID,
-        SystemSymbols.ION_SHARED_SYMBOL_TABLE
-    };
-
-    /**
      * The <b>singleton</b> instance of Ion 1.0 system symbol table.
-     * <p>
-     * TODO amazon-ion/ion-java/issues/34 Optimize system symtabs by using our custom backing impl.
      */
-    private static final SymbolTable ION_1_0_SYSTEM_SYMTAB;
-    static
-    {
-        Map<String, Integer> systemSymbolsMap = new HashMap<String, Integer>();
-
-        for (int i = 0; i < SYSTEM_SYMBOLS.length; i++)
-        {
-            systemSymbolsMap.put(SYSTEM_SYMBOLS[i], i+1);
-        }
-
-        ION_1_0_SYSTEM_SYMTAB =
-            new SharedSymbolTable(ION, 1, SYSTEM_SYMBOLS, systemSymbolsMap);
-    }
+    private static final SymbolTable ION_1_0_SYSTEM_SYMTAB = Ion_1_0_SystemSymbolTable.INSTANCE;
 
     /**
      * The name of this shared symbol table. If this is a system symbol
