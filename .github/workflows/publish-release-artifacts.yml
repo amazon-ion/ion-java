@@ -29,7 +29,7 @@ jobs:
     # First, a sanity check to ensure that the library version matches the release version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.6.0
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
       - name: Validate project version matches tag
         shell: bash
         run: |
@@ -48,7 +48,7 @@ jobs:
     steps:
         # TODO: replace with artifact upload/download -- make sure there's no race condition with other builds also
         # uploading an artifact.
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.6.0
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
         with:
           submodules: recursive
       - uses: gradle/gradle-build-action@29c0906b64b8fc82467890bfb7a0a7ef34bda89e # v3.1.0
