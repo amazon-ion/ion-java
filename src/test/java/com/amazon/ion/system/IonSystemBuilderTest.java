@@ -133,6 +133,34 @@ public class IonSystemBuilderTest
         b2.setStreamCopyOptimized(false);
     }
 
+    //-------------------------------------------------------------------------
+
+    @Test
+    public void testIonTextWriterBuilder()
+    {
+        IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard();
+
+        IonSystemBuilder b = IonSystemBuilder.standard().withIonTextWriterBuilder(textWriterBuilder);
+        assertSame(textWriterBuilder, b.getIonTextWriterBuilder());
+    }
+
+    @Test
+    public void testIonBinaryWriterBuilder()
+    {
+        IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard();
+
+        IonSystemBuilder b = IonSystemBuilder.standard().withIonBinaryWriterBuilder(binaryWriterBuilder);
+        assertSame(binaryWriterBuilder, b.getIonBinaryWriterBuilder());
+    }
+
+    @Test
+    public void testIonReaderBuilder()
+    {
+        IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
+
+        IonSystemBuilder b = IonSystemBuilder.standard().withReaderBuilder(readerBuilder);
+        assertSame(readerBuilder, b.getReaderBuilder());
+    }
 
     //-------------------------------------------------------------------------
 
