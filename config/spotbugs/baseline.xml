@@ -1,4 +1,4 @@
-<BugCollection version="4.7.3" sequence="0" timestamp="1711991506428" analysisTimestamp="1711991506457" release="1.11.5-SNAPSHOT">
+<BugCollection version="4.7.3" sequence="0" timestamp="1712136759933" analysisTimestamp="1712136759967" release="1.11.5-SNAPSHOT">
   <BugInstance type="NP_NULL_ON_SOME_PATH_MIGHT_BE_INFEASIBLE" priority="2" rank="13" abbrev="NP" category="STYLE" instanceHash="dfc0f20e980ed41b0fb16167cccef563" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
     <ShortMessage>Possible null pointer dereference on branch that might be infeasible</ShortMessage>
     <LongMessage>Possible null pointer dereference of Timestamp._fraction on branch that might be infeasible in com.amazon.ion.Timestamp.equals(Timestamp)</LongMessage>
@@ -39,8 +39,8 @@
       <Message>In method com.amazon.ion.Timestamp.make_localtime()</Message>
     </Method>
     <Type descriptor="Ljava/lang/Integer;" role="TYPE_FOUND">
-      <SourceLine classname="java.lang.Integer" start="52" end="1590" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
-        <Message>At Integer.java:[lines 52-1590]</Message>
+      <SourceLine classname="java.lang.Integer" start="71" end="1872" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
+        <Message>At Integer.java:[lines 71-1872]</Message>
       </SourceLine>
       <Message>Actual type Integer</Message>
     </Type>
@@ -68,8 +68,8 @@
       <Message>In method com.amazon.ion.Timestamp.print(Appendable, Timestamp)</Message>
     </Method>
     <Type descriptor="Ljava/lang/Integer;" role="TYPE_FOUND">
-      <SourceLine classname="java.lang.Integer" start="52" end="1590" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
-        <Message>At Integer.java:[lines 52-1590]</Message>
+      <SourceLine classname="java.lang.Integer" start="71" end="1872" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
+        <Message>At Integer.java:[lines 71-1872]</Message>
       </SourceLine>
       <Message>Actual type Integer</Message>
     </Type>
@@ -79,16 +79,16 @@
       </SourceLine>
       <Message>Value loaded from field com.amazon.ion.Timestamp.UNKNOWN_OFFSET</Message>
     </Field>
-    <SourceLine classname="com.amazon.ion.Timestamp" primary="true" start="2171" end="2171" startBytecode="46" endBytecode="46" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java">
+    <SourceLine classname="com.amazon.ion.Timestamp" primary="true" start="2171" end="2171" startBytecode="47" endBytecode="47" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java">
       <Message>At Timestamp.java:[line 2171]</Message>
     </SourceLine>
-    <SourceLine classname="com.amazon.ion.Timestamp" start="2179" end="2179" startBytecode="108" endBytecode="108" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
+    <SourceLine classname="com.amazon.ion.Timestamp" start="2179" end="2179" startBytecode="111" endBytecode="111" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
       <Message>Another occurrence at Timestamp.java:[line 2179]</Message>
     </SourceLine>
-    <SourceLine classname="com.amazon.ion.Timestamp" start="2187" end="2187" startBytecode="170" endBytecode="170" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
+    <SourceLine classname="com.amazon.ion.Timestamp" start="2187" end="2187" startBytecode="175" endBytecode="175" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
       <Message>Another occurrence at Timestamp.java:[line 2187]</Message>
     </SourceLine>
-    <SourceLine classname="com.amazon.ion.Timestamp" start="2205" end="2205" startBytecode="268" endBytecode="268" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
+    <SourceLine classname="com.amazon.ion.Timestamp" start="2205" end="2205" startBytecode="276" endBytecode="276" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
       <Message>Another occurrence at Timestamp.java:[line 2205]</Message>
     </SourceLine>
   </BugInstance>
@@ -106,8 +106,8 @@
       <Message>In method com.amazon.ion.Timestamp.printZ(Appendable)</Message>
     </Method>
     <Type descriptor="Ljava/lang/Integer;" role="TYPE_FOUND">
-      <SourceLine classname="java.lang.Integer" start="52" end="1590" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
-        <Message>At Integer.java:[lines 52-1590]</Message>
+      <SourceLine classname="java.lang.Integer" start="71" end="1872" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
+        <Message>At Integer.java:[lines 71-1872]</Message>
       </SourceLine>
       <Message>Actual type Integer</Message>
     </Type>
@@ -135,8 +135,8 @@
       <Message>In method com.amazon.ion.Timestamp.set_fields_from_calendar(Calendar, Timestamp$Precision, boolean)</Message>
     </Method>
     <Type descriptor="Ljava/lang/Integer;" role="TYPE_FOUND">
-      <SourceLine classname="java.lang.Integer" start="52" end="1590" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
-        <Message>At Integer.java:[lines 52-1590]</Message>
+      <SourceLine classname="java.lang.Integer" start="71" end="1872" sourcefile="Integer.java" sourcepath="java/lang/Integer.java">
+        <Message>At Integer.java:[lines 71-1872]</Message>
       </SourceLine>
       <Message>Actual type Integer</Message>
     </Type>
@@ -278,8 +278,8 @@
       <Message>In method new com.amazon.ion.impl.BlockedBuffer(InputStream)</Message>
     </Method>
     <Type descriptor="Ljava/io/OutputStream;" role="TYPE_CLOSEIT">
-      <SourceLine classname="java.io.OutputStream" start="46" end="152" sourcefile="OutputStream.java" sourcepath="java/io/OutputStream.java">
-        <Message>At OutputStream.java:[lines 46-152]</Message>
+      <SourceLine classname="java.io.OutputStream" start="52" end="198" sourcefile="OutputStream.java" sourcepath="java/io/OutputStream.java">
+        <Message>At OutputStream.java:[lines 52-198]</Message>
       </SourceLine>
       <Message>Need to close java.io.OutputStream </Message>
     </Type>
@@ -816,13 +816,13 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawTokensX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawTokensX" name="read_base64_byte_helper" signature="()I" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2557" end="2589" startBytecode="0" endBytecode="439" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2557" end="2589" startBytecode="0" endBytecode="441" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawTokensX.read_base64_byte_helper()</Message>
     </Method>
-    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true" start="2579" end="2582" startBytecode="146" endBytecode="149" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
+    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true" start="2579" end="2582" startBytecode="148" endBytecode="151" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
       <Message>At IonReaderTextRawTokensX.java:[lines 2579-2582]</Message>
     </SourceLine>
-    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2583" end="2586" startBytecode="172" endBytecode="175" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
+    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2583" end="2586" startBytecode="174" endBytecode="177" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
       <Message>Another occurrence at IonReaderTextRawTokensX.java:[lines 2583-2586]</Message>
     </SourceLine>
   </BugInstance>
@@ -856,7 +856,7 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawTokensX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawTokensX" name="skip_over_container" signature="(I)V" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="1213" end="1298" startBytecode="0" endBytecode="636" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="1213" end="1298" startBytecode="0" endBytecode="637" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawTokensX.skip_over_container(int)</Message>
     </Method>
     <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true" start="1225" end="1229" startBytecode="129" endBytecode="132" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
@@ -907,10 +907,10 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawTokensX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawTokensX" name="read_escaped_char_content_helper" signature="(IZ)I" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2473" end="2512" startBytecode="0" endBytecode="363" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2473" end="2512" startBytecode="0" endBytecode="365" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawTokensX.read_escaped_char_content_helper(int, boolean)</Message>
     </Method>
-    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true" start="2490" end="2509" startBytecode="64" endBytecode="185" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
+    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true" start="2490" end="2509" startBytecode="64" endBytecode="187" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
       <Message>At IonReaderTextRawTokensX.java:[lines 2490-2509]</Message>
     </SourceLine>
   </BugInstance>
@@ -992,7 +992,7 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawTokensX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawTokensX" name="read_base64_getchar_helper" signature="(I)I" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2592" end="2600" startBytecode="0" endBytecode="141" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2592" end="2600" startBytecode="0" endBytecode="142" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawTokensX.read_base64_getchar_helper(int)</Message>
     </Method>
     <String value="c != -1">
@@ -1015,7 +1015,7 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawTokensX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawTokensX" name="read_base64_getchar_helper" signature="(I)I" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2592" end="2600" startBytecode="0" endBytecode="141" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2592" end="2600" startBytecode="0" endBytecode="142" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawTokensX.read_base64_getchar_helper(int)</Message>
     </Method>
     <String value="c != 125 ('}')">
@@ -1038,7 +1038,7 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawTokensX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawTokensX" name="read_hex_escape_sequence_value" signature="(I)I" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2516" end="2533" startBytecode="0" endBytecode="255" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="2516" end="2533" startBytecode="0" endBytecode="257" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawTokensX.read_hex_escape_sequence_value(int)</Message>
     </Method>
     <String value="len &lt;= 0">
@@ -1061,10 +1061,10 @@
       <Message>In class com.amazon.ion.impl.IonReaderTextRawX</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonReaderTextRawX" name="parseSymbolToken" signature="(Ljava/lang/String;Ljava/lang/StringBuilder;I)Lcom/amazon/ion/SymbolToken;" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawX" start="745" end="772" startBytecode="0" endBytecode="406" sourcefile="IonReaderTextRawX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawX.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawX" start="745" end="772" startBytecode="0" endBytecode="408" sourcefile="IonReaderTextRawX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawX.java"/>
       <Message>In method com.amazon.ion.impl.IonReaderTextRawX.parseSymbolToken(String, StringBuilder, int)</Message>
     </Method>
-    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawX" primary="true" start="756" end="758" startBytecode="104" endBytecode="107" sourcefile="IonReaderTextRawX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawX.java">
+    <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawX" primary="true" start="756" end="758" startBytecode="106" endBytecode="109" sourcefile="IonReaderTextRawX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawX.java">
       <Message>At IonReaderTextRawX.java:[lines 756-758]</Message>
     </SourceLine>
   </BugInstance>
@@ -1121,13 +1121,13 @@
       <Message>In class com.amazon.ion.impl.IonTokenReader</Message>
     </Class>
     <Method classname="com.amazon.ion.impl.IonTokenReader" name="readEscapedCharacter" signature="(Ljava/io/PushbackReader;Z)I" isStatic="true" primary="true">
-      <SourceLine classname="com.amazon.ion.impl.IonTokenReader" start="1134" end="1197" startBytecode="0" endBytecode="745" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java"/>
+      <SourceLine classname="com.amazon.ion.impl.IonTokenReader" start="1134" end="1197" startBytecode="0" endBytecode="750" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java"/>
       <Message>In method com.amazon.ion.impl.IonTokenReader.readEscapedCharacter(PushbackReader, boolean)</Message>
     </Method>
-    <SourceLine classname="com.amazon.ion.impl.IonTokenReader" primary="true" start="1167" end="1171" startBytecode="307" endBytecode="308" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java">
+    <SourceLine classname="com.amazon.ion.impl.IonTokenReader" primary="true" start="1167" end="1171" startBytecode="308" endBytecode="309" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java">
       <Message>At IonTokenReader.java:[lines 1167-1171]</Message>
     </SourceLine>
-    <SourceLine classname="com.amazon.ion.impl.IonTokenReader" start="1179" end="1183" startBytecode="365" endBytecode="366" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
+    <SourceLine classname="com.amazon.ion.impl.IonTokenReader" start="1179" end="1183" startBytecode="367" endBytecode="368" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java" role="SOURCE_LINE_ANOTHER_INSTANCE">
       <Message>Another occurrence at IonTokenReader.java:[lines 1179-1183]</Message>
     </SourceLine>
   </BugInstance>
@@ -1162,8 +1162,8 @@
       <Message>In method com.amazon.ion.impl.IonTokenReader$Type.setNumericValue(IonTokenReader, String)</Message>
     </Method>
     <Type descriptor="Ljava/lang/String;" role="TYPE_FOUND">
-      <SourceLine classname="java.lang.String" start="111" end="3141" sourcefile="String.java" sourcepath="java/lang/String.java">
-        <Message>At String.java:[lines 111-3141]</Message>
+      <SourceLine classname="java.lang.String" start="140" end="4657" sourcefile="String.java" sourcepath="java/lang/String.java">
+        <Message>At String.java:[lines 140-4657]</Message>
       </SourceLine>
       <Message>Actual type String</Message>
     </Type>
@@ -1670,7 +1670,7 @@
       </SourceLine>
       <Message>Field com.amazon.ion.impl._Private_IonTextAppender.ZERO_PADDING</Message>
     </Field>
-    <SourceLine classname="com.amazon.ion.impl._Private_IonTextAppender" primary="true" start="111" end="111" startBytecode="327" endBytecode="327" sourcefile="_Private_IonTextAppender.java" sourcepath="com/amazon/ion/impl/_Private_IonTextAppender.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonTextAppender.java">
+    <SourceLine classname="com.amazon.ion.impl._Private_IonTextAppender" primary="true" start="111" end="111" startBytecode="335" endBytecode="335" sourcefile="_Private_IonTextAppender.java" sourcepath="com/amazon/ion/impl/_Private_IonTextAppender.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonTextAppender.java">
       <Message>At _Private_IonTextAppender.java:[line 111]</Message>
     </SourceLine>
   </BugInstance>
@@ -1830,8 +1830,8 @@
       <Message>In method com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(BigDecimal)</Message>
     </Method>
     <Type descriptor="Ljava/math/BigDecimal;" role="TYPE_FOUND">
-      <SourceLine classname="java.math.BigDecimal" start="224" end="5315" sourcefile="BigDecimal.java" sourcepath="java/math/BigDecimal.java">
-        <Message>At BigDecimal.java:[lines 224-5315]</Message>
+      <SourceLine classname="java.math.BigDecimal" start="305" end="5815" sourcefile="BigDecimal.java" sourcepath="java/math/BigDecimal.java">
+        <Message>At BigDecimal.java:[lines 305-5815]</Message>
       </SourceLine>
       <Message>Actual type java.math.BigDecimal</Message>
     </Type>
@@ -2202,6 +2202,29 @@
       <Message>At IonManagedBinaryWriter.java:[lines 499-505]</Message>
     </SourceLine>
   </BugInstance>
+  <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="e531b8f0ec0bd6a1fdfe3969f045a568" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
+    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
+    <LongMessage>com.amazon.ion.impl.bin.utf8.PoolableByteBuffer.getBuffer() may expose internal representation by returning PoolableByteBuffer.buffer</LongMessage>
+    <Class classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" primary="true">
+      <SourceLine classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" start="12" end="31" sourcefile="PoolableByteBuffer.java" sourcepath="com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java">
+        <Message>At PoolableByteBuffer.java:[lines 12-31]</Message>
+      </SourceLine>
+      <Message>In class com.amazon.ion.impl.bin.utf8.PoolableByteBuffer</Message>
+    </Class>
+    <Method classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" name="getBuffer" signature="()Ljava/nio/ByteBuffer;" isStatic="false" primary="true">
+      <SourceLine classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" start="31" end="31" startBytecode="0" endBytecode="46" sourcefile="PoolableByteBuffer.java" sourcepath="com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java"/>
+      <Message>In method com.amazon.ion.impl.bin.utf8.PoolableByteBuffer.getBuffer()</Message>
+    </Method>
+    <Field classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" name="buffer" signature="Ljava/nio/ByteBuffer;" isStatic="false" primary="true">
+      <SourceLine classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" sourcefile="PoolableByteBuffer.java" sourcepath="com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java">
+        <Message>In PoolableByteBuffer.java</Message>
+      </SourceLine>
+      <Message>Field com.amazon.ion.impl.bin.utf8.PoolableByteBuffer.buffer</Message>
+    </Field>
+    <SourceLine classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" primary="true" start="31" end="31" startBytecode="4" endBytecode="4" sourcefile="PoolableByteBuffer.java" sourcepath="com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java">
+      <Message>At PoolableByteBuffer.java:[line 31]</Message>
+    </SourceLine>
+  </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="dd12a2fa0c1d9ca7e991926a3dbcfc33" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
     <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
     <LongMessage>com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result.getBuffer() may expose internal representation by returning Utf8StringEncoder$Result.buffer</LongMessage>
@@ -2458,8 +2481,8 @@
       <Message>In method com.amazon.ion.impl.lite.IonStructLite.validate()</Message>
     </Method>
     <Type descriptor="Ljava/lang/String;" role="TYPE_FOUND">
-      <SourceLine classname="java.lang.String" start="111" end="3141" sourcefile="String.java" sourcepath="java/lang/String.java">
-        <Message>At String.java:[lines 111-3141]</Message>
+      <SourceLine classname="java.lang.String" start="140" end="4657" sourcefile="String.java" sourcepath="java/lang/String.java">
+        <Message>At String.java:[lines 140-4657]</Message>
       </SourceLine>
       <Message>Actual type String</Message>
     </Type>
@@ -2487,10 +2510,10 @@
       <SourceLine classname="com.amazon.ion.impl.lite.IonStructLite" start="481" end="501" startBytecode="0" endBytecode="33" sourcefile="IonStructLite.java" sourcepath="com/amazon/ion/impl/lite/IonStructLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonStructLite.java"/>
       <Message>In method com.amazon.ion.impl.lite.IonStructLite.add(SymbolToken, IonValue)</Message>
     </Method>
-    <LocalVariable name="text" register="3" pc="58" role="LOCAL_VARIABLE_VALUE_OF">
+    <LocalVariable name="text" register="3" pc="59" role="LOCAL_VARIABLE_VALUE_OF">
       <Message>Value loaded from text</Message>
     </LocalVariable>
-    <SourceLine classname="com.amazon.ion.impl.lite.IonStructLite" primary="true" start="500" end="500" startBytecode="59" endBytecode="59" sourcefile="IonStructLite.java" sourcepath="com/amazon/ion/impl/lite/IonStructLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonStructLite.java">
+    <SourceLine classname="com.amazon.ion.impl.lite.IonStructLite" primary="true" start="500" end="500" startBytecode="60" endBytecode="60" sourcefile="IonStructLite.java" sourcepath="com/amazon/ion/impl/lite/IonStructLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonStructLite.java">
       <Message>At IonStructLite.java:[line 500]</Message>
     </SourceLine>
   </BugInstance>
