@@ -344,7 +344,7 @@ public class IonSystemBuilder
     }
 
     /**
-     * Sets the binary writer builder whose options will be used to use when building
+     * Sets the binary writer builder whose options will be used when building
      * an {@link IonSystem}. The writer builder's catalog will never be used; the
      * catalog provided to {@link #setCatalog(IonCatalog)} or
      * {@link #withCatalog(IonCatalog)} will always be used instead.
