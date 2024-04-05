@@ -310,7 +310,7 @@ public class IonSystemBuilder
     }
 
     /**
-     * Declares the text writer builder whose options will be used to use when building
+     * Declares the text writer builder whose options will be used when building
      * an {@link IonSystem}, returning a new mutable builder if this is immutable.
      * The writer builder's catalog will never be used; the catalog provided to
      * {@link #setCatalog(IonCatalog)} or {@link #withCatalog(IonCatalog)} will
