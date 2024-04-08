@@ -282,8 +282,8 @@ public class IonSystemBuilder
 
     /**
      * Gets the text writer builder whose options will be used when building an
-     * {@link IonSystem}. By default, {@link IonTextWriterBuilder#standard()} will
-     * be used.
+     * {@link IonSystem}. By default, {@link IonTextWriterBuilder#standard()}
+     * using {@code US-ASCII} encoding will be used.
      *
      * @see #setIonTextWriterBuilder(IonTextWriterBuilder)
      * @see #withIonTextWriterBuilder(IonTextWriterBuilder)
@@ -299,7 +299,8 @@ public class IonSystemBuilder
      * {@link #withCatalog(IonCatalog)} will always be used instead.
      *
      * @param builder the writer builder to use in built systems.
-     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}.
+     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}
+     *  using {@code US-ASCII} encoding.
      *
      * @see #getIonTextWriterBuilder()
      * @see #withIonTextWriterBuilder(IonTextWriterBuilder)
@@ -319,7 +320,8 @@ public class IonSystemBuilder
      * always be used instead.
      *
      * @param builder the writer builder to use in built systems.
-     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}.
+     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}
+     *  using {@code US-ASCII} encoding.
      *
      * @see #getIonTextWriterBuilder()
      * @see #setIonTextWriterBuilder(IonTextWriterBuilder)
