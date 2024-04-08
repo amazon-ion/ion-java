@@ -138,28 +138,43 @@ public class IonSystemBuilderTest
     @Test
     public void testIonTextWriterBuilder()
     {
-        IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard();
+        IonCatalog textWriterCatalog = new SimpleCatalog(); // should be ignored
+        IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard().withCatalog(textWriterCatalog);
 
-        IonSystemBuilder b = IonSystemBuilder.standard().withIonTextWriterBuilder(textWriterBuilder);
-        assertSame(textWriterBuilder, b.getIonTextWriterBuilder());
+        IonSystemBuilder systemBuilder = IonSystemBuilder.standard().withIonTextWriterBuilder(textWriterBuilder);
+        assertSame(textWriterBuilder, systemBuilder.getIonTextWriterBuilder());
+
+        IonCatalog systemCatalog = new SimpleCatalog();
+        IonSystem system = systemBuilder.withCatalog(systemCatalog).build();
+        assertSame(systemCatalog, system.getCatalog());
     }
 
     @Test
     public void testIonBinaryWriterBuilder()
     {
-        IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard();
+        IonCatalog binaryWriterCatalog = new SimpleCatalog(); // should be ignored
+        IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard().withCatalog(binaryWriterCatalog);
 
-        IonSystemBuilder b = IonSystemBuilder.standard().withIonBinaryWriterBuilder(binaryWriterBuilder);
-        assertSame(binaryWriterBuilder, b.getIonBinaryWriterBuilder());
+        IonSystemBuilder systemBuilder = IonSystemBuilder.standard().withIonBinaryWriterBuilder(binaryWriterBuilder);
+        assertSame(binaryWriterBuilder, systemBuilder.getIonBinaryWriterBuilder());
+
+        IonCatalog systemCatalog = new SimpleCatalog();
+        IonSystem system = systemBuilder.build();
+        assertSame(systemCatalog, system.getCatalog());
     }
 
     @Test
     public void testIonReaderBuilder()
     {
-        IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
+        IonCatalog readerCatalog = new SimpleCatalog(); // should be ignored
+        IonReaderBuilder readerBuilder = IonReaderBuilder.standard().withCatalog(readerCatalog);
 
-        IonSystemBuilder b = IonSystemBuilder.standard().withReaderBuilder(readerBuilder);
-        assertSame(readerBuilder, b.getReaderBuilder());
+        IonSystemBuilder systemBuilder = IonSystemBuilder.standard().withReaderBuilder(readerBuilder);
+        assertSame(readerBuilder, systemBuilder.getReaderBuilder());
+
+        IonCatalog systemCatalog = new SimpleCatalog();
+        IonSystem system = systemBuilder.build();
+        assertSame(systemCatalog, system.getCatalog());
     }
 
     //-------------------------------------------------------------------------
