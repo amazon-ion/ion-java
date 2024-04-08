@@ -24,6 +24,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_Utils;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -102,9 +103,10 @@ public class IonSystemBuilder
 
     IonCatalog myCatalog;
     boolean myStreamCopyOptimized = false;
-    IonTextWriterBuilder textWriterBuilder;
-    IonBinaryWriterBuilder binaryWriterBuilder;
-    IonReaderBuilder readerBuilder;
+
+    IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard().withCharsetAscii();
+    IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard();
+    IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
 
 
     /** You no touchy. */
@@ -306,7 +308,7 @@ public class IonSystemBuilder
      */
     public final void setIonTextWriterBuilder(IonTextWriterBuilder builder) {
         mutationCheck();
-        textWriterBuilder = builder;
+        textWriterBuilder = Objects.requireNonNull(builder);
     }
 
     /**
@@ -359,7 +361,7 @@ public class IonSystemBuilder
      */
     public final void setIonBinaryWriterBuilder(IonBinaryWriterBuilder builder) {
         mutationCheck();
-        binaryWriterBuilder = builder;
+        binaryWriterBuilder = Objects.requireNonNull(builder);
     }
 
     /**
@@ -412,7 +414,7 @@ public class IonSystemBuilder
      */
     public final void setReaderBuilder(IonReaderBuilder builder) {
         mutationCheck();
-        readerBuilder = builder;
+        readerBuilder = Objects.requireNonNull(builder);
     }
 
     /**
@@ -443,18 +445,14 @@ public class IonSystemBuilder
      */
     public final IonSystem build()
     {
-        IonCatalog catalog = Optional.ofNullable(myCatalog)
-                .orElseGet(SimpleCatalog::new);
+        IonCatalog catalog = Optional.ofNullable(myCatalog).orElseGet(SimpleCatalog::new);
 
-        IonTextWriterBuilder twb = Optional.ofNullable(textWriterBuilder)
-                .orElseGet(() -> IonTextWriterBuilder.standard()
-                        .withCharsetAscii())
-                .withCatalog(catalog);
+        IonTextWriterBuilder twb = textWriterBuilder.copy().withCatalog(catalog);
+        IonBinaryWriterBuilder bwb = binaryWriterBuilder.copy().withCatalog(catalog);
+        IonReaderBuilder rb = readerBuilder.copy().withCatalog(catalog);
 
-        IonBinaryWriterBuilder bwb = Optional.ofNullable(binaryWriterBuilder)
-                .orElseGet(() -> IonBinaryWriterBuilder.standard()
-                        .withStreamCopyOptimized(myStreamCopyOptimized))
-                .withCatalog(catalog);
+        // TODO Use #setStreamCopyOptimized directly on the BWB
+        bwb.setStreamCopyOptimized(myStreamCopyOptimized);
 
         // TODO Would be nice to remove this since it's implied by the BWB.
         //      However that currently causes problems in the IonSystem
@@ -463,10 +461,6 @@ public class IonSystemBuilder
         bwb.setInitialSymbolTable(systemSymtab);
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
-
-        IonReaderBuilder rb = Optional.ofNullable(readerBuilder)
-                .orElseGet(IonReaderBuilder::standard)
-                .withCatalog(catalog);
 
         return newLiteSystem(twb, (_Private_IonBinaryWriterBuilder) bwb, rb);
     }

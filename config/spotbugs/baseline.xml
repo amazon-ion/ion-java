@@ -1,4 +1,4 @@
-<BugCollection version="4.7.3" sequence="0" timestamp="1712136759933" analysisTimestamp="1712136759967" release="1.11.5-SNAPSHOT">
+<BugCollection version="4.7.3" sequence="0" timestamp="1712606556088" analysisTimestamp="1712606556119" release="1.11.5-SNAPSHOT">
   <BugInstance type="NP_NULL_ON_SOME_PATH_MIGHT_BE_INFEASIBLE" priority="2" rank="13" abbrev="NP" category="STYLE" instanceHash="dfc0f20e980ed41b0fb16167cccef563" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
     <ShortMessage>Possible null pointer dereference on branch that might be infeasible</ShortMessage>
     <LongMessage>Possible null pointer dereference of Timestamp._fraction on branch that might be infeasible in com.amazon.ion.Timestamp.equals(Timestamp)</LongMessage>
@@ -26,8 +26,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="RC_REF_COMPARISON" priority="1" rank="1" abbrev="RC" category="CORRECTNESS" instanceHash="37701f2731e243676fa1126c1a454fea" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Suspicious reference comparison</ShortMessage>
-    <LongMessage>Suspicious comparison of Integer references in com.amazon.ion.Timestamp.make_localtime()</LongMessage>
+    <ShortMessage>Comparaison de références suspecte</ShortMessage>
+    <LongMessage>Comparaison suspecte des références com.amazon.ion.Timestamp._offset dans com.amazon.ion.Timestamp.make_localtime()</LongMessage>
     <Class classname="com.amazon.ion.Timestamp" primary="true">
       <SourceLine classname="com.amazon.ion.Timestamp" start="74" end="2884" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java">
         <Message>At Timestamp.java:[lines 74-2884]</Message>
@@ -151,8 +151,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="c2029a51b12e7834b0f8742d886d38c3" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in new com.amazon.ion.Timestamp(BigDecimal, Timestamp$Precision, Integer) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de new com.amazon.ion.Timestamp(BigDecimal, Timestamp$Precision, Integer) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.Timestamp" primary="true">
       <SourceLine classname="com.amazon.ion.Timestamp" start="74" end="2884" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java">
         <Message>At Timestamp.java:[lines 74-2884]</Message>
@@ -174,8 +174,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="74f8353cfe942e522c8de66a81285331" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.Timestamp.clearUnusedPrecision() where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.Timestamp.clearUnusedPrecision() comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.Timestamp" primary="true">
       <SourceLine classname="com.amazon.ion.Timestamp" start="74" end="2884" sourcefile="Timestamp.java" sourcepath="com/amazon/ion/Timestamp.java" relSourcepath="src/main/java/com/amazon/ion/Timestamp.java">
         <Message>At Timestamp.java:[lines 74-2884]</Message>
@@ -265,8 +265,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="OS_OPEN_STREAM" priority="2" rank="16" abbrev="OS" category="BAD_PRACTICE" instanceHash="2beb630b98529c2ec849305b3b9385cd" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Method may fail to close stream</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.BlockedBuffer(InputStream) may fail to close stream</LongMessage>
+    <ShortMessage>La méthode peut ne pas fermer un flux</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.BlockedBuffer(InputStream) peut ne pas fermer un flux</LongMessage>
     <Class classname="com.amazon.ion.impl.BlockedBuffer" primary="true">
       <SourceLine classname="com.amazon.ion.impl.BlockedBuffer" start="38" end="1041" sourcefile="BlockedBuffer.java" sourcepath="com/amazon/ion/impl/BlockedBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/BlockedBuffer.java">
         <Message>At BlockedBuffer.java:[lines 38-1041]</Message>
@@ -288,8 +288,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="49ae3f2aff89fca77ece8f5b6b1d8e1d" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream(BlockedBuffer) may expose internal representation by storing an externally mutable object into BlockedBuffer$BlockedByteOutputStream._buf</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream(BlockedBuffer) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream._buf</LongMessage>
     <Class classname="com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream" primary="true">
       <SourceLine classname="com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream" start="1310" end="1656" sourcefile="BlockedBuffer.java" sourcepath="com/amazon/ion/impl/BlockedBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/BlockedBuffer.java">
         <Message>At BlockedBuffer.java:[lines 1310-1656]</Message>
@@ -314,8 +314,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="d862968857053de2e52f028d75db8af3" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream(BlockedBuffer, int) may expose internal representation by storing an externally mutable object into BlockedBuffer$BlockedByteOutputStream._buf</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream(BlockedBuffer, int) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream._buf</LongMessage>
     <Class classname="com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream" primary="true">
       <SourceLine classname="com.amazon.ion.impl.BlockedBuffer$BlockedByteOutputStream" start="1310" end="1656" sourcefile="BlockedBuffer.java" sourcepath="com/amazon/ion/impl/BlockedBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/BlockedBuffer.java">
         <Message>At BlockedBuffer.java:[lines 1310-1656]</Message>
@@ -340,8 +340,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="7df0b5cbb977df79b8ff3750bbd5a37d" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.BlockedBuffer$BufferedOutputStream(BlockedBuffer) may expose internal representation by storing an externally mutable object into BlockedBuffer$BufferedOutputStream._buffer</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.BlockedBuffer$BufferedOutputStream(BlockedBuffer) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.BlockedBuffer$BufferedOutputStream._buffer</LongMessage>
     <Class classname="com.amazon.ion.impl.BlockedBuffer$BufferedOutputStream" primary="true">
       <SourceLine classname="com.amazon.ion.impl.BlockedBuffer$BufferedOutputStream" start="1674" end="1776" sourcefile="BlockedBuffer.java" sourcepath="com/amazon/ion/impl/BlockedBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/BlockedBuffer.java">
         <Message>At BlockedBuffer.java:[lines 1674-1776]</Message>
@@ -472,8 +472,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="7a2dfc422120143b681c7f39bd32798c" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.buffer() may expose internal representation by returning IonBinary$BufferManager._buf</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.buffer() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._buf</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -495,8 +495,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="bb5993199b143728b278261ec17b72f2" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.openReader() may expose internal representation by returning IonBinary$BufferManager._reader</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.openReader() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._reader</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -518,8 +518,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="13a1cd7af738123e4c2e7d41e42da55f" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.openWriter() may expose internal representation by returning IonBinary$BufferManager._writer</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.openWriter() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._writer</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -541,8 +541,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="e23a2c4995e81e2f50e116d22b11817" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.reader() may expose internal representation by returning IonBinary$BufferManager._reader</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.reader() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._reader</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -564,8 +564,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="33ce07038be68a0b32e72494c0b0779d" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.reader(int) may expose internal representation by returning IonBinary$BufferManager._reader</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.reader(int) risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._reader</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -587,8 +587,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="ce9dc2b4001e503cbc79f5cd18a70d87" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.writer() may expose internal representation by returning IonBinary$BufferManager._writer</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.writer() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._writer</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -610,8 +610,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="3f96230ef763752c8cd65017112683aa" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonBinary$BufferManager.writer(int) may expose internal representation by returning IonBinary$BufferManager._writer</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonBinary$BufferManager.writer(int) risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.IonBinary$BufferManager._writer</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -633,8 +633,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="cb558f16e9df13958572ae691116db56" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.IonBinary$BufferManager(BlockedBuffer) may expose internal representation by storing an externally mutable object into IonBinary$BufferManager._buf</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.IonBinary$BufferManager(BlockedBuffer) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.IonBinary$BufferManager._buf</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$BufferManager" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$BufferManager" start="322" end="437" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 322-437]</Message>
@@ -659,8 +659,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="9748c6aaf34a4d74620a1ec326f0f096" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonBinary$Reader.readIntAsInt(int) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonBinary$Reader.readIntAsInt(int) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$Reader" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$Reader" start="942" end="1815" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 942-1815]</Message>
@@ -710,8 +710,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="BIT_AND" priority="1" rank="5" abbrev="BIT" category="CORRECTNESS" instanceHash="489579953b9cb45b99949c6c8254098f" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Incompatible bit masks</ShortMessage>
-    <LongMessage>Incompatible bit masks in (e &amp; 0x80 == 0x40) yields a constant result in com.amazon.ion.impl.IonBinary$Writer.writeIntValue(long)</LongMessage>
+    <ShortMessage>Masques binaires incompatibles</ShortMessage>
+    <LongMessage>Des masques binaires incompatibles renvoient un résultat constant dans com.amazon.ion.impl.IonBinary$Writer.writeIntValue(long)</LongMessage>
     <Class classname="com.amazon.ion.impl.IonBinary$Writer" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonBinary$Writer" start="1819" end="2917" sourcefile="IonBinary.java" sourcepath="com/amazon/ion/impl/IonBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonBinary.java">
         <Message>At IonBinary.java:[lines 1819-2917]</Message>
@@ -733,8 +733,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SBSC_USE_STRINGBUFFER_CONCATENATION" priority="2" rank="18" abbrev="SBSC" category="PERFORMANCE" instanceHash="1983f5982865e6bca7fcbab80f84c0eb" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Method concatenates strings using + in a loop</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.IonReaderTextRawTokensX.peekNullTypeSymbolUndo(int[], int) concatenates strings using + in a loop</LongMessage>
+    <ShortMessage>La méthode concatène des chaînes au moyen de + en boucle</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.IonReaderTextRawTokensX.peekNullTypeSymbolUndo(int[], int) concatène des chaînes au moyen de + en boucle</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -750,8 +750,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="7ac13daf00bed04a0dc687024ba3a5c3" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.load_double_quoted_string(StringBuilder, boolean) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.load_double_quoted_string(StringBuilder, boolean) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -767,8 +767,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="e71ff3699310d9d02654e42aa19f1ea7" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.load_fixed_digits(StringBuilder, int) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.load_fixed_digits(StringBuilder, int) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -790,8 +790,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="aa3a0c04d8e812b2cc9b8e968316999c" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.load_single_quoted_string(StringBuilder, boolean) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.load_single_quoted_string(StringBuilder, boolean) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -807,8 +807,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="52a2b4795d02a2af4518de7c8fc46346" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.read_base64_byte_helper() where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.read_base64_byte_helper() comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -827,8 +827,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="a8ea82c1e5d992dab6cd75d14f2a8a05" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.skip_double_quoted_string_helper() where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.skip_double_quoted_string_helper() comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -847,8 +847,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="d1e587d656a8337e9067d0cf2b73a976" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.skip_over_container(int) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.skip_over_container(int) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -864,8 +864,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="a4a066a68adf31d418a174990aefe0b1" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.skip_single_quoted_string(UnifiedSavePointManagerX$SavePoint) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.skip_single_quoted_string(UnifiedSavePointManagerX$SavePoint) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -881,8 +881,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="ee5b2dc71707fd11c5c55336b3872f2a" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawTokensX.skip_triple_quoted_string(UnifiedSavePointManagerX$SavePoint, IonReaderTextRawTokensX$CommentStrategy) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawTokensX.skip_triple_quoted_string(UnifiedSavePointManagerX$SavePoint, IonReaderTextRawTokensX$CommentStrategy) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawTokensX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawTokensX" start="66" end="2915" sourcefile="IonReaderTextRawTokensX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawTokensX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawTokensX.java">
         <Message>At IonReaderTextRawTokensX.java:[lines 66-2915]</Message>
@@ -1052,8 +1052,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="63520ea30e12c2314c00f268931e030a" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonReaderTextRawX.parseSymbolToken(String, StringBuilder, int) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonReaderTextRawX.parseSymbolToken(String, StringBuilder, int) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonReaderTextRawX" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonReaderTextRawX" start="72" end="1446" sourcefile="IonReaderTextRawX.java" sourcepath="com/amazon/ion/impl/IonReaderTextRawX.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonReaderTextRawX.java">
         <Message>At IonReaderTextRawX.java:[lines 72-1446]</Message>
@@ -1112,8 +1112,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="2a3aa1c1ca170777e5487dcfe23af64b" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.IonTokenReader.readEscapedCharacter(PushbackReader, boolean) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.IonTokenReader.readEscapedCharacter(PushbackReader, boolean) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.IonTokenReader" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonTokenReader" start="41" end="1620" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java">
         <Message>At IonTokenReader.java:[lines 41-1620]</Message>
@@ -1149,8 +1149,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="ES_COMPARING_STRINGS_WITH_EQ" priority="1" rank="9" abbrev="ES" category="BAD_PRACTICE" instanceHash="9d5144bbccad95f029d2e28c030ddfc9" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="597">
-    <ShortMessage>Comparison of String objects using == or !=</ShortMessage>
-    <LongMessage>Comparison of String objects using == or != in com.amazon.ion.impl.IonTokenReader$Type.setNumericValue(IonTokenReader, String)</LongMessage>
+    <ShortMessage>Comparaison d'objets String utilisant == ou !=</ShortMessage>
+    <LongMessage>Comparaison d'objets String utilisant == ou != dans com.amazon.ion.impl.IonTokenReader$Type.setNumericValue(IonTokenReader, String)</LongMessage>
     <Class classname="com.amazon.ion.impl.IonTokenReader$Type" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonTokenReader$Type" start="54" end="209" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java">
         <Message>At IonTokenReader.java:[lines 54-209]</Message>
@@ -1179,8 +1179,8 @@
     <Property name="edu.umd.cs.findbugs.detect.RefComparisonWarningProperty.DYNAMIC_AND_UNKNOWN" value="true"/>
   </BugInstance>
   <BugInstance type="NM_CLASS_NAMING_CONVENTION" priority="2" rank="16" abbrev="Nm" category="BAD_PRACTICE" instanceHash="2f78ac987f6763ec5762edc7af0ba831" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Class names should start with an upper case letter</ShortMessage>
-    <LongMessage>The class name com.amazon.ion.impl.IonTokenReader$Type$timeinfo doesn't start with an upper case letter</LongMessage>
+    <ShortMessage>Nom de classe devant commencer par une majuscule</ShortMessage>
+    <LongMessage>Le nom de la classe com.amazon.ion.impl.IonTokenReader$Type$timeinfo ne commence pas par une majusucle</LongMessage>
     <Class classname="com.amazon.ion.impl.IonTokenReader$Type$timeinfo" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonTokenReader$Type$timeinfo" start="132" end="143" sourcefile="IonTokenReader.java" sourcepath="com/amazon/ion/impl/IonTokenReader.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonTokenReader.java">
         <Message>At IonTokenReader.java:[lines 132-143]</Message>
@@ -1192,8 +1192,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="BIT_IOR_OF_SIGNED_BYTE" priority="2" rank="2" abbrev="BIT" category="CORRECTNESS" instanceHash="93df0fa44c6dfe9f55204cae04ba21c3" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Bitwise OR of signed byte value</ShortMessage>
-    <LongMessage>Bitwise OR of signed byte value computed in com.amazon.ion.impl.IonUTF8.getAs4BytesReversed(int)</LongMessage>
+    <ShortMessage>Ou binaire d'un octet signé</ShortMessage>
+    <LongMessage>Ou binaire d'un octet signé calculé dans com.amazon.ion.impl.IonUTF8.getAs4BytesReversed(int)</LongMessage>
     <Class classname="com.amazon.ion.impl.IonUTF8" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonUTF8" start="35" end="406" sourcefile="IonUTF8.java" sourcepath="com/amazon/ion/impl/IonUTF8.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonUTF8.java">
         <Message>At IonUTF8.java:[lines 35-406]</Message>
@@ -1215,8 +1215,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="BIT_IOR_OF_SIGNED_BYTE" priority="2" rank="2" abbrev="BIT" category="CORRECTNESS" instanceHash="c7af8fe0a87cebec80f386f18d0bad53" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Bitwise OR of signed byte value</ShortMessage>
-    <LongMessage>Bitwise OR of signed byte value computed in com.amazon.ion.impl.IonUTF8.packBytesAfter1(int, int)</LongMessage>
+    <ShortMessage>Ou binaire d'un octet signé</ShortMessage>
+    <LongMessage>Ou binaire d'un octet signé calculé dans com.amazon.ion.impl.IonUTF8.packBytesAfter1(int, int)</LongMessage>
     <Class classname="com.amazon.ion.impl.IonUTF8" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonUTF8" start="35" end="406" sourcefile="IonUTF8.java" sourcepath="com/amazon/ion/impl/IonUTF8.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonUTF8.java">
         <Message>At IonUTF8.java:[lines 35-406]</Message>
@@ -1252,8 +1252,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" priority="2" rank="11" abbrev="RCN" category="CORRECTNESS" instanceHash="a947663772ecc40ffa3682e827dfdb04" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
-    <ShortMessage>Nullcheck of value previously dereferenced</ShortMessage>
-    <LongMessage>Nullcheck of IonWriterSystemBinary._patch at line 519 of value previously dereferenced in com.amazon.ion.impl.IonWriterSystemBinary.closeValue()</LongMessage>
+    <ShortMessage>Test de nullité d'une valeur préalablement déréférencée</ShortMessage>
+    <LongMessage>Test de nullité dans com.amazon.ion.impl.IonWriterSystemBinary._patch d'une valeur préalablement déréférencée dans com.amazon.ion.impl.IonWriterSystemBinary.closeValue()</LongMessage>
     <Class classname="com.amazon.ion.impl.IonWriterSystemBinary" primary="true">
       <SourceLine classname="com.amazon.ion.impl.IonWriterSystemBinary" start="40" end="1049" sourcefile="IonWriterSystemBinary.java" sourcepath="com/amazon/ion/impl/IonWriterSystemBinary.java" relSourcepath="src/main/java/com/amazon/ion/impl/IonWriterSystemBinary.java">
         <Message>At IonWriterSystemBinary.java:[lines 40-1049]</Message>
@@ -1278,8 +1278,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="IS2_INCONSISTENT_SYNC" priority="2" rank="17" abbrev="IS" category="MT_CORRECTNESS" instanceHash="6d5e152f4ead561f66657ad28715856a" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="366">
-    <ShortMessage>Inconsistent synchronization</ShortMessage>
-    <LongMessage>Inconsistent synchronization of com.amazon.ion.impl.LocalSymbolTable.mySymbolNames; locked 58% of time</LongMessage>
+    <ShortMessage>Synchronisation incohérente</ShortMessage>
+    <LongMessage>Synchronisation incohérente de com.amazon.ion.impl.LocalSymbolTable.mySymbolNames; verrouillée à 58%</LongMessage>
     <Class classname="com.amazon.ion.impl.LocalSymbolTable" primary="true">
       <SourceLine classname="com.amazon.ion.impl.LocalSymbolTable" start="52" end="863" sourcefile="LocalSymbolTable.java" sourcepath="com/amazon/ion/impl/LocalSymbolTable.java" relSourcepath="src/main/java/com/amazon/ion/impl/LocalSymbolTable.java">
         <Message>At LocalSymbolTable.java:[lines 52-863]</Message>
@@ -1333,8 +1333,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="IS2_INCONSISTENT_SYNC" priority="2" rank="17" abbrev="IS" category="MT_CORRECTNESS" instanceHash="51a58628ea63298078b87f36b7a3416e" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="366">
-    <ShortMessage>Inconsistent synchronization</ShortMessage>
-    <LongMessage>Inconsistent synchronization of com.amazon.ion.impl.LocalSymbolTable.mySymbolsCount; locked 81% of time</LongMessage>
+    <ShortMessage>Synchronisation incohérente</ShortMessage>
+    <LongMessage>Synchronisation incohérente de com.amazon.ion.impl.LocalSymbolTable.mySymbolsCount; verrouillée à 81%</LongMessage>
     <Class classname="com.amazon.ion.impl.LocalSymbolTable" primary="true">
       <SourceLine classname="com.amazon.ion.impl.LocalSymbolTable" start="52" end="863" sourcefile="LocalSymbolTable.java" sourcepath="com/amazon/ion/impl/LocalSymbolTable.java" relSourcepath="src/main/java/com/amazon/ion/impl/LocalSymbolTable.java">
         <Message>At LocalSymbolTable.java:[lines 52-863]</Message>
@@ -1385,8 +1385,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="NP_NULL_PARAM_DEREF" priority="2" rank="8" abbrev="NP" category="CORRECTNESS" instanceHash="beb1e796c5e40b6af4fc4a6a96fabb76" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
-    <ShortMessage>Method call passes null for non-null parameter</ShortMessage>
-    <LongMessage>Null passed for non-null parameter of com.amazon.ion.Timestamp.createFromUtcFields(Timestamp$Precision, int, int, int, int, int, int, BigDecimal, Integer) in com.amazon.ion.impl.SimpleByteBuffer$SimpleByteReader.readTimestamp(int)</LongMessage>
+    <ShortMessage>Méthode passant null à un paramètre déréférencé inconditionnellement</ShortMessage>
+    <LongMessage>L'appel de méthode dans com.amazon.ion.impl.SimpleByteBuffer$SimpleByteReader.readTimestamp(int) passe null à un paramètre de com.amazon.ion.Timestamp.createFromUtcFields(Timestamp$Precision, int, int, int, int, int, int, BigDecimal, Integer) déréférencé de façon inconditionnelle</LongMessage>
     <Class classname="com.amazon.ion.impl.SimpleByteBuffer$SimpleByteReader" primary="true">
       <SourceLine classname="com.amazon.ion.impl.SimpleByteBuffer$SimpleByteReader" start="135" end="660" sourcefile="SimpleByteBuffer.java" sourcepath="com/amazon/ion/impl/SimpleByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/SimpleByteBuffer.java">
         <Message>At SimpleByteBuffer.java:[lines 135-660]</Message>
@@ -1419,8 +1419,8 @@
     <Property name="edu.umd.cs.findbugs.detect.NullDerefProperty.LONG_RANGE_NULL_SOURCE" value="true"/>
   </BugInstance>
   <BugInstance type="SF_SWITCH_FALLTHROUGH" priority="2" rank="17" abbrev="SF" category="STYLE" instanceHash="9a234b1a21f1d8ba763393929cce11e4" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="484">
-    <ShortMessage>Switch statement found where one case falls through to the next case</ShortMessage>
-    <LongMessage>Switch statement found in com.amazon.ion.impl.SimpleByteBuffer$SimpleByteWriter.writeVarInt(int, int, boolean) where one case falls through to the next case</LongMessage>
+    <ShortMessage>Un switch comporte un cas qui déborde sur le suivant</ShortMessage>
+    <LongMessage>Un switch de com.amazon.ion.impl.SimpleByteBuffer$SimpleByteWriter.writeVarInt(int, int, boolean) comporte un cas qui déborde sur le suivant</LongMessage>
     <Class classname="com.amazon.ion.impl.SimpleByteBuffer$SimpleByteWriter" primary="true">
       <SourceLine classname="com.amazon.ion.impl.SimpleByteBuffer$SimpleByteWriter" start="841" end="1383" sourcefile="SimpleByteBuffer.java" sourcepath="com/amazon/ion/impl/SimpleByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/SimpleByteBuffer.java">
         <Message>At SimpleByteBuffer.java:[lines 841-1383]</Message>
@@ -1510,8 +1510,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="d58e1592bc2a700caa5be665fe6fe77e" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.UnifiedDataPageX$Bytes(byte[], int, int) may expose internal representation by storing an externally mutable object into UnifiedDataPageX$Bytes._bytes</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.UnifiedDataPageX$Bytes(byte[], int, int) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.UnifiedDataPageX$Bytes._bytes</LongMessage>
     <Class classname="com.amazon.ion.impl.UnifiedDataPageX$Bytes" primary="true">
       <SourceLine classname="com.amazon.ion.impl.UnifiedDataPageX$Bytes" start="168" end="204" sourcefile="UnifiedDataPageX.java" sourcepath="com/amazon/ion/impl/UnifiedDataPageX.java" relSourcepath="src/main/java/com/amazon/ion/impl/UnifiedDataPageX.java">
         <Message>At UnifiedDataPageX.java:[lines 168-204]</Message>
@@ -1536,8 +1536,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="5631ddc5128a828436df68eb6b9359c6" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.UnifiedDataPageX$Chars(char[], int, int) may expose internal representation by storing an externally mutable object into UnifiedDataPageX$Chars._characters</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.UnifiedDataPageX$Chars(char[], int, int) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.UnifiedDataPageX$Chars._characters</LongMessage>
     <Class classname="com.amazon.ion.impl.UnifiedDataPageX$Chars" primary="true">
       <SourceLine classname="com.amazon.ion.impl.UnifiedDataPageX$Chars" start="210" end="251" sourcefile="UnifiedDataPageX.java" sourcepath="com/amazon/ion/impl/UnifiedDataPageX.java" relSourcepath="src/main/java/com/amazon/ion/impl/UnifiedDataPageX.java">
         <Message>At UnifiedDataPageX.java:[lines 210-251]</Message>
@@ -1562,8 +1562,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="b694ed23a3292b72fc9a15b1055e9e87" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl._Private_FastAppendableDecorator(_Private_FastAppendable) may expose internal representation by storing an externally mutable object into _Private_FastAppendableDecorator.myOutput</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl._Private_FastAppendableDecorator(_Private_FastAppendable) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_FastAppendableDecorator.myOutput</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_FastAppendableDecorator" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_FastAppendableDecorator" start="31" end="100" sourcefile="_Private_FastAppendableDecorator.java" sourcepath="com/amazon/ion/impl/_Private_FastAppendableDecorator.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_FastAppendableDecorator.java">
         <Message>At _Private_FastAppendableDecorator.java:[lines 31-100]</Message>
@@ -1588,8 +1588,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="979e51d12a6742548549ed889fc05276" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_IonBinaryWriterBuilder.getInitialSymbolTable() may expose internal representation by returning _Private_IonBinaryWriterBuilder.myInitialSymbolTable</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_IonBinaryWriterBuilder.getInitialSymbolTable() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl._Private_IonBinaryWriterBuilder.myInitialSymbolTable</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_IonBinaryWriterBuilder" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_IonBinaryWriterBuilder" start="39" end="414" sourcefile="_Private_IonBinaryWriterBuilder.java" sourcepath="com/amazon/ion/impl/_Private_IonBinaryWriterBuilder.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonBinaryWriterBuilder.java">
         <Message>At _Private_IonBinaryWriterBuilder.java:[lines 39-414]</Message>
@@ -1611,8 +1611,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="c0ea811377595a8421959f727e278998" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_IonBinaryWriterBuilder.setInitialSymbolTable(SymbolTable) may expose internal representation by storing an externally mutable object into _Private_IonBinaryWriterBuilder.myInitialSymbolTable</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_IonBinaryWriterBuilder.setInitialSymbolTable(SymbolTable) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_IonBinaryWriterBuilder.myInitialSymbolTable</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_IonBinaryWriterBuilder" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_IonBinaryWriterBuilder" start="39" end="414" sourcefile="_Private_IonBinaryWriterBuilder.java" sourcepath="com/amazon/ion/impl/_Private_IonBinaryWriterBuilder.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonBinaryWriterBuilder.java">
         <Message>At _Private_IonBinaryWriterBuilder.java:[lines 39-414]</Message>
@@ -1637,8 +1637,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_MUTABLE_ARRAY" priority="2" rank="18" abbrev="MS" category="MALICIOUS_CODE" instanceHash="aca2d4624c416fb2d215e8f3628836ee" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Field is a mutable array</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0 is a mutable array</LongMessage>
+    <ShortMessage>Un champ est un tableau modifiable</ShortMessage>
+    <LongMessage>com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0 est un tableau modifiable</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_IonConstants" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_IonConstants" start="23" end="282" sourcefile="_Private_IonConstants.java" sourcepath="com/amazon/ion/impl/_Private_IonConstants.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonConstants.java">
         <Message>At _Private_IonConstants.java:[lines 23-282]</Message>
@@ -1656,8 +1656,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_MUTABLE_ARRAY" priority="1" rank="16" abbrev="MS" category="MALICIOUS_CODE" instanceHash="a4efef007b82cbeb6ba15e77ec77047f" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Field is a mutable array</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_IonTextAppender.ZERO_PADDING is a mutable array</LongMessage>
+    <ShortMessage>Un champ est un tableau modifiable</ShortMessage>
+    <LongMessage>com.amazon.ion.impl._Private_IonTextAppender.ZERO_PADDING est un tableau modifiable</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_IonTextAppender" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_IonTextAppender" start="43" end="1032" sourcefile="_Private_IonTextAppender.java" sourcepath="com/amazon/ion/impl/_Private_IonTextAppender.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonTextAppender.java">
         <Message>At _Private_IonTextAppender.java:[lines 43-1032]</Message>
@@ -1675,8 +1675,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_PKGPROTECT" priority="2" rank="18" abbrev="MS" category="MALICIOUS_CODE" instanceHash="d0ab04bc1ad42d1fad533b0b48ddfb6d" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Field should be package protected</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_IonTextAppender.OPERATOR_CHAR_FLAGS should be package protected</LongMessage>
+    <ShortMessage>Un champ devrait être package protected</ShortMessage>
+    <LongMessage>com.amazon.ion.impl._Private_IonTextAppender.OPERATOR_CHAR_FLAGS devrait être package protected</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_IonTextAppender" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_IonTextAppender" start="43" end="1032" sourcefile="_Private_IonTextAppender.java" sourcepath="com/amazon/ion/impl/_Private_IonTextAppender.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonTextAppender.java">
         <Message>At _Private_IonTextAppender.java:[lines 43-1032]</Message>
@@ -1711,8 +1711,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_SHOULD_BE_FINAL" priority="1" rank="16" abbrev="MS" category="MALICIOUS_CODE" instanceHash="5b00fde4435120c6dcd09015babd6015" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Field isn't final but should be</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_IonTextWriterBuilder.STANDARD isn't final but should be</LongMessage>
+    <ShortMessage>Un champ n'est pas final alors qu'il devrait l'être</ShortMessage>
+    <LongMessage>com.amazon.ion.impl._Private_IonTextWriterBuilder.STANDARD n'est pas final mais devrait l'être</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_IonTextWriterBuilder" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_IonTextWriterBuilder" start="33" end="329" sourcefile="_Private_IonTextWriterBuilder.java" sourcepath="com/amazon/ion/impl/_Private_IonTextWriterBuilder.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_IonTextWriterBuilder.java">
         <Message>At _Private_IonTextWriterBuilder.java:[lines 33-329]</Message>
@@ -1730,8 +1730,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="6da378526fc82201e6b54f920bd795" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_MarkupCallback.getAppendable() may expose internal representation by returning _Private_MarkupCallback.myAppendable</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_MarkupCallback.getAppendable() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl._Private_MarkupCallback.myAppendable</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_MarkupCallback" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_MarkupCallback" start="190" end="351" sourcefile="_Private_MarkupCallback.java" sourcepath="com/amazon/ion/impl/_Private_MarkupCallback.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_MarkupCallback.java">
         <Message>At _Private_MarkupCallback.java:[lines 190-351]</Message>
@@ -1753,8 +1753,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="1bc20b2396d805db0503a8cfe3a4ac01" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl._Private_MarkupCallback(_Private_FastAppendable) may expose internal representation by storing an externally mutable object into _Private_MarkupCallback.myAppendable</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl._Private_MarkupCallback(_Private_FastAppendable) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_MarkupCallback.myAppendable</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_MarkupCallback" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_MarkupCallback" start="190" end="351" sourcefile="_Private_MarkupCallback.java" sourcepath="com/amazon/ion/impl/_Private_MarkupCallback.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_MarkupCallback.java">
         <Message>At _Private_MarkupCallback.java:[lines 190-351]</Message>
@@ -1779,8 +1779,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_SHOULD_BE_FINAL" priority="2" rank="18" abbrev="MS" category="MALICIOUS_CODE" instanceHash="652384d5d2378bce4067c28205a4ab59" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Field isn't final but should be</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions.FNID_identity isn't final but should be</LongMessage>
+    <ShortMessage>Un champ n'est pas final alors qu'il devrait l'être</ShortMessage>
+    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions.FNID_identity n'est pas final mais devrait l'être</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions" start="30" end="333" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 30-333]</Message>
@@ -1798,8 +1798,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_SHOULD_BE_FINAL" priority="2" rank="18" abbrev="MS" category="MALICIOUS_CODE" instanceHash="7466384ad6d6901614632524bf856c4f" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Field isn't final but should be</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions.FNID_no_conversion isn't final but should be</LongMessage>
+    <ShortMessage>Un champ n'est pas final alors qu'il devrait l'être</ShortMessage>
+    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions.FNID_no_conversion n'est pas final mais devrait l'être</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions" start="30" end="333" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 30-333]</Message>
@@ -1817,8 +1817,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="BC_UNCONFIRMED_CAST" priority="2" rank="17" abbrev="BC" category="STYLE" instanceHash="2dbcb25375fc771b3962e53d90af7ee8" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Unchecked/unconfirmed cast</ShortMessage>
-    <LongMessage>Unchecked/unconfirmed cast from java.math.BigDecimal to com.amazon.ion.Decimal in com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(BigDecimal)</LongMessage>
+    <ShortMessage>Transtypage non vérifié/non confirmé</ShortMessage>
+    <LongMessage>Transtypage non vérifié/non confirmé de com.amazon.ion.Decimal vers value dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(BigDecimal)</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1849,8 +1849,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="c2797b12d401329b15b33d898826132e" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.getDate() may expose internal representation by returning _Private_ScalarConversions$ValueVariant._date_value</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.getDate() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._date_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1872,8 +1872,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="2f740c4ec56c82773af0108950b50244" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.getDecimal() may expose internal representation by returning _Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.getDecimal() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1895,8 +1895,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="3445b251f5b9b22a9b7c11eb0f8f9b18" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.getTimestamp() may expose internal representation by returning _Private_ScalarConversions$ValueVariant._timestamp_value</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.getTimestamp() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._timestamp_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1918,8 +1918,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="112e0051b0813f283c398373d0802d4d" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(Decimal) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(Decimal) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1944,8 +1944,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="6583b1eb19f73cdc461bc4116b37d243" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(Timestamp) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._timestamp_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(Timestamp) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._timestamp_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1970,8 +1970,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="589da41cf438e747d7ed7167f383fec1" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(BigDecimal) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(BigDecimal) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -1996,8 +1996,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="ef493d618a888e73be4c0bf250e37110" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(Date) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._date_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.addValue(Date) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._date_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -2022,8 +2022,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="9aed0612674cf9959c8fc7c8704b6c3f" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.setValue(Decimal) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.setValue(Decimal) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._decimal_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -2048,8 +2048,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="d0ff0229be9c1c1b891b6496d34e5ca1" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.setValue(Timestamp) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._timestamp_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.setValue(Timestamp) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._timestamp_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -2074,8 +2074,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="9b0573d22a4daf2279fcc1e811a682c2" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.setValue(Date) may expose internal representation by storing an externally mutable object into _Private_ScalarConversions$ValueVariant._date_value</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_ScalarConversions$ValueVariant.setValue(Date) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_ScalarConversions$ValueVariant._date_value</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_ScalarConversions$ValueVariant" start="373" end="873" sourcefile="_Private_ScalarConversions.java" sourcepath="com/amazon/ion/impl/_Private_ScalarConversions.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_ScalarConversions.java">
         <Message>At _Private_ScalarConversions.java:[lines 373-873]</Message>
@@ -2100,8 +2100,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="3292330b87d18c82fcfd8345b0cc7d63" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_SymtabExtendsCache.symtabsCompat(SymbolTable, SymbolTable) may expose internal representation by storing an externally mutable object into _Private_SymtabExtendsCache.myReaderSymtab</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_SymtabExtendsCache.symtabsCompat(SymbolTable, SymbolTable) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_SymtabExtendsCache.myReaderSymtab</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_SymtabExtendsCache" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_SymtabExtendsCache" start="27" end="64" sourcefile="_Private_SymtabExtendsCache.java" sourcepath="com/amazon/ion/impl/_Private_SymtabExtendsCache.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_SymtabExtendsCache.java">
         <Message>At _Private_SymtabExtendsCache.java:[lines 27-64]</Message>
@@ -2126,8 +2126,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="eecd0e4d8408e77ef05ad3b3b1c6f801" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl._Private_SymtabExtendsCache.symtabsCompat(SymbolTable, SymbolTable) may expose internal representation by storing an externally mutable object into _Private_SymtabExtendsCache.myWriterSymtab</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl._Private_SymtabExtendsCache.symtabsCompat(SymbolTable, SymbolTable) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl._Private_SymtabExtendsCache.myWriterSymtab</LongMessage>
     <Class classname="com.amazon.ion.impl._Private_SymtabExtendsCache" primary="true">
       <SourceLine classname="com.amazon.ion.impl._Private_SymtabExtendsCache" start="27" end="64" sourcefile="_Private_SymtabExtendsCache.java" sourcepath="com/amazon/ion/impl/_Private_SymtabExtendsCache.java" relSourcepath="src/main/java/com/amazon/ion/impl/_Private_SymtabExtendsCache.java">
         <Message>At _Private_SymtabExtendsCache.java:[lines 27-64]</Message>
@@ -2203,8 +2203,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="e531b8f0ec0bd6a1fdfe3969f045a568" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.bin.utf8.PoolableByteBuffer.getBuffer() may expose internal representation by returning PoolableByteBuffer.buffer</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.bin.utf8.PoolableByteBuffer.getBuffer() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.bin.utf8.PoolableByteBuffer.buffer</LongMessage>
     <Class classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" primary="true">
       <SourceLine classname="com.amazon.ion.impl.bin.utf8.PoolableByteBuffer" start="12" end="31" sourcefile="PoolableByteBuffer.java" sourcepath="com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/PoolableByteBuffer.java">
         <Message>At PoolableByteBuffer.java:[lines 12-31]</Message>
@@ -2226,8 +2226,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="dd12a2fa0c1d9ca7e991926a3dbcfc33" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result.getBuffer() may expose internal representation by returning Utf8StringEncoder$Result.buffer</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result.getBuffer() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result.buffer</LongMessage>
     <Class classname="com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result" primary="true">
       <SourceLine classname="com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result" start="128" end="148" sourcefile="Utf8StringEncoder.java" sourcepath="com/amazon/ion/impl/bin/utf8/Utf8StringEncoder.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/Utf8StringEncoder.java">
         <Message>At Utf8StringEncoder.java:[lines 128-148]</Message>
@@ -2249,8 +2249,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="37090090b85d969f582bf784a80bac99" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result(int, byte[]) may expose internal representation by storing an externally mutable object into Utf8StringEncoder$Result.buffer</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result(int, byte[]) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result.buffer</LongMessage>
     <Class classname="com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result" primary="true">
       <SourceLine classname="com.amazon.ion.impl.bin.utf8.Utf8StringEncoder$Result" start="128" end="148" sourcefile="Utf8StringEncoder.java" sourcepath="com/amazon/ion/impl/bin/utf8/Utf8StringEncoder.java" relSourcepath="src/main/java/com/amazon/ion/impl/bin/utf8/Utf8StringEncoder.java">
         <Message>At Utf8StringEncoder.java:[lines 128-148]</Message>
@@ -2298,8 +2298,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="b7e63818cc4fb7d7cacbaf6e3670ee33" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.next() may expose internal representation by returning IonContainerLite$SequenceContentIterator.__current</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.next() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.__current</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" start="275" end="463" sourcefile="IonContainerLite.java" sourcepath="com/amazon/ion/impl/lite/IonContainerLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonContainerLite.java">
         <Message>At IonContainerLite.java:[lines 275-463]</Message>
@@ -2321,8 +2321,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="684c779584e3e2b9fcb83562f66693c5" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.previous() may expose internal representation by returning IonContainerLite$SequenceContentIterator.__current</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.previous() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.__current</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" start="275" end="463" sourcefile="IonContainerLite.java" sourcepath="com/amazon/ion/impl/lite/IonContainerLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonContainerLite.java">
         <Message>At IonContainerLite.java:[lines 275-463]</Message>
@@ -2344,8 +2344,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="75d6b0614d6a1619bd6e44699b8b9706" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator(IonContainerLite, int, boolean) may expose internal representation by storing an externally mutable object into IonContainerLite$SequenceContentIterator.this$0</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator(IonContainerLite, int, boolean) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.this$0</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" start="275" end="463" sourcefile="IonContainerLite.java" sourcepath="com/amazon/ion/impl/lite/IonContainerLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonContainerLite.java">
         <Message>At IonContainerLite.java:[lines 275-463]</Message>
@@ -2370,8 +2370,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SA_FIELD_SELF_ASSIGNMENT" priority="1" rank="1" abbrev="SA" category="CORRECTNESS" instanceHash="e157432d9915932567d32bd045df9794" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Self assignment of field</ShortMessage>
-    <LongMessage>Self assignment of field IonContainerLite$SequenceContentIterator.__pos in com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.force_position_sync_helper()</LongMessage>
+    <ShortMessage>Auto-alimentation d'un champs</ShortMessage>
+    <LongMessage>Auto-alimentation du champs com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.__pos dans com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator.force_position_sync_helper()</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonContainerLite$SequenceContentIterator" start="275" end="463" sourcefile="IonContainerLite.java" sourcepath="com/amazon/ion/impl/lite/IonContainerLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonContainerLite.java">
         <Message>At IonContainerLite.java:[lines 275-463]</Message>
@@ -2393,8 +2393,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="79891fc74efbc99a58252ed737deca1f" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.impl.lite.IonDatagramLite$SystemContentIterator(IonDatagramLite, boolean) may expose internal representation by storing an externally mutable object into IonDatagramLite$SystemContentIterator.this$0</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.impl.lite.IonDatagramLite$SystemContentIterator(IonDatagramLite, boolean) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.impl.lite.IonDatagramLite$SystemContentIterator.this$0</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonDatagramLite$SystemContentIterator" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonDatagramLite$SystemContentIterator" start="585" end="834" sourcefile="IonDatagramLite.java" sourcepath="com/amazon/ion/impl/lite/IonDatagramLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonDatagramLite.java">
         <Message>At IonDatagramLite.java:[lines 585-834]</Message>
@@ -2419,8 +2419,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" priority="1" rank="9" abbrev="RCN" category="CORRECTNESS" instanceHash="db2225a597140cf69dffc0ffe5dcc0a0" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
-    <ShortMessage>Nullcheck of value previously dereferenced</ShortMessage>
-    <LongMessage>Nullcheck of IonDatagramLite$SystemIteratorPosition.__local_values at line 1075 of value previously dereferenced in com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition.push_system_value(IonValueLite)</LongMessage>
+    <ShortMessage>Test de nullité d'une valeur préalablement déréférencée</ShortMessage>
+    <LongMessage>Test de nullité dans com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition.__local_values d'une valeur préalablement déréférencée dans com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition.push_system_value(IonValueLite)</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition" start="837" end="1138" sourcefile="IonDatagramLite.java" sourcepath="com/amazon/ion/impl/lite/IonDatagramLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonDatagramLite.java">
         <Message>At IonDatagramLite.java:[lines 837-1138]</Message>
@@ -2445,8 +2445,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" priority="2" rank="11" abbrev="RCN" category="CORRECTNESS" instanceHash="7b7d1cc56b68e53eb5a551bbf5bc7fe0" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
-    <ShortMessage>Nullcheck of value previously dereferenced</ShortMessage>
-    <LongMessage>Nullcheck of curr at line 1134 of value previously dereferenced in com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition.count_system_values(IonSystem, SymbolTable, SymbolTable)</LongMessage>
+    <ShortMessage>Test de nullité d'une valeur préalablement déréférencée</ShortMessage>
+    <LongMessage>Test de nullité dans curr d'une valeur préalablement déréférencée dans com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition.count_system_values(IonSystem, SymbolTable, SymbolTable)</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonDatagramLite$SystemIteratorPosition" start="837" end="1138" sourcefile="IonDatagramLite.java" sourcepath="com/amazon/ion/impl/lite/IonDatagramLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonDatagramLite.java">
         <Message>At IonDatagramLite.java:[lines 837-1138]</Message>
@@ -2468,8 +2468,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="ES_COMPARING_STRINGS_WITH_EQ" priority="2" rank="11" abbrev="ES" category="BAD_PRACTICE" instanceHash="8c2c628526908e5f999348173832bbb7" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="597">
-    <ShortMessage>Comparison of String objects using == or !=</ShortMessage>
-    <LongMessage>Comparison of String objects using == or != in com.amazon.ion.impl.lite.IonStructLite.validate()</LongMessage>
+    <ShortMessage>Comparaison d'objets String utilisant == ou !=</ShortMessage>
+    <LongMessage>Comparaison d'objets String utilisant == ou != dans com.amazon.ion.impl.lite.IonStructLite.validate()</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonStructLite" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonStructLite" start="38" end="753" sourcefile="IonStructLite.java" sourcepath="com/amazon/ion/impl/lite/IonStructLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonStructLite.java">
         <Message>At IonStructLite.java:[lines 38-753]</Message>
@@ -2498,8 +2498,8 @@
     <Property name="edu.umd.cs.findbugs.detect.RefComparisonWarningProperty.COMPARE_STATIC_STRINGS" value="true"/>
   </BugInstance>
   <BugInstance type="NP_LOAD_OF_KNOWN_NULL_VALUE" priority="2" rank="16" abbrev="NP" category="STYLE" instanceHash="398a2e584fed81324bd20bd97797f3b0" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
-    <ShortMessage>Load of known null value</ShortMessage>
-    <LongMessage>Load of known null value in com.amazon.ion.impl.lite.IonStructLite.add(SymbolToken, IonValue)</LongMessage>
+    <ShortMessage>Chargement d'une valeur connue pour être à null</ShortMessage>
+    <LongMessage>Chargement d'une valeur connue pour être à null dans com.amazon.ion.impl.lite.IonStructLite.add(SymbolToken, IonValue)</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonStructLite" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonStructLite" start="38" end="753" sourcefile="IonStructLite.java" sourcepath="com/amazon/ion/impl/lite/IonStructLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonStructLite.java">
         <Message>At IonStructLite.java:[lines 38-753]</Message>
@@ -2518,8 +2518,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SBSC_USE_STRINGBUFFER_CONCATENATION" priority="2" rank="18" abbrev="SBSC" category="PERFORMANCE" instanceHash="e29cf5bfde55497ab095a8a75b41d74" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Method concatenates strings using + in a loop</ShortMessage>
-    <LongMessage>com.amazon.ion.impl.lite.IonStructLite.validate() concatenates strings using + in a loop</LongMessage>
+    <ShortMessage>La méthode concatène des chaînes au moyen de + en boucle</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.impl.lite.IonStructLite.validate() concatène des chaînes au moyen de + en boucle</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.IonStructLite" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.IonStructLite" start="38" end="753" sourcefile="IonStructLite.java" sourcepath="com/amazon/ion/impl/lite/IonStructLite.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/IonStructLite.java">
         <Message>At IonStructLite.java:[lines 38-753]</Message>
@@ -2535,8 +2535,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" priority="2" rank="17" abbrev="BSHIFT" category="STYLE" instanceHash="2fcf6ca181f8ad96d590e312b49a642c" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Unsigned right shift cast to short/byte</ShortMessage>
-    <LongMessage>Unsigned right shift cast to short/byte in com.amazon.ion.impl.lite.ReverseBinaryEncoder.writeVarInt(int)</LongMessage>
+    <ShortMessage>Décalage à droite non signé et transtypage short/byte</ShortMessage>
+    <LongMessage>Décalage à droite non signé et transtypage vers un short/byte dans com.amazon.ion.impl.lite.ReverseBinaryEncoder.writeVarInt(int)</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.ReverseBinaryEncoder" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.ReverseBinaryEncoder" start="90" end="1464" sourcefile="ReverseBinaryEncoder.java" sourcepath="com/amazon/ion/impl/lite/ReverseBinaryEncoder.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/ReverseBinaryEncoder.java">
         <Message>At ReverseBinaryEncoder.java:[lines 90-1464]</Message>
@@ -2558,8 +2558,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" priority="2" rank="17" abbrev="BSHIFT" category="STYLE" instanceHash="fd4898df5b4dfc93069b54d16ee4ef7c" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Unsigned right shift cast to short/byte</ShortMessage>
-    <LongMessage>Unsigned right shift cast to short/byte in com.amazon.ion.impl.lite.ReverseBinaryEncoder.writeVarUInt(int)</LongMessage>
+    <ShortMessage>Décalage à droite non signé et transtypage short/byte</ShortMessage>
+    <LongMessage>Décalage à droite non signé et transtypage vers un short/byte dans com.amazon.ion.impl.lite.ReverseBinaryEncoder.writeVarUInt(int)</LongMessage>
     <Class classname="com.amazon.ion.impl.lite.ReverseBinaryEncoder" primary="true">
       <SourceLine classname="com.amazon.ion.impl.lite.ReverseBinaryEncoder" start="90" end="1464" sourcefile="ReverseBinaryEncoder.java" sourcepath="com/amazon/ion/impl/lite/ReverseBinaryEncoder.java" relSourcepath="src/main/java/com/amazon/ion/impl/lite/ReverseBinaryEncoder.java">
         <Message>At ReverseBinaryEncoder.java:[lines 90-1464]</Message>
@@ -2584,16 +2584,16 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="c44e2a3d646df3e5542a6dadd8c623f" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.system.IonSystemBuilder.getIonBinaryWriterBuilder() may expose internal representation by returning IonSystemBuilder.binaryWriterBuilder</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.system.IonSystemBuilder.getIonBinaryWriterBuilder() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.system.IonSystemBuilder.binaryWriterBuilder</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="getIonBinaryWriterBuilder" signature="()Lcom/amazon/ion/system/IonBinaryWriterBuilder;" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="343" end="343" startBytecode="0" endBytecode="46" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="345" end="345" startBytecode="0" endBytecode="46" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.getIonBinaryWriterBuilder()</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="binaryWriterBuilder" signature="Lcom/amazon/ion/system/IonBinaryWriterBuilder;" isStatic="false" primary="true">
@@ -2602,21 +2602,21 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.binaryWriterBuilder</Message>
     </Field>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="343" end="343" startBytecode="4" endBytecode="4" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 343]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="345" end="345" startBytecode="4" endBytecode="4" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 345]</Message>
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="4a97b7ce8f9d4ea446f9b0a8a853f3ea" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.system.IonSystemBuilder.getIonTextWriterBuilder() may expose internal representation by returning IonSystemBuilder.textWriterBuilder</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.system.IonSystemBuilder.getIonTextWriterBuilder() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.system.IonSystemBuilder.textWriterBuilder</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="getIonTextWriterBuilder" signature="()Lcom/amazon/ion/system/IonTextWriterBuilder;" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="290" end="290" startBytecode="0" endBytecode="46" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="292" end="292" startBytecode="0" endBytecode="46" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.getIonTextWriterBuilder()</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="textWriterBuilder" signature="Lcom/amazon/ion/system/IonTextWriterBuilder;" isStatic="false" primary="true">
@@ -2625,21 +2625,21 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.textWriterBuilder</Message>
     </Field>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="290" end="290" startBytecode="4" endBytecode="4" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 290]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="292" end="292" startBytecode="4" endBytecode="4" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 292]</Message>
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="238ea94b9fbc4d991e904f39656925e4" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.system.IonSystemBuilder.getReaderBuilder() may expose internal representation by returning IonSystemBuilder.readerBuilder</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.system.IonSystemBuilder.getReaderBuilder() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.system.IonSystemBuilder.readerBuilder</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="getReaderBuilder" signature="()Lcom/amazon/ion/system/IonReaderBuilder;" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="396" end="396" startBytecode="0" endBytecode="46" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="398" end="398" startBytecode="0" endBytecode="46" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.getReaderBuilder()</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="readerBuilder" signature="Lcom/amazon/ion/system/IonReaderBuilder;" isStatic="false" primary="true">
@@ -2648,21 +2648,21 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.readerBuilder</Message>
     </Field>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="396" end="396" startBytecode="4" endBytecode="4" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 396]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="398" end="398" startBytecode="4" endBytecode="4" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 398]</Message>
     </SourceLine>
   </BugInstance>
-  <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="88d7ea02dad6cc4240510afa9642764d" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.system.IonSystemBuilder.setIonBinaryWriterBuilder(IonBinaryWriterBuilder) may expose internal representation by storing an externally mutable object into IonSystemBuilder.binaryWriterBuilder</LongMessage>
+  <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="9351307308fc1a50b5c24fb76646cac6" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.system.IonSystemBuilder.setIonBinaryWriterBuilder(IonBinaryWriterBuilder) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.system.IonSystemBuilder.binaryWriterBuilder</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="setIonBinaryWriterBuilder" signature="(Lcom/amazon/ion/system/IonBinaryWriterBuilder;)V" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="361" end="363" startBytecode="0" endBytecode="69" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="363" end="365" startBytecode="0" endBytecode="75" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.setIonBinaryWriterBuilder(IonBinaryWriterBuilder)</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="binaryWriterBuilder" signature="Lcom/amazon/ion/system/IonBinaryWriterBuilder;" isStatic="false" primary="true">
@@ -2671,24 +2671,24 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.binaryWriterBuilder</Message>
     </Field>
-    <LocalVariable name="builder" register="1" pc="6" role="LOCAL_VARIABLE_NAMED">
-      <Message>Local variable named builder</Message>
+    <LocalVariable name="?" register="-1" pc="11" role="LOCAL_VARIABLE_UNKNOWN">
+      <Message>Local variable stored in JVM register ?</Message>
     </LocalVariable>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="362" end="362" startBytecode="6" endBytecode="6" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 362]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="364" end="364" startBytecode="12" endBytecode="12" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 364]</Message>
     </SourceLine>
   </BugInstance>
-  <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="804949436410e73277f950debac11458" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.system.IonSystemBuilder.setIonTextWriterBuilder(IonTextWriterBuilder) may expose internal representation by storing an externally mutable object into IonSystemBuilder.textWriterBuilder</LongMessage>
+  <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="7f5d5be9a0962a786a4878b30c8a8774" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.system.IonSystemBuilder.setIonTextWriterBuilder(IonTextWriterBuilder) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.system.IonSystemBuilder.textWriterBuilder</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="setIonTextWriterBuilder" signature="(Lcom/amazon/ion/system/IonTextWriterBuilder;)V" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="308" end="310" startBytecode="0" endBytecode="69" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="310" end="312" startBytecode="0" endBytecode="75" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.setIonTextWriterBuilder(IonTextWriterBuilder)</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="textWriterBuilder" signature="Lcom/amazon/ion/system/IonTextWriterBuilder;" isStatic="false" primary="true">
@@ -2697,24 +2697,24 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.textWriterBuilder</Message>
     </Field>
-    <LocalVariable name="builder" register="1" pc="6" role="LOCAL_VARIABLE_NAMED">
-      <Message>Local variable named builder</Message>
+    <LocalVariable name="?" register="-1" pc="11" role="LOCAL_VARIABLE_UNKNOWN">
+      <Message>Local variable stored in JVM register ?</Message>
     </LocalVariable>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="309" end="309" startBytecode="6" endBytecode="6" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 309]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="311" end="311" startBytecode="12" endBytecode="12" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 311]</Message>
     </SourceLine>
   </BugInstance>
-  <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="bb9e01cd9f71a1049efd92d5d3c49a41" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.system.IonSystemBuilder.setReaderBuilder(IonReaderBuilder) may expose internal representation by storing an externally mutable object into IonSystemBuilder.readerBuilder</LongMessage>
+  <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="624bf93bedc7b88bdd39ad55bb6888b6" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.system.IonSystemBuilder.setReaderBuilder(IonReaderBuilder) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.system.IonSystemBuilder.readerBuilder</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="setReaderBuilder" signature="(Lcom/amazon/ion/system/IonReaderBuilder;)V" isStatic="false" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="414" end="416" startBytecode="0" endBytecode="69" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="416" end="418" startBytecode="0" endBytecode="75" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.setReaderBuilder(IonReaderBuilder)</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="readerBuilder" signature="Lcom/amazon/ion/system/IonReaderBuilder;" isStatic="false" primary="true">
@@ -2723,24 +2723,24 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.readerBuilder</Message>
     </Field>
-    <LocalVariable name="builder" register="1" pc="6" role="LOCAL_VARIABLE_NAMED">
-      <Message>Local variable named builder</Message>
+    <LocalVariable name="?" register="-1" pc="11" role="LOCAL_VARIABLE_UNKNOWN">
+      <Message>Local variable stored in JVM register ?</Message>
     </LocalVariable>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="415" end="415" startBytecode="6" endBytecode="6" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 415]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="417" end="417" startBytecode="12" endBytecode="12" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 417]</Message>
     </SourceLine>
   </BugInstance>
   <BugInstance type="MS_EXPOSE_REP" priority="2" rank="18" abbrev="MS" category="MALICIOUS_CODE" instanceHash="309257473ba90ad1ae51e692ce2020b4" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="218">
-    <ShortMessage>Public static method may expose internal representation by returning array</ShortMessage>
-    <LongMessage>Public static com.amazon.ion.system.IonSystemBuilder.standard() may expose internal representation by returning IonSystemBuilder.STANDARD</LongMessage>
+    <ShortMessage>Une méthode statique publique risque d'exposer une représentation interne en renvoyant un tableau</ShortMessage>
+    <LongMessage>La méthode statique publique com.amazon.ion.system.IonSystemBuilder.standard() peut exposer une représentation interne en renvoyant com.amazon.ion.system.IonSystemBuilder.STANDARD</LongMessage>
     <Class classname="com.amazon.ion.system.IonSystemBuilder" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="85" end="471" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-        <Message>At IonSystemBuilder.java:[lines 85-471]</Message>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="86" end="465" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+        <Message>At IonSystemBuilder.java:[lines 86-465]</Message>
       </SourceLine>
       <Message>In class com.amazon.ion.system.IonSystemBuilder</Message>
     </Class>
     <Method classname="com.amazon.ion.system.IonSystemBuilder" name="standard" signature="()Lcom/amazon/ion/system/IonSystemBuilder;" isStatic="true" primary="true">
-      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="97" end="97" startBytecode="0" endBytecode="27" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
+      <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" start="98" end="98" startBytecode="0" endBytecode="27" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java"/>
       <Message>In method com.amazon.ion.system.IonSystemBuilder.standard()</Message>
     </Method>
     <Field classname="com.amazon.ion.system.IonSystemBuilder" name="STANDARD" signature="Lcom/amazon/ion/system/IonSystemBuilder;" isStatic="true" primary="true">
@@ -2749,8 +2749,8 @@
       </SourceLine>
       <Message>Field com.amazon.ion.system.IonSystemBuilder.STANDARD</Message>
     </Field>
-    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="97" end="97" startBytecode="3" endBytecode="3" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
-      <Message>At IonSystemBuilder.java:[line 97]</Message>
+    <SourceLine classname="com.amazon.ion.system.IonSystemBuilder" primary="true" start="98" end="98" startBytecode="3" endBytecode="3" sourcefile="IonSystemBuilder.java" sourcepath="com/amazon/ion/system/IonSystemBuilder.java" relSourcepath="src/main/java/com/amazon/ion/system/IonSystemBuilder.java">
+      <Message>At IonSystemBuilder.java:[line 98]</Message>
     </SourceLine>
   </BugInstance>
   <BugInstance type="BC_EQUALS_METHOD_SHOULD_WORK_FOR_ALL_OBJECTS" priority="2" rank="16" abbrev="BC" category="BAD_PRACTICE" instanceHash="b1501ead4d1f31655c61d7d81eb69329" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
@@ -2771,8 +2771,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT" priority="2" rank="11" abbrev="NP" category="BAD_PRACTICE" instanceHash="6ac3d35c70d5495ccdd6381542086821" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="476">
-    <ShortMessage>equals() method does not check for null argument</ShortMessage>
-    <LongMessage>com.amazon.ion.util.Equivalence$Field.equals(Object) does not check for null argument</LongMessage>
+    <ShortMessage>Méthode equals() ne vérifiant pas la nullité</ShortMessage>
+    <LongMessage>com.amazon.ion.util.Equivalence$Field.equals(Object) ne vérifie pas la nullité d'un paramètre</LongMessage>
     <Class classname="com.amazon.ion.util.Equivalence$Field" primary="true">
       <SourceLine classname="com.amazon.ion.util.Equivalence$Field" start="444" end="496" sourcefile="Equivalence.java" sourcepath="com/amazon/ion/util/Equivalence.java" relSourcepath="src/main/java/com/amazon/ion/util/Equivalence.java">
         <Message>At Equivalence.java:[lines 444-496]</Message>
@@ -2791,8 +2791,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP" priority="2" rank="18" abbrev="EI" category="MALICIOUS_CODE" instanceHash="e557838e54f12add1769c485479329bb" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by returning reference to mutable object</ShortMessage>
-    <LongMessage>com.amazon.ion.util.JarInfo.getBuildTime() may expose internal representation by returning JarInfo.ourBuildTime</LongMessage>
+    <ShortMessage>Une méthode peut exposer sa représentation interne en renvoyant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode com.amazon.ion.util.JarInfo.getBuildTime() risque d'exposer sa représentation interne en renvoyant com.amazon.ion.util.JarInfo.ourBuildTime</LongMessage>
     <Class classname="com.amazon.ion.util.JarInfo" primary="true">
       <SourceLine classname="com.amazon.ion.util.JarInfo" start="43" end="120" sourcefile="JarInfo.java" sourcepath="com/amazon/ion/util/JarInfo.java" relSourcepath="src/main/java/com/amazon/ion/util/JarInfo.java">
         <Message>At JarInfo.java:[lines 43-120]</Message>
@@ -2814,8 +2814,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="EI_EXPOSE_REP2" priority="2" rank="18" abbrev="EI2" category="MALICIOUS_CODE" instanceHash="90d966275cb56b8eb2c12e2e886d9799" instanceOccurrenceNum="0" instanceOccurrenceMax="0" cweid="374">
-    <ShortMessage>May expose internal representation by incorporating reference to mutable object</ShortMessage>
-    <LongMessage>new com.amazon.ion.util.Printer$Options(Printer) may expose internal representation by storing an externally mutable object into Printer$Options.this$0</LongMessage>
+    <ShortMessage>Une méthode expose sa représentation interne en incorporant une référence à un objet modifiable</ShortMessage>
+    <LongMessage>La méthode new com.amazon.ion.util.Printer$Options(Printer) risque d'exposer sa représentation interne en stockant un objet externe modifiable dans com.amazon.ion.util.Printer$Options.this$0</LongMessage>
     <Class classname="com.amazon.ion.util.Printer$Options" primary="true">
       <SourceLine classname="com.amazon.ion.util.Printer$Options" start="88" end="115" sourcefile="Printer.java" sourcepath="com/amazon/ion/util/Printer.java" relSourcepath="src/main/java/com/amazon/ion/util/Printer.java">
         <Message>At Printer.java:[lines 88-115]</Message>
@@ -2840,8 +2840,8 @@
     </SourceLine>
   </BugInstance>
   <BugInstance type="SIC_INNER_SHOULD_BE_STATIC" priority="2" rank="18" abbrev="SIC" category="PERFORMANCE" instanceHash="f1c9859bc3808074f14801216c655fa8" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
-    <ShortMessage>Should be a static inner class</ShortMessage>
-    <LongMessage>Should com.amazon.ion.util.Printer$Options be a _static_ inner class?</LongMessage>
+    <ShortMessage>Devrait être une classe interne statique</ShortMessage>
+    <LongMessage>La classe com.amazon.ion.util.Printer$Options devrait-elle être une classe interne static ?</LongMessage>
     <Class classname="com.amazon.ion.util.Printer$Options" primary="true">
       <SourceLine classname="com.amazon.ion.util.Printer$Options" start="88" end="115" sourcefile="Printer.java" sourcepath="com/amazon/ion/util/Printer.java" relSourcepath="src/main/java/com/amazon/ion/util/Printer.java">
         <Message>At Printer.java:[lines 88-115]</Message>
