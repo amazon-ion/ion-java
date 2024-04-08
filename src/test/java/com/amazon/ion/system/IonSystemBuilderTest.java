@@ -159,7 +159,7 @@ public class IonSystemBuilderTest
         assertSame(binaryWriterBuilder, systemBuilder.getIonBinaryWriterBuilder());
 
         IonCatalog systemCatalog = new SimpleCatalog();
-        IonSystem system = systemBuilder.build();
+        IonSystem system = systemBuilder.withCatalog(systemCatalog).build();
         assertSame(systemCatalog, system.getCatalog());
     }
 
@@ -173,7 +173,7 @@ public class IonSystemBuilderTest
         assertSame(readerBuilder, systemBuilder.getReaderBuilder());
 
         IonCatalog systemCatalog = new SimpleCatalog();
-        IonSystem system = systemBuilder.build();
+        IonSystem system = systemBuilder.withCatalog(systemCatalog).build();
         assertSame(systemCatalog, system.getCatalog());
     }
 
