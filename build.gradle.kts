@@ -322,7 +322,7 @@ tasks {
                             "xsltproc",
                             "--output", spotbugsBaselineFile,
                             "$rootDir/config/spotbugs/baseline.xslt",
-                            "${outputLocation.get()}/spotBugs"
+                            "${outputLocation.get()}"
                         )
                     }
                 }

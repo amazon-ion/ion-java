@@ -133,6 +133,49 @@ public class IonSystemBuilderTest
         b2.setStreamCopyOptimized(false);
     }
 
+    //-------------------------------------------------------------------------
+
+    @Test
+    public void testIonTextWriterBuilder()
+    {
+        IonCatalog textWriterCatalog = new SimpleCatalog(); // should be ignored
+        IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard().withCatalog(textWriterCatalog);
+
+        IonSystemBuilder systemBuilder = IonSystemBuilder.standard().withIonTextWriterBuilder(textWriterBuilder);
+        assertSame(textWriterBuilder, systemBuilder.getIonTextWriterBuilder());
+
+        IonCatalog systemCatalog = new SimpleCatalog();
+        IonSystem system = systemBuilder.withCatalog(systemCatalog).build();
+        assertSame(systemCatalog, system.getCatalog());
+    }
+
+    @Test
+    public void testIonBinaryWriterBuilder()
+    {
+        IonCatalog binaryWriterCatalog = new SimpleCatalog(); // should be ignored
+        IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard().withCatalog(binaryWriterCatalog);
+
+        IonSystemBuilder systemBuilder = IonSystemBuilder.standard().withIonBinaryWriterBuilder(binaryWriterBuilder);
+        assertSame(binaryWriterBuilder, systemBuilder.getIonBinaryWriterBuilder());
+
+        IonCatalog systemCatalog = new SimpleCatalog();
+        IonSystem system = systemBuilder.withCatalog(systemCatalog).build();
+        assertSame(systemCatalog, system.getCatalog());
+    }
+
+    @Test
+    public void testIonReaderBuilder()
+    {
+        IonCatalog readerCatalog = new SimpleCatalog(); // should be ignored
+        IonReaderBuilder readerBuilder = IonReaderBuilder.standard().withCatalog(readerCatalog);
+
+        IonSystemBuilder systemBuilder = IonSystemBuilder.standard().withReaderBuilder(readerBuilder);
+        assertSame(readerBuilder, systemBuilder.getReaderBuilder());
+
+        IonCatalog systemCatalog = new SimpleCatalog();
+        IonSystem system = systemBuilder.withCatalog(systemCatalog).build();
+        assertSame(systemCatalog, system.getCatalog());
+    }
 
     //-------------------------------------------------------------------------
 
