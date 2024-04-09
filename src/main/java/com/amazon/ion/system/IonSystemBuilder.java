@@ -24,6 +24,8 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 import com.amazon.ion.impl._Private_Utils;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The builder for creating {@link IonSystem}s.
@@ -101,7 +103,10 @@ public class IonSystemBuilder
 
     IonCatalog myCatalog;
     boolean myStreamCopyOptimized = false;
-    IonReaderBuilder readerBuilder;
+
+    IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard().withCharsetAscii();
+    IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard();
+    IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
 
 
     /** You no touchy. */
@@ -114,6 +119,8 @@ public class IonSystemBuilder
     {
         this.myCatalog      = that.myCatalog;
         this.myStreamCopyOptimized = that.myStreamCopyOptimized;
+        this.textWriterBuilder = that.textWriterBuilder;
+        this.binaryWriterBuilder = that.binaryWriterBuilder;
         this.readerBuilder = that.readerBuilder;
     }
 
@@ -271,7 +278,113 @@ public class IonSystemBuilder
         return b;
     }
 
+    //=========================================================================
 
+    /**
+     * Gets the text writer builder whose options will be used when building an
+     * {@link IonSystem}. By default, {@link IonTextWriterBuilder#standard()}
+     * using {@code US-ASCII} encoding will be used.
+     *
+     * @see #setIonTextWriterBuilder(IonTextWriterBuilder)
+     * @see #withIonTextWriterBuilder(IonTextWriterBuilder)
+     */
+    public final IonTextWriterBuilder getIonTextWriterBuilder() {
+        return textWriterBuilder;
+    }
+
+    /**
+     * Sets the text writer builder whose options will be used when building
+     * an {@link IonSystem}. The writer builder's catalog will never be used; the
+     * catalog provided to {@link #setCatalog(IonCatalog)} or
+     * {@link #withCatalog(IonCatalog)} will always be used instead.
+     *
+     * @param builder the writer builder to use in built systems.
+     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}
+     *  using {@code US-ASCII} encoding.
+     *
+     * @see #getIonTextWriterBuilder()
+     * @see #withIonTextWriterBuilder(IonTextWriterBuilder)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public final void setIonTextWriterBuilder(IonTextWriterBuilder builder) {
+        mutationCheck();
+        textWriterBuilder = Objects.requireNonNull(builder);
+    }
+
+    /**
+     * Declares the text writer builder whose options will be used when building
+     * an {@link IonSystem}, returning a new mutable builder if this is immutable.
+     * The writer builder's catalog will never be used; the catalog provided to
+     * {@link #setCatalog(IonCatalog)} or {@link #withCatalog(IonCatalog)} will
+     * always be used instead.
+     *
+     * @param builder the writer builder to use in built systems.
+     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}
+     *  using {@code US-ASCII} encoding.
+     *
+     * @see #getIonTextWriterBuilder()
+     * @see #setIonTextWriterBuilder(IonTextWriterBuilder)
+     */
+    public final IonSystemBuilder withIonTextWriterBuilder(IonTextWriterBuilder builder)
+    {
+        IonSystemBuilder b = mutable();
+        b.setIonTextWriterBuilder(builder);
+        return b;
+    }
+
+    //=========================================================================
+
+    /**
+     * Gets the binary writer builder whose options will be used when building an
+     * {@link IonSystem}. By default, {@link IonBinaryWriterBuilder#standard()} will
+     * be used.
+     *
+     * @see #setIonBinaryWriterBuilder(IonBinaryWriterBuilder)
+     * @see #withIonBinaryWriterBuilder(IonBinaryWriterBuilder)
+     */
+    public final IonBinaryWriterBuilder getIonBinaryWriterBuilder() {
+        return binaryWriterBuilder;
+    }
+
+    /**
+     * Sets the binary writer builder whose options will be used when building
+     * an {@link IonSystem}. The writer builder's catalog will never be used; the
+     * catalog provided to {@link #setCatalog(IonCatalog)} or
+     * {@link #withCatalog(IonCatalog)} will always be used instead.
+     *
+     * @param builder the writer builder to use in built systems.
+     *  If null, each system will be built with {@link IonBinaryWriterBuilder#standard()}.
+     *
+     * @see #getIonBinaryWriterBuilder()
+     * @see #withIonBinaryWriterBuilder(IonBinaryWriterBuilder)
+     *
+     * @throws UnsupportedOperationException if this is immutable.
+     */
+    public final void setIonBinaryWriterBuilder(IonBinaryWriterBuilder builder) {
+        mutationCheck();
+        binaryWriterBuilder = Objects.requireNonNull(builder);
+    }
+
+    /**
+     * Declares the binary writer builder whose options will be used to use when building
+     * an {@link IonSystem}, returning a new mutable builder if this is immutable.
+     * The writer builder's catalog will never be used; the catalog provided to
+     * {@link #setCatalog(IonCatalog)} or {@link #withCatalog(IonCatalog)} will
+     * always be used instead.
+     *
+     * @param builder the writer builder to use in built systems.
+     *  If null, each system will be built with {@link IonBinaryWriterBuilder#standard()}.
+     *
+     * @see #getIonBinaryWriterBuilder()
+     * @see #setIonBinaryWriterBuilder(IonBinaryWriterBuilder)
+     */
+    public final IonSystemBuilder withIonBinaryWriterBuilder(IonBinaryWriterBuilder builder)
+    {
+        IonSystemBuilder b = mutable();
+        b.setIonBinaryWriterBuilder(builder);
+        return b;
+    }
 
     //=========================================================================
 
@@ -303,7 +416,7 @@ public class IonSystemBuilder
      */
     public final void setReaderBuilder(IonReaderBuilder builder) {
         mutationCheck();
-        readerBuilder = builder;
+        readerBuilder = Objects.requireNonNull(builder);
     }
 
     /**
@@ -334,16 +447,13 @@ public class IonSystemBuilder
      */
     public final IonSystem build()
     {
-        IonCatalog catalog =
-            (myCatalog != null ? myCatalog : new SimpleCatalog());
+        IonCatalog catalog = Optional.ofNullable(myCatalog).orElseGet(SimpleCatalog::new);
 
-        IonTextWriterBuilder twb =
-            IonTextWriterBuilder.standard().withCharsetAscii();
-        twb.setCatalog(catalog);
+        IonTextWriterBuilder twb = textWriterBuilder.copy().withCatalog(catalog);
+        IonBinaryWriterBuilder bwb = binaryWriterBuilder.copy().withCatalog(catalog);
+        IonReaderBuilder rb = readerBuilder.copy().withCatalog(catalog);
 
-        _Private_IonBinaryWriterBuilder bwb =
-            _Private_IonBinaryWriterBuilder.standard();
-        bwb.setCatalog(catalog);
+        // TODO Use #setStreamCopyOptimized directly on the BWB
         bwb.setStreamCopyOptimized(myStreamCopyOptimized);
 
         // TODO Would be nice to remove this since it's implied by the BWB.
@@ -353,9 +463,8 @@ public class IonSystemBuilder
         bwb.setInitialSymbolTable(systemSymtab);
         // This is what we need, more or less.
 //        bwb = bwb.fillDefaults();
-        IonReaderBuilder rb = readerBuilder == null ? IonReaderBuilder.standard() : readerBuilder;
-        rb = rb.withCatalog(catalog);
-        return newLiteSystem(twb, bwb, rb);
+
+        return newLiteSystem(twb, (_Private_IonBinaryWriterBuilder) bwb, rb);
     }
 
     //=========================================================================
