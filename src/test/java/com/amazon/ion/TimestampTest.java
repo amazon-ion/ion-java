@@ -17,6 +17,7 @@ package com.amazon.ion;
 
 import static com.amazon.ion.Decimal.NEGATIVE_ZERO;
 import static com.amazon.ion.Decimal.negativeZero;
+import static com.amazon.ion.Timestamp.DEFAULT_MAXIMUM_DIGITS_TEXT;
 import static com.amazon.ion.Timestamp.MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL;
 import static com.amazon.ion.Timestamp.MINIMUM_TIMESTAMP_IN_MILLIS;
 import static com.amazon.ion.Timestamp.MINIMUM_TIMESTAMP_IN_MILLIS_DECIMAL;
@@ -32,6 +33,8 @@ import static com.amazon.ion.Timestamp.Precision.YEAR;
 import static com.amazon.ion.impl._Private_Utils.UTC;
 
 import com.amazon.ion.Timestamp.Precision;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -40,7 +43,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
+import java.util.function.Function;
 
+import com.amazon.ion.system.IonTextWriterBuilder;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -3097,5 +3102,81 @@ public class TimestampTest
         assertEquals(millisFromInstant, ts1.getMillis());
         assertEquals(millisFromTimestamp, ts2.getMillis());
         */
+    }
+
+    private void expectCleanToStringFailure(Timestamp timestamp, Function<Timestamp, String> function) {
+        try {
+            function.apply(timestamp);
+            fail();
+        } catch (IonException e) {
+            // Expected.
+        }
+    }
+
+    @FunctionalInterface
+    private interface TimestampPrintFunction {
+        void print(Timestamp timestamp, Appendable appendable) throws IOException;
+    }
+
+    private void expectCleanPrintFailure(Timestamp timestamp, TimestampPrintFunction function) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        try {
+            function.print(timestamp, sb);
+        } catch (IonException e) {
+            // Expected.
+        }
+        assertTrue(sb.toString().isEmpty());
+    }
+
+    @Test
+    public void testCleanFailureWhenAttemptingToWriteVeryPreciseTimestampToString() throws IOException {
+        Timestamp timestamp = Timestamp.forSecond(2024, 4, 10, 10, 56, BigDecimal.valueOf(0, Timestamp.DEFAULT_MAXIMUM_DIGITS_TEXT + 1), 0);
+        expectCleanToStringFailure(timestamp, Timestamp::toString);
+        expectCleanToStringFailure(timestamp, Timestamp::toZString);
+        expectCleanPrintFailure(timestamp, Timestamp::print);
+        expectCleanPrintFailure(timestamp, Timestamp::printZ);
+    }
+
+    private void expectEquivalentTimestampStrings(Timestamp timestamp, Function<Timestamp, String> toStringFunction, TimestampPrintFunction printFunction) throws IOException {
+        String text = toStringFunction.apply(timestamp);
+        StringBuilder sb = new StringBuilder();
+        printFunction.print(timestamp, sb);
+        assertEquals(text, sb.toString());
+        assertFalse(text.isEmpty());
+    }
+
+    @Test
+    public void testSuccessWhenWritingTimestampWithPrecisionAtMaximum() throws IOException {
+        Timestamp timestamp = Timestamp.forSecond(2024, 4, 10, 10, 56, BigDecimal.valueOf(0, Timestamp.DEFAULT_MAXIMUM_DIGITS_TEXT), 0);
+        expectEquivalentTimestampStrings(timestamp, Timestamp::toString, Timestamp::print);
+        expectEquivalentTimestampStrings(timestamp, Timestamp::toZString, Timestamp::printZ);
+    }
+
+    private void testAtAndAboveMaximumDigits(int maximum) throws IOException {
+        Timestamp aboveMaximum = Timestamp.forSecond(2024, 4, 10, 10, 56, BigDecimal.valueOf(0, maximum + 1), 0);
+        Timestamp atMaximum = Timestamp.forSecond(2024, 4, 10, 10, 56, BigDecimal.valueOf(0, maximum), 0);
+        StringBuilder sb = new StringBuilder();
+        IonTextWriterBuilder builder = IonTextWriterBuilder.standard();
+        if (maximum != DEFAULT_MAXIMUM_DIGITS_TEXT) {
+            builder = builder.withMaximumTimestampPrecisionDigits(maximum);
+        }
+        try (IonWriter writer = builder.build(sb)) {
+            try {
+                writer.writeTimestamp(aboveMaximum);
+                fail();
+            } catch (IonException e) {
+                // Expected.
+            }
+            // The error is recoverable, so subsequently writing a valid timestamp should work.
+            writer.writeTimestamp(atMaximum);
+        }
+        assertEquals(atMaximum.toString(), sb.toString());
+    }
+
+    @Test
+    public void testCleanFailureWhenAttemptingToWriteVeryPreciseTimestampWithTextWriter() throws IOException {
+        testAtAndAboveMaximumDigits(DEFAULT_MAXIMUM_DIGITS_TEXT);
+        testAtAndAboveMaximumDigits(DEFAULT_MAXIMUM_DIGITS_TEXT - 1);
+        testAtAndAboveMaximumDigits(42);
     }
 }

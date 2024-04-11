@@ -19,6 +19,7 @@ import static com.amazon.ion.impl._Private_Utils.safeEquals;
 import static com.amazon.ion.util.IonTextUtils.printCodePointAsString;
 
 import com.amazon.ion.impl._Private_Utils;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -132,6 +133,18 @@ public final class Timestamp
     private static final int FLAG_DAY       = 0x04;
     private static final int FLAG_MINUTE    = 0x08;
     private static final int FLAG_SECOND    = 0x10;
+
+    /**
+     * The default maximum number of digits in the fractional component that will be written when a text representation
+     * of a timestamp is requested. If more precision is needed, timestamps can be serialized using a text IonWriter
+     * configured with {@link IonTextWriterBuilder#withMaximumTimestampPrecisionDigits(int)}.
+     *
+     * @see #toString()
+     * @see #toZString()
+     * @see #print(Appendable)
+     * @see #printZ(Appendable)
+     */
+    public static final int DEFAULT_MAXIMUM_DIGITS_TEXT = 10000;
 
     /**
      * The precision of the Timestamp.
@@ -2035,16 +2048,34 @@ public final class Timestamp
      * Returns the string representation (in Ion format) of this Timestamp in
      * its local time.
      *
+     * @throws IonException if the text representation of the timestamp requires more than
+     *  {@link Timestamp#DEFAULT_MAXIMUM_DIGITS_TEXT}.
+     *
      * @see #toZString()
      * @see #print(Appendable)
      */
     @Override
     public String toString()
     {
+        return toString(DEFAULT_MAXIMUM_DIGITS_TEXT);
+    }
+
+    /**
+     * Returns the string representation (in Ion format) of this Timestamp in
+     * its local time.
+     *
+     * @throws IonException if the text representation of the timestamp requires more than
+     *  the given maximum.
+     *
+     * @see #toZString()
+     * @see #print(Appendable)
+     */
+    String toString(int maximumDigits)
+    {
         StringBuilder buffer = new StringBuilder(32);
         try
         {
-            print(buffer);
+            print(buffer, maximumDigits);
         }
         catch (IOException e)
         {
@@ -2058,6 +2089,9 @@ public final class Timestamp
     /**
      * Returns the string representation (in Ion format) of this Timestamp
      * in UTC.
+     *
+     * @throws IonException if the text representation of the timestamp requires more than
+     *  {@link Timestamp#DEFAULT_MAXIMUM_DIGITS_TEXT}.
      *
      * @see #toString()
      * @see #printZ(Appendable)
@@ -2087,10 +2121,32 @@ public final class Timestamp
      * @param out not {@code null}
      *
      * @throws IOException propagated when the {@link Appendable} throws it
+     * @throws IonException if the text representation of the timestamp requires more than
+     *  {@link Timestamp#DEFAULT_MAXIMUM_DIGITS_TEXT}.
      *
      * @see #printZ(Appendable)
      */
     public void print(Appendable out)
+        throws IOException
+    {
+        print(out, DEFAULT_MAXIMUM_DIGITS_TEXT);
+    }
+
+    /**
+     * Prints to an {@code Appendable} the string representation (in Ion format)
+     * of this Timestamp in its local time.
+     * <p>
+     * This method produces the same output as {@link #toString()}.
+     *
+     * @param out not {@code null}
+     *
+     * @throws IOException propagated when the {@link Appendable} throws it
+     * @throws IonException if the text representation of the timestamp requires more than
+     *  the given maximum.
+     *
+     * @see #printZ(Appendable)
+     */
+    private void print(Appendable out, int maximumDigits)
         throws IOException
     {
         // we have to make a copy to preserve the "immutable" contract
@@ -2103,7 +2159,7 @@ public final class Timestamp
             adjusted = make_localtime();
         }
 
-        print(out, adjusted);
+        print(out, adjusted, maximumDigits);
     }
 
 
@@ -2116,6 +2172,8 @@ public final class Timestamp
      * @param out not {@code null}
      *
      * @throws IOException propagated when the {@code Appendable} throws it.
+     * @throws IonException if the text representation of the timestamp requires more than
+     *  {@link Timestamp#DEFAULT_MAXIMUM_DIGITS_TEXT}.
      *
      * @see #print(Appendable)
      */
@@ -2147,15 +2205,35 @@ public final class Timestamp
 
 
     /**
+     * Throws if the text representation of the timestamp would require more than the given number of digits in its
+     * fractional component.
+     * @param value a Timestamp with a non-null fraction.
+     * @param maximumDigits the maximum number of digits allowed.
+     */
+    private static void requirePrecisionWithinLimit(Timestamp value, int maximumDigits) {
+        if (value._fraction.scale() > maximumDigits) {
+            throw new IonException(String.format(
+                "Timestamp with %d digits of precision cannot be serialized because it exceeds the " +
+                    "configurable maximum timestamp precision of %d digits. Timestamps that require more digits " +
+                    "may be written using a text writer configured with " +
+                    "IonTextWriterBuilder.withMaximumTimestampPrecisionDigits.",
+                value._fraction.scale(),
+                maximumDigits
+            ));
+        }
+    }
+
+    /**
      * helper for print(out) and printZ(out) so that printZ can create
      * a zulu time and pass it directly and print can apply the local
      * offset and adjust the various fields (without breaking the
      * contract to be immutable).
      * @param out destination for the text image of the value
      * @param adjusted the time value with the fields adjusted to match the desired text output
+     * @param maximumDigits the maximum number of digits allowed in the fractional seconds
      * @throws IOException
      */
-    private static void print(Appendable out, Timestamp adjusted)
+    private static void print(Appendable out, Timestamp adjusted, int maximumDigits)
         throws IOException
     {
         // null is our first "guess" to get it out of the way
@@ -2164,11 +2242,14 @@ public final class Timestamp
             return;
         }
 
+        if (adjusted._precision == Precision.SECOND && adjusted._fraction != null) {
+            requirePrecisionWithinLimit(adjusted, maximumDigits);
+        }
+
         // so we have a real value - we'll start with the date portion
         // which we always have
         print_digits(out, adjusted._year, 4);
         if (adjusted._precision == Precision.YEAR) {
-            assert adjusted._offset == UNKNOWN_OFFSET;
             out.append("T");
             return;
         }
@@ -2176,7 +2257,6 @@ public final class Timestamp
         out.append("-");
         print_digits(out, adjusted._month, 2);  // convert calendar months to a base 1 value
         if (adjusted._precision == Precision.MONTH) {
-            assert adjusted._offset == UNKNOWN_OFFSET;
             out.append("T");
             return;
         }
@@ -2184,8 +2264,6 @@ public final class Timestamp
         out.append("-");
         print_digits(out, adjusted._day, 2);
         if (adjusted._precision == Precision.DAY) {
-            assert adjusted._offset == UNKNOWN_OFFSET;
-            // out.append("T");
             return;
         }
 
@@ -2202,7 +2280,7 @@ public final class Timestamp
             }
         }
 
-        if (adjusted._offset != UNKNOWN_OFFSET) {
+        if (adjusted._offset != null) {
             int min, hour;
             min = adjusted._offset;
             if (min == 0) {
