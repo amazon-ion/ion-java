@@ -16,6 +16,7 @@
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
+import static com.amazon.ion._Private_TrampolineKt.printTimestamp;
 import static com.amazon.ion.impl._Private_IonConstants.tidList;
 import static com.amazon.ion.impl._Private_IonConstants.tidSexp;
 import static com.amazon.ion.impl._Private_IonConstants.tidStruct;
@@ -641,13 +642,14 @@ class IonWriterSystemText
         else if (_options._timestamp_as_string)
         {
             // Timestamp is ASCII-safe so this is easy
+            String valueText = printTimestamp(value, _options.getMaximumTimestampPrecisionDigits());
             _output.appendAscii('"');
-            _output.appendAscii(value.toString());
+            _output.appendAscii(valueText);
             _output.appendAscii('"');
         }
         else
         {
-            _output.appendAscii(value.toString());
+            _output.appendAscii(printTimestamp(value, _options.getMaximumTimestampPrecisionDigits()));
         }
 
         closeValue();
