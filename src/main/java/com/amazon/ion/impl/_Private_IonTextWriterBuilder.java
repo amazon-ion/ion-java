@@ -199,6 +199,13 @@ public class _Private_IonTextWriterBuilder
             b.setNewLineType(NewLineType.PLATFORM_DEPENDENT);
         }
 
+        if (b.getMaximumTimestampPrecisionDigits() < 1) {
+            throw new IllegalArgumentException(String.format(
+                "Configured maximum timestamp precision must be positive, not %d.",
+                b.getMaximumTimestampPrecisionDigits()
+            ));
+        }
+
         return (_Private_IonTextWriterBuilder) b.immutable();
     }
 

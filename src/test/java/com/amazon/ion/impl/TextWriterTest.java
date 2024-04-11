@@ -32,6 +32,8 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing;
 import com.amazon.ion.system.IonWriterBuilder.IvmMinimizing;
+
+import java.io.IOException;
 import java.io.OutputStream;
 import org.junit.Test;
 
@@ -614,6 +616,11 @@ public class TextWriterTest
         options = IonTextWriterBuilder.standard().withInitialIvmHandling(ENSURE);
 
         super.testAnnotationNotSetToIvmOnStartOfStream();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNegativeMaximumTimestampDigitsFails() throws IOException  {
+        try (IonWriter writer = IonTextWriterBuilder.standard().withMaximumTimestampPrecisionDigits(-1).build(new StringBuilder())) {}
     }
 
     @Override

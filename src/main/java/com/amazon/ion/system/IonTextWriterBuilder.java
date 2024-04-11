@@ -20,6 +20,7 @@ import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_IonTextWriterBuilder;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.OutputStream;
@@ -221,6 +222,7 @@ public abstract class IonTextWriterBuilder
     private int myLongStringThreshold;
     private NewLineType myNewLineType;
     private boolean myTopLevelValuesOnNewLines;
+    private int myMaximumTimestampPrecisionDigits = Timestamp.DEFAULT_MAXIMUM_DIGITS_TEXT;
 
 
     /** NOT FOR APPLICATION USE! */
@@ -240,6 +242,7 @@ public abstract class IonTextWriterBuilder
         this.myLongStringThreshold  = that.myLongStringThreshold;
         this.myNewLineType          = that.myNewLineType;
         this.myTopLevelValuesOnNewLines = that.myTopLevelValuesOnNewLines;
+        this.myMaximumTimestampPrecisionDigits = that.myMaximumTimestampPrecisionDigits;
     }
 
 
@@ -759,6 +762,47 @@ public abstract class IonTextWriterBuilder
     {
         IonTextWriterBuilder b = mutable();
         b.setWriteTopLevelValuesOnNewLines(writeTopLevelValuesOnNewLines);
+        return b;
+    }
+
+    //=========================================================================
+
+    /**
+     * Gets the maximum number of digits of fractional second precision allowed to be written for timestamp values.
+     *
+     * @return the currently configured maximum.
+     *
+     * @see #setMaximumTimestampPrecisionDigits(int)
+     * @see #withMaximumTimestampPrecisionDigits(int)
+     */
+    public final int getMaximumTimestampPrecisionDigits() {
+        return myMaximumTimestampPrecisionDigits;
+    }
+
+    /**
+     * Sets the maximum number of digits of fractional second precision allowed to be written for timestamp values.
+     * Default: {@link Timestamp#DEFAULT_MAXIMUM_DIGITS_TEXT}.
+     *
+     * @see #getMaximumTimestampPrecisionDigits()
+     * @see #withMaximumTimestampPrecisionDigits(int)
+     */
+    public void setMaximumTimestampPrecisionDigits(int maximumTimestampPrecisionDigits) {
+        mutationCheck();
+        myMaximumTimestampPrecisionDigits = maximumTimestampPrecisionDigits;
+    }
+
+    /**
+     * Sets the maximum number of digits of fractional second precision allowed to be written for timestamp values.
+     * Default: {@link Timestamp#DEFAULT_MAXIMUM_DIGITS_TEXT}.
+     *
+     * @return this instance, if mutable; otherwise a mutable copy of this instance.
+     *
+     * @see #getMaximumTimestampPrecisionDigits()
+     * @see #setMaximumTimestampPrecisionDigits(int)
+     */
+    public final IonTextWriterBuilder withMaximumTimestampPrecisionDigits(int maximumTimestampPrecisionDigits) {
+        IonTextWriterBuilder b = mutable();
+        b.setMaximumTimestampPrecisionDigits(maximumTimestampPrecisionDigits);
         return b;
     }
 
