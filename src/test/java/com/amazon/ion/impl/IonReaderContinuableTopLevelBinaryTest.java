@@ -3933,6 +3933,25 @@ public class IonReaderContinuableTopLevelBinaryTest {
         );
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void incompleteAnnotationAfterStructFailsCleanly(boolean constructFromBytes) throws Exception {
+        expectIonException(
+            constructFromBytes,
+            reader -> {
+                try {
+                    assertEquals(IonType.STRUCT, reader.next());
+                } catch (Exception e) {
+                    fail();
+                }
+                // This should fail with IonException due to unexpected EOF.
+                reader.next();
+            },
+            0xDF, // null.struct
+            0xE6, 0x81 // Incomplete annotation wrapper declaring length 6
+        );
+    }
+
     /**
      * Verifies that corrupting each byte in the input data results in IonException, or nothing.
      * @param constructFromBytes whether to provide bytes (true) or an InputStream (false) to the reader.
