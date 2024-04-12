@@ -30,8 +30,8 @@ plugins {
     id("org.cyclonedx.bom") version "1.7.2"
     id("com.github.spotbugs") version "5.0.13"
     id("org.jlleitschuh.gradle.ktlint") version "11.3.2"
-    // TODO: more static analysis. E.g.:
-    // id("com.diffplug.spotless") version "6.11.0"
+
+    id("com.diffplug.spotless") version "6.11.0"
 
     // Used for generating the third party attribution document
     id("com.github.jk1.dependency-license-report") version "2.5"
@@ -97,6 +97,55 @@ licenseReport {
             )
         )
     )
+}
+
+/**
+ * This is the `git remote` name that corresponds to amazon-ion/ion-java.
+ * It is used for applying the "spotless" checks only to things that are changed
+ * compared to the master branch of the source repo.
+ */
+val sourceRepoRemoteName: String by lazy {
+    val git = System.getenv("GIT_CLI") ?: "git"
+
+    fun String.isSourceRepo(): Boolean {
+        val url = "$git remote get-url ${this@isSourceRepo}".runCommand()
+        return "amazon-ion/ion-java" in url || "amzn/ion-java" in url
+    }
+
+    "$git remote".runCommand().lines().firstOrNull { it.isSourceRepo() }
+        ?: throw Exception("""
+            |No git remote found for amazon-ion/ion-java. Try again after running:
+            |
+            |    git remote add -f <name> https://github.com/amazon-ion/ion-java/
+            """.trimMargin())
+}
+
+fun String.runCommand(workingDir: File = rootProject.projectDir): String {
+    val parts = this.split("\\s".toRegex())
+    val proc = ProcessBuilder(*parts.toTypedArray())
+        .directory(workingDir)
+        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+        .redirectError(ProcessBuilder.Redirect.PIPE)
+        .start()
+    proc.waitFor(30, TimeUnit.SECONDS)
+    return proc.inputStream.bufferedReader().readText()
+}
+
+spotless {
+    ratchetFrom("$sourceRepoRemoteName/master")
+
+    val shortFormLicenseHeader = """
+        // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+        // SPDX-License-Identifier: Apache-2.0
+    """.trimIndent()
+
+    java {
+        licenseHeader(shortFormLicenseHeader)
+        removeUnusedImports()
+    }
+    kotlin {
+        licenseHeader(shortFormLicenseHeader)
+    }
 }
 
 tasks {
