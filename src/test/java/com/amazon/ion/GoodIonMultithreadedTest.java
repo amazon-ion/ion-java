@@ -18,6 +18,14 @@ import static com.amazon.ion.TestUtils.testdataFiles;
 
 /**
  * Tests IonValue's multithreaded contract over the `good` ion-tests files.
+ *
+ * For each file, the test randomly chooses a child value to test and marks that value as read-only. Then
+ * it spawns many instances of an async task to concurrently perform read operations on the chosen value.
+ * Finally, it asserts that all instances of the async task got the same results from the read operations.
+ *
+ * Testing every value at every depth would be more robust, but is likely more suited to a suite of 
+ * long-running tests that are executed periodically, rather than the unit tests that are executed on each build.
+ * This test is expected to take only a few seconds to execute.
  */
 public class GoodIonMultithreadedTest extends IonTestCase {
 
