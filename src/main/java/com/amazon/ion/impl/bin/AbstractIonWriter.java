@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Decimal;
@@ -85,92 +72,135 @@ import java.util.Date;
         writeValueRecursive(reader);
     }
 
+    /**
+     * Performs a depth-first (recursive-like) traversal of the IonReader's current value, writing all values and
+     * annotations encountered during the traversal. This method is not implemented using recursion.
+     *
+     * @param reader       The IonReader that will provide a value to write.
+     * @throws IOException if either the provided IonReader or this writer's underlying OutputStream throw an
+     *                     IOException.
+     * @throws IllegalStateException if this writer is inside a struct but the IonReader is not.
+     */
     public final void writeValueRecursive(final IonReader reader) throws IOException
     {
-        final IonType type = reader.getType();
+        // The IonReader does not need to be at the top level (getDepth()==0) when the function is called.
+        // We take note of its initial depth so we can avoid advancing the IonReader beyond the starting value.
+        int startingDepth = getDepth();
 
-        final SymbolToken fieldName = reader.getFieldNameSymbol();
-        if (fieldName != null && !isFieldNameSet() && isInStruct())
-        {
-            setFieldNameSymbol(fieldName);
-        }
-        final SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
-        if (annotations.length > 0)
-        {
-            setTypeAnnotationSymbols(annotations);
-        }
-        if (reader.isNullValue())
-        {
-            writeNull(type);
-            return;
-        }
+        // The IonReader will be at `startingDepth` when the function is first called and then again when we
+        // have finished traversing all of its children. This boolean tracks which of those two states we are
+        // in when `getDepth() == startingDepth`.
+        boolean alreadyProcessedTheStartingValue = false;
 
-        switch (type)
-        {
-            case BOOL:
-                final boolean booleanValue = reader.booleanValue();
-                writeBool(booleanValue);
-                break;
-            case INT:
-                switch (reader.getIntegerSize())
-                {
-                    case INT:
-                        final int intValue = reader.intValue();
-                        writeInt(intValue);
-                        break;
-                    case LONG:
-                        final long longValue = reader.longValue();
-                        writeInt(longValue);
-                        break;
-                    case BIG_INTEGER:
-                        final BigInteger bigIntegerValue = reader.bigIntegerValue();
-                        writeInt(bigIntegerValue);
-                        break;
-                    default:
-                        throw new IllegalStateException();
+        // The IonType of the IonReader's current value.
+        IonType type;
+
+        while (true) {
+            // Each time we reach the top of the loop we are in one of three states:
+            // 1. We have not yet begun processing the starting value.
+            // 2. We are currently traversing the starting value's children.
+            // 3. We have finished processing the starting value.
+            if (getDepth() == startingDepth) {
+                // The IonReader is at the starting depth. We're either beginning our traversal or finishing it.
+                if (alreadyProcessedTheStartingValue) {
+                    // We're finishing our traversal.
+                    break;
                 }
-                break;
-            case FLOAT:
-                final double doubleValue = reader.doubleValue();
-                writeFloat(doubleValue);
-                break;
-            case DECIMAL:
-                final Decimal decimalValue = reader.decimalValue();
-                writeDecimal(decimalValue);
-                break;
-            case TIMESTAMP:
-                final Timestamp timestampValue = reader.timestampValue();
-                writeTimestamp(timestampValue);
-                break;
-            case SYMBOL:
-                final SymbolToken symbolToken = reader.symbolValue();
-                writeSymbolToken(symbolToken);
-                break;
-            case STRING:
-                final String stringValue = reader.stringValue();
-                writeString(stringValue);
-                break;
-            case CLOB:
-                final byte[] clobValue = reader.newBytes();
-                writeClob(clobValue);
-                break;
-            case BLOB:
-                final byte[] blobValue = reader.newBytes();
-                writeBlob(blobValue);
-                break;
-            case LIST:
-            case SEXP:
-            case STRUCT:
-                reader.stepIn();
-                stepIn(type);
-                while (reader.next() != null) {
-                    writeValue(reader);
+                // We're beginning our traversal. Don't advance the cursor; instead, use the current
+                // value's IonType.
+                type = reader.getType();
+                // We've begun processing the starting value.
+                alreadyProcessedTheStartingValue = true;
+            } else {
+                // We're traversing the starting value's children (that is: values at greater depths). We need to
+                // advance the cursor by calling next().
+                type = reader.next();
+            }
+
+            if (type == null) {
+                // There are no more values at this level. If we're at the starting level, we're done.
+                if (getDepth() == startingDepth) {
+                    break;
                 }
-                stepOut();
+                // Otherwise, step out once and then try to move forward again.
                 reader.stepOut();
-                break;
-            default:
-                throw new IllegalStateException("Unexpected type: " + type);
+                stepOut();
+                continue;
+            }
+
+            final SymbolToken fieldName = reader.getFieldNameSymbol();
+            if (fieldName != null && !isFieldNameSet() && isInStruct()) {
+                setFieldNameSymbol(fieldName);
+            }
+            final SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
+            if (annotations.length > 0) {
+                setTypeAnnotationSymbols(annotations);
+            }
+            if (reader.isNullValue()) {
+                writeNull(type);
+                continue;
+            }
+
+            switch (type) {
+                case BOOL:
+                    final boolean booleanValue = reader.booleanValue();
+                    writeBool(booleanValue);
+                    break;
+                case INT:
+                    switch (reader.getIntegerSize()) {
+                        case INT:
+                            final int intValue = reader.intValue();
+                            writeInt(intValue);
+                            break;
+                        case LONG:
+                            final long longValue = reader.longValue();
+                            writeInt(longValue);
+                            break;
+                        case BIG_INTEGER:
+                            final BigInteger bigIntegerValue = reader.bigIntegerValue();
+                            writeInt(bigIntegerValue);
+                            break;
+                        default:
+                            throw new IllegalStateException();
+                    }
+                    break;
+                case FLOAT:
+                    final double doubleValue = reader.doubleValue();
+                    writeFloat(doubleValue);
+                    break;
+                case DECIMAL:
+                    final Decimal decimalValue = reader.decimalValue();
+                    writeDecimal(decimalValue);
+                    break;
+                case TIMESTAMP:
+                    final Timestamp timestampValue = reader.timestampValue();
+                    writeTimestamp(timestampValue);
+                    break;
+                case SYMBOL:
+                    final SymbolToken symbolToken = reader.symbolValue();
+                    writeSymbolToken(symbolToken);
+                    break;
+                case STRING:
+                    final String stringValue = reader.stringValue();
+                    writeString(stringValue);
+                    break;
+                case CLOB:
+                    final byte[] clobValue = reader.newBytes();
+                    writeClob(clobValue);
+                    break;
+                case BLOB:
+                    final byte[] blobValue = reader.newBytes();
+                    writeBlob(blobValue);
+                    break;
+                case LIST:
+                case SEXP:
+                case STRUCT:
+                    reader.stepIn();
+                    stepIn(type);
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected type: " + type);
+            }
         }
     }
 
