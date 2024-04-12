@@ -1094,6 +1094,7 @@ class IonCursorBinary implements IonCursor {
      * Resets state specific to the current value.
      */
     private void reset() {
+        valueMarker.typeId = null;
         valueMarker.startIndex = -1;
         valueMarker.endIndex = -1;
         fieldSid = -1;
