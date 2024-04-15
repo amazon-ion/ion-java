@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
         with:
           submodules: recursive
-      - uses: gradle/gradle-build-action@fe59895742b4f984530980e4f693943577526b61 # v3.2.0
+      - uses: gradle/gradle-build-action@8baac4c8ef753599f92eeb509c246d09d6250fa6 # v3.3.0
         with:
           arguments: build cyclonedxBom
       - name: Upload Jar to GitHub release
