@@ -180,7 +180,7 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @ParameterizedTest
-    @CsvSource("true, 5E", "false, 5F")
+    @CsvSource("true, 6E", "false, 6F")
     fun `write a boolean`(value: Boolean, hexBytes: String) {
         assertWriterOutputEquals(hexBytes) {
             writeBool(value)
@@ -189,7 +189,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a delimited list`() {
-        assertWriterOutputEquals("F1 5E 5F F0") {
+        assertWriterOutputEquals("F1 6E 6F F0") {
             stepInList(true)
             writeBool(true)
             writeBool(false)
@@ -199,7 +199,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a prefixed list`() {
-        assertWriterOutputEquals("A2 5E 5F") {
+        assertWriterOutputEquals("B2 6E 6F") {
             stepInList(false)
             writeBool(true)
             writeBool(false)
@@ -209,7 +209,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a variable-length prefixed list`() {
-        assertWriterOutputEquals("FA 21 ${" 5E".repeat(16)}") {
+        assertWriterOutputEquals("FB 21 ${" 6E".repeat(16)}") {
             stepInList(false)
             repeat(16) { writeBool(true) }
             stepOut()
@@ -219,7 +219,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a prefixed list that is so long it requires patch points`() {
-        assertWriterOutputEquals("FA 02 02 ${" 5E".repeat(128)}") {
+        assertWriterOutputEquals("FB 02 02 ${" 6E".repeat(128)}") {
             stepInList(false)
             repeat(128) { writeBool(true) }
             stepOut()
@@ -228,7 +228,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write multiple nested prefixed lists`() {
-        assertWriterOutputEquals("A4 A3 A2 A1 A0") {
+        assertWriterOutputEquals("B4 B3 B2 B1 B0") {
             repeat(5) { stepInList(false) }
             repeat(5) { stepOut() }
         }
@@ -244,7 +244,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write multiple nested delimited and prefixed lists`() {
-        assertWriterOutputEquals("F1 A9 F1 A6 F1 A3 F1 A0 F0 F0 F0 F0") {
+        assertWriterOutputEquals("F1 B9 F1 B6 F1 B3 F1 B0 F0 F0 F0 F0") {
             repeat(4) {
                 stepInList(true)
                 stepInList(false)
@@ -255,7 +255,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a delimited sexp`() {
-        assertWriterOutputEquals("F2 5E 5F F0") {
+        assertWriterOutputEquals("F2 6E 6F F0") {
             stepInSExp(true)
             writeBool(true)
             writeBool(false)
@@ -265,7 +265,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a prefixed sexp`() {
-        assertWriterOutputEquals("B2 5E 5F") {
+        assertWriterOutputEquals("C2 6E 6F") {
             stepInSExp(false)
             writeBool(true)
             writeBool(false)
@@ -275,7 +275,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a variable-length prefixed sexp`() {
-        assertWriterOutputEquals("FB 21 ${" 5E".repeat(16)}") {
+        assertWriterOutputEquals("FC 21 ${" 6E".repeat(16)}") {
             stepInSExp(false)
             repeat(16) { writeBool(true) }
             stepOut()
@@ -285,7 +285,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write a prefixed sexp that is so long it requires patch points`() {
-        assertWriterOutputEquals("FB 02 02 ${" 5E".repeat(128)}") {
+        assertWriterOutputEquals("FC 02 02 ${" 6E".repeat(128)}") {
             stepInSExp(false)
             repeat(128) { writeBool(true) }
             stepOut()
@@ -294,7 +294,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write multiple nested prefixed sexps`() {
-        assertWriterOutputEquals("B4 B3 B2 B1 B0") {
+        assertWriterOutputEquals("C4 C3 C2 C1 C0") {
             repeat(5) { stepInSExp(false) }
             repeat(5) { stepOut() }
         }
@@ -310,7 +310,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write multiple nested delimited and prefixed sexps`() {
-        assertWriterOutputEquals("F2 B9 F2 B6 F2 B3 F2 B0 F0 F0 F0 F0") {
+        assertWriterOutputEquals("F2 C9 F2 C6 F2 C3 F2 C0 F0 F0 F0 F0") {
             repeat(4) {
                 stepInSExp(true)
                 stepInSExp(false)
@@ -323,11 +323,11 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a prefixed struct`() {
         assertWriterOutputEquals(
             """
-            C4  | Struct Length = 4
+            D4  | Struct Length = 4
             17  | SID 11
-            5E  | true
+            6E  | true
             19  | SID 12
-            5F  | false
+            6F  | false
             """
         ) {
             stepInStruct(false)
@@ -343,9 +343,9 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a variable length prefixed struct`() {
         assertWriterOutputEquals(
             """
-            FC      | Variable Length SID Struct
+            FD      | Variable Length SID Struct
             21      | Length = 16
-            ${"17 5E ".repeat(8)}
+            ${"17 6E ".repeat(8)}
             """
         ) {
             stepInStruct(false)
@@ -361,9 +361,9 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a struct so long it requires patch points`() {
         assertWriterOutputEquals(
             """
-            FC      | Variable Length SID Struct
+            FD      | Variable Length SID Struct
             02 02   | Length = 128
-            ${"17 5E ".repeat(64)}
+            ${"17 6E ".repeat(64)}
             """
         ) {
             stepInStruct(false)
@@ -379,15 +379,15 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write multiple nested prefixed structs`() {
         assertWriterOutputEquals(
             """
-            C8  | Struct Length = 8
+            D8  | Struct Length = 8
             17  | SID 11
-            C6  | Struct Length = 6
+            D6  | Struct Length = 6
             17  | SID 11
-            C4  | Struct Length = 4
+            D4  | Struct Length = 4
             17  | SID 11
-            C2  | Struct Length = 2
+            D2  | Struct Length = 2
             17  | SID 11
-            C0  | Struct Length = 0
+            D0  | Struct Length = 0
             """
         ) {
             stepInStruct(false)
@@ -426,7 +426,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write empty prefixed struct`() {
-        assertWriterOutputEquals("C0") {
+        assertWriterOutputEquals("D0") {
             stepInStruct(false)
             stepOut()
         }
@@ -438,11 +438,11 @@ class IonRawBinaryWriterTest_1_1 {
             """
             F3          | Begin delimited struct
             17          | SID 11
-            5E          | true
+            6E          | true
             FB 66 6F 6F | FlexSym 'foo'
-            5E          | true
+            6E          | true
             02 01       | FlexSym SID 64
-            5E          | true
+            6E          | true
             01 F0       | End delimited struct
             """
         ) {
@@ -474,10 +474,11 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write prefixed struct with a single flex sym field`() {
         assertWriterOutputEquals(
             """
-            FD          | Variable length FlexSym Struct
-            0B          | Length = 5
+            FD          | Variable length Struct
+            0D          | Length = 6
+            01          | switch to FlexSym encoding
             FB 66 6F 6F | FlexSym 'foo'
-            5E          | true
+            6E          | true
             """
         ) {
             stepInStruct(false)
@@ -491,14 +492,15 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write prefixed struct with multiple fields and flex syms`() {
         assertWriterOutputEquals(
             """
-            FD           | Variable length FlexSym Struct
-            1F           | Length = 15
+            FD           | Variable length Struct
+            21           | Length = 16
+            01             | switch to FlexSym encoding
             FB 66 6F 6F  | FlexSym 'foo'
-            5E           | true
+            6E           | true
             FB 62 61 72  | FlexSym 'bar'
-            5E           | true
+            6E           | true
             FB 62 61 7A  | FlexSym 'baz'
-            5E           | true
+            6E           | true
             """
         ) {
             stepInStruct(false)
@@ -516,15 +518,15 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write prefixed struct that starts with sids and switches partway through to use flex syms`() {
         assertWriterOutputEquals(
             """
-            FC             | Variable length SID Struct
+            FD             | Variable length Struct
             17             | Length = 11
             81             | SID 64
-            5E             | true
+            6E             | true
             01             | switch to FlexSym encoding
             FB 66 6F 6F    | FlexSym 'foo'
-            5E             | true
+            6E             | true
             02 01          | FlexSym SID 64
-            5E             | true
+            6E             | true
             """
         ) {
             stepInStruct(false)
@@ -542,10 +544,11 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write prefixed struct with sid 0`() {
         assertWriterOutputEquals(
             """
-            FD     | Variable length FlexSym Struct
-            07     | Length = 3
+            FD     | Variable length Struct
+            09     | Length = 4
+            01     | switch to FlexSym encoding
             01 90  | FlexSym SID 0
-            5E     | true
+            6E     | true
             """
         ) {
             stepInStruct(false)
@@ -559,17 +562,17 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write prefixed struct with sid 0 after another value`() {
         assertWriterOutputEquals(
             """
-            FC      | Variable length SID struct
+            FD      | Variable length struct
             17      | Length = FlexUInt 11
             03      | SID 1
-            5E      | true
+            6E      | true
             01      | switch to FlexSym encoding
             01 90   | FlexSym SID 0
-            5E      | true
+            6E      | true
             05      | FlexSym SID 2
-            5E      | true
+            6E      | true
             01 90   | FlexSym SID 0
-            5E      | true
+            6E      | true
             """
         ) {
             stepInStruct(false)
@@ -623,7 +626,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `writeAnnotations with empty int array should write no annotations`() {
-        assertWriterOutputEquals("5E") {
+        assertWriterOutputEquals("6E") {
             writeAnnotations(intArrayOf())
             writeBool(true)
         }
@@ -631,7 +634,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write one sid annotation`() {
-        val expectedBytes = "E4 07 5E"
+        val expectedBytes = "E4 07 6E"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(3)
             writeBool(true)
@@ -646,7 +649,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write two sid annotations`() {
-        val expectedBytes = "E5 07 09 5E"
+        val expectedBytes = "E5 07 09 6E"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(3)
             writeAnnotations(4)
@@ -664,7 +667,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write three sid annotations`() {
-        val expectedBytes = "E6 09 07 09 02 04 5E"
+        val expectedBytes = "E6 09 07 09 02 04 6E"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(3)
             writeAnnotations(4)
@@ -689,7 +692,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write sid 0 annotation`() {
-        assertWriterOutputEquals("E4 01 5E") {
+        assertWriterOutputEquals("E4 01 6E") {
             writeAnnotations(0)
             writeBool(true)
         }
@@ -697,7 +700,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write one inline annotation`() {
-        val expectedBytes = "E7 FB 66 6F 6F 5F"
+        val expectedBytes = "E7 FB 66 6F 6F 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations("foo")
             writeBool(false)
@@ -711,7 +714,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write two inline annotations`() {
-        val expectedBytes = "E8 FB 66 6F 6F FB 62 61 72 5F"
+        val expectedBytes = "E8 FB 66 6F 6F FB 62 61 72 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations("foo")
             writeAnnotations("bar")
@@ -725,7 +728,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write three inline annotations`() {
-        val expectedBytes = "E9 19 FB 66 6F 6F FB 62 61 72 FB 62 61 7A 5F"
+        val expectedBytes = "E9 19 FB 66 6F 6F FB 62 61 72 FB 62 61 7A 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations("foo")
             writeAnnotations("bar")
@@ -750,7 +753,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write empty text and sid 0 annotations`() {
-        assertWriterOutputEquals("E8 01 90 01 80 5E") {
+        assertWriterOutputEquals("E8 01 90 01 80 6E") {
             writeAnnotations(0)
             writeAnnotations("")
             writeBool(true)
@@ -759,7 +762,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write two mixed sid and inline annotations`() {
-        val expectedBytes = "E8 15 FB 66 6F 6F 5F"
+        val expectedBytes = "E8 15 FB 66 6F 6F 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(10)
             writeAnnotations("foo")
@@ -769,7 +772,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write three mixed sid and inline annotations`() {
-        val expectedBytes = "E9 13 15 FB 66 6F 6F FB 62 61 72 5F"
+        val expectedBytes = "E9 13 15 FB 66 6F 6F FB 62 61 72 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(10)
             writeAnnotations("foo")
@@ -791,8 +794,9 @@ class IonRawBinaryWriterTest_1_1 {
             "6C 66 2D 64 65 73 63 72 69 62 69 6E 67 2C 20 68 69 65 72 61 72 63 68 69 63 61 6C 20 64 61 74 61 20 " +
             "73 65 72 69 61 6C 69 7A 61 74 69 6F 6E 20 66 6F 72 6D 61 74 20 6F 66 66 65 72 69 6E 67 20 69 6E 74 " +
             "65 72 63 68 61 6E 67 65 61 62 6C 65 20 62 69 6E 61 72 79 20 61 6E 64 20 74 65 78 74 20 72 65 70 72 " +
-            "65 73 65 6E 74 61 74 69 6F 6E 73 2E 5F"
-        assertWriterOutputEquals("$opCode $length $text") {
+            "65 73 65 6E 74 61 74 69 6F 6E 73 2E"
+        val falseOpCode = "6F"
+        assertWriterOutputEquals("$opCode $length $text $falseOpCode") {
             writeAnnotations(
                 "Amazon Ion is a richly-typed, self-describing, hierarchical data serialization " +
                     "format offering interchangeable binary and text representations."
@@ -805,8 +809,8 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write int`() {
         assertWriterOutputEquals(
             """
-            51 01
-            51 0A
+            61 01
+            61 0A
             """
         ) {
             writeInt(1)
@@ -818,9 +822,9 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write float`() {
         assertWriterOutputEquals(
             """
-            5A
-            5C 40 48 F5 C3
-            5D 40 09 1E B8 51 EB 85 1F
+            6A
+            6C 40 48 F5 C3
+            6D 40 09 1E B8 51 EB 85 1F
             """
         ) {
             writeFloat(0.0)
@@ -833,8 +837,8 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write decimal`() {
         assertWriterOutputEquals(
             """
-            60
-            62 01 00
+            70
+            72 01 00
             """
         ) {
             writeDecimal(BigDecimal.ZERO)
@@ -846,8 +850,8 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write timestamp`() {
         assertWriterOutputEquals(
             """
-            77 35 46 AF 7C 55 47 70 2D
-            F7 05 4B 08
+            87 35 46 AF 7C 55 47 70 2D
+            F8 05 4B 08
             """
         ) {
             writeTimestamp(Timestamp.valueOf("2023-12-08T15:37:23.190583253Z"))
@@ -862,7 +866,7 @@ class IonRawBinaryWriterTest_1_1 {
             E1 00
             E1 01
             E2 39 2F
-            93 66 6F 6F
+            A3 66 6F 6F
             """
         ) {
             writeSymbol(0)
@@ -874,7 +878,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write string`() {
-        assertWriterOutputEquals("83 66 6F 6F") {
+        assertWriterOutputEquals("93 66 6F 6F") {
             writeString("foo")
         }
     }
@@ -907,16 +911,21 @@ class IonRawBinaryWriterTest_1_1 {
 
     @ParameterizedTest
     @CsvSource(
-        "      64, 40 01",
-        "      65, 41 01",
-        "      80, 40 03",
-        "    1211, 4B 8F",
-        "    2111, 4F FF",
-        "    2112, 40 02 02",
-        "   71376, 40 A6 45",
-        "  262207, 4F FE FF",
-        "  262208, 40 04 00 02",
-        "33554495, 4F FC FF FF",
+        "              64, 40 00",
+        "              65, 40 01",
+        "             319, 40 FF",
+        "             320, 41 00",
+        "            1211, 44 7B",
+        "            4159, 4F FF",
+        "            4160, 50 00 00",
+        "            4161, 50 01 00",
+        "            4415, 50 FF 00",
+        "            4416, 50 00 01",
+        "           69695, 50 FF FF",
+        "           69696, 51 00 00",
+        "         1052735, 5F FF FF",
+        "         1052736, EE 04 82 80",
+        "${Int.MAX_VALUE}, EE F0 FF FF FF 0F"
     )
     fun `write an e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
         assertWriterOutputEquals(expectedBytes) {
@@ -931,14 +940,14 @@ class IonRawBinaryWriterTest_1_1 {
         // so that we can check that the length gets propagated correctly to the parent
         assertWriterOutputEquals(
             """
-            AB         | List Length 11
+            BB         | List Length 11
             1F         | Macro 31
-            A9         | List Length 9
-            40 01      | Macro 64
-            A6         | List Length 6
-            43 03      | Macro 83
-            A3         | List Length 3
-            44 5A 02   | Macro 2468
+            B9         | List Length 9
+            40 00      | Macro 64
+            B6         | List Length 6
+            40 13      | Macro 83
+            B3         | List Length 3
+            50 00 00   | Macro 4160
             """
         ) {
             stepInList(false)
@@ -948,24 +957,24 @@ class IonRawBinaryWriterTest_1_1 {
             stepInList(false)
             stepInEExp(83)
             stepInList(false)
-            stepInEExp(2468)
+            stepInEExp(4160)
             repeat(8) { stepOut() }
         }
     }
 
     @Test
-    fun `write an e-expression in the field name position of a sid struct`() {
+    fun `write an e-expression in the field name position of a variable-length struct`() {
         assertWriterOutputEquals(
             """
-            FC      | Variable Length SID Struct
+            FD      | Variable Length Struct
             11      | Length = 8
             15      | SID 10
-            5E      | true
+            6E      | true
             01      | switch to FlexSym encoding
             01      | FlexSym Escape Byte
             1F      | Macro 31 (0x1F)
             01      | FlexSym Escape Byte
-            40 01   | Macro 64
+            40 00   | Macro 64
             """
         ) {
             stepInStruct(false)
@@ -998,27 +1007,10 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
-    fun `write an e-expression in the field name position of a variable length flex-sym struct`() {
-        assertWriterOutputEquals(
-            """
-            FD      | Variable Length FlexSym Struct
-            05      | Length = 2
-            01      | FlexSym Escape Byte
-            1F      | Macro 31 (0x1F)
-            """
-        ) {
-            stepInStruct(false)
-            stepInEExp(31)
-            stepOut()
-            stepOut()
-        }
-    }
-
-    @Test
     fun `write an e-expression in the value position of a struct`() {
         assertWriterOutputEquals(
             """
-            C2      | Struct length 2
+            D2      | Struct length 2
             03      | SID 1
             01      | Macro 1
             """
@@ -1054,7 +1046,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
             00      | Macro 0
             01      | FlexUInt 0 (delimited expression group)
-            5E      | true
+            6E      | true
             F0      | End of Expression Group
             """
         ) {
@@ -1072,7 +1064,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
             00      | Macro 0
             03      | Expression Group, Length = 1
-            5E      | true
+            6E      | true
             """
         ) {
             stepInEExp(0)
@@ -1089,7 +1081,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
             00      | Macro 0
             FE 03   | Expression Group, Length = 255
-            ${"5E ".repeat(255)}
+            ${"6E ".repeat(255)}
             """
         ) {
             stepInEExp(0)
@@ -1173,29 +1165,29 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterOutputEquals(
             """
             E0 01 01 EA                 | IVM
-            E4 07 FC 63                 | $3::{             // length=49
-            0F FA 5D                    |   $7: [           // length=46
-            84 6E 61 6D 65              |     "name",
-            83 61 67 65                 |     "age",
-            85 79 65 61 72 73           |     "years",
-            88 62 69 72 74 68 64 61 79  |     "birthday",
-            84 74 6F 79 73              |     "toys",
-            84 62 61 6C 6C              |     "ball",
-            86 77 65 69 67 68 74        |     "weight",
-            84 62 75 7A 7A              |     "buzz",
+            E4 07 FD 63                 | $3::{             // length=49
+            0F FB 5D                    |   $7: [           // length=46
+            94 6E 61 6D 65              |     "name",
+            93 61 67 65                 |     "age",
+            95 79 65 61 72 73           |     "years",
+            98 62 69 72 74 68 64 61 79  |     "birthday",
+            94 74 6F 79 73              |     "toys",
+            94 62 61 6C 6C              |     "ball",
+            96 77 65 69 67 68 74        |     "weight",
+            94 62 75 7A 7A              |     "buzz",
                                         |   ]
                                         | }
-            FC 85                       | {                 // length=66
-            15 84 46 69 64 6F           |   $10: "Fido",
-            17 E4 19 51 04              |   $11: $12::4,
-            1B 72 AA 09                 |   $13: 2012-03-01T
-            1D A7                       |   $14: [          // length=7
+            FD 85                       | {                 // length=66
+            15 94 46 69 64 6F           |   $10: "Fido",
+            17 E4 19 61 04              |   $11: $12::4,
+            1B 82 AA 09                 |   $13: 2012-03-01T
+            1D B7                       |   $14: [          // length=7
             E1 0F                       |     $15,
-            94 72 6F 70 65              |     rope
+            A4 72 6F 70 65              |     rope
                                         |   ],
             21                          |   $16:
             E7 F5 70 6F 75 6E 64 73     |       pounds::
-            63 FF 9C 01                 |       41.2
+            73 FF 9C 01                 |       41.2
             23 FE 35                    |   $17: {{         // length=26
             54 6F 20 69 6E 66 69 6E 69  |     VG8gaW5maW5p
             74 79 2E 2E 2E 20 61 6E 64  |     dHkuLi4gYW5k

@@ -334,14 +334,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     private fun switchCurrentStructToFlexSym() {
-        // To switch, we need to insert the sid-to-flexsym switch marker, unless...
-        // if no fields have been written yet, we can just switch the op code of the struct.
-        if (currentContainer.length == 0L) {
-            buffer.writeByteAt(currentContainer.position, OpCodes.VARIABLE_LENGTH_STRUCT_WITH_FLEX_SYMS)
-        } else {
-            buffer.writeByte(SID_TO_FLEX_SYM_SWITCH_MARKER)
-            currentContainer.length += 1
-        }
+        // To switch, we need to insert the sid-to-flexsym switch marker.
+        buffer.writeByte(SID_TO_FLEX_SYM_SWITCH_MARKER)
+        currentContainer.length += 1
         currentContainer.usesFlexSym = true
     }
 
@@ -429,12 +424,24 @@ class IonRawBinaryWriter_1_1 internal constructor(
         currentContainer = containerStack.push { it.reset(Macro, buffer.position()) }
         if (id < 64) {
             buffer.writeByte(id.toByte())
-        } else {
+        } else if (id < 4160) {
             val biasedId = id - 64
-            val opCodeIdBits = FOUR_BIT_MASK and biasedId
-            val remainderOfId = biasedId shr 4
-            buffer.writeByte((OpCodes.BIASED_E_EXPRESSION + opCodeIdBits).toByte())
-            currentContainer.length += buffer.writeFlexUInt(remainderOfId)
+            val lowNibble = biasedId / 256
+            val adjustedId = biasedId % 256L
+            buffer.writeByte((OpCodes.BIASED_E_EXPRESSION_ONE_BYTE_FIXED_INT + lowNibble).toByte())
+            currentContainer.length += buffer.writeFixedUInt(adjustedId)
+        } else if (id < 1_052_736) {
+            val biasedId = id - 4160
+            println(biasedId)
+            val lowNibble = biasedId / (256 * 256)
+            println(lowNibble)
+            val adjustedId = biasedId % (256 * 256L)
+            println(adjustedId)
+            buffer.writeByte((OpCodes.BIASED_E_EXPRESSION_TWO_BYTE_FIXED_INT + lowNibble).toByte())
+            currentContainer.length += buffer.writeFixedIntOrUInt(adjustedId, 2)
+        } else {
+            buffer.writeByte(OpCodes.E_EXPRESSION_FLEX_UINT)
+            currentContainer.length += buffer.writeFlexUInt(id)
         }
 
         // No need to clear any of the annotation fields because we already asserted that there are no annotations
