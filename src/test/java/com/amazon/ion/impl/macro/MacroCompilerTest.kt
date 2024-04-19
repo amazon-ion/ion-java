@@ -36,26 +36,38 @@ class MacroCompilerTest {
 
     private fun testCases() = listOf(
         "(macro identity (x) x)" shouldCompileTo TemplateMacro(
-            listOf(Parameter("x", Tagged, grouped = false)),
+            listOf(Parameter("x", Tagged, ParameterCardinality.One)),
             listOf(Variable(0)),
         ),
         "(macro identity (any::x) x)" shouldCompileTo TemplateMacro(
-            listOf(Parameter("x", Tagged, grouped = false)),
+            listOf(Parameter("x", Tagged, ParameterCardinality.One)),
             listOf(Variable(0)),
         ),
         "(macro pi () 3.141592653589793)" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(DecimalValue(emptyList(), BigDecimal("3.141592653589793")))
         ),
-        "(macro group_test ([x]) x)" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, grouped = true)),
+        "(macro cardinality_test (x?) x)" shouldCompileTo TemplateMacro(
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.AtMostOne)),
+            body = listOf(Variable(0))
+        ),
+        "(macro cardinality_test (x!) x)" shouldCompileTo TemplateMacro(
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.One)),
+            body = listOf(Variable(0))
+        ),
+        "(macro cardinality_test (x+) x)" shouldCompileTo TemplateMacro(
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.AtLeastOne)),
+            body = listOf(Variable(0))
+        ),
+        "(macro cardinality_test (x*) x)" shouldCompileTo TemplateMacro(
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.Any)),
             body = listOf(Variable(0))
         ),
         // Outer 'values' call allows multiple expressions in the body
         // The second `values` is a macro call that has a single argument: the variable `x`
-        // The `quote` call causes the third (inner) `(values x)` to be an uninterpreted s-expression.
-        """(macro quote_test (x) (values (values x) (quote (values x))))""" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, grouped = false)),
+        // The `literal` call causes the third (inner) `(values x)` to be an uninterpreted s-expression.
+        """(macro literal_test (x) (values (values x) (literal (values x))))""" shouldCompileTo TemplateMacro(
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.One)),
             body = listOf(
                 MacroInvocation(ByName("values"), startInclusive = 0, endInclusive = 5),
                 MacroInvocation(ByName("values"), startInclusive = 1, endInclusive = 2),
@@ -65,7 +77,7 @@ class MacroCompilerTest {
                 SymbolValue(emptyList(), FakeSymbolToken("x", -1)),
             ),
         ),
-        "(macro each_type () (values null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" (quote bar) [] (quote ()) {} {{}} {{\"\"}} ))" shouldCompileTo TemplateMacro(
+        "(macro each_type () (values null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" (literal bar) [] (literal ()) {} {{}} {{\"\"}} ))" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
                 MacroInvocation(ByName("values"), 0, 14),
@@ -102,11 +114,15 @@ class MacroCompilerTest {
                 BoolValue(emptyList(), false),
             )
         ),
+        "(macro null () \"abc\")" shouldCompileTo TemplateMacro(
+            signature = emptyList(),
+            body = listOf(StringValue(emptyList(), "abc"))
+        ),
         "(macro foo (x y z) [100, [200, a::b::300], x, {y: [true, false, z]}])" shouldCompileTo TemplateMacro(
             signature = listOf(
-                Parameter("x", Tagged, grouped = false),
-                Parameter("y", Tagged, grouped = false),
-                Parameter("z", Tagged, grouped = false)
+                Parameter("x", Tagged, ParameterCardinality.One),
+                Parameter("y", Tagged, ParameterCardinality.One),
+                Parameter("z", Tagged, ParameterCardinality.One)
             ),
             body = listOf(
                 ListValue(emptyList(), startInclusive = 0, endInclusive = 11),
@@ -163,6 +179,7 @@ class MacroCompilerTest {
             """
             (macro foo (x) 1)
             (macro bar (y) 2)
+            (macro null (z) 3)
         """
         )
         val compiler = MacroCompiler(reader)
@@ -173,6 +190,9 @@ class MacroCompilerTest {
         reader.next()
         compiler.compileMacro()
         assertEquals("bar", compiler.macroName)
+        reader.next()
+        compiler.compileMacro()
+        assertNull(compiler.macroName)
     }
 
     // macro with invalid variable
@@ -198,15 +218,18 @@ class MacroCompilerTest {
             "(macro 2.5 () 3.141592653589793)", // Macro name is not a symbol
             """(macro "pi"() 3.141592653589793)""", // Macro name is not a symbol
             "(macro \$0 () 3.141592653589793)", // Macro name must have known text
+            "(macro + () 123)", // Macro name cannot be an operator symbol
+            "(macro 'a.b' () 123)", // Macro name must be a symbol that can be unquoted (i.e. an identifier symbol)
+            "(macro 'false' () 123)", // Macro name must be a symbol that can be unquoted (i.e. an identifier symbol)
 
             // Problems in the signature
             "(macro identity x x)", // Missing sexp around signature
             "(macro identity [x] x)", // Using list instead of sexp for signature
             "(macro identity any::(x) x)", // Signature sexp should not be annotated
             "(macro identity (foo::x) x)", // Unknown type in signature
-            "(macro identity (any::[x]) x)", // Annotation should be on parameter name, not the grouping indicator
-            "(macro identity ([]) x)", // Grouping indicator must have one symbol in it
-            "(macro identity ([x, y]) x)", // Grouping indicator must have one symbol in it
+            "(macro identity (x any::*) x)", // Annotation should be on parameter name, not the cardinality
+            "(macro identity (x! !) x)", // Dangling cardinality modifier
+            "(macro identity (x%) x)", // Not a real cardinality sigil
             "(macro identity (x x) x)", // Repeated parameter name
             """(macro identity ("x") x)""", // Parameter name must be a symbol, not a string
 
@@ -214,8 +237,8 @@ class MacroCompilerTest {
             "(macro empty ())", // No body expression
             "(macro transform (x) y)", // Unknown variable
             "(macro transform (x) foo::x)", // Variable cannot be annotated
-            "(macro transform (x) foo::(quote x))", // Macro invocation cannot be annotated
-            """(macro transform (x) ("quote" x))""", // Macro invocation must start with a symbol or integer id
+            "(macro transform (x) foo::(literal x))", // Macro invocation cannot be annotated
+            """(macro transform (x) ("literal" x))""", // Macro invocation must start with a symbol or integer id
             "(macro transform (x) 1 2)", // Template body must be one expression
         ]
     )
