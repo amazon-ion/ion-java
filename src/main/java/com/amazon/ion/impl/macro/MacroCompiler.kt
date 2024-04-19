@@ -4,8 +4,9 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
+import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.TemplateBodyExpression.*
-import com.amazon.ion.util.confirm
+import com.amazon.ion.util.*
 
 /**
  * [MacroCompiler] wraps an [IonReader]. When directed to do so, it will take over advancing and getting values from the
@@ -41,12 +42,11 @@ class MacroCompiler(private val reader: IonReader) {
         reader.readContainer {
             confirm(reader.next() == IonType.SYMBOL && reader.stringValue() == "macro") { "macro compilation expects a sexp starting with the keyword `macro`" }
 
-            nextAndCheckType(IonType.SYMBOL, "macro name")
+            nextAndCheckType(IonType.SYMBOL, IonType.NULL, "macro name")
             confirmNoAnnotations("macro name")
-            // TODO: Enforce 'identifier' syntax subset of symbol
-            //       Possibly add support for macro definitions without names?
-            macroName = symbolValue().assumeText()
-
+            if (type != IonType.NULL) {
+                macroName = symbolValue().assumeText().also { confirm(isIdentifierSymbol(it)) { "invalid macro name: '$it'" } }
+            }
             nextAndCheckType(IonType.SEXP, "macro signature")
             confirmNoAnnotations("macro signature")
             readSignature()
@@ -62,32 +62,51 @@ class MacroCompiler(private val reader: IonReader) {
      * Caller is responsible for making sure that the reader is positioned on (but not stepped into) the signature sexp.
      */
     private fun readSignature() {
+        var pendingParameter: Macro.Parameter? = null
+
         reader.forEachInContainer {
-            when (it) {
-                IonType.SYMBOL -> addParameter(grouped = false)
-                IonType.LIST -> {
-                    confirmNoAnnotations(location = "grouped parameter enclosing list")
-                    readContainer {
-                        nextAndCheckType(IonType.SYMBOL, "parameter name")
-                        addParameter(grouped = true)
-                        confirm(next() == null) { "grouped parameter list must enclose only one variable name" }
-                    }
+            if (type != IonType.SYMBOL) throw IonException("parameter must be a symbol; found $type")
+
+            val symbolText = symbolValue().assumeText()
+
+            val cardinality = Macro.ParameterCardinality.fromSigil(symbolText)
+
+            if (cardinality != null) {
+                confirmNoAnnotations("cardinality sigil")
+                // The symbol is a cardinality modifier
+                if (pendingParameter == null) {
+                    throw IonException("Found an orphaned cardinality in macro signature")
+                } else {
+                    signature.add(pendingParameter!!.copy(cardinality = cardinality))
+                    pendingParameter = null
+                    return@forEachInContainer
                 }
-                else -> throw IonException("parameter must be a symbol or a list; found ${reader.type}")
             }
+
+            // If we have a pending parameter, add it to the signature before we read the next parameter
+            if (pendingParameter != null) signature.add(pendingParameter!!)
+
+            // Read the next parameter name
+            val annotations = typeAnnotations
+            confirm(annotations.isEmptyOr(Macro.ParameterEncoding.Tagged.ionTextName)) { "unsupported parameter encoding ${annotations.toList()}" }
+            confirm(isIdentifierSymbol(symbolText)) { "invalid parameter name: '$symbolText'" }
+            confirm(signature.none { it.variableName == symbolText }) { "redeclaration of parameter '$symbolText'" }
+            pendingParameter = Macro.Parameter(symbolText, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.One)
         }
+        // If we have a pending parameter than hasn't been added to the signature, add it here.
+        if (pendingParameter != null) signature.add(pendingParameter!!)
     }
 
-    /**
-     * Adds a parameter to the macro signature.
-     * Caller is responsible for making sure that the reader is positioned on a parameter name.
-     */
-    private fun addParameter(grouped: Boolean) {
-        val annotations = reader.typeAnnotations
-        confirm(annotations.isEmptyOr(Macro.ParameterEncoding.Tagged.ionTextName)) { "unsupported parameter encoding ${annotations.toList()}" }
-        val parameterName = reader.symbolValue().assumeText()
-        confirm(signature.none { it.variableName == parameterName }) { "redeclaration of parameter '$parameterName'" }
-        signature.add(Macro.Parameter(parameterName, Macro.ParameterEncoding.Tagged, grouped))
+    private fun isIdentifierSymbol(symbol: String): Boolean {
+        if (symbol.isEmpty()) return false
+
+        // If the symbol's text matches an Ion keyword, it's not an identifier symbol.
+        // Eg, the symbol 'false' must be quoted and is not an identifier symbol.
+        if (_Private_IonTextAppender.isIdentifierKeyword(symbol)) return false
+
+        if (!_Private_IonTextAppender.isIdentifierStart(symbol[0].code)) return false
+
+        return symbol.all { c -> _Private_IonTextAppender.isIdentifierPart(c.code) }
     }
 
     /**
@@ -192,16 +211,16 @@ class MacroCompiler(private val reader: IonReader) {
             IonType.SYMBOL -> {
                 val macroName = reader.stringValue()
                 // TODO: Once we have a macro table, validate name exists in current macro table.
-                if (macroName == "quote") null else MacroRef.ByName(macroName)
+                // TODO: Come up with a consistent strategy for handling special forms.
+                if (macroName == "literal") null else MacroRef.ByName(macroName)
             }
-            // TODO: When we have an ID for the macro "quote", add handling for it here.
             // TODO: Once we have a macro table, validate that id exists in current macro table.
             IonType.INT -> MacroRef.ById(reader.longValue())
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${reader.type ?: "nothing"}\"")
         }
 
         if (macroRef == null) {
-            // It's the "quote" macro; skip compiling a macro invocation and just treat all contents as literals
+            // It's the "literal" special form; skip compiling a macro invocation and just treat all contents as literals
             reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = true) }
         } else {
             val macroStart = expressions.size
@@ -227,6 +246,12 @@ class MacroCompiler(private val reader: IonReader) {
     /** Moves to the next type and throw [IonException] if it is not the `expected` [IonType]. */
     private fun IonReader.nextAndCheckType(expected: IonType, location: String) {
         confirm(next() == expected) { "$location must be a $expected; found ${type ?: "nothing"}" }
+    }
+
+    /** Moves to the next type and throw [IonException] if it is not the `expected` [IonType]. */
+    private fun IonReader.nextAndCheckType(expected0: IonType, expected1: IonType, location: String) {
+        val next = next()
+        confirm(next == expected0 || next == expected1) { "$location must be a $expected0 or $expected1; found ${type ?: "nothing"}" }
     }
 
     /** Steps into a container, executes [block], and steps out. */

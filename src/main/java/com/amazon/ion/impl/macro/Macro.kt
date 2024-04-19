@@ -6,11 +6,29 @@ package com.amazon.ion.impl.macro
 sealed interface Macro {
     val signature: List<Parameter>
 
-    data class Parameter(val variableName: String, val type: ParameterEncoding, val grouped: Boolean)
+    data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality)
 
     enum class ParameterEncoding(val ionTextName: String) {
         Tagged("any"),
         // TODO: List all of the possible tagless encodings
+    }
+
+    enum class ParameterCardinality(val sigil: Char) {
+        AtMostOne('?'),
+        One('!'),
+        AtLeastOne('+'),
+        Any('*');
+
+        companion object {
+            @JvmStatic
+            fun fromSigil(sigil: String): ParameterCardinality? = when (sigil.singleOrNull()) {
+                '?' -> AtMostOne
+                '!' -> One
+                '+' -> AtLeastOne
+                '*' -> Any
+                else -> null
+            }
+        }
     }
 }
 
@@ -40,6 +58,6 @@ enum class SystemMacro(override val signature: List<Macro.Parameter>) : Macro {
     // TODO: replace these placeholders
     Stream(emptyList()), // A stream is technically not a macro, but we can implement it as a macro that is the identity function.
     Annotate(emptyList()),
-    MakeString(listOf(Macro.Parameter("text", Macro.ParameterEncoding.Tagged, grouped = true))),
+    MakeString(listOf(Macro.Parameter("text", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.Any))),
     // TODO: Other system macros
 }
