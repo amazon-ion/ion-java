@@ -29,7 +29,7 @@ jobs:
     # First, a sanity check to ensure that the library version matches the release version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
+      - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v3.6.0
       - name: Validate project version matches tag
         shell: bash
         run: |
@@ -48,10 +48,10 @@ jobs:
     steps:
         # TODO: replace with artifact upload/download -- make sure there's no race condition with other builds also
         # uploading an artifact.
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
+      - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v3.6.0
         with:
           submodules: recursive
-      - uses: gradle/gradle-build-action@8baac4c8ef753599f92eeb509c246d09d6250fa6 # v3.3.0
+      - uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
         with:
           arguments: build cyclonedxBom
       - name: Upload Jar to GitHub release
