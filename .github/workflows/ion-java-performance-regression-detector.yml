@@ -61,7 +61,7 @@ jobs:
       codebuild-project-name: ${{ vars.CODEBUILD_PROJECT_NAME != '' && vars.CODEBUILD_PROJECT_NAME || 'ion-java' }}
       al2-arm: "codebuild-${{ vars.CODEBUILD_PROJECT_NAME != '' && vars.CODEBUILD_PROJECT_NAME || 'ion-java' }}-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large"
     outputs:
-      runner-type: ${{ env.use-codebuild && env.al2_arm || "ubuntu-latest" }}
+      runner-type: ${{ env.use-codebuild && env.al2_arm || 'ubuntu-latest' }}
     steps:
       - name: Dump Config
         run: echo '${{ toJSON(env) }}'
