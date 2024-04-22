@@ -92,7 +92,7 @@ class IonCursorBinary implements IonCursor {
          * READY state). This enables the reader to complete the previous IonCursor API invocation if it returned a
          * NEEDS_DATA event.
          */
-        State state = State.READY;
+        State state;
 
         /**
          * The number of bytes that still need to be consumed from the input during a fill or seek operation.
@@ -124,13 +124,19 @@ class IonCursorBinary implements IonCursor {
          */
         int individualBytesSkippedWithoutBuffering = 0;
 
-        RefillableState(InputStream inputStream, int capacity, int maximumBufferSize) {
+        RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, State initialState) {
             this.inputStream = inputStream;
             this.capacity = capacity;
             this.maximumBufferSize = maximumBufferSize;
+            this.state = initialState;
         }
 
     }
+
+    /**
+     * Dummy state that indicates the cursor has been terminated and that additional API calls will have no effect.
+     */
+    private static final RefillableState TERMINATED_STATE = new RefillableState(null, -1, -1, State.TERMINATED);
 
     /**
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
@@ -249,7 +255,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Holds information necessary for reading from refillable input. Null if the cursor is byte-backed.
      */
-    private final RefillableState refillableState;
+    private RefillableState refillableState;
 
     /**
      * Describes the byte at the `checkpoint` index.
@@ -455,7 +461,8 @@ class IonCursorBinary implements IonCursor {
         refillableState = new RefillableState(
             inputStream,
             configuration.getInitialBufferSize(),
-            configuration.getMaximumBufferSize()
+            configuration.getMaximumBufferSize(),
+            State.READY
         );
         registerOversizedValueHandler(configuration.getOversizedValueHandler());
     }
@@ -1898,12 +1905,15 @@ class IonCursorBinary implements IonCursor {
      * exceeds the maximum buffer size.
      */
     void terminate() {
-        refillableState.state = State.TERMINATED;
+        refillableState = TERMINATED_STATE;
+        // Use a unified code path for all cursors after termination. This path forces a termination check before
+        // accessing the input stream or buffer.
+        isSlowMode = true;
     }
 
     @Override
     public void close() {
-        if (refillableState != null) {
+        if (refillableState != null && refillableState.inputStream != null) {
             try {
                 refillableState.inputStream.close();
             } catch (IOException e) {
@@ -1913,6 +1923,7 @@ class IonCursorBinary implements IonCursor {
         buffer = null;
         containerStack = null;
         byteBuffer = null;
+        terminate();
     }
 
     /* ---- End: version-agnostic parsing, utility, and public API methods ---- */
