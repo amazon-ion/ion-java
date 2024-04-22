@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
@@ -31,6 +30,7 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class IonCursorBinaryTest {
@@ -425,6 +425,24 @@ public class IonCursorBinaryTest {
         assertThat(ie.getMessage(),
                 containsString("An oversized value was found even though no maximum size was configured."));
 
+        cursor.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectUseAfterCloseToHaveNoEffect(boolean constructFromBytes) {
+        // Using the cursor after close should not fail with an obscure unchecked
+        // exception like NullPointerException, ArrayIndexOutOfBoundsException, etc.
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x20
+        );
+        cursor.close();
+        assertEquals(IonCursor.Event.NEEDS_DATA, cursor.nextValue());
+        assertNull(cursor.getValueMarker().typeId);
+        assertEquals(IonCursor.Event.NEEDS_DATA, cursor.nextValue());
+        assertNull(cursor.getValueMarker().typeId);
         cursor.close();
     }
 }

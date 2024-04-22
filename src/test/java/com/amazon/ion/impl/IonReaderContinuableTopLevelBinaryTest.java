@@ -4009,4 +4009,22 @@ public class IonReaderContinuableTopLevelBinaryTest {
         corruptEachByteThrowsIonException(constructFromBytes, false, true);
         corruptEachByteThrowsIonException(constructFromBytes, false, false);
     }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectUseAfterCloseToHaveNoEffect(boolean constructFromBytes) throws Exception {
+        // Using the cursor after close should not fail with an obscure unchecked
+        // exception like NullPointerException, ArrayIndexOutOfBoundsException, etc.
+        reader = readerFor(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA,
+            0x20
+        );
+        reader.close();
+        assertNull(reader.next());
+        assertNull(reader.getType());
+        assertNull(reader.next());
+        assertNull(reader.getType());
+        reader.close();
+    }
 }
