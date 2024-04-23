@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
 import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.newLiteSystem;
@@ -104,7 +91,7 @@ public class IonSystemBuilder
     IonCatalog myCatalog;
     boolean myStreamCopyOptimized = false;
 
-    IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard().withCharsetAscii();
+    IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard();
     IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard();
     IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
 
@@ -282,8 +269,7 @@ public class IonSystemBuilder
 
     /**
      * Gets the text writer builder whose options will be used when building an
-     * {@link IonSystem}. By default, {@link IonTextWriterBuilder#standard()}
-     * using {@code US-ASCII} encoding will be used.
+     * {@link IonSystem}. By default, {@link IonTextWriterBuilder#standard()} will be used.
      *
      * @see #setIonTextWriterBuilder(IonTextWriterBuilder)
      * @see #withIonTextWriterBuilder(IonTextWriterBuilder)
@@ -294,13 +280,10 @@ public class IonSystemBuilder
 
     /**
      * Sets the text writer builder whose options will be used when building
-     * an {@link IonSystem}. The writer builder's catalog will never be used; the
-     * catalog provided to {@link #setCatalog(IonCatalog)} or
-     * {@link #withCatalog(IonCatalog)} will always be used instead.
+     * an {@link IonSystem}.
      *
      * @param builder the writer builder to use in built systems.
-     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}
-     *  using {@code US-ASCII} encoding.
+     *  If unset, each system will be built with {@link IonTextWriterBuilder#standard()}.
      *
      * @see #getIonTextWriterBuilder()
      * @see #withIonTextWriterBuilder(IonTextWriterBuilder)
@@ -320,8 +303,7 @@ public class IonSystemBuilder
      * always be used instead.
      *
      * @param builder the writer builder to use in built systems.
-     *  If null, each system will be built with {@link IonTextWriterBuilder#standard()}
-     *  using {@code US-ASCII} encoding.
+     *  If unset, each system will be built with {@link IonTextWriterBuilder#standard()}.
      *
      * @see #getIonTextWriterBuilder()
      * @see #setIonTextWriterBuilder(IonTextWriterBuilder)
@@ -354,7 +336,7 @@ public class IonSystemBuilder
      * {@link #withCatalog(IonCatalog)} will always be used instead.
      *
      * @param builder the writer builder to use in built systems.
-     *  If null, each system will be built with {@link IonBinaryWriterBuilder#standard()}.
+     *  If unset, each system will be built with {@link IonBinaryWriterBuilder#standard()}.
      *
      * @see #getIonBinaryWriterBuilder()
      * @see #withIonBinaryWriterBuilder(IonBinaryWriterBuilder)
@@ -374,7 +356,7 @@ public class IonSystemBuilder
      * always be used instead.
      *
      * @param builder the writer builder to use in built systems.
-     *  If null, each system will be built with {@link IonBinaryWriterBuilder#standard()}.
+     *  If unset, each system will be built with {@link IonBinaryWriterBuilder#standard()}.
      *
      * @see #getIonBinaryWriterBuilder()
      * @see #setIonBinaryWriterBuilder(IonBinaryWriterBuilder)
@@ -407,7 +389,7 @@ public class IonSystemBuilder
      * {@link #withCatalog(IonCatalog)} will always be used instead.
      *
      * @param builder the reader builder to use in built systems.
-     *  If null, each system will be built with {@link IonReaderBuilder#standard()}.
+     *  If unset, each system will be built with {@link IonReaderBuilder#standard()}.
      *
      * @see #getReaderBuilder()
      * @see #withReaderBuilder(IonReaderBuilder)
@@ -427,7 +409,7 @@ public class IonSystemBuilder
      * always be used instead.
      *
      * @param builder the reader builder to use in built systems.
-     *  If null, each system will be built with {@link IonReaderBuilder#standard()}.
+     *  If unset, each system will be built with {@link IonReaderBuilder#standard()}.
      *
      * @see #getReaderBuilder()
      * @see #setReaderBuilder(IonReaderBuilder)
@@ -462,7 +444,7 @@ public class IonSystemBuilder
         SymbolTable systemSymtab = _Private_Utils.systemSymtab(1);
         bwb.setInitialSymbolTable(systemSymtab);
         // This is what we need, more or less.
-//        bwb = bwb.fillDefaults();
+        //     bwb = bwb.fillDefaults();
 
         return newLiteSystem(twb, (_Private_IonBinaryWriterBuilder) bwb, rb);
     }
