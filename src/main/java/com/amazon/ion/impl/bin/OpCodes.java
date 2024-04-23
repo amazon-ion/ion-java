@@ -52,8 +52,6 @@ public class OpCodes {
     // 0xD1 Reserved
     // 0xD2-0xDF are additional lengths of structs.
 
-    // See https://github.com/amazon-ion/ion-docs/issues/292
-
     public static final byte SYMBOL_ADDRESS_1_BYTE = (byte) 0xE1;
     public static final byte SYMBOL_ADDRESS_2_BYTES = (byte) 0xE2;
     public static final byte SYMBOL_ADDRESS_MANY_BYTES = (byte) 0xE3;

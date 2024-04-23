@@ -5005,13 +5005,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "6E                       | true \n" +
         "0D                       | SID 6 \n " +
         "6F                       | false",
-//        // FlexSym field names using variable-length FlexSym type ID
-//        "FD                       | Variable Length FlexSym struct \n" +
-//        "1F                       | Length = 15 \n" +
-//        "F9 6E 61 6D 65           | name \n" +
-//        "6E                       | true \n" +
-//        "F3 69 6D 70 6F 72 74 73  | imports \n " +
-//        "6F                       | false",
     })
     public void readStruct_1_1(String inputBytes) throws Exception {
         assertSimpleStructCorrectlyParsed(true, inputBytes);
@@ -5074,17 +5067,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "6E      | true \n" +
         "01 A0   | FlexSym SID 0 \n" +
         "6E      | true",
-//        // SID 0 in variable-length FlexSym struct
-//        "FD      | Variable length SID struct \n" +
-//        "17      | Length = FlexUInt 11 \n" +
-//        "01 A0   | SID 0 \n" +
-//        "6E      | true \n" +
-//        "01 A0   | FlexSym SID 0 \n" +
-//        "6E      | true \n" +
-//        "09      | FlexSym SID 4 (name) \n" +
-//        "6E      | true \n" +
-//        "01 A0   | FlexSym SID 0 \n" +
-//        "6E      | true",
         // SID 0 in variable-length SID to FlexSyms
         "FD      | Variable length SID struct \n" +
         "19      | Length = FlexUInt 12 \n" +
@@ -5168,11 +5150,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "01      | switch to FlexSym encoding \n" +
         "01 90   | FlexSym empty text \n" +
         "6F      | false",
-//        // Empty field name in variable-length FlexSym struct
-//        "FD      | Variable length FlexSym struct \n" +
-//        "07      | Length = 3 \n" +
-//        "01 90   | FlexSym empty text \n" +
-//        "6F      | false",
         // Empty field name in delimited struct
         "F3      | Delimited struct \n" +
         "01 90   | FlexSym empty text \n" +
@@ -5442,7 +5419,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @Test
     public void oversizeNestedDelimitedContainerIncremental() throws Exception {
-                byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
+        byte[] input = delimitedListNestedWithinDelimitedStructFollowedByFloatZero();
         ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
         reader = boundedReaderFor(pipe, 5, 5, byteAndOversizedValueCountingHandler);
         feedBytesOneByOne(input, pipe, reader);

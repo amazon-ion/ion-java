@@ -432,11 +432,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
             currentContainer.length += buffer.writeFixedUInt(adjustedId)
         } else if (id < 1_052_736) {
             val biasedId = id - 4160
-            println(biasedId)
             val lowNibble = biasedId / (256 * 256)
-            println(lowNibble)
             val adjustedId = biasedId % (256 * 256L)
-            println(adjustedId)
             buffer.writeByte((OpCodes.BIASED_E_EXPRESSION_TWO_BYTE_FIXED_INT + lowNibble).toByte())
             currentContainer.length += buffer.writeFixedIntOrUInt(adjustedId, 2)
         } else {
