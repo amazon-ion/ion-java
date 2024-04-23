@@ -6,7 +6,6 @@ import org.gradle.kotlin.dsl.support.zipTo
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import proguard.gradle.ProGuardTask
-import java.net.URI
 import java.time.Instant
 import java.util.Properties
 
@@ -23,6 +22,10 @@ plugins {
     kotlin("jvm") version "1.9.0"
     java
     `maven-publish`
+
+    // There are newer versions available, but they are not guaranteed to support Java 8.
+    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+
     jacoco
     signing
     id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -69,6 +72,7 @@ group = "com.amazon.ion"
 version = File(project.rootDir.path + "/project.version").readLines().single()
 description = "A Java implementation of the Amazon Ion data notation."
 
+val isCI: Boolean = System.getenv("CI") == "true"
 val githubRepositoryUrl = "https://github.com/amazon-ion/ion-java/"
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 val generatedResourcesDir = "$buildDir/generated/main/resources"
@@ -115,7 +119,7 @@ val sourceRepoRemoteName: String by lazy {
 
     var name = "$git remote".runCommand().lines().firstOrNull { it.isSourceRepo() }
 
-    if (System.getenv("CI") == "true") {
+    if (isCI) {
         // When running on a CI environment e.g. GitHub Actions, we might need to automatically add the remote
         if (name == null) {
             name = "ci_source_repository"
@@ -504,12 +508,20 @@ publishing {
             }
         }
     }
-    repositories.mavenCentral {
-        credentials {
-            username = properties["ossrhUsername"].toString()
-            password = properties["ossrhPassword"].toString()
+}
+
+nexusPublishing {
+    // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v1.3.0/README.md
+    this.repositories {
+        sonatype {
+            nexusUrl.set(uri("https://aws.oss.sonatype.org/service/local/staging/deploy/maven2/"))
+            // For CI environments, the username and password should be stored in
+            // ORG_GRADLE_PROJECT_sonatypeUsername and ORG_GRADLE_PROJECT_sonatypePassword respectively.
+            if (!isCI) {
+                username.set(properties["ossrhUsername"].toString())
+                password.set(properties["ossrhPassword"].toString())
+            }
         }
-        url = URI.create("https://aws.oss.sonatype.org/service/local/staging/deploy/maven2")
     }
 }
 
@@ -519,5 +531,13 @@ signing {
     // if signing.keyId, signing.password, signing.secretKeyRingFile, etc are
     // not present in gradle.properties.
     isRequired = isReleaseVersion
+
+    if (isCI) {
+        val signingKeyId: String? by project
+        val signingKey: String? by project
+        val signingPassword: String? by project
+        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    }
+
     sign(publishing.publications["IonJava"])
 }
