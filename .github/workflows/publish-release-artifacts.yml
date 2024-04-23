@@ -26,8 +26,6 @@ permissions:
 
 jobs:
   publish-to-github-release:
-    # only run if `check-tag` completes successfully
-    needs: check-tag
     runs-on: "codebuild-ion-java-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large"
     permissions:
       contents: write
