@@ -905,7 +905,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     private boolean readBoolean_1_1() {
-        // Boolean 'true' is 0x5E; 'false' is 0x5F.
+        // Boolean 'true' is 0x6E; 'false' is 0x6F.
         return valueTid.lowerNibble == 0xE;
     }
 
