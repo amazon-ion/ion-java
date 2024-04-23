@@ -187,9 +187,10 @@ final class IonTypeID {
      */
     private static boolean isValid_1_1(byte id) {
         return !(
-            id == (byte) 0xD1
+            id == 0x69
+            || id == (byte) 0xD1
             || id == (byte) 0xE0
-            || id == (byte) 0xEE
+            || id == (byte) 0xF4
         );
     }
 
@@ -260,7 +261,8 @@ final class IonTypeID {
             // just to identify this byte.
             lowerNibble = (id == DELIMITED_END_MARKER) ? DELIMITED_END_MARKER : (byte) (id & LOW_NIBBLE_BITMASK);
             isNegativeInt = false; // Not applicable for Ion 1.1; sign is conveyed by the representation.
-            isMacroInvocation = (id >= 0x00 && id <= 0x5F)  || id == E_EXPRESSION_FLEX_UINT || id == SYSTEM_MACRO_INVOCATION;
+            isMacroInvocation = (id >= 0x00 && id <= 0x5F)  || id == E_EXPRESSION_FLEX_UINT
+                    || id == SYSTEM_MACRO_INVOCATION || id == LENGTH_PREFIXED_MACRO_INVOCATION;
             boolean isNopPad = false;
             boolean isNull = false;
             int length = -1;
@@ -269,6 +271,8 @@ final class IonTypeID {
                     variableLength = true;
                     macroId = -1;
                 } else if (upperNibble == 0x5) {
+                    // TODO: For 0x4_ and 0x5_, the bias can be precomputed based on the lower nibble.
+                    //       Consider precomputing and adding it to the type id or some other relevant location.
                     variableLength = false;
                     length = 2;
                     // This isn't the whole macro ID, but it's all the relevant bits from the type ID byte (the 4
@@ -310,7 +314,7 @@ final class IonTypeID {
                     if (!isValid) {
                         type = null;
                     } else if (upperNibble == 0x6) {
-                        if (lowerNibble >= 0 && lowerNibble <= 0x8) {
+                        if (lowerNibble <= 0x8) {
                             type = IonType.INT;
                             length = lowerNibble;
                         } else if (id == BOOLEAN_TRUE || id == BOOLEAN_FALSE) {
