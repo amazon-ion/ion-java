@@ -20,20 +20,20 @@ jobs:
           - java: 17
       fail-fast: false
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
         with:
           submodules: recursive
-      - uses: gradle/wrapper-validation-action@460a3ca55fc5d559238a0efc7fa9f7465df8585d # v3.3.0
+      - uses: gradle/wrapper-validation-action@5188e9b5527a0a094cee21e2fe9a8ca44b4629af # v3.3.1
       - name: Use java ${{ matrix.java }}
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
         with:
           distribution: 'corretto'
           java-version: ${{ matrix.java }}
-      - uses: gradle/gradle-build-action@8baac4c8ef753599f92eeb509c246d09d6250fa6 # v3.3.0
+      - uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
         with:
           arguments: build
       - name: Test minified JAR
-        uses: gradle/gradle-build-action@8baac4c8ef753599f92eeb509c246d09d6250fa6 # v3.3.0
+        uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
         with:
           arguments: minifyTest
       - run: ./ion-test-driver-run version
@@ -53,7 +53,7 @@ jobs:
     # https://github.com/amazon-ion/ion-java/blob/master/.github/actions/inspect-version/action.yml
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
+      - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v3.6.0
       - name: Get Project Version
         run: |
           echo "PROJECT_VERSION=v$(<project.version)" >> $GITHUB_ENV
