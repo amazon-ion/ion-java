@@ -300,10 +300,10 @@ public class IonCursorBinaryTest {
             0xF3, // Delimited struct
             0x07, // Field SID 3
             0xF1, // Delimited list, contents start at index 7
-            0x5A, // Float length 0
+            0x6A, // Float length 0
             0xF0, // End delimited list
             0x09, // Field SID 4
-            0x51, 0x01, // Int length 1, starting at byte index 11
+            0x61, 0x01, // Int length 1, starting at byte index 11
             0x01, 0xF0 // End delimited struct
         );
         assertSequence(
@@ -354,10 +354,10 @@ public class IonCursorBinaryTest {
             0xF3, // Delimited struct
             0x07, // Field SID 3
             0xF1, // Delimited list, contents start at index 7
-            0x5A, // Float length 0
+            0x6A, // Float length 0
             0xF0, // End delimited list
             0x09, // Field SID 4
-            0x51, 0x01, // Int length 1, starting at byte index 11
+            0x61, 0x01, // Int length 1, starting at byte index 11
             0x01, 0xF0 // End delimited struct
         );
         assertSequence(
@@ -384,10 +384,10 @@ public class IonCursorBinaryTest {
             0xF3, // Delimited struct
             0x07, // Field SID 3
             0xF1, // Delimited list, contents start at index 7
-            0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, // Five floats 0e0
+            0x6A, 0x6A, 0x6A, 0x6A, 0x6A, 0x6A, // Six floats 0e0
             0xF0, // End delimited list
             0x09, // Field SID 4
-            0x51, 0x01, // Int length 1, starting at byte index 16
+            0x61, 0x01, // Int length 1, starting at byte index 16
             0x01, 0xF0 // End delimited struct
         };
         IonCursorBinary cursor = initializeCursor(
@@ -452,14 +452,14 @@ public class IonCursorBinaryTest {
             0xF3, // Delimited struct
             0x07, // Field SID 3
             0xF1, // Delimited list, contents start at index 7
-            0x5A, // Float length 0
+            0x6A, // Float length 0
             0xF0, // End delimited list
             0x09, // Field SID 4
-            0x51, 0x01, // Int length 1, starting at byte index 11
+            0x61, 0x01, // Int length 1, starting at byte index 11
             0x01, 0xF0, // End delimited struct
             0xF3, // Delimited struct
             0x09, // Field SID 4
-            0x50, // Int length 0, at byte index 17
+            0x60, // Int length 0, at byte index 17
             0x01, 0xF0 // End delimited struct
         );
         assertSequence(
