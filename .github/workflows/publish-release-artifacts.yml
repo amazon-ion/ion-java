@@ -25,11 +25,16 @@ permissions:
   contents: read
 
 jobs:
-  check-tag:
-    # First, a sanity check to ensure that the library version matches the release version
-    runs-on: ubuntu-latest
+  publish-to-github-release:
+    # only run if `check-tag` completes successfully
+    needs: check-tag
+    runs-on: "codebuild-ion-java-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large"
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
+        with:
+          submodules: recursive
       - name: Validate project version matches tag
         shell: bash
         run: |
@@ -39,21 +44,9 @@ jobs:
           echo "Project Version: $PROJECT_VERSION"
           echo "Release Tag: $RELEASE_TAG"
           [ "$PROJECT_VERSION" = "$RELEASE_TAG" ] || exit 1
-  publish-to-github-release:
-    # only run if `check-tag` completes successfully
-    needs: check-tag
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-        # TODO: replace with artifact upload/download -- make sure there's no race condition with other builds also
-        # uploading an artifact.
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v3.6.0
-        with:
-          submodules: recursive
       - uses: gradle/gradle-build-action@8baac4c8ef753599f92eeb509c246d09d6250fa6 # v3.3.0
         with:
-          arguments: build cyclonedxBom
+          arguments: build cyclonedxBom publishToSonatype closeAndReleaseSonatypeStagingRepository
       - name: Upload Jar to GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,4 +57,3 @@ jobs:
         run: |
           gh release upload "v$(<project.version)" "build/libs/ion-java-$(<project.version).jar"
           gh release upload "v$(<project.version)" "build/reports/bom.json"
-  # TODO: Add `publish-to-maven-central` job
