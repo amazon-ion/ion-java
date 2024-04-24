@@ -55,6 +55,19 @@ repositories {
     google()
 }
 
+// This list should be kept up to date to include all LTS versions of Corretto.
+// These are the versions that we guarantee are supported by `ion-java`, though it can probably run on other versions too.
+val SUPPORTED_JRE_VERSIONS = listOf(8, 11, 17, 21)
+
+java {
+    toolchain {
+        // Always build with the minimum supported Java version so that builds are reproducible,
+        // and so it automatically targets the min supported version.
+        languageVersion.set(JavaLanguageVersion.of(SUPPORTED_JRE_VERSIONS.min()))
+        vendor.set(JvmVendorSpec.AMAZON)
+    }
+}
+
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
 
@@ -78,9 +91,6 @@ val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 // The name we're checking for corresponds to the name that is set in the `publish-release-artifacts.yml` file.
 val isReleaseWorkflow: Boolean = System.getenv("GITHUB_WORKFLOW") == "Publish Release Artifacts"
 val generatedResourcesDir = "$buildDir/generated/main/resources"
-lateinit var sourcesJar: AbstractArchiveTask
-lateinit var javadocJar: AbstractArchiveTask
-lateinit var minifyJar: ProGuardTask
 
 sourceSets {
     main {
@@ -175,14 +185,14 @@ spotless {
     }
 }
 
+// Tasks that must be visible outside the tasks block
+lateinit var sourcesJar: AbstractArchiveTask
+lateinit var javadocJar: AbstractArchiveTask
+lateinit var minifyJar: ProGuardTask
+
 tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-        // The `release` option is not available for the Java 8 compiler, but if we're building with Java 8 we don't
-        // need it anyway.
-        if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-            options.release.set(8)
-        }
     }
     withType<KotlinCompile<KotlinJvmOptions>> {
         kotlinOptions {
@@ -451,27 +461,55 @@ tasks {
         maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
         maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
         useJUnitPlatform()
-        // report is always generated after tests run
-        finalizedBy(jacocoTestReport)
     }
 
     test {
         applyCommonTestConfig()
+        // report is always generated after tests run
+        finalizedBy(jacocoTestReport)
     }
 
-    /** Runs the JUnit test on the minified jar. */
-    register<Test>("minifyTest") {
-        applyCommonTestConfig()
-        classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + minifyJar.outputs.files
-        dependsOn(minifyJar)
-    }
-
-    /** Runs the JUnit test on the shadow jar. */
+    /**
+     * Runs the JUnit test on the shadow jar.
+     * Potentially useful for debugging issues that are not reproducible in the standard `test` task.
+     */
     register<Test>("shadowTest") {
         applyCommonTestConfig()
         classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + shadowJar.get().outputs.files
         dependsOn(minifyJar)
     }
+
+    val jvmSpecificMinifyTests = SUPPORTED_JRE_VERSIONS.map {
+        // Run the JUnit tests on the minified jar using the given java version for setting up the JRE
+        register<Test>("minifyTest$it") {
+            javaLauncher.set(
+                project.javaToolchains.launcherFor {
+                    languageVersion.set(JavaLanguageVersion.of(it))
+                    vendor.set(JvmVendorSpec.AMAZON)
+                }
+            )
+            applyCommonTestConfig()
+            classpath = project.configurations.testRuntimeClasspath.get() + project.sourceSets.test.get().output + minifyJar.outputs.files
+            dependsOn(minifyJar)
+        }
+    }.toTypedArray()
+
+    /**
+     * Umbrella task for the JUnit tests on the minified jar for all supported JRE versions.
+     *
+     * This ensures that the built JAR will run properly on all the supported JREs. It is time-consuming
+     * to run all tests for each JRE, so they are not included in the `build` task. However, they are
+     * mandatory as a prerequisite for publishing any release.
+     *
+     * They should all be run in the CI workflow for every PR, but it is best if they run concurrently
+     * in separate workflow steps.
+     */
+    val minifyTest = register<Task>("minifyTest") {
+        group = "verification"
+        dependsOn(jvmSpecificMinifyTests)
+    }
+
+    publish { dependsOn(minifyTest) }
 
     withType<Sign> {
         setOnlyIf { isReleaseVersion && gradle.taskGraph.hasTask(":publish") }
@@ -523,7 +561,7 @@ nexusPublishing {
     // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v1.3.0/README.md
     this.repositories {
         sonatype {
-            nexusUrl.set(uri("https://aws.oss.sonatype.org/service/local/staging/deploy/maven2/"))
+            nexusUrl.set(uri("https://aws.oss.sonatype.org/service/local/"))
             // For CI environments, the username and password should be stored in
             // ORG_GRADLE_PROJECT_sonatypeUsername and ORG_GRADLE_PROJECT_sonatypePassword respectively.
             if (!isCI) {
