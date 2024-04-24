@@ -15,7 +15,7 @@
 # TODO: Consider whether we should merge this with the "prepare-release" workflow rather
 # than having separate workflows.
 
-name: "Publish Release Artifacts"
+name: Publish Artifacts for Release
 
 on:
   release:
@@ -42,19 +42,10 @@ jobs:
           echo "Project Version: $PROJECT_VERSION"
           echo "Release Tag: $RELEASE_TAG"
           [ "$PROJECT_VERSION" = "$RELEASE_TAG" ] || exit 1
-      - name: Build Release Artifacts
-        uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
+      - uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
         with:
-          arguments: build cyclonedxBom
-      - name: Publish to Sonatype
-        uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
-        with:
-          arguments: publishToSonatype
-      - name: Close and Release Sonatype Staging Repository
-        uses: gradle/gradle-build-action@e2097ccd7e8ed48671dc068ac4efa86d25745b39 # v3.3.1
-        with:
-          arguments: closeAndReleaseSonatypeStagingRepository
-      - name: Upload Artifacts to GitHub Release
+          arguments: build cyclonedxBom publishToSonatype closeAndReleaseSonatypeStagingRepository
+      - name: Upload Jar to GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # TODO - reusability
