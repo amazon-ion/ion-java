@@ -75,6 +75,8 @@ description = "A Java implementation of the Amazon Ion data notation."
 val isCI: Boolean = System.getenv("CI") == "true"
 val githubRepositoryUrl = "https://github.com/amazon-ion/ion-java/"
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
+// The name we're checking for corresponds to the name that is set in the `publish-release-artifacts.yml` file.
+val isReleaseWorkflow: Boolean = System.getenv("GITHUB_WORKFLOW") == "Publish Release Artifacts"
 val generatedResourcesDir = "$buildDir/generated/main/resources"
 lateinit var sourcesJar: AbstractArchiveTask
 lateinit var javadocJar: AbstractArchiveTask
@@ -150,6 +152,13 @@ fun String.runCommand(workingDir: File = rootProject.projectDir): String {
 }
 
 spotless {
+    // If this is an automated release workflow, don't configure any style checks.
+    // This is important because we're ratcheting from `master` and when we create
+    // a release that is not directly from `master`, the spotless checks can cause
+    // the release workflow to fail if `master` has any commits that are not in the
+    // release branch.
+    if (isReleaseWorkflow) return@spotless
+
     ratchetFrom("$sourceRepoRemoteName/master")
 
     val shortFormLicenseHeader = """
