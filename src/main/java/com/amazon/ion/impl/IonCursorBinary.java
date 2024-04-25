@@ -17,6 +17,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
@@ -571,7 +572,9 @@ class IonCursorBinary implements IonCursor {
             moveBytesToStartOfBuffer(newBuffer, startOffset);
             refillableState.capacity = newSize;
             buffer = newBuffer;
+            ByteOrder byteOrder = byteBuffer.order();
             byteBuffer = ByteBuffer.wrap(buffer, (int) offset, (int) refillableState.capacity);
+            byteBuffer.order(byteOrder);
         } else {
             // The current capacity can accommodate the requested size; move the existing bytes to the beginning
             // to make room for the remaining requested bytes to be filled at the end.
@@ -1827,8 +1830,10 @@ class IonCursorBinary implements IonCursor {
         }
         if (minorVersion == 0) {
             typeIds = IonTypeID.TYPE_IDS_1_0;
+            byteBuffer.order(ByteOrder.BIG_ENDIAN);
         } else if (minorVersion == 1) {
             typeIds = IonTypeID.TYPE_IDS_1_1;
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         } else {
             throw new IonException(String.format("Unsupported Ion version: %d.%d", majorVersion, minorVersion));
         }
