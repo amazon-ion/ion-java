@@ -192,21 +192,21 @@ public class IonEncoder_1_1Test {
     @ParameterizedTest
     @CsvSource({
             "            0.0, 6A",
-            "            1.0, 6C 3F 80 00 00",
-            "            1.5, 6C 3F C0 00 00",
-            "      3.1415927, 6C 40 49 0F DB",
-            "  4.00537109375, 6C 40 80 2C 00",
-            "   423542.09375, 6C 48 CE CE C3",
-            " 3.40282347E+38, 6C 7F 7F FF FF", // Float.MAX_VALUE
-            "           -1.0, 6C BF 80 00 00",
-            "           -1.5, 6C BF C0 00 00",
-            "     -3.1415927, 6C C0 49 0F DB",
-            " -4.00537109375, 6C C0 80 2C 00",
-            "  -423542.09375, 6C C8 CE CE C3",
-            "-3.40282347E+38, 6C FF 7F FF FF", // Float.MIN_VALUE
-            "            NaN, 6C 7F C0 00 00",
-            "       Infinity, 6C 7F 80 00 00",
-            "      -Infinity, 6C FF 80 00 00",
+            "            1.0, 6C 00 00 80 3F",
+            "            1.5, 6C 00 00 C0 3F",
+            "      3.1415927, 6C DB 0F 49 40",
+            "  4.00537109375, 6C 00 2C 80 40",
+            "   423542.09375, 6C C3 CE CE 48",
+            " 3.40282347E+38, 6C FF FF 7F 7F", // Float.MAX_VALUE
+            "           -1.0, 6C 00 00 80 BF",
+            "           -1.5, 6C 00 00 C0 BF",
+            "     -3.1415927, 6C DB 0F 49 C0",
+            " -4.00537109375, 6C 00 2C 80 C0",
+            "  -423542.09375, 6C C3 CE CE C8",
+            "-3.40282347E+38, 6C FF FF 7F FF", // Float.MIN_VALUE
+            "            NaN, 6C 00 00 C0 7F",
+            "       Infinity, 6C 00 00 80 7F",
+            "      -Infinity, 6C 00 00 80 FF",
     })
     public void testWriteFloatValue(float value, String expectedBytes) {
         assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloatValue);
@@ -215,25 +215,25 @@ public class IonEncoder_1_1Test {
     @ParameterizedTest
     @CsvSource({
             "                      0.0, 6A",
-            "                      1.0, 6C 3F 80 00 00",
-            "                      1.5, 6C 3F C0 00 00",
-            "        3.141592653589793, 6D 40 09 21 FB 54 44 2D 18",
-            "            4.00537109375, 6C 40 80 2C 00",
-            "            4.11111111111, 6D 40 10 71 C7 1C 71 C2 39",
-            "             423542.09375, 6C 48 CE CE C3",
-            "         8236423542.09375, 6D 41 FE AE DD 97 61 80 00",
-            " 1.79769313486231570e+308, 6D 7F EF FF FF FF FF FF FF", // Double.MAX_VALUE
-            "                     -1.0, 6C BF 80 00 00",
-            "                     -1.5, 6C BF C0 00 00",
-            "       -3.141592653589793, 6D C0 09 21 FB 54 44 2D 18",
-            "           -4.00537109375, 6C C0 80 2C 00",
-            "           -4.11111111111, 6D C0 10 71 C7 1C 71 C2 39",
-            "            -423542.09375, 6C C8 CE CE C3",
-            "        -8236423542.09375, 6D C1 FE AE DD 97 61 80 00",
-            "-1.79769313486231570e+308, 6D FF EF FF FF FF FF FF FF", // Double.MIN_VALUE
-            "                      NaN, 6C 7F C0 00 00",
-            "                 Infinity, 6C 7F 80 00 00",
-            "                -Infinity, 6C FF 80 00 00",
+            "                      1.0, 6C 00 00 80 3F",
+            "                      1.5, 6C 00 00 C0 3F",
+            "        3.141592653589793, 6D 18 2D 44 54 FB 21 09 40",
+            "            4.00537109375, 6C 00 2C 80 40",
+            "            4.11111111111, 6D 39 C2 71 1C C7 71 10 40",
+            "             423542.09375, 6C C3 CE CE 48",
+            "         8236423542.09375, 6D 00 80 61 97 DD AE FE 41",
+            " 1.79769313486231570e+308, 6D FF FF FF FF FF FF EF 7F", // Double.MAX_VALUE
+            "                     -1.0, 6C 00 00 80 BF",
+            "                     -1.5, 6C 00 00 C0 BF",
+            "       -3.141592653589793, 6D 18 2D 44 54 FB 21 09 C0",
+            "           -4.00537109375, 6C 00 2C 80 C0",
+            "           -4.11111111111, 6D 39 C2 71 1C C7 71 10 C0",
+            "            -423542.09375, 6C C3 CE CE C8",
+            "        -8236423542.09375, 6D 00 80 61 97 DD AE FE C1",
+            "-1.79769313486231570e+308, 6D FF FF FF FF FF FF EF FF", // Double.MIN_VALUE
+            "                      NaN, 6C 00 00 C0 7F",
+            "                 Infinity, 6C 00 00 80 7F",
+            "                -Infinity, 6C 00 00 80 FF",
     })
     public void testWriteFloatValueForDouble(double value, String expectedBytes) {
         assertWritingValue(expectedBytes, value, IonEncoder_1_1::writeFloatValue);
