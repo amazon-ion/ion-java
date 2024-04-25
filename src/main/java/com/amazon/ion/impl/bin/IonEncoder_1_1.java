@@ -137,7 +137,7 @@ public class IonEncoder_1_1 {
             return 1;
         } else {
             buffer.writeByte(OpCodes.FLOAT_32);
-            buffer.writeUInt32(floatToIntBits(value));
+            buffer.writeUInt32(Integer.reverseBytes(floatToIntBits(value)));
             return 5;
         }
     }
@@ -153,11 +153,11 @@ public class IonEncoder_1_1 {
             return 1;
         } else if (!Double.isFinite(value) || value == (float) value) {
             buffer.writeByte(OpCodes.FLOAT_32);
-            buffer.writeUInt32(floatToIntBits((float) value));
+            buffer.writeUInt32(Integer.reverseBytes(floatToIntBits((float) value)));
             return 5;
         } else {
             buffer.writeByte(OpCodes.FLOAT_64);
-            buffer.writeUInt64(doubleToRawLongBits(value));
+            buffer.writeUInt64(Long.reverseBytes(doubleToRawLongBits(value)));
             return 9;
         }
     }

@@ -4399,41 +4399,41 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "                      0.0, 6B 00 00",
         "                      0.0, 6C 00 00 00 00",
         "                      0.0, 6D 00 00 00 00 00 00 00 00",
-        "                     -0.0, 6B 80 00",
-        "                     -0.0, 6C 80 00 00 00",
-        "                     -0.0, 6D 80 00 00 00 00 00 00 00",
-        "                      1.0, 6B 3C 00",
-        "                      1.0, 6C 3F 80 00 00",
-        "                      1.0, 6D 3F F0 00 00 00 00 00 00",
-        "                      1.5, 6C 3F C0 00 00",
-        "         0.00006103515625, 6B 04 00", // Smallest positive normal half-precision float
-        "           0.333251953125, 6B 35 55", // Nearest half-precision representation of one third
-        "        3.141592653589793, 6D 40 09 21 FB 54 44 2D 18",
-        "            4.00537109375, 6C 40 80 2C 00",
-        "            4.11111111111, 6D 40 10 71 C7 1C 71 C2 39",
-        "                    65504, 6B 7B FF", // Largest normal half-precision float
-        "             423542.09375, 6C 48 CE CE C3",
-        "         8236423542.09375, 6D 41 FE AE DD 97 61 80 00",
-        " 1.79769313486231570e+308, 6D 7F EF FF FF FF FF FF FF", // Double.MAX_VALUE
-        "                     -1.0, 6C BF 80 00 00",
-        "                     -1.5, 6C BF C0 00 00",
-        "                       -2, 6B C0 00",
-        "       -3.141592653589793, 6D C0 09 21 FB 54 44 2D 18",
-        "           -4.00537109375, 6C C0 80 2C 00",
-        "           -4.11111111111, 6D C0 10 71 C7 1C 71 C2 39",
-        "                   -65504, 6B FB FF", // Smallest normal half-precision float
-        "            -423542.09375, 6C C8 CE CE C3",
-        "        -8236423542.09375, 6D C1 FE AE DD 97 61 80 00",
-        "-1.79769313486231570e+308, 6D FF EF FF FF FF FF FF FF", // Double.MIN_VALUE
-        "                      NaN, 6B 7C 01",
-        "                 Infinity, 6B 7C 00",
-        "                -Infinity, 6B FC 00",
-        "                      NaN, 6C 7F C0 00 00",
-        "                 Infinity, 6C 7F 80 00 00",
-        "                -Infinity, 6C FF 80 00 00",
-        "                      NaN, 6D 7F F0 00 00 00 00 00 01",
-        "                 Infinity, 6D 7F F0 00 00 00 00 00 00",
-        "                -Infinity, 6D FF F0 00 00 00 00 00 00",
+        "                     -0.0, 6B 00 80",
+        "                     -0.0, 6C 00 00 00 80",
+        "                     -0.0, 6D 00 00 00 00 00 00 00 80",
+        "                      1.0, 6B 00 3C",
+        "                      1.0, 6C 00 00 80 3F",
+        "                      1.0, 6D 00 00 00 00 00 00 F0 3F",
+        "                      1.5, 6C 00 00 C0 3F",
+        "         0.00006103515625, 6B 00 04", // Smallest positive normal half-precision float
+        "           0.333251953125, 6B 55 35", // Nearest half-precision representation of one third
+        "        3.141592653589793, 6D 18 2D 44 54 FB 21 09 40",
+        "            4.00537109375, 6C 00 2C 80 40",
+        "            4.11111111111, 6D 39 C2 71 1C C7 71 10 40",
+        "                    65504, 6B FF 7B", // Largest normal half-precision float
+        "             423542.09375, 6C C3 CE CE 48",
+        "         8236423542.09375, 6D 00 80 61 97 DD AE FE 41",
+        " 1.79769313486231570e+308, 6D FF FF FF FF FF FF EF 7F", // Double.MAX_VALUE
+        "                     -1.0, 6C 00 00 80 BF",
+        "                     -1.5, 6C 00 00 C0 BF",
+        "                       -2, 6B 00 C0",
+        "       -3.141592653589793, 6D 18 2D 44 54 FB 21 09 C0",
+        "           -4.00537109375, 6C 00 2C 80 C0",
+        "           -4.11111111111, 6D 39 C2 71 1C C7 71 10 C0",
+        "                   -65504, 6B FF FB", // Smallest normal half-precision float
+        "            -423542.09375, 6C C3 CE CE C8",
+        "        -8236423542.09375, 6D 00 80 61 97 DD AE FE C1",
+        "-1.79769313486231570e+308, 6D FF FF FF FF FF FF EF FF", // Double.MIN_VALUE
+        "                      NaN, 6B 01 7C",
+        "                 Infinity, 6B 00 7C",
+        "                -Infinity, 6B 00 FC",
+        "                      NaN, 6C 00 00 C0 7F",
+        "                 Infinity, 6C 00 00 80 7F",
+        "                -Infinity, 6C 00 00 80 FF",
+        "                      NaN, 6D 01 00 00 00 00 00 F0 7F",
+        "                 Infinity, 6D 00 00 00 00 00 00 F0 7F",
+        "                -Infinity, 6D 00 00 00 00 00 00 F0 FF",
     })
     public void readDoubleValue(double expectedValue, String inputBytes) throws Exception {
         assertDoubleCorrectlyParsed(true, expectedValue, inputBytes);
