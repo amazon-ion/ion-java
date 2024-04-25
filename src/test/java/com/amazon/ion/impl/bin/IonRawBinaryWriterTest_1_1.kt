@@ -823,8 +823,8 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterOutputEquals(
             """
             6A
-            6C 40 48 F5 C3
-            6D 40 09 1E B8 51 EB 85 1F
+            6C C3 F5 48 40
+            6D 1F 85 EB 51 B8 1E 09 40
             """
         ) {
             writeFloat(0.0)
