@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
         with:
@@ -40,8 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         java: [8, 11, 17, 21]
-    runs-on: "ubuntu-latest"
-      steps:
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
         with:
           submodules: recursive
