@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: "codebuild-ion-java-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large"
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
         with:
@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
         with:
           distribution: 'corretto'
-          java-version: 20
+          java-version: 8
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@db19848a5fa7950289d3668fb053140cf3028d43
         with:
@@ -40,8 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         java: [8, 11, 17, 21]
-    runs-on: "codebuild-ion-java-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large"
-    steps:
+    runs-on: "ubuntu-latest"
+      steps:
       - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
         with:
           submodules: recursive
