@@ -57,11 +57,7 @@ import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.TestUtils.StringToTimestamp;
-import static com.amazon.ion.TestUtils.bitStringToByteArray;
-import static com.amazon.ion.TestUtils.cleanCommentedHexBytes;
-import static com.amazon.ion.TestUtils.gzippedBytes;
-import static com.amazon.ion.TestUtils.hexStringToByteArray;
+import static com.amazon.ion.TestUtils.*;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
 import static com.amazon.ion.impl.IonCursorTestUtilities.type;
@@ -4910,6 +4906,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
             next(null)
         );
         closeAndCount();
+    }
+
+    @Test
+    public void readAnnotations_1_0() throws Exception {
+        String inputBytes = hexDump(toBinary("name::0 symbols::name::0 name::symbols::imports::0 0 symbols::name::0"));
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
     }
 
     @ParameterizedTest

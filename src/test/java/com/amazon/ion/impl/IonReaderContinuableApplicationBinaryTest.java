@@ -130,15 +130,15 @@ public class IonReaderContinuableApplicationBinaryTest {
     @ValueSource(booleans = {true, false})
     public void basicInlineSymbols(boolean constructFromBytes) {
         IonReaderContinuableApplicationBinary reader = initializeReader(
-                constructFromBytes,
-                0xE0, 0x01, 0x01, 0xEA,
-                0xA0, // Empty inline symbol
-                0xA3, 0x61, 0x62, 0x63 // Inline symbol 'abc'
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xA0, // Empty inline symbol
+            0xA3, 0x61, 0x62, 0x63 // Inline symbol 'abc'
         );
         assertSequence(
-                reader,
-                scalar(), fillSymbolValue(""),
-                scalar(), fillSymbolValue("abc")
+            reader,
+            scalar(), fillSymbolValue(""),
+            scalar(), fillSymbolValue("abc")
         );
     }
 

@@ -1793,6 +1793,8 @@ class IonCursorBinary implements IonCursor {
         valueMarker.endIndex = -1;
         fieldSid = -1;
         hasAnnotations = false;
+        annotationSequenceMarker.startIndex = -1;
+        annotationSequenceMarker.endIndex = -1;
         if (refillableState != null) {
             refillableState.isSpecialFlexSymPartiallyRead = false;
             refillableState.pendingShift = 0;
@@ -2447,10 +2449,6 @@ class IonCursorBinary implements IonCursor {
 
     @Override
     public Event nextValue() {
-        if (event != Event.NEEDS_DATA) {
-            annotationSequenceMarker.startIndex = -1;
-            annotationSequenceMarker.endIndex = -1;
-        }
         if (isSlowMode) {
             return slowNextValue();
         }
