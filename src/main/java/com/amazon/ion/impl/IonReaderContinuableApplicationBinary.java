@@ -1,9 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
