@@ -1113,6 +1113,9 @@ class IonCursorBinary implements IonCursor {
      * point to the first byte after the IVM.
      */
     private void readIvm() {
+        if (limit < peekIndex + IVM_REMAINING_LENGTH) {
+            throw new IonException("Incomplete Ion version marker.");
+        }
         majorVersion = buffer[(int) (peekIndex++)];
         minorVersion = buffer[(int) (peekIndex++)];
         if ((buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) != IVM_FINAL_BYTE) {

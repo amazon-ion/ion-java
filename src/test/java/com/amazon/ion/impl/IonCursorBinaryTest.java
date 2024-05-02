@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.util.function.Consumer;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
@@ -443,6 +444,27 @@ public class IonCursorBinaryTest {
         assertNull(cursor.getValueMarker().typeId);
         assertEquals(IonCursor.Event.NEEDS_DATA, cursor.nextValue());
         assertNull(cursor.getValueMarker().typeId);
+        cursor.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void expectIncompleteIvmToFailCleanly(boolean constructFromBytes) {
+        IonCursorBinary cursor = initializeCursor(
+            constructFromBytes,
+            0xE0, 0x01, 0x00, 0xEA, // Complete IVM
+            0x20, // Int 0
+            0xE0, 0x01 // Incomplete IVM
+        );
+        assertEquals(START_SCALAR, cursor.nextValue());
+        if (constructFromBytes) {
+            // This is a fixed stream, so no more bytes will become available. An error must be raised when the
+            // incomplete IVM is encountered.
+            assertThrows(IonException.class, cursor::nextValue);
+        } else {
+            // This is a growing stream, so the cursor waits for more bytes.
+            assertEquals(NEEDS_DATA, cursor.nextValue());
+        }
         cursor.close();
     }
 }
