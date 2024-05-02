@@ -2447,6 +2447,10 @@ class IonCursorBinary implements IonCursor {
 
     @Override
     public Event nextValue() {
+        if (event != Event.NEEDS_DATA) {
+            annotationSequenceMarker.startIndex = -1;
+            annotationSequenceMarker.endIndex = -1;
+        }
         if (isSlowMode) {
             return slowNextValue();
         }
