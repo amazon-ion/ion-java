@@ -57,11 +57,7 @@ import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.TestUtils.StringToTimestamp;
-import static com.amazon.ion.TestUtils.bitStringToByteArray;
-import static com.amazon.ion.TestUtils.cleanCommentedHexBytes;
-import static com.amazon.ion.TestUtils.gzippedBytes;
-import static com.amazon.ion.TestUtils.hexStringToByteArray;
+import static com.amazon.ion.TestUtils.*;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
 import static com.amazon.ion.impl.IonCursorTestUtilities.type;
@@ -4898,16 +4894,30 @@ public class IonReaderContinuableTopLevelBinaryTest {
     private void assertAnnotationsCorrectlyParsed(
         boolean constructFromBytes,
         Function<String[], ExpectationProvider<IonReaderContinuableTopLevelBinary>> expectation,
-        String inputBytes
+        byte[] inputBytes
     ) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
+        byteCounter.set(0);
+        reader = readerFor(readerBuilder, constructFromBytes, inputBytes);
         assertSequence(
             next(IonType.INT), expectation.apply(new String[] {"name"}), intValue(0),
             next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
             next(IonType.INT), expectation.apply(new String[] {"name", "symbols", "imports"}), intValue(0),
+            next(IonType.INT), expectation.apply(new String[] {}), intValue(0),
+            next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
             next(null)
         );
         closeAndCount();
+    }
+
+    @Test
+    public void readAnnotations_1_0() throws Exception {
+        byte[] inputBytes = toBinary("name::0 symbols::name::0 name::symbols::imports::0 0 symbols::name::0");
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
+        assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
+        assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
     }
 
     @ParameterizedTest
@@ -4915,21 +4925,30 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // SIDs
         "E4 09 60            | One annotation SID = 4 (name); value int 0 \n" +
         "E5 0F 09 60         | Two annotation SIDs = 7 (symbols), 4 (name); value int 0 \n " +
-        "E6 07 09 0F 0D 60   | Variable length = 3 SIDs = 4 (name), 7 (symbols), 6 (imports); value int 0 \n",
+        "E6 07 09 0F 0D 60   | Variable length = 3 SIDs = 4 (name), 7 (symbols), 6 (imports); value int 0 \n" +
+        "60                  | Unannotated value int 0 \n" +
+        "E5 0F 09 60         | Two annotation SIDs = 7 (symbols), 4 (name); value int 0 \n",
         // FlexSyms
         "E7 F9 6E 61 6D 65 60                                | One annotation FlexSym text = name; value int 0 \n" +
         "E8 0F F9 6E 61 6D 65 60                             | Two annotation FlexSyms SID = 7 (symbols), text = name; value int 0 \n" +
-        "E9 1D F9 6E 61 6D 65 0F F3 69 6D 70 6F 72 74 73 60  | Variable length = 14 FlexSyms text = name, SID = 7 (symbols), text = imports; value int 0 \n",
+        "E9 1D F9 6E 61 6D 65 0F F3 69 6D 70 6F 72 74 73 60  | Variable length = 14 FlexSyms text = name, SID = 7 (symbols), text = imports; value int 0 \n" +
+        "60                                                  | Unannotated value int 0 \n" +
+        "E8 0F F9 6E 61 6D 65 60                             | Two annotation FlexSyms SID = 7 (symbols), text = name; value int 0 \n",
         // SIDs (multi-byte FlexUInts)
         "E4 12 00 60             | One annotation overpadded SID = 4 (name); value int 0 \n" +
         "E5 0F 24 00 00 60       | Two annotation SID = 7 (symbols), overpadded SID = 4 (name); value int 0 \n " +
-        "E6 0E 00 09 0F 0D 60    | Variable overpadded length = 3 SIDs = 4 (name), 7 (symbols), 6 (imports); value int 0 \n",
+        "E6 0E 00 09 0F 0D 60    | Variable overpadded length = 3 SIDs = 4 (name), 7 (symbols), 6 (imports); value int 0 \n" +
+        "60                      | Unannotated value int 0 \n" +
+        "E5 0F 24 00 00 60       | Two annotation SID = 7 (symbols), overpadded SID = 4 (name); value int 0 \n ",
         // Multi-byte FlexSyms
         "E7 F2 FF 6E 61 6D 65 60                                         | One annotation overpadded FlexSym text = name; value int 0 \n" +
         "E8 3C 00 00 F9 6E 61 6D 65 60                                   | Two annotation FlexSyms = overpadded SID 7 (symbols),  text = name; value int 0 \n " +
-        "E9 F8 00 00 00 F9 6E 61 6D 65 0F E6 FF 69 6D 70 6F 72 74 73 60  | Variable overpadded length = 15 FlexSyms text = name, SID = 7 (symbols), overpadded text = imports; value int 0 \n",
+        "E9 F8 00 00 00 F9 6E 61 6D 65 0F E6 FF 69 6D 70 6F 72 74 73 60  | Variable overpadded length = 15 FlexSyms text = name, SID = 7 (symbols), overpadded text = imports; value int 0 \n" +
+        "60                                                              | Unannotated value int 0 \n" +
+        "E8 3C 00 00 F9 6E 61 6D 65 60                                   | Two annotation FlexSyms = overpadded SID 7 (symbols),  text = name; value int 0 \n ",
     })
-    public void readAnnotations_1_1(String inputBytes) throws Exception {
+    public void readAnnotations_1_1(String inputBytesAsText) throws Exception {
+        byte[] inputBytes = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(inputBytesAsText)));
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);

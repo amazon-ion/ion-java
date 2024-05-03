@@ -547,7 +547,7 @@ class IonRawBinaryWriterTest_1_1 {
             FD     | Variable length Struct
             09     | Length = 4
             01     | switch to FlexSym encoding
-            01 90  | FlexSym SID 0
+            01 A0  | FlexSym SID 0
             6E     | true
             """
         ) {
@@ -567,11 +567,11 @@ class IonRawBinaryWriterTest_1_1 {
             03      | SID 1
             6E      | true
             01      | switch to FlexSym encoding
-            01 90   | FlexSym SID 0
+            01 A0   | FlexSym SID 0
             6E      | true
             05      | FlexSym SID 2
             6E      | true
-            01 90   | FlexSym SID 0
+            01 A0   | FlexSym SID 0
             6E      | true
             """
         ) {
@@ -753,7 +753,7 @@ class IonRawBinaryWriterTest_1_1 {
 
     @Test
     fun `write empty text and sid 0 annotations`() {
-        assertWriterOutputEquals("E8 01 90 01 80 6E") {
+        assertWriterOutputEquals("E8 01 A0 01 90 6E") {
             writeAnnotations(0)
             writeAnnotations("")
             writeBool(true)
