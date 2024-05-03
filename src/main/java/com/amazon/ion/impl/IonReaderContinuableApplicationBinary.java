@@ -1006,6 +1006,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public SymbolToken symbolValue() {
+        if (valueTid.isInlineable) {
+            return new SymbolTokenImpl(stringValue(), SymbolTable.UNKNOWN_SYMBOL_ID);
+        }
+
         int sid = symbolValueId();
         if (sid < 0) {
             // The raw reader uses this to denote null.symbol.

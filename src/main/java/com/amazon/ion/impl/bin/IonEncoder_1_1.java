@@ -148,13 +148,25 @@ public class IonEncoder_1_1 {
      */
     public static int writeFloatValue(WriteBuffer buffer, final double value) {
         // TODO: Optimization to write a 16 bit float for non-finite and possibly other values
-        if (value == 0.0) {
-            buffer.writeByte(OpCodes.FLOAT_ZERO_LENGTH);
-            return 1;
-        } else if (!Double.isFinite(value) || value == (float) value) {
-            buffer.writeByte(OpCodes.FLOAT_32);
-            buffer.writeUInt32(Integer.reverseBytes(floatToIntBits((float) value)));
-            return 5;
+        //       We could check the number of significand bits and the value of the exponent
+        //       to determine if it can be represented in a smaller format without having a
+        //       complete representation of half-precision floating point numbers.
+
+        if (!Double.isFinite(value) || value == (float) value) {
+            int floatBits = Float.floatToIntBits((float) value);
+            switch (floatBits) {
+                case 0: // Positive zero
+                    buffer.writeByte(OpCodes.FLOAT_ZERO_LENGTH);
+                    return 1;
+                case FLOAT_32_NEGATIVE_ZERO_BITS:
+                    buffer.writeByte(OpCodes.FLOAT_16);
+                    buffer.writeFixedIntOrUInt(FLOAT_16_NEGATIVE_ZERO_BITS, 2);
+                    return 3;
+                default:
+                    buffer.writeByte(OpCodes.FLOAT_32);
+                    buffer.writeUInt32(Integer.reverseBytes(floatToIntBits((float) value)));
+                    return 5;
+            }
         } else {
             buffer.writeByte(OpCodes.FLOAT_64);
             buffer.writeUInt64(Long.reverseBytes(doubleToRawLongBits(value)));
