@@ -4894,9 +4894,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
     private void assertAnnotationsCorrectlyParsed(
         boolean constructFromBytes,
         Function<String[], ExpectationProvider<IonReaderContinuableTopLevelBinary>> expectation,
-        String inputBytes
+        byte[] inputBytes
     ) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
+        byteCounter.set(0);
+        reader = readerFor(readerBuilder, constructFromBytes, inputBytes);
         assertSequence(
             next(IonType.INT), expectation.apply(new String[] {"name"}), intValue(0),
             next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
@@ -4910,7 +4911,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @Test
     public void readAnnotations_1_0() throws Exception {
-        String inputBytes = hexDump(toBinary("name::0 symbols::name::0 name::symbols::imports::0 0 symbols::name::0"));
+        byte[] inputBytes = toBinary("name::0 symbols::name::0 name::symbols::imports::0 0 symbols::name::0");
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
@@ -4946,7 +4947,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "60                                                              | Unannotated value int 0 \n" +
         "E8 3C 00 00 F9 6E 61 6D 65 60                                   | Two annotation FlexSyms = overpadded SID 7 (symbols),  text = name; value int 0 \n ",
     })
-    public void readAnnotations_1_1(String inputBytes) throws Exception {
+    public void readAnnotations_1_1(String inputBytesAsText) throws Exception {
+        byte[] inputBytes = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(inputBytesAsText)));
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
         assertAnnotationsCorrectlyParsed(true, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
