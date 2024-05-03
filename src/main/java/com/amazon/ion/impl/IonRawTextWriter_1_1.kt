@@ -17,6 +17,7 @@ import java.time.Instant
  *  - Never writes using "long string" syntax in order to simplify the writer.
  *  - Uses `[: ... ]` for expression groups.
  *  - Does not try to resolve symbol tokens. That is the concern of the managed writer.
+ *  - To make it easier to concatenate streams, this eagerly emits a top-level separator after each top-level syntax item.
  */
 class IonRawTextWriter_1_1 internal constructor(
     private val options: _Private_IonTextWriterBuilder,
@@ -113,7 +114,12 @@ class IonRawTextWriter_1_1 internal constructor(
 
     private inline fun closeValue(valueWriterExpression: () -> Unit) {
         valueWriterExpression()
-        isPendingSeparator = true
+        if (currentContainer == Top) {
+            output.appendAscii(options.topLevelSeparator())
+            isPendingSeparator = false
+        } else {
+            isPendingSeparator = true
+        }
         isPendingLeadingWhitespace = false
         currentContainerHasValues = true
     }
@@ -140,8 +146,10 @@ class IonRawTextWriter_1_1 internal constructor(
     override fun writeIVM() {
         confirm(currentContainer == Top) { "IVM can only be written at the top level of an Ion stream." }
         confirm(numAnnotations == 0) { "Cannot write an IVM with annotations" }
+        // It's not a value, but we'll treat it like one to get
         output.appendAscii(IVM)
-        isPendingSeparator = true
+        output.appendAscii(options.topLevelSeparator())
+        isPendingSeparator = false
     }
 
     override fun isInStruct(): Boolean = currentContainer == Struct
@@ -199,6 +207,12 @@ class IonRawTextWriter_1_1 internal constructor(
         annotations.copyInto(annotationsTextBuffer, numAnnotations)
         numAnnotations += annotations.size
     }
+
+    override fun _private_clearAnnotations() {
+        numAnnotations = 0
+    }
+
+    override fun _private_hasFieldName(): Boolean = hasFieldName
 
     override fun writeFieldName(sid: Int) {
         confirm(currentContainer == Struct) { "Cannot write field name outside of a struct." }

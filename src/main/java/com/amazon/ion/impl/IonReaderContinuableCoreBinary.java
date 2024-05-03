@@ -1187,7 +1187,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         int fraction = bits & FLOAT_16_FRACTION_MASK;
         if (exponent == 0) {
             if (fraction == 0) {
-                return sign == 0 ? -0e0 : 0e0;
+                return sign == 0 ? 0e0 : -0e0;
             }
             // Denormalized
             throw new UnsupportedOperationException("Support for denormalized half-precision floats not yet added.");
