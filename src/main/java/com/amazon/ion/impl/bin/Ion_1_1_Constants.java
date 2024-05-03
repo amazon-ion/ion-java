@@ -23,6 +23,11 @@ public class Ion_1_1_Constants {
     public static final int MAX_MILLISECONDS = 999;
     public static final int MILLISECOND_SCALE = 3;
 
+    //////// Special Float Value Constants ////////
+
+    public static final int FLOAT_16_NEGATIVE_ZERO_BITS = 0x8000;
+    public static final int FLOAT_32_NEGATIVE_ZERO_BITS = 0x80000000;
+
     //////// Timestamp Field Constants ////////
 
     // S_TIMESTAMP_* is applicable to all short-form timestamps
