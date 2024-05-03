@@ -146,7 +146,6 @@ class IonRawTextWriter_1_1 internal constructor(
     override fun writeIVM() {
         confirm(currentContainer == Top) { "IVM can only be written at the top level of an Ion stream." }
         confirm(numAnnotations == 0) { "Cannot write an IVM with annotations" }
-        // It's not a value, but we'll treat it like one to get
         output.appendAscii(IVM)
         output.appendAscii(options.topLevelSeparator())
         isPendingSeparator = false

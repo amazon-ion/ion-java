@@ -377,11 +377,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun writeString(value: CharSequence) = writeScalar { writeStringValue(buffer, utf8StringEncoder.encode(value.toString())) }
 
-//    override fun writeString(value: ByteArray, offset: Int, length: Int) = writeScalar {
-//        buffer.writeBytes(value, offset, length)
-//        length
-//    }
-
     override fun writeBlob(value: ByteArray, start: Int, length: Int) = writeScalar { writeBlobValue(buffer, value, start, length) }
 
     override fun writeClob(value: ByteArray, start: Int, length: Int) = writeScalar { writeClobValue(buffer, value, start, length) }

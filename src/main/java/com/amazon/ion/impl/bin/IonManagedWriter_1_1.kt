@@ -25,8 +25,6 @@ import java.math.BigInteger
 internal class IonManagedWriter_1_1(
     val userData: IonRawWriter_1_1,
     val systemData: IonRawWriter_1_1,
-    /** Must be the output stream for the raw writer and the encoding directive writer */
-    val output: OutputStream,
     private val options: ManagedWriterOptions,
 ) : _Private_IonManagedWriter, AbstractIonWriter(WriteValueOptimization.NONE) {
 
@@ -54,7 +52,6 @@ internal class IonManagedWriter_1_1(
                     options = textOptions,
                     output = appender(),
                 ),
-                output,
                 managedWriterOptions.copy(internEncodingDirectiveSymbols = false)
             )
         }
@@ -73,28 +70,8 @@ internal class IonManagedWriter_1_1(
                     buffer = WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(binaryOptions.blockSize),) {},
                     lengthPrefixPreallocation = 1
                 ),
-                output,
                 managedWriterOptions.copy(internEncodingDirectiveSymbols = true),
             )
-        }
-    }
-
-    data class Options(
-        var internEncodingDirectives: Boolean = false,
-        var internFieldNames: Boolean,
-        var internAnnotations: Boolean,
-        var internSymbols: Boolean,
-        var useDelimitedLists: Boolean = false,
-        var useDelimitedSExps: Boolean = false,
-        var useDelimitedStructs: Boolean = false,
-    ) {
-        constructor(internEncodingDirectives: Boolean = true, intern: Boolean, delimited: Boolean = false) : this(internEncodingDirectives, intern, intern, intern, delimited, delimited, delimited)
-
-        companion object {
-            @JvmField
-            val ION_BINARY_DEFAULT = Options(internEncodingDirectives = true, intern = true)
-            @JvmField
-            val ION_TEXT_DEFAULT = Options(internEncodingDirectives = false, intern = false)
         }
     }
 
@@ -205,7 +182,8 @@ internal class IonManagedWriter_1_1(
     override fun setTypeAnnotationSymbols(annotations: Array<SymbolToken>?) {
         userData._private_clearAnnotations()
         annotations?.forEachIndexed { i, it ->
-            // TODO: This is handled inconsistently
+            // TODO: This is handled inconsistently. If you add annotations one at a time using addTypeAnnotation,
+            //       we don't know whether the $ion_symbol_table annotation is the first one or not.
             if (depth == 0 && i == 0) {
                 if (it.sid == SystemSymbols.ION_SYMBOL_TABLE_SID || it.text == SystemSymbols.ION_SYMBOL_TABLE)
                     throw IonException("User-defined symbol tables not permitted by the managed writer.")
@@ -319,7 +297,7 @@ internal class IonManagedWriter_1_1(
         TODO("Not implemented. Is this actually needed?")
     }
 
-    override fun getRawWriter(): _Private_IonRawWriter = IonRawWriter_1_1_Shim(userData, WriteValueOptimization.NONE)
+    override fun getRawWriter(): _Private_IonRawWriter = TODO("Not yet implemented")
 
     override fun requireLocalSymbolTable() {
         // Can this be a no-op?
@@ -332,7 +310,6 @@ internal class IonManagedWriter_1_1(
         flush()
         systemData.close()
         userData.close()
-        output.close()
     }
 
     override fun flush() {
