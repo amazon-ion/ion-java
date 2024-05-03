@@ -1522,7 +1522,8 @@ import java.util.List;
             return writeFlexInt(sid);
         } else {
             writeByte(FlexInt.ZERO);
-            writeByte((byte) 0x90);
+            // The INLINE_SYMBOL_ZERO_LENGTH opcode is used for $0 in FlexSyms
+            writeByte(OpCodes.INLINE_SYMBOL_ZERO_LENGTH);
             return 2;
         }
     }
@@ -1533,7 +1534,8 @@ import java.util.List;
     public int writeFlexSym(Utf8StringEncoder.Result text) {
     if (text.getEncodedLength() == 0) {
         writeByte(FlexInt.ZERO);
-        writeByte((byte) 0x80);
+        // The STRING_ZERO_LENGTH opcode is used for '' in FlexSyms
+        writeByte(OpCodes.STRING_ZERO_LENGTH);
         return 2;
     } else {
         int numLengthBytes = writeFlexInt(-text.getEncodedLength());

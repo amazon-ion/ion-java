@@ -217,6 +217,7 @@ public class IonEncoder_1_1Test {
     @ParameterizedTest
     @CsvSource({
             "                      0.0, 6A",
+            "                     -0.0, 6B 00 80",
             "                      1.0, 6C 00 00 80 3F",
             "                      1.5, 6C 00 00 C0 3F",
             "        3.141592653589793, 6D 18 2D 44 54 FB 21 09 40",
