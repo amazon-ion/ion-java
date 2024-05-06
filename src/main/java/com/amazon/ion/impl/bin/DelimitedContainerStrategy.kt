@@ -15,7 +15,8 @@ fun interface DelimitedContainerStrategy {
      * Indicates whether a container should be written using a length prefix.
      *
      * TODO: See if we can add other context, such as annotations that are going to be added to this container,
-     *       or the field name (if this container is in a struct).
+     *       the field name (if this container is in a struct), or the delimited/prefixed status of the parent
+     *       container.
      *
      * With more context, we could enable strategies like:
      *   - Write lists with annotation `X` as a delimited container.

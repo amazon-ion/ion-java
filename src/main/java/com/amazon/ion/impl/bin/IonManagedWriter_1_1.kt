@@ -25,7 +25,7 @@ import java.math.BigInteger
 internal class IonManagedWriter_1_1(
     val userData: IonRawWriter_1_1,
     val systemData: IonRawWriter_1_1,
-    private val options: ManagedWriterOptions,
+    private val options: ManagedWriterOptions_1_1,
 ) : _Private_IonManagedWriter, AbstractIonWriter(WriteValueOptimization.NONE) {
 
     init {
@@ -35,12 +35,12 @@ internal class IonManagedWriter_1_1(
 
     companion object {
         @JvmStatic
-        fun textWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions, textOptions: IonTextWriterBuilder): IonManagedWriter_1_1 {
+        fun textWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: IonTextWriterBuilder): IonManagedWriter_1_1 {
             textOptions as _Private_IonTextWriterBuilder
 
             val appender = {
-                val bufferedOutput = BufferedOutputStream(output, BlockAllocatorProviders.basicProvider().vendAllocator(4096))
-                _Private_IonTextAppender.forOutputStream(bufferedOutput, Charsets.UTF_8)
+                val bufferedOutput = BlockBufferingOutputStreamFastAppendable(output, BlockAllocatorProviders.basicProvider().vendAllocator(4096))
+                _Private_IonTextAppender.forFastAppendable(bufferedOutput, Charsets.UTF_8)
             }
 
             return IonManagedWriter_1_1(
@@ -57,7 +57,7 @@ internal class IonManagedWriter_1_1(
         }
 
         @JvmStatic
-        fun binaryWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions, binaryOptions: _Private_IonBinaryWriterBuilder_1_1): IonManagedWriter_1_1 {
+        fun binaryWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions_1_1, binaryOptions: _Private_IonBinaryWriterBuilder_1_1): IonManagedWriter_1_1 {
             // TODO: Add autoflush
             return IonManagedWriter_1_1(
                 userData = IonRawBinaryWriter_1_1(

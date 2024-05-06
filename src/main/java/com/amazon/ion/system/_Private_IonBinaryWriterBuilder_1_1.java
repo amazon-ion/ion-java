@@ -6,7 +6,7 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl.bin.DelimitedContainerStrategy;
 import com.amazon.ion.impl.bin.IonManagedWriter_1_1;
-import com.amazon.ion.impl.bin.ManagedWriterOptions;
+import com.amazon.ion.impl.bin.ManagedWriterOptions_1_1;
 import com.amazon.ion.impl.bin.SymbolInliningStrategy;
 
 import java.io.OutputStream;
@@ -130,7 +130,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
         if (out == null) {
             throw new IllegalArgumentException("Cannot construct a writer with a null OutputStream.");
         }
-        ManagedWriterOptions options = new ManagedWriterOptions(true, symbolInliningStrategy, delimitedContainerStrategy);
+        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(true, symbolInliningStrategy, delimitedContainerStrategy);
         return IonManagedWriter_1_1.binaryWriter(out, options, this);
     }
 
@@ -139,7 +139,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
         if (out == null) {
             throw new IllegalArgumentException("Cannot construct a writer with a null OutputStream.");
         }
-        ManagedWriterOptions options = new ManagedWriterOptions(false, symbolInliningStrategy, delimitedContainerStrategy);
+        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(false, symbolInliningStrategy, delimitedContainerStrategy);
         return IonManagedWriter_1_1.textWriter(out, options, textWriterBuilder);
     }
 

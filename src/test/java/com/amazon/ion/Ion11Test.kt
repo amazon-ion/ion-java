@@ -83,7 +83,7 @@ class Ion11Test {
 
         textTest(ion) {
             val builder = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
+                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
             (builder as _Private_IonBinaryWriterBuilder_1_1)._private_buildTextWriter(it, textOptions)
         }
     }
@@ -97,7 +97,7 @@ class Ion11Test {
 
         textTest(ion) {
             val builder = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
+                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
             (builder as _Private_IonBinaryWriterBuilder_1_1)._private_buildTextWriter(it, textOptions)
         }
     }
