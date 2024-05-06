@@ -31,6 +31,7 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.converter.ConvertWith;
@@ -5633,6 +5634,143 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertNull(reader.next());
         expectOversized(1);
         reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readIon10then11(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            constructFromBytes,
+            // Ion 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            0xD3, // Struct length 3
+            0x84, // Field SID 4 ("name")
+            0x21, 0x01, // Int 1
+
+            // Ion 1.1
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0xF7, 0x68, 0x65, 0x6C, 0x6C, 0x6F, // Inline field name "hello"
+            0x60, // Int 0
+            0x01, 0xF0 // End delimited struct
+        );
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.INT),
+                fieldName("name"),
+                intValue(1),
+                next(null)
+            ),
+            container(IonType.STRUCT,
+                next(IonType.INT),
+                fieldName("hello"),
+                intValue(0),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Disabled("Currently failing. It seems like there is a problem switching from 1.1 to 1.0")
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readIon11then10(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            constructFromBytes,
+            // Ion 1.1
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0xF7, 0x68, 0x65, 0x6C, 0x6C, 0x6F, // Inline field name "hello"
+            0x60, // Int 0
+            0x01, 0xF0, // End delimited struct
+
+            // Ion 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            0xD3, // Struct length 3
+            0x84, // Field SID 4 ("name")
+            0x21, 0x01 // Int 1
+        );
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.INT),
+                fieldName("hello"),
+                intValue(0),
+                next(null)
+            ),
+            container(IonType.STRUCT,
+                next(IonType.INT),
+                fieldName("name"),
+                intValue(1),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+
+    @Disabled("Currently failing. See readIon11then10()")
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readDataThatSwitchesVersionsMultipleTimes(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            constructFromBytes,
+            // Ion 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            0xD3, // Struct length 3
+            0x84, // Field SID 4 ("name")
+            0x21, 0x01, // Int 1
+
+            // Ion 1.1
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF3, // Delimited struct
+            0xF7, 0x68, 0x65, 0x6C, 0x6C, 0x6F, // Inline field name "hello"
+            0x60, // Int 0
+            0x01, 0xF0, // End delimited struct
+
+            // Ion 1.0
+            0xE0, 0x01, 0x00, 0xEA,
+            0xB3, // List length 3
+            0x01, // null.bool
+            0x21, 0x01, // Int 1
+
+            // Ion 1.1
+            0xE0, 0x01, 0x01, 0xEA,
+            0xF1, // Delimited list
+            0xE5, 0x0F, 0x09, // Two annotation SIDs: $7 ("symbols"), $4 ("name")
+            0xEB, 0x00, // null.bool
+            0xF0 // End delimited list
+        );
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.INT),
+                fieldName("name"),
+                intValue(1),
+                next(null)
+            ),
+            container(IonType.STRUCT,
+                next(IonType.INT),
+                fieldName("hello"),
+                intValue(0),
+                next(null)
+            ),
+            container(IonType.LIST,
+                next(IonType.BOOL),
+                nullValue(IonType.BOOL),
+                next(IonType.INT),
+                intValue(1),
+                next(null)
+            ),
+            container(IonType.LIST,
+                next(IonType.BOOL),
+                annotations("symbols", "name"),
+                nullValue(IonType.BOOL),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
     }
 
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)

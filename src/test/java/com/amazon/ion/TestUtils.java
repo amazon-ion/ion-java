@@ -147,6 +147,7 @@ public class TestUtils
                       ,"good/equivs/clobNewlines.ion"          // TODO amazon-ion/ion-java#274
                       ,"bad/minLongWithLenTooSmall.10n"        // Note: The long itself is fine. The data ends with 0x01, a 2-byte NOP pad header. It is not worth adding the logic to detect this as unexpected EOF.
                       ,"bad/nopPadTooShort.10n"                // Note: There are fewer bytes than the NOP pad header declares. It is not worth adding the logic to detect this as unexpected EOF.
+                      ,"bad/invalidVersionMarker_ion_1_1.ion"  // We're working on Ion 1.1 support.
             )
         );
 

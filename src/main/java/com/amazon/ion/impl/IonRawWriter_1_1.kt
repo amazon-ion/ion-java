@@ -49,6 +49,17 @@ interface IonRawWriter_1_1 {
     fun writeIVM()
 
     /**
+     * *Attempts* to reset the current annotations. This is not guaranteed to succeed, and will
+     * throw an [IllegalStateException] if annotations have eagerly been written to the output
+     * buffer.
+     *
+     * TODO: Decide if this is something that should be public. It seems advantageous for the 1.1
+     *       writer if we reserve the ability for it to eagerly write annotations, and if we want
+     *       to keep this behavior, then it's best _not_ to expose this method.
+     */
+    fun _private_clearAnnotations()
+
+    /**
      * Writes one annotation for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
@@ -83,6 +94,11 @@ interface IonRawWriter_1_1 {
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotations: Array<CharSequence>)
+
+    /**
+     * TODO: Consider making this a public method. It's probably safe to do so.
+     */
+    fun _private_hasFieldName(): Boolean
 
     /**
      * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
