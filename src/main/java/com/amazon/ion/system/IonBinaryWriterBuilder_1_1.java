@@ -5,6 +5,8 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.impl.bin.DelimitedContainerStrategy;
+import com.amazon.ion.impl.bin.SymbolInliningStrategy;
 
 import java.io.OutputStream;
 
@@ -146,6 +148,78 @@ public interface IonBinaryWriterBuilder_1_1 {
      * @see #setBlockSize(int)
      */
     IonBinaryWriterBuilder_1_1 withBlockSize(int size);
+
+    /**
+     * Gets the DelimitedContainerStrategy that will be used to determine which containers will use a delimited encoding
+     * vs a length-prefixed encoding.
+     *
+     * @return the DelimitedContainerStrategy currently configured
+     *
+     * @see #setDelimitedContainerStrategy(DelimitedContainerStrategy)
+     * @see #withDelimitedContainerStrategy(DelimitedContainerStrategy)
+     */
+    DelimitedContainerStrategy getDelimitedContainerStrategy();
+
+    /**
+     * Sets the DelimitedContainerStrategy that will be used to determine which containers will use a delimited encoding
+     * vs a length-prefixed encoding.
+     *
+     * @param delimitedContainerStrategy  If unset, the default strategy of {@link DelimitedContainerStrategy#ALWAYS_PREFIXED}
+     *                                    will be used.
+     *
+     * @see #getDelimitedContainerStrategy()
+     * @see #withDelimitedContainerStrategy(DelimitedContainerStrategy)
+     */
+    void setDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy);
+
+    /**
+     * Declares the DelimitedContainerStrategy that will be used to determine which containers will use a delimited
+     * encoding vs a length-prefixed encoding.
+     *
+     * @param delimitedContainerStrategy  If unset, the default strategy of {@link DelimitedContainerStrategy#ALWAYS_PREFIXED}
+     *                                    will be used.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @see #getDelimitedContainerStrategy()
+     * @see #setDelimitedContainerStrategy(DelimitedContainerStrategy)
+     */
+    IonBinaryWriterBuilder_1_1 withDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy);
+
+    /**
+     * Gets the SymbolInliningStrategy that will be used to determine which symbols will be written with inline text.
+     *
+     * @return the SymbolInliningStrategy currently configured
+     *
+     * @see #setSymbolInliningStrategy(SymbolInliningStrategy)
+     * @see #withSymbolInliningStrategy(SymbolInliningStrategy)
+     */
+    SymbolInliningStrategy getSymbolInliningStrategy();
+
+    /**
+     * Sets the SymbolInliningStrategy that will be used to determine which symbols will be written with inline text.
+     *
+     * @param symbolInliningStrategy if unset, the default of {@link SymbolInliningStrategy#NEVER_INLINE} will be used.
+     *
+     * @see #getSymbolInliningStrategy()
+     * @see #withSymbolInliningStrategy(SymbolInliningStrategy)
+     */
+    void setSymbolInliningStrategy(SymbolInliningStrategy symbolInliningStrategy);
+
+    /**
+     * Declares the SymbolInliningStrategy that will be used to determine which symbols will be written with inline text.
+     *
+     * @param symbolInliningStrategy if unset, the default of {@link SymbolInliningStrategy#NEVER_INLINE} will be used.
+     *
+     * @return this instance, if mutable;
+     * otherwise a mutable copy of this instance.
+     *
+     * @see #getSymbolInliningStrategy()
+     * @see #withSymbolInliningStrategy(SymbolInliningStrategy)
+     */
+    IonBinaryWriterBuilder_1_1 withSymbolInliningStrategy(SymbolInliningStrategy symbolInliningStrategy);
+
 
     // NOTE: Unlike in Ion 1.0, local symbol table append is always enabled in the Ion 1.1 writers.
     // NOTE: Unlike in Ion 1.0, writing float 32 is always enabled in the Ion 1.1 writers.
