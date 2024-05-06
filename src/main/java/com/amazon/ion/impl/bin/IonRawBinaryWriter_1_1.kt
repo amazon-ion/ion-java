@@ -7,17 +7,16 @@ import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.IonEncoder_1_1.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.List
-import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.Macro
 import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.bin.utf8.*
 import com.amazon.ion.util.*
-import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.time.Instant
 
 class IonRawBinaryWriter_1_1 internal constructor(
-    private val out: ByteArrayOutputStream,
+    private val out: OutputStream,
     private val buffer: WriteBuffer,
     private val lengthPrefixPreallocation: Int,
 ) : IonRawWriter_1_1 {
@@ -177,17 +176,20 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun writeAnnotations(annotation0: Int) {
+        require(annotation0 >= 0)
         ensureAnnotationSpace(numAnnotations + 1)
         annotationsIdBuffer[numAnnotations++] = annotation0
     }
 
     override fun writeAnnotations(annotation0: Int, annotation1: Int) {
+        require(annotation0 >= 0 && annotation1 >= 0)
         ensureAnnotationSpace(numAnnotations + 2)
         annotationsIdBuffer[numAnnotations++] = annotation0
         annotationsIdBuffer[numAnnotations++] = annotation1
     }
 
     override fun writeAnnotations(annotations: IntArray) {
+        require(annotations.all { it >= 0 })
         ensureAnnotationSpace(numAnnotations + annotations.size)
         annotations.copyInto(annotationsIdBuffer, numAnnotations)
         numAnnotations += annotations.size
@@ -212,6 +214,11 @@ class IonRawBinaryWriter_1_1 internal constructor(
         annotations.copyInto(annotationsTextBuffer, numAnnotations)
         numAnnotations += annotations.size
         annotationFlexSymFlag = FLEX_SYMS_REQUIRED
+    }
+
+    override fun _private_clearAnnotations() {
+        numAnnotations = 0
+        annotationFlexSymFlag = 0
     }
 
     /**
@@ -333,6 +340,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
         hasFieldName = true
     }
 
+    override fun _private_hasFieldName(): Boolean = hasFieldName
+
     private fun switchCurrentStructToFlexSym() {
         // To switch, we need to insert the sid-to-flexsym switch marker.
         buffer.writeByte(SID_TO_FLEX_SYM_SWITCH_MARKER)
@@ -362,7 +371,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         TODO("Not yet implemented")
     }
 
-    override fun writeSymbol(id: Int) = writeScalar { writeSymbolValue(buffer, id) }
+    override fun writeSymbol(id: Int) = writeScalar { writeSymbolValue(buffer, id.also { require(it >= 0) }) }
 
     override fun writeSymbol(text: CharSequence) = writeScalar { writeSymbolValue(buffer, utf8StringEncoder.encode(text.toString())) }
 
@@ -414,6 +423,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun stepInEExp(id: Int) {
+        // TODO: Add support for length-prefixed E-Expressions
         confirm(numAnnotations == 0) { "Cannot annotate an E-Expression" }
 
         if (currentContainer.type == Struct && !hasFieldName) {

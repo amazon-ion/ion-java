@@ -50,7 +50,8 @@ class IonRawTextWriterTest_1_1 {
         autoClose: Boolean = true,
         block: IonRawTextWriter_1_1.() -> Unit,
     ) {
-        assertEquals(text, writeAsString(builderConfigurator, autoClose, block))
+        // Trim whitespace since the IonRawTextWriter_1_1 eagerly writes top-level separators.
+        assertEquals(text, writeAsString(builderConfigurator, autoClose, block).trim())
     }
 
     @Test
