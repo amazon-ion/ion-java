@@ -3,6 +3,7 @@
 package com.amazon.ion.system;
 
 import com.amazon.ion.IonWriter;
+import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl._Private_IonConstants;
 import com.amazon.ion.impl.bin.DelimitedContainerStrategy;
 import com.amazon.ion.impl.bin.IonManagedWriter_1_1;
@@ -89,11 +90,15 @@ public class _Private_IonBinaryWriterBuilder_1_1
         return null;
     }
 
+    // DelimitedContainerStrategy is an interface. We have no way to make a defensive copy or ensure immutability.
+    // It is unclear why SpotBugs flagged these methods and not the similar methods for SymbolInliningStrategy.
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     @Override
     public DelimitedContainerStrategy getDelimitedContainerStrategy() {
         return delimitedContainerStrategy;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     @Override
     public void setDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy) {
         mutationCheck();
