@@ -4,7 +4,6 @@ insert_final_newline = true
 trim_trailing_whitespace=true
 ij_kotlin_imports_layout = *
 ij_kotlin_packages_to_use_import_on_demand=com.amazon.ion.**,java.util.*
-;ij_kotlin_packages_to_use_import_on_demand=com.amazon.ionelement.**
 
-;[test/**.kt]
-;ktlint_ignore_back_ticked_identifier=true
+[src/test/**.kt]
+ktlint_ignore_back_ticked_identifier=true
