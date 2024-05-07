@@ -1,13 +1,13 @@
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryMarkdownReportRenderer
 import com.github.jk1.license.render.TextReportRenderer
+import java.time.Instant
+import java.util.Properties
 import org.gradle.kotlin.dsl.support.unzipTo
 import org.gradle.kotlin.dsl.support.zipTo
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import proguard.gradle.ProGuardTask
-import java.time.Instant
-import java.util.Properties
 
 buildscript {
     repositories {
@@ -149,7 +149,7 @@ val sourceRepoRemoteName: String by lazy {
             |No git remote found for amazon-ion/ion-java. Try again after running:
             |
             |    git remote add -f <name> $githubRepositoryUrl
-            """.trimMargin()
+        """.trimMargin()
     )
 }
 
@@ -369,7 +369,7 @@ tasks {
     }
 
     ktlint {
-        version.set("0.40.0")
+        version.set("0.45.2")
         outputToConsole.set(true)
     }
 
