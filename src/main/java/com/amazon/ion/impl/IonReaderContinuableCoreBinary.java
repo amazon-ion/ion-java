@@ -484,6 +484,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     long readFlexUInt_1_1() {
         // Up-cast to int, ensuring the most significant bit in the byte is not treated as the sign.
+        // TODO: IndexOutOfBoundsException is thrown here for op code E3 because valueTid.length == -1
+        //       Maybe need to refactor this method to have a `position` parameter.
         int currentByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         if ((currentByte & 1) == 1) {
             // Single byte; shift out the continuation bit.
@@ -712,7 +714,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             value = new BigDecimal(readLargeFixedIntOrFixedUIntAsBigInteger(length), scale);
         } else if (length > 0) {
-            value = BigDecimal.valueOf(readFixedUInt_1_1(), scale);
+            value = BigDecimal.valueOf(readFixedUInt_1_1(peekIndex, valueMarker.endIndex), scale);
         } else {
             value = BigDecimal.valueOf(0, scale);
         }
@@ -946,13 +948,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Reads a FixedUInt (little-endian), starting at `peekIndex` and ending at `valueMarker.endIndex`.
+     * Reads a FixedUInt (little-endian), starting at `valueMarker.startIndex` and ending at `valueMarker.endIndex`.
      * @return the value.
      */
-    private long readFixedUInt_1_1() {
+    private long readFixedUInt_1_1(long startInclusive, long endExclusive) {
         long result = 0;
-        for (int i = (int) peekIndex; i < valueMarker.endIndex; i++) {
-            result |= ((long) (buffer[i] & SINGLE_BYTE_MASK) << ((i - peekIndex) * VALUE_BITS_PER_UINT_BYTE));
+        for (int i = (int) startInclusive; i < endExclusive; i++) {
+            result |= ((long) (buffer[i] & SINGLE_BYTE_MASK) << ((i - startInclusive) * VALUE_BITS_PER_UINT_BYTE));
         }
         return result;
     }
@@ -1306,7 +1308,19 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return -1;
         }
         prepareScalar();
-        return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
+        if (minorVersion == 0) {
+            return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
+        } else {
+            if (valueTid.length == 1){
+                return (int) readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex);
+            } else if (valueTid.length == 2){
+                return (int) readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex) + 256;
+            } else if (valueTid.length == -1) {
+                return (int) readFlexUInt_1_1() + 65792;
+            } else {
+                throw new IllegalStateException("Illegal length " + valueTid.length + " for " + valueMarker);
+            }
+        }
     }
 
     /**

@@ -210,6 +210,21 @@ public class IonCursorTestUtilities {
     }
 
     /**
+     * Provides Expectations that verify that advancing the cursor to the next value positions the cursor on a scalar
+     * with type symbol and the given expected value.
+     */
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> fillSymbolValue(int expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("symbol($%s)", expectedValue),
+            reader -> {
+                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(IonType.SYMBOL, reader.getType());
+                assertEquals(expectedValue, reader.symbolValueId());
+            }
+        ));
+    }
+
+    /**
      * Provides an Expectation that verifies that advancing the cursor positions it on a container value, without
      * filling that container.
      */
