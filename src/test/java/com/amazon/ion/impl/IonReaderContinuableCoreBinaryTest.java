@@ -1,32 +1,20 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.TestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
-import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
-import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
-import static com.amazon.ion.impl.IonCursorTestUtilities.assertSequence;
-import static com.amazon.ion.impl.IonCursorTestUtilities.container;
-import static com.amazon.ion.impl.IonCursorTestUtilities.container;
-import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
-import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
-import static com.amazon.ion.impl.IonCursorTestUtilities.fillContainer;
-import static com.amazon.ion.impl.IonCursorTestUtilities.fillIntValue;
-import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
-import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
-import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
-import static com.amazon.ion.impl.IonCursorTestUtilities.fillStringValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,13 +22,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class IonReaderContinuableCoreBinaryTest {
 
     private IonReaderContinuableCoreBinary initializeReader(boolean constructFromBytes, int... data) {
+        return initializeReader(constructFromBytes, bytes(data));
+    }
+
+    private IonReaderContinuableCoreBinary initializeReader(boolean constructFromBytes, byte[] data) {
         IonReaderContinuableCoreBinary reader;
         if (constructFromBytes) {
-            reader = new IonReaderContinuableCoreBinary(STANDARD_BUFFER_CONFIGURATION, bytes(data), 0, data.length);
+            reader = new IonReaderContinuableCoreBinary(STANDARD_BUFFER_CONFIGURATION, data, 0, data.length);
         } else {
             reader = new IonReaderContinuableCoreBinary(
                 STANDARD_BUFFER_CONFIGURATION,
-                new ByteArrayInputStream(bytes(data)),
+                new ByteArrayInputStream(data),
                 null,
                 0,
                 0
@@ -115,6 +107,40 @@ public class IonReaderContinuableCoreBinaryTest {
             reader,
             scalar(), fillStringValue("foo"),
             scalar(), fillStringValue("bar"),
+            endStream()
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @CsvSource({
+        "0,                   E1 00 60",
+        "1,                   E1 01 60",
+        "255,                 E1 FF 60",
+        "256,                 E2 00 00 60",
+        "257,                 E2 01 00 60",
+        "512,                 E2 00 01 60",
+        "513,                 E2 01 01 60",
+        "65535,               E2 FF FE 60",
+        "65791,               E2 FF FF 60",
+        "65792,               E3 01 60",
+        "65793,               E3 03 60",
+        "65919,               E3 FF 60",
+        "65920,               E3 02 02 60",
+        "2147483647         , E3 F0 DF DF FF 0F 60",
+    })
+    public void sidSymbols_1_1(int sid, String bytes) {
+        sidSymbols_1_1_helper(sid, bytes, true);
+        sidSymbols_1_1_helper(sid, bytes, false);
+    }
+    void sidSymbols_1_1_helper(int sid, String bytes, boolean constructFromBytes) {
+        IonReaderContinuableCoreBinary reader = initializeReader(
+            constructFromBytes,
+            TestUtils.hexStringToByteArray("E0 01 01 EA " + bytes)
+        );
+        assertSequence(
+            reader,
+            scalar(), fillSymbolValue(sid),
+            scalar(), fillIntValue(0),
             endStream()
         );
     }
