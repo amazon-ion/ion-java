@@ -23,9 +23,10 @@ import java.math.BigInteger
  *       See also [ManagedWriterOptions], [SymbolInliningStrategy], and [DelimitedContainerStrategy].
  */
 internal class IonManagedWriter_1_1(
-    val userData: IonRawWriter_1_1,
-    val systemData: IonRawWriter_1_1,
+    private val userData: IonRawWriter_1_1,
+    private val systemData: IonRawWriter_1_1,
     private val options: ManagedWriterOptions_1_1,
+    private val onClose: () -> Unit,
 ) : _Private_IonManagedWriter, AbstractIonWriter(WriteValueOptimization.NONE) {
 
     init {
@@ -52,7 +53,8 @@ internal class IonManagedWriter_1_1(
                     options = textOptions,
                     output = appender(),
                 ),
-                managedWriterOptions.copy(internEncodingDirectiveSymbols = false)
+                options = managedWriterOptions.copy(internEncodingDirectiveSymbols = false),
+                onClose = output::close,
             )
         }
 
@@ -70,7 +72,8 @@ internal class IonManagedWriter_1_1(
                     buffer = WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(binaryOptions.blockSize),) {},
                     lengthPrefixPreallocation = 1
                 ),
-                managedWriterOptions.copy(internEncodingDirectiveSymbols = true),
+                options = managedWriterOptions.copy(internEncodingDirectiveSymbols = true),
+                onClose = output::close,
             )
         }
     }
@@ -310,6 +313,7 @@ internal class IonManagedWriter_1_1(
         flush()
         systemData.close()
         userData.close()
+        onClose()
     }
 
     override fun flush() {
