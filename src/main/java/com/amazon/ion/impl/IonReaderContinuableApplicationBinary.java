@@ -1,9 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
@@ -469,8 +467,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             cachedReadOnlySymbolTable = snapshot;
             imports = snapshot.importedTables;
             firstLocalSymbolId = imports.getMaxId() + 1;
+            // 'symbols' may be smaller than 'idToText' if the span was created from a different reader.
+            int shortfall = snapshot.idToText.length - symbols.length;
+            if (shortfall > 0) {
+                growSymbolsArray(shortfall);
+            }
             localSymbolMaxOffset = snapshot.maxId - firstLocalSymbolId;
-            // Note: because `symbols` only grows, `snapshot.listView` will always fit within `symbols`.
             System.arraycopy(snapshot.idToText, 0, symbols, 0, snapshot.idToText.length);
         } else {
             // Note: this will only happen when `symbolTable` is the system symbol table.
@@ -569,6 +571,13 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         return new SymbolTokenImpl(text, sid);
     }
 
+    private void growSymbolsArray(int shortfall) {
+        int newSize = nextPowerOfTwo(symbols.length + shortfall);
+        String[] resized = new String[newSize];
+        System.arraycopy(symbols, 0, resized, 0, localSymbolMaxOffset + 1);
+        symbols = resized;
+    }
+
     /**
      * Uses the underlying raw reader to read the symbol tables from the stream. Capable of resuming if not enough
      * data is currently available to complete the symbol table.
@@ -596,13 +605,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         private boolean valueUnavailable() {
             Event event = fillValue();
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
-        }
-
-        private void growSymbolsArray(int shortfall) {
-            int newSize = nextPowerOfTwo(symbols.length + shortfall);
-            String[] resized = new String[newSize];
-            System.arraycopy(symbols, 0, resized, 0, localSymbolMaxOffset + 1);
-            symbols = resized;
         }
 
         private void finishReadingSymbolTableStruct() {
