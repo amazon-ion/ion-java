@@ -583,7 +583,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Attempts to fill the buffer so that it contains at least `numberOfBytes` after `index`.
      * @param index the index after which to fill.
-     * @param numberOfBytes the number of bytes after `index` that need to be present.
+     * @param numberOfBytes the number of bytes starting at `index` that need to be present.
      * @return false if not enough bytes were available in the stream to satisfy the request; otherwise, true.
      */
     private boolean fillAt(long index, long numberOfBytes) {
@@ -1119,7 +1119,7 @@ class IonCursorBinary implements IonCursor {
     private long slowReadLengthOfFlexUInt_1_1(long position) {
         int length = 1;
         while (true) {
-            if (!fillAt(position, 0)) {
+            if (!fillAt(position, 1)) {
                 return -1;
             }
             int numZeros = Integer.numberOfTrailingZeros(buffer[(int) position]);
