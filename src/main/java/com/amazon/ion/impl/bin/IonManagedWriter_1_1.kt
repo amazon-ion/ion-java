@@ -40,7 +40,7 @@ internal class IonManagedWriter_1_1(
             textOptions as _Private_IonTextWriterBuilder
 
             val appender = {
-                val bufferedOutput = BlockBufferingOutputStreamFastAppendable(output, BlockAllocatorProviders.basicProvider().vendAllocator(4096))
+                val bufferedOutput = BufferedOutputStreamFastAppendable(output, BlockAllocatorProviders.basicProvider().vendAllocator(4096))
                 _Private_IonTextAppender.forFastAppendable(bufferedOutput, Charsets.UTF_8)
             }
 
@@ -55,6 +55,29 @@ internal class IonManagedWriter_1_1(
                 ),
                 options = managedWriterOptions.copy(internEncodingDirectiveSymbols = false),
                 onClose = output::close,
+            )
+        }
+
+        @JvmStatic
+        fun textWriter(output: Appendable, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: IonTextWriterBuilder): IonManagedWriter_1_1 {
+            textOptions as _Private_IonTextWriterBuilder
+
+            val appender = {
+                val bufferedOutput = BufferedAppendableFastAppendable(output)
+                _Private_IonTextAppender.forFastAppendable(bufferedOutput, Charsets.UTF_8)
+            }
+
+            return IonManagedWriter_1_1(
+                userData = IonRawTextWriter_1_1(
+                    options = textOptions,
+                    output = appender(),
+                ),
+                systemData = IonRawTextWriter_1_1(
+                    options = textOptions,
+                    output = appender(),
+                ),
+                options = managedWriterOptions.copy(internEncodingDirectiveSymbols = false),
+                onClose = {},
             )
         }
 

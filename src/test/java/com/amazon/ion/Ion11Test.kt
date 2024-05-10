@@ -9,8 +9,7 @@ import com.amazon.ion.TestUtils.GOOD_IONTESTS_FILES
 import com.amazon.ion.TestUtils.TEXT_ONLY_FILTER
 import com.amazon.ion.TestUtils.hexStringToByteArray
 import com.amazon.ion.TestUtils.testdataFiles
-import com.amazon.ion.impl.bin.DelimitedContainerStrategy
-import com.amazon.ion.impl.bin.SymbolInliningStrategy
+import com.amazon.ion.impl.bin.*
 import com.amazon.ion.system.IonBinaryWriterBuilder
 import com.amazon.ion.system.IonSystemBuilder
 import com.amazon.ion.system.IonTextWriterBuilder
@@ -90,6 +89,27 @@ class Ion11Test {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("ionData")
+    fun writeIon11TextToAppendable(name: String, ion: ByteArray) {
+        val textOptions = IonTextWriterBuilder
+            .standard()
+            .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
+
+        textTestAppendable(ion) {
+            IonManagedWriter_1_1.textWriter(
+                output = it,
+                managedWriterOptions = ManagedWriterOptions_1_1(
+                    internEncodingDirectiveSymbols = false,
+                    // Test using NEVER_INLINE to make sure that the BufferedAppendableFastAppendable works correctly.
+                    symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
+                    delimitedContainerStrategy = DelimitedContainerStrategy.ALWAYS_DELIMITED
+                ),
+                textOptions = textOptions,
+            )
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("ionData")
     fun writeIon11TextWithSymtab(name: String, ion: ByteArray) {
         val textOptions = IonTextWriterBuilder
             .standard()
@@ -139,6 +159,18 @@ class Ion11Test {
         writer.close()
         println(baos.toByteArray().toString(Charsets.UTF_8))
         val loadedData = ION.loader.load(baos.toByteArray())
+        println(loadedData)
+        assertEquals(data, loadedData.toList())
+    }
+
+    fun textTestAppendable(ion: ByteArray, writerFn: (Appendable) -> IonWriter) {
+        val data: List<IonValue> = ION.loader.load(ion).map { it }
+        val appendable = StringBuilder()
+        val writer = writerFn(appendable)
+        data.forEach { it.writeTo(writer) }
+        writer.close()
+        println(appendable.toString())
+        val loadedData = ION.loader.load(appendable.toString())
         println(loadedData)
         assertEquals(data, loadedData.toList())
     }
