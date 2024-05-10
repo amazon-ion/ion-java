@@ -1,26 +1,11 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.system.IonTextWriterBuilder.ASCII;
 import static com.amazon.ion.system.IonTextWriterBuilder.UTF8;
 import static com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing.EVERYTHING;
 import static com.amazon.ion.system.IonTextWriterBuilder.LstMinimizing.LOCALS;
-import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.ADJACENT;
 import static com.amazon.ion.system.IonWriterBuilder.IvmMinimizing.DISTANT;
 import static org.junit.Assert.assertArrayEquals;
@@ -40,9 +25,15 @@ import java.nio.charset.Charset;
 import org.junit.Assert;
 import org.junit.Test;
 
-
-public class IonTextWriterBuilderTest
+/**
+ * Base tests for classes that inherit from {@link IonTextWriterBuilder}.
+ */
+public abstract class IonTextWriterBuilderTestBase
 {
+
+    abstract IonTextWriterBuilder standard();
+    abstract String ivm();
+
     public void testBuildNull(IonTextWriterBuilder b)
     {
         try {
@@ -61,7 +52,7 @@ public class IonTextWriterBuilderTest
     @Test
     public void testStandard()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         Assert.assertNotNull(b);
 
         testBuildNull(b);
@@ -70,7 +61,7 @@ public class IonTextWriterBuilderTest
         IonWriter writer = b.build(out);
         Assert.assertNotNull(writer);
 
-        assertNotSame(b, IonTextWriterBuilder.standard());
+        assertNotSame(b, standard());
     }
 
 
@@ -81,7 +72,7 @@ public class IonTextWriterBuilderTest
     {
         IonCatalog catalog = new SimpleCatalog();
 
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setCatalog(catalog);
         assertSame(catalog, b.getCatalog());
 
@@ -114,7 +105,7 @@ public class IonTextWriterBuilderTest
     {
         IonCatalog catalog = new SimpleCatalog();
 
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setCatalog(catalog);
 
         IonTextWriterBuilder b2 = b.immutable();
@@ -125,70 +116,9 @@ public class IonTextWriterBuilderTest
     //-------------------------------------------------------------------------
 
     @Test
-    public void testInitialIvmHandling()
-    {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
-        b.setInitialIvmHandling(SUPPRESS);
-        assertSame(SUPPRESS, b.getInitialIvmHandling());
-
-        // Test with...() on mutable builder
-
-        IonTextWriterBuilder b2 = b.withInitialIvmHandling(null);
-        assertSame(b, b2);
-        assertSame(null, b.getInitialIvmHandling());
-
-        // Test with...() on immutable builder
-
-        b2 = b.immutable();
-        assertSame(null, b2.getInitialIvmHandling());
-        IonTextWriterBuilder b3 = b2.withInitialIvmHandling(SUPPRESS);
-        assertNotSame(b2, b3);
-        assertSame(null, b2.getInitialIvmHandling());
-        assertSame(SUPPRESS, b3.getInitialIvmHandling());
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testInitialIvmHandlingImmutability()
-    {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
-        b.setInitialIvmHandling(SUPPRESS);
-
-        IonTextWriterBuilder b2 = b.immutable();
-        assertSame(SUPPRESS, b2.getInitialIvmHandling());
-        b2.setInitialIvmHandling(null);
-    }
-
-    @Test
-    public void testInitialIvmSuppression()
-        throws IOException
-    {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
-
-        StringBuilder out = new StringBuilder();
-        IonWriter writer = b.build(out);
-        writer.writeSymbol(ION_1_0);
-        writer.writeNull();
-        writer.writeSymbol(ION_1_0);
-        writer.close();
-        assertEquals(ION_1_0 + " null " + ION_1_0, out.toString());
-
-        b.withInitialIvmHandling(SUPPRESS);
-        out.setLength(0);
-        writer = b.build(out);
-        writer.writeSymbol(ION_1_0);
-        writer.writeSymbol(ION_1_0);
-        writer.writeNull();
-        writer.writeSymbol(ION_1_0);
-        writer.close();
-        assertEquals("null " + ION_1_0, out.toString());
-    }
-
-    //-------------------------------------------------------------------------
-
-    @Test
     public void testIvmMinimizing()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         assertEquals(null, b.getIvmMinimizing());
         b.setIvmMinimizing(ADJACENT);
         assertSame(ADJACENT, b.getIvmMinimizing());
@@ -212,7 +142,7 @@ public class IonTextWriterBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testIvmMinimizingImmutability()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setIvmMinimizing(ADJACENT);
 
         IonTextWriterBuilder b2 = b.immutable();
@@ -224,36 +154,36 @@ public class IonTextWriterBuilderTest
     public void testIvmMinimization()
         throws IOException
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
 
         StringBuilder out = new StringBuilder();
         IonWriter writer = b.build(out);
-        writer.writeSymbol(ION_1_0);
-        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ivm());
+        writer.writeSymbol(ivm());
         writer.close();
-        assertEquals(ION_1_0 + " " + ION_1_0, out.toString());
+        assertEquals(ivm() + " " + ivm(), out.toString());
 
         b.withIvmMinimizing(ADJACENT);
         out.setLength(0);
         writer = b.build(out);
-        writer.writeSymbol(ION_1_0);
-        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ivm());
+        writer.writeSymbol(ivm());
         writer.writeNull();
-        writer.writeSymbol(ION_1_0);
-        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ivm());
+        writer.writeSymbol(ivm());
         writer.close();
-        assertEquals(ION_1_0 + " null " + ION_1_0, out.toString());
+        assertEquals(ivm() + " null " + ivm(), out.toString());
 
         b.withIvmMinimizing(DISTANT);
         out.setLength(0);
         writer = b.build(out);
-        writer.writeSymbol(ION_1_0);
-        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ivm());
+        writer.writeSymbol(ivm());
         writer.writeNull();
-        writer.writeSymbol(ION_1_0);
-        writer.writeSymbol(ION_1_0);
+        writer.writeSymbol(ivm());
+        writer.writeSymbol(ivm());
         writer.close();
-        assertEquals(ION_1_0 + " null", out.toString());
+        assertEquals(ivm() + " null", out.toString());
     }
 
     //-------------------------------------------------------------------------
@@ -261,7 +191,7 @@ public class IonTextWriterBuilderTest
     @Test
     public void testLstMinimizing()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setLstMinimizing(EVERYTHING);
         assertSame(EVERYTHING, b.getLstMinimizing());
 
@@ -284,7 +214,7 @@ public class IonTextWriterBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testLstMinimizingImmutability()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setLstMinimizing(EVERYTHING);
 
         IonTextWriterBuilder b2 = b.immutable();
@@ -297,7 +227,7 @@ public class IonTextWriterBuilderTest
     @Test
     public void testCharset()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setCharset(ASCII);
         assertSame(ASCII, b.getCharset());
         b.setCharset(null);
@@ -326,7 +256,7 @@ public class IonTextWriterBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testCharsetImmutability()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setCharset(ASCII);
         assertSame(ASCII, b.getCharset());
 
@@ -340,7 +270,7 @@ public class IonTextWriterBuilderTest
     public void testCharsetValidation()
     {
         Charset iso = Charset.forName("ISO-8859-1");
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setCharset(iso);
     }
 
@@ -355,7 +285,7 @@ public class IonTextWriterBuilderTest
         SymbolTable[] symtabsF = new SymbolTable[] { f };
         SymbolTable[] symtabsG = new SymbolTable[] { g };
 
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setImports(f);
 
         StringBuilder out = new StringBuilder();
@@ -398,7 +328,7 @@ public class IonTextWriterBuilderTest
         SymbolTable f = Symtabs.CATALOG.getTable("fred", 1);
         SymbolTable[] symtabs = new SymbolTable[] { f };
 
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setImports(f);
 
         IonTextWriterBuilder b2 = b.immutable();
@@ -412,7 +342,7 @@ public class IonTextWriterBuilderTest
         SymbolTable f = Symtabs.CATALOG.getTable("fred", 1);
         SymbolTable[] symtabs = new SymbolTable[] { f };
 
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setImports(symtabs);
         b.setImports((SymbolTable[])null);
         assertSame(null, b.getImports());
@@ -427,7 +357,7 @@ public class IonTextWriterBuilderTest
     @Test(expected = UnsupportedOperationException.class)
     public void testLongStringThresholdImmutability()
     {
-        IonTextWriterBuilder b = IonTextWriterBuilder.standard();
+        IonTextWriterBuilder b = standard();
         b.setLongStringThreshold(99);
 
         IonTextWriterBuilder b2 = b.immutable();

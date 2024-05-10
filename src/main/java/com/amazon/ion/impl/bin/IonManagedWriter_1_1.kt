@@ -36,9 +36,8 @@ internal class IonManagedWriter_1_1(
 
     companion object {
         @JvmStatic
-        fun textWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: IonTextWriterBuilder): IonManagedWriter_1_1 {
-            textOptions as _Private_IonTextWriterBuilder
-
+        fun textWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: _Private_IonTextWriterBuilder_1_1): IonManagedWriter_1_1 {
+            // TODO support all options configurable via IonTextWriterBuilder_1_1
             val appender = {
                 val bufferedOutput = BufferedOutputStreamFastAppendable(output, BlockAllocatorProviders.basicProvider().vendAllocator(4096))
                 _Private_IonTextAppender.forFastAppendable(bufferedOutput, Charsets.UTF_8)
@@ -59,9 +58,7 @@ internal class IonManagedWriter_1_1(
         }
 
         @JvmStatic
-        fun textWriter(output: Appendable, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: IonTextWriterBuilder): IonManagedWriter_1_1 {
-            textOptions as _Private_IonTextWriterBuilder
-
+        fun textWriter(output: Appendable, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: _Private_IonTextWriterBuilder_1_1): IonManagedWriter_1_1 {
             val appender = {
                 val bufferedOutput = BufferedAppendableFastAppendable(output)
                 _Private_IonTextAppender.forFastAppendable(bufferedOutput, Charsets.UTF_8)
