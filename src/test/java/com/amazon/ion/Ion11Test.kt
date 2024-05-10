@@ -13,7 +13,6 @@ import com.amazon.ion.impl.bin.*
 import com.amazon.ion.system.IonBinaryWriterBuilder
 import com.amazon.ion.system.IonSystemBuilder
 import com.amazon.ion.system.IonTextWriterBuilder
-import com.amazon.ion.system._Private_IonBinaryWriterBuilder_1_1
 import java.io.ByteArrayOutputStream
 import java.io.FilenameFilter
 import java.io.OutputStream
@@ -76,49 +75,32 @@ class Ion11Test {
     @ParameterizedTest(name = "{0}")
     @MethodSource("ionData")
     fun writeIon11Text(name: String, ion: ByteArray) {
-        val textOptions = IonTextWriterBuilder
-            .standard()
-            .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
-
         textTest(ion) {
-            val builder = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-            (builder as _Private_IonBinaryWriterBuilder_1_1)._private_buildTextWriter(it, textOptions)
+            ION_1_1.textWriterBuilder()
+                .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
+                .build(it)
         }
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("ionData")
     fun writeIon11TextToAppendable(name: String, ion: ByteArray) {
-        val textOptions = IonTextWriterBuilder
-            .standard()
-            .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
-
         textTestAppendable(ion) {
-            IonManagedWriter_1_1.textWriter(
-                output = it,
-                managedWriterOptions = ManagedWriterOptions_1_1(
-                    internEncodingDirectiveSymbols = false,
-                    // Test using NEVER_INLINE to make sure that the BufferedAppendableFastAppendable works correctly.
-                    symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
-                    delimitedContainerStrategy = DelimitedContainerStrategy.ALWAYS_DELIMITED
-                ),
-                textOptions = textOptions,
-            )
+            ION_1_1.textWriterBuilder()
+                .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
+                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
+                .build(it)
         }
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("ionData")
     fun writeIon11TextWithSymtab(name: String, ion: ByteArray) {
-        val textOptions = IonTextWriterBuilder
-            .standard()
-            .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
-
         textTest(ion) {
-            val builder = ION_1_1.binaryWriterBuilder()
+            ION_1_1.textWriterBuilder()
+                .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
                 .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-            (builder as _Private_IonBinaryWriterBuilder_1_1)._private_buildTextWriter(it, textOptions)
+                .build(it)
         }
     }
 
