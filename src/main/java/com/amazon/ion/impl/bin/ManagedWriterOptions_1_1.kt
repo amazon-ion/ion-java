@@ -12,7 +12,7 @@ data class ManagedWriterOptions_1_1(
      * For binary, almost certainly want this to be true, and for text, it's
      * more readable if it's false.
      */
-    val internEncodingDirectiveSymbols: Boolean = false,
+    val internEncodingDirectiveSymbols: Boolean,
     val symbolInliningStrategy: SymbolInliningStrategy,
     val delimitedContainerStrategy: DelimitedContainerStrategy,
 ) : SymbolInliningStrategy by symbolInliningStrategy, DelimitedContainerStrategy by delimitedContainerStrategy {

@@ -21,8 +21,11 @@ import java.io.OutputStream
  *
  * TODO:
  *   - Add proper tests
+ *
+ * @see BufferedAppendableFastAppendable
+ * @see OutputStreamFastAppendable
  */
-internal class BlockBufferingOutputStreamFastAppendable(
+internal class BufferedOutputStreamFastAppendable(
     private val out: OutputStream,
     private val allocator: BlockAllocator,
     /**
@@ -54,9 +57,13 @@ internal class BlockBufferingOutputStreamFastAppendable(
     }
 
     override fun close() {
-        flush()
-        blocks.onEach { it.close() }.clear()
-        index = Int.MIN_VALUE
+        try {
+            flush()
+        } finally {
+            blocks.onEach { it.close() }.clear()
+            index = Int.MIN_VALUE
+            out.close()
+        }
     }
 
     override fun flush() {
@@ -66,6 +73,7 @@ internal class BlockBufferingOutputStreamFastAppendable(
         }
         index = 0
         current = blocks[index]
+        out.flush()
     }
 
     override fun write(b: Int) {
