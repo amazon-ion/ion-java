@@ -42,28 +42,18 @@ public class IonBinaryWriterBuilder_1_1_Test extends IonWriterBuilderTestBase<_P
         assertEquals(4096, immutable.getBlockSize());
     }
 
-    // TODO the following tests are currently skipped because the builder's build() method does not yet return
-    //  non-null IonWriter instances.
-
-    @Override
-    @Test
-    @Ignore
-    public void testStandard() {
-        // TODO remove this override.
-    }
-
     @Override
     @Test
     @Ignore
     public void testImports() {
-        // TODO remove this override.
+        // Note: skipped because IonManagedWriter_1_1 does not implement _Private_IonWriter.getSymbolTable.
     }
 
     @Override
     @Test
     @Ignore
     public void testCustomCatalog() {
-        // TODO remove this override.
+        // Note: skipped because IonManagedWriter_1_1 does not implement _Private_IonWriter.getCatalog.
     }
 
 }

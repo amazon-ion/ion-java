@@ -20,7 +20,7 @@ import java.time.Instant
  *  - To make it easier to concatenate streams, this eagerly emits a top-level separator after each top-level syntax item.
  */
 class IonRawTextWriter_1_1 internal constructor(
-    private val options: _Private_IonTextWriterBuilder,
+    private val options: _Private_IonTextWriterBuilder_1_1,
     private val output: _Private_IonTextAppender,
 ) : IonRawWriter_1_1 {
 

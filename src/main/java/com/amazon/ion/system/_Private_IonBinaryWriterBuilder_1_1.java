@@ -45,6 +45,8 @@ public class _Private_IonBinaryWriterBuilder_1_1
     private _Private_IonBinaryWriterBuilder_1_1(_Private_IonBinaryWriterBuilder_1_1 that) {
         super(that);
         blockSize = that.blockSize;
+        delimitedContainerStrategy = that.delimitedContainerStrategy;
+        symbolInliningStrategy = that.symbolInliningStrategy;
     }
 
     @Override
@@ -137,15 +139,6 @@ public class _Private_IonBinaryWriterBuilder_1_1
         }
         ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(true, symbolInliningStrategy, delimitedContainerStrategy);
         return IonManagedWriter_1_1.binaryWriter(out, options, this);
-    }
-
-    // TODO: Replace this hacky method with a proper Ion 1.1 text writer builder
-    public IonWriter _private_buildTextWriter(OutputStream out, IonTextWriterBuilder textWriterBuilder) {
-        if (out == null) {
-            throw new IllegalArgumentException("Cannot construct a writer with a null OutputStream.");
-        }
-        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(false, symbolInliningStrategy, delimitedContainerStrategy);
-        return IonManagedWriter_1_1.textWriter(out, options, textWriterBuilder);
     }
 
     // Note: the copy/immutable/mutable pattern is copied from _Private_IonBinaryWriterBuilder.

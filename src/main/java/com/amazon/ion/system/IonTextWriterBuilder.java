@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
 import static com.amazon.ion.system.IonWriterBuilder.InitialIvmHandling.SUPPRESS;
@@ -21,13 +8,15 @@ import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_IonTextWriterBuilder;
+import com.amazon.ion.impl._Private_IonTextWriterBuilder_1_0;
 import com.amazon.ion.impl._Private_Utils;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 /**
- * The builder for creating {@link IonWriter}s emitting the Ion text syntax.
+ * The builder for creating {@link IonWriter}s emitting the Ion text syntax
+ * in any encoding version. Subclasses may provide version-specific
+ * configuration.
  * <p>
  * <b>WARNING:</b> This class should not be extended by code outside of
  * this library.
@@ -161,7 +150,7 @@ public abstract class IonTextWriterBuilder
      */
     public static IonTextWriterBuilder standard()
     {
-        return _Private_IonTextWriterBuilder.standard();
+        return _Private_IonTextWriterBuilder_1_0.standard();
     }
 
     /**
@@ -261,13 +250,13 @@ public abstract class IonTextWriterBuilder
 
 
     @Override
-    public final IonTextWriterBuilder withCatalog(IonCatalog catalog)
+    public IonTextWriterBuilder withCatalog(IonCatalog catalog)
     {
         return super.withCatalog(catalog);
     }
 
     @Override
-    public final IonTextWriterBuilder withImports(SymbolTable... imports)
+    public IonTextWriterBuilder withImports(SymbolTable... imports)
     {
         return super.withImports(imports);
     }
@@ -331,7 +320,7 @@ public abstract class IonTextWriterBuilder
      * @see #getCharset()
      * @see #setCharset(Charset)
      */
-    public final IonTextWriterBuilder withCharset(Charset charset)
+    public IonTextWriterBuilder withCharset(Charset charset)
     {
         IonTextWriterBuilder b = mutable();
         b.setCharset(charset);
@@ -344,7 +333,7 @@ public abstract class IonTextWriterBuilder
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      */
-    public final IonTextWriterBuilder withCharsetAscii()
+    public IonTextWriterBuilder withCharsetAscii()
     {
         return withCharset(ASCII);
     }
@@ -370,7 +359,7 @@ public abstract class IonTextWriterBuilder
      *
 
      */
-    public final IonTextWriterBuilder withMinimalSystemData()
+    public  IonTextWriterBuilder withMinimalSystemData()
     {
         IonTextWriterBuilder b = mutable();
         b.setInitialIvmHandling(SUPPRESS);
@@ -536,7 +525,7 @@ public abstract class IonTextWriterBuilder
      *
 
      */
-    public final IonTextWriterBuilder
+    public IonTextWriterBuilder
     withIvmMinimizing(IvmMinimizing minimizing)
     {
         IonTextWriterBuilder b = mutable();
@@ -598,7 +587,7 @@ public abstract class IonTextWriterBuilder
      *
 
      */
-    public final IonTextWriterBuilder
+    public IonTextWriterBuilder
     withLstMinimizing(LstMinimizing minimizing)
     {
         IonTextWriterBuilder b = mutable();
@@ -655,7 +644,7 @@ public abstract class IonTextWriterBuilder
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      */
-    public final IonTextWriterBuilder withLongStringThreshold(int threshold)
+    public IonTextWriterBuilder withLongStringThreshold(int threshold)
     {
         IonTextWriterBuilder b = mutable();
         b.setLongStringThreshold(threshold);
@@ -708,7 +697,7 @@ public abstract class IonTextWriterBuilder
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      */
-    public final IonTextWriterBuilder withNewLineType(NewLineType newLineType)
+    public IonTextWriterBuilder withNewLineType(NewLineType newLineType)
     {
         IonTextWriterBuilder b = mutable();
         b.setNewLineType(newLineType);
@@ -758,7 +747,7 @@ public abstract class IonTextWriterBuilder
      * @see #getWriteTopLevelValuesOnNewLines()
      * @see #setWriteTopLevelValuesOnNewLines(boolean)
      */
-    public final IonTextWriterBuilder withWriteTopLevelValuesOnNewLines(boolean writeTopLevelValuesOnNewLines)
+    public IonTextWriterBuilder withWriteTopLevelValuesOnNewLines(boolean writeTopLevelValuesOnNewLines)
     {
         IonTextWriterBuilder b = mutable();
         b.setWriteTopLevelValuesOnNewLines(writeTopLevelValuesOnNewLines);
@@ -800,7 +789,7 @@ public abstract class IonTextWriterBuilder
      * @see #getMaximumTimestampPrecisionDigits()
      * @see #setMaximumTimestampPrecisionDigits(int)
      */
-    public final IonTextWriterBuilder withMaximumTimestampPrecisionDigits(int maximumTimestampPrecisionDigits) {
+    public IonTextWriterBuilder withMaximumTimestampPrecisionDigits(int maximumTimestampPrecisionDigits) {
         IonTextWriterBuilder b = mutable();
         b.setMaximumTimestampPrecisionDigits(maximumTimestampPrecisionDigits);
         return b;
