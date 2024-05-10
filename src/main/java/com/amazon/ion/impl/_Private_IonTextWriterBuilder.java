@@ -1,52 +1,24 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.impl._Private_Utils.initialSymtab;
 
-import com.amazon.ion.IonCatalog;
-import com.amazon.ion.IonSystem;
-import com.amazon.ion.IonWriter;
-import com.amazon.ion.SymbolTable;
-import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
-import com.amazon.ion.util._Private_FastAppendable;
-import java.io.OutputStream;
 
 /**
+ * Contains configuration common to text writers for all Ion versions.
  * NOT FOR APPLICATION USE!
  */
-public class _Private_IonTextWriterBuilder
+public abstract class _Private_IonTextWriterBuilder<T extends _Private_IonTextWriterBuilder<T>>
     extends IonTextWriterBuilder
 {
     private final static CharSequence SPACE_CHARACTER = " ";
 
-    public static _Private_IonTextWriterBuilder standard()
-    {
-        return new _Private_IonTextWriterBuilder.Mutable();
-    }
-
-    public static _Private_IonTextWriterBuilder STANDARD =
-        standard().immutable();
-
 
     //=========================================================================
 
-    private boolean _pretty_print;
+    public boolean _pretty_print;
 
     // These options control whether the IonTextWriter will write standard ion or ion that is down-converted json.
     public boolean _blob_as_string;
@@ -62,15 +34,15 @@ public class _Private_IonTextWriterBuilder
     public boolean _untyped_nulls;
     public boolean _allow_invalid_sids;
 
-    private _Private_CallbackBuilder _callback_builder;
+    public _Private_CallbackBuilder _callback_builder;
 
 
-    private _Private_IonTextWriterBuilder()
+    _Private_IonTextWriterBuilder()
     {
         super();
     }
 
-    private _Private_IonTextWriterBuilder(_Private_IonTextWriterBuilder that)
+    _Private_IonTextWriterBuilder(T that)
     {
         super(that);
         this._callback_builder    = that._callback_builder   ;
@@ -89,40 +61,35 @@ public class _Private_IonTextWriterBuilder
         this._allow_invalid_sids  = that._allow_invalid_sids ;
     }
 
+    @Override
+    public abstract T copy();
 
     @Override
-    public final _Private_IonTextWriterBuilder copy()
+    public T immutable()
     {
-        return new Mutable(this);
+        return (T) this;
     }
 
     @Override
-    public _Private_IonTextWriterBuilder immutable()
-    {
-        return this;
-    }
-
-    @Override
-    public _Private_IonTextWriterBuilder mutable()
+    public T mutable()
     {
         return copy();
     }
 
-
     //=========================================================================
 
     @Override
-    public final IonTextWriterBuilder withPrettyPrinting()
+    public IonTextWriterBuilder withPrettyPrinting()
     {
-        _Private_IonTextWriterBuilder b = mutable();
+        T b = mutable();
         b._pretty_print = true;
         return b;
     }
 
     @Override
-    public final IonTextWriterBuilder withJsonDowngrade()
+    public IonTextWriterBuilder withJsonDowngrade()
     {
-        _Private_IonTextWriterBuilder b = mutable();
+        T b = mutable();
 
         b.withMinimalSystemData();
 
@@ -150,8 +117,8 @@ public class _Private_IonTextWriterBuilder
      * @param allowInvalidSids whether to allow invalid SIDs.
      * @return the builder.
      */
-    public final _Private_IonTextWriterBuilder withInvalidSidsAllowed(boolean allowInvalidSids) {
-        _Private_IonTextWriterBuilder b = mutable();
+    public final T withInvalidSidsAllowed(boolean allowInvalidSids) {
+        T b = mutable();
         b._allow_invalid_sids = allowInvalidSids;
         return b;
     }
@@ -179,7 +146,7 @@ public class _Private_IonTextWriterBuilder
 
     //=========================================================================
 
-    private _Private_IonTextWriterBuilder fillDefaults()
+    T fillDefaults()
     {
         // Ensure that we don't modify the user's builder.
         IonTextWriterBuilder b = copy();
@@ -206,87 +173,7 @@ public class _Private_IonTextWriterBuilder
             ));
         }
 
-        return (_Private_IonTextWriterBuilder) b.immutable();
-    }
-
-
-    /** Assumes that {@link #fillDefaults()} has been called. */
-    private IonWriter build(_Private_FastAppendable appender)
-    {
-        IonCatalog catalog = getCatalog();
-        SymbolTable[] imports = getImports();
-
-        // TODO We shouldn't need a system here
-        IonSystem system =
-            IonSystemBuilder.standard().withCatalog(catalog).build();
-
-        SymbolTable defaultSystemSymtab = system.getSystemSymbolTable();
-
-        IonWriterSystemText systemWriter =
-            (getCallbackBuilder() == null
-                ? new IonWriterSystemText(defaultSystemSymtab,
-                                          this,
-                                          appender)
-                : new IonWriterSystemTextMarkup(defaultSystemSymtab,
-                                                this,
-                                                appender));
-
-        SymbolTable initialSymtab =
-            initialSymtab(((_Private_ValueFactory)system).getLstFactory(), defaultSystemSymtab, imports);
-
-        return new IonWriterUser(catalog, system, systemWriter, initialSymtab, !_allow_invalid_sids);
-    }
-
-
-    @Override
-    public final IonWriter build(Appendable out)
-    {
-        _Private_IonTextWriterBuilder b = fillDefaults();
-
-        _Private_FastAppendable fast = new AppendableFastAppendable(out);
-
-        return b.build(fast);
-    }
-
-
-    @Override
-    public final IonWriter build(OutputStream out)
-    {
-        _Private_IonTextWriterBuilder b = fillDefaults();
-
-        _Private_FastAppendable fast = new OutputStreamFastAppendable(out);
-
-        return b.build(fast);
-    }
-
-    //=========================================================================
-
-    private static final class Mutable
-        extends _Private_IonTextWriterBuilder
-    {
-        private Mutable() { }
-
-        private Mutable(_Private_IonTextWriterBuilder that)
-        {
-            super(that);
-        }
-
-        @Override
-        public _Private_IonTextWriterBuilder immutable()
-        {
-            return new _Private_IonTextWriterBuilder(this);
-        }
-
-        @Override
-        public _Private_IonTextWriterBuilder mutable()
-        {
-            return this;
-        }
-
-        @Override
-        protected void mutationCheck()
-        {
-        }
+        return (T) b.immutable();
     }
 
     //-------------------------------------------------------------------------
@@ -328,10 +215,9 @@ public class _Private_IonTextWriterBuilder
      * @see #getCallbackBuilder()
      * @see #setCallbackBuilder(_Private_CallbackBuilder)
      */
-    public final _Private_IonTextWriterBuilder
-                 withCallbackBuilder(_Private_CallbackBuilder builder)
+    public final T withCallbackBuilder(_Private_CallbackBuilder builder)
     {
-        _Private_IonTextWriterBuilder b = mutable();
+        T b = mutable();
         b.setCallbackBuilder(builder);
         return b;
     }

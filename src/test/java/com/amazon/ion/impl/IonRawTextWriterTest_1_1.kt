@@ -15,18 +15,22 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class IonRawTextWriterTest_1_1 {
 
+    private fun standardBuilder(): _Private_IonTextWriterBuilder_1_1 {
+        return _Private_IonTextWriterBuilder_1_1.standard()
+    }
+
     private inline fun ionWriter(
         out: StringBuilder = StringBuilder(),
-        builderConfigurator: IonTextWriterBuilder.() -> Unit = { /* noop */ },
+        builderConfigurator: IonTextWriterBuilder_1_1.() -> Unit = { /* noop */ },
         block: IonRawTextWriter_1_1.() -> Unit,
     ): IonRawTextWriter_1_1 {
-        val b = IonTextWriterBuilder.standard()
+        val b = standardBuilder()
             .apply(builderConfigurator)
             // Always use LF because the tests' expected data uses LF.
             .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
 
         val rawWriter = IonRawTextWriter_1_1(
-            options = b as _Private_IonTextWriterBuilder,
+            options = b as _Private_IonTextWriterBuilder_1_1,
             output = _Private_IonTextAppender.forAppendable(out)
         )
         block.invoke(rawWriter)
@@ -34,7 +38,7 @@ class IonRawTextWriterTest_1_1 {
     }
 
     private inline fun writeAsString(
-        builderConfigurator: IonTextWriterBuilder.() -> Unit = { /* noop */ },
+        builderConfigurator: IonTextWriterBuilder_1_1.() -> Unit = { /* noop */ },
         autoClose: Boolean = true,
         block: IonRawTextWriter_1_1.() -> Unit,
     ): String {
@@ -46,7 +50,7 @@ class IonRawTextWriterTest_1_1 {
 
     private inline fun assertWriterOutputEquals(
         text: String,
-        builderConfigurator: IonTextWriterBuilder.() -> Unit = { /* noop */ },
+        builderConfigurator: IonTextWriterBuilder_1_1.() -> Unit = { /* noop */ },
         autoClose: Boolean = true,
         block: IonRawTextWriter_1_1.() -> Unit,
     ) {
