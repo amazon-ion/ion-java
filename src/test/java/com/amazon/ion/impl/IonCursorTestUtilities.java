@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
@@ -205,6 +204,21 @@ public class IonCursorTestUtilities {
                 assertEquals(VALUE_READY, reader.fillValue());
                 assertEquals(IonType.SYMBOL, reader.getType());
                 assertEquals(expectedValue, reader.stringValue());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that verify that advancing the cursor to the next value positions the cursor on a scalar
+     * with type symbol and the given expected value.
+     */
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> fillSymbolValue(int expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("symbol($%s)", expectedValue),
+            reader -> {
+                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(IonType.SYMBOL, reader.getType());
+                assertEquals(expectedValue, reader.symbolValueId());
             }
         ));
     }
