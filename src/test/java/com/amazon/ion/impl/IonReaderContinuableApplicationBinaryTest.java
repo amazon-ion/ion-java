@@ -19,7 +19,6 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fillIntValue;
 import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
-import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fillSymbolValue;
 
 public class IonReaderContinuableApplicationBinaryTest {
