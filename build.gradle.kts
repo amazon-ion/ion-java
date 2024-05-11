@@ -1,3 +1,4 @@
+import com.diffplug.gradle.spotless.SpotlessTask
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryMarkdownReportRenderer
 import com.github.jk1.license.render.TextReportRenderer
@@ -89,8 +90,8 @@ description = "A Java implementation of the Amazon Ion data notation."
 val isCI: Boolean = System.getenv("CI") == "true"
 val githubRepositoryUrl = "https://github.com/amazon-ion/ion-java/"
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
-// The name we're checking for corresponds to the name that is set in the `publish-release-artifacts.yml` file.
-val isReleaseWorkflow: Boolean = System.getenv("GITHUB_WORKFLOW") == "Publish Release Artifacts"
+// Workflows triggered by a new release always have a tag ref.
+val isReleaseWorkflow: Boolean = (System.getenv("GITHUB_REF") ?: "").startsWith("refs/tags/")
 val generatedResourcesDir = "$buildDir/generated/main/resources"
 
 sourceSets {
@@ -117,41 +118,52 @@ licenseReport {
     )
 }
 
+// Spotless eagerly checks for the `rachetFrom` git ref even if there are no spotless tasks in the task
+// graph, so we're going to use a git tag to create our own lazy evaluation and setting of `rachetFrom`.
+// See https://github.com/diffplug/spotless/issues/1902
+val SPOTLESS_TAG = "spotless-check-${Instant.now().epochSecond}-DELETE-ME"
+
 /**
- * This is the `git remote` name that corresponds to amazon-ion/ion-java.
- * It is used for applying the "spotless" checks only to things that are changed
- * compared to the master branch of the source repo.
+ * This is the commit where the current branch most recently forked from master. We use this as
+ * our "rachetFrom" base so that changes in master don't cause unexpected formatting failures in
+ * feature branches.
  */
-val sourceRepoRemoteName: String by lazy {
+val sourceRepoRachetFromCommit: String by lazy {
     val git = System.getenv("GIT_CLI") ?: "git"
 
     fun String.isSourceRepo(): Boolean {
-        val url = "$git remote get-url ${this@isSourceRepo}".runCommand()
+        val url = "$git remote get-url ${this@isSourceRepo}".trim().runCommand()
         return "amazon-ion/ion-java" in url || "amzn/ion-java" in url
     }
 
-    var name = "$git remote".runCommand().lines().firstOrNull { it.isSourceRepo() }
+    var remoteName = "$git remote".runCommand().trim().lines().firstOrNull { it.isSourceRepo() }
 
     if (isCI) {
         // When running on a CI environment e.g. GitHub Actions, we might need to automatically add the remote
-        if (name == null) {
-            name = "ci_source_repository"
-            "$git remote add $name $githubRepositoryUrl".runCommand()
+        if (remoteName == null) {
+            remoteName = "ci_source_repository"
+            "$git remote add $remoteName $githubRepositoryUrl".runCommand(log = logger::quiet)
+            logger.quiet("Added remote repository ")
         }
         // ...and make sure that we have indeed fetched that remote
-        "$git fetch $name".runCommand()
+        "$git fetch --unshallow --no-tags --no-recurse-submodules $remoteName master".runCommand()
     }
 
-    name ?: throw Exception(
+    remoteName ?: throw Exception(
         """
             |No git remote found for amazon-ion/ion-java. Try again after running:
             |
             |    git remote add -f <name> $githubRepositoryUrl
         """.trimMargin()
     )
+
+    // TODO: We might need to use the PR base ref when this is running as part of a CI check for a PR.
+    logger.quiet("Finding spotless ratchetFrom base...")
+    "$git merge-base $remoteName/master HEAD".runCommand(log = logger::quiet).trim()
 }
 
-fun String.runCommand(workingDir: File = rootProject.projectDir): String {
+fun String.runCommand(workingDir: File = rootProject.projectDir, log: (String) -> Unit = logger::info): String {
+    log("$ $this")
     val parts = this.split("\\s".toRegex())
     val proc = ProcessBuilder(*parts.toTypedArray())
         .directory(workingDir)
@@ -159,7 +171,14 @@ fun String.runCommand(workingDir: File = rootProject.projectDir): String {
         .redirectError(ProcessBuilder.Redirect.PIPE)
         .start()
     proc.waitFor(30, TimeUnit.SECONDS)
-    return proc.inputStream.bufferedReader().readText()
+    val stdOut = proc.inputStream.bufferedReader().readText()
+    val stdErr = proc.errorStream.bufferedReader().readText()
+    if (stdOut.isNotBlank()) log(stdOut)
+    if (stdErr.isNotBlank()) logger.warn(stdErr)
+    if (proc.exitValue() != 0) {
+        throw Exception("Failed to run command: $this")
+    }
+    return stdOut
 }
 
 spotless {
@@ -170,7 +189,10 @@ spotless {
     // release branch.
     if (isReleaseWorkflow) return@spotless
 
-    ratchetFrom("$sourceRepoRemoteName/master")
+    "git tag -f $SPOTLESS_TAG".runCommand()
+    ratchetFrom(SPOTLESS_TAG)
+    // Make sure this always gets cleaned up. We can't do it inline here, so we'll do it once the task graph is created.
+    gradle.taskGraph.addTaskExecutionGraphListener { "git tag -d $SPOTLESS_TAG".runCommand() }
 
     val shortFormLicenseHeader = """
         // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -178,6 +200,8 @@ spotless {
     """.trimIndent()
 
     java {
+        // Note that the order of these is important. Each of these is an individual formatter
+        // that is applied sequentially.
         licenseHeader(shortFormLicenseHeader)
         removeUnusedImports()
     }
@@ -521,6 +545,11 @@ tasks {
     cyclonedxBom {
         dependsOn(jar)
         includeConfigs.set(listOf("runtimeClasspath"))
+    }
+
+    withType<SpotlessTask> {
+        doFirst { "git tag -f $SPOTLESS_TAG $sourceRepoRachetFromCommit".runCommand() }
+        doLast { "git tag -d $SPOTLESS_TAG".runCommand() }
     }
 }
 
