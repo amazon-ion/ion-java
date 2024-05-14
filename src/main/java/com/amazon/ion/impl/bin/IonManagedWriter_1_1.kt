@@ -29,9 +29,15 @@ internal class IonManagedWriter_1_1(
     private val onClose: () -> Unit,
 ) : _Private_IonManagedWriter, AbstractIonWriter(WriteValueOptimization.NONE) {
 
+    private val systemSymbolTableMap = hashMapOf<String, Int>()
+
     init {
         // Since this is Ion 1.1, we must always start with the IVM.
         systemData.writeIVM()
+        var id = 1
+        Symbols.systemSymbolTable().iterateDeclaredSymbolNames().forEach {
+            systemSymbolTableMap[it] = id++
+        }
     }
 
     companion object {
@@ -104,16 +110,16 @@ internal class IonManagedWriter_1_1(
     /** TODO: Document what this is for... */
     private var canAppendToLocalSymbolTable: Boolean = false
     /** The symbol table for the prior encoding context */
-    private var symbolTable: SymbolTable = Symbols.systemSymbolTable()
+    private var symbolTable: HashMap<String, Int> = HashMap(systemSymbolTableMap)
     /** Max symbol ID of the prior encoding context. */
-    private var priorMaxId: Int = symbolTable.maxId
+    private var priorMaxId: Int = symbolTable.size
     /** Symbols to be interned since the prior encoding context. */
     private var newSymbols = arrayListOf<String>()
 
     private fun intern(text: String): Int {
         // Check the current symbol table
-        var sid = symbolTable.findSymbol(text)
-        if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) return sid
+        var sid = symbolTable[text]
+        if (sid != null) return sid
         // Check the to-be-appended symbols
         sid = newSymbols.indexOf(text)
         if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) return sid + priorMaxId + 1
@@ -146,9 +152,8 @@ internal class IonManagedWriter_1_1(
             stepOut()
         }
 
-        symbolTable = LocalSymbolTable.DEFAULT_LST_FACTORY.newLocalSymtab(symbolTable).apply {
-            newSymbols.forEach { this@apply.intern(it) }
-        }
+        var id = symbolTable.size + 1
+        newSymbols.forEach { symbolTable[it] = id++ }
 
         newSymbols.clear()
         canAppendToLocalSymbolTable = true
@@ -156,8 +161,8 @@ internal class IonManagedWriter_1_1(
 
     private fun resetLocalSymbolTable() {
         if (depth != 0) throw IllegalStateException("Cannot reset the encoding context while stepped in any value.")
-        symbolTable = Symbols.systemSymbolTable()
-        priorMaxId = symbolTable.maxId
+        symbolTable = HashMap(systemSymbolTableMap)
+        priorMaxId = symbolTable.size
         canAppendToLocalSymbolTable = false
     }
 
