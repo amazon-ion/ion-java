@@ -149,7 +149,9 @@ internal class IonManagedWriter_1_1(
             stepOut()
         }
 
-        symbolTable = LocalSymbolTable.DEFAULT_LST_FACTORY.newLocalSymtab(symbolTable).apply {
+        val currentSymbols = symbolTable.iterateDeclaredSymbolNames()
+        symbolTable = LocalSymbolTable.DEFAULT_LST_FACTORY.newLocalSymtab(Symbols.systemSymbolTable()).apply {
+            currentSymbols.forEach { this@apply.intern(it) }
             newSymbols.forEach { this@apply.intern(it) }
         }
 
