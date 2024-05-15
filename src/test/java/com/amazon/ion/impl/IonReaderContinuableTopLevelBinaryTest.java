@@ -346,6 +346,23 @@ public class IonReaderContinuableTopLevelBinaryTest {
         };
     }
 
+    /**
+     * Steps in, asserts something about the content of a container, and then steps out.
+     *
+     * This enables us to use `next()` to move to a container value and check the annotations
+     * and/or field name of the value before checking the content of the container value.
+     */
+    @SafeVarargs
+    static ExpectationProvider<IonReaderContinuableTopLevelBinary> inContainer(ExpectationProvider<IonReaderContinuableTopLevelBinary>... expectations) {
+        return consumer -> {
+            STEP_IN.accept(consumer);
+            for (Consumer<Consumer<Expectation<IonReaderContinuableTopLevelBinary>>> expectation : expectations) {
+                expectation.accept(consumer);
+            }
+            STEP_OUT.accept(consumer);
+        };
+    }
+
     static ExpectationProvider<IonReaderContinuableTopLevelBinary> nullValue(IonType expectedType) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("null(%s)", expectedType),
@@ -5064,6 +5081,27 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void readStruct_1_1(String inputBytes) throws Exception {
         assertSimpleStructCorrectlyParsed(true, inputBytes);
         assertSimpleStructCorrectlyParsed(false, inputBytes);
+    }
+
+    @Test
+    public void ensureFieldNameStateDoesNotLeakIntoNestedStructs() throws Exception {
+        // This test case covers a very specific edge case where the field name was leaking from
+        // an outer struct to the first field of a nested struct, when the outer field name was
+        // an inline field name symbol, and the first inner field name was a given by SID.
+        // For example, { a: { $4: b } } was incorrectly being read as { a: { a: b } }
+        String data = "FD 0F 01 FF 61 D3 09 A1 62";
+        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(data)), true);
+        assertSequence(
+            next(IonType.STRUCT), inContainer(
+                next(IonType.STRUCT), fieldName("a"), inContainer(
+                    next(IonType.SYMBOL), fieldName("name"), symbolValue("b"),
+                    next(null)
+                ),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
     }
 
     @ParameterizedTest
