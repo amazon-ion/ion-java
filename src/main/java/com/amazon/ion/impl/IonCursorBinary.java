@@ -1853,7 +1853,6 @@ class IonCursorBinary implements IonCursor {
         annotationSequenceMarker.typeId = null;
         annotationSequenceMarker.startIndex = -1;
         annotationSequenceMarker.endIndex = -1;
-        annotationTokenMarkers.clear();
         if (refillableState != null) {
             refillableState.isSpecialFlexSymPartiallyRead = false;
             refillableState.pendingShift = 0;
