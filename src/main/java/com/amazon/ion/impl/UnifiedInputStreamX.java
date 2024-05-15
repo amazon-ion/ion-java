@@ -383,19 +383,6 @@ abstract class UnifiedInputStreamX
         }
         return length - remaining;
     }
-    private int read_utf8(int c) throws IOException
-    {
-        int len = IonUTF8.getUTF8LengthFromFirstByte(c);
-        for (int ii=1; ii<len; ii++) {
-            int c2 = read();
-            if (c2 == -1) {
-                throw new IonReaderTextTokenException("invalid UTF8 sequence encountered in stream");
-            }
-            c |= (c2 << (ii*8));
-        }
-        c = IonUTF8.getScalarFrom4BytesReversed(c);
-        return c;
-    }
 
     /**
      * the refill method is the key override that is filled in by

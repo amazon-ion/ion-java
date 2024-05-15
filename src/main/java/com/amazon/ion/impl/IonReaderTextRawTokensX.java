@@ -1582,11 +1582,11 @@ final class IonReaderTextRawTokensX
             int c2 = read_char();
             if (Radix.HEX.isPrefix(c2)) {
                 sb.append((char)c);
-                c = loadRadixValue(sb, has_sign, c2, Radix.HEX);
+                c = loadRadixValue(sb, c2, Radix.HEX);
                 return load_finish_number(sb, c, IonTokenConstsX.TOKEN_HEX);
             } else if (Radix.BINARY.isPrefix(c2)) {
                 sb.append((char) c);
-                c = loadRadixValue(sb, has_sign, c2, Radix.BINARY);
+                c = loadRadixValue(sb, c2, Radix.BINARY);
                 return load_finish_number(sb, c, IonTokenConstsX.TOKEN_BINARY);
             }
             // not a next value, back up and try again
@@ -1843,7 +1843,7 @@ final class IonReaderTextRawTokensX
         return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
     }
 
-    private final int loadRadixValue(StringBuilder sb, boolean has_sign, int c2, Radix radix)
+    private final int loadRadixValue(StringBuilder sb, int c2, Radix radix)
         throws IOException
     {
         radix.assertPrefix(c2);
