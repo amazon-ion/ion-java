@@ -30,11 +30,12 @@ class Ion11Test {
         val ION = IonSystemBuilder.standard().build()
 
         fun ionText(text: String): Array<Any> = arrayOf(text, text.encodeToByteArray())
-        fun ionBinary(text: String): Array<Any> = arrayOf("Binary: ${text.slice(0..10)}", hexStringToByteArray(text))
+        fun ionBinary(name: String, bytes: String): Array<Any> = arrayOf(name, hexStringToByteArray(bytes))
 
         // Arguments here are an array containing a String for the test case name, and a ByteArray of the test data.
         @JvmStatic
         fun ionData() = listOf(
+            ionBinary("{a:{$4:b}}", "E0 01 01 EA FD 0F 01 FF 61 D3 09 A1 62"),
             ionText("""a::a::c::a::0 a::a::0"""),
             ionText("""a::a::c::a::0 a::0"""),
             ionText("""foo::bar::baz::false foo::0"""),
