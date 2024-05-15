@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
@@ -19,8 +18,10 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 
 import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
@@ -46,8 +47,15 @@ final class IonReaderNonContinuableSystem implements IonReader {
      */
     IonReaderNonContinuableSystem(IonReaderContinuableCore reader) {
         this.reader = reader;
-        reader.registerIvmNotificationConsumer((x, y) -> {
-            pendingIvmSids.add(SystemSymbols.ION_1_0_SID); // TODO generalize for Ion 1.1
+        reader.registerIvmNotificationConsumer((major, minor) -> {
+            if (major != 1 || minor > 1) {
+                throw new IllegalStateException("The parser should have already thrown upon encountering this illegal IVM.");
+            }
+            if (minor == 0) {
+                pendingIvmSids.add(SystemSymbols.ION_1_0_SID);
+            } else {
+                // TODO how should this be handled for Ion 1.1?
+            }
         });
     }
 
@@ -224,10 +232,14 @@ final class IonReaderNonContinuableSystem implements IonReader {
         prepareScalar();
         String value;
         if (type == IonType.SYMBOL) {
-            int sid = reader.symbolValueId();
-            value = getSymbolTable().findKnownSymbol(sid);
-            if (value == null) {
-                throw new UnknownSymbolException(sid);
+            if (reader.hasSymbolText()) {
+                value = reader.getSymbolText();
+            } else {
+                int sid = reader.symbolValueId();
+                value = getSymbolTable().findKnownSymbol(sid);
+                if (value == null) {
+                    throw new UnknownSymbolException(sid);
+                }
             }
         } else {
             value = reader.stringValue();
@@ -269,18 +281,22 @@ final class IonReaderNonContinuableSystem implements IonReader {
         if (pendingIvmSid != -1 || !reader.hasAnnotations()) {
             return _Private_Utils.EMPTY_STRING_ARRAY;
         }
-        int[] annotationIds = reader.getAnnotationIds();
-        String[] annotations = new String[annotationIds.length];
+        // Note: it is not expected that the system reader is used in performance-sensitive applications; hence,
+        // no effort is made optimize the following.
+        List<String> annotations = new ArrayList<>();
         SymbolTable symbolTable = getSymbolTable();
-        for (int i = 0; i < annotationIds.length; i++) {
-            int sid = annotationIds[i];
-            String annotation = symbolTable.findKnownSymbol(sid);
-            if (annotation == null) {
-                throw new UnknownSymbolException(sid);
+        reader.consumeAnnotationTokens((token) -> {
+            String text = token.getText();
+            if (text == null) {
+                int sid = token.getSid();
+                text = symbolTable.findKnownSymbol(sid);
+                if (text == null) {
+                    throw new UnknownSymbolException(sid);
+                }
             }
-            annotations[i] = annotation;
-        }
-        return annotations;
+            annotations.add(text);
+        });
+        return annotations.toArray(_Private_Utils.EMPTY_STRING_ARRAY);
     }
 
     @Override
@@ -288,14 +304,20 @@ final class IonReaderNonContinuableSystem implements IonReader {
         if (pendingIvmSid != -1 || !reader.hasAnnotations()) {
             return SymbolToken.EMPTY_ARRAY;
         }
-        int[] annotationIds = reader.getAnnotationIds();
-        SymbolToken[] annotationSymbolTokens = new SymbolToken[annotationIds.length];
+        // Note: it is not expected that the system reader is used in performance-sensitive applications; hence,
+        // no effort is made optimize the following.
+        List<SymbolToken> annotations = new ArrayList<>();
         SymbolTable symbolTable = getSymbolTable();
-        for (int i = 0; i < annotationIds.length; i++) {
-            int sid = annotationIds[i];
-            annotationSymbolTokens[i] = new SymbolTokenImpl(symbolTable.findKnownSymbol(sid), sid);
-        }
-        return annotationSymbolTokens;
+        reader.consumeAnnotationTokens((token) -> {
+            String text = token.getText();
+            if (text != null) {
+                annotations.add(token);
+            } else {
+                int sid = token.getSid();
+                annotations.add(new SymbolTokenImpl(symbolTable.findKnownSymbol(sid), sid));
+            }
+        });
+        return annotations.toArray(SymbolToken.EMPTY_ARRAY);
     }
 
     @Override
@@ -313,6 +335,9 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public String getFieldName() {
+        if (reader.hasFieldText()) {
+            return reader.getFieldText();
+        }
         int sid = reader.getFieldId();
         if (sid < 0) {
             return null;
@@ -326,23 +351,37 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public SymbolToken getFieldNameSymbol() {
-        int sid = reader.getFieldId();
-        if (sid < 0) {
-            return null;
+        String fieldText;
+        int sid = -1;
+        if (reader.hasFieldText()) {
+            fieldText = reader.getFieldText();
+        } else {
+            sid = reader.getFieldId();
+            if (sid < 0) {
+                return null;
+            }
+            fieldText = getSymbolTable().findKnownSymbol(sid);
         }
-        return new SymbolTokenImpl(getSymbolTable().findKnownSymbol(sid), sid);
+        return new SymbolTokenImpl(fieldText, sid);
     }
 
     @Override
     public SymbolToken symbolValue() {
-        int sid;
+        String symbolText;
+        int sid = -1;
         if (pendingIvmSid != -1) {
             sid = pendingIvmSid;
+            symbolText = getSymbolTable().findKnownSymbol(sid);
         } else {
             prepareScalar();
-            sid = reader.symbolValueId();
+            if (reader.hasSymbolText()) {
+                symbolText = reader.getSymbolText();
+            } else {
+                sid = reader.symbolValueId();
+                symbolText = getSymbolTable().findKnownSymbol(sid);
+            }
         }
-        return new SymbolTokenImpl(getSymbolTable().findKnownSymbol(sid), sid);
+        return new SymbolTokenImpl(symbolText, sid);
     }
 
     @Override

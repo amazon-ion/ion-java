@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
@@ -9,12 +8,14 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.function.Consumer;
 
 /**
  * IonCursor with the core IonReader interface methods. Useful for adapting an IonCursor implementation into a
@@ -71,24 +72,43 @@ interface IonReaderContinuableCore extends IonCursor {
      * @return the symbol ID of the field name, if the current value is a
      * field within a struct.
      * If the current value is not a field, or if the symbol ID cannot be
-     * determined, this method returns a value <em>less than one</em>.
+     * determined, this method returns a value <em>less than zero</em>.
+     * If this method returns less than zero and the reader is positioned
+     * on a value with a field name, then the text for the field name can be
+     * retrieved using {@link #getFieldText()}.
      *
      */
     @Deprecated
     int getFieldId();
 
     /**
-     * Gets the symbol IDs of the annotations attached to the current value.
+     * @return true if the value on which the reader is currently positioned has field
+     *  name text available for reading via {@link #getFieldText()}. If this
+     *  method returns false but the reader is positioned on a value with a field name,
+     *  then the field name symbol ID can be retrieved using {@link #getFieldId()}.
+     */
+    boolean hasFieldText();
+
+    /**
+     * Reads the text for the current field name. It is the caller's responsibility to
+     * ensure {@link #hasFieldText()} returns true before calling this method.
+     * @return the field name text.
+     */
+    String getFieldText();
+
+    /**
+     * Consumes SymbolTokens representing the annotations attached to the current value.
+     * Each SymbolToken provided will contain *either* a symbol ID, *or* its symbol
+     * text, depending on how it was encoded.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
-     *
-     * @return the symbol IDs of the annotations on the current value.
-     * If the current value has no annotations, this method returns an empty array.
-     *
+     * <p>
+     * It is the caller's responsibility to ensure {@link #hasAnnotations()} returns
+     * true before calling this method.
      */
     @Deprecated
-    int[] getAnnotationIds();
+    void consumeAnnotationTokens(Consumer<SymbolToken> consumer);
 
     /**
      * Returns the current value as an boolean.
@@ -181,21 +201,33 @@ interface IonReaderContinuableCore extends IonCursor {
     String stringValue();
 
     /**
-     * Reads the symbol ID of the symbol value that begins at `valueMarker.startIndex` and ends at
-     * `valueMarker.endIndex`.
-     * @return -1 if the value is null
-     */
-    /**
      * Gets the symbol ID of the current symbol value.
      * <p>
      * <b>This is an "expert method": correct use requires deep understanding
      * of the Ion binary format. You almost certainly don't want to use it.</b>
      *
      * @return the symbol ID of the value.
-     * If the symbol ID cannot be determined, this method returns a value <em>less than one</em>.
+     * If the symbol ID cannot be determined, this method returns a value <em>less than zero</em>.
+     * If this is the case and the reader is positioned on a symbol value, then the text for the
+     * symbol can be retrieved using {@link #hasSymbolText()}.
      */
     @Deprecated
     int symbolValueId();
+
+    /**
+     * @return true if the value on which the reader is currently positioned is a
+     *  symbol with text available for reading via {@link #getSymbolText()}. If this
+     *  method returns false but the reader is positioned on a symbol value, then
+     *  the value's symbol ID can be retrieved using {@link #symbolValueId()}.
+     */
+    boolean hasSymbolText();
+
+    /**
+     * Reads the text for the current symbol value. It is the caller's responsibility to
+     * ensure {@link #hasSymbolText()} returns true before calling this method.
+     * @return the symbol value text.
+     */
+    String getSymbolText();
 
     /**
      * Gets the size in bytes of the current lob value.

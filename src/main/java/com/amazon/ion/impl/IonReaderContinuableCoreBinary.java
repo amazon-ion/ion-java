@@ -7,6 +7,7 @@ import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl.bin.IntList;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
+import java.util.function.Consumer;
 
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 
@@ -1298,6 +1300,19 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     @Override
+    public boolean hasSymbolText() {
+        if (valueTid == null || IonType.SYMBOL != valueTid.type) {
+            return false;
+        }
+        return valueTid.isInlineable;
+    }
+
+    @Override
+    public String getSymbolText() {
+        return readString();
+    }
+
+    @Override
     public int symbolValueId() {
         if (valueTid == null || IonType.SYMBOL != valueTid.type) {
             throwDueToInvalidType(IonType.SYMBOL);
@@ -1344,13 +1359,28 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     @Override
-    public int[] getAnnotationIds() {
-        getAnnotationSidList();
-        int[] annotationArray = new int[annotationSids.size()];
-        for (int i = 0; i < annotationArray.length; i++) {
-            annotationArray[i] = annotationSids.get(i);
+    public void consumeAnnotationTokens(Consumer<SymbolToken> consumer) {
+        if (annotationSequenceMarker.startIndex >= 0) {
+            if (annotationSequenceMarker.typeId != null && annotationSequenceMarker.typeId.isInlineable) {
+                getAnnotationMarkerList();
+            } else {
+                getAnnotationSidList();
+                for (int i = 0; i < annotationSids.size(); i++) {
+                    consumer.accept(new SymbolTokenImpl(annotationSids.get(i)));
+                }
+            }
         }
-        return annotationArray;
+        for (int i = 0; i < annotationTokenMarkers.size(); i++) {
+            Marker marker = annotationTokenMarkers.get(i);
+            if (marker.startIndex < 0) {
+                // This means the endIndex represents the token's symbol ID.
+                consumer.accept(new SymbolTokenImpl((int) marker.endIndex));
+            } else {
+                // The token is inline UTF-8 text.
+                ByteBuffer utf8InputBuffer = prepareByteBuffer(marker.startIndex, marker.endIndex);
+                consumer.accept(new SymbolTokenImpl(utf8Decoder.decode(utf8InputBuffer, (int) (marker.endIndex - marker.startIndex)), -1));
+            }
+        }
     }
 
     /**
@@ -1380,11 +1410,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return fieldSid;
     }
 
-    /**
-     * Reads the text for the current field name.
-     * @return the field name text.
-     */
-    String getFieldText() {
+    @Override
+    public boolean hasFieldText() {
+        return fieldTextMarker.startIndex > -1;
+    }
+
+    @Override
+    public String getFieldText() {
         ByteBuffer utf8InputBuffer = prepareByteBuffer(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
         return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
     }
