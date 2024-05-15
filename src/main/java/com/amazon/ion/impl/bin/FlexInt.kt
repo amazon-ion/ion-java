@@ -40,89 +40,123 @@ object FlexInt {
         return numMagnitudeBitsRequired / 7 + 1
     }
 
+    @JvmStatic
+    fun writeFlexIntOrUInt4Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = (0x08L or (value shl 4)).toByte()
+        data[offset + 1] = (value shr 4).toByte()
+        data[offset + 2] = (value shr 12).toByte()
+        data[offset + 3] = (value shr 20).toByte()
+    }
+
+    @JvmStatic
+    fun writeFlexIntOrUInt5Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = (0x10L or (value shl 5)).toByte()
+        data[offset + 1] = (value shr 3).toByte()
+        data[offset + 2] = (value shr 11).toByte()
+        data[offset + 3] = (value shr 19).toByte()
+        data[offset + 4] = (value shr 27).toByte()
+    }
+
+    @JvmStatic
+    fun writeFlexIntOrUInt6Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = (0x20L or (value shl 6)).toByte()
+        data[offset + 1] = (value shr 2).toByte()
+        data[offset + 2] = (value shr 10).toByte()
+        data[offset + 3] = (value shr 18).toByte()
+        data[offset + 4] = (value shr 26).toByte()
+        data[offset + 5] = (value shr 34).toByte()
+    }
+
+    @JvmStatic
+    fun writeFlexIntOrUInt7Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = (0x40L or (value shl 7)).toByte()
+        data[offset + 1] = (value shr 1).toByte()
+        data[offset + 2] = (value shr 9).toByte()
+        data[offset + 3] = (value shr 17).toByte()
+        data[offset + 4] = (value shr 25).toByte()
+        data[offset + 5] = (value shr 33).toByte()
+        data[offset + 6] = (value shr 41).toByte()
+    }
+
+    @JvmStatic
+    fun writeFlexIntOrUInt8Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = 0x80.toByte()
+        data[offset + 1] = (value shr 0).toByte()
+        data[offset + 2] = (value shr 8).toByte()
+        data[offset + 3] = (value shr 16).toByte()
+        data[offset + 4] = (value shr 24).toByte()
+        data[offset + 5] = (value shr 32).toByte()
+        data[offset + 6] = (value shr 40).toByte()
+        data[offset + 7] = (value shr 48).toByte()
+    }
+
+    @JvmStatic
+    fun writeFlexIntOrUInt9Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = 0
+        data[offset + 1] = (0x01L or (value shl 1)).toByte()
+        data[offset + 2] = (value shr 7).toByte()
+        data[offset + 3] = (value shr 15).toByte()
+        data[offset + 4] = (value shr 23).toByte()
+        data[offset + 5] = (value shr 31).toByte()
+        data[offset + 6] = (value shr 39).toByte()
+        data[offset + 7] = (value shr 47).toByte()
+        data[offset + 8] = (value shr 55).toByte()
+    }
+
+    @JvmStatic
+    fun writeFlexIntOrUInt10Into(data: ByteArray, offset: Int, value: Long) {
+        data[offset] = 0
+        data[offset + 1] = (0x02L or (value shl 2)).toByte()
+        data[offset + 2] = (value shr 6).toByte()
+        data[offset + 3] = (value shr 14).toByte()
+        data[offset + 4] = (value shr 22).toByte()
+        data[offset + 5] = (value shr 30).toByte()
+        data[offset + 6] = (value shr 38).toByte()
+        data[offset + 7] = (value shr 46).toByte()
+        data[offset + 8] = (value shr 54).toByte()
+        data[offset + 9] = (value shr 62).toByte()
+    }
+
     /**
      * Writes a FlexInt or FlexUInt encoding of [value] into [data] starting at [offset].
      * Use [flexIntLength] or [flexUIntLength] to get the value for the [numBytes] parameter.
      */
     @JvmStatic
-    fun writeFlexIntOrUIntInto(data: ByteArray, offset: Int, value: Long, numBytes: Int) {
-        var i = offset
+    inline fun writeFlexIntOrUIntInto(data: ByteArray, offset: Int, value: Long, numBytes: Int) {
 
         when (numBytes) {
             1 -> {
-                data[i] = (0x01L or (value shl 1)).toByte()
+                data[offset] = (0x01L or (value shl 1)).toByte()
             }
             2 -> {
-                data[i] = (0x02L or (value shl 2)).toByte()
-                data[++i] = (value shr 6).toByte()
+                data[offset] = (0x02L or (value shl 2)).toByte()
+                data[offset + 1] = (value shr 6).toByte()
             }
             3 -> {
-                data[i] = (0x04L or (value shl 3)).toByte()
-                data[++i] = (value shr 5).toByte()
-                data[++i] = (value shr 13).toByte()
+                data[offset] = (0x04L or (value shl 3)).toByte()
+                data[offset + 1] = (value shr 5).toByte()
+                data[offset + 2] = (value shr 13).toByte()
             }
             4 -> {
-                data[i] = (0x08L or (value shl 4)).toByte()
-                data[++i] = (value shr 4).toByte()
-                data[++i] = (value shr 12).toByte()
-                data[++i] = (value shr 20).toByte()
+                writeFlexIntOrUInt4Into(data, offset, value)
             }
             5 -> {
-                data[i] = (0x10L or (value shl 5)).toByte()
-                data[++i] = (value shr 3).toByte()
-                data[++i] = (value shr 11).toByte()
-                data[++i] = (value shr 19).toByte()
-                data[++i] = (value shr 27).toByte()
+                writeFlexIntOrUInt5Into(data, offset, value)
             }
             6 -> {
-                data[i] = (0x20L or (value shl 6)).toByte()
-                data[++i] = (value shr 2).toByte()
-                data[++i] = (value shr 10).toByte()
-                data[++i] = (value shr 18).toByte()
-                data[++i] = (value shr 26).toByte()
-                data[++i] = (value shr 34).toByte()
+                writeFlexIntOrUInt6Into(data, offset, value)
             }
             7 -> {
-                data[i] = (0x40L or (value shl 7)).toByte()
-                data[++i] = (value shr 1).toByte()
-                data[++i] = (value shr 9).toByte()
-                data[++i] = (value shr 17).toByte()
-                data[++i] = (value shr 25).toByte()
-                data[++i] = (value shr 33).toByte()
-                data[++i] = (value shr 41).toByte()
+                writeFlexIntOrUInt7Into(data, offset, value)
             }
             8 -> {
-                data[i] = 0x80.toByte()
-                data[++i] = (value shr 0).toByte()
-                data[++i] = (value shr 8).toByte()
-                data[++i] = (value shr 16).toByte()
-                data[++i] = (value shr 24).toByte()
-                data[++i] = (value shr 32).toByte()
-                data[++i] = (value shr 40).toByte()
-                data[++i] = (value shr 48).toByte()
+                writeFlexIntOrUInt8Into(data, offset, value)
             }
             9 -> {
-                data[i] = 0
-                data[++i] = (0x01L or (value shl 1)).toByte()
-                data[++i] = (value shr 7).toByte()
-                data[++i] = (value shr 15).toByte()
-                data[++i] = (value shr 23).toByte()
-                data[++i] = (value shr 31).toByte()
-                data[++i] = (value shr 39).toByte()
-                data[++i] = (value shr 47).toByte()
-                data[++i] = (value shr 55).toByte()
+                writeFlexIntOrUInt9Into(data, offset, value)
             }
             10 -> {
-                data[i] = 0
-                data[++i] = (0x02L or (value shl 2)).toByte()
-                data[++i] = (value shr 6).toByte()
-                data[++i] = (value shr 14).toByte()
-                data[++i] = (value shr 22).toByte()
-                data[++i] = (value shr 30).toByte()
-                data[++i] = (value shr 38).toByte()
-                data[++i] = (value shr 46).toByte()
-                data[++i] = (value shr 54).toByte()
-                data[++i] = (value shr 62).toByte()
+                writeFlexIntOrUInt10Into(data, offset, value)
             }
         }
     }
