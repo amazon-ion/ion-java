@@ -1853,11 +1853,16 @@ class IonCursorBinary implements IonCursor {
      * Resets state specific to the current value.
      */
     private void reset() {
+        valueTid = null;
         valueMarker.typeId = null;
         valueMarker.startIndex = -1;
         valueMarker.endIndex = -1;
         fieldSid = -1;
+        fieldTextMarker.typeId = null;
+        fieldTextMarker.startIndex = -1;
+        fieldTextMarker.endIndex = -1;
         hasAnnotations = false;
+        annotationSequenceMarker.typeId = null;
         annotationSequenceMarker.startIndex = -1;
         annotationSequenceMarker.endIndex = -1;
         if (refillableState != null) {
