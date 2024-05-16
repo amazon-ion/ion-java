@@ -375,6 +375,13 @@ tasks {
     project.gradle.startParameter.excludedTaskNames.add(":spotbugsTest")
 
     spotbugsMain {
+        launcher.set(
+            project.javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(SUPPORTED_JRE_VERSIONS.min()))
+                vendor.set(JvmVendorSpec.AMAZON)
+            }
+        )
+
         val spotbugsBaselineFile = "$rootDir/config/spotbugs/baseline.xml"
 
         val baselining = project.hasProperty("baseline") // e.g. `./gradlew :spotbugsMain -Pbaseline`
