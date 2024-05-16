@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl.IonTokenConstsX.CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1;
@@ -1582,11 +1569,11 @@ final class IonReaderTextRawTokensX
             int c2 = read_char();
             if (Radix.HEX.isPrefix(c2)) {
                 sb.append((char)c);
-                c = loadRadixValue(sb, has_sign, c2, Radix.HEX);
+                c = loadRadixValue(sb, c2, Radix.HEX);
                 return load_finish_number(sb, c, IonTokenConstsX.TOKEN_HEX);
             } else if (Radix.BINARY.isPrefix(c2)) {
                 sb.append((char) c);
-                c = loadRadixValue(sb, has_sign, c2, Radix.BINARY);
+                c = loadRadixValue(sb, c2, Radix.BINARY);
                 return load_finish_number(sb, c, IonTokenConstsX.TOKEN_BINARY);
             }
             // not a next value, back up and try again
@@ -1843,7 +1830,7 @@ final class IonReaderTextRawTokensX
         return load_finish_number(sb, c, IonTokenConstsX.TOKEN_TIMESTAMP);
     }
 
-    private final int loadRadixValue(StringBuilder sb, boolean has_sign, int c2, Radix radix)
+    private final int loadRadixValue(StringBuilder sb, int c2, Radix radix)
         throws IOException
     {
         radix.assertPrefix(c2);
