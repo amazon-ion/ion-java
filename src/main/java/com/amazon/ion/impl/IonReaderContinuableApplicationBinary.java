@@ -11,7 +11,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.ReadOnlyValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
-import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.ValueFactory;
 import com.amazon.ion.impl.bin.IntList;
@@ -20,7 +19,6 @@ import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,13 +39,6 @@ import static com.amazon.ion.SystemSymbols.VERSION_SID;
  * An IonCursor capable of application-level parsing of binary Ion streams.
  */
 class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBinary implements IonReaderContinuableApplication {
-
-    // The UTF-8 encoded bytes representing the text `$ion_symbol_table`.
-    private static final byte[] ION_SYMBOL_TABLE_UTF8;
-
-    static {
-        ION_SYMBOL_TABLE_UTF8 = SystemSymbols.ION_SYMBOL_TABLE.getBytes(StandardCharsets.UTF_8);
-    }
 
     // An IonCatalog containing zero shared symbol tables.
     private static final IonCatalog EMPTY_CATALOG = new SimpleCatalog();

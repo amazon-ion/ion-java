@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import static com.amazon.ion.Decimal.isNegativeZero;
@@ -57,7 +44,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.ListIterator;
-import java.util.NoSuchElementException;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -225,10 +211,6 @@ import java.util.NoSuchElementException;
             throw new IllegalArgumentException("No such preallocation mode for: " + pad);
         }
     }
-
-    private static final byte STRING_TYPE_EXTENDED_LENGTH       = (byte) 0x8E;
-    private static final byte[] STRING_TYPED_PREALLOCATED_2     = makeTypedPreallocatedBytes(0x8E, 2);
-    private static final byte[] STRING_TYPED_PREALLOCATED_3     = makeTypedPreallocatedBytes(0x8E, 3);
 
     /** Max supported annotation length specifier size supported. */
     private static final int MAX_ANNOTATION_LENGTH = 0x7F;
@@ -599,16 +581,6 @@ import java.util.NoSuchElementException;
         final int patchLength = WriteBuffer.varUIntLength(value);
         container.appendPatch(position, oldLength, value);
         updateLength(patchLength - oldLength);
-    }
-
-    /**
-     * This is used to reclaim the placeholder patch point after scan the current container.
-     * @param placeholderPatchIndex represents the index of the placeholder patch point.
-     */
-    private void reclaimPlaceholderPatchPoint(int placeholderPatchIndex) {
-        if (placeholderPatchIndex >= patchPoints.size() - 1) {
-            patchPoints.remove();
-        }
     }
 
     private ContainerInfo popContainer()

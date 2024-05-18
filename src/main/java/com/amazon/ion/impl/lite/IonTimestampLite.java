@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.lite;
 
 import com.amazon.ion.IonTimestamp;
@@ -32,12 +19,6 @@ final class IonTimestampLite
 {
     public final static Integer UTC_OFFSET = Timestamp.UTC_OFFSET;
 
-    private static final int BIT_FLAG_YEAR      = 0x01;
-    private static final int BIT_FLAG_MONTH     = 0x02;
-    private static final int BIT_FLAG_DAY       = 0x04;
-    private static final int BIT_FLAG_MINUTE    = 0x08;
-    private static final int BIT_FLAG_SECOND    = 0x10;
-    private static final int BIT_FLAG_FRACTION  = 0x20;
     private static final int HASH_SIGNATURE =
         IonType.TIMESTAMP.toString().hashCode();
 
