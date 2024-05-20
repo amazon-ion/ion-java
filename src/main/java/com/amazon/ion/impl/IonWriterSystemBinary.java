@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonConstants.tidDATAGRAM;
@@ -265,10 +252,8 @@ final class IonWriterSystemBinary
     /** Ensure we don't use a closed {@link #output} stream. */
     private boolean _closed;
 
-    private final static int TID_FOR_SYMBOL_TABLE_PATCH = _Private_IonConstants.tidDATAGRAM + 1;
     private final static int DEFAULT_PATCH_COUNT        = 10;
     private final static int DEFAULT_PATCH_DEPTH        = 10;
-    private final static int NOT_A_SYMBOL_TABLE_IDX     = -1;
 
     // Patch:
     //          offset in data stream
@@ -385,11 +370,6 @@ final class IonWriterSystemBinary
         return _in_struct;
     }
 
-    private final boolean topInStruct() {
-        if (_top == 0) return false;
-        boolean in_struct = _patch_in_struct[_patch_stack[_top - 1]];
-        return in_struct;
-    }
     protected final boolean atDatagramLevel()
     {
         return (topType() == _Private_IonConstants.tidDATAGRAM);
@@ -438,10 +418,6 @@ final class IonWriterSystemBinary
         top.injectSymbolTable(symbols, _patch.getParent() != null);
         super.endValue();
         return symbols;
-    }
-
-    private final int topLength() {
-        return _patch_lengths[_patch_stack[_top - 1]];
     }
 
     private final int topType() {

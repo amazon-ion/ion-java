@@ -1,7 +1,8 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Decimal;
-import com.amazon.ion.IonText;
 import com.amazon.ion.IonType;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
@@ -9,7 +10,6 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 import static java.lang.Double.doubleToRawLongBits;

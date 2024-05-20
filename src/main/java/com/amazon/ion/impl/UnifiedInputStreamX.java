@@ -344,7 +344,6 @@ abstract class UnifiedInputStreamX
                            + getPosition();
             throw new IOException(message);
         }
-        return;
     }
     // NB this method does not follow the contract of InputStream.read, it will return 0 at EOF
     //    It is unclear what the implication to the rest of the system to make it 'conform'
@@ -478,7 +477,6 @@ abstract class UnifiedInputStreamX
 
         make_page_current(new_page, new_page_idx, pos, new_page.getBufferLimit());
 
-        return;
     }
     private int refill_is_eof() {
         _eof = true;
