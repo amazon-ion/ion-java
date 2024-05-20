@@ -943,6 +943,10 @@ class IonCursorBinary implements IonCursor {
 
     /* ---- Ion 1.1 ---- */
 
+    private long uncheckedReadVarUInt_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
     private long slowReadVarUInt_1_1() {
         throw new UnsupportedOperationException();
     }

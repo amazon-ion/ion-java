@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
@@ -422,6 +423,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     int readVarUInt_1_1() {
+        throw new UnsupportedOperationException();
+    }
+
+    private int readVarSym_1_1(Marker marker) {
         throw new UnsupportedOperationException();
     }
 
