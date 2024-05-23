@@ -221,6 +221,17 @@ class IonRawBinaryWriter_1_1 internal constructor(
         annotationFlexSymFlag = 0
     }
 
+    override fun _private_hasFirstAnnotation(sid: Int, text: String?): Boolean {
+        if (numAnnotations == 0) return false
+        if (sid >= 0 && annotationsIdBuffer[0] == sid) {
+            return true
+        }
+        if (text != null && annotationsTextBuffer[0] == text) {
+            return true
+        }
+        return false
+    }
+
     /**
      * Helper function for handling annotations and field names when starting a value.
      */

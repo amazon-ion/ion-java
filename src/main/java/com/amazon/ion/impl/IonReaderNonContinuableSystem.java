@@ -35,11 +35,35 @@ import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
  */
 final class IonReaderNonContinuableSystem implements IonReader {
 
+    private static final SymbolToken IVM_1_0 = new SymbolTokenImpl(SystemSymbols.ION_1_0, SystemSymbols.ION_1_0_SID);
+    private static final SymbolToken IVM_1_1 = new SymbolTokenImpl("$ion_1_1", -1);
+
+    private static enum PendingIvm {
+        ION_1_0(IVM_1_0),
+        ION_1_1(IVM_1_1);
+
+        private final SymbolToken token;
+        PendingIvm(SymbolToken symbolToken) {
+            token = symbolToken;
+        }
+
+        static PendingIvm pendingIvmForVersionOrNull(int major, int minor) {
+            if (major == 1) {
+                if (minor == 0) {
+                    return ION_1_0;
+                } else if (minor == 1) {
+                    return ION_1_1;
+                }
+            }
+            return null;
+        }
+    }
+
     private final IonReaderContinuableCore reader;
     private IonType type = null;
     private IonType typeAfterIvm = null;
-    private final Queue<Integer> pendingIvmSids = new ArrayDeque<>(1);
-    private int pendingIvmSid = -1;
+    private final Queue<PendingIvm> pendingIvms = new ArrayDeque<>(1);
+    private PendingIvm pendingIvm = null;
 
     /**
      * Constructs a new non-continuable system-level reader over the given continuable reader.
@@ -48,14 +72,11 @@ final class IonReaderNonContinuableSystem implements IonReader {
     IonReaderNonContinuableSystem(IonReaderContinuableCore reader) {
         this.reader = reader;
         reader.registerIvmNotificationConsumer((major, minor) -> {
-            if (major != 1 || minor > 1) {
+            PendingIvm ivm = PendingIvm.pendingIvmForVersionOrNull(major, minor);
+            if (ivm == null) {
                 throw new IllegalStateException("The parser should have already thrown upon encountering this illegal IVM.");
             }
-            if (minor == 0) {
-                pendingIvmSids.add(SystemSymbols.ION_1_0_SID);
-            } else {
-                // TODO how should this be handled for Ion 1.1?
-            }
+            pendingIvms.add(ivm);
         });
     }
 
@@ -70,8 +91,8 @@ final class IonReaderNonContinuableSystem implements IonReader {
      * @return true if a value is ready to be presented to the user; otherwise, false.
      */
     private boolean handleIvm() {
-        Integer ivmSid = pendingIvmSids.poll();
-        if (ivmSid != null) {
+        PendingIvm nextPendingIvm = pendingIvms.poll();
+        if (nextPendingIvm != null) {
             // An IVM has been found between values.
             if (typeAfterIvm == null) {
                 // Only save the type of the next user value the first time an IVM is encountered before that value.
@@ -79,11 +100,11 @@ final class IonReaderNonContinuableSystem implements IonReader {
             }
             // For consistency with the legacy implementation, the system reader surfaces IVMs as symbol values.
             type = IonType.SYMBOL;
-            pendingIvmSid = ivmSid;
+            pendingIvm = nextPendingIvm;
             return true;
-        } else if (pendingIvmSid != -1) {
+        } else if (pendingIvm != null) {
             // All preceding IVMs have been surfaced. Restore the value that follows.
-            pendingIvmSid = -1;
+            pendingIvm = null;
             type = typeAfterIvm;
             typeAfterIvm = null;
             return true;
@@ -162,7 +183,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public boolean isNullValue() {
-        return pendingIvmSid == -1 && reader.isNullValue();
+        return pendingIvm == null && reader.isNullValue();
     }
 
     @Override
@@ -226,8 +247,8 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public String stringValue() {
-        if (pendingIvmSid != -1) {
-            return getSymbolTable().findKnownSymbol(pendingIvmSid);
+        if (pendingIvm != null) {
+            return pendingIvm.token.getText();
         }
         prepareScalar();
         String value;
@@ -278,7 +299,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public String[] getTypeAnnotations() {
-        if (pendingIvmSid != -1 || !reader.hasAnnotations()) {
+        if (pendingIvm != null || !reader.hasAnnotations()) {
             return _Private_Utils.EMPTY_STRING_ARRAY;
         }
         // Note: it is not expected that the system reader is used in performance-sensitive applications; hence,
@@ -301,7 +322,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
-        if (pendingIvmSid != -1 || !reader.hasAnnotations()) {
+        if (pendingIvm != null || !reader.hasAnnotations()) {
             return SymbolToken.EMPTY_ARRAY;
         }
         // Note: it is not expected that the system reader is used in performance-sensitive applications; hence,
@@ -322,7 +343,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public Iterator<String> iterateTypeAnnotations() {
-        if (pendingIvmSid != -1 || !reader.hasAnnotations()) {
+        if (pendingIvm != null || !reader.hasAnnotations()) {
             return _Private_Utils.emptyIterator();
         }
         return _Private_Utils.stringIterator(getTypeAnnotations());
@@ -369,9 +390,8 @@ final class IonReaderNonContinuableSystem implements IonReader {
     public SymbolToken symbolValue() {
         String symbolText;
         int sid = -1;
-        if (pendingIvmSid != -1) {
-            sid = pendingIvmSid;
-            symbolText = getSymbolTable().findKnownSymbol(sid);
+        if (pendingIvm != null) {
+            return pendingIvm.token;
         } else {
             prepareScalar();
             if (reader.hasSymbolText()) {

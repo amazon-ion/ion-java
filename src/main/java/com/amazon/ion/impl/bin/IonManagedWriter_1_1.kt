@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
+import com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.DelimitedContainerStrategy.*
 import com.amazon.ion.impl.bin.SymbolInliningStrategy.*
@@ -10,6 +11,7 @@ import com.amazon.ion.system.*
 import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.*
 
 /**
  * A managed writer for Ion 1.1 that is generic over whether the raw encoding is text or binary.
@@ -27,7 +29,7 @@ internal class IonManagedWriter_1_1(
     private val systemData: IonRawWriter_1_1,
     private val options: ManagedWriterOptions_1_1,
     private val onClose: () -> Unit,
-) : _Private_IonManagedWriter, AbstractIonWriter(WriteValueOptimization.NONE) {
+) : _Private_IonWriter {
 
     private val systemSymbolTableMap = hashMapOf<String, Int>()
 
@@ -41,6 +43,8 @@ internal class IonManagedWriter_1_1(
     }
 
     companion object {
+        private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_\\d+_\\d+$")
+
         @JvmStatic
         fun textWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: _Private_IonTextWriterBuilder_1_1): IonManagedWriter_1_1 {
             // TODO support all options configurable via IonTextWriterBuilder_1_1
@@ -95,7 +99,7 @@ internal class IonManagedWriter_1_1(
                 ),
                 systemData = IonRawBinaryWriter_1_1(
                     out = output,
-                    buffer = WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(binaryOptions.blockSize),) {},
+                    buffer = WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(binaryOptions.blockSize)) {},
                     lengthPrefixPreallocation = 1
                 ),
                 options = managedWriterOptions.copy(internEncodingDirectiveSymbols = true),
@@ -122,7 +126,7 @@ internal class IonManagedWriter_1_1(
         if (sid != null) return sid
         // Check the to-be-appended symbols
         sid = newSymbols.indexOf(text)
-        if (sid != SymbolTable.UNKNOWN_SYMBOL_ID) return sid + priorMaxId + 1
+        if (sid != UNKNOWN_SYMBOL_ID) return sid + priorMaxId + 1
         // Add to the to-be-appended symbols
         sid = priorMaxId + newSymbols.size + 1
         newSymbols.add(text)
@@ -187,18 +191,15 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun setFieldName(name: String) {
-        handleSymbolText(name, options.shouldWriteInline(SymbolKind.FIELD_NAME, name), userData::writeFieldName, userData::writeFieldName)
+        handleSymbolToken(UNKNOWN_SYMBOL_ID, name, SymbolKind.FIELD_NAME, userData)
     }
 
     override fun setFieldNameSymbol(name: SymbolToken) {
-        handleSymbolToken(name, options.shouldWriteInline(SymbolKind.FIELD_NAME, name), userData::writeFieldName, userData::writeFieldName)
+        handleSymbolToken(name.sid, name.text, SymbolKind.FIELD_NAME, userData)
     }
 
     override fun addTypeAnnotation(annotation: String) {
-        if (annotation == SystemSymbols.ION_SYMBOL_TABLE && depth == 0) {
-            throw IonException("User-defined symbol tables not permitted by the managed writer.")
-        }
-        handleSymbolText(annotation, options.shouldWriteInline(SymbolKind.ANNOTATION, annotation), userData::writeAnnotations, userData::writeAnnotations)
+        handleSymbolToken(UNKNOWN_SYMBOL_ID, annotation, SymbolKind.ANNOTATION, userData)
     }
 
     override fun setTypeAnnotations(annotations: Array<String>?) {
@@ -209,15 +210,7 @@ internal class IonManagedWriter_1_1(
 
     override fun setTypeAnnotationSymbols(annotations: Array<SymbolToken>?) {
         userData._private_clearAnnotations()
-        annotations?.forEachIndexed { i, it ->
-            // TODO: This is handled inconsistently. If you add annotations one at a time using addTypeAnnotation,
-            //       we don't know whether the $ion_symbol_table annotation is the first one or not.
-            if (depth == 0 && i == 0) {
-                if (it.sid == SystemSymbols.ION_SYMBOL_TABLE_SID || it.text == SystemSymbols.ION_SYMBOL_TABLE)
-                    throw IonException("User-defined symbol tables not permitted by the managed writer.")
-            }
-            handleSymbolToken(it, options.shouldWriteInline(SymbolKind.ANNOTATION, it), userData::writeAnnotations, userData::writeAnnotations)
-        }
+        annotations?.forEach { handleSymbolToken(it.sid, it.text, SymbolKind.ANNOTATION, userData) }
     }
 
     override fun stepIn(containerType: IonType?) {
@@ -225,7 +218,12 @@ internal class IonManagedWriter_1_1(
         when (containerType) {
             IonType.LIST -> userData.stepInList(options.writeDelimited(ContainerType.LIST, newDepth))
             IonType.SEXP -> userData.stepInSExp(options.writeDelimited(ContainerType.SEXP, newDepth))
-            IonType.STRUCT -> userData.stepInStruct(options.writeDelimited(ContainerType.STRUCT, newDepth))
+            IonType.STRUCT -> {
+                if (depth == 0 && userData._private_hasFirstAnnotation(SystemSymbols.ION_SYMBOL_TABLE_SID, SystemSymbols.ION_SYMBOL_TABLE)) {
+                    throw IonException("User-defined symbol tables not permitted by the Ion 1.1 managed writer.")
+                }
+                userData.stepInStruct(options.writeDelimited(ContainerType.STRUCT, newDepth))
+            }
             else -> throw IllegalArgumentException("Not a container type: $containerType")
         }
     }
@@ -246,7 +244,7 @@ internal class IonManagedWriter_1_1(
         if (content == null) {
             userData.writeNull(IonType.SYMBOL)
         } else {
-            handleSymbolText(content, options.shouldWriteInline(SymbolKind.VALUE, content), userData::writeSymbol, userData::writeSymbol)
+            handleSymbolToken(UNKNOWN_SYMBOL_ID, content, SymbolKind.VALUE, userData)
         }
     }
 
@@ -257,31 +255,38 @@ internal class IonManagedWriter_1_1(
             val text: String? = content.text
             if (content.sid == SystemSymbols.ION_1_0_SID) throw IonException("Can't write a top-level symbol that is the same as the IVM.")
             if (text == SystemSymbols.ION_1_0) throw IonException("Can't write a top-level symbol that is the same as the IVM.")
-            handleSymbolToken(content, options.shouldWriteInline(SymbolKind.VALUE, content), userData::writeSymbol, userData::writeSymbol)
+            handleSymbolToken(content.sid, content.text, SymbolKind.VALUE, userData)
         }
+    }
+
+    private inline fun IonRawWriter_1_1.write(kind: SymbolKind, sid: Int) = when (kind) {
+        SymbolKind.VALUE -> writeSymbol(sid)
+        SymbolKind.FIELD_NAME -> writeFieldName(sid)
+        SymbolKind.ANNOTATION -> writeAnnotations(sid)
+    }
+
+    private inline fun IonRawWriter_1_1.write(kind: SymbolKind, text: String) = when (kind) {
+        SymbolKind.VALUE -> writeSymbol(text)
+        SymbolKind.FIELD_NAME -> writeFieldName(text)
+        SymbolKind.ANNOTATION -> writeAnnotations(text)
     }
 
     /** Helper function that determines whether to write a symbol token as a SID or inline symbol */
-    private inline fun handleSymbolToken(sym: SymbolToken, inline: Boolean, writeSymbolText: (String) -> Unit, writeSymbolId: (Int) -> Unit) {
-        val text: String? = sym.text
+    private inline fun handleSymbolToken(sid: Int, text: String?, kind: SymbolKind, rawWriter: IonRawWriter_1_1, preserveEncoding: Boolean = false) {
         if (text == null) {
-            if (sym.sid < priorMaxId) {
-                // It's in the system symbol table or local table but was constructed without the text for some reason.
-                writeSymbolId(sym.sid)
+            // No text. Decide whether to write $0 or some other SID
+            if (sid == UNKNOWN_SYMBOL_ID) {
+                // No (known) SID either.
+                throw UnknownSymbolException("Cannot write a symbol token with unknown text and unknown SID.")
             } else {
-                // Unknown Local Symbol
-                writeSymbolId(0)
+                rawWriter.write(kind, sid)
             }
+        } else if (preserveEncoding && sid < 0) {
+            rawWriter.write(kind, text)
+        } else if (options.shouldWriteInline(kind, text)) {
+            rawWriter.write(kind, text)
         } else {
-            handleSymbolText(text, inline, writeSymbolText, writeSymbolId)
-        }
-    }
-
-    private inline fun handleSymbolText(text: String, inline: Boolean, writeSymbolText: (String) -> Unit, writeSymbolId: (Int) -> Unit) {
-        if (inline) {
-            writeSymbolText(text)
-        } else {
-            writeSymbolId(intern(text))
+            rawWriter.write(kind, intern(text))
         }
     }
 
@@ -295,11 +300,6 @@ internal class IonManagedWriter_1_1(
     override fun writeDecimal(value: BigDecimal?) = value.writeMaybeNull(IonType.DECIMAL, userData::writeDecimal)
     override fun writeTimestamp(value: Timestamp?) = value.writeMaybeNull(IonType.TIMESTAMP, userData::writeTimestamp)
     override fun writeString(value: String?) = value.writeMaybeNull(IonType.STRING, userData::writeString)
-
-    override fun writeString(data: ByteArray?, offset: Int, length: Int) = data.writeMaybeNull(IonType.STRING) { bytes ->
-        // TODO: We should probably plumb this through to the Ion 1.1 raw writer rather than decoding it here
-        userData.writeString(bytes.decodeToString(offset, length + offset, throwOnInvalidSequence = true))
-    }
 
     override fun writeClob(value: ByteArray?) = value.writeMaybeNull(IonType.CLOB, userData::writeClob)
     override fun writeClob(value: ByteArray?, start: Int, len: Int) = value.writeMaybeNull(IonType.CLOB) { userData.writeClob(it, start, len) }
@@ -316,20 +316,132 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun writeIonVersionMarker() {
-        // Make sure we write out any symbol tables and buffered values before the IVM
-        flush()
-        userData.writeIVM()
+        if (depth == 0) {
+            // Make sure we write out any symbol tables and buffered values before the IVM
+            finish()
+            systemData.writeIVM()
+        } else {
+            writeSymbol("\$ion_1_1")
+        }
     }
 
-    override fun writeBytes(data: ByteArray?, off: Int, len: Int) {
-        TODO("Not implemented. Is this actually needed?")
+    @Deprecated("Use IonValue.writeTo(IonWriter) instead.")
+    override fun writeValue(value: IonValue) = value.writeTo(this)
+
+    @Deprecated("Use writeTimestamp instead.")
+    override fun writeTimestampUTC(value: Date?) {
+        TODO("Use writeTimestamp instead.")
     }
 
-    override fun getRawWriter(): _Private_IonRawWriter = TODO("Not yet implemented")
+    override fun isStreamCopyOptimized(): Boolean = false
 
-    override fun requireLocalSymbolTable() {
-        // Can this be a no-op?
-        TODO("Not yet implemented")
+    override fun writeValues(reader: IonReader) {
+        // There's a possibility that we could have interference between encoding contexts if we're transferring from a
+        // system reader. However, this is the same behavior as the other implementations.
+
+        val startingDepth = reader.depth
+        while (true) {
+            val nextType = reader.next()
+            if (nextType == null) {
+                // Nothing more *and* we're at the starting depth? We're all done.
+                if (reader.depth == startingDepth) return
+                // Otherwise, step out and continue.
+                userData.stepOut()
+                reader.stepOut()
+            } else {
+                transferScalarOrStepIn(reader, nextType)
+            }
+        }
+    }
+
+    override fun writeValue(reader: IonReader) {
+        // There's a possibility that we could have interference between encoding contexts if we're transferring from a
+        // system reader. However, this is the same behavior as the other implementations.
+
+        if (reader.type == null) return
+        val startingDepth = reader.depth
+        transferScalarOrStepIn(reader, reader.type)
+        if (reader.depth != startingDepth) {
+            // We stepped into a container, so write the content of the container and then step out.
+            writeValues(reader)
+            reader.stepOut()
+            userData.stepOut()
+        }
+    }
+
+    /**
+     * Can only be called when the reader is positioned on a value. Having [currentType] in the
+     * function signature helps to enforce that requirement because [currentType] is not allowed
+     * to be `null`.
+     */
+    private fun transferScalarOrStepIn(reader: IonReader, currentType: IonType) {
+        // TODO: If the Ion 1.1 symbol table differs at all from the Ion 1.0 symbol table, and we're copying
+        //       from Ion 1.0, we will have to adjust any SIDs that we are writing.
+
+        reader.typeAnnotationSymbols.forEach {
+            handleSymbolToken(it.sid, it.text, SymbolKind.ANNOTATION, userData, preserveEncoding = true)
+        }
+        if (isInStruct) {
+            // TODO: Can't use reader.fieldId, reader.fieldName because it will throw UnknownSymbolException.
+            //       However, this might mean we're unnecessarily constructing `SymbolToken` instances.
+            val fieldName = reader.fieldNameSymbol
+            handleSymbolToken(fieldName.sid, fieldName.text, SymbolKind.FIELD_NAME, userData, preserveEncoding = true)
+        }
+
+        if (reader.isNullValue) {
+            userData.writeNull(currentType)
+        } else when (currentType) {
+            IonType.BOOL -> userData.writeBool(reader.booleanValue())
+            IonType.INT -> {
+                if (reader.integerSize == IntegerSize.BIG_INTEGER) {
+                    userData.writeInt(reader.bigIntegerValue())
+                } else {
+                    userData.writeInt(reader.longValue())
+                }
+            }
+            IonType.FLOAT -> userData.writeFloat(reader.doubleValue())
+            IonType.DECIMAL -> userData.writeDecimal(reader.decimalValue())
+            IonType.TIMESTAMP -> userData.writeTimestamp(reader.timestampValue())
+            IonType.SYMBOL -> {
+                if (reader.isCurrentValueAnIvm()) {
+                    // TODO: What about the case where it's an IVM, but the writer is not at depth==0? Should we write
+                    //       it as a symbol or just ignore it? (This can only happen if the writer is stepped in, but
+                    //       the reader starts at depth==0.)
+
+                    // Just in case—call finish to flush the current system values, then user values, and then write the IVM.
+                    finish()
+                    userData.writeIVM()
+                } else {
+                    val symbol = reader.symbolValue()
+                    handleSymbolToken(symbol.sid, symbol.text, SymbolKind.VALUE, userData, preserveEncoding = true)
+                }
+            }
+            IonType.STRING -> userData.writeString(reader.stringValue())
+            IonType.CLOB -> userData.writeClob(reader.newBytes())
+            IonType.BLOB -> userData.writeBlob(reader.newBytes())
+            // TODO: See if we can preserve the encoding of containers (delimited vs length-prefixed)
+            IonType.LIST -> {
+                userData.stepInList(options.writeDelimited(ContainerType.LIST, reader.depth))
+                reader.stepIn()
+            }
+            IonType.SEXP -> {
+                userData.stepInSExp(options.writeDelimited(ContainerType.SEXP, reader.depth))
+                reader.stepIn()
+            }
+            IonType.STRUCT -> {
+                userData.stepInStruct(options.writeDelimited(ContainerType.STRUCT, reader.depth))
+                reader.stepIn()
+            }
+            else -> TODO("NULL and DATAGRAM are unreachable.")
+        }
+    }
+
+    private fun IonReader.isCurrentValueAnIvm(): Boolean {
+        if (depth != 0 || type != IonType.SYMBOL || typeAnnotationSymbols.isNotEmpty()) return false
+        val symbol = symbolValue() ?: return false
+        if (symbol.sid == 2) return true
+        symbol.text ?: return false
+        return ION_VERSION_MARKER_REGEX.matches(symbol.assumeText())
     }
 
     // Stream termination
@@ -343,7 +455,7 @@ internal class IonManagedWriter_1_1(
 
     override fun flush() {
         writeSymbolTable()
-        // TODO: This method should probably be called `flush()` instead of `finish()`.
+        // TODO: This method on the raw writer should probably be called `flush()` instead of `finish()`.
         systemData.finish()
         userData.finish()
     }
