@@ -38,7 +38,10 @@ final class IonReaderNonContinuableSystem implements IonReader {
     private static final SymbolToken IVM_1_0 = new SymbolTokenImpl(SystemSymbols.ION_1_0, SystemSymbols.ION_1_0_SID);
     private static final SymbolToken IVM_1_1 = new SymbolTokenImpl("$ion_1_1", -1);
 
-    private static enum PendingIvm {
+    /**
+     * Represents an IVM that was read that has not yet been exposed as a Symbol value.
+     */
+    private enum PendingIvm {
         ION_1_0(IVM_1_0),
         ION_1_1(IVM_1_1);
 
@@ -48,13 +51,9 @@ final class IonReaderNonContinuableSystem implements IonReader {
         }
 
         static PendingIvm pendingIvmForVersionOrNull(int major, int minor) {
-            if (major == 1) {
-                if (minor == 0) {
-                    return ION_1_0;
-                } else if (minor == 1) {
-                    return ION_1_1;
-                }
-            }
+            if (major != 1) return null;
+            if (minor == 0) return ION_1_0;
+            if (minor == 1) return ION_1_1;
             return null;
         }
     }
