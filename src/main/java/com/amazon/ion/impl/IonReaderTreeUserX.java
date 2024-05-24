@@ -101,10 +101,9 @@ final class IonReaderTreeUserX
                             sid = _system_symtab.findSymbol(name);
                         }
                     }
-                    boolean isIVM = isIonVersionMarker(sym.symbolValue().getText()) || sid == ION_1_0_SID;
-                    if (isIVM
+                    if ((sid == ION_1_0_SID || isIonVersionMarker(sym.symbolValue().getText()))
                         && _next.getTypeAnnotationSymbols().length == 0) {
-                        // $ion_1_0 is read as an IVM only if it is not annotated
+                        // $ion_1_0 and other version markers are read as an IVM only if unannotated
                         SymbolTable symbols = _system_symtab;
                         _symbols = symbols;
                         push_symbol_table(symbols);

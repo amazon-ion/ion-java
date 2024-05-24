@@ -6,7 +6,6 @@ import com.amazon.ion.*
 import com.amazon.ion.system.*
 import java.math.BigDecimal
 import java.math.BigInteger
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

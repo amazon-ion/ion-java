@@ -57,8 +57,8 @@ class Ion_1_1_RoundTripTest {
         override val writerFn: (OutputStream) -> IonWriter = builder::build
 
         @Disabled("Ion binary reader can't seem to discover symbol tables with inline annotations")
-        override fun testUserValuesArePreservedWhenTranscodingSystemValues(name: String, ion: ByteArray) {
-            super.testUserValuesArePreservedWhenTranscodingSystemValues(name, ion)
+        override fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
+            super.testUserValuesArePreservedWhenTransferringSystemValues(name, ion)
         }
     }
 
@@ -71,8 +71,8 @@ class Ion_1_1_RoundTripTest {
         override val writerFn: (OutputStream) -> IonWriter = builder::build
 
         @Disabled("Ion binary reader can't seem to discover symbol tables with inline annotations")
-        override fun testUserValuesArePreservedWhenTranscodingSystemValues(name: String, ion: ByteArray) {
-            super.testUserValuesArePreservedWhenTranscodingSystemValues(name, ion)
+        override fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
+            super.testUserValuesArePreservedWhenTransferringSystemValues(name, ion)
         }
     }
 
@@ -121,10 +121,10 @@ abstract class Ion_1_1_RoundTripBase {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    fun testUserValuesArePreservedWhenTranscodingUserValues(name: String, ion: ByteArray) {
+    fun testUserValuesArePreservedWhenTransferringUserValues(name: String, ion: ByteArray) {
 
         // Read and compare the data.
-        val actual = copyUserData(ion).toByteArray()
+        val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { it.writeTo(w) } }
         println("Expected:")
         ion.printDisplayString()
         println("Actual:")
@@ -138,10 +138,43 @@ abstract class Ion_1_1_RoundTripBase {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    open fun testUserValuesArePreservedWhenTranscodingSystemValues(name: String, ion: ByteArray) {
+    fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForReader(name: String, ion: ByteArray) {
 
         // Read and compare the data.
-        val actual = copySystemData(ion).toByteArray()
+        val actual = roundTripToByteArray { w -> newReader(ion).let { r -> while (r.next() != null) w.writeValue(r) } }
+        println("Expected:")
+        ion.printDisplayString()
+        println("Actual:")
+        actual.printDisplayString()
+
+        assertReadersHaveEquivalentValues(
+            ION.newReader(ion),
+            ION.newReader(actual)
+        )
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("testData")
+    fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForIonValue(name: String, ion: ByteArray) {
+        // Read and compare the data.
+        val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { w.writeValue(it) } }
+        println("Expected:")
+        ion.printDisplayString()
+        println("Actual:")
+        actual.printDisplayString()
+
+        assertReadersHaveEquivalentValues(
+            ION.newReader(ion),
+            ION.newReader(actual)
+        )
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("testData")
+    open fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
+
+        // Read and compare the data.
+        val actual = roundTripToByteArray { w -> w.writeValues(newSystemReader(ion)) }
         println("Expected:")
         ion.printDisplayString()
         println("Actual:")
@@ -156,10 +189,10 @@ abstract class Ion_1_1_RoundTripBase {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    open fun testSystemValuesArePreservedWhenTranscodingSystemValues(name: String, ion: ByteArray) {
+    open fun testSystemValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
 
         // Read and compare the data.
-        val actual = copySystemData(ion).toByteArray()
+        val actual = roundTripToByteArray { w -> w.writeValues(newSystemReader(ion)) }
         println("Expected:")
         ion.printDisplayString()
         println("Actual:")
@@ -173,25 +206,13 @@ abstract class Ion_1_1_RoundTripBase {
         )
     }
 
-    private fun copyUserData(f: ByteArray): ByteArrayOutputStream {
-        val data: Iterator<IonValue> = ION.iterate(ION.newReader(f.inputStream()))
+    private fun roundTripToByteArray(block: _Private_IonSystem.(IonWriter) -> Unit): ByteArray {
         // Create a new copy of the data in Ion 1.1
         val baos = ByteArrayOutputStream()
         val writer = writerFn(baos)
-        data.forEach { it.writeTo(writer) }
+        block(ION, writer)
         writer.close()
-        return baos
-    }
-
-    private fun copySystemData(f: ByteArray): ByteArrayOutputStream {
-        // val data: Iterator<IonValue> = ION.systemIterate(ION.newSystemReader(f))
-        // Create a new copy of the data in Ion 1.1
-        val baos = ByteArrayOutputStream()
-        val writer = writerFn(baos)
-        writer.writeValues(ION.newSystemReader(f.inputStream()))
-        // data.forEach { it.writeTo(writer) }
-        writer.close()
-        return baos
+        return baos.toByteArray()
     }
 
     /**

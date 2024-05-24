@@ -26,7 +26,6 @@ class IonRawBinaryWriterTest_1_1 {
         lengthPrefixPreallocation = 1,
     )
 
-
     private inline fun writeAsHexString(autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit): String {
         val baos = ByteArrayOutputStream()
         val rawWriter = ionWriter(baos)
