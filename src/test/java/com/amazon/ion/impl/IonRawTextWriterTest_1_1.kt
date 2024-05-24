@@ -6,7 +6,9 @@ import com.amazon.ion.*
 import com.amazon.ion.system.*
 import java.math.BigDecimal
 import java.math.BigInteger
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -22,7 +24,7 @@ class IonRawTextWriterTest_1_1 {
     private inline fun ionWriter(
         out: StringBuilder = StringBuilder(),
         builderConfigurator: IonTextWriterBuilder_1_1.() -> Unit = { /* noop */ },
-        block: IonRawTextWriter_1_1.() -> Unit,
+        block: IonRawTextWriter_1_1.() -> Unit = {},
     ): IonRawTextWriter_1_1 {
         val b = standardBuilder()
             .apply(builderConfigurator)
@@ -550,6 +552,36 @@ class IonRawTextWriterTest_1_1 {
             writeAnnotations(arrayOf("foo", "bar"))
             writeBool(false)
         }
+    }
+
+    @Test
+    fun `_private_hasFirstAnnotation() should return false when there are no annotations`() {
+        val rawWriter = ionWriter()
+        assertFalse(rawWriter._private_hasFirstAnnotation(SystemSymbols.ION_SID, SystemSymbols.ION))
+    }
+
+    @Test
+    fun `_private_hasFirstAnnotation() should return true if only the sid matches`() {
+        val rawWriter = ionWriter()
+        rawWriter.writeAnnotations(SystemSymbols.ION_SID)
+        assertTrue(rawWriter._private_hasFirstAnnotation(SystemSymbols.ION_SID, null))
+    }
+
+    @Test
+    fun `_private_hasFirstAnnotation() should return true if only the text matches`() {
+        val rawWriter = ionWriter()
+        rawWriter.writeAnnotations(SystemSymbols.ION)
+        assertTrue(rawWriter._private_hasFirstAnnotation(-1, SystemSymbols.ION))
+    }
+
+    @Test
+    fun `_private_hasFirstAnnotation() should return false if the first annotation does not match the sid or text`() {
+        val rawWriter = ionWriter()
+        rawWriter.writeAnnotations(SystemSymbols.IMPORTS_SID)
+        rawWriter.writeAnnotations(SystemSymbols.ION)
+        rawWriter.writeAnnotations(SystemSymbols.ION_SID)
+        // Matches the second and third annotations, but not the first one.
+        assertFalse(rawWriter._private_hasFirstAnnotation(SystemSymbols.ION_SID, SystemSymbols.ION))
     }
 
     @Test
