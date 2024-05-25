@@ -219,6 +219,10 @@ public class BinaryReaderSystemProcessingTest
             "62          | UTF-8 byte 'b' \n"
         );
         IonReader reader = systemRead();
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("$ion_1_1", reader.symbolValue().getText());
+
         assertEquals(IonType.STRUCT, reader.next());
         reader.stepIn();
         assertEquals(IonType.STRUCT, reader.next());
@@ -255,6 +259,10 @@ public class BinaryReaderSystemProcessingTest
             "6F          | boolean false\n"
         );
         IonReader reader = systemRead();
+
+        assertEquals(IonType.SYMBOL, reader.next());
+        assertEquals("$ion_1_1", reader.symbolValue().getText());
+
         assertEquals(IonType.BOOL, reader.next());
         String[] annotations = reader.getTypeAnnotations();
         assertEquals(2, annotations.length);
