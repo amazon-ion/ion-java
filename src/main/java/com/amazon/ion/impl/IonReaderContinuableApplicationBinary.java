@@ -932,7 +932,13 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             if (marker.startIndex < 0) {
                 return marker.endIndex == ION_SYMBOL_TABLE_SID;
             } else {
-                throw new UnsupportedOperationException("https://github.com/amazon-ion/ion-java/issues/866");
+                if (marker.endIndex - marker.startIndex != ION_SYMBOL_TABLE_UTF8.length) return false;
+                int start = (int) marker.startIndex;
+                boolean isIonSymbolTable = true;
+                for (int i = 0; i < ION_SYMBOL_TABLE_UTF8.length; i++) {
+                    isIonSymbolTable &= buffer[start + i] == ION_SYMBOL_TABLE_UTF8[i];
+                }
+                return isIonSymbolTable;
             }
         }
         return false;
