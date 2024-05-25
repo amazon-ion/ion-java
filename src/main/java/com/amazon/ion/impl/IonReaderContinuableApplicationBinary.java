@@ -891,7 +891,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         }
                         readImportMaxId();
                         break;
-                    default: throw new IllegalStateException();
+                    default: throw new IllegalStateException(state.toString());
                 }
             }
         }
@@ -924,14 +924,28 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
      *  false.
      */
     boolean startsWithIonSymbolTable() {
-        if (minorVersion == 0 || annotationTokenMarkers.isEmpty()) {
+        if (minorVersion == 0 && annotationSequenceMarker.startIndex >= 0) {
             long savedPeekIndex = peekIndex;
             peekIndex = annotationSequenceMarker.startIndex;
             int sid = readVarUInt_1_0();
             peekIndex = savedPeekIndex;
             return ION_SYMBOL_TABLE_SID == sid;
         }
-        return ION_SYMBOL_TABLE_SID == annotationTokenMarkers.get(0).endIndex;
+        if (minorVersion == 1) {
+            Marker marker = annotationTokenMarkers.get(0);
+            if (marker.startIndex < 0) {
+                return marker.endIndex == ION_SYMBOL_TABLE_SID;
+            } else {
+                if (marker.endIndex - marker.startIndex != ION_SYMBOL_TABLE_UTF8.length) return false;
+                int start = (int) marker.startIndex;
+                boolean isIonSymbolTable = true;
+                for (int i = 0; i < ION_SYMBOL_TABLE_UTF8.length; i++) {
+                    isIonSymbolTable &= buffer[start + i] == ION_SYMBOL_TABLE_UTF8[i];
+                }
+                return isIonSymbolTable;
+            }
+        }
+        return false;
     }
 
     /**

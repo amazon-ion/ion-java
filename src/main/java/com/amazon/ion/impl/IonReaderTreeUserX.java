@@ -1,23 +1,12 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import static com.amazon.ion.SystemSymbols.ION_1_0_SID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.impl.IonReaderTextUserX.isIonVersionMarker;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonDatagram;
@@ -29,6 +18,7 @@ import com.amazon.ion.SeekableReader;
 import com.amazon.ion.Span;
 import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
+import com.amazon.ion.SymbolToken;
 
 
 final class IonReaderTreeUserX
@@ -111,9 +101,9 @@ final class IonReaderTreeUserX
                             sid = _system_symtab.findSymbol(name);
                         }
                     }
-                    if (sid == ION_1_0_SID
+                    if ((sid == ION_1_0_SID || isIonVersionMarker(sym.symbolValue().getText()))
                         && _next.getTypeAnnotationSymbols().length == 0) {
-                        // $ion_1_0 is read as an IVM only if it is not annotated
+                        // $ion_1_0 and other version markers are read as an IVM only if unannotated
                         SymbolTable symbols = _system_symtab;
                         _symbols = symbols;
                         push_symbol_table(symbols);
@@ -122,7 +112,7 @@ final class IonReaderTreeUserX
                     }
                 }
                 else if (IonType.STRUCT.equals(next_type)
-                      && _next.findTypeAnnotation(ION_SYMBOL_TABLE) == 0
+                    && _next_has_ion_symbol_table_annotation()
                 ) {
                     assert(_next instanceof IonStruct);
                     // read a local symbol table
@@ -143,6 +133,14 @@ final class IonReaderTreeUserX
         }
         return (next_type != null);
     }
+
+    private boolean _next_has_ion_symbol_table_annotation() {
+        SymbolToken[] annotations = _next.getTypeAnnotationSymbols();
+        if (annotations.length == 0) return false;
+        return annotations[0].getSid() == ION_SYMBOL_TABLE_SID
+            || annotations[0].getText() == ION_SYMBOL_TABLE;
+    }
+
     //
     //  This code handles the skipped symbol table
     //  support - it is cloned in IonReaderTextUserX

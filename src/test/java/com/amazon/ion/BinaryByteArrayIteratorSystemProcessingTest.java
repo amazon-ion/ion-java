@@ -62,6 +62,10 @@ public class BinaryByteArrayIteratorSystemProcessingTest
         );
         Iterator<IonValue> iterator = systemIterate();
         assertTrue(iterator.hasNext());
+        IonValue shouldBeAnIvm = iterator.next();
+        assertEquals(IonType.SYMBOL, shouldBeAnIvm.getType());
+        assertEquals("$ion_1_1", ((IonSymbol) shouldBeAnIvm).stringValue());
+        assertTrue(iterator.hasNext());
         IonStruct struct = (IonStruct) iterator.next();
         assertEquals(1, struct.size());
         IonStruct nested = (IonStruct) struct.get("a");
@@ -87,6 +91,10 @@ public class BinaryByteArrayIteratorSystemProcessingTest
             "6F          | boolean false\n"
         );
         Iterator<IonValue> iterator = systemIterate();
+        assertTrue(iterator.hasNext());
+        IonValue shouldBeAnIvm = iterator.next();
+        assertEquals(IonType.SYMBOL, shouldBeAnIvm.getType());
+        assertEquals("$ion_1_1", ((IonSymbol) shouldBeAnIvm).stringValue());
         assertTrue(iterator.hasNext());
         IonBool value = (IonBool) iterator.next();
         String[] annotations = value.getTypeAnnotations();
