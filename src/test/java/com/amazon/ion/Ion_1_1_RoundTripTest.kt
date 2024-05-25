@@ -308,6 +308,8 @@ abstract class Ion_1_1_RoundTripBase {
             ionText("""a::b::c::d::0 a::b::c::0"""),
             ionText("""a::b::c::d::0 a::0 a::0"""),
             ionText("""abc"""),
+            // This test case has a top-level annotation that is the same number of utf-8 bytes as $ion_symbol_table
+            ionText("fake_symbol_table::{}"),
             ionText(
                 """
                     ${'$'}ion_1_0
