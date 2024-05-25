@@ -60,6 +60,12 @@ interface IonRawWriter_1_1 {
     fun _private_clearAnnotations()
 
     /**
+     * Returns true if the reader has at least one annotation set and the first annotation matches the
+     * given sid OR text.
+     */
+    fun _private_hasFirstAnnotation(sid: Int, text: String?): Boolean
+
+    /**
      * Writes one annotation for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
