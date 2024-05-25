@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonType;
@@ -118,7 +119,7 @@ class IonReaderTextUserX
             if (_value_type != null && !isNullValue() && IonType.DATAGRAM.equals(getContainerType())) {
                 switch (_value_type) {
                 case STRUCT:
-                    if (_annotation_count > 0 && ION_SYMBOL_TABLE.equals(_annotations[0].getText())) {
+                    if (_annotation_count > 0 && (ION_SYMBOL_TABLE.equals(_annotations[0].getText()) || ION_SYMBOL_TABLE_SID == _annotations[0].getSid())) {
                         _symbols = _lstFactory.newLocalSymtab(_catalog,
                                                               this,
                                                               true);
@@ -158,7 +159,7 @@ class IonReaderTextUserX
         return (!_eof);
     }
 
-    private static boolean isIonVersionMarker(String text)
+    static boolean isIonVersionMarker(String text)
     {
         return text != null && ION_VERSION_MARKER_REGEX.matcher(text).matches();
     }

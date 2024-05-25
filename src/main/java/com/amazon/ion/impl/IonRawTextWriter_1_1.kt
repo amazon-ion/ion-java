@@ -211,6 +211,17 @@ class IonRawTextWriter_1_1 internal constructor(
         numAnnotations = 0
     }
 
+    override fun _private_hasFirstAnnotation(sid: Int, text: String?): Boolean {
+        if (numAnnotations == 0) return false
+        if (sid >= 0 && annotationsIdBuffer[0] == sid) {
+            return true
+        }
+        if (text != null && annotationsTextBuffer[0] == text) {
+            return true
+        }
+        return false
+    }
+
     override fun _private_hasFieldName(): Boolean = hasFieldName
 
     override fun writeFieldName(sid: Int) {
