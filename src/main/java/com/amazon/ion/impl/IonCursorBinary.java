@@ -20,8 +20,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
-import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
-import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
@@ -158,6 +156,13 @@ class IonCursorBinary implements IonCursor {
          * The number of bytes of an oversized value skipped during single-byte read operations.
          */
         int individualBytesSkippedWithoutBuffering = 0;
+
+        /**
+         * The last byte that was read without being buffered (due to the buffer exceeding the maximum size). This
+         * allows for one byte to be un-read even if an oversize value is being skipped. Un-reading is necessary
+         * when the cursor probes for, but does not find, an end delimiter.
+         */
+        int lastUnbufferedByte = -1;
 
         RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, State initialState) {
             this.inputStream = inputStream;
@@ -544,19 +549,23 @@ class IonCursorBinary implements IonCursor {
      * Ensures that there is space for at least 'minimumNumberOfBytesRequired' additional bytes in the buffer,
      * growing the buffer if necessary. May consolidate buffered bytes to the beginning of the buffer, shifting indices
      * accordingly.
-     * @param minimumNumberOfBytesRequired the minimum number of additional bytes to buffer.
+     * @param numberOfBytes the number of bytes starting at `index` that need to be present.
+     * @param index the index after which to fill.
      * @return true if the buffer has sufficient capacity; otherwise, false.
      */
-    private boolean ensureCapacity(long minimumNumberOfBytesRequired) {
-        if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
-            // No need to shift any bytes or grow the buffer.
-            return true;
-        }
+    private boolean ensureCapacity(long numberOfBytes, long index) {
         int maximumFreeSpace = refillableState.maximumBufferSize;
         int startOffset = (int) offset;
         if (refillableState.pinOffset > -1) {
             maximumFreeSpace -=  (int) (offset - refillableState.pinOffset);
             startOffset = (int) refillableState.pinOffset;
+        }
+
+        long minimumNumberOfBytesRequired = numberOfBytes + (index - startOffset);
+        refillableState.bytesRequested = minimumNumberOfBytesRequired;
+        if (freeSpaceAt(startOffset) >= minimumNumberOfBytesRequired) {
+            // No need to shift any bytes or grow the buffer.
+            return true;
         }
         if (minimumNumberOfBytesRequired > maximumFreeSpace) {
             refillableState.isSkippingCurrentValue = true;
@@ -589,8 +598,7 @@ class IonCursorBinary implements IonCursor {
     private boolean fillAt(long index, long numberOfBytes) {
         long shortfall = numberOfBytes - availableAt(index);
         if (shortfall > 0) {
-            refillableState.bytesRequested = numberOfBytes + (index - offset);
-            if (ensureCapacity(refillableState.bytesRequested)) {
+            if (ensureCapacity(numberOfBytes, index)) {
                 // Fill all the free space, not just the shortfall; this reduces I/O.
                 shortfall = refill(refillableState.bytesRequested);
             } else {
@@ -642,6 +650,11 @@ class IonCursorBinary implements IonCursor {
      */
     private int readByteWithoutBuffering() {
         int b = -1;
+        if (refillableState.lastUnbufferedByte > -1) {
+            b = refillableState.lastUnbufferedByte;
+            refillableState.lastUnbufferedByte = -1;
+            return b;
+        }
         try {
             b = refillableState.inputStream.read();
         } catch (EOFException e) {
@@ -707,17 +720,21 @@ class IonCursorBinary implements IonCursor {
         valueMarker.startIndex -= shiftAmount;
         valueMarker.endIndex -= shiftAmount;
         checkpoint -= shiftAmount;
+        if (fieldTextMarker.startIndex > -1) {
+            fieldTextMarker.startIndex -= shiftAmount;
+            fieldTextMarker.endIndex -= shiftAmount;
+        }
         if (annotationSequenceMarker.startIndex > -1) {
             annotationSequenceMarker.startIndex -= shiftAmount;
             annotationSequenceMarker.endIndex -= shiftAmount;
         }
-        if (!annotationTokenMarkers.isEmpty()) {
-            for (int i = 0; i < annotationTokenMarkers.size(); i++) {
-                Marker marker = annotationTokenMarkers.get(i);
-                if (marker.startIndex > -1) {
-                    marker.startIndex -= shiftAmount;
-                    marker.endIndex -= shiftAmount;
-                }
+        // Note: even provisional annotation token markers must be shifted because a shift may occur between
+        // provisional creation and commit.
+        for (int i = 0; i < annotationTokenMarkers.provisionalSize(); i++) {
+            Marker marker = annotationTokenMarkers.provisionalGet(i);
+            if (marker.startIndex > -1) {
+                marker.startIndex -= shiftAmount;
+                marker.endIndex -= shiftAmount;
             }
         }
         shiftContainerEnds(shiftAmount);
@@ -751,7 +768,7 @@ class IonCursorBinary implements IonCursor {
             if (numberOfBytesFilled > 0) {
                 limit += numberOfBytesFilled;
             }
-            shortfall = minimumNumberOfBytesRequired - availableAt(offset);
+            shortfall = minimumNumberOfBytesRequired - availableAt(refillableState.pinOffset > -1 ? refillableState.pinOffset : offset);
         } while (shortfall > 0 && numberOfBytesFilled >= 0);
         return shortfall;
     }
@@ -1220,10 +1237,6 @@ class IonCursorBinary implements IonCursor {
         } else {
             // At this point the value must have at least one more byte for each annotation FlexSym (one for lower
             // nibble 7, two for lower nibble 8), plus one for the smallest-possible value representation.
-            if (!fillAt(peekIndex, (valueTid.lowerNibble == ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1 || valueTid.lowerNibble == ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1) ? 2 : 3)) {
-                return true;
-            }
-
             if (valueTid.isInlineable) {
                 // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
                 Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
@@ -1522,12 +1535,24 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Un-reads one byte. It is up to the caller to ensure the provided byte is actually the last byte read.
+     * @param b the byte to un-read.
+     */
+    private void unreadByte(int b) {
+        if (refillableState.isSkippingCurrentValue) {
+            refillableState.lastUnbufferedByte = b;
+        } else {
+            peekIndex--;
+        }
+    }
+
+    /**
      * Determines whether the cursor is at the end of a delimited struct.
      * @param currentByte the byte on which the cursor is currently positioned.
      * @return true if the struct is at its end or if not enough data is available; otherwise, false.
      */
     private boolean slowIsDelimitedStructEnd_1_1(int currentByte) {
-        if (refillableState.isSpecialFlexSymPartiallyRead) {
+        if (refillableState.isSpecialFlexSymPartiallyRead) { // TODO 'unreadByte' should replace this
             // The delimited struct is oversized, and the first byte in a special FlexSym in field position (0x01)
             // was already skipped. If the next byte is DELIMITED_END_MARKER, then the struct is at its end.
             if (currentByte == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
@@ -1554,7 +1579,7 @@ class IonCursorBinary implements IonCursor {
             }
             // Note: slowReadByte() increments the peekIndex, but if the delimiter end is not found, the byte
             // needs to remain available.
-            peekIndex--;
+            unreadByte(currentByte);
         }
         return false;
     }
@@ -1581,7 +1606,7 @@ class IonCursorBinary implements IonCursor {
         }
         // Note: slowReadByte() increments the peekIndex, but if the delimiter end is not found, the byte
         // needs to remain available.
-        peekIndex--;
+        unreadByte(b);
         return false;
     }
 
@@ -1591,7 +1616,8 @@ class IonCursorBinary implements IonCursor {
      */
     boolean skipRemainingDelimitedContainerElements_1_1() {
         while (event != Event.END_CONTAINER) {
-            nextValue();
+            event = Event.NEEDS_DATA;
+            while (uncheckedNextToken());
             if (event == Event.NEEDS_DATA) {
                 return true;
             }
@@ -1630,6 +1656,17 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the container was found; otherwise, false.
      */
     private boolean slowFindDelimitedEnd_1_1() {
+        // Pin the current buffer offset so that all bytes encountered while finding the end of the delimited container
+        // are buffered. If the pin is already set, do not overwrite; this indicates a retry after previously
+        // running out of data.
+        if (refillableState.pinOffset < 0) {
+            refillableState.pinOffset = offset;
+        }
+        if (parent == null) {
+            // At depth zero, there can not be any more upward recursive calls to which the shift needs to be
+            // conveyed.
+            refillableState.pendingShift = 0;
+        }
         // Save the cursor's current state so that it can return to this position after finding the delimited end.
         long savedPeekIndex = peekIndex;
         long savedStartIndex = valueMarker.startIndex;
@@ -1646,6 +1683,7 @@ class IonCursorBinary implements IonCursor {
         long savedCheckpoint = checkpoint;
         int savedContainerIndex = containerIndex;
         Marker savedParent = parent;
+        boolean savedHasAnnotations = hasAnnotations; // TODO have to set aside all annotation markers... or go into a mode where the markers are not recorded
         // ------------
 
         // TODO performance: the following line causes the end indexes of any child delimited containers that are not
@@ -1679,19 +1717,16 @@ class IonCursorBinary implements IonCursor {
         checkpointLocation = savedCheckpointLocation;
         checkpoint = savedCheckpoint - pendingShift;
         containerIndex = savedContainerIndex;
+        hasAnnotations = savedHasAnnotations;
 
         savedPeekIndex -= pendingShift;
         parent = savedParent;
-        if (parent == null) {
-            // At depth zero, there can not be any more upward recursive calls to which the shift needs to be
-            // conveyed.
-            refillableState.pendingShift = 0;
-        }
         if (isReady) {
             // Record the endIndex so that it does not need to be calculated repetitively.
             valueMarker.endIndex = peekIndex;
             event = Event.START_CONTAINER;
             refillableState.state = State.READY;
+            refillableState.pinOffset = -1;
         } else {
             // The fill is not complete, but there is currently no more data. The cursor will have to resume the fill
             // before processing the next request.
@@ -1726,22 +1761,6 @@ class IonCursorBinary implements IonCursor {
         refillableState.isSkippingCurrentValue = false;
         event = Event.NEEDS_INSTRUCTION;
         return true;
-    }
-
-    /**
-     * Fills all bytes in the delimited container on which the cursor is currently positioned.
-     * @return true if not enough data was available in the stream; otherwise, false.
-     */
-    private boolean slowFillDelimitedContainer_1_1() {
-        // Pin the current buffer offset so that all bytes encountered while finding the end of the delimited container
-        // are buffered.
-        refillableState.pinOffset = offset;
-        slowFindDelimitedEnd_1_1();
-        if (event == Event.NEEDS_DATA) {
-            return true;
-        }
-        refillableState.pinOffset = -1;
-        return false;
     }
 
     /* ---- End: version-dependent parsing methods ---- */
@@ -1822,7 +1841,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the current container has been reached; otherwise, false.
      */
     private boolean checkContainerEnd() {
-        if (parent.endIndex > peekIndex) {
+        if (peekIndex < valueMarker.endIndex ||  parent.endIndex > peekIndex) {
             return false;
         }
         if (parent.endIndex == DELIMITED_MARKER) {
@@ -1853,9 +1872,9 @@ class IonCursorBinary implements IonCursor {
         annotationSequenceMarker.typeId = null;
         annotationSequenceMarker.startIndex = -1;
         annotationSequenceMarker.endIndex = -1;
+        // TOOD annotationTokenMarkers?
         if (refillableState != null) {
             refillableState.isSpecialFlexSymPartiallyRead = false;
-            refillableState.pendingShift = 0;
         }
     }
 
@@ -2088,9 +2107,11 @@ class IonCursorBinary implements IonCursor {
             event = Event.START_SCALAR;
         }
         if (endIndex != DELIMITED_MARKER) {
-            if (refillableState.isSkippingCurrentValue) {
+            if (refillableState.isSkippingCurrentValue && valueLength > 0) {
                 // Any bytes that were skipped directly from the input must still be included in the logical endIndex so
-                // that the rest of the oversized value's bytes may be skipped.
+                // that the rest of the oversized value's bytes may be skipped. However, if the value's length is 0,
+                // then the type ID byte must have been skipped. In this case, the skipped type ID byte is already
+                // accounted for in the peekIndex.
                 endIndex = peekIndex + valueLength + refillableState.individualBytesSkippedWithoutBuffering;
             } else {
                 endIndex = peekIndex + valueLength;
@@ -2451,6 +2472,12 @@ class IonCursorBinary implements IonCursor {
             if (event == Event.NEEDS_DATA) {
                 return true;
             }
+        } else if (refillableState.pinOffset > -1) {
+            // Bytes in the buffer are being pinned, so buffer the remaining bytes instead of seeking past them.
+            if (!fillAt(refillableState.pinOffset, valueMarker.endIndex - refillableState.pinOffset)) {
+                return true;
+            }
+            offset = valueMarker.endIndex;
         } else if (limit >= valueMarker.endIndex) {
             offset = valueMarker.endIndex;
         } else if (slowSeek(valueMarker.endIndex - offset)) {
@@ -2567,7 +2594,7 @@ class IonCursorBinary implements IonCursor {
         event = Event.NEEDS_DATA;
 
         if (valueMarker.endIndex == DELIMITED_MARKER) {
-            if (slowFillDelimitedContainer_1_1()) {
+            if (!slowFindDelimitedEnd_1_1()) {
                 return event;
             }
         }
