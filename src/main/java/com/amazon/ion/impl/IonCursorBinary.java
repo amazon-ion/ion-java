@@ -128,15 +128,6 @@ class IonCursorBinary implements IonCursor {
         long pinOffset = -1;
 
         /**
-         * True if the first byte of a special FlexSym in field name position was skipped due to the delimited struct
-         * being oversize. This is necessary because the only way to end a delimited struct is with a two-byte
-         * sequence. If the second byte in the sequence is not yet available, this flag reminds the cursor that the
-         * previous byte, which could not be buffered, began the special two-byte sequence.
-         * TODO: handling this case introduces some complexity; alternative solutions should be considered.
-         */
-        boolean isSpecialFlexSymPartiallyRead = false;
-
-        /**
          * The target depth to which the reader should seek. This is used when a container is determined to be oversize
          * while buffering one of its children.
          */
@@ -1552,23 +1543,10 @@ class IonCursorBinary implements IonCursor {
      * @return true if the struct is at its end or if not enough data is available; otherwise, false.
      */
     private boolean slowIsDelimitedStructEnd_1_1(int currentByte) {
-        if (refillableState.isSpecialFlexSymPartiallyRead) { // TODO 'unreadByte' should replace this
-            // The delimited struct is oversized, and the first byte in a special FlexSym in field position (0x01)
-            // was already skipped. If the next byte is DELIMITED_END_MARKER, then the struct is at its end.
-            if (currentByte == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
-                event = Event.END_CONTAINER;
-                fieldSid = -1;
-                return true;
-            }
-            refillableState.isSpecialFlexSymPartiallyRead = false;
-        } else if (currentByte == FlexInt.ZERO) {
+        if (currentByte == FlexInt.ZERO) {
             // This is a special FlexSym in field position. Determine whether the next byte is DELIMITED_END_MARKER.
             currentByte = slowReadByte();
             if (currentByte < 0) {
-                // If the struct is being skipped due to being oversized, then the first byte in the special FlexSym
-                // was skipped and is not present in the buffer. This needs to be recorded so that the struct can
-                // still terminate if additional bytes become available.
-                refillableState.isSpecialFlexSymPartiallyRead = refillableState.isSkippingCurrentValue;
                 return true;
             }
             if (currentByte == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
@@ -1873,9 +1851,6 @@ class IonCursorBinary implements IonCursor {
         annotationSequenceMarker.startIndex = -1;
         annotationSequenceMarker.endIndex = -1;
         // TOOD annotationTokenMarkers?
-        if (refillableState != null) {
-            refillableState.isSpecialFlexSymPartiallyRead = false;
-        }
     }
 
     /**
