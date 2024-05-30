@@ -7,11 +7,11 @@ import com.amazon.ion.TestUtils.*
 import com.amazon.ion.impl._Private_IonSystem
 import com.amazon.ion.impl.bin.*
 import com.amazon.ion.system.*
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FilenameFilter
 import java.io.OutputStream
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -55,11 +55,6 @@ class Ion_1_1_RoundTripTest {
             .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)
 
         override val writerFn: (OutputStream) -> IonWriter = builder::build
-
-        @Disabled("Ion binary reader can't seem to discover symbol tables with inline annotations")
-        override fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
-            super.testUserValuesArePreservedWhenTransferringSystemValues(name, ion)
-        }
     }
 
     @Nested
@@ -69,11 +64,6 @@ class Ion_1_1_RoundTripTest {
             .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)
 
         override val writerFn: (OutputStream) -> IonWriter = builder::build
-
-        @Disabled("Ion binary reader can't seem to discover symbol tables with inline annotations")
-        override fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
-            super.testUserValuesArePreservedWhenTransferringSystemValues(name, ion)
-        }
     }
 
     @Nested
@@ -131,8 +121,8 @@ abstract class Ion_1_1_RoundTripBase {
         actual.printDisplayString()
 
         assertReadersHaveEquivalentValues(
-            ION.newReader(ion),
-            ION.newReader(actual)
+            newReader(ion),
+            newReader(actual)
         )
     }
 
@@ -148,8 +138,8 @@ abstract class Ion_1_1_RoundTripBase {
         actual.printDisplayString()
 
         assertReadersHaveEquivalentValues(
-            ION.newReader(ion),
-            ION.newReader(actual)
+            newReader(ion),
+            newReader(actual)
         )
     }
 
@@ -164,8 +154,8 @@ abstract class Ion_1_1_RoundTripBase {
         actual.printDisplayString()
 
         assertReadersHaveEquivalentValues(
-            ION.newReader(ion),
-            ION.newReader(actual)
+            newReader(ion),
+            newReader(actual)
         )
     }
 
@@ -182,8 +172,8 @@ abstract class Ion_1_1_RoundTripBase {
 
         // Check the user values
         assertReadersHaveEquivalentValues(
-            ION.newReader(ion),
-            ION.newReader(actual)
+            newReader(ion),
+            newReader(actual)
         )
     }
 
@@ -200,9 +190,9 @@ abstract class Ion_1_1_RoundTripBase {
 
         // Check the system values
         assertReadersHaveEquivalentValues(
-            ION.newSystemReader(ion),
+            newSystemReader(ion),
             // Skip the initial IVM since it ends up being doubled when we're copying.
-            ION.newSystemReader(actual).apply { next() }
+            newSystemReader(actual).apply { next() }
         )
     }
 
@@ -290,6 +280,16 @@ abstract class Ion_1_1_RoundTripBase {
         @JvmStatic
         protected val ION = IonSystemBuilder.standard().build() as _Private_IonSystem
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_[0-9]+_[0-9]+$")
+
+        private fun newReader(data: ByteArray): IonReader {
+             //return ION.newReader(data)
+            // TODO parameterize incremental/non-incremental & buffer size 16 / default & stream / buffer
+            return IonReaderBuilder.standard()/*.withIncrementalReadingEnabled(true)*/.withBufferConfiguration(IonBufferConfiguration.Builder.standard().withInitialBufferSize(16).build()).build(ByteArrayInputStream(data))
+        }
+
+        private fun newSystemReader(data: ByteArray): IonReader {
+            return ION.newSystemReader(data)
+        }
 
         private fun ionText(text: String): Array<Any> = arrayOf(text, text.encodeToByteArray())
         private fun ionBinary(name: String, bytes: String): Array<Any> = arrayOf(name, hexStringToByteArray(bytes))
