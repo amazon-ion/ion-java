@@ -39,40 +39,204 @@ class Ion_1_1_RoundTripTest {
         override val newWriterForAppendable: (Appendable) -> IonWriter = builder::build
     }
 
-    @Nested
-    inner class BinaryWithInternedSymbolsAndPrefixedContainers : Ion_1_1_RoundTripBase() {
-        private val builder = ION_1_1.binaryWriterBuilder()
-            .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)
+    // Writer: Interned/Prefixed
 
-        override val writerFn: (OutputStream) -> IonWriter = builder::build
+    @Nested
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_DEFAULT
     }
 
     @Nested
-    inner class BinaryWithInlineSymbolsAndPrefixedContainers : Ion_1_1_RoundTripBase() {
-        private val builder = ION_1_1.binaryWriterBuilder()
-            .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)
-
-        override val writerFn: (OutputStream) -> IonWriter = builder::build
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_16
     }
 
     @Nested
-    inner class BinaryWithInlineSymbolsAndDelimitedContainers : Ion_1_1_RoundTripBase() {
-        private val builder = ION_1_1.binaryWriterBuilder()
-            .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)
-
-        override val writerFn: (OutputStream) -> IonWriter = builder::build
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_DEFAULT
     }
 
     @Nested
-    inner class BinaryWithInternedSymbolsAndDelimitedContainers : Ion_1_1_RoundTripBase() {
-        private val builder = ION_1_1.binaryWriterBuilder()
-            .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_16
+    }
 
-        override val writerFn: (OutputStream) -> IonWriter = builder::build
+    @Nested
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderNonContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderNonContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderNonContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndPrefixedContainers_ReaderNonContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_16
+    }
+
+    // Writer: Inline/Prefixed
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_16
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderNonContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderNonContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderNonContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndPrefixedContainers_ReaderNonContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_PREFIXED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_16
+    }
+
+    // Writer: Inline/Delimited
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_16
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderNonContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderNonContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderNonContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInlineSymbolsAndDelimitedContainers_ReaderNonContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INLINE_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_16
+    }
+
+    // Writer: Interned / Delimited
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_CONTINUABLE_STREAM_16
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderNonContinuableBufferDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderNonContinuableBuffer16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_BUFFER_16
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderNonContinuableStreamDefault : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_DEFAULT
+    }
+
+    @Nested
+    inner class BinaryWithInternedSymbolsAndDelimitedContainers_ReaderNonContinuableStream16 : Ion_1_1_RoundTripBase() {
+        override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
+        override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_16
     }
 }
 
@@ -81,6 +245,7 @@ class Ion_1_1_RoundTripTest {
  */
 abstract class Ion_1_1_RoundTripTextBase : Ion_1_1_RoundTripBase() {
     abstract val newWriterForAppendable: (Appendable) -> IonWriter
+    override val readerFn: (ByteArray) -> IonReader = IonReaderBuilder.standard()::build
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
@@ -92,10 +257,12 @@ abstract class Ion_1_1_RoundTripTextBase : Ion_1_1_RoundTripBase() {
         writer.close()
         val actual = appendable.toString()
 
-        println("Expected:")
-        ion.printDisplayString()
-        println("Actual:")
-        println(actual)
+        if (DEBUG_MODE) {
+            println("Expected:")
+            ion.printDisplayString()
+            println("Actual:")
+            println(actual)
+        }
 
         assertReadersHaveEquivalentValues(
             ION.newReader(ion),
@@ -108,6 +275,8 @@ abstract class Ion_1_1_RoundTripTextBase : Ion_1_1_RoundTripBase() {
 abstract class Ion_1_1_RoundTripBase {
 
     abstract val writerFn: (OutputStream) -> IonWriter
+    abstract val readerFn: (ByteArray) -> IonReader
+    val systemReaderFn: (ByteArray) -> IonReader = ION::newSystemReader
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
@@ -115,14 +284,12 @@ abstract class Ion_1_1_RoundTripBase {
 
         // Read and compare the data.
         val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { it.writeTo(w) } }
-        println("Expected:")
-        ion.printDisplayString()
-        println("Actual:")
-        actual.printDisplayString()
+
+        printDebugInfo(ion, actual)
 
         assertReadersHaveEquivalentValues(
-            newReader(ion),
-            newReader(actual)
+            readerFn(ion),
+            readerFn(actual)
         )
     }
 
@@ -132,14 +299,12 @@ abstract class Ion_1_1_RoundTripBase {
 
         // Read and compare the data.
         val actual = roundTripToByteArray { w -> newReader(ion).let { r -> while (r.next() != null) w.writeValue(r) } }
-        println("Expected:")
-        ion.printDisplayString()
-        println("Actual:")
-        actual.printDisplayString()
+
+        printDebugInfo(ion, actual)
 
         assertReadersHaveEquivalentValues(
-            newReader(ion),
-            newReader(actual)
+            readerFn(ion),
+            readerFn(actual)
         )
     }
 
@@ -148,14 +313,12 @@ abstract class Ion_1_1_RoundTripBase {
     fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForIonValue(name: String, ion: ByteArray) {
         // Read and compare the data.
         val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { w.writeValue(it) } }
-        println("Expected:")
-        ion.printDisplayString()
-        println("Actual:")
-        actual.printDisplayString()
+
+        printDebugInfo(ion, actual)
 
         assertReadersHaveEquivalentValues(
-            newReader(ion),
-            newReader(actual)
+            readerFn(ion),
+            readerFn(actual)
         )
     }
 
@@ -165,15 +328,13 @@ abstract class Ion_1_1_RoundTripBase {
 
         // Read and compare the data.
         val actual = roundTripToByteArray { w -> w.writeValues(newSystemReader(ion)) }
-        println("Expected:")
-        ion.printDisplayString()
-        println("Actual:")
-        actual.printDisplayString()
+
+        printDebugInfo(ion, actual)
 
         // Check the user values
         assertReadersHaveEquivalentValues(
-            newReader(ion),
-            newReader(actual)
+            readerFn(ion),
+            readerFn(actual)
         )
     }
 
@@ -183,16 +344,14 @@ abstract class Ion_1_1_RoundTripBase {
 
         // Read and compare the data.
         val actual = roundTripToByteArray { w -> w.writeValues(newSystemReader(ion)) }
-        println("Expected:")
-        ion.printDisplayString()
-        println("Actual:")
-        actual.printDisplayString()
+
+        printDebugInfo(ion, actual)
 
         // Check the system values
         assertReadersHaveEquivalentValues(
-            newSystemReader(ion),
+            systemReaderFn(ion),
             // Skip the initial IVM since it ends up being doubled when we're copying.
-            newSystemReader(actual).apply { next() }
+            systemReaderFn(actual).apply { next() }
         )
     }
 
@@ -203,22 +362,6 @@ abstract class Ion_1_1_RoundTripBase {
         block(ION, writer)
         writer.close()
         return baos.toByteArray()
-    }
-
-    /**
-     * Prints this ByteArray as hex octets if this contains Ion Binary, otherwise prints as UTF-8 decoded string.
-     */
-    protected fun ByteArray.printDisplayString() {
-        if (isIonBinary()) {
-            map { it.toHexString(HexFormat.UpperCase) }
-                .windowed(4, 4, partialWindows = true)
-                .windowed(8, 8, partialWindows = true)
-                .forEach {
-                    println(it.joinToString("   ") { it.joinToString(" ") })
-                }
-        } else {
-            println(toString(Charsets.UTF_8))
-        }
     }
 
     fun assertReadersHaveEquivalentValues(expectedDataReader: IonReader, actualDataReader: IonReader) {
@@ -257,16 +400,8 @@ abstract class Ion_1_1_RoundTripBase {
         while (actualData.hasNext()) { actualData.next(); ia++ }
 
         assertEquals(ie, ia, "Data is unequal length")
-    }
-
-    /**
-     * Checks if this ByteArray contains Ion Binary.
-     */
-    private fun ByteArray.isIonBinary(): Boolean {
-        return get(0) == 0xE0.toByte() &&
-            get(1) == 0x01.toByte() &&
-            get(2) in setOf<Byte>(0, 1) &&
-            get(3) == 0xEA.toByte()
+        expectedDataReader.close()
+        actualDataReader.close()
     }
 
     private fun isIonVersionMarker(symbol: SymbolToken?): Boolean {
@@ -277,18 +412,84 @@ abstract class Ion_1_1_RoundTripBase {
     }
 
     companion object {
+
+        @JvmStatic
+        protected val DEBUG_MODE = false
+
         @JvmStatic
         protected val ION = IonSystemBuilder.standard().build() as _Private_IonSystem
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_[0-9]+_[0-9]+$")
 
-        private fun newReader(data: ByteArray): IonReader {
-             //return ION.newReader(data)
-            // TODO parameterize incremental/non-incremental & buffer size 16 / default & stream / buffer
-            return IonReaderBuilder.standard()/*.withIncrementalReadingEnabled(true)*/.withBufferConfiguration(IonBufferConfiguration.Builder.standard().withInitialBufferSize(16).build()).build(ByteArrayInputStream(data))
+        @JvmStatic
+        private val BUFFER_CONFIGURATION_INITIAL_SIZE_16: IonBufferConfiguration = IonBufferConfiguration.Builder.standard().withInitialBufferSize(16).build()
+        @JvmStatic
+        protected val READER_NON_CONTINUABLE_BUFFER_DEFAULT: (ByteArray) -> IonReader = IonReaderBuilder.standard()::build
+        @JvmStatic
+        protected val READER_NON_CONTINUABLE_STREAM_DEFAULT: (ByteArray) -> IonReader = { IonReaderBuilder.standard().build(ByteArrayInputStream(it)) }
+        @JvmStatic
+        protected val READER_NON_CONTINUABLE_BUFFER_16: (ByteArray) -> IonReader = IonReaderBuilder.standard().withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16)::build
+        @JvmStatic
+        protected val READER_NON_CONTINUABLE_STREAM_16: (ByteArray) -> IonReader = { IonReaderBuilder.standard().withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16).build(ByteArrayInputStream(it)) }
+        @JvmStatic
+        protected val READER_CONTINUABLE_BUFFER_DEFAULT: (ByteArray) -> IonReader = IonReaderBuilder.standard().withIncrementalReadingEnabled(true)::build
+        @JvmStatic
+        protected val READER_CONTINUABLE_STREAM_DEFAULT: (ByteArray) -> IonReader = { IonReaderBuilder.standard().withIncrementalReadingEnabled(true).build(ByteArrayInputStream(it)) }
+        @JvmStatic
+        protected val READER_CONTINUABLE_BUFFER_16: (ByteArray) -> IonReader = IonReaderBuilder.standard().withIncrementalReadingEnabled(true).withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16)::build
+        @JvmStatic
+        protected val READER_CONTINUABLE_STREAM_16: (ByteArray) -> IonReader = { IonReaderBuilder.standard().withIncrementalReadingEnabled(true).withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16).build(ByteArrayInputStream(it)) }
+
+        @JvmStatic
+        protected val WRITER_INTERNED_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
+                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
+                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
+        @JvmStatic
+        protected val WRITER_INLINE_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
+                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
+                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
+        @JvmStatic
+        protected val WRITER_INTERNED_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
+                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
+                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
+        @JvmStatic
+        protected val WRITER_INLINE_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
+                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
+                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
+
+        /**
+         * Checks if this ByteArray contains Ion Binary.
+         */
+        private fun ByteArray.isIonBinary(): Boolean {
+            return get(0) == 0xE0.toByte() &&
+                    get(1) == 0x01.toByte() &&
+                    get(2) in setOf<Byte>(0, 1) &&
+                    get(3) == 0xEA.toByte()
         }
 
-        private fun newSystemReader(data: ByteArray): IonReader {
-            return ION.newSystemReader(data)
+        /**
+         * Prints this ByteArray as hex octets if this contains Ion Binary, otherwise prints as UTF-8 decoded string.
+         */
+        @JvmStatic
+        protected fun ByteArray.printDisplayString() {
+            if (isIonBinary()) {
+                map { it.toHexString(HexFormat.UpperCase) }
+                        .windowed(4, 4, partialWindows = true)
+                        .windowed(8, 8, partialWindows = true)
+                        .forEach {
+                            println(it.joinToString("   ") { it.joinToString(" ") })
+                        }
+            } else {
+                println(toString(Charsets.UTF_8))
+            }
+        }
+
+        fun printDebugInfo(expected: ByteArray, actual: ByteArray) {
+            if (DEBUG_MODE) {
+                println("Expected:")
+                expected.printDisplayString()
+                println("Actual:")
+                actual.printDisplayString()
+            }
         }
 
         private fun ionText(text: String): Array<Any> = arrayOf(text, text.encodeToByteArray())
