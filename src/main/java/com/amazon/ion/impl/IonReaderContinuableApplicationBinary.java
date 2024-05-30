@@ -45,9 +45,19 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     // The UTF-8 encoded bytes representing the text `$ion_symbol_table`.
     private static final byte[] ION_SYMBOL_TABLE_UTF8;
+    private static final byte[] IMPORTS_UTF8;
+    private static final byte[] SYMBOLS_UTF8;
+    private static final byte[] NAME_UTF8;
+    private static final byte[] VERSION_UTF8;
+    private static final byte[] MAX_ID_UTF8;
 
     static {
         ION_SYMBOL_TABLE_UTF8 = SystemSymbols.ION_SYMBOL_TABLE.getBytes(StandardCharsets.UTF_8);
+        IMPORTS_UTF8 = SystemSymbols.IMPORTS.getBytes(StandardCharsets.UTF_8);
+        SYMBOLS_UTF8 = SystemSymbols.SYMBOLS.getBytes(StandardCharsets.UTF_8);
+        NAME_UTF8 = SystemSymbols.NAME.getBytes(StandardCharsets.UTF_8);
+        VERSION_UTF8 = SystemSymbols.VERSION.getBytes(StandardCharsets.UTF_8);
+        MAX_ID_UTF8 = SystemSymbols.MAX_ID.getBytes(StandardCharsets.UTF_8);
     }
 
     // An IonCatalog containing zero shared symbol tables.
@@ -673,7 +683,39 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             state = State.READING_VALUE;
         }
 
+        /**
+         * Gets the symbol ID for the Marker representing a symbol token.
+         * @param marker the symbol token marker.
+         * @return a symbol ID, or -1 if unknown or not a system symbol.
+         */
+        private int mapInlineTextToSystemSid(Marker marker) {
+            if (marker.startIndex < 0) {
+                // Symbol ID is already populated.
+                return (int) marker.endIndex;
+            }
+            if (bytesMatch(SYMBOLS_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex)) {
+                return SYMBOLS_SID;
+            }
+            if (bytesMatch(IMPORTS_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex)) {
+                return IMPORTS_SID;
+            }
+            if (bytesMatch(NAME_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex)) {
+                return NAME_SID;
+            }
+            if (bytesMatch(VERSION_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex)) {
+                return VERSION_SID;
+            }
+            if (bytesMatch(MAX_ID_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex)) {
+                return MAX_ID_SID;
+            }
+            // Not a system symbol.
+            return -1;
+        }
+
         private void readSymbolTableStructField() {
+            if (minorVersion > 0 && fieldSid < 0) {
+                fieldSid = mapInlineTextToSystemSid(fieldTextMarker);
+            }
             if (fieldSid == SYMBOLS_SID) {
                 state = State.ON_SYMBOL_TABLE_SYMBOLS;
                 if (hasSeenSymbols) {
@@ -698,7 +740,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         private void preparePossibleAppend() {
-            if (symbolValueId() != ION_SYMBOL_TABLE_SID) {
+            if (minorVersion > 0 && hasSymbolText()) {
+                prepareScalar();
+                if (!bytesMatch(ION_SYMBOL_TABLE_UTF8, buffer, (int) valueMarker.startIndex, (int) valueMarker.endIndex)) {
+                    resetSymbolTable();
+                }
+            } else if (symbolValueId() != ION_SYMBOL_TABLE_SID) {
                 resetSymbolTable();
             }
             state = State.ON_SYMBOL_TABLE_FIELD;
@@ -756,6 +803,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         private void startReadingImportStructField() {
             int fieldId = getFieldId();
+            if (minorVersion > 0 && fieldId < 0) {
+                fieldId = mapInlineTextToSystemSid(fieldTextMarker);
+            }
             if (fieldId == NAME_SID) {
                 state = State.READING_SYMBOL_TABLE_IMPORT_NAME;
             } else if (fieldId == VERSION_SID) {
@@ -920,6 +970,27 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private State state = State.READING_VALUE;
 
     /**
+     * Determines whether the bytes between [start, end) in 'buffer' match the target bytes.
+     * @param target the target bytes.
+     * @param buffer the bytes to match.
+     * @param start index of the first byte to match.
+     * @param end index of the first byte after the last byte to match.
+     * @return true if the bytes match; otherwise, false.
+     */
+    private static boolean bytesMatch(byte[] target, byte[] buffer, int start, int end) {
+        int length = end - start;
+        if (length != target.length) {
+            return false;
+        }
+        for (int i = 0; i < target.length; i++) {
+            if (target[i] != buffer[start + i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * @return true if current value has a sequence of annotations that begins with `$ion_symbol_table`; otherwise,
      *  false.
      */
@@ -930,19 +1001,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             int sid = readVarUInt_1_0();
             peekIndex = savedPeekIndex;
             return ION_SYMBOL_TABLE_SID == sid;
-        }
-        if (minorVersion == 1) {
+        } else if (minorVersion > 0) {
             Marker marker = annotationTokenMarkers.get(0);
             if (marker.startIndex < 0) {
                 return marker.endIndex == ION_SYMBOL_TABLE_SID;
             } else {
-                if (marker.endIndex - marker.startIndex != ION_SYMBOL_TABLE_UTF8.length) return false;
-                int start = (int) marker.startIndex;
-                boolean isIonSymbolTable = true;
-                for (int i = 0; i < ION_SYMBOL_TABLE_UTF8.length; i++) {
-                    isIonSymbolTable &= buffer[start + i] == ION_SYMBOL_TABLE_UTF8[i];
-                }
-                return isIonSymbolTable;
+                return bytesMatch(ION_SYMBOL_TABLE_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex);
             }
         }
         return false;
