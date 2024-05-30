@@ -55,6 +55,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
@@ -4914,17 +4915,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
         Function<String[], ExpectationProvider<IonReaderContinuableTopLevelBinary>> expectation,
         byte[] inputBytes
     ) throws Exception {
-        byteCounter.set(0);
-        reader = readerFor(readerBuilder, constructFromBytes, inputBytes);
-        assertSequence(
-            next(IonType.INT), expectation.apply(new String[] {"name"}), intValue(0),
-            next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
-            next(IonType.INT), expectation.apply(new String[] {"name", "symbols", "imports"}), intValue(0),
-            next(IonType.INT), expectation.apply(new String[] {}), intValue(0),
-            next(IonType.INT), expectation.apply(new String[] {"symbols", "name"}), intValue(0),
-            next(null)
-        );
-        closeAndCount();
+        for (int initialBufferSize = 5; initialBufferSize <= Math.max(5, inputBytes.length); initialBufferSize++) {
+            reader = boundedReaderFor(constructFromBytes, inputBytes, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+            assertSequence(
+                next(IonType.INT), expectation.apply(new String[]{"name"}), intValue(0),
+                next(IonType.INT), expectation.apply(new String[]{"symbols", "name"}), intValue(0),
+                next(IonType.INT), expectation.apply(new String[]{"name", "symbols", "imports"}), intValue(0),
+                next(IonType.INT), expectation.apply(new String[]{}), intValue(0),
+                next(IonType.INT), expectation.apply(new String[]{"symbols", "name"}), intValue(0),
+                next(null)
+            );
+            closeAndCount();
+        }
     }
 
     @Test
@@ -4973,6 +4975,103 @@ public class IonReaderContinuableTopLevelBinaryTest {
         assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotations, inputBytes);
         assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationSymbols, inputBytes);
         assertAnnotationsCorrectlyParsed(false, IonReaderContinuableTopLevelBinaryTest::annotationsIterator, inputBytes);
+    }
+
+    private void readAnnotationsThatForceBufferShift_1_1(
+        boolean constructFromBytes,
+        byte[] inputBytes,
+        int initialBufferSize,
+        Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> annotationExpectation,
+        IonType valueType,
+        Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> valueExpectation
+    ) throws Exception {
+        reader = boundedReaderFor(constructFromBytes, inputBytes, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+        assertSequence(
+            next(valueType), annotationExpectation.get(), valueExpectation.get(),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints={5, 6, 7, 8, 9, 10})
+    public void readOneAnnotationFlexSymThatForcesBufferShift_1_1(int initialBufferSize) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray("E7 F1 61 62 63 64 65 66 67 68 A8 69 6A 6B 6C 6D 6E 6F 70"));
+        Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> annotationExpectation = () -> annotations("abcdefgh");
+        Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> valueExpectation = () -> symbolValue("ijklmnop");
+        readAnnotationsThatForceBufferShift_1_1(true, data, initialBufferSize, annotationExpectation, IonType.SYMBOL, valueExpectation);
+        readAnnotationsThatForceBufferShift_1_1(false, data, initialBufferSize, annotationExpectation, IonType.SYMBOL, valueExpectation);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints={5, 6, 7, 8, 9, 10})
+    public void readTwoAnnotationFlexSymsThatForceBufferShift_1_1(int initialBufferSize) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray("E8 F1 61 62 63 64 65 66 67 68 3C 00 00 60"));
+        Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> annotationExpectation = () -> annotations("abcdefgh", "symbols");
+        Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> valueExpectation = () -> intValue(0);
+        readAnnotationsThatForceBufferShift_1_1(true, data, initialBufferSize, annotationExpectation, IonType.INT, valueExpectation);
+        readAnnotationsThatForceBufferShift_1_1(false, data, initialBufferSize, annotationExpectation, IonType.INT, valueExpectation);
+    }
+
+    private void readAnnotationsThatForceBufferShiftInDelimitedStruct_1_1(
+        boolean constructFromBytes,
+        byte[] inputBytes,
+        int initialBufferSize
+    ) throws Exception {
+        //readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        reader = boundedReaderFor(constructFromBytes, inputBytes, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.INT), fieldName("ab"), annotations("abcdefgh", "symbols"), intValue(0),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints={5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
+    public void readTwoAnnotationFlexSymsThatForceBufferShiftInDelimitedStruct_1_1(int initialBufferSize) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray("F3 FD 61 62 E8 F1 61 62 63 64 65 66 67 68 3C 00 00 60 01 F0"));
+        readAnnotationsThatForceBufferShiftInDelimitedStruct_1_1(true, data, initialBufferSize);
+        readAnnotationsThatForceBufferShiftInDelimitedStruct_1_1(false, data, initialBufferSize);
+    }
+
+    private void readFieldSymFlexSymThatForcesBufferShift_1_1(
+        boolean constructFromBytes,
+        byte[] inputBytes,
+        int initialBufferSize
+    ) throws Exception {
+        reader = boundedReaderFor(constructFromBytes, inputBytes, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+        assertSequence(
+            container(IonType.STRUCT,
+                next(IonType.INT), fieldName("abcdefgh"), intValue(0),
+                next(null)
+            ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints={5, 6, 7, 8, 9, 10})
+    public void readFieldNameFlexSymThatForcesBufferShift_1_1(int initialBufferSize) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray("DB 01 F1 61 62 63 64 65 66 67 68 60"));
+        // Disable incremental reading so that the reader does not attempt to buffer the struct before stepping in.
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        readFieldSymFlexSymThatForcesBufferShift_1_1(true, data, initialBufferSize);
+        readFieldSymFlexSymThatForcesBufferShift_1_1(false, data, initialBufferSize);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints={5, 6, 7, 8, 9, 10})
+    public void readFieldNameFlexSymThatForcesBufferShiftDelimited_1_1(int initialBufferSize) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray("F3 F1 61 62 63 64 65 66 67 68 60 01 F0"));
+        // Disable incremental reading so that the reader does not attempt to buffer the struct before stepping in.
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        readFieldSymFlexSymThatForcesBufferShift_1_1(true, data, initialBufferSize);
+        readFieldSymFlexSymThatForcesBufferShift_1_1(false, data, initialBufferSize);
     }
 
     /**
@@ -5028,16 +5127,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
      * Checks that the reader correctly reads a struct with two fields: "name" and "imports".
      */
     private void assertSimpleStructCorrectlyParsed(boolean constructFromBytes, String inputBytes) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
-        assertSequence(
-            container(IonType.STRUCT,
-                next(IonType.BOOL), fieldName("name"), booleanValue(true),
-                next(IonType.BOOL), fieldName("imports"), booleanValue(false),
+        byte[] data = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(inputBytes)));
+        for (int initialBufferSize = 5; initialBufferSize <= Math.max(5, data.length); initialBufferSize++) {
+            reader = boundedReaderFor(constructFromBytes, data, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+            assertSequence(
+                container(IonType.STRUCT,
+                    next(IonType.BOOL), fieldName("name"), booleanValue(true),
+                    next(IonType.BOOL), fieldName("imports"), booleanValue(false),
+                    next(null)
+                ),
                 next(null)
-            ),
-            next(null)
-        );
-        closeAndCount();
+            );
+            closeAndCount();
+        }
     }
 
     @ParameterizedTest
@@ -5134,17 +5236,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
      * Checks that the reader correctly reads symbol zero, which requires a special FlexSym, as a field name.
      */
     private void assertStructWithSymbolZeroFieldNamesCorrectlyParsed(boolean constructFromBytes, String inputBytes) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
-        assertSequence(
-            container(IonType.STRUCT,
-                next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true),
-                next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true),
-                next(IonType.BOOL), fieldName("name"), booleanValue(true),
-                next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true)
-            ),
-            next(null)
-        );
-        closeAndCount();
+        for (int initialBufferSize = 5; initialBufferSize <= 20; initialBufferSize++) {
+            reader = boundedReaderFor(constructFromBytes, withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(inputBytes))), initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+            assertSequence(
+                container(IonType.STRUCT,
+                    next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true),
+                    next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true),
+                    next(IonType.BOOL), fieldName("name"), booleanValue(true),
+                    next(IonType.BOOL), fieldNameSymbolZero(), booleanValue(true)
+                ),
+                next(null)
+            );
+            closeAndCount();
+        }
     }
 
     @ParameterizedTest
@@ -5220,14 +5324,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
      * Checks that the reader correctly reads empty inline text, which requires a special FlexSym, as a field name.
      */
     public void assertStructWithEmptyInlineFieldNamesCorrectlyParsed(boolean constructFromBytes, String inputBytes) throws Exception {
-        reader = readerForIon11(hexStringToByteArray(cleanCommentedHexBytes(inputBytes)), constructFromBytes);
-        assertSequence(
-            container(IonType.STRUCT,
-                next(IonType.BOOL), fieldName(""), booleanValue(false)
-            ),
-            next(null)
-        );
-        closeAndCount();
+        for (int initialBufferSize = 5; initialBufferSize <= 20; initialBufferSize++) {
+            reader = boundedReaderFor(constructFromBytes, withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(inputBytes))), initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+            assertSequence(
+                container(IonType.STRUCT,
+                    next(IonType.BOOL), fieldName(""), booleanValue(false)
+                ),
+                next(null)
+            );
+            closeAndCount();
+        }
     }
 
     @ParameterizedTest
@@ -5597,8 +5703,9 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    @Test
-    public void nestedDelimitedContainerInlineFieldNamesIncremental() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints={5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
+    public void nestedDelimitedContainerInlineFieldNamesIncremental(int initialBufferSize) throws Exception {
         byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
             "F3          | Delimited struct\n" +
             "F9          | Inline field name, length 4\n" +
@@ -5614,7 +5721,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         )));
         totalBytesInStream = input.length;
         ResizingPipedInputStream pipe = new ResizingPipedInputStream((int) totalBytesInStream);
-        reader = readerFor(pipe);
+        reader = boundedReaderFor(pipe, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
         for (int i = 0; i < input.length - 1; i++) {
             nextExpect(null);
             pipe.receive(input[i]);
@@ -5656,14 +5763,16 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
     public void delimitedSymbolTable(boolean constructFromBytes) throws Exception {
-        reader = readerFor(readerBuilder, constructFromBytes, delimitedSymbolTable());
-        assertSequence(
-            // Note: this will fail if the Ion 1.1 system symbol table changes because SID 10 will point to something
-            // else. If that happens, change the input data to point to the first Ion 1.1 local symbol ID.
-            next(IonType.SYMBOL), symbolValue("foobar"),
-            next(null)
-        );
-        closeAndCount();
+        for (int initialBufferSize = 5; initialBufferSize <= 20; initialBufferSize++) {
+            reader = boundedReaderFor(constructFromBytes, delimitedSymbolTable(), initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
+            assertSequence(
+                // Note: this will fail if the Ion 1.1 system symbol table changes because SID 10 will point to something
+                // else. If that happens, change the input data to point to the first Ion 1.1 local symbol ID.
+                next(IonType.SYMBOL), symbolValue("foobar"),
+                next(null)
+            );
+            closeAndCount();
+        }
     }
 
     @Test

@@ -34,6 +34,13 @@ public class MarkerList {
     }
 
     /**
+     * @return The number of markers, including provisional markers, in the list.
+     */
+    public int provisionalSize() {
+        return provisionalIndex; // TODO Math.max(provisionalIndex, numberOfValues)? provisionalIndex + numberOfValues?
+    }
+
+    /**
      * @return {@code true} if there are Markers stored in the list.
      */
     public boolean isEmpty() {
@@ -53,13 +60,29 @@ public class MarkerList {
      * Returns the {@code index}th Marker in the list.
      * @param index     The list index of the desired Marker.
      * @return          The Marker at index {@code index} in the list.
-     * @throws IndexOutOfBoundsException    if the index is negative or greater than the number of Markers stored in the
-     *                                      list.
+     * @throws IndexOutOfBoundsException    if the index is negative or greater than the number of committed Markers
+     *                                      stored in the list.
      */
     public Marker get(int index) {
         if (index < 0 || index >= numberOfValues) {
             throw new IndexOutOfBoundsException(
                 "Invalid index " + index + " requested from IntList with " + numberOfValues + " values."
+            );
+        }
+        return data[index];
+    }
+
+    /**
+     * Returns the {@code index}th Marker in the list, even if that Marker is provisional.
+     * @param index     The list index of the desired Marker.
+     * @return          The Marker at index {@code index} in the list.
+     * @throws IndexOutOfBoundsException    if the index is negative or greater than the number of Markers stored in the
+     *                                      list.
+     */
+    public Marker provisionalGet(int index) {
+        if (index < 0 || index >= provisionalIndex) {
+            throw new IndexOutOfBoundsException(
+                "Invalid index " + index + " requested from IntList with " + provisionalIndex + " values."
             );
         }
         return data[index];
