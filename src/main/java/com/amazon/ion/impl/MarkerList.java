@@ -37,7 +37,7 @@ public class MarkerList {
      * @return The number of markers, including provisional markers, in the list.
      */
     public int provisionalSize() {
-        return provisionalIndex; // TODO Math.max(provisionalIndex, numberOfValues)? provisionalIndex + numberOfValues?
+        return provisionalIndex;
     }
 
     /**
