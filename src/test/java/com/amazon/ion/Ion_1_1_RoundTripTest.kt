@@ -441,29 +441,29 @@ abstract class Ion_1_1_RoundTripBase {
 
         @JvmStatic
         protected val WRITER_INTERNED_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
+            .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
+            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
         @JvmStatic
         protected val WRITER_INLINE_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
+            .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
+            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
         @JvmStatic
         protected val WRITER_INTERNED_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
+            .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
+            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
         @JvmStatic
         protected val WRITER_INLINE_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
-                .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-                .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
+            .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
+            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
 
         /**
          * Checks if this ByteArray contains Ion Binary.
          */
         private fun ByteArray.isIonBinary(): Boolean {
             return get(0) == 0xE0.toByte() &&
-                    get(1) == 0x01.toByte() &&
-                    get(2) in setOf<Byte>(0, 1) &&
-                    get(3) == 0xEA.toByte()
+                get(1) == 0x01.toByte() &&
+                get(2) in setOf<Byte>(0, 1) &&
+                get(3) == 0xEA.toByte()
         }
 
         /**
@@ -473,11 +473,11 @@ abstract class Ion_1_1_RoundTripBase {
         protected fun ByteArray.printDisplayString() {
             if (isIonBinary()) {
                 map { it.toHexString(HexFormat.UpperCase) }
-                        .windowed(4, 4, partialWindows = true)
-                        .windowed(8, 8, partialWindows = true)
-                        .forEach {
-                            println(it.joinToString("   ") { it.joinToString(" ") })
-                        }
+                    .windowed(4, 4, partialWindows = true)
+                    .windowed(8, 8, partialWindows = true)
+                    .forEach {
+                        println(it.joinToString("   ") { it.joinToString(" ") })
+                    }
             } else {
                 println(toString(Charsets.UTF_8))
             }
@@ -525,6 +525,7 @@ abstract class Ion_1_1_RoundTripBase {
                     $10 $11 $12 $13 $14
                 """.trimIndent()
             ),
+            ionText("foo::(bar::baz::{abc: zar::qux::xyz::123, def: 456})")
         ) + files().flatMap { f ->
             val ion = ION.loader.load(f)
             // If there are embedded documents, flatten them into separate test cases.
