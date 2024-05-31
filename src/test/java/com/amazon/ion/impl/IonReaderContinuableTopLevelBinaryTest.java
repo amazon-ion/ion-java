@@ -5018,7 +5018,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] inputBytes,
         int initialBufferSize
     ) throws Exception {
-        //readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = boundedReaderFor(constructFromBytes, inputBytes, initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
         assertSequence(
             container(IonType.STRUCT,
@@ -5915,6 +5914,55 @@ public class IonReaderContinuableTopLevelBinaryTest {
                 nullValue(IonType.BOOL),
                 next(null)
             ),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void prefixedAnnotatedContainerInsideDelimitedAnnotatedContainerPreservesSidAnnotations(boolean constructFromBytes) throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "E4 09    | Annotation symbol 4 (name) \n" +
+            "F1       | Delimited list start \n" +
+            "E5 0B 0D | Annotation symbol 5 (version), annotation symbol 6 (imports) \n" +
+            "C7       | Prefixed s-exp length 7 \n" +
+            "E4 0F    | Annotation symbol 7 (symbols) \n" +
+            "60       | Int 0 \n" +
+            "E5 11 13 | Annotation symbol 8 (max_id), annotation symbol 9 ($ion_shared_symbol_table) \n" +
+            "60       | Int 0 \n" +
+            "F0       | End of delimited list"
+        )));
+        reader = readerFor(readerBuilder, constructFromBytes, input);
+        assertSequence(
+            next(IonType.LIST), annotations("name"), STEP_IN,
+                next(IonType.SEXP), annotations("version", "imports"),
+            STEP_OUT,
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void prefixedAnnotatedContainerInsideDelimitedAnnotatedContainerPreservesFlexSymAnnotations(boolean constructFromBytes) throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "E7 FF 61       | Annotation FlexSym 'a' \n" +
+            "F1             | Delimited list start \n" +
+            "E8 FF 62 09    | Annotation FlexSym 'b', annotation FlexSym SID 4 (name) \n" +
+            "C8             | Prefixed s-exp length 8 \n" +
+            "E4 0F          | Annotation symbol 7 (symbols) \n" +
+            "60             | Int 0 \n" +
+            "E8 0B FF 63    | Annotation FlexSym SID 5 (version), annotation FlexSym 'c' \n" +
+            "60             | Int 0 \n" +
+            "F0             | End of delimited list"
+        )));
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(readerBuilder, constructFromBytes, input);
+        assertSequence(
+            next(IonType.LIST), annotations("a"), STEP_IN,
+            next(IonType.SEXP), annotations("b", "name"),
+            STEP_OUT,
             next(null)
         );
         closeAndCount();
