@@ -20,6 +20,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
+import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
@@ -154,6 +156,14 @@ class IonCursorBinary implements IonCursor {
          * when the cursor probes for, but does not find, an end delimiter.
          */
         int lastUnbufferedByte = -1;
+
+        /**
+         * Whether to skip over annotation sequences rather than recording them for consumption by the user. This is
+         * used when probing forward in the stream for the end of a delimited container while remaining logically
+         * positioned on the current value. This is only needed in 'slow' mode because in quick mode the entire
+         * container is assumed to be buffered in its entirety and no probing occurs.
+         */
+        private boolean skipAnnotations = false;
 
         RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, State initialState) {
             this.inputStream = inputStream;
@@ -1207,6 +1217,38 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Skips a non-length-prefixed annotation sequence (opcodes E4, E5, E7, or E8), ensuring enough space is available
+     * in the buffer. After this method returns, `peekIndex` points to the first byte after the end of the annotation
+     * sequence.
+     * @param valueTid the type ID of the annotation sequence to skip.
+     * @return true if there are not enough bytes in the stream to complete the annotation sequence; otherwise, false.
+     */
+    private boolean slowSkipNonPrefixedAnnotations_1_1(IonTypeID valueTid) {
+        if (valueTid.isInlineable) {
+            // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
+            if (slowSkipFlexSym_1_1()) {
+                return true;
+            }
+            if (valueTid.lowerNibble == TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1) {
+                // Opcode 0xE8 (two annotation FlexSyms)
+                return slowSkipFlexSym_1_1();
+            }
+        } else {
+            // Opcodes 0xE4 (one annotation SID) and 0xE5 (two annotation SIDs)
+            int annotationSid = (int) slowReadFlexUInt_1_1();
+            if (annotationSid < 0) {
+                return true;
+            }
+            if (valueTid.lowerNibble == TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1) {
+                // Opcode 0xE5 (two annotation SIDs)
+                annotationSid = (int) slowReadFlexUInt_1_1();
+                return annotationSid < 0;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Reads the header of an Ion 1.1 annotation wrapper, ensuring enough data is available in the buffer. Sets
      * `valueMarker` with the start and end indices of the wrapped value. Sets `annotationSequenceMarker` with the start
      * and end indices of the sequence of annotation SIDs, if applicable, or fills `annotationTokenMarkers` if the
@@ -1216,7 +1258,9 @@ class IonCursorBinary implements IonCursor {
      * @return true if there are not enough bytes in the stream to complete the value; otherwise, false.
      */
     private boolean slowReadAnnotationWrapperHeader_1_1(IonTypeID valueTid) {
-        annotationTokenMarkers.clear();
+        if (!refillableState.skipAnnotations) {
+            annotationTokenMarkers.clear();
+        }
         if (valueTid.variableLength) {
             // Opcodes 0xE6 (variable-length annotation SIDs) and 0xE9 (variable-length annotation FlexSyms)
             // At this point the value must be at least 3 more bytes: one for the smallest-possible annotations
@@ -1232,13 +1276,22 @@ class IonCursorBinary implements IonCursor {
             if (!fillAt(peekIndex, annotationsLength)) {
                 return true;
             }
-            annotationSequenceMarker.typeId = valueTid;
-            annotationSequenceMarker.startIndex = peekIndex;
-            annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
-            peekIndex = annotationSequenceMarker.endIndex;
+            long annotationsEnd = peekIndex + annotationsLength;
+            if (!refillableState.skipAnnotations) {
+                annotationSequenceMarker.typeId = valueTid;
+                annotationSequenceMarker.startIndex = peekIndex;
+                annotationSequenceMarker.endIndex = annotationsEnd;
+            }
+            peekIndex = annotationsEnd;
         } else {
             // At this point the value must have at least one more byte for each annotation FlexSym (one for lower
             // nibble 7, two for lower nibble 8), plus one for the smallest-possible value representation.
+            if (!fillAt(peekIndex, (valueTid.lowerNibble == ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1 || valueTid.lowerNibble == ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1) ? 2 : 3)) {
+                return true;
+            }
+            if (refillableState.skipAnnotations) {
+                return slowSkipNonPrefixedAnnotations_1_1(valueTid);
+            }
             if (valueTid.isInlineable) {
                 // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
                 Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
@@ -1485,6 +1538,29 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Skips a FlexSym, ensuring enough space is available in the buffer. After this method returns, `peekIndex` points
+     * to the first byte after the end of the FlexSym.
+     * @return true if there are not enough bytes in the stream to complete the FlexSym; otherwise, false.
+     */
+    private boolean slowSkipFlexSym_1_1() {
+        long result = slowReadFlexInt_1_1();
+        if (result == 0) {
+            int nextByte = slowReadByte();
+            if (nextByte < 0) {
+                return true;
+            }
+            if ((byte) nextByte != OpCodes.INLINE_SYMBOL_ZERO_LENGTH && (byte) nextByte != OpCodes.STRING_ZERO_LENGTH && (byte) nextByte != OpCodes.DELIMITED_END_MARKER) {
+                throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
+            }
+            return false;
+        } else if (result < 0) {
+            peekIndex -= result;
+            return false;
+        }
+        return false;
+    }
+
+    /**
      * Reads the field name at `peekIndex`, ensuring enough bytes are available in the buffer. After this method returns
      * `peekIndex` points to the first byte of the value that follows the field name. If the field name contained a
      * symbol ID, `fieldSid` is set to that symbol ID. If it contained inline text, `fieldSid` is set to -1, and the
@@ -1672,7 +1748,11 @@ class IonCursorBinary implements IonCursor {
         long savedCheckpoint = checkpoint;
         int savedContainerIndex = containerIndex;
         Marker savedParent = parent;
-        boolean savedHasAnnotations = hasAnnotations; // TODO have to set aside all annotation markers... or go into a mode where the markers are not recorded
+        boolean savedHasAnnotations = hasAnnotations;
+        // The cursor remains logically positioned at the current value despite probing forward for the end of the
+        // delimited value. Accordingly, do not overwrite the existing annotations with any annotations found during
+        // the probe.
+        refillableState.skipAnnotations = true;
         // ------------
 
         // TODO performance: the following line causes the end indexes of any child delimited containers that are not
@@ -1681,6 +1761,7 @@ class IonCursorBinary implements IonCursor {
         //  additional complexity.
         seekPastDelimitedContainer_1_1();
 
+        refillableState.skipAnnotations = false;
         boolean isReady = event != Event.NEEDS_DATA;
         if (refillableState.isSkippingCurrentValue) {
             // This delimited container is oversized. The cursor must seek past it.
@@ -1861,7 +1942,6 @@ class IonCursorBinary implements IonCursor {
         annotationSequenceMarker.typeId = null;
         annotationSequenceMarker.startIndex = -1;
         annotationSequenceMarker.endIndex = -1;
-        // TOOD annotationTokenMarkers?
     }
 
     /**
