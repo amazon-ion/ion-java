@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
@@ -13,9 +12,8 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.RepeatInputStream;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -23,12 +21,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 
 import static com.amazon.ion.impl._Private_IonConstants.BINARY_VERSION_MARKER_1_0;
-import static junit.framework.TestCase.assertNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// NOTE: these tests each take several seconds to complete.
+@EnabledIfEnvironmentVariable(
+    // GitHub actions and other CI systems will set CI=true
+    named = "CI", matches = "true",
+    disabledReason = "It regularly takes about 1 minute to run all the tests in this class."
+)
 public class IonReaderBinaryLargeStreamTest {
 
     private byte[] testData(Timestamp timestamp) throws IOException {
@@ -295,11 +299,8 @@ public class IonReaderBinaryLargeStreamTest {
     // when they *do* fail due to limitations of the current implementation, they fail by throwing an IonException
     // and not something unexpected and ugly.
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     private void cleanlyFailsOnLargeScalar(IonReaderBuilder readerBuilder) throws Exception {
-        byte[] data = "foobarbaz".getBytes("UTF-8");
+        byte[] data = "foobarbaz".getBytes(StandardCharsets.UTF_8);
         final int totalNumberOfBatches = (Integer.MAX_VALUE / data.length) + 123; // 123 makes the value exceed Integer.MAX_VALUE by an arbitrary amount.
         ByteArrayOutputStream header = new ByteArrayOutputStream();
         header.write(BINARY_VERSION_MARKER_1_0);
@@ -313,12 +314,10 @@ public class IonReaderBinaryLargeStreamTest {
         // If support for large scalars is added, the following will be deleted and the rest of the test
         // completed to assert the correctness of the value.
         if (readerBuilder.isIncrementalReadingEnabled()) {
-            thrown.expect(IonException.class);
-            reader.next();
+            assertThrows(IonException.class, reader::next);
         } else {
             assertEquals(IonType.STRING, reader.next());
-            thrown.expect(IonException.class);
-            reader.stringValue();
+            assertThrows(IonException.class, reader::stringValue);
         }
     }
 
@@ -333,7 +332,7 @@ public class IonReaderBinaryLargeStreamTest {
     }
 
     private void cleanlyFailsOnLargeAnnotatedScalar(IonReaderBuilder readerBuilder) throws Exception {
-        byte[] data = "foobarbaz".getBytes("UTF-8");
+        byte[] data = "foobarbaz".getBytes(StandardCharsets.UTF_8);
         final int totalNumberOfBatches = (Integer.MAX_VALUE / data.length) + 9999; // 9999 makes the value exceed Integer.MAX_VALUE by an arbitrary amount.
         final long stringLength = (long) totalNumberOfBatches * data.length;
         ByteArrayOutputStream header = new ByteArrayOutputStream();
@@ -352,12 +351,10 @@ public class IonReaderBinaryLargeStreamTest {
         // If support for large scalars is added, the following will be deleted and the rest of the test
         // completed to assert the correctness of the value.
         if (readerBuilder.isIncrementalReadingEnabled()) {
-            thrown.expect(IonException.class);
-            reader.next();
+            assertThrows(IonException.class, reader::next);
         } else {
             assertEquals(IonType.STRING, reader.next());
-            thrown.expect(IonException.class);
-            reader.stringValue();
+            assertThrows(IonException.class, reader::stringValue);
         }
     }
 
@@ -388,8 +385,7 @@ public class IonReaderBinaryLargeStreamTest {
         );
 
         IonReader reader = newReaderBuilderThatThrowsOnOversizedValues(true).build(inputStream);
-        thrown.expect(IonException.class);
-        reader.next();
+        assertThrows(IonException.class, reader::next);
     }
 
 }
