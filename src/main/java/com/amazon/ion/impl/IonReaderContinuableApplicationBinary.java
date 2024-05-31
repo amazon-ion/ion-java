@@ -44,21 +44,12 @@ import static com.amazon.ion.SystemSymbols.VERSION_SID;
 class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBinary implements IonReaderContinuableApplication {
 
     // The UTF-8 encoded bytes representing the text `$ion_symbol_table`.
-    private static final byte[] ION_SYMBOL_TABLE_UTF8;
-    private static final byte[] IMPORTS_UTF8;
-    private static final byte[] SYMBOLS_UTF8;
-    private static final byte[] NAME_UTF8;
-    private static final byte[] VERSION_UTF8;
-    private static final byte[] MAX_ID_UTF8;
-
-    static {
-        ION_SYMBOL_TABLE_UTF8 = SystemSymbols.ION_SYMBOL_TABLE.getBytes(StandardCharsets.UTF_8);
-        IMPORTS_UTF8 = SystemSymbols.IMPORTS.getBytes(StandardCharsets.UTF_8);
-        SYMBOLS_UTF8 = SystemSymbols.SYMBOLS.getBytes(StandardCharsets.UTF_8);
-        NAME_UTF8 = SystemSymbols.NAME.getBytes(StandardCharsets.UTF_8);
-        VERSION_UTF8 = SystemSymbols.VERSION.getBytes(StandardCharsets.UTF_8);
-        MAX_ID_UTF8 = SystemSymbols.MAX_ID.getBytes(StandardCharsets.UTF_8);
-    }
+    private static final byte[] ION_SYMBOL_TABLE_UTF8 = SystemSymbols.ION_SYMBOL_TABLE.getBytes(StandardCharsets.UTF_8);
+    private static final byte[] IMPORTS_UTF8 = SystemSymbols.IMPORTS.getBytes(StandardCharsets.UTF_8);
+    private static final byte[] SYMBOLS_UTF8 = SystemSymbols.SYMBOLS.getBytes(StandardCharsets.UTF_8);
+    private static final byte[] NAME_UTF8 = SystemSymbols.NAME.getBytes(StandardCharsets.UTF_8);
+    private static final byte[] VERSION_UTF8 = SystemSymbols.VERSION.getBytes(StandardCharsets.UTF_8);
+    private static final byte[] MAX_ID_UTF8 = SystemSymbols.MAX_ID.getBytes(StandardCharsets.UTF_8);
 
     // An IonCatalog containing zero shared symbol tables.
     private static final IonCatalog EMPTY_CATALOG = new SimpleCatalog();
@@ -978,6 +969,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
      * @return true if the bytes match; otherwise, false.
      */
     private static boolean bytesMatch(byte[] target, byte[] buffer, int start, int end) {
+        // TODO if this ends up on a critical performance path, see if it's faster to copy the bytes into a
+        //  pre-allocated buffer and then perform a comparison. It's possible that a combination of System.arraycopy()
+        //  and Arrays.equals(byte[], byte[]) is faster because it can be more easily optimized with native code by the
+        //  JVM—both are annotated with @HotSpotIntrinsicCandidate.
         int length = end - start;
         if (length != target.length) {
             return false;
