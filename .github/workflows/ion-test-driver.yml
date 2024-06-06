@@ -26,11 +26,17 @@ jobs:
           ref: master
           path: ion-test-driver
 
-      - name: Set up python3 env
-        run: python3 -m venv ion-test-driver/venv && . ion-test-driver/venv/bin/activate
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Set up python env
+        run: python -m venv ion-test-driver/venv && . ion-test-driver/venv/bin/activate
 
       - name: Pip install
-        run: pip3 install -r ion-test-driver/requirements.txt && pip3 install -e ion-test-driver
+        run: pip install -r ion-test-driver/requirements.txt && pip install -e ion-test-driver
 
       - name: Get main branch HEAD sha
         run: cd ion-java && echo `git rev-parse --short=7 HEAD` && echo "main=`git rev-parse --short=7 HEAD`" >> $GITHUB_ENV
@@ -40,7 +46,7 @@ jobs:
           && echo "cur=`git rev-parse --short=7 ${{ github.event.pull_request.head.sha }}`" >> $GITHUB_ENV
 
       - name: Run ion-test-driver
-        run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
+        run: python ion-test-driver/amazon/iontest/ion_test_driver.py -o output
           -i ion-java,${{ github.event.pull_request.head.repo.html_url }},${{ github.event.pull_request.head.sha }}
           --replace ion-java,https://github.com/amazon-ion/ion-java.git,$main
 
@@ -56,7 +62,7 @@ jobs:
       - name: Analyze two implementations
         continue-on-error: true
         id: result-diff
-        run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -R
+        run: python ion-test-driver/amazon/iontest/ion_test_driver.py -R
           ion-java,$main ion-java,$cur output/results/ion-test-driver-results.ion
 
       - name: Upload analysis report
