@@ -5,6 +5,7 @@ package com.amazon.ion.impl.bin
 import com.amazon.ion.*
 import com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl._Private_IonWriter.IntTransformer
 import com.amazon.ion.impl.bin.DelimitedContainerStrategy.*
 import com.amazon.ion.impl.bin.SymbolInliningStrategy.*
 import com.amazon.ion.system.*
@@ -119,6 +120,12 @@ internal class IonManagedWriter_1_1(
     private var priorMaxId: Int = symbolTable.size
     /** Symbols to be interned since the prior encoding context. */
     private var newSymbols = arrayListOf<String>()
+
+    /**
+     * Transformer for symbol IDs encountered during writeValues. Can be used to upgrade Ion 1.0 symbol IDs to the
+     * Ion 1.1 equivalents.
+     */
+    private var sidTransformer: IntTransformer? = null
 
     private fun intern(text: String): Int {
         // Check the current symbol table
@@ -279,7 +286,7 @@ internal class IonManagedWriter_1_1(
                 // No (known) SID either.
                 throw UnknownSymbolException("Cannot write a symbol token with unknown text and unknown SID.")
             } else {
-                rawWriter.write(kind, sid)
+                rawWriter.write(kind, sidTransformer?.transform(sid) ?: sid)
             }
         } else if (preserveEncoding && sid < 0) {
             rawWriter.write(kind, text)
@@ -335,6 +342,15 @@ internal class IonManagedWriter_1_1(
 
     override fun isStreamCopyOptimized(): Boolean = false
 
+    override fun writeValues(reader: IonReader, symbolIdTransformer: IntTransformer) {
+        sidTransformer = symbolIdTransformer
+        try {
+            writeValues(reader)
+        } finally {
+            sidTransformer = null
+        }
+    }
+
     override fun writeValues(reader: IonReader) {
         // There's a possibility that we could have interference between encoding contexts if we're transferring from a
         // system reader. However, this is the same behavior as the other implementations.
@@ -351,6 +367,15 @@ internal class IonManagedWriter_1_1(
             } else {
                 transferScalarOrStepIn(reader, nextType)
             }
+        }
+    }
+
+    override fun writeValue(reader: IonReader, symbolIdTransformer: IntTransformer) {
+        sidTransformer = symbolIdTransformer
+        try {
+            writeValue(reader)
+        } finally {
+            sidTransformer = null
         }
     }
 
