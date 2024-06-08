@@ -119,7 +119,7 @@ internal class IonManagedWriter_1_1(
     /** Max symbol ID of the prior encoding context. */
     private var priorMaxId: Int = symbolTable.size
     /** Symbols to be interned since the prior encoding context. */
-    private var newSymbols = arrayListOf<String>()
+    private var newSymbols: HashMap<String, Int> = LinkedHashMap() // Preserves insertion order.
 
     /**
      * Transformer for symbol IDs encountered during writeValues. Can be used to upgrade Ion 1.0 symbol IDs to the
@@ -132,11 +132,11 @@ internal class IonManagedWriter_1_1(
         var sid = symbolTable[text]
         if (sid != null) return sid
         // Check the to-be-appended symbols
-        sid = newSymbols.indexOf(text)
-        if (sid != UNKNOWN_SYMBOL_ID) return sid + priorMaxId + 1
+        sid = newSymbols[text]
+        if (sid != null) return sid
         // Add to the to-be-appended symbols
         sid = priorMaxId + newSymbols.size + 1
-        newSymbols.add(text)
+        newSymbols[text] = sid
         return sid
     }
 
@@ -158,13 +158,12 @@ internal class IonManagedWriter_1_1(
             // ... and write the new symbols
             if (useSid) writeFieldName(SystemSymbols.SYMBOLS_SID) else writeFieldName(SystemSymbols.SYMBOLS)
             stepInList(delimited = false)
-            newSymbols.forEach { writeString(it) }
+            newSymbols.forEach { (text, _) -> writeString(text) }
             stepOut()
             stepOut()
         }
 
-        var id = symbolTable.size + 1
-        newSymbols.forEach { symbolTable[it] = id++ }
+        symbolTable.putAll(newSymbols)
 
         newSymbols.clear()
         canAppendToLocalSymbolTable = true
