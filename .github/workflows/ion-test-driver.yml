@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # master
         with:
           repository: amazon-ion/ion-test-driver
-          ref: fff3a34b70d42c389ebcfd1f5168e550801f8e35
+          ref: master
           path: ion-test-driver
 
       - name: Setup Python
