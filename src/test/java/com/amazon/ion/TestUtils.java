@@ -590,6 +590,16 @@ public class TestUtils
     }
 
     /**
+     * Returns the given data prepended with an IVM for the requested 1.x minor version.
+     * @param minorVersion the IVM version to prepend.
+     * @param data the data.
+     * @return the data with an IVM prepended.
+     */
+    public static byte[] withIvm(int minorVersion, byte[] data) throws Exception {
+        return new TestUtils.BinaryIonAppender(minorVersion).append(data).toByteArray();
+    }
+
+    /**
      * Compresses the given bytes using GZIP.
      * @param bytes the bytes to compress.
      * @return a new byte array containing the GZIP payload.
