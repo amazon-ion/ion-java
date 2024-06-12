@@ -8,6 +8,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
@@ -21,6 +22,7 @@ import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
+import static com.amazon.ion.TestUtils.withIvm;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
@@ -35,19 +37,21 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IonCursorBinaryTest {
 
-    private static IonCursorBinary initializeCursor(IonBufferConfiguration configuration, boolean constructFromBytes, int... data) {
+    private static IonCursorBinary initializeCursor(IonBufferConfiguration configuration, boolean constructFromBytes, byte[] data) {
         IonCursorBinary cursor;
         if (constructFromBytes) {
-            cursor = new IonCursorBinary(configuration, bytes(data), 0, data.length);
+            cursor = new IonCursorBinary(configuration, data, 0, data.length);
         } else {
             cursor = new IonCursorBinary(
                 configuration,
-                new ByteArrayInputStream(bytes(data)),
+                new ByteArrayInputStream(data),
                 null,
                 0,
                 0
@@ -58,7 +62,49 @@ public class IonCursorBinaryTest {
     }
 
     private static IonCursorBinary initializeCursor(boolean constructFromBytes, int... data) {
-        return initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data);
+        return initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, bytes(data));
+    }
+
+    public enum InputType {
+
+        /**
+         * The cursor will be constructed from a fixed byte array.
+         */
+        FIXED_BYTES {
+            @Override
+            IonCursorBinary initializeCursor(byte[] data) {
+                return IonCursorBinaryTest.initializeCursor(STANDARD_BUFFER_CONFIGURATION, true, data);
+            }
+        },
+
+        /**
+         * The cursor will be constructed from an InputStream with all bytes available up front.
+         */
+        FIXED_STREAM {
+            @Override
+            IonCursorBinary initializeCursor(byte[] data) {
+                return IonCursorBinaryTest.initializeCursor(STANDARD_BUFFER_CONFIGURATION, false, data);
+            }
+        },
+
+        /**
+         * The cursor will be constructed from an InputStream that is fed bytes one by one, expecting NEEDS_DATA
+         * after each byte except the final one.
+         */
+        INCREMENTAL {
+            @Override
+            IonCursorBinary initializeCursor(byte[] data) {
+                ResizingPipedInputStream pipe = new ResizingPipedInputStream(data.length);
+                IonCursorBinary cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, pipe, null, 0, 0);
+                for (byte b : data) {
+                    assertEquals(NEEDS_DATA, cursor.nextValue());
+                    pipe.receive(b);
+                }
+                return cursor;
+            }
+        };
+
+        abstract IonCursorBinary initializeCursor(byte[] data);
     }
 
     /**
@@ -380,7 +426,7 @@ public class IonCursorBinaryTest {
         AtomicInteger oversizeValueCounter = new AtomicInteger(0);
         AtomicInteger oversizeSymbolTableCounter = new AtomicInteger(0);
         AtomicInteger byteCounter = new AtomicInteger(0);
-        int[] data = new int[] {
+        byte[] data = bytes(
             0xE0, 0x01, 0x01, 0xEA,
             0xF3, // Delimited struct
             0x07, // Field SID 3
@@ -390,7 +436,7 @@ public class IonCursorBinaryTest {
             0x09, // Field SID 4
             0x61, 0x01, // Int length 1, starting at byte index 16
             0x01, 0xF0 // End delimited struct
-        };
+        );
         IonCursorBinary cursor = initializeCursor(
             IonBufferConfiguration.Builder.standard()
                 .withInitialBufferSize(5)
@@ -715,6 +761,95 @@ public class IonCursorBinaryTest {
             )
         ) {
             assertThrows(IonException.class, cursor::nextValue);
+        }
+    }
+
+    /**
+     * Asserts that the given data contains macro invocation that matches the given attributes.
+     * @param input the data (without IVM) to test.
+     * @param inputType the type of input to provide to the cursor.
+     * @param expectedStartIndex the expected start index of the invocation's body.
+     * @param expectedEndIndex the expected end index of the invocation's body, or -1 if the end index cannot be
+     *                         computed from the encoding alone.
+     * @param expectedId the ID of the macro being invoked.
+     * @param isSystemInvocation whether the invocation is of a system macro.
+     */
+    private static void testMacroInvocation(
+        byte[] input,
+        InputType inputType,
+        int expectedStartIndex,
+        int expectedEndIndex,
+        int expectedId,
+        boolean isSystemInvocation
+    ) throws Exception {
+        try (IonCursorBinary cursor = inputType.initializeCursor(withIvm(1, input))) {
+            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            Marker invocationMarker = cursor.getValueMarker();
+            assertTrue(invocationMarker.typeId.isMacroInvocation);
+            assertEquals(expectedStartIndex, invocationMarker.startIndex);
+            assertEquals(expectedEndIndex, invocationMarker.endIndex);
+            assertEquals(expectedId, cursor.getMacroInvocationId());
+            assertEquals(isSystemInvocation, cursor.isSystemInvocation());
+        }
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void macroInvocationWithIdInOpcode(InputType inputType) throws Exception {
+        // Opcode 0x13 -> macro ID 0x13
+        testMacroInvocation(bytes(0x13), inputType, 5, -1, 0x13, false);
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void macroInvocationWithOneByteFixedUIntId(InputType inputType) throws Exception {
+        // Opcode 0x43; 1-byte FixedUInt 0x09 follows
+        testMacroInvocation(bytes(0x43, 0x09), inputType, 6, -1, 841, false);
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void macroInvocationWithTwoByteFixedUIntId(InputType inputType) throws Exception {
+        // Opcode 0x52; 2-byte FixedUInt 0x06, 0x1E follows
+        testMacroInvocation(bytes(0x52, 0x06, 0x1E), inputType, 7, -1, 142918, false);
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void macroInvocationWithFlexUIntId(InputType inputType) throws Exception {
+        // Opcode 0xEE; 3-byte FlexUInt 0xFC, 0xFF, 0xFF follows
+        testMacroInvocation(bytes(0xEE, 0xFC, 0xFF, 0xFF), inputType, 8, -1, 2097151, false);
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void macroInvocationLengthPrefixed(InputType inputType) throws Exception {
+        // Opcode 0xF5; FlexUInt length 1 followed by FlexUInt ID 2
+        testMacroInvocation(bytes(0xF5, 0x03, 0x05), inputType, 7, 7, 2, false);
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void systemMacroInvocation(InputType inputType) throws Exception {
+        // Opcode 0xEF; 1-byte FixedInt follows. Positive 4 indicates system macro ID 4.
+        testMacroInvocation(bytes(0xEF, 0x04), inputType, 6, -1, 4, true);
+    }
+
+    @ParameterizedTest(name = "inputType={0}")
+    @EnumSource(InputType.class)
+    public void systemSymbolValue(InputType inputType) throws Exception {
+        // Opcode 0xEF; 1-byte FixedInt follows. 0xFE (-2) indicates system symbol ID 2.
+        byte[] data = withIvm(1, bytes(0xEF, 0xFE));
+        try (IonCursorBinary cursor = inputType.initializeCursor(data)) {
+            assertEquals(START_SCALAR, cursor.nextValue());
+            assertTrue(cursor.isSystemInvocation());
+            Marker invocationMarker = cursor.getValueMarker();
+            assertFalse(invocationMarker.typeId.isMacroInvocation);
+            assertEquals(6, invocationMarker.startIndex);
+            assertEquals(6, invocationMarker.endIndex);
+            // Note: a higher-level reader will use the sign to direct the lookup to the system symbol table instead of
+            // the system macro table.
+            assertEquals(-2, cursor.getMacroInvocationId());
         }
     }
 }

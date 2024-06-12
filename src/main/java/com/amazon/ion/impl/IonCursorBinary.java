@@ -22,6 +22,7 @@ import java.nio.ByteOrder;
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
@@ -334,6 +335,19 @@ class IonCursorBinary implements IonCursor {
      */
     private long lastReportedByteTotal = 0;
 
+    /**
+     * The ID of the current macro invocation. When `isSystemInvocation` is true, a positive value indicates a system
+     * macro address, while a negative value indicates a system symbol ID. When `isSystemInvocation` is false, a
+     * positive value indicates a user macro address, while a negative value indicates that the cursor's current token
+     * is not a macro invocation.
+     */
+    private long macroInvocationId = -1;
+
+    /**
+     * True if the given token represents a system invocation (either a system macro invocation or a system symbol
+     * value). When true, `macroInvocationId` is used to retrieve the ID of the system token.
+     */
+    private boolean isSystemInvocation = false;
 
     /**
      * @return the given configuration's DataHandler, or null if that DataHandler is a no-op.
@@ -967,6 +981,7 @@ class IonCursorBinary implements IonCursor {
         if (peekIndex >= valueMarker.endIndex) {
             throw new IonException("Annotation wrapper must wrap a value.");
         }
+        valueMarker.typeId = valueTid;
         return false;
     }
 
@@ -1329,6 +1344,7 @@ class IonCursorBinary implements IonCursor {
             }
 
         }
+        valueMarker.typeId = valueTid;
         return false;
     }
 
@@ -1942,6 +1958,8 @@ class IonCursorBinary implements IonCursor {
         annotationSequenceMarker.typeId = null;
         annotationSequenceMarker.startIndex = -1;
         annotationSequenceMarker.endIndex = -1;
+        macroInvocationId = -1;
+        isSystemInvocation = false;
     }
 
     /**
@@ -2030,6 +2048,91 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Sets the given marker to represent the current system token (system macro invocation or system symbol value).
+     * Before calling this method, `macroInvocationId` must be set from the one-byte FixedInt that represents the ID;
+     * positive values indicate a macro address, while negative values indicate a system symbol ID.
+     * @param valueTid the type ID of the system token.
+     * @param markerToSet the marker to set.
+     */
+    private void setSystemTokenMarker(IonTypeID valueTid, Marker markerToSet) {
+        isSystemInvocation = true;
+        markerToSet.startIndex = peekIndex;
+        if (macroInvocationId < 0) {
+            // This is a system symbol value.
+            event = Event.START_SCALAR;
+            markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
+            markerToSet.endIndex = peekIndex;
+        } else {
+            event = Event.NEEDS_INSTRUCTION;
+            markerToSet.typeId = valueTid;
+            markerToSet.endIndex = -1;
+        }
+    }
+
+    /**
+     * Sets the given marker to represent the current user macro invocation.
+     * @param valueTid the type ID of the macro invocation.
+     * @param markerToSet the Marker to set with information parsed from the macro invocation. After return, the
+     *                    marker's type ID will be set, startIndex will point to the first byte of the invocation's
+     *                    body, and endIndex will either be -1 (when not a system symbol or prefixed invocation), or
+     *                    will be set to the end of the invocation.
+     * @param length the declared length of the invocation. Ignored unless this is a length-prefixed invocation
+     *               (denoted by `valueTid.variableLength == true`).
+     */
+    private void setUserMacroInvocationMarker(IonTypeID valueTid, Marker markerToSet, long length) {
+        // It's not yet known whether the invocation represents a scalar or container, or even if it is complete.
+        // A higher-level reader must provide additional instructions to evaluate the invocation.
+        event = Event.NEEDS_INSTRUCTION;
+        markerToSet.typeId = valueTid;
+        markerToSet.startIndex = peekIndex;
+        // Unless this is a length-prefixed invocation, the end index of the macro invocation cannot be known until
+        // evaluation.
+        markerToSet.endIndex = valueTid.variableLength ? peekIndex + length : -1;
+    }
+
+    /**
+     * Reads a macro invocation header, ensuring enough bytes are buffered. `peekIndex` must be positioned on the
+     * first byte that follows the opcode. After return, `peekIndex` will be positioned after any macro address
+     * byte(s), and `macroInvocationId` will be set to the address of the macro being invoked.
+     * @param valueTid the type ID of the macro invocation.
+     * @param markerToSet the Marker to set with information parsed from the macro invocation. After return, the
+     *                    marker's type ID will be set, startIndex will point to the first byte of the invocation's
+     *                    body, and endIndex will either be -1 (when not a system symbol or prefixed invocation), or
+     *                    will be set to the end of the invocation.
+     * @param length the declared length of the invocation. Ignored unless this is a length-prefixed invocation
+     *               (denoted by `valueTid.variableLength == true`).
+     */
+    private void uncheckedReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet, long length) {
+        if (valueTid.macroId < 0) {
+            if (valueTid.lowerNibble == 0xE || valueTid.variableLength) {
+                // Opcode 0xEE or Opcode 0xF5 (when length > 0): Read the macro ID as a FlexUInt.
+                long idStart = peekIndex;
+                macroInvocationId = uncheckedReadFlexUInt_1_1();
+                // The length included the macro ID. Subtract the length of the macro ID so that the end index can
+                // be set correctly.
+                length -= peekIndex - idStart;
+            } else {
+                // Opcode 0xEF: system macro invocation or system symbol value.
+                macroInvocationId = buffer[(int) peekIndex++];
+                setSystemTokenMarker(valueTid, markerToSet);
+                return;
+            }
+        } else if (valueTid.length > 0) {
+            // Opcodes 0x4_: the rest of the macro ID follows in a 1-byte FixedUInt.
+            // Opcodes 0x5_: the rest of the macro ID follows in a 2-byte FixedUInt.
+            int remainingId = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
+            if (valueTid.length > 1) {
+                remainingId |= ((buffer[(int) peekIndex++] & SINGLE_BYTE_MASK) << 8);
+            }
+            macroInvocationId = valueTid.macroId + remainingId;
+        } else {
+            // Opcodes 0x00 - 0x3F -- the opcode is the macro ID.
+            macroInvocationId = valueTid.macroId;
+        }
+        setUserMacroInvocationMarker(valueTid, markerToSet, length);
+    }
+
+    /**
      * Reads a value header, consuming the value's annotation wrapper header, if any. Upon invocation,
      * `peekIndex` must be positioned on the first byte that follows the given type ID byte. After return, `peekIndex`
      * will be positioned after the type ID byte of the value, and `markerToSet.typeId` will be set with the IonTypeID
@@ -2052,7 +2155,10 @@ class IonCursorBinary implements IonCursor {
                 return true;
             }
             hasAnnotations = true;
-            return uncheckedReadHeader(buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK, true, valueMarker);
+            return uncheckedReadHeader(buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK, true, valueMarker);
+        } else if (minorVersion == 1 && valueTid.isMacroInvocation) {
+            uncheckedReadMacroInvocationHeader(valueTid, markerToSet, valueTid.variableLength ? uncheckedReadFlexUInt_1_1() : -1);
+            return true;
         } else {
             long endIndex = minorVersion == 0
                 ? calculateEndIndex_1_0(valueTid, isAnnotated)
@@ -2116,9 +2222,8 @@ class IonCursorBinary implements IonCursor {
             if (nullTypeIndex < 0) {
                 return true;
             }
-            valueTid = IonTypeID.NULL_TYPE_IDS_1_1[nullTypeIndex];
+            markerToSet.typeId = IonTypeID.NULL_TYPE_IDS_1_1[nullTypeIndex];
         }
-        markerToSet.typeId = valueTid;
         if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
             return true;
         }
@@ -2130,6 +2235,61 @@ class IonCursorBinary implements IonCursor {
         }
         return false;
     }
+
+    /**
+     * Reads a macro invocation header, ensuring enough bytes are buffered. `peekIndex` must be positioned on the
+     * first byte that follows the opcode. After return, `peekIndex` will be positioned after any macro address
+     * byte(s), and `macroInvocationId` will be set to the address of the macro being invoked.
+     * @param valueTid the type ID of the macro invocation.
+     * @param markerToSet the Marker to set with information parsed from the macro invocation. After returning `false`,
+     *                    the marker's type ID will be set, startIndex will point to the first byte of the invocation's
+     *                    body, and endIndex will either be -1 (when not a system symbol or prefixed invocation), or
+     *                    will be set to the end of the invocation.
+     * @param length the declared length of the invocation. Ignored unless this is a length-prefixed invocation
+     *               (denoted by `valueTid.variableLength == true`).
+     * @return true if not enough data was available in the stream to complete the header; otherwise, false.
+     */
+     private boolean slowReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet, long length) {
+         if (valueTid.macroId < 0) {
+             if (valueTid.lowerNibble == 0xE || valueTid.variableLength) {
+                 // Opcode 0xEE or Opcode 0xF5 (when length > 0): Read the macro ID as a FlexUInt.
+                 long idStart = peekIndex;
+                 macroInvocationId = slowReadFlexUInt_1_1();
+                 // The length included the macro ID. Subtract the length of the macro ID so that the end index can
+                 // be set correctly.
+                 length -= peekIndex - idStart;
+                 if (macroInvocationId < 0) {
+                     return true;
+                 }
+             } else {
+                 // Opcode 0xEF: system macro invocation or system symbol value.
+                 int truncatedId = slowReadByte();
+                 if (truncatedId < 0) {
+                     return true;
+                 }
+                 // The downcast to byte then upcast to long results in sign extension, treating the byte as a FixedInt.
+                 macroInvocationId = (byte) truncatedId;
+                 setSystemTokenMarker(valueTid, markerToSet);
+                 return false;
+             }
+         } else if (valueTid.length > 0) {
+             // Opcode 0x4: the rest of the macro ID follows in a 1-byte FixedUInt.
+             // Opcode 0x5: the rest of the macro ID follows in a 2-byte FixedUInt.
+             if (!fillAt(peekIndex, valueTid.length)) {
+                 return true;
+             }
+             int remainingId = slowPeekByte();
+             if (valueTid.length > 1) {
+                 remainingId |= ((byte) slowPeekByte() << 8);
+             }
+             macroInvocationId = valueTid.macroId + remainingId;
+         } else {
+             // Opcodes 0x00 - 0x3F -- the opcode is the macro ID.
+             macroInvocationId = valueTid.macroId;
+         }
+         setUserMacroInvocationMarker(valueTid, markerToSet, length);
+         return false;
+     }
 
     /**
      * Reads a value header, ensuring enough bytes are buffered. Upon invocation, `peekIndex` must
@@ -2168,6 +2328,8 @@ class IonCursorBinary implements IonCursor {
                 return true;
             }
             valueLength = 0;
+        } else if (minorVersion == 1 && valueTid.isMacroInvocation) {
+            return slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
         } else {
             setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
             event = Event.START_SCALAR;
@@ -2191,6 +2353,7 @@ class IonCursorBinary implements IonCursor {
             validateAnnotationWrapperEndIndex(endIndex);
         }
         setMarker(endIndex, markerToSet);
+        markerToSet.typeId = valueTid;
         return false;
     }
 
@@ -2698,6 +2861,14 @@ class IonCursorBinary implements IonCursor {
 
     Marker getValueMarker() {
         return valueMarker;
+    }
+
+    long getMacroInvocationId() {
+        return macroInvocationId;
+    }
+
+    boolean isSystemInvocation() {
+        return isSystemInvocation;
     }
 
     /**

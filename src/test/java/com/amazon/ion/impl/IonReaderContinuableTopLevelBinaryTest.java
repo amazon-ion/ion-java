@@ -4144,16 +4144,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     /**
-     * Returns the given data prepended with an IVM for the requested 1.x minor version.
-     * @param minorVersion the IVM version to prepend.
-     * @param data the data.
-     * @return the data with an IVM prepended.
-     */
-    private static byte[] withIvm(int minorVersion, byte[] data) throws Exception {
-        return new TestUtils.BinaryIonAppender(minorVersion).append(data).toByteArray();
-    }
-
-    /**
      * Creates an IonReader over the given data, which will be prepended with a binary Ion 1.1 IVM.
      * @param data the data to read.
      * @param constructFromBytes whether to construct the reader from bytes or an InputStream.

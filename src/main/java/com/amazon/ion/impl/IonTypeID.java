@@ -85,6 +85,7 @@ final class IonTypeID {
     static final IonTypeID[] NULL_TYPE_IDS_1_1;
     static final IonTypeID STRUCT_WITH_FLEX_SYMS_ID;
     static final IonTypeID DELIMITED_END_ID;
+    static final IonTypeID SYSTEM_SYMBOL_VALUE;
     static {
         TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
         TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
@@ -134,6 +135,8 @@ final class IonTypeID {
         // This is used as a dummy ID when a delimited container reaches its end. The key here is that the type ID's
         // lower nibble is OpCodes.DELIMITED_END_MARKER.
         DELIMITED_END_ID = TYPE_IDS_1_1[DELIMITED_END_MARKER & 0xFF];
+        // This is used as a dummy ID when a system symbol value is encoded using the 0xEF opcode in Ion 1.1.
+        SYSTEM_SYMBOL_VALUE = TYPE_IDS_1_1[SYMBOL_ADDRESS_1_BYTE & 0xFF];
     }
 
     final IonType type;
@@ -266,29 +269,31 @@ final class IonTypeID {
             boolean isNull = false;
             int length = -1;
             if (isMacroInvocation) {
-                if (id == E_EXPRESSION_FLEX_UINT) {
-                    variableLength = true;
-                    macroId = -1;
-                } else if (upperNibble == 0x5) {
-                    // TODO: For 0x4_ and 0x5_, the bias can be precomputed based on the lower nibble.
-                    //       Consider precomputing and adding it to the type id or some other relevant location.
+                if (upperNibble == 0x5) {
                     variableLength = false;
                     length = 2;
                     // This isn't the whole macro ID, but it's all the relevant bits from the type ID byte (the 4
-                    // least-significant bits).
-                    macroId = lowerNibble;
+                    // least-significant bits), with pre-computed bias.
+                    macroId = (lowerNibble << 16) + 4160;
                 } else if (upperNibble == 0x4) {
                     variableLength = false;
                     length = 1;
                     // This isn't the whole macro ID, but it's all the relevant bits from the type ID byte (the 4
-                    // least-significant bits).
-                    macroId = lowerNibble;
+                    // least-significant bits), with pre-computed bias.
+                    macroId = (lowerNibble << 8) + 64;
                 } else if (upperNibble < 0x4){
                     variableLength = false;
                     macroId = id;
+                    length = 0;
                 } else {
-                    // System or flexuint macro invocation.
-                    variableLength = upperNibble == 0xF;
+                    if (upperNibble == 0xF) {
+                        // FlexUInt length-prefixed macro invocation.
+                        variableLength = true;
+                    } else {
+                        // System invocation; ID follows as a 1-byte FixedInt.
+                        variableLength = false;
+                        length = 1;
+                    }
                     macroId = -1;
                 }
                 type = null;
