@@ -26,6 +26,11 @@ jobs:
           ref: master
           path: ion-test-driver
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Set up python3 env
         run: python3 -m venv ion-test-driver/venv && . ion-test-driver/venv/bin/activate
 
