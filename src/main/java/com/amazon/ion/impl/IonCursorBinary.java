@@ -822,6 +822,8 @@ class IonCursorBinary implements IonCursor {
         } while (shortfall > 0 && skipped > 0);
         if (shortfall <= 0) {
             refillableState.bytesRequested = 0;
+            // The value has been entirely skipped, so its endIndex is now the buffer's limit.
+            valueMarker.endIndex = limit;
             refillableState.state = State.READY;
             return false;
         }
@@ -1543,12 +1545,31 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Skips a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
+     */
+    private void uncheckedSkipFlexSym_1_1() {
+        long result = uncheckedReadFlexInt_1_1();
+        if (result == 0) {
+            peekIndex++;
+        } else if (result < 0) {
+            peekIndex -= result;
+        }
+    }
+
+    /**
      * Skips a FlexSym, ensuring enough space is available in the buffer. After this method returns, `peekIndex` points
      * to the first byte after the end of the FlexSym.
      * @return true if there are not enough bytes in the stream to complete the FlexSym; otherwise, false.
      */
     private boolean slowSkipFlexSym_1_1() {
-        long result = slowReadFlexInt_1_1();
+        long result = slowReadFlexUInt_1_1();
+        if (result < 0) {
+            return true;
+        }
+        if (buffer[(int) peekIndex - 1] < 0) {
+            // Sign extension.
+            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
+        }
         if (result == 0) {
             int nextByte = slowReadByte();
             if (nextByte < 0) {
@@ -2318,7 +2339,8 @@ class IonCursorBinary implements IonCursor {
             }
             valueLength = 0;
         } else if (minorVersion == 1 && valueTid.isMacroInvocation) {
-            return slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
+            slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
+            return true;
         } else {
             setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
             event = Event.START_SCALAR;
@@ -2782,6 +2804,164 @@ class IonCursorBinary implements IonCursor {
             return event;
         }
         return slowOverflowableNextToken();
+    }
+
+
+    /**
+     * The tagless primitive types supported by Ion 1.1+.
+     */
+    enum PrimitiveType {
+        UINT8(IonTypeID.TYPE_IDS_1_1[0x61], true),
+        UINT16(IonTypeID.TYPE_IDS_1_1[0x62], true),
+        UINT32(IonTypeID.TYPE_IDS_1_1[0x64], true),
+        UINT64(IonTypeID.TYPE_IDS_1_1[0x68], true),
+        FLEX_UINT(IonTypeID.TYPE_IDS_1_1[0xF6], true),
+        INT8(IonTypeID.TYPE_IDS_1_1[0x61], false),
+        INT16(IonTypeID.TYPE_IDS_1_1[0x62], false),
+        INT32(IonTypeID.TYPE_IDS_1_1[0x64], false),
+        INT64(IonTypeID.TYPE_IDS_1_1[0x68], false),
+        FLEX_INT(IonTypeID.TYPE_IDS_1_1[0xF6], false),
+        FLOAT16(IonTypeID.TYPE_IDS_1_1[0x6B], false),
+        FLOAT32(IonTypeID.TYPE_IDS_1_1[0x6C], false),
+        FLOAT64(IonTypeID.TYPE_IDS_1_1[0x6D], false),
+        COMPACT_SYMBOL(IonTypeID.TYPE_IDS_1_1[0xFA], false);
+
+        final IonTypeID typeID;
+        final boolean isUnsigned;
+
+        PrimitiveType(IonTypeID typeID, boolean isUnsigned) {
+            this.typeID = typeID;
+            this.isUnsigned = isUnsigned;
+        }
+    }
+
+    /**
+     * Skips any bytes remaining in the previous value, positioning the cursor on the next token.
+     * @return true if not enough data was available in the stream to skip the previous value; otherwise, false.
+     */
+    private boolean slowSkipToNextToken() {
+        if ((refillableState.state != State.READY && !slowMakeBufferReady())) {
+            return true;
+        }
+        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER || checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+            return slowSkipRemainingValueBytes();
+        }
+        return false;
+    }
+
+    /**
+     * Reads the length of the FlexSym that starts at the given position.
+     * @param position the start position of the FlexSym.
+     * @return the length of the FlexSym.
+     */
+    private long uncheckedReadLengthOfFlexSym_1_1(long position) {
+        uncheckedSkipFlexSym_1_1();
+        long lengthOfFlexSym = (int) (peekIndex - position);
+        peekIndex = position;
+        return lengthOfFlexSym;
+    }
+
+    /**
+     * Reads the length of the FlexSym that starts at the given position, ensuring enough bytes are available in the
+     * stream.
+     * @param position the start position of the FlexSym.
+     * @return the length of the FlexSym, or -1 if not enough bytes are available in the stream to determine the length.
+     */
+    private long slowReadLengthOfFlexSym_1_1(long position) {
+        if (slowSkipFlexSym_1_1()) {
+            return -1;
+        }
+        int lengthOfFlexSym = (int) (peekIndex - position);
+        peekIndex = position;
+        return lengthOfFlexSym;
+    }
+
+    /**
+     * Calculates the length of a variable-length primitive value.
+     * @param primitiveType the variable-length primitive type of the tagless value that starts at `peekIndex`.
+     * @return the length of the value.
+     */
+    private long uncheckedCalculateTaglessLength(PrimitiveType primitiveType) {
+        switch (primitiveType) {
+            case FLEX_UINT:
+            case FLEX_INT:
+                return uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
+            case COMPACT_SYMBOL:
+                return uncheckedReadLengthOfFlexSym_1_1(peekIndex);
+            default:
+                throw new IllegalStateException("Length is built into the primitive type's IonTypeID.");
+        }
+    }
+
+    /**
+     * Calculates the length of a variable-length primitive value, ensuring enough bytes are available in the stream.
+     * @param primitiveType the variable-length primitive type of the tagless value that starts at `peekIndex`.
+     * @return the length of the value, or -1 if not enough bytes are available in the stream to determine the length.
+     */
+    private long slowCalculateTaglessLength(PrimitiveType primitiveType) {
+        switch (primitiveType) {
+            case FLEX_UINT:
+            case FLEX_INT:
+                return slowReadLengthOfFlexUInt_1_1(peekIndex);
+            case COMPACT_SYMBOL:
+                return slowReadLengthOfFlexSym_1_1(peekIndex);
+            default:
+                throw new IllegalStateException("Length is built into the primitive type's IonTypeID.");
+        }
+    }
+
+    /**
+     * Advances the cursor to the next value, assuming that it is tagless with the given type, skipping the current
+     * value (if any). This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream</li>
+     *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
+     * </ul>
+     * @param primitiveType the {@link PrimitiveType} of the tagless value on which to position the cursor.
+     * @return an Event conveying the result of the operation.
+     */
+    public Event nextTaglessValue(PrimitiveType primitiveType) {
+        event = Event.NEEDS_DATA;
+        if (isSlowMode) {
+            if (slowSkipToNextToken()) {
+                return event;
+            }
+        } else {
+            if (peekIndex < valueMarker.endIndex) {
+                peekIndex = valueMarker.endIndex;
+            } else if (valueTid != null && valueTid.isDelimited) {
+                seekPastDelimitedContainer_1_1();
+            }
+        }
+        valueTid = null;
+        if (dataHandler != null) {
+            reportConsumedData();
+        }
+        reset();
+        valueTid = primitiveType.typeID;
+        valueMarker.typeId = valueTid;
+        valueMarker.startIndex = peekIndex;
+        valuePreHeaderIndex = peekIndex;
+        if (valueTid.variableLength) {
+            // TODO length calculation for these types could be deferred until they are consumed to avoid duplicate
+            //  work. This would trade some added complexity for a potential performance gain that would need to be
+            //  quantified.
+            long length;
+            if (isSlowMode) {
+                length = slowCalculateTaglessLength(primitiveType);
+                if (length < 0) {
+                    return event;
+                }
+            } else {
+                length = uncheckedCalculateTaglessLength(primitiveType);
+            }
+            valueMarker.endIndex = peekIndex + length;
+        } else {
+            valueMarker.endIndex = peekIndex + valueTid.length;
+        }
+        setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+        event = Event.START_SCALAR;
+        return event;
     }
 
     @Override
