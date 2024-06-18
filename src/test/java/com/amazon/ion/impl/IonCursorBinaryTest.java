@@ -12,8 +12,11 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.amazon.ion.BitUtils.bytes;
@@ -851,5 +854,395 @@ public class IonCursorBinaryTest {
             // the system macro table.
             assertEquals(-2, cursor.getMacroInvocationId());
         }
+    }
+
+    /**
+     * Asserts that the given cursor's current value marker has the given attributes.
+     */
+    private static void assertValueMarker(IonCursorBinary cursor, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        Marker marker = cursor.getValueMarker();
+        assertEquals(expectedType, marker.typeId.type);
+        assertEquals(expectedStartIndex, marker.startIndex);
+        assertEquals(expectedEndIndex, marker.endIndex);
+    }
+
+    /**
+     * Provides Expectations that verify that the cursor is currently positioned at a value marker with the given attributes.
+     */
+    private static ExpectationProvider<IonCursorBinary> valueMarker(IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("%s[%d,%d]", expectedType, expectedStartIndex, expectedEndIndex),
+            cursor -> assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex)
+        ));
+    }
+
+    /**
+     * Provides Expectations that verify that the cursor is currently at a value with the given attributes that has been
+     * successfully filled.
+     */
+    private static ExpectationProvider<IonCursorBinary> valueReady(IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("ready: %s[%d,%d]", expectedType, expectedStartIndex, expectedEndIndex),
+            cursor -> {
+                assertEquals(VALUE_READY, cursor.getCurrentEvent());
+                assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that verify that the cursor is currently positioned at macro invocation with the given ID.
+     */
+    private static ExpectationProvider<IonCursorBinary> macroInvocation(int id) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("macro invocation %d", id),
+            cursor -> {
+                assertEquals(NEEDS_INSTRUCTION, cursor.getCurrentEvent());
+                assertTrue(cursor.getValueMarker().typeId.isMacroInvocation);
+                assertEquals(id, cursor.getMacroInvocationId());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next value and verify that it is a macro invocation with
+     * the given ID.
+     */
+    private static ExpectationProvider<IonCursorBinary> nextMacroInvocation(int id) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("next macro invocation %d", id),
+            cursor -> {
+                assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+                assertTrue(cursor.getValueMarker().typeId.isMacroInvocation);
+                assertEquals(id, cursor.getMacroInvocationId());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagless value and verify that it has the given
+     * attributes.
+     */
+    private static ExpectationProvider<IonCursorBinary> nextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("next tagless %s", primitiveType.name()),
+            cursor -> {
+                assertEquals(START_SCALAR, cursor.nextTaglessValue(primitiveType));
+                assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagless value, fills the value, and verify that it has
+     * the given attributes.
+     */
+    private static ExpectationProvider<IonCursorBinary> fillNextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fill tagless %s", primitiveType.name()),
+            cursor -> {
+                assertEquals(START_SCALAR, cursor.nextTaglessValue(primitiveType));
+                assertEquals(VALUE_READY, cursor.fillValue());
+                assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagged value and verify that it has the given
+     * attributes.
+     */
+    private static ExpectationProvider<IonCursorBinary> nextTaggedValue(IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return scalar(new Expectation<>(
+            String.format("next tagged %s", expectedType),
+            cursor -> assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex)
+        ));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessInts(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xFF, // Interpreted as uint8
+            0xFF, 0xFF, // Interpreted as int16
+            0xFF, 0xFF, 0xFF, 0xFF, // Interpreted as uint32
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Interpreted as int64
+            0xFC, 0xFF, 0xFF, // Interpreted as flex_uint
+            0xFC, 0xFF, 0xFF // Interpreted as flex_int
+        ));
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8, IonType.INT, 5, 6),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.INT16, IonType.INT, 6, 8),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.UINT32, IonType.INT, 8, 12),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.INT64, IonType.INT, 12, 20),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.FLEX_UINT, IonType.INT, 20, 23),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.FLEX_INT, IonType.INT, 23, 26),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessFloats(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0x00, 0x3C, // Interpreted as float16 (1.0)
+            0x00, 0x00, 0x80, 0x3F, // Interpreted as float32 (1.0)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F // Interpreted as float64 (1.0)
+        ));
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT16, IonType.FLOAT, 5, 7),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT64, IonType.FLOAT, 11, 19),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessCompactSymbols(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xF9, 0x6E, 0x61, 0x6D, 0x65, // interpreted as compact symbol (FlexSym with inline text "name")
+            0x09, // interpreted as compact symbol (FlexSym with SID 4)
+            0x01, 0x90 // interpreted as compact symbol (special FlexSym)
+        ));
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 5, 10),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 10, 11),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 11, 13),
+                endStream()
+            );
+        }
+    }
+
+    private static byte[] taggedAndTaglessValues() throws Exception {
+        return withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xFF, // Interpreted as uint8
+            0x60, // Tagged int 0
+            0x00, 0x00, 0x80, 0x3F, // Interpreted as float32 (1.0)
+            0x6C, 0x00, 0x00, 0x80, 0x3F, // Tagged float32 (1.0)
+            0xF9, 0x6E, 0x61, 0x6D, 0x65, // interpreted as compact symbol (FlexSym with inline text "name")
+            0xA4, 0x6E, 0x61, 0x6D, 0x65 // Inline symbol value "name"
+        ));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessValuesInterspersedWithTaggedValues(boolean constructFromBytes) throws Exception {
+        byte[] data = taggedAndTaglessValues();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8, IonType.INT, 5, 6),
+                nextTaggedValue(IonType.INT, 7, 7),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
+                nextTaggedValue(IonType.FLOAT, 12, 16),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 16, 21),
+                nextTaggedValue(IonType.SYMBOL, 22, 26),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fillTaglessValuesInterspersedWithTaggedValues(boolean constructFromBytes) throws Exception {
+        byte[] data = taggedAndTaglessValues();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.UINT8, IonType.INT, 5, 6),
+                fillScalar(7, 7), type(IonType.INT),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
+                fillScalar(12, 16), type(IonType.FLOAT),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 16, 21),
+                fillScalar(22, 26), type(IonType.SYMBOL),
+                endStream()
+            );
+        }
+    }
+
+    /**
+     * Provides a consumer that executes its expectation immediately.
+     */
+    private static Consumer<Expectation<IonCursorBinary>> evaluateImmediately(IonCursorBinary cursor) {
+        return e -> e.test(cursor);
+    }
+
+    /**
+     * A request to be applied to an IonCursorBinary, and the expected response.
+     */
+    private static class Instruction {
+        final Function<IonCursorBinary, IonCursor.Event> request;
+        final ExpectationProvider<IonCursorBinary> response;
+
+        private Instruction(Function<IonCursorBinary, IonCursor.Event> request, ExpectationProvider<IonCursorBinary> response) {
+            this.request = request;
+            this.response = response;
+        }
+
+        /**
+         * Executes the request. If the response was not `NEEDS_DATA`, compares it to the expected response.
+         * @param cursor the cursor to which the request is to be applied.
+         * @return false if the response was `NEEDS_DATA`, true if the response matched the expectation.
+         */
+        boolean executeAndValidate(IonCursorBinary cursor) {
+            if (request.apply(cursor) != NEEDS_DATA) {
+                response.accept(evaluateImmediately(cursor));
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Creates a new Instruction.
+     */
+    private static Instruction instruction(
+        Function<IonCursorBinary, IonCursor.Event> request,
+        ExpectationProvider<IonCursorBinary> response
+    ) {
+        return new Instruction(request, response);
+    }
+
+    /**
+     * Feeds bytes from the given data one-by-one to a new cursor, attempting to execute the next instruction
+     * in the given list after each byte. Each time an instruction is successfully executed, the next one in the
+     * list will be attempted after the next byte is fed. After all bytes have been fed, the cursor is expected to
+     * convey the end of the stream.
+     * @param data the data to read incrementally.
+     * @param instructions the instructions to execute.
+     */
+    private static void executeIncrementally(byte[] data, List<Instruction> instructions) {
+        ResizingPipedInputStream pipe = new ResizingPipedInputStream(data.length);
+        int valuesEncountered = 0;
+        try (IonCursorBinary cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, pipe, null, 0, 0)) {
+            for (byte b : data) {
+                pipe.receive(b & 0xFF);
+                if (instructions.get(valuesEncountered).executeAndValidate(cursor)) {
+                    valuesEncountered++;
+                }
+            }
+            endStream().accept(evaluateImmediately(cursor));
+        }
+        // All instructions should result in a value except the final one, which results in stream end.
+        assertEquals(instructions.size() - 1, valuesEncountered);
+    }
+
+    @Test
+    public void fillTaglessValuesInterspersedWithTaggedValuesIncremental() throws Exception {
+        byte[] data = taggedAndTaglessValues();
+        List<Instruction> instructions = Arrays.asList(
+            instruction(IonCursorBinary::nextValue, macroInvocation(0)),
+            instruction(
+                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8),
+                valueMarker(IonType.INT, 5, 6)
+            ),
+            instruction(
+                IonCursorBinary::fillValue,
+                valueReady(IonType.INT, 5, 6)
+            ),
+            instruction(
+                IonCursorBinary::nextValue,
+                valueMarker(IonType.INT,7, 7)
+            ),
+            instruction(
+                IonCursorBinary::fillValue,
+                valueReady(IonType.INT, 7, 7)
+            ),
+            instruction(
+                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32),
+                valueMarker(IonType.FLOAT, 7, 11)
+            ),
+            instruction(
+                IonCursorBinary::fillValue,
+                valueReady(IonType.FLOAT, 7, 11)
+            ),
+            instruction(
+                IonCursorBinary::nextValue,
+                valueMarker(IonType.FLOAT, 12, 16)
+            ),
+            instruction(
+                IonCursorBinary::fillValue,
+                valueReady(IonType.FLOAT, 12, 16)
+            ),
+            instruction(
+                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL),
+                valueMarker(IonType.SYMBOL, 16, 21)
+            ),
+            instruction(
+                IonCursorBinary::fillValue,
+                valueReady(IonType.SYMBOL, 16, 21)
+            ),
+            instruction(
+                IonCursorBinary::nextValue,
+                valueMarker(IonType.SYMBOL, 22, 26)
+            ),
+            instruction(
+                IonCursorBinary::fillValue,
+                valueReady(IonType.SYMBOL, 22, 26)
+            ),
+            // This is the end of the stream, so the response is not used.
+            instruction(IonCursorBinary::nextValue, null)
+        );
+        executeIncrementally(data, instructions);
+    }
+
+    @Test
+    public void skipTaglessValuesInterspersedWithTaggedValuesIncremental() throws Exception {
+        byte[] data = taggedAndTaglessValues();
+        List<Instruction> instructions = Arrays.asList(
+            instruction(IonCursorBinary::nextValue, macroInvocation(0)),
+            instruction(
+                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8),
+                // 0xFF is skipped.
+                valueMarker(IonType.INT, 5, 6)
+            ),
+            instruction(
+                IonCursorBinary::nextValue,
+                // 0x60 is buffered because it's a type ID; everything else is skipped.
+                valueMarker(IonType.INT,6, 6)
+            ),
+            instruction(
+                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32),
+                // All four bytes are skipped.
+                valueMarker(IonType.FLOAT, 6, 10)
+            ),
+            instruction(
+                IonCursorBinary::nextValue,
+                // 0x6C is buffered because it's a type ID; everything else is skipped.
+                valueMarker(IonType.FLOAT, 7, 11)
+            ),
+            instruction(
+                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL),
+                // All five bytes are skipped.
+                valueMarker(IonType.SYMBOL, 7, 12)
+            ),
+            instruction(
+                IonCursorBinary::nextValue,
+                // 0xF9 is buffered to determine the length and 0xA4 is buffered because it's a type ID;
+                // everything else is skipped.
+                valueMarker(IonType.SYMBOL, 9, 13)
+            ),
+            // This is the end of the stream, so the response is not used.
+            instruction(IonCursorBinary::nextValue, null)
+        );
+        executeIncrementally(data, instructions);
     }
 }
