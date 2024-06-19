@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,6 +26,8 @@ import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
+import static com.amazon.ion.TestUtils.cleanCommentedHexBytes;
+import static com.amazon.ion.TestUtils.hexStringToByteArray;
 import static com.amazon.ion.TestUtils.withIvm;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
@@ -796,6 +799,38 @@ public class IonCursorBinaryTest {
     }
 
     /**
+     * Provides Expectations that verify that the cursor is currently positioned at a value with a field text marker
+     * that matches the given attributes.
+     */
+    static ExpectationProvider<IonCursorBinary> fieldNameText(int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("field(%d, %d)", expectedStartIndex, expectedEndIndex),
+            cursor -> {
+                assertEquals(expectedStartIndex, cursor.fieldTextMarker.startIndex);
+                assertEquals(expectedEndIndex, cursor.fieldTextMarker.endIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that verify that the cursor is currently positioned at a value with annotation token
+     * markers that match the start and end indices of the given markers.
+     */
+    static ExpectationProvider<IonCursorBinary> annotationTokens(Marker... expectedMarkers) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("annotations%s", Arrays.toString(expectedMarkers)),
+            cursor -> {
+                assertTrue(cursor.hasAnnotations());
+                for (int i = 0; i < cursor.annotationTokenMarkers.size(); i++) {
+                    Marker annotationTokenMarker = cursor.annotationTokenMarkers.get(i);
+                    assertEquals(expectedMarkers[i].startIndex, annotationTokenMarker.startIndex);
+                    assertEquals(expectedMarkers[i].endIndex, annotationTokenMarker.endIndex);
+                }
+            }
+        ));
+    }
+
+    /**
      * Provides Expectations that verify that the cursor is currently at a value with the given attributes that has been
      * successfully filled.
      */
@@ -805,6 +840,18 @@ public class IonCursorBinaryTest {
             cursor -> {
                 assertEquals(VALUE_READY, cursor.getCurrentEvent());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that verify that the cursor's current event matches the expected event.
+     */
+    private static ExpectationProvider<IonCursorBinary> event(IonCursor.Event expectedEvent) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("%s", expectedEvent),
+            cursor -> {
+                assertEquals(expectedEvent, cursor.getCurrentEvent());
             }
         ));
     }
@@ -853,7 +900,7 @@ public class IonCursorBinaryTest {
     }
 
     /**
-     * Provides Expectations that advance the reader to the next tagless value, fills the value, and verify that it has
+     * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it has
      * the given attributes.
      */
     private static ExpectationProvider<IonCursorBinary> fillNextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
@@ -863,6 +910,50 @@ public class IonCursorBinaryTest {
                 assertEquals(START_SCALAR, cursor.nextTaglessValue(primitiveType));
                 assertEquals(VALUE_READY, cursor.fillValue());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that verify the cursor is positioned on a container with the given attributes, then step
+     * into the container.
+     */
+    private static ExpectationProvider<IonCursorBinary> stepInToContainer(IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("stepIn: %s[%d,%d]", expectedType, expectedStartIndex, expectedEndIndex),
+            cursor -> {
+                assertEquals(START_CONTAINER, cursor.getCurrentEvent());
+                assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+                assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that step out of a container and verify that the resulting event is NEEDS_INSTRUCTION.
+     */
+    private static ExpectationProvider<IonCursorBinary> stepOutOfContainer() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "stepOut",
+            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer())
+        ));
+    }
+
+    /**
+     * Provides a single Expectation that performs the function of each expectation in the given sequence.
+     * @param expectationProviders the expectations to perform in one step.
+     * @return the composite ExpectationProvider.
+     */
+    @SafeVarargs
+    private static ExpectationProvider<IonCursorBinary> allOf(ExpectationProvider<IonCursorBinary>... expectationProviders) {
+        List<Expectation<IonCursorBinary>> expectations = new ArrayList<>(expectationProviders.length);
+        Arrays.stream(expectationProviders).forEach(provider -> provider.accept(expectations::add));
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("%s", expectations),
+            cursor -> {
+                for (Expectation<IonCursorBinary> expectation : expectations) {
+                    expectation.test(cursor);
+                }
             }
         ));
     }
@@ -1158,6 +1249,38 @@ public class IonCursorBinaryTest {
                 // 0xF9 is buffered to determine the length and 0xA4 is buffered because it's a type ID;
                 // everything else is skipped.
                 valueMarker(IonType.SYMBOL, 9, 13)
+            ),
+            // This is the end of the stream, so the response is not used.
+            instruction(IonCursorBinary::nextValue, null)
+        );
+        executeIncrementally(data, instructions);
+    }
+
+    /**
+     * Creates a new Marker.
+     */
+    private Marker marker(int startIndex, int endIndex) {
+        return new Marker(startIndex, endIndex);
+    }
+
+    @Test
+    public void readFlexSymsIncrementally() throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "DB                        | Struct length 11 \n" +
+            "01                        | Switch to FlexSym field names \n" +
+            "FF 61                     | FlexSym a \n" +
+            "E8 0F F9 6E 61 6D 65 60   | Two annotation FlexSyms SID = 7 (symbols), text = name; value int 0 \n"
+        )));
+        List<Instruction> instructions = Arrays.asList(
+            instruction(IonCursorBinary::nextValue, stepInToContainer(IonType.STRUCT, 5, 16)),
+            instruction(
+                IonCursorBinary::nextValue,
+                allOf(
+                    fieldNameText(7, 8),
+                    annotationTokens(marker(-1, 7), marker(11, 15)),
+                    valueMarker(IonType.INT, 16, 16),
+                    stepOutOfContainer()
+                )
             ),
             // This is the end of the stream, so the response is not used.
             instruction(IonCursorBinary::nextValue, null)
