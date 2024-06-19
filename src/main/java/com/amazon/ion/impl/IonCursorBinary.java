@@ -226,7 +226,7 @@ class IonCursorBinary implements IonCursor {
      * Marker for the sequence of annotation symbol IDs on the current value. If there are no annotations on
      * the current value, the startIndex will be negative.
      */
-    final Marker annotationSequenceMarker = new Marker(-1, 0);
+    final Marker annotationSequenceMarker = new Marker(-1, -1);
 
     /**
      * Holds both inline text markers and symbol IDs. If representing a symbol ID, the symbol ID value will
@@ -242,7 +242,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Marker representing the current value.
      */
-    final Marker valueMarker = new Marker(-1, 0);
+    final Marker valueMarker = new Marker(-1, -1);
 
     /**
      * The index of the first byte in the header of the value at which the reader is currently positioned.
@@ -1307,15 +1307,13 @@ class IonCursorBinary implements IonCursor {
             if (valueTid.isInlineable) {
                 // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
                 Marker provisionalMarker = annotationTokenMarkers.provisionalElement();
-                slowReadFlexSym_1_1(provisionalMarker);
-                if (provisionalMarker.endIndex < 0) {
+                if (slowReadFlexSym_1_1(provisionalMarker)) {
                     return true;
                 }
                 if (valueTid.lowerNibble == TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1) {
                     // Opcode 0xE8 (two annotation FlexSyms)
                     provisionalMarker = annotationTokenMarkers.provisionalElement();
-                    slowReadFlexSym_1_1(provisionalMarker);
-                    if (provisionalMarker.endIndex < 0) {
+                    if (slowReadFlexSym_1_1(provisionalMarker)) {
                         return true;
                     }
                     annotationTokenMarkers.commit();
@@ -1478,35 +1476,48 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Reads a FlexInt into a long, ensuring enough space is available in the buffer. After this method returns,
-     * `peekIndex` points to the first byte after the end of the FlexUInt.
-     * @return the value.
+     * Reads a FlexInt into a long, ensuring enough space is available in the buffer. After this method returns false,
+     * `peekIndex` points to the first byte after the end of the FlexInt and `markerToSet.endIndex` contains the
+     * FlexInt value.
+     * @param firstByte the first (least-significant) byte of the FlexInt.
+     * @param markerToSet the marker to populate.
+     * @return true if there are not enough bytes to complete the FlexSym; otherwise, false.
      */
-    private long slowReadLargeFlexInt_1_1(int firstByte) {
+    private boolean slowReadLargeFlexInt_1_1(int firstByte, Marker markerToSet) {
         firstByte &= SINGLE_BYTE_MASK;
         // FlexInts are essentially just FlexUInts that interpret the most significant bit as a sign that needs to be
         // extended.
         long result = slowReadLargeFlexUInt_1_1(firstByte);
+        if (result < 0) {
+            return true;
+        }
         if (buffer[(int) peekIndex - 1] < 0) {
             // Sign extension.
             result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
         }
-        return result;
+        markerToSet.endIndex = result;
+        return false;
     }
 
     /**
-     * Reads a FlexInt into a long, ensuring enough space is available in the buffer. After this method returns,
-     * `peekIndex` points to the first byte after the end of the FlexUInt.
-     * @return the value.
+     * Reads a FlexInt into a long, ensuring enough space is available in the buffer. After this method returns false,
+     * `peekIndex` points to the first byte after the end of the FlexInt and `markerToSet.endIndex` contains the
+     * FlexInt value.
+     * @param markerToSet the marker to populate.
+     * @return true if there are not enough bytes to complete the FlexSym; otherwise, false.
      */
-    private long slowReadFlexInt_1_1() {
-        // The following up-cast to int performs sign extension, if applicable.
-        int currentByte = (byte) slowReadByte();
-        if ((currentByte & 1) == 1) {
-            // Single byte; shift out the continuation bit while preserving the sign.
-            return currentByte >> 1;
+    private boolean slowReadFlexInt_1_1(Marker markerToSet) {
+        int currentByte = slowReadByte();
+        if (currentByte < 0) {
+            return true;
         }
-        return slowReadLargeFlexInt_1_1(currentByte);
+        if ((currentByte & 1) == 1) {
+            // Single byte; shift out the continuation bit while preserving the sign. The downcast to byte and implicit
+            // upcast back to int results in sign extension.
+            markerToSet.endIndex = ((byte) currentByte) >> 1;
+            return false;
+        }
+        return slowReadLargeFlexInt_1_1(currentByte, markerToSet);
     }
 
     /**
@@ -1517,37 +1528,42 @@ class IonCursorBinary implements IonCursor {
      * startIndex is set to -1. When this FlexSym wraps a delimited end marker, neither the Marker's startIndex nor its
      * endIndex is set.
      * @param markerToSet the marker to populate.
-     * @return the symbol ID value if one was present, otherwise -1.
+     * @return true if there are not enough bytes to complete the FlexSym; otherwise, false.
      */
-    private long slowReadFlexSym_1_1(Marker markerToSet) {
-        long result = slowReadFlexInt_1_1();
+    private boolean slowReadFlexSym_1_1(Marker markerToSet) {
+        if (slowReadFlexInt_1_1(markerToSet)) {
+            return true;
+        }
+        long result = markerToSet.endIndex;
+        markerToSet.endIndex = -1;
         if (result == 0) {
-            int nextByte = (byte) slowReadByte();
-            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
+            int nextByte = slowReadByte();
+            if (nextByte < 0) {
+                return true;
+            }
+            if ((byte) nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
                 // Symbol zero.
                 markerToSet.endIndex = 0;
-                return 0;
+                return false;
             }
-            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
+            if ((byte) nextByte == OpCodes.STRING_ZERO_LENGTH) {
                 // Inline symbol with zero length.
                 markerToSet.startIndex = peekIndex;
                 markerToSet.endIndex = peekIndex;
-                return -1;
-            } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
+                return false;
+            } else if ((byte) nextByte != OpCodes.DELIMITED_END_MARKER) {
                 throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
             }
             markerToSet.typeId = DELIMITED_END_ID;
-            return -1;
         } else if (result < 0) {
             markerToSet.startIndex = peekIndex;
             markerToSet.endIndex = peekIndex - result;
             peekIndex = markerToSet.endIndex;
-            return -1;
         } else {
             markerToSet.startIndex = -1;
             markerToSet.endIndex = result;
         }
-        return result;
+        return false;
     }
 
     /**
@@ -1674,10 +1690,27 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Reads the field name at `peekIndex`, ensuring enough bytes are available in the buffer. After this method returns
-     * `peekIndex` points to the first byte of the value that follows the field name. If the field name contained a
-     * symbol ID, `fieldSid` is set to that symbol ID. If it contained inline text, `fieldSid` is set to -1, and the
-     * start and end indexes of the inline text are described by `fieldTextMarker`.
+     * Reads the field name FlexSym at `peekIndex`, ensuring enough bytes are available in the buffer. After this method
+     * returns `peekIndex` points to the first byte of the value that follows the field name. If the field name
+     * contained a symbol ID, `fieldSid` is set to that symbol ID. If it contained inline text, `fieldSid` is set to -1,
+     * and the start and end indexes of the inline text are described by `fieldTextMarker`.
+     * @return true if there are not enough bytes in the stream to complete the field name; otherwise, false.
+     */
+    private boolean slowReadFieldNameFlexSym_1_1() {
+        if (slowReadFlexSym_1_1(fieldTextMarker)) {
+            return true;
+        }
+        if (fieldTextMarker.startIndex < 0) {
+            fieldSid = (int) fieldTextMarker.endIndex;
+        }
+        return false;
+    }
+
+    /**
+     * Reads the field name FlexSym or FlexUInt at `peekIndex`, ensuring enough bytes are available in the buffer. After
+     * this method returns `peekIndex` points to the first byte of the value that follows the field name. If the field
+     * name contained a symbol ID, `fieldSid` is set to that symbol ID. If it contained inline text, `fieldSid` is set
+     * to -1, and the start and end indexes of the inline text are described by `fieldTextMarker`.
      * @return true if there are not enough bytes in the stream to complete the field name; otherwise, false.
      */
     private boolean slowReadFieldName_1_1() {
@@ -1687,16 +1720,15 @@ class IonCursorBinary implements IonCursor {
             return true;
         }
         if (parent.typeId.isInlineable) {
-            fieldSid = (int) slowReadFlexSym_1_1(fieldTextMarker);
-            return fieldSid < 0 && fieldTextMarker.endIndex < 0;
+            return slowReadFieldNameFlexSym_1_1();
         } else {
             // 0 in field name position of a SID struct indicates that all field names that follow are represented as
             // using FlexSyms.
             if (buffer[(int) peekIndex] == FlexInt.ZERO) {
                 peekIndex++;
+                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
                 parent.typeId = IonTypeID.STRUCT_WITH_FLEX_SYMS_ID;
-                fieldSid = (int) slowReadFlexSym_1_1(fieldTextMarker);
-                return fieldSid < 0 && fieldTextMarker.endIndex < 0;
+                return slowReadFieldNameFlexSym_1_1();
             } else {
                 fieldSid = (int) slowReadFlexUInt_1_1();
                 return fieldSid < 0;

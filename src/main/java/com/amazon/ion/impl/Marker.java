@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 /**
@@ -25,11 +24,11 @@ class Marker {
 
     /**
      * @param startIndex index of the first byte in the slice.
-     * @param length     the number of bytes in the slice.
+     * @param endIndex index of the first byte after the slice.
      */
-    Marker(final int startIndex, final int length) {
+    Marker(final int startIndex, final int endIndex) {
         this.startIndex = startIndex;
-        this.endIndex = startIndex + length;
+        this.endIndex = endIndex;
     }
 
     /**
