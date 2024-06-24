@@ -21,7 +21,7 @@ jobs:
           distribution: 'corretto'
           java-version: 8
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@31ae3562f68c96d481c31bc1a8a55cc1be162f83
+        uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda
         with:
           validate-wrappers: true
       - run: ./gradlew build
@@ -53,7 +53,7 @@ jobs:
             8
             ${{matrix.java}}
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@31ae3562f68c96d481c31bc1a8a55cc1be162f83
+        uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda
         with:
           cache-read-only: true
           validate-wrappers: true

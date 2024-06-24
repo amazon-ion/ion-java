@@ -50,7 +50,7 @@ jobs:
             11
             17
             21
-      - uses: gradle/actions/setup-gradle@31ae3562f68c96d481c31bc1a8a55cc1be162f83
+      - uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda
         with:
           validate-wrappers: true
       - name: Build Release Artifacts
