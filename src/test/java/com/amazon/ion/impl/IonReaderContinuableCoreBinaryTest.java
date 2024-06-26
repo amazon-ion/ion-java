@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
@@ -12,13 +13,27 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.math.BigInteger;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR;
+import static com.amazon.ion.IonCursor.Event.VALUE_READY;
+import static com.amazon.ion.TestUtils.withIvm;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.FLEX_INT;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.FLEX_UINT;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT16;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT32;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT64;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT32;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT64;
+import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT8;
+import static com.amazon.ion.impl.IonCursorBinaryTest.nextMacroInvocation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
 import static com.amazon.ion.impl.IonCursorTestUtilities.assertSequence;
 import static com.amazon.ion.impl.IonCursorTestUtilities.container;
+import static com.amazon.ion.impl.IonCursorTestUtilities.doubleValue;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endContainer;
 import static com.amazon.ion.impl.IonCursorTestUtilities.endStream;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fillContainer;
@@ -28,8 +43,10 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.fillSymbolValue;
 import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IonReaderContinuableCoreBinaryTest {
 
@@ -668,5 +685,298 @@ public class IonReaderContinuableCoreBinaryTest {
         // This is an unexpected EOF, so the reader should fail cleanly.
         assertThrows(IonException.class, reader::nextValue);
         reader.close();
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it has
+     * the given attributes.
+     */
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> fillNextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fill tagless %s", primitiveType.name()),
+            reader -> {
+                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(expectedType, reader.getType());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
+     * an integer that fits in a Java int with the expected value.
+     */
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessIntValue(IonCursorBinary.PrimitiveType primitiveType, int expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fill tagless int from %s", primitiveType.name()),
+            reader -> {
+                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(IonType.INT, reader.getType());
+                assertEquals(IntegerSize.INT, reader.getIntegerSize());
+                assertEquals(expectedValue, reader.intValue());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
+     * an integer that fits in a Java long with the expected value.
+     */
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessLongValue(IonCursorBinary.PrimitiveType primitiveType, long expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fill tagless long from %s", primitiveType.name()),
+            reader -> {
+                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(IonType.INT, reader.getType());
+                assertEquals(IntegerSize.LONG, reader.getIntegerSize());
+                assertEquals(expectedValue, reader.longValue());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
+     * an integer that fits in a BigInteger with the expected value.
+     */
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessBigIntegerValue(IonCursorBinary.PrimitiveType primitiveType, BigInteger expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fill tagless BigInteger from %s", primitiveType.name()),
+            reader -> {
+                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(IonType.INT, reader.getType());
+                assertEquals(IntegerSize.BIG_INTEGER, reader.getIntegerSize());
+                assertEquals(expectedValue, reader.bigIntegerValue());
+            }
+        ));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessInts(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xFF, // Interpreted as uint8
+            0xFF, 0xFF, // Interpreted as int16
+            0xFF, 0xFF, 0xFF, 0xFF, // Interpreted as uint32
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Interpreted as int64
+            0xFC, 0xFF, 0xFF, // Interpreted as flex_uint
+            0xFC, 0xFF, 0xFF // Interpreted as flex_int
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                nextTaglessIntValue(UINT8, 0xFF),
+                nextTaglessIntValue(INT16, -1),
+                nextTaglessLongValue(UINT32, 0xFFFFFFFFL),
+                nextTaglessLongValue(INT64, -1),
+                nextTaglessIntValue(FLEX_UINT, 0x1FFFFF),
+                nextTaglessIntValue(FLEX_INT, -1),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessFixedIntBoundaries(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xFF, 0xFF, 0xFF, 0x7F, // Interpreted as uint32 -- this is Integer.MAX_VALUE
+            0xFF, 0xFF, 0xFF, 0x7F, // Interpreted as int32 -- this is Integer.MAX_VALUE
+            0x00, 0x00, 0x00, 0x80, // Interpreted as uint32 -- this won't fit in a Java int, which is signed
+            0x00, 0x00, 0x00, 0x80, // Interpreted as int32 -- this is Integer.MIN_VALUE
+            0xFF, 0xFF, 0xFF, 0xFF, // Interpreted as uint32 -- this won't fit in a Java int
+            0xFF, 0xFF, 0xFF, 0xFF  // Interpreted as int32 -- this is -1
+         ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                nextTaglessIntValue(UINT32, Integer.MAX_VALUE),
+                nextTaglessIntValue(INT32, Integer.MAX_VALUE),
+                nextTaglessLongValue(UINT32, 0x80000000L),
+                nextTaglessIntValue(INT32, Integer.MIN_VALUE),
+                nextTaglessLongValue(UINT32, 0xFFFFFFFFL),
+                nextTaglessIntValue(INT32, -1),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessFixedLongBoundaries(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, // Interpreted as uint64 -- this is Long.MAX_VALUE
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, // Interpreted as int64 -- this is Long.MAX_VALUE
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Interpreted as uint64 -- this won't fit in a Java long
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Interpreted as int64 -- this is Long.MIN_VALUE
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Interpreted as uint64 -- this won't fit in a Java long
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF  // Interpreted as int64 -- this is -1
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                nextTaglessLongValue(UINT64, Long.MAX_VALUE),
+                nextTaglessLongValue(INT64, Long.MAX_VALUE),
+                nextTaglessBigIntegerValue(UINT64, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)),
+                nextTaglessLongValue(INT64, Long.MIN_VALUE),
+                nextTaglessBigIntegerValue(UINT64, BigInteger.valueOf(Long.MAX_VALUE).shiftLeft(1).add(BigInteger.ONE)),
+                nextTaglessLongValue(INT64, -1),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessFlexIntBoundaries(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xF0, 0xFF, 0xFF, 0xFF, 0x0F, // 31 set bits. As flex_uint this is Integer.MAX_VALUE
+            0xF0, 0xFF, 0xFF, 0xFF, 0x0F, // 31 set bits. As flex_int this is Integer.MAX_VALUE
+            0x10, 0x00, 0x00, 0x00, 0x10, // Bit 31 set. As a flex_uint this is Integer.MAX_VALUE + 1
+            0x10, 0x00, 0x00, 0x00, 0x10, // Bit 31 set (sign not extended). As flex_int this is Integer.MAX_VALUE + 1
+            0xF0, 0xFF, 0xFF, 0xFF, 0x1F, // 32 set bits. As flex_uint this is (Integer.MAX_VALUE << 1) + 1
+            0xF0, 0xFF, 0xFF, 0xFF, 0x1F, // 32 set bits. As flex_int this is (Integer.MAX_VALUE << 1) + 1
+            0x10, 0x00, 0x00, 0x00, 0xF0, // Bits 31+ set. As flex_uint this won't fit in an int
+            0x10, 0x00, 0x00, 0x00, 0xF0, // Bits 31+ set (sign extended). As flex_int this is Integer.MIN_VALUE
+            0xF0, 0xFF, 0xFF, 0xFF, 0xEF, // All bits except bit 31 set. As flex_uint this won't fit in an int
+            0xF0, 0xFF, 0xFF, 0xFF, 0xEF, // All bits except bit 31 set (sign extended). As flex_int this is Integer.MIN_VALUE - 1
+            0xF0, 0xFF, 0xFF, 0xFF, 0xFF, // All bits set. As flex_uint this won't fit in a Java int
+            0xF0, 0xFF, 0xFF, 0xFF, 0xFF  // All bits set. As flex_int this is -1
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                nextTaglessIntValue(FLEX_UINT, Integer.MAX_VALUE),
+                nextTaglessIntValue(FLEX_INT, Integer.MAX_VALUE),
+                nextTaglessLongValue(FLEX_UINT, Integer.MAX_VALUE + 1L),
+                nextTaglessLongValue(FLEX_INT, Integer.MAX_VALUE + 1L),
+                nextTaglessLongValue(FLEX_UINT, 0xFFFFFFFFL),
+                nextTaglessLongValue(FLEX_INT, 0xFFFFFFFFL),
+                nextTaglessLongValue(FLEX_UINT, 0x780000000L), // 0xF000... >> 5 == 0x780...
+                nextTaglessIntValue(FLEX_INT, Integer.MIN_VALUE),
+                nextTaglessLongValue(FLEX_UINT, 0x77FFFFFFFL), // 0xEFFF... >> 5 == 0x77F...
+                nextTaglessLongValue(FLEX_INT, Integer.MIN_VALUE - 1L),
+                nextTaglessLongValue(FLEX_UINT, 0x7FFFFFFFFL), // 0xFFFF... >> 5 == 0x7FF...
+                nextTaglessIntValue(FLEX_INT, -1),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessFlexLongBoundaries(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, // 63 set bits. As flex_uint this is Long.MAX_VALUE
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, // 63 set bits. As flex_int this is Long.MAX_VALUE
+            0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // Bit 63 set. As a flex_uint this is Long.MAX_VALUE + 1
+            0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // Bit 63 set (sign not extended). As flex_int this is Long.MAX_VALUE + 1
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, // 64 set bits. As flex_uint this is (Long.MAX_VALUE << 1) + 1
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, // 64 set bits. As flex_int this is (Long.MAX_VALUE << 1) + 1
+            0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFE, // Bits 63+ set. As flex_uint this won't fit in a long
+            0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFE, // Bits 63+ set (sign extended). As flex_int this is Long.MIN_VALUE
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD, // All bits except bit 63 set. As flex_uint this won't fit in a long
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD, // All bits except bit 63 set (sign extended). As flex_int this is Long.MIN_VALUE - 1
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // All bits set. As flex_uint this won't fit in a Java long
+            0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF // All bits set. As flex_int this is -1
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                nextTaglessLongValue(FLEX_UINT, Long.MAX_VALUE),
+                nextTaglessLongValue(FLEX_INT, Long.MAX_VALUE),
+                nextTaglessBigIntegerValue(FLEX_UINT, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)),
+                nextTaglessBigIntegerValue(FLEX_INT, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)),
+                nextTaglessBigIntegerValue(FLEX_UINT, BigInteger.valueOf(Long.MAX_VALUE).shiftLeft(1).add(BigInteger.ONE)),
+                nextTaglessBigIntegerValue(FLEX_INT, BigInteger.valueOf(Long.MAX_VALUE).shiftLeft(1).add(BigInteger.ONE)),
+                nextTaglessBigIntegerValue(FLEX_UINT, BigInteger.valueOf(0x3F80000000000000L).shiftLeft(8)), // 0xFE00... >>> 2 == 0x3F80...
+                nextTaglessLongValue(FLEX_INT, Long.MIN_VALUE),
+                nextTaglessBigIntegerValue(FLEX_UINT, BigInteger.valueOf(0x3F7FFFFFFFFFFFFFL).shiftLeft(8).or(BigInteger.valueOf(0xFF))), // 0xFDFF... >>> 2 == 0x3F7F...
+                nextTaglessBigIntegerValue(FLEX_INT, BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE)),
+                nextTaglessBigIntegerValue(FLEX_UINT, BigInteger.valueOf(0x3FFFFFFFFFFFFFFFL).shiftLeft(8).or(BigInteger.valueOf(0xFF))), // 0xFF... >>> 2 == 0x3F...
+                nextTaglessLongValue(FLEX_INT, -1),
+                endStream()
+            );
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessFloats(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0x00, 0x3C, // Interpreted as float16 (1.0)
+            0x00, 0x00, 0x80, 0x3F, // Interpreted as float32 (1.0)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F // Interpreted as float64 (1.0)
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT16, IonType.FLOAT),
+                doubleValue(1.0),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT),
+                doubleValue(1.0),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT64, IonType.FLOAT),
+                doubleValue(1.0),
+                endStream()
+            );
+        }
+    }
+
+    static ExpectationProvider<IonReaderContinuableCoreBinary> symbolValue(String expectedText) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("symbol(%s)", expectedText),
+            reader -> {
+                assertTrue(reader.hasSymbolText());
+                assertEquals(expectedText, reader.getSymbolText());
+            }
+        ));
+    }
+
+    static ExpectationProvider<IonReaderContinuableCoreBinary> symbolValue(int expectedSid) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("symbol(%d)", expectedSid),
+            reader -> {
+                assertFalse(reader.hasSymbolText());
+                assertEquals(expectedSid, reader.symbolValueId());
+            }
+        ));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void taglessCompactSymbols(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0x00, // User macro ID 0
+            0xF9, 0x6E, 0x61, 0x6D, 0x65, // interpreted as compact symbol (FlexSym with inline text "name")
+            0x09, // interpreted as compact symbol (FlexSym with SID 4)
+            0x01, 0x90 // interpreted as compact symbol (special FlexSym)
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertSequence(
+                reader,
+                nextMacroInvocation(0),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                symbolValue("name"),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                symbolValue(4),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                symbolValue(""),
+                endStream()
+            );
+        }
     }
 }

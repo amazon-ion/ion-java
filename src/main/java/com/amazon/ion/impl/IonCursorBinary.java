@@ -25,6 +25,7 @@ import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.TYPE_IDS_1_1;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
 /**
@@ -348,6 +349,11 @@ class IonCursorBinary implements IonCursor {
      * value). When true, `macroInvocationId` is used to retrieve the ID of the system token.
      */
     private boolean isSystemInvocation = false;
+
+    /**
+     * The type of the current value, if tagless. Otherwise, null.
+     */
+    PrimitiveType taglessType = null;
 
     /**
      * @return the given configuration's DataHandler, or null if that DataHandler is a no-op.
@@ -1232,12 +1238,12 @@ class IonCursorBinary implements IonCursor {
     private boolean slowSkipNonPrefixedAnnotations_1_1(IonTypeID valueTid) {
         if (valueTid.isInlineable) {
             // Opcodes 0xE7 (one annotation FlexSym) and 0xE8 (two annotation FlexSyms)
-            if (slowSkipFlexSym_1_1()) {
+            if (slowSkipFlexSym_1_1(null) == FlexSymType.INCOMPLETE) {
                 return true;
             }
             if (valueTid.lowerNibble == TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1) {
                 // Opcode 0xE8 (two annotation FlexSyms)
-                return slowSkipFlexSym_1_1();
+                return slowSkipFlexSym_1_1(null) == FlexSymType.INCOMPLETE;
             }
         } else {
             // Opcodes 0xE4 (one annotation SID) and 0xE5 (two annotation SIDs)
@@ -1545,45 +1551,126 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Skips a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
+     * FlexSym encoding types.
      */
-    private void uncheckedSkipFlexSym_1_1() {
+    private enum FlexSymType {
+        INCOMPLETE {
+            @Override
+            IonTypeID typeIdFor(int length) {
+                throw new IllegalStateException("The FlexSym is incomplete.");
+            }
+        },
+        INLINE_TEXT {
+            @Override
+            IonTypeID typeIdFor(int length) {
+                if (length <= 0xF) {
+                    return TYPE_IDS_1_1[0xA0 | length];
+                }
+                return TYPE_IDS_1_1[OpCodes.VARIABLE_LENGTH_INLINE_SYMBOL & SINGLE_BYTE_MASK];
+            }
+        },
+        SYMBOL_ID {
+            @Override
+            IonTypeID typeIdFor(int length) {
+                if (length == 0) {
+                    return TYPE_IDS_1_1[OpCodes.SYMBOL_ADDRESS_1_BYTE & SINGLE_BYTE_MASK];
+                }
+                if (length < 3) {
+                    return TYPE_IDS_1_1[0xE0 | length];
+                }
+                return TYPE_IDS_1_1[OpCodes.SYMBOL_ADDRESS_MANY_BYTES & SINGLE_BYTE_MASK];
+            }
+        },
+        STRUCT_END {
+            @Override
+            IonTypeID typeIdFor(int length) {
+                throw new IllegalStateException("The special struct end FlexSym is not associated with a type ID.");
+            }
+        };
+
+        /**
+         * Classifies a special FlexSym (beginning with FlexInt zero) based on the byte that follows.
+         * @param specialByte the byte that followed FlexInt zero.
+         * @return the FlexSymType that corresponds to the given special byte.
+         */
+        static FlexSymType classifySpecialFlexSym(int specialByte) {
+            if (specialByte < 0) {
+                return FlexSymType.INCOMPLETE;
+            }
+            if ((byte) specialByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
+                return FlexSymType.SYMBOL_ID;
+            }
+            if ((byte) specialByte == OpCodes.STRING_ZERO_LENGTH) {
+                return FlexSymType.INLINE_TEXT;
+            }
+            if ((byte) specialByte == OpCodes.DELIMITED_END_MARKER) {
+                return FlexSymType.STRUCT_END;
+            }
+            throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
+        }
+
+        /**
+         * Gets the most appropriate IonTypeID for a FlexSym of this type and the given length.
+         * @param length the length of the FlexSym.
+         * @return an Ion 1.1 IonTypeID with appropriate values for 'length' and 'isInlineable'.
+         */
+        abstract IonTypeID typeIdFor(int length);
+    }
+
+    /**
+     * Skips a FlexSym. After this method returns, `peekIndex` points to the first byte after the end of the FlexSym.
+     * @param markerToSet the method returns `INLINE_TEXT, will have `startIndex` and `endIndex` set to the bounds of
+     *                    the inline UTF-8 byte sequence.
+     * @return the type of FlexSym that was skipped.
+     */
+    private FlexSymType uncheckedSkipFlexSym_1_1(Marker markerToSet) {
         long result = uncheckedReadFlexInt_1_1();
         if (result == 0) {
-            peekIndex++;
+            markerToSet.startIndex = peekIndex + 1;
+            markerToSet.endIndex = markerToSet.startIndex;
+            return FlexSymType.classifySpecialFlexSym(buffer[(int) peekIndex++] & SINGLE_BYTE_MASK);
         } else if (result < 0) {
-            peekIndex -= result;
+            markerToSet.startIndex = peekIndex;
+            markerToSet.endIndex = peekIndex - result;
+            peekIndex = markerToSet.endIndex;
+            return FlexSymType.INLINE_TEXT;
         }
+        return FlexSymType.SYMBOL_ID;
     }
 
     /**
      * Skips a FlexSym, ensuring enough space is available in the buffer. After this method returns, `peekIndex` points
      * to the first byte after the end of the FlexSym.
-     * @return true if there are not enough bytes in the stream to complete the FlexSym; otherwise, false.
+     * @param markerToSet if non-null and the method returns `INLINE_TEXT`, will have `startIndex` and `endIndex` set
+     *                    to the bounds of the inline UTF-8 byte sequence.
+     * @return INCOMPLETE if there are not enough bytes in the stream to complete the FlexSym; otherwise, the type
+     *  of FlexSym that was skipped.
      */
-    private boolean slowSkipFlexSym_1_1() {
+    private FlexSymType slowSkipFlexSym_1_1(Marker markerToSet) {
         long result = slowReadFlexUInt_1_1();
         if (result < 0) {
-            return true;
+            return FlexSymType.INCOMPLETE;
         }
         if (buffer[(int) peekIndex - 1] < 0) {
             // Sign extension.
             result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
         }
         if (result == 0) {
-            int nextByte = slowReadByte();
-            if (nextByte < 0) {
-                return true;
+            FlexSymType flexSymType = FlexSymType.classifySpecialFlexSym(slowReadByte());
+            if (markerToSet != null && flexSymType != FlexSymType.INCOMPLETE) {
+                markerToSet.startIndex = peekIndex;
+                markerToSet.endIndex = peekIndex;
             }
-            if ((byte) nextByte != OpCodes.INLINE_SYMBOL_ZERO_LENGTH && (byte) nextByte != OpCodes.STRING_ZERO_LENGTH && (byte) nextByte != OpCodes.DELIMITED_END_MARKER) {
-                throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
-            }
-            return false;
+            return flexSymType;
         } else if (result < 0) {
+            if (markerToSet != null) {
+                markerToSet.startIndex = peekIndex;
+                markerToSet.endIndex = peekIndex - result;
+            }
             peekIndex -= result;
-            return false;
+            return FlexSymType.INLINE_TEXT;
         }
-        return false;
+        return FlexSymType.SYMBOL_ID;
     }
 
     /**
@@ -1970,6 +2057,7 @@ class IonCursorBinary implements IonCursor {
         annotationSequenceMarker.endIndex = -1;
         macroInvocationId = -1;
         isSystemInvocation = false;
+        taglessType = null;
     }
 
     /**
@@ -2850,64 +2938,55 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Reads the length of the FlexSym that starts at the given position.
-     * @param position the start position of the FlexSym.
-     * @return the length of the FlexSym.
-     */
-    private long uncheckedReadLengthOfFlexSym_1_1(long position) {
-        uncheckedSkipFlexSym_1_1();
-        long lengthOfFlexSym = (int) (peekIndex - position);
-        peekIndex = position;
-        return lengthOfFlexSym;
-    }
-
-    /**
-     * Reads the length of the FlexSym that starts at the given position, ensuring enough bytes are available in the
-     * stream.
-     * @param position the start position of the FlexSym.
+     * Reads the length and type of the FlexSym that starts at the given position, ensuring enough bytes are available
+     * in the stream. After this method returns with a value greater than or equal to zero, `valueTid` and
+     * `valueMarker.typeId` will be set to the IonTypeID that most closely corresponds to the length and type of the
+     * FlexSym.
      * @return the length of the FlexSym, or -1 if not enough bytes are available in the stream to determine the length.
      */
-    private long slowReadLengthOfFlexSym_1_1(long position) {
-        if (slowSkipFlexSym_1_1()) {
-            return -1;
+    private long readFlexSymLengthAndType_1_1() {
+        FlexSymType flexSymType;
+        if (isSlowMode) {
+            flexSymType = slowSkipFlexSym_1_1(valueMarker);
+            if (flexSymType == FlexSymType.INCOMPLETE) {
+                return -1;
+            }
+        } else {
+            flexSymType = uncheckedSkipFlexSym_1_1(valueMarker);
         }
-        int lengthOfFlexSym = (int) (peekIndex - position);
-        peekIndex = position;
+        int lengthOfFlexSym = (int) (peekIndex - valueMarker.startIndex);
+        peekIndex = valueMarker.startIndex;
+        valueTid = flexSymType.typeIdFor(lengthOfFlexSym);
+        valueMarker.typeId = valueTid;
         return lengthOfFlexSym;
     }
 
     /**
-     * Calculates the length of a variable-length primitive value.
-     * @param primitiveType the variable-length primitive type of the tagless value that starts at `peekIndex`.
-     * @return the length of the value.
-     */
-    private long uncheckedCalculateTaglessLength(PrimitiveType primitiveType) {
-        switch (primitiveType) {
-            case FLEX_UINT:
-            case FLEX_INT:
-                return uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
-            case COMPACT_SYMBOL:
-                return uncheckedReadLengthOfFlexSym_1_1(peekIndex);
-            default:
-                throw new IllegalStateException("Length is built into the primitive type's IonTypeID.");
-        }
-    }
-
-    /**
-     * Calculates the length of a variable-length primitive value, ensuring enough bytes are available in the stream.
+     * Calculates the length and type of variable-length primitive value, ensuring enough bytes are available in the
+     * stream.
      * @param primitiveType the variable-length primitive type of the tagless value that starts at `peekIndex`.
      * @return the length of the value, or -1 if not enough bytes are available in the stream to determine the length.
      */
-    private long slowCalculateTaglessLength(PrimitiveType primitiveType) {
+    private long calculateTaglessLengthAndType(PrimitiveType primitiveType) {
+        // TODO length calculation for these types could be deferred until they are consumed to avoid duplicate
+        //  work. This would trade some added complexity for a potential performance gain that would need to be
+        //  quantified.
+        long length;
         switch (primitiveType) {
             case FLEX_UINT:
             case FLEX_INT:
-                return slowReadLengthOfFlexUInt_1_1(peekIndex);
+                length = isSlowMode ? slowReadLengthOfFlexUInt_1_1(peekIndex) : uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
+                break;
             case COMPACT_SYMBOL:
-                return slowReadLengthOfFlexSym_1_1(peekIndex);
+                length = readFlexSymLengthAndType_1_1();
+                break;
             default:
                 throw new IllegalStateException("Length is built into the primitive type's IonTypeID.");
         }
+        if (length >= 0) {
+            valueMarker.endIndex = peekIndex + length;
+        }
+        return length;
     }
 
     /**
@@ -2938,24 +3017,15 @@ class IonCursorBinary implements IonCursor {
             reportConsumedData();
         }
         reset();
+        taglessType = primitiveType;
         valueTid = primitiveType.typeID;
         valueMarker.typeId = valueTid;
         valueMarker.startIndex = peekIndex;
         valuePreHeaderIndex = peekIndex;
         if (valueTid.variableLength) {
-            // TODO length calculation for these types could be deferred until they are consumed to avoid duplicate
-            //  work. This would trade some added complexity for a potential performance gain that would need to be
-            //  quantified.
-            long length;
-            if (isSlowMode) {
-                length = slowCalculateTaglessLength(primitiveType);
-                if (length < 0) {
-                    return event;
-                }
-            } else {
-                length = uncheckedCalculateTaglessLength(primitiveType);
+            if (calculateTaglessLengthAndType(primitiveType) < 0) {
+                return event;
             }
-            valueMarker.endIndex = peekIndex + length;
         } else {
             valueMarker.endIndex = peekIndex + valueTid.length;
         }

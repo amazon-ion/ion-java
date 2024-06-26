@@ -4,7 +4,6 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
-import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonException;
@@ -62,6 +61,10 @@ import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.TestUtils.*;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
+import static com.amazon.ion.impl.IonCursorTestUtilities.bigIntegerValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.doubleValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.intValue;
+import static com.amazon.ion.impl.IonCursorTestUtilities.longValue;
 import static com.amazon.ion.impl.IonCursorTestUtilities.type;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -378,40 +381,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("boolean(%s)", expectedValue),
             reader -> assertEquals(expectedValue, reader.booleanValue())
-        ));
-    }
-
-    static ExpectationProvider<IonReaderContinuableTopLevelBinary> intValue(int expectedValue) {
-        return consumer -> consumer.accept(new Expectation<>(
-            String.format("int(%d)", expectedValue),
-            reader -> {
-                assertEquals(IntegerSize.INT, reader.getIntegerSize());
-                assertEquals(expectedValue, reader.intValue());
-            }
-        ));
-    }
-
-    static ExpectationProvider<IonReaderContinuableTopLevelBinary> longValue(long expectedValue) {
-        return consumer -> consumer.accept(new Expectation<>(
-            String.format("long(%d)", expectedValue),
-            reader -> {
-                assertTrue(reader.getIntegerSize().ordinal() <= IntegerSize.LONG.ordinal());
-                assertEquals(expectedValue, reader.longValue());
-            }
-        ));
-    }
-
-    static ExpectationProvider<IonReaderContinuableTopLevelBinary> bigIntegerValue(BigInteger expectedValue) {
-        return consumer -> consumer.accept(new Expectation<>(
-            String.format("bigInteger(%s)", expectedValue),
-            reader -> assertEquals(expectedValue, reader.bigIntegerValue())
-        ));
-    }
-
-    static ExpectationProvider<IonReaderContinuableTopLevelBinary> doubleValue(double expectedValue) {
-        return consumer -> consumer.accept(new Expectation<>(
-            String.format("double(%f)", expectedValue),
-            reader -> assertEquals(expectedValue, reader.doubleValue(), 1e-9)
         ));
     }
 
@@ -1825,7 +1794,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void doubleValueOnInt(boolean constructFromBytes) throws Exception {
         readIntsIntoOtherType(
             constructFromBytes,
-            IonReaderContinuableTopLevelBinaryTest::doubleValue,
+            IonCursorTestUtilities::doubleValue,
             0.0,
             1.0,
             -1.0,
