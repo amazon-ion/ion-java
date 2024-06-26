@@ -2229,18 +2229,17 @@ class IonCursorBinary implements IonCursor {
      *                    marker's type ID will be set, startIndex will point to the first byte of the invocation's
      *                    body, and endIndex will either be -1 (when not a system symbol or prefixed invocation), or
      *                    will be set to the end of the invocation.
-     * @param length the declared length of the invocation. Ignored unless this is a length-prefixed invocation
-     *               (denoted by `valueTid.variableLength == true`).
      */
-    private void uncheckedReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet, long length) {
+    private void uncheckedReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet) {
         if (valueTid.macroId < 0) {
-            if (valueTid.lowerNibble == 0xE || valueTid.variableLength) {
-                // Opcode 0xEE or Opcode 0xF5 (when length > 0): Read the macro ID as a FlexUInt.
-                long idStart = peekIndex;
+            if (valueTid.lowerNibble == 0xE) {
+                // Opcode 0xEE: Read the macro ID as a FlexUInt.
                 macroInvocationId = uncheckedReadFlexUInt_1_1();
-                // The length included the macro ID. Subtract the length of the macro ID so that the end index can
-                // be set correctly.
-                length -= peekIndex - idStart;
+            } else if (valueTid.variableLength) {
+                // Opcode 0xF5: Read the macro ID as a FlexUInt, then read the length as a FlexUInt.
+                macroInvocationId = uncheckedReadFlexUInt_1_1();
+                setUserMacroInvocationMarker(valueTid, markerToSet, uncheckedReadFlexUInt_1_1());
+                return;
             } else {
                 // Opcode 0xEF: system macro invocation or system symbol value.
                 macroInvocationId = buffer[(int) peekIndex++];
@@ -2259,7 +2258,7 @@ class IonCursorBinary implements IonCursor {
             // Opcodes 0x00 - 0x3F -- the opcode is the macro ID.
             macroInvocationId = valueTid.macroId;
         }
-        setUserMacroInvocationMarker(valueTid, markerToSet, length);
+        setUserMacroInvocationMarker(valueTid, markerToSet, -1);
     }
 
     /**
@@ -2287,7 +2286,7 @@ class IonCursorBinary implements IonCursor {
             hasAnnotations = true;
             return uncheckedReadHeader(buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK, true, valueMarker);
         } else if (minorVersion == 1 && valueTid.isMacroInvocation) {
-            uncheckedReadMacroInvocationHeader(valueTid, markerToSet, valueTid.variableLength ? uncheckedReadFlexUInt_1_1() : -1);
+            uncheckedReadMacroInvocationHeader(valueTid, markerToSet);
             return true;
         } else {
             long endIndex = minorVersion == 0
@@ -2375,22 +2374,28 @@ class IonCursorBinary implements IonCursor {
      *                    the marker's type ID will be set, startIndex will point to the first byte of the invocation's
      *                    body, and endIndex will either be -1 (when not a system symbol or prefixed invocation), or
      *                    will be set to the end of the invocation.
-     * @param length the declared length of the invocation. Ignored unless this is a length-prefixed invocation
-     *               (denoted by `valueTid.variableLength == true`).
+     * @param macroId the ID of the invocation, if known. This is only the case for opcode 0xF5 (denoted by
+     *                `valueTid.variableLength == true`), which has its macro ID encoded as a FlexUInt before its
+     *                length.
      * @return true if not enough data was available in the stream to complete the header; otherwise, false.
      */
-     private boolean slowReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet, long length) {
+     private boolean slowReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet, long macroId) {
          if (valueTid.macroId < 0) {
-             if (valueTid.lowerNibble == 0xE || valueTid.variableLength) {
-                 // Opcode 0xEE or Opcode 0xF5 (when length > 0): Read the macro ID as a FlexUInt.
-                 long idStart = peekIndex;
+             if (valueTid.lowerNibble == 0xE) {
+                 // Opcode 0xEE: Read the macro ID as a FlexUInt.
                  macroInvocationId = slowReadFlexUInt_1_1();
-                 // The length included the macro ID. Subtract the length of the macro ID so that the end index can
-                 // be set correctly.
-                 length -= peekIndex - idStart;
                  if (macroInvocationId < 0) {
                      return true;
                  }
+             } else if (valueTid.variableLength) {
+                 // Opcode 0xF5: The macro ID was already read as a FlexUInt. Now read the length as a FlexUInt.
+                 macroInvocationId = macroId;
+                 long length = slowReadFlexUInt_1_1();
+                 if (length < 0) {
+                     return true;
+                 }
+                 setUserMacroInvocationMarker(valueTid, markerToSet, length);
+                 return false;
              } else {
                  // Opcode 0xEF: system macro invocation or system symbol value.
                  int truncatedId = slowReadByte();
@@ -2417,7 +2422,7 @@ class IonCursorBinary implements IonCursor {
              // Opcodes 0x00 - 0x3F -- the opcode is the macro ID.
              macroInvocationId = valueTid.macroId;
          }
-         setUserMacroInvocationMarker(valueTid, markerToSet, length);
+         setUserMacroInvocationMarker(valueTid, markerToSet, -1);
          return false;
      }
 
@@ -2459,6 +2464,10 @@ class IonCursorBinary implements IonCursor {
             }
             valueLength = 0;
         } else if (minorVersion == 1 && valueTid.isMacroInvocation) {
+            // Note: The 0xF5 opcode is variable-length, but unlike other variable-length opcodes, it encodes the
+            // macro ID, rather than the length, as the first FlexUInt following the opcode. Therefore, for opcode
+            // 0xF5, `valueLength` below refers to the ID of the invocation. For the other macro invocation opcodes,
+            // this value is not used.
             slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
             return true;
         } else {

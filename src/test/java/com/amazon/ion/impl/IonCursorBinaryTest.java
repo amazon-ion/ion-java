@@ -749,8 +749,8 @@ public class IonCursorBinaryTest {
     @ParameterizedTest(name = "inputType={0}")
     @EnumSource(InputType.class)
     public void macroInvocationLengthPrefixed(InputType inputType) throws Exception {
-        // Opcode 0xF5; FlexUInt length 1 followed by FlexUInt ID 2
-        testMacroInvocation(bytes(0xF5, 0x03, 0x05), inputType, 7, 7, 2, false);
+        // Opcode 0xF5; FlexUInt ID 2 followed by FlexUInt length 0
+        testMacroInvocation(bytes(0xF5, 0x05, 0x01), inputType, 7, 7, 2, false);
     }
 
     @ParameterizedTest(name = "inputType={0}")
