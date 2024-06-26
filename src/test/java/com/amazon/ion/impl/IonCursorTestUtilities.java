@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonType;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -16,6 +18,7 @@ import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IonCursorTestUtilities {
 
@@ -220,6 +223,49 @@ public class IonCursorTestUtilities {
                 assertEquals(IonType.SYMBOL, reader.getType());
                 assertEquals(expectedValue, reader.symbolValueId());
             }
+        ));
+    }
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> integerSize(IntegerSize expectedSize) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("integerSize(%s)", expectedSize),
+            reader -> {
+                assertEquals(expectedSize, reader.getIntegerSize());
+            }
+        ));
+    }
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> intValue(int expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("int(%d)", expectedValue),
+            reader -> {
+                assertEquals(IntegerSize.INT, reader.getIntegerSize());
+                assertEquals(expectedValue, reader.intValue());
+            }
+        ));
+    }
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> longValue(long expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("long(%d)", expectedValue),
+            reader -> {
+                assertTrue(reader.getIntegerSize().ordinal() <= IntegerSize.LONG.ordinal());
+                assertEquals(expectedValue, reader.longValue());
+            }
+        ));
+    }
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> bigIntegerValue(BigInteger expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("bigInteger(%s)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.bigIntegerValue())
+        ));
+    }
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> doubleValue(double expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("double(%f)", expectedValue),
+            reader -> assertEquals(expectedValue, reader.doubleValue(), 1e-9)
         ));
     }
 
