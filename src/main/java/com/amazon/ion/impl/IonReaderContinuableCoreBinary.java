@@ -465,16 +465,21 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     private long readLargeFlexUInt_1_1(int firstByte) {
+        byte length = 0;
+        int bitShift = 0;
         if (firstByte == 0) {
-            // Note: this is conservative, as 9-byte flex subfields (with a continuation bit in the second byte) can fit
-            // in a long. However, the flex subfields parsed by the methods in this class are used only in cases that
-            // require an int anyway (symbol IDs, decimal scale), so the added complexity is not warranted.
-            throw new IonException("Flex subfield exceeds the length of a long.");
+            length = 7; // Don't include the skipped zero byte.
+            bitShift = -7;
+            firstByte = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
+            if (firstByte == 0) {
+                throw new IonException("Flex subfield exceeds the length of a long.");
+            }
         }
-        byte length = (byte) (Integer.numberOfTrailingZeros(firstByte) + 1);
-        long result = firstByte >>> length;
+        length += (byte) (Integer.numberOfTrailingZeros(firstByte) + 1);
+        bitShift += length;
+        long result = firstByte >>> bitShift;
         for (byte i = 1; i < length; i++) {
-            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - length));
+            result |= ((long) (buffer[(int) (peekIndex++)] & SINGLE_BYTE_MASK) << (8 * i - bitShift));
         }
         return result;
     }
@@ -512,7 +517,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         long result = readLargeFlexUInt_1_1(firstByte);
         if (buffer[(int) peekIndex - 1] < 0) {
             // Sign extension.
-            result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
+            result |= ~(-1L >>> Long.numberOfLeadingZeros(result));
         }
         return result;
     }
@@ -618,6 +623,75 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
+     * Reads a FixedUInt value into a BigInteger.
+     * @return the value.
+     */
+    private BigInteger readFixedUIntAsBigInteger_1_1(int length) {
+        if (buffer[(int) valueMarker.endIndex - 1] < 0) {
+            // The most-significant bit is set; pad the length by one byte so that the value remains unsigned.
+            length += 1;
+        }
+        return readLargeFixedIntOrFixedUIntAsBigInteger(length);
+    }
+
+    /**
+     * Reads a FlexUInt or FlexInt value into a BigInteger.
+     * @param length the byte length of the encoded FlexUInt or FlexInt to read.
+     * @return the value.
+     */
+    private BigInteger readLargeFlexIntOrFlexUIntAsBigInteger(int length) {
+        int bitShift = length;
+        int maskForLength = (SINGLE_BYTE_MASK >>> (8 - bitShift));
+        int numberOfLeadingZeroBytes = 0;
+        // First count the leading zeroes and calculate the number of bits that need to be shifted out of each
+        // encoded byte.
+        for (long i = peekIndex; i < valueMarker.endIndex; i++) {
+            int b = buffer[(int) i] & SINGLE_BYTE_MASK;
+            if (b == 0) {
+                bitShift -= 8;
+                numberOfLeadingZeroBytes++;
+                maskForLength = (SINGLE_BYTE_MASK >>> (8 - bitShift));
+                continue; // Skip over any bytes that contain only continuation bits.
+            }
+            break;
+        }
+        // FlexInt and FlexUInt are little-endian. Reverse the bytes and shift out the continuation bits.
+        byte[] bytes = getScratchForSize(length - numberOfLeadingZeroBytes);
+        int copyIndex = bytes.length;
+        for (long i = peekIndex + numberOfLeadingZeroBytes; i < valueMarker.endIndex; i++) {
+            int b = buffer[(int) i] & SINGLE_BYTE_MASK;
+            if (copyIndex < bytes.length) {
+                bytes[copyIndex] |= (byte) ((b & maskForLength) << (8 - bitShift));
+            }
+            if (--copyIndex == 0 && !taglessType.isUnsigned) {
+                bytes[copyIndex] = (byte) ((byte) b >> bitShift); // Sign extend most significant byte.
+            } else {
+                bytes[copyIndex] = (byte) (b >>> bitShift);
+            }
+        }
+        peekIndex = valueMarker.endIndex;
+        return new BigInteger(bytes);
+    }
+
+    /**
+     * Reads a tagless int value into a BigInteger.
+     * @return the value.
+     */
+    private BigInteger readTaglessIntAsBigInteger_1_1() {
+        BigInteger value;
+        int length = (int) (valueMarker.endIndex - peekIndex);
+        if (valueTid.variableLength) {
+            value = readLargeFlexIntOrFlexUIntAsBigInteger(length);
+        } else if (length < LONG_SIZE_IN_BYTES || !taglessType.isUnsigned) {
+            // Note: all fixed-width tagless signed ints fit in a Java long.
+            value = BigInteger.valueOf(readTaglessInt_1_1());
+        } else {
+            value = readFixedUIntAsBigInteger_1_1(length);
+        }
+        return value;
+    }
+
+    /**
      * Reads a FixedInt value into a BigInteger.
      * @return the value.
      */
@@ -675,11 +749,34 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
+     * Reads the tagless int bounded by 'valueMarker` into a long.
+     * @return the value.
+     */
+    private long readTaglessInt_1_1() {
+        // TODO performance: the fixed width types all correspond to Java primitives and could therefore be read
+        //  using ByteBuffer, possibly more quickly than using the following methods, especially if several in a row
+        //  can be read without requiring the cursor's state to be modified before each one.
+        if (taglessType.isUnsigned) {
+            if (taglessType == PrimitiveType.FLEX_UINT) {
+                return readFlexUInt_1_1();
+            }
+            return readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex);
+        }
+        if (taglessType == PrimitiveType.FLEX_INT) {
+            return readFlexInt_1_1();
+        }
+        return readFixedInt_1_1();
+    }
+
+    /**
      * Reads the FixedInt bounded by `valueMarker` into a `long`.
      * @return the value.
      */
     private long readLong_1_1() {
         peekIndex = valueMarker.startIndex;
+        if (taglessType != null) {
+            return readTaglessInt_1_1();
+        }
         return readFixedInt_1_1();
     }
 
@@ -689,6 +786,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     private BigInteger readBigInteger_1_1() {
         peekIndex = valueMarker.startIndex;
+        if (taglessType != null) {
+            return readTaglessIntAsBigInteger_1_1();
+        }
         return readFixedIntAsBigInteger_1_1();
     }
 
@@ -708,11 +808,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         int scale = (int) readFlexUInt_1_1();
         int length = (int) (valueMarker.endIndex - peekIndex);
         if (length >= LONG_SIZE_IN_BYTES) {
-            if (buffer[(int) valueMarker.endIndex - 1] < 0) {
-                // The most-significant bit is set; pad the length by one byte so that the value remains unsigned.
-                length += 1;
-            }
-            value = new BigDecimal(readLargeFixedIntOrFixedUIntAsBigInteger(length), scale);
+            value = new BigDecimal(readFixedUIntAsBigInteger_1_1(length), scale);
         } else if (length > 0) {
             value = BigDecimal.valueOf(readFixedUInt_1_1(peekIndex, valueMarker.endIndex), scale);
         } else {
@@ -974,23 +1070,136 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
     }
 
+    /**
+     * Determines whether the tagless integer starting at `valueMarker.startIndex` and ending at `valueMarker.endIndex`
+     * crosses a type boundary. Callers must only invoke this method when the integer's size is known to be either
+     * 4 or 8 bytes.
+     * @return true if the value fits in the Java integer type that matches its Ion serialized size; false if it
+     *  requires the next larger size.
+     */
+    private boolean classifyFixedWidthTaglessInteger_1_1() {
+        if (!taglessType.isUnsigned || taglessType.typeID.variableLength) {
+            return true;
+        }
+        // UInt values with the most significant bit set will not fit in the signed Java primitive of the same width.
+        return buffer[(int) valueMarker.endIndex - 1] >= 0;
+    }
+
+    /**
+     * Selects and returns the size of the current integer value from the given options. Callers must only invoke this
+     * method when the integer's size is known to be either 4 or 8 bytes, and it is the caller's responsibility to
+     * provide correct values to 'smaller' and 'larger'.
+     * @param smaller the smaller of the possible sizes.
+     * @param larger the larger of the possible sizes.
+     * @return the matching size.
+     */
+    private IntegerSize classifyFixedWidthInteger(IntegerSize smaller, IntegerSize larger) {
+        if (minorVersion == 0) {
+            return classifyInteger_1_0() ? smaller : larger;
+        }
+        if (taglessType == null) {
+            return smaller;
+        }
+        return classifyFixedWidthTaglessInteger_1_1() ? smaller : larger;
+    }
+
+    // The maximum most-significant byte of a positive 5-byte FlexUInt or FlexUInt value that can fit in
+    // a Java int. Integer.MAX_VALUE is 0x7FFFFFFF and a 5-byte Flex integer requires a right-shift of 5 bits.
+    // 0x0FFF... >> 5 == 0x007F..., so all less significant byte values are guaranteed to fit and therefore do not
+    // need to be examined individually.
+    private static final int MAX_POSITIVE_FLEX_MSB_JAVA_INT = 0x0F;
+
+    // The maximum most-significant byte of a positive 10-byte FlexUInt or FlexUInt value that can fit in
+    // a Java long. Long.MAX_VALUE is 0x7FFFFFFFFFFFFFFF and a 10-byte Flex integer requires a right-shift of 10 bits.
+    // 0x01FFFF... >> 10 == 0x00007F..., so all less significant byte values are guaranteed to fit and therefore do not
+    // need to be examined individually.
+    private static final int MAX_POSITIVE_FLEX_MSB_JAVA_LONG = 0x01;
+
+    // The minimum most-significant byte of a negative 5-byte FlexInt with that can fit in a Java int.
+    // Integer.MIN_VALUE is 0x80000000 and a 5-byte FlexInt requires a right-shift of 5 bits.
+    // (int)(0xF000... >> 5) == 0x80... Any bits set in the less significant bytes would lessen the magnitude
+    // and therefore do not need to be examined individually.
+    private static final int MIN_NEGATIVE_FLEX_MSB_JAVA_INT = (byte) 0xF0;
+
+    // The minimum most-significant byte of a negative 10-byte FlexInt with that can fit in a Java long.
+    // Long.MIN_VALUE is 0x8000000000000000 and a 10-byte FlexInt requires a right-shift of 10 bits.
+    // (long) (0xFE0000... >> 10) == 0x80... Any bits set in the less significant bytes would lessen the magnitude
+    // and therefore do not need to be examined individually.
+    private static final int MIN_NEGATIVE_FLEX_MSB_JAVA_LONG = (byte) 0xFE;
+
+    /**
+     * Classifies a 5- or 10-byte FlexInt or FlexUInt according the Java integer size required to represent it without
+     * data loss.
+     * @param maxPositiveMsb the maximum most-significant byte of a positive encoded integer that would allow the
+     *                       value to fit in the smaller of the two Java types applicable to the relevant boundary.
+     * @param minNegativeMsb the minimum most-significant byte of a negative encoded integer that would allow the
+     *                       value to fit in the smaller of the two Java types applicable to the relevant boundary.
+     * @return true if the encoded value fits in the smaller of the two Java types applicable to the relevant boundary;
+     *  otherwise, false.
+     */
+    private boolean classifyVariableWidthTaglessIntegerAtBoundary_1_1(int maxPositiveMsb, int minNegativeMsb) {
+        int mostSignificantByte = buffer[(int) valueMarker.endIndex - 1];
+        if (taglessType.isUnsigned) {
+            return (mostSignificantByte & SINGLE_BYTE_MASK) <= maxPositiveMsb;
+        }
+        return mostSignificantByte >= minNegativeMsb && mostSignificantByte <= maxPositiveMsb;
+    }
+
+    /**
+     * Classifies the current variable-length integer (FlexInt or FlexUInt) according to the IntegerSize required to
+     * represent it without data loss. For efficiency, does not attempt to find the smallest-possible size for
+     * overpadded representations.
+     * @param length the byte length of the FlexInt or FlexUInt to classify.
+     * @return an IntegerSize capable of holding the value without data loss.
+     */
+    private IntegerSize classifyVariableWidthTaglessInteger_1_1(int length) {
+        if (length < 5) {
+            // Flex integers of less than 5 bytes cannot hit the Java int boundaries.
+            return IntegerSize.INT;
+        }
+        if (length == 5) {
+            return classifyVariableWidthTaglessIntegerAtBoundary_1_1(MAX_POSITIVE_FLEX_MSB_JAVA_INT, MIN_NEGATIVE_FLEX_MSB_JAVA_INT)
+                ? IntegerSize.INT
+                : IntegerSize.LONG;
+        }
+        if (length < 10) {
+            // Flex integers of less than 10 bytes cannot hit the Java long boundaries.
+            return IntegerSize.LONG;
+        }
+        if (length == 10) {
+            return classifyVariableWidthTaglessIntegerAtBoundary_1_1(MAX_POSITIVE_FLEX_MSB_JAVA_LONG, MIN_NEGATIVE_FLEX_MSB_JAVA_LONG)
+                ? IntegerSize.LONG
+                : IntegerSize.BIG_INTEGER;
+        }
+        return IntegerSize.BIG_INTEGER;
+    }
+
     @Override
     public IntegerSize getIntegerSize() {
         if (valueTid == null || valueTid.type != IonType.INT || valueTid.isNull) {
             return null;
         }
         prepareScalar();
-        int length = valueTid.variableLength ? ((int) (valueMarker.endIndex - valueMarker.startIndex)) : valueTid.length;
+        int length;
+        if (valueTid.variableLength) {
+            length = (int) (valueMarker.endIndex - valueMarker.startIndex);
+            if (taglessType != null) {
+                // FlexUInt or FlexInt
+                return classifyVariableWidthTaglessInteger_1_1(length);
+            }
+        } else {
+            length = valueTid.length;
+        }
         if (length < 0) {
             return IntegerSize.BIG_INTEGER;
         } else if (length < INT_SIZE_IN_BYTES) {
             return IntegerSize.INT;
         } else if (length == INT_SIZE_IN_BYTES) {
-            return (minorVersion != 0 || classifyInteger_1_0()) ? IntegerSize.INT : IntegerSize.LONG;
+            return classifyFixedWidthInteger(IntegerSize.INT, IntegerSize.LONG);
         } else if (length < LONG_SIZE_IN_BYTES) {
             return IntegerSize.LONG;
         } else if (length == LONG_SIZE_IN_BYTES) {
-            return (minorVersion != 0 || classifyInteger_1_0()) ? IntegerSize.LONG : IntegerSize.BIG_INTEGER;
+            return classifyFixedWidthInteger(IntegerSize.LONG, IntegerSize.BIG_INTEGER);
         }
         return IntegerSize.BIG_INTEGER;
     }
@@ -1324,6 +1533,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (minorVersion == 0) {
             return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
         } else {
+            if (taglessType != null) {
+                // It is the caller's responsibility to call 'symbolValueId()' only when 'hasSymbolText()' is false,
+                // meaning that the tagless FlexSym is encoded as a FlexInt representing a symbol ID.
+                peekIndex = valueMarker.startIndex;
+                return (int) readFlexInt_1_1();
+            }
             if (valueTid.length == 1){
                 return (int) readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex);
             } else if (valueTid.length == 2){
