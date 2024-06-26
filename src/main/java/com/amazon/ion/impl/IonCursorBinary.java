@@ -2346,12 +2346,17 @@ class IonCursorBinary implements IonCursor {
             }
             return true;
         }
-        if (minorVersion == 1 && valueTid.isNull && valueTid.length > 0) {
-            int nullTypeIndex = slowReadByte();
-            if (nullTypeIndex < 0) {
+        if (minorVersion == 1) {
+            if (valueTid.isMacroInvocation) {
                 return true;
             }
-            markerToSet.typeId = IonTypeID.NULL_TYPE_IDS_1_1[nullTypeIndex];
+            if (valueTid.isNull && valueTid.length > 0) {
+                int nullTypeIndex = slowReadByte();
+                if (nullTypeIndex < 0) {
+                    return true;
+                }
+                markerToSet.typeId = IonTypeID.NULL_TYPE_IDS_1_1[nullTypeIndex];
+            }
         }
         if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
             return true;
@@ -2468,8 +2473,7 @@ class IonCursorBinary implements IonCursor {
             // macro ID, rather than the length, as the first FlexUInt following the opcode. Therefore, for opcode
             // 0xF5, `valueLength` below refers to the ID of the invocation. For the other macro invocation opcodes,
             // this value is not used.
-            slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
-            return true;
+            return slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
         } else {
             setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
             event = Event.START_SCALAR;
