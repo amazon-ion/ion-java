@@ -908,7 +908,7 @@ public class IonCursorBinaryTest {
      * Provides Expectations that advance the reader to the next value and verify that it is a macro invocation with
      * the given ID.
      */
-    private static ExpectationProvider<IonCursorBinary> nextMacroInvocation(int id) {
+    static <T extends IonCursorBinary> ExpectationProvider<T> nextMacroInvocation(int id) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("next macro invocation %d", id),
             cursor -> {
@@ -1020,9 +1020,9 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 5, 10),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 6, 10),
                 nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 10, 11),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 11, 13),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 13, 13),
                 endStream()
             );
         }
@@ -1052,7 +1052,7 @@ public class IonCursorBinaryTest {
                 nextTaggedValue(IonType.INT, 7, 7),
                 nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
                 nextTaggedValue(IonType.FLOAT, 12, 16),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 16, 21),
+                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
                 nextTaggedValue(IonType.SYMBOL, 22, 26),
                 endStream()
             );
@@ -1071,7 +1071,7 @@ public class IonCursorBinaryTest {
                 fillScalar(7, 7), type(IonType.INT),
                 fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
                 fillScalar(12, 16), type(IonType.FLOAT),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 16, 21),
+                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
                 fillScalar(22, 26), type(IonType.SYMBOL),
                 endStream()
             );
@@ -1184,11 +1184,11 @@ public class IonCursorBinaryTest {
             ),
             instruction(
                 cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL),
-                valueMarker(IonType.SYMBOL, 16, 21)
+                valueMarker(IonType.SYMBOL, 17, 21)
             ),
             instruction(
                 IonCursorBinary::fillValue,
-                valueReady(IonType.SYMBOL, 16, 21)
+                valueReady(IonType.SYMBOL, 17, 21)
             ),
             instruction(
                 IonCursorBinary::nextValue,
@@ -1231,8 +1231,8 @@ public class IonCursorBinaryTest {
             ),
             instruction(
                 cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL),
-                // All five bytes are skipped.
-                valueMarker(IonType.SYMBOL, 7, 12)
+                // All four bytes are skipped.
+                valueMarker(IonType.SYMBOL, 8, 12)
             ),
             instruction(
                 IonCursorBinary::nextValue,
