@@ -638,6 +638,7 @@ public class TestUtils
      * @return a new byte array.
      */
     private static byte[] octetStringToByteArray(String octetString, int radix) {
+        if (octetString.isEmpty()) return new byte[0];
         String[] bytesAsStrings = octetString.split(" ");
         byte[] bytesAsBytes = new byte[bytesAsStrings.length];
         for (int i = 0; i < bytesAsBytes.length; i++) {

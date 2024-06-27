@@ -97,7 +97,7 @@ public class IonEncoder_1_1 {
             buffer.writeByte(OpCodes.INTEGER_ZERO_LENGTH);
             return 1;
         }
-        int length = WriteBuffer.fixedIntLength(value);
+        int length = FixedInt.fixedIntLength(value);
         buffer.writeByte((byte) (OpCodes.INTEGER_ZERO_LENGTH + length));
         buffer.writeFixedInt(value);
         return 1 + length;
