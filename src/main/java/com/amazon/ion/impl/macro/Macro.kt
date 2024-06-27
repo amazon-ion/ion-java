@@ -8,14 +8,19 @@ package com.amazon.ion.impl.macro
 sealed interface Macro {
     val signature: List<Parameter>
 
-    data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality)
+    data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
+        override fun toString() = "$type::$variableName${cardinality.sigil}"
+    }
 
-    enum class ParameterEncoding(val ionTextName: String) {
+    enum class ParameterEncoding(val ionTextName: String, val isTagless: Boolean = false) {
         Tagged("any"),
+        uint8("uint8", isTagless = true),
         // TODO: List all of the possible tagless encodings
+        // TODO: Update this to support macro shapes
     }
 
     enum class ParameterCardinality(val sigil: Char) {
+        // TODO: Rename to match spec.
         AtMostOne('?'),
         One('!'),
         AtLeastOne('+'),
