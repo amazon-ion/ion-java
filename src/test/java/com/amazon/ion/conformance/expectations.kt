@@ -74,6 +74,10 @@ private fun IonReader.walk(): List<String> {
         if (isNullValue) {
             recordEvent("NULL", currentType)
         } else when (currentType) {
+            // TODO: See if we can exercise multiple APIs here.
+            //       Since `walk()` is used for looking for errors, we might need to create
+            //       multiple versions of walk that use different subsets of the APIs so we
+            //       can ensure that all of them result in the expected error.
             IonType.BOOL -> recordEvent(value = booleanValue())
             IonType.INT -> recordEvent(value = bigIntegerValue())
             IonType.FLOAT -> recordEvent(value = doubleValue())
@@ -115,7 +119,7 @@ fun TestCaseSupport.assertDenotes(modelValues: List<AnyElement>, reader: IonRead
  */
 private fun TestCaseSupport.denotesModelValue(expectation: AnyElement, reader: IonReader) {
     if (reader.type == null) fail(expectation, "no more values; expected $expectation")
-    if (expectation is SexpElement && expectation.head == "annot") {
+    if (expectation is SexpElement && expectation.head == "Annot") {
         val actualAnnotations = reader.typeAnnotationSymbols
         expectation.tailFrom(2)
             .forEachIndexed { i, it -> denotesSymtok(it, actualAnnotations[i]) }

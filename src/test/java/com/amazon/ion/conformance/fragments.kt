@@ -118,7 +118,7 @@ fun TestCaseSupport.readFragments(fragments: List<SeqElement>): ByteArray {
 
     // All documents start as Ion 1.0, but we must explicitly ensure that the IVM is present if
     // transcoding fragments to binary.
-    if (encodeToBinary) serializedFragments.add(byteArrayOf(0xE0.toByte(), 0x01, 0x00, 0xEA.toByte()))
+    if (encodeToBinary) serializedFragments.add(encoding.ivmBytes)
 
     fragments.foldIndexed(encoding) { i, encodingVersion, fragment ->
         val (bytes, continueWithVersion) = readFragment(fragment, encodingVersion)
