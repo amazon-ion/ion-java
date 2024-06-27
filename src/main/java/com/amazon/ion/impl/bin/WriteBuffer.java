@@ -1408,33 +1408,13 @@ import java.util.List;
         return numBytes;
     }
 
-    /** Get the length of FixedInt for the provided value. */
-    public static int fixedIntLength(final long value) {
-        int numMagnitudeBitsRequired;
-        if (value < 0) {
-            int numLeadingOnes = Long.numberOfLeadingZeros(~value);
-            numMagnitudeBitsRequired = 64 - numLeadingOnes;
-        } else {
-            int numLeadingZeros = Long.numberOfLeadingZeros(value);
-            numMagnitudeBitsRequired = 64 - numLeadingZeros;
-        }
-        return numMagnitudeBitsRequired / 8 + 1;
-    }
-
     /**
      * Writes a FixedInt to this WriteBuffer, using the minimum number of bytes needed to represent the number.
      * Returns the number of bytes that were needed to encode the value.
      */
     public int writeFixedInt(final long value) {
-        int numBytes = fixedIntLength(value);
-        return _writeFixedIntOrUInt(value, numBytes);
-    }
-
-    /** Get the length of FixedUInt for the provided value. */
-    public static int fixedUIntLength(final long value) {
-        int numLeadingZeros = Long.numberOfLeadingZeros(value);
-        int numMagnitudeBitsRequired = 64 - numLeadingZeros;
-        return (numMagnitudeBitsRequired - 1) / 8 + 1;
+        int numBytes = FixedInt.fixedIntLength(value);
+        return writeFixedIntOrUInt(value, numBytes);
     }
 
     /**
@@ -1445,7 +1425,7 @@ import java.util.List;
         if (value < 0) {
             throw new IllegalArgumentException("Attempted to write a FixedUInt for " + value);
         }
-        int numBytes = fixedUIntLength(value);
+        int numBytes = FixedInt.fixedUIntLength(value);
         return _writeFixedIntOrUInt(value, numBytes);
     }
 
@@ -1500,6 +1480,27 @@ import java.util.List;
             }
         }
         return numBytes;
+    }
+
+    /**
+     * Writes a FixedInt or FixedUInt to this WriteBuffer at the specified position.
+     * If the allocator's block size is ever less than 8 bytes, this may throw an IndexOutOfBoundsException.
+     */
+    public void writeFixedIntOrUIntAt(final long position, final long value, final int numBytes) {
+        int index = index(position);
+        Block block = blocks.get(index);
+        int dataOffset = offset(position);
+        if (dataOffset + numBytes < block.capacity()) {
+            FixedInt.writeFixedIntOrUIntInto(block.data, dataOffset, value, numBytes);
+        } else {
+            FixedInt.writeFixedIntOrUIntInto(scratch, 0, value, numBytes);
+            if (index == blocks.size() - 1) {
+                allocateNewBlock();
+            }
+            for (int i = 0; i < numBytes; i++) {
+                writeByteAt(position + i, scratch[i]);
+            }
+        }
     }
 
     /**
