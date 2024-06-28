@@ -5,7 +5,6 @@ package com.amazon.ion.impl.bin
 import com.amazon.ion.*
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.impl.macro.Macro.*
-import java.nio.ByteBuffer
 
 /**
  * Utility class for setting, storing, reading, and writing presence bits.
@@ -88,12 +87,17 @@ internal class PresenceBitmap {
 
     /** Resets this [PresenceBitmap] for the given [macro]. */
     fun initialize(signature: List<Parameter>) {
+        if (signature.size > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
+        this.signature = signature
         a = 0
         b = 0
         c = 0
         d = 0
-        size = calculateNumPresenceBits(signature)
-        this.signature = signature
+        // TODO – performance: consider calculating this once for a macro when it is compiled
+        // Calculate the actual number of presence bits that will be encoded for the given signature.
+        val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.One }
+        val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.isTagless }
+        size = if (usePresenceBits) nonRequiredParametersCount else 0
     }
 
     /**
@@ -101,49 +105,49 @@ internal class PresenceBitmap {
      * Throws [IonException] if any are not.
      */
     fun validate() {
-        signature.forEachIndexed { i, it ->
-            val presenceValue = get(i)
-            val isValid = when (it.cardinality) {
-                ParameterCardinality.AtMostOne -> presenceValue == VOID || presenceValue == EXPRESSION
-                ParameterCardinality.One -> presenceValue == EXPRESSION
-                ParameterCardinality.AtLeastOne -> presenceValue == EXPRESSION || presenceValue == GROUP
-                ParameterCardinality.Any -> presenceValue != RESERVED
+        val parameters = signature.iterator()
+        var i = 0
+        while (parameters.hasNext()) {
+            val p = parameters.next()
+            val v = getUnchecked(i++)
+            val isValid = when (p.cardinality) {
+                ParameterCardinality.AtMostOne -> v == VOID || v == EXPRESSION
+                ParameterCardinality.One -> v == EXPRESSION
+                ParameterCardinality.AtLeastOne -> v == EXPRESSION || v == GROUP
+                ParameterCardinality.Any -> v != RESERVED
             }
-            if (!isValid) throw IonException("Invalid argument for parameter: $it")
+            if (!isValid) throw IonException("Invalid argument for parameter: $p")
         }
     }
 
     /**
-     * Populates this [PresenceBitmap] from the given [ByteBuffer] that is positioned on the first
+     * Populates this [PresenceBitmap] from the given [ByteArray] that is positioned on the first
      * byte that (potentially) contains presence bits.
      *
      * When complete, the buffer is positioned on the first byte that does not contain presence bits.
      */
     fun readFrom(bytes: ByteArray, startInclusive: Int) {
-        var currentByte: Byte = -1
+        // Doesn't always contain the full byte. We shift the bits over every time we read a value
+        // so that the next value is always the least significant bits.
+        var currentByte: Long = -1
         var currentPosition: Int = startInclusive
         var bitmapIndex = 0
+        var i = 0
 
-        signature.forEachIndexed { i, it ->
-            if (it.cardinality == ParameterCardinality.One) {
-                set(i, EXPRESSION)
+        val parameters = signature.iterator()
+        while (parameters.hasNext()) {
+            val p = parameters.next()
+            if (p.cardinality == ParameterCardinality.One) {
+                setUnchecked(i++, EXPRESSION)
             } else {
                 if (bitmapIndex % PB_SLOTS_PER_BYTE == 0) {
-                    currentByte = bytes[currentPosition++]
+                    currentByte = bytes[currentPosition++].toLong()
                 }
-                val pbValue = ((currentByte.toLong()) shr ((bitmapIndex % PB_SLOTS_PER_BYTE) * PB_BITS_PER_SLOT)) and TWO_BIT_MASK
-                set(i, pbValue)
+                setUnchecked(i++, currentByte and TWO_BIT_MASK)
+                currentByte = currentByte shr PB_BITS_PER_SLOT
                 bitmapIndex++
             }
         }
-    }
-
-    /** Calculates the actual number of presence bits that will be encoded for the given signature. */
-    private fun calculateNumPresenceBits(signature: List<Parameter>): Int {
-        if (signature.size > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
-        val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.One }
-        val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.isTagless }
-        return if (usePresenceBits) nonRequiredParametersCount else 0
     }
 
     /**
@@ -152,15 +156,19 @@ internal class PresenceBitmap {
      */
     operator fun get(index: Int): Long {
         if (index >= totalParameterCount || index < 0) throw IndexOutOfBoundsException("$index")
-        val bits = when (index / PB_SLOTS_PER_LONG) {
-            0 -> a
-            1 -> b
-            2 -> c
-            3 -> d
+        return getUnchecked(index)
+    }
+
+    /** Gets a presence bits "slot" without any bounds checking. See [get]. */
+    private inline fun getUnchecked(index: Int): Long {
+        val shift = (index % PB_SLOTS_PER_LONG) * PB_BITS_PER_SLOT
+        when (index / PB_SLOTS_PER_LONG) {
+            0 -> return (a shr shift) and TWO_BIT_MASK
+            1 -> return (b shr shift) and TWO_BIT_MASK
+            2 -> return (c shr shift) and TWO_BIT_MASK
+            3 -> return (d shr shift) and TWO_BIT_MASK
             else -> TODO("Unreachable")
         }
-        val shift = (index % PB_SLOTS_PER_LONG) * PB_BITS_PER_SLOT
-        return (bits shr shift) and TWO_BIT_MASK
     }
 
     /**
@@ -171,13 +179,17 @@ internal class PresenceBitmap {
      */
     operator fun set(index: Int, value: Long) {
         if (index >= totalParameterCount || index < 0) throw IndexOutOfBoundsException("$index")
+        setUnchecked(index, value)
+    }
+
+    /** Sets a presence bits "slot" without any bounds checking. See [set]. */
+    private inline fun setUnchecked(index: Int, value: Long) {
         val shiftedBits = (value shl ((index % PB_SLOTS_PER_LONG) * PB_BITS_PER_SLOT))
         when (index / PB_SLOTS_PER_LONG) {
             0 -> a = a or shiftedBits
             1 -> b = b or shiftedBits
             2 -> c = c or shiftedBits
             3 -> d = d or shiftedBits
-            else -> TODO("Unreachable")
         }
     }
 
@@ -186,12 +198,16 @@ internal class PresenceBitmap {
      */
     fun writeTo(buffer: WriteBuffer, position: Long) {
         if (size == 0) return
-        var resultBuffer = 0L
+        var resultBuffer: Long = 0
         var resultPosition = 0
         var writePosition = position
-        signature.forEachIndexed { i, it ->
-            if (it.cardinality == ParameterCardinality.One) return@forEachIndexed
-            val bits = get(i)
+        var i = 0
+        val parameters = signature.iterator()
+
+        while (parameters.hasNext()) {
+            val parameter = parameters.next()
+            val bits = getUnchecked(i++)
+            if (parameter.cardinality == ParameterCardinality.One) continue
             val destShift = resultPosition * PB_BITS_PER_SLOT
             resultBuffer = resultBuffer or (bits shl destShift)
             resultPosition++
