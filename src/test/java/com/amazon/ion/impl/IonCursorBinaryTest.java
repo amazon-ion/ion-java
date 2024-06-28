@@ -783,7 +783,11 @@ public class IonCursorBinaryTest {
      */
     private static void assertValueMarker(IonCursorBinary cursor, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
         Marker marker = cursor.getValueMarker();
-        assertEquals(expectedType, marker.typeId.type);
+        if (expectedType == null) {
+            assertTrue(marker.typeId == null || marker.typeId.type == null);
+        } else {
+            assertEquals(expectedType, marker.typeId.type);
+        }
         assertEquals(expectedStartIndex, marker.startIndex);
         assertEquals(expectedEndIndex, marker.endIndex);
     }
@@ -895,6 +899,20 @@ public class IonCursorBinaryTest {
             cursor -> {
                 assertEquals(START_SCALAR, cursor.nextTaglessValue(primitiveType));
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that fill the argument encoding bitmap (AEB) at the cursor's current index and verify that
+     * the AEB has the given start and end indices.
+     */
+    private static ExpectationProvider<IonCursorBinary> fillArgumentEncodingBitmap(int numberOfBytes, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("next %d-byte AEB", numberOfBytes),
+            cursor -> {
+                assertEquals(NEEDS_INSTRUCTION, cursor.fillArgumentEncodingBitmap(numberOfBytes));
+                assertValueMarker(cursor, null, expectedStartIndex, expectedEndIndex);
             }
         ));
     }
@@ -1286,5 +1304,72 @@ public class IonCursorBinaryTest {
             instruction(IonCursorBinary::nextValue, null)
         );
         executeIncrementally(data, instructions);
+    }
+
+    private static byte[] macroWithOneByteAEBThenIntZero() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13  | Opcode 0x13 -> macro ID 0x13 \n" +
+            "00  | AEB 0x00 \n" +
+            "60  | int 0 \n"
+        )));
+    }
+
+    private static byte[] macroWithThreeByteAEBThenIntZero() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13        | Opcode 0x13 -> macro ID 0x13 \n" +
+            "01 00 00  | AEB 0x01 0x00 0x00 \n" +
+            "60        | int 0 \n"
+        )));
+    }
+
+    private static void assertAEBThenIntZero(byte[] data, boolean constructFromBytes, int numberOfBytesInAEB) {
+        // The given data will always have a four-byte IVM followed by a 1-byte macro invocation opcode. Therefore,
+        // the AEB starts at index 5.
+        int expectedAEBEndIndex = 5 + numberOfBytesInAEB;
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(numberOfBytesInAEB, 5, expectedAEBEndIndex),
+                nextTaggedValue(IonType.INT, expectedAEBEndIndex + 1, expectedAEBEndIndex + 1),
+                endStream()
+            );
+        }
+    }
+
+    private static void assertAEBThenIntZeroIncremental(byte[] data, int numberOfBytesInAEB) {
+        // The given data will always have a four-byte IVM followed by a 1-byte macro invocation opcode. Therefore,
+        // the AEB starts at index 5.
+        int expectedAEBEndIndex = 5 + numberOfBytesInAEB;
+        List<Instruction> instructions = Arrays.asList(
+            instruction(IonCursorBinary::nextValue, macroInvocation(0x13)),
+            instruction(cursor -> cursor.fillArgumentEncodingBitmap(numberOfBytesInAEB), valueMarker(null, 5, expectedAEBEndIndex)),
+            instruction(IonCursorBinary::nextValue, valueMarker(IonType.INT, expectedAEBEndIndex + 1, expectedAEBEndIndex + 1)),
+            // This is the end of the stream, so the response is not used.
+            instruction(IonCursorBinary::nextValue, null)
+        );
+        executeIncrementally(data, instructions);
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void macroInvocationWithIdInOpcodeAndOneByteAEB(boolean constructFromBytes) throws Exception {
+        assertAEBThenIntZero(macroWithOneByteAEBThenIntZero(), constructFromBytes, 1);
+    }
+
+    @Test
+    public void macroInvocationWithIdInOpcodeAndOneByteAEBIncremental() throws Exception {
+        assertAEBThenIntZeroIncremental(macroWithOneByteAEBThenIntZero(), 1);
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void macroInvocationWithIdInOpcodeAndMultiByteAEB(boolean constructFromBytes) throws Exception {
+        assertAEBThenIntZero(macroWithThreeByteAEBThenIntZero(), constructFromBytes, 3);
+    }
+
+    @Test
+    public void macroInvocationWithIdInOpcodeAndMultiByteAEBIncremental() throws Exception {
+        assertAEBThenIntZeroIncremental(macroWithThreeByteAEBThenIntZero(), 3);
     }
 }
