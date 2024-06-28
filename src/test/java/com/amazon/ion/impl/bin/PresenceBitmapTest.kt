@@ -35,7 +35,7 @@ class PresenceBitmapTest {
         pb.initialize(signature)
         for (i in 0..7) pb[i] = PresenceBitmap.EXPRESSION
         pb.initialize(signature)
-        for (i in 0..7) assertEquals(PresenceBitmap.VOID, pb[0])
+        for (i in 0..7) assertEquals(PresenceBitmap.VOID, pb[i])
         assertThrows<IndexOutOfBoundsException> { pb[8] }
     }
 
@@ -152,8 +152,9 @@ class PresenceBitmapTest {
     @Test
     fun `read 4 parameters`() {
         val signature = listOf(taggedZeroToMany, taggedZeroOrOne, taggedExactlyOne, taggedZeroToMany)
-
-        val bytes = bitStringToByteArray("00100010")
+        // Bits are read in pairs from right to left
+        // There are only three pairs of presence bits because "exactly-one" parameters do not get presence bits.
+        val bytes = bitStringToByteArray("100010")
 
         val pb = PresenceBitmap()
         pb.initialize(signature)
