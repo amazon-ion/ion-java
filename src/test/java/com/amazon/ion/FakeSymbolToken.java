@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
+import com.amazon.ion.impl._Private_SymbolToken;
+
 /**
  * NOT SUITABLE FOR PUBLIC USE since it doesn't enforce correctness.
  */
 public class FakeSymbolToken
-    implements SymbolToken
+    implements SymbolToken, _Private_SymbolToken
 {
     private final String myText;
     private final int mySid;
