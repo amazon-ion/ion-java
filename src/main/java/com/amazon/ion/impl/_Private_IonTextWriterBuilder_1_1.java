@@ -78,12 +78,12 @@ public class _Private_IonTextWriterBuilder_1_1
 
     @Override
     public _Private_IonTextWriterBuilder_1_1 withCatalog(IonCatalog catalog) {
-        return (_Private_IonTextWriterBuilder_1_1) super.getCatalog();
+        return (_Private_IonTextWriterBuilder_1_1) super.withCatalog(catalog);
     }
 
     @Override
     public _Private_IonTextWriterBuilder_1_1 withImports(SymbolTable[] imports) {
-        return (_Private_IonTextWriterBuilder_1_1) super.getCatalog();
+        return (_Private_IonTextWriterBuilder_1_1) super.withImports(imports);
     }
 
     @Override
