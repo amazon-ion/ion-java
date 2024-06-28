@@ -81,6 +81,11 @@ dependencies {
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
+
+    // Used for the conformance test runner, because IonValue is not suitable for it.
+    testImplementation("com.amazon.ion:ion-element:1.2.0")
+    // Force the tests to use the locally built version rather than a version transitively provided by `ion-element`.
+    testImplementation(project)
 }
 
 group = "com.amazon.ion"
