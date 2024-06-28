@@ -307,14 +307,16 @@ class PresenceBitmapTest {
 
     /**
      * The purpose of this utility function is to create a bit string containing a whole number
-     * of little endian bytes that represents a list of
+     * of little endian bytes that represents a list of presence bit pairs.
      */
     private fun createBitStringFromParameterPresences(parameterPresences: List<Long>): String {
         val sb = StringBuilder()
-        (0 until (((parameterPresences.size + 3) / 4) * 4)).forEach { i ->
+        // Calculate the number of bit-pairs needed to have a whole number of bytes.
+        val n = (((parameterPresences.size + 3) / 4) * 4)
+        for (i in 0 until n) {
             // Calculate the little-endian position
             val ii = i - 2 * (i % 4) + 3
-            // If we go beyond the
+            // If `getOrNull` returns null, we've gone past the end of the presence values, so pad with zeros
             val parameterPresence = parameterPresences.getOrNull(ii) ?: 0
             val bits = when (parameterPresence) {
                 0L -> "00"
