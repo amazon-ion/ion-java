@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
@@ -594,6 +593,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
             value = scalarConverter.getBigDecimal();
             scalarConverter.clear();
+        } else if (valueTid.type == IonType.FLOAT) {
+                scalarConverter.addValue(doubleValue());
+                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
+                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
+                value = scalarConverter.getDecimal();
+                scalarConverter.clear();
         } else {
             throwDueToInvalidType(IonType.DECIMAL);
         }
@@ -619,6 +624,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 return null;
             }
             prepareToConvertIntValue();
+            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
+            value = scalarConverter.getDecimal();
+            scalarConverter.clear();
+        } else if (valueTid.type == IonType.FLOAT) {
+            scalarConverter.addValue(doubleValue());
+            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
             value = scalarConverter.getDecimal();
             scalarConverter.clear();
