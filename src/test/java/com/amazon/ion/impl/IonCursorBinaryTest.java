@@ -1372,4 +1372,357 @@ public class IonCursorBinaryTest {
     public void macroInvocationWithIdInOpcodeAndMultiByteAEBIncremental() throws Exception {
         assertAEBThenIntZeroIncremental(macroWithThreeByteAEBThenIntZero(), 3);
     }
+
+
+    private static ExpectationProvider<IonCursorBinary> enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType type) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("enter tagless %s group", type.name()),
+            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.enterTaglessArgumentGroup(type))
+        ));
+    }
+
+    private static ExpectationProvider<IonCursorBinary> enterTaggedArgumentGroup() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "enter tagged group",
+            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.enterTaggedArgumentGroup())
+        ));
+    }
+
+    private static ExpectationProvider<IonCursorBinary> nextGroupedValue(IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("grouped value %s[%d, %d]", expectedType, expectedStartIndex, expectedEndIndex),
+            cursor -> {
+                assertEquals(IonType.isContainer(expectedType) ? START_CONTAINER : START_SCALAR, cursor.nextGroupedValue());
+                assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
+            }
+        ));
+    }
+
+    private static ExpectationProvider<IonCursorBinary> endOfGroup() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "end of group",
+            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.nextGroupedValue())
+        ));
+    }
+
+    private static ExpectationProvider<IonCursorBinary> exitArgumentGroup() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "exit group",
+            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.exitArgumentGroup())
+        ));
+    }
+
+    private static byte[] taglessArgumentGroup() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13  | Opcode 0x13 -> macro ID 0x13 \n" +
+            "05  | AEB 0b00000010 -- one grouped argument \n" +
+            "03  | FlexUInt 1 - page length 1 byte \n" +
+            "0A  | int 10 \n" +
+            "03  | FlexUInt 1 - page length 1 byte \n" +
+            "0B  | int 11 \n" +
+            "01  | FlexUInt 0 - end of argument group \n"
+        )));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fullyTraverseTaglessArgumentGroup(boolean constructFromBytes) throws Exception {
+        byte[] data = taglessArgumentGroup();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(1, 5, 6),
+                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                nextGroupedValue(IonType.INT, 7, 8),
+                nextGroupedValue(IonType.INT, 9, 10),
+                endOfGroup(),
+                exitArgumentGroup(),
+                endStream()
+            );
+        }
+    }
+
+    private static byte[] taggedPrefixedArgumentGroup() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13  | Opcode 0x13 -> macro ID 0x13 \n" +
+            "05  | AEB 0b00000010 -- one grouped argument \n" +
+            "0B  | FlexUInt 1 - group length 5 bytes \n" +
+            "60  | int 0 \n" +
+            "B3  | List length 3 \n" +
+            "91  | String length 1 \n" +
+            "61  | 'a' \n" +
+            "6A  | Float 0 \n"
+        )));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fullyTraverseTaggedPrefixedArgumentGroup(boolean constructFromBytes) throws Exception {
+        byte[] data = taggedPrefixedArgumentGroup();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(1, 5, 6),
+                enterTaggedArgumentGroup(),
+                nextGroupedValue(IonType.INT, 8, 8),
+                nextGroupedValue(IonType.LIST, 9, 12),
+                stepInToContainer(IonType.LIST, 9, 12),
+                nextTaggedValue(IonType.STRING, 10, 11),
+                nextTaggedValue(IonType.FLOAT, 12, 12),
+                stepOutOfContainer(),
+                endOfGroup(),
+                exitArgumentGroup(),
+                endStream()
+            );
+        }
+    }
+
+    private static byte[] taggedDelimitedArgumentGroup() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13  | Opcode 0x13 -> macro ID 0x13 \n" +
+            "05  | AEB 0b00000010 -- one grouped argument \n" +
+            "01  | FlexUInt 0 - delimited group \n" +
+            "60  | int 0 \n" +
+            "B3  | List length 3 \n" +
+            "91  | String length 1 \n" +
+            "61  | 'a' \n" +
+            "6A  | Float 0 \n" +
+            "F0  | End of delimited group \n"
+        )));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fullyTraverseTaggedDelimitedArgumentGroup(boolean constructFromBytes) throws Exception {
+        byte[] data = taggedDelimitedArgumentGroup();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(1, 5, 6),
+                enterTaggedArgumentGroup(),
+                nextGroupedValue(IonType.INT, 8, 8),
+                nextGroupedValue(IonType.LIST, 9, 12),
+                stepInToContainer(IonType.LIST, 9, 12),
+                nextTaggedValue(IonType.STRING, 10, 11),
+                nextTaggedValue(IonType.FLOAT, 12, 12),
+                stepOutOfContainer(),
+                endOfGroup(),
+                exitArgumentGroup(),
+                endStream()
+            );
+        }
+    }
+
+    private static byte[] emptyArgumentGroups() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13  | Opcode 0x13 -> macro ID 0x13 \n" +
+            "05  | AEB 0b00001010 -- two grouped arguments \n" +
+            // First group: interpreted as tagged
+            "01  | FlexUInt 0 - delimited group \n" +
+            "F0  | End of delimited group \n" +
+            // Second group: interpreted as tagless
+            "01  | FlexUInt 0 - end of argument group \n"
+        )));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void emptyArgumentGroups(boolean constructFromBytes) throws Exception {
+        byte[] data = emptyArgumentGroups();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(1, 5, 6),
+                enterTaggedArgumentGroup(),
+                endOfGroup(),
+                exitArgumentGroup(),
+                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                endOfGroup(),
+                exitArgumentGroup(),
+                endStream()
+            );
+        }
+    }
+
+    private static byte[] twoArgumentGroupsFollowedBySingleValue() throws Exception {
+        return withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13  | Opcode 0x13 -> macro ID 0x13 \n" +
+            "05  | AEB 0b00001010 -- two grouped arguments \n" +
+            // First group: interpreted as tagged
+            "01  | FlexUInt 0 - delimited group \n" +
+            "60  | int 0 \n" +
+            "B3  | List length 3 \n" +
+            "91  | String length 1 \n" +
+            "61  | 'a' \n" +
+            "6A  | Float 0 \n" +
+            "F0  | End of delimited group \n" +
+            // Second group: interpreted as tagless
+            "03  | FlexUInt 1 - page length 1 byte \n" +
+            "0A  | int 10 \n" +
+            "03  | FlexUInt 1 - page length 1 byte \n" +
+            "0B  | int 11 \n" +
+            "01  | FlexUInt 0 - end of argument group \n" +
+            "B1  | List length 1 \n" +
+            "60  | int 0 \n"
+        )));
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void twoArgumentGroupsFollowedBySingleValue(boolean constructFromBytes) throws Exception {
+        byte[] data = twoArgumentGroupsFollowedBySingleValue();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(1, 5, 6),
+                enterTaggedArgumentGroup(),
+                nextGroupedValue(IonType.INT, 8, 8),
+                nextGroupedValue(IonType.LIST, 9, 12),
+                stepInToContainer(IonType.LIST, 9, 12),
+                nextTaggedValue(IonType.STRING, 10, 11),
+                nextTaggedValue(IonType.FLOAT, 12, 12),
+                stepOutOfContainer(),
+                endOfGroup(),
+                exitArgumentGroup(),
+                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                nextGroupedValue(IonType.INT, 14, 15),
+                nextGroupedValue(IonType.INT, 16, 17),
+                endOfGroup(),
+                exitArgumentGroup(),
+                container(
+                    scalar(), valueMarker(IonType.INT, 20, 20)
+                ),
+                endStream()
+            );
+        }
+    }
+
+    @Test
+    public void twoArgumentGroupsFollowedBySingleValueIncremental() throws Exception {
+        byte[] data = twoArgumentGroupsFollowedBySingleValue();
+        List<Instruction> instructions = Arrays.asList(
+            instruction(IonCursorBinary::nextValue, macroInvocation(0x13)),
+            instruction(cursor -> cursor.fillArgumentEncodingBitmap(1), valueMarker(null, 5, 6)),
+            instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
+            instruction(
+                cursor -> {
+                    if (cursor.nextGroupedValue() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    assertValueMarker(cursor, IonType.LIST, 9, 12);
+                    return cursor.stepIntoContainer();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            instruction(IonCursorBinary::nextValue, valueMarker(IonType.STRING, 10, 11)),
+            instruction(
+                cursor -> {
+                    if (cursor.nextValue() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    // Note: the value byte of the string is skipped, not buffered.
+                    assertValueMarker(cursor, IonType.FLOAT, 11, 11);
+                    return cursor.stepOutOfContainer();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            instruction(
+                cursor -> {
+                    if (cursor.nextGroupedValue() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    return cursor.exitArgumentGroup();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            instruction(cursor -> cursor.enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8), event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 13, 14)),
+            instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 15, 16)),
+            instruction(
+                cursor -> {
+                    if (cursor.nextGroupedValue() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    return cursor.exitArgumentGroup();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            instruction(
+                cursor -> {
+                    if (cursor.nextValue() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    assertValueMarker(cursor, IonType.LIST, 18, 19);
+                    return cursor.stepIntoContainer();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            instruction(
+                cursor -> {
+                    if (cursor.nextValue() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    assertValueMarker(cursor, IonType.INT, 19, 19);
+                    return cursor.stepOutOfContainer();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            // This is the end of the stream, so the response is not used.
+            instruction(IonCursorBinary::nextValue, null)
+        );
+        executeIncrementally(data, instructions);
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipOverArgumentGroups(boolean constructFromBytes) throws Exception {
+        byte[] data = twoArgumentGroupsFollowedBySingleValue();
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertSequence(
+                cursor,
+                nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                fillArgumentEncodingBitmap(1, 5, 6),
+                enterTaggedArgumentGroup(),
+                nextGroupedValue(IonType.INT, 8, 8),
+                exitArgumentGroup(), // Early exit
+                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                exitArgumentGroup(), // Skip over group
+                container(
+                    scalar(), valueMarker(IonType.INT, 20, 20)
+                ),
+                endStream()
+            );
+        }
+    }
+
+    @Test
+    public void skipOverArgumentGroupsIncremental() throws Exception {
+        byte[] data = twoArgumentGroupsFollowedBySingleValue();
+        List<Instruction> instructions = Arrays.asList(
+            instruction(IonCursorBinary::nextValue, macroInvocation(0x13)),
+            instruction(cursor -> cursor.fillArgumentEncodingBitmap(1), valueMarker(null, 5, 6)),
+            instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
+            // Skip the list argument
+            instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
+            instruction(cursor -> cursor.enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8), event(NEEDS_INSTRUCTION)),
+            // Skip all arguments in the group
+            instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::nextValue, valueMarker(IonType.LIST, 16, 17)),
+            // This is the end of the stream, so the response is not used.
+            instruction(IonCursorBinary::nextValue, null)
+        );
+        executeIncrementally(data, instructions);
+    }
+
+    // TODO Nest argument groups >8 deep, exercising argument group stack growth.
+    // TODO Add more incremental tests for various argument group combinations, improving coverage of NEEDS_DATA cases.
+    // TODO Extend a tagged prefixed argument group page beyond the current buffer limit. In slow mode, this should
+    //  cause the whole page to be filled. In unchecked mode, this should be an error for unexpected EOF.
 }
