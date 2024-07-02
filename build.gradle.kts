@@ -90,7 +90,7 @@ val githubRepositoryUrl = "https://github.com/amazon-ion/ion-java/"
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 // The name we're checking for corresponds to the name that is set in the `publish-release-artifacts.yml` file.
 val isReleaseWorkflow: Boolean = System.getenv("GITHUB_WORKFLOW") == "Publish Release Artifacts"
-val generatedResourcesDir = "$buildDir/generated/main/resources"
+val generatedResourcesDir = "${layout.buildDirectory}/generated/main/resources"
 
 sourceSets {
     main {
@@ -103,7 +103,7 @@ licenseReport {
     // though ion-java does not depend on ion-java-cli. By default, the license report generator includes
     // the current project (ion-java) and all its subprojects.
     projects = arrayOf(project)
-    outputDir = "$buildDir/reports/licenses"
+    outputDir = "${layout.buildDirectory}/reports/licenses"
     renderers = arrayOf(InventoryMarkdownReportRenderer(), TextReportRenderer())
     // Dependencies use inconsistent titles for Apache-2.0, so we need to specify mappings
     filters = arrayOf(
