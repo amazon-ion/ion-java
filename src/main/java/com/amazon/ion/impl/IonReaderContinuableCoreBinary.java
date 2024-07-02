@@ -594,11 +594,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             value = scalarConverter.getBigDecimal();
             scalarConverter.clear();
         } else if (valueTid.type == IonType.FLOAT) {
-                scalarConverter.addValue(doubleValue());
-                scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
-                scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
-                value = scalarConverter.getDecimal();
-                scalarConverter.clear();
+            scalarConverter.addValue(doubleValue());
+            scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
+            scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
+            value = scalarConverter.getDecimal();
+            scalarConverter.clear();
         } else {
             throwDueToInvalidType(IonType.DECIMAL);
         }
