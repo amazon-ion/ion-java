@@ -3086,7 +3086,7 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the AEB was filled and the cursor is now positioned on the first byte of the
      *     macro invocation.</li>
      * </ul>
-     * After return, `valueMarker` is set with teh start and end indices of the AEB.
+     * After return, `valueMarker` is set with the start and end indices of the AEB.
      * @param numberOfBytes the byte width of the AEB.
      * @return an Event conveying the result of the operation.
      */
