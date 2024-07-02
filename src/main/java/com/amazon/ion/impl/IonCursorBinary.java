@@ -3057,7 +3057,6 @@ class IonCursorBinary implements IonCursor {
                 seekPastDelimitedContainer_1_1();
             }
         }
-        valueTid = null;
         if (dataHandler != null) {
             reportConsumedData();
         }
@@ -3076,6 +3075,32 @@ class IonCursorBinary implements IonCursor {
         }
         setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
         event = Event.START_SCALAR;
+        return event;
+    }
+
+    /**
+     * Fills the argument encoding bitmap (AEB) of the given byte width that is expected to occur at
+     * the cursor's current `peekIndex`. This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream</li>
+     *     <li>NEEDS_INSTRUCTION, if the AEB was filled and the cursor is now positioned on the first byte of the
+     *     macro invocation.</li>
+     * </ul>
+     * After return, `valueMarker` is set with the start and end indices of the AEB.
+     * @param numberOfBytes the byte width of the AEB.
+     * @return an Event conveying the result of the operation.
+     */
+    public Event fillArgumentEncodingBitmap(int numberOfBytes) {
+        event = Event.NEEDS_DATA;
+        valueMarker.typeId = null;
+        valueMarker.startIndex = peekIndex;
+        valueMarker.endIndex = peekIndex + numberOfBytes;
+        if (isSlowMode && !fillAt(peekIndex, numberOfBytes)) {
+            return event;
+        }
+        peekIndex = valueMarker.endIndex;
+        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+        event = Event.NEEDS_INSTRUCTION;
         return event;
     }
 
