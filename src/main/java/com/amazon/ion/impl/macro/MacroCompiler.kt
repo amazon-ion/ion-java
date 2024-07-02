@@ -90,7 +90,7 @@ class MacroCompiler(private val reader: IonReader) {
             confirm(annotations.isEmptyOr(Macro.ParameterEncoding.Tagged.ionTextName)) { "unsupported parameter encoding ${annotations.toList()}" }
             confirm(isIdentifierSymbol(symbolText)) { "invalid parameter name: '$symbolText'" }
             confirm(signature.none { it.variableName == symbolText }) { "redeclaration of parameter '$symbolText'" }
-            pendingParameter = Macro.Parameter(symbolText, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.One)
+            pendingParameter = Macro.Parameter(symbolText, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
         }
         // If we have a pending parameter than hasn't been added to the signature, add it here.
         if (pendingParameter != null) signature.add(pendingParameter!!)

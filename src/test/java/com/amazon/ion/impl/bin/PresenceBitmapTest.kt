@@ -15,14 +15,14 @@ import org.junit.jupiter.params.provider.CsvSource
 class PresenceBitmapTest {
 
     companion object {
-        val taggedZeroToMany = Parameter("a", ParameterEncoding.Tagged, ParameterCardinality.Any)
-        val taggedExactlyOne = Parameter("b", ParameterEncoding.Tagged, ParameterCardinality.One)
-        val taggedZeroOrOne = Parameter("c", ParameterEncoding.Tagged, ParameterCardinality.AtMostOne)
-        val taggedOneToMany = Parameter("d", ParameterEncoding.Tagged, ParameterCardinality.AtLeastOne)
-        val taglessZeroToMany = Parameter("e", ParameterEncoding.uint8, ParameterCardinality.Any)
-        val taglessExactlyOne = Parameter("f", ParameterEncoding.uint8, ParameterCardinality.One)
-        val taglessZeroOrOne = Parameter("g", ParameterEncoding.uint8, ParameterCardinality.AtMostOne)
-        val taglessOneToMany = Parameter("h", ParameterEncoding.uint8, ParameterCardinality.AtLeastOne)
+        val taggedZeroToMany = Parameter("a", ParameterEncoding.Tagged, ParameterCardinality.ZeroOrMore)
+        val taggedExactlyOne = Parameter("b", ParameterEncoding.Tagged, ParameterCardinality.ExactlyOne)
+        val taggedZeroOrOne = Parameter("c", ParameterEncoding.Tagged, ParameterCardinality.ZeroOrOne)
+        val taggedOneToMany = Parameter("d", ParameterEncoding.Tagged, ParameterCardinality.OneOrMore)
+        val taglessZeroToMany = Parameter("e", ParameterEncoding.uint8, ParameterCardinality.ZeroOrMore)
+        val taglessExactlyOne = Parameter("f", ParameterEncoding.uint8, ParameterCardinality.ExactlyOne)
+        val taglessZeroOrOne = Parameter("g", ParameterEncoding.uint8, ParameterCardinality.ZeroOrOne)
+        val taglessOneToMany = Parameter("h", ParameterEncoding.uint8, ParameterCardinality.OneOrMore)
     }
 
     @Test
@@ -82,22 +82,22 @@ class PresenceBitmapTest {
     @CsvSource(
         // For some reason `Long.decode()` doesn't support binary, so
         // we're just using decimal for the presence values here.
-        "One, 0, false",
-        "One, 1, true",
-        "One, 2, false",
-        "One, 3, false",
-        "Any, 0, true",
-        "Any, 1, true",
-        "Any, 2, true",
-        "Any, 3, false",
-        "AtMostOne, 0, true",
-        "AtMostOne, 1, true",
-        "AtMostOne, 2, false",
-        "AtMostOne, 3, false",
-        "AtLeastOne, 0, false",
-        "AtLeastOne, 1, true",
-        "AtLeastOne, 2, true",
-        "AtLeastOne, 3, false",
+        "ExactlyOne, 0, false",
+        "ExactlyOne, 1, true",
+        "ExactlyOne, 2, false",
+        "ExactlyOne, 3, false",
+        "ZeroOrMore, 0, true",
+        "ZeroOrMore, 1, true",
+        "ZeroOrMore, 2, true",
+        "ZeroOrMore, 3, false",
+        "ZeroOrOne, 0, true",
+        "ZeroOrOne, 1, true",
+        "ZeroOrOne, 2, false",
+        "ZeroOrOne, 3, false",
+        "OneOrMore, 0, false",
+        "OneOrMore, 1, true",
+        "OneOrMore, 2, true",
+        "OneOrMore, 3, false",
     )
     fun `validate() correctly throws exception when presence bits are invalid for signature`(cardinality: ParameterCardinality, presenceValue: Long, isValid: Boolean) {
         val signature = listOf(Parameter("a", ParameterEncoding.uint8, cardinality))

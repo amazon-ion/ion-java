@@ -20,19 +20,18 @@ sealed interface Macro {
     }
 
     enum class ParameterCardinality(val sigil: Char) {
-        // TODO: Rename to match spec.
-        AtMostOne('?'),
-        One('!'),
-        AtLeastOne('+'),
-        Any('*');
+        ZeroOrOne('?'),
+        ExactlyOne('!'),
+        OneOrMore('+'),
+        ZeroOrMore('*');
 
         companion object {
             @JvmStatic
             fun fromSigil(sigil: String): ParameterCardinality? = when (sigil.singleOrNull()) {
-                '?' -> AtMostOne
-                '!' -> One
-                '+' -> AtLeastOne
-                '*' -> Any
+                '?' -> ZeroOrOne
+                '!' -> ExactlyOne
+                '+' -> OneOrMore
+                '*' -> ZeroOrMore
                 else -> null
             }
         }
@@ -65,6 +64,6 @@ enum class SystemMacro(override val signature: List<Macro.Parameter>) : Macro {
     // TODO: replace these placeholders
     Stream(emptyList()), // A stream is technically not a macro, but we can implement it as a macro that is the identity function.
     Annotate(emptyList()),
-    MakeString(listOf(Macro.Parameter("text", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.Any))),
+    MakeString(listOf(Macro.Parameter("text", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore))),
     // TODO: Other system macros
 }
