@@ -35,11 +35,11 @@ class MacroCompilerTest {
 
     private fun testCases() = listOf(
         "(macro identity (x) x)" shouldCompileTo TemplateMacro(
-            listOf(Parameter("x", Tagged, ParameterCardinality.One)),
+            listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             listOf(Variable(0)),
         ),
         "(macro identity (any::x) x)" shouldCompileTo TemplateMacro(
-            listOf(Parameter("x", Tagged, ParameterCardinality.One)),
+            listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             listOf(Variable(0)),
         ),
         "(macro pi () 3.141592653589793)" shouldCompileTo TemplateMacro(
@@ -47,26 +47,26 @@ class MacroCompilerTest {
             body = listOf(DecimalValue(emptyList(), BigDecimal("3.141592653589793")))
         ),
         "(macro cardinality_test (x?) x)" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, ParameterCardinality.AtMostOne)),
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.ZeroOrOne)),
             body = listOf(Variable(0))
         ),
         "(macro cardinality_test (x!) x)" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, ParameterCardinality.One)),
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             body = listOf(Variable(0))
         ),
         "(macro cardinality_test (x+) x)" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, ParameterCardinality.AtLeastOne)),
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.OneOrMore)),
             body = listOf(Variable(0))
         ),
         "(macro cardinality_test (x*) x)" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, ParameterCardinality.Any)),
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.ZeroOrMore)),
             body = listOf(Variable(0))
         ),
         // Outer 'values' call allows multiple expressions in the body
         // The second `values` is a macro call that has a single argument: the variable `x`
         // The `literal` call causes the third (inner) `(values x)` to be an uninterpreted s-expression.
         """(macro literal_test (x) (values (values x) (literal (values x))))""" shouldCompileTo TemplateMacro(
-            signature = listOf(Parameter("x", Tagged, ParameterCardinality.One)),
+            signature = listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             body = listOf(
                 MacroInvocation(ByName("values"), startInclusive = 0, endInclusive = 5),
                 MacroInvocation(ByName("values"), startInclusive = 1, endInclusive = 2),
@@ -119,9 +119,9 @@ class MacroCompilerTest {
         ),
         "(macro foo (x y z) [100, [200, a::b::300], x, {y: [true, false, z]}])" shouldCompileTo TemplateMacro(
             signature = listOf(
-                Parameter("x", Tagged, ParameterCardinality.One),
-                Parameter("y", Tagged, ParameterCardinality.One),
-                Parameter("z", Tagged, ParameterCardinality.One)
+                Parameter("x", Tagged, ParameterCardinality.ExactlyOne),
+                Parameter("y", Tagged, ParameterCardinality.ExactlyOne),
+                Parameter("z", Tagged, ParameterCardinality.ExactlyOne)
             ),
             body = listOf(
                 ListValue(emptyList(), startInclusive = 0, endInclusive = 11),

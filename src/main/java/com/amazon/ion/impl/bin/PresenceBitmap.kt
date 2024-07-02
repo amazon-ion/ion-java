@@ -95,7 +95,7 @@ internal class PresenceBitmap {
         d = 0
         // TODO – performance: consider calculating this once for a macro when it is compiled
         // Calculate the actual number of presence bits that will be encoded for the given signature.
-        val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.One }
+        val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
         val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.isTagless }
         size = if (usePresenceBits) nonRequiredParametersCount else 0
     }
@@ -111,10 +111,10 @@ internal class PresenceBitmap {
             val p = parameters.next()
             val v = getUnchecked(i++)
             val isValid = when (p.cardinality) {
-                ParameterCardinality.AtMostOne -> v == VOID || v == EXPRESSION
-                ParameterCardinality.One -> v == EXPRESSION
-                ParameterCardinality.AtLeastOne -> v == EXPRESSION || v == GROUP
-                ParameterCardinality.Any -> v != RESERVED
+                ParameterCardinality.ZeroOrOne -> v == VOID || v == EXPRESSION
+                ParameterCardinality.ExactlyOne -> v == EXPRESSION
+                ParameterCardinality.OneOrMore -> v == EXPRESSION || v == GROUP
+                ParameterCardinality.ZeroOrMore -> v != RESERVED
             }
             if (!isValid) throw IonException("Invalid argument for parameter: $p")
         }
@@ -137,7 +137,7 @@ internal class PresenceBitmap {
         val parameters = signature.iterator()
         while (parameters.hasNext()) {
             val p = parameters.next()
-            if (p.cardinality == ParameterCardinality.One) {
+            if (p.cardinality == ParameterCardinality.ExactlyOne) {
                 setUnchecked(i++, EXPRESSION)
             } else {
                 if (bitmapIndex % PB_SLOTS_PER_BYTE == 0) {
@@ -207,7 +207,7 @@ internal class PresenceBitmap {
         while (parameters.hasNext()) {
             val parameter = parameters.next()
             val bits = getUnchecked(i++)
-            if (parameter.cardinality == ParameterCardinality.One) continue
+            if (parameter.cardinality == ParameterCardinality.ExactlyOne) continue
             val destShift = resultPosition * PB_BITS_PER_SLOT
             resultBuffer = resultBuffer or (bits shl destShift)
             resultPosition++
