@@ -502,6 +502,9 @@ class IonCursorBinary implements IonCursor {
      * @return true if the buffer has sufficient capacity; otherwise, false.
      */
     private boolean ensureCapacity(long minimumNumberOfBytesRequired) {
+        if (minimumNumberOfBytesRequired < 0) {
+            throw new IonException("The number of bytes required cannot be represented in a Java long.");
+        }
         if (freeSpaceAt(offset) >= minimumNumberOfBytesRequired) {
             // No need to shift any bytes or grow the buffer.
             return true;
@@ -809,17 +812,20 @@ class IonCursorBinary implements IonCursor {
             throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
         }
         byte b = buffer[(int) peekIndex++];
-        int annotationsLength;
+        long annotationsLength;
         if (b < 0) {
             annotationsLength = (b & LOWER_SEVEN_BITS_BITMASK);
         } else {
-            annotationsLength = (int) uncheckedReadVarUInt_1_0(b);
+            annotationsLength = uncheckedReadVarUInt_1_0(b);
         }
         annotationSequenceMarker.startIndex = peekIndex;
         annotationSequenceMarker.endIndex = annotationSequenceMarker.startIndex + annotationsLength;
         peekIndex = annotationSequenceMarker.endIndex;
         if (peekIndex >= endIndex) {
             throw new IonException("Annotation wrapper must wrap a value.");
+        }
+        if (peekIndex < 0) {
+            throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
         }
         return false;
     }
@@ -855,7 +861,7 @@ class IonCursorBinary implements IonCursor {
         }
         // Record the post-length index in a value that will be shifted in the event the buffer needs to refill.
         setMarker(peekIndex + valueLength, valueMarker);
-        int annotationsLength = (int) slowReadVarUInt_1_0();
+        long annotationsLength = slowReadVarUInt_1_0();
         if (annotationsLength < 0) {
             return true;
         }
