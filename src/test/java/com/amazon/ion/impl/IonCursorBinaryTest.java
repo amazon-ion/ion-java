@@ -467,4 +467,54 @@ public class IonCursorBinaryTest {
         }
         cursor.close();
     }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationSequenceLengthExceedsJavaLong(boolean constructFromBytes) {
+        try (
+            IonCursorBinary cursor = initializeCursor(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xEA, // Annotation wrapper, length 10
+                0x01, 0x16, 0x76, 0x76, 0x76, 0x76, 0x3F, 0x3F, 0x76, 0x76, 0xF3, // Annotation sequence length > Long.MAX_VALUE
+                0x9E // The start of the annotation sequence
+            )
+        ) {
+            assertThrows(IonException.class, cursor::nextValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationSequenceLengthPlusCurrentIndexExceedsJavaLong(boolean constructFromBytes) {
+        try (
+            IonCursorBinary cursor = initializeCursor(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xEA, // Annotation wrapper, length 10
+                0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF, // Annotation sequence length = Long.MAX_VALUE
+                0x9E // The start of the annotation sequence
+            )
+        ) {
+            assertThrows(IonException.class, cursor::nextValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationWrapperLengthPlusCurrentIndexExceedsJavaLong(boolean constructFromBytes) {
+        try (
+            IonCursorBinary cursor = initializeCursor(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xEE, // Annotation wrapper, variable length
+                0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF, // Annotation wrapper length = Long.MAX_VALUE
+                0x81, // Annotation sequence length = 1
+                0x83, // SID 3
+                0x9E // The start of the wrapped value
+            )
+        ) {
+            assertThrows(IonException.class, cursor::nextValue);
+        }
+    }
 }
