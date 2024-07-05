@@ -157,52 +157,6 @@ interface IonRawWriter_1_1 {
     /**
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
-     *
-     * TODO:
-     *   There are three approaches here for the third parameter
-     *   1. It can be a boolean "requiresPresenceBits", and then the raw writer has to keep track of things
-     *      This is tricky because we will need patch points if we don't preallocate enough bytes, but that
-     *      will be complicated because it could interfere with the existing patch-point logic.
-     *      This is also binary specific.
-     *   2. We could accept e.g. ByteArray that is the right size as an argument to stepInEExp().
-     *      If it's a null/empty bytearray, then we don't require presence bits.
-     *      Benefit is that we always allocate the right size for presence bits.
-     *      Is this going to require a lot of allocations? Maybe.
-     *   3. We could accept the number of parameters in the macro as an argument to stepInEExp().
-     *      I think this is probably the best. It means that the containers can have ByteArrays or LongArrays
-     *      that are appropriately sized and live with the ContainerInfo.
-     *      However, we don't know if there are any tagless expressions. But presumably, tag-less expressions will
-     *      will require different APIs, so we can find out about their existence when they are written. That way,
-     *      by the end of the macro, we will have enough information to determine whether presence bits are required.
-     *      However, that might be tricky for the 1-parameter-with-empty-expression-group case.
-     *      Also, how will macro-shape parameters work?
-     *   3b We could have stepInEExp() accept the number of _presence bits_ as an argument.
-     *      This has all of the benefits of 3, except that it eliminates the need for the raw writer
-     *      to figure out whether presence bits are required, and we don't have any tricky cases such
-     *      as 1-parameter-with-empty-expression-group.
-     *      Actually, this still doesn't deal with the ! cardinality not requiring presence bits.
-     *      How is the raw writer to know which arguments are ! cardinality without seeing the signature.
-     *      So... I think the raw writer needs to know the signature. It will probably be simpler to store
-     *      the signature than it is to e.g. pass the cardinality with every value we try to write.
-     *   4. Pass in the signature. Then we can determine whether the signature requires presence bits,
-     *      and we know which arguments require presence bits and which don't.
-     *   5. Should we expose a writeRawBytes method and push macro handling into the managed writer?
-     *      Maybe... the managed writer has to have knowledge of macros anyway.
-     *   5b We could make stepInEExp() accept the number of presenceBytes required. Then, it can reserve
-     *      that number, and when stepping out of an EExp, we have a distinct stepOutEExp() that accepts
-     *      the values of the presence bits. <-- THIS IS MY CURRENT FAVORITE
-     *      However, this does leak "presence bits" (which is an encoding concept) out of the raw writer.
-     *   6. Should we create a separate macro writer that manages things?
-     *      That doesn't really solve the problem other than encapsulating the logic... which does help
-     *      because we can put all of the macro logic into one class, but it also requires possibly more
-     *      branching/indirection.
-     *
-     *
-     * TODO:
-     *      Macro shape args potentially need presence bits that are detached from a macro container.
-     *      Do we need to add a `tagless: Boolean = false` parameter to all of our write functions?
-     *      No, not all. However, we probably need to add methods for `writeTagless___` for many types.
-     *      We also need to figure out segments for the macro args.
      */
     fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro)
 

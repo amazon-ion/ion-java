@@ -185,7 +185,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * If more space is needed, it over-allocates by 8 to ensure that we're not continually allocating when annotations
      * are being added one by one.
      */
-    private /*inline*/ fun ensureAnnotationSpace(n: Int) {
+    private inline fun ensureAnnotationSpace(n: Int) {
         if (annotationsIdBuffer.size < n || annotationsTextBuffer.size < n) {
             val oldIds = annotationsIdBuffer
             annotationsIdBuffer = IntArray(n + 8)
@@ -259,7 +259,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     /**
      * Helper function for handling annotations and field names when starting a value.
      */
-    private /*inline*/ fun openValue(valueWriterExpression: () -> Unit) {
+    private inline fun openValue(valueWriterExpression: () -> Unit) {
 
         if (isInStruct()) {
             confirm(hasFieldName) { "Values in a struct must have a field name." }
@@ -354,7 +354,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * @param valueWriterExpression should be a function that writes the scalar value to the buffer, and
      *                              returns the number of bytes that were written.
      */
-    private /*inline*/ fun writeScalar(valueWriterExpression: () -> Int) = openValue {
+    private inline fun writeScalar(valueWriterExpression: () -> Int) = openValue {
         val numBytesWritten = valueWriterExpression()
         currentContainer.length += numBytesWritten
         currentContainer.numChildren++
@@ -366,7 +366,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * @param ifTagged should be a function that writes the scalar value to the buffer, and returns the number of bytes that were written.
      * @param ifTagless should be a function that writes the scalar value to the buffer _without an opcode_ and returns the number of bytes that were written.
      */
-    private /*inline*/ fun writeTaggedOrTaglessScalar(
+    private inline fun writeTaggedOrTaglessScalar(
         ifTagged: () -> Int,
         ifTagless: (PrimitiveType) -> Int,
     ) {
@@ -561,7 +561,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
         throw UnsupportedOperationException("Binary writer requires macros to be invoked by their ID.")
     }
 
-    // The managed writer should write all arguments, even if they are void.
     // Void can be written as an empty expression group.
     override fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro) {
         // Length-prefixed e-expression format:
@@ -577,10 +576,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
         }
 
         currentContainer = containerStack.push { it.reset(EEXP, buffer.position(), !lengthPrefixed) }
-        println("LengthPrefixOffset = ${currentContainer.metadataOffset}")
-
-        // We use `currentContainer.lengthPrefixOffset` to also keep track of where to write the presence bitmap.
-        // It will be written at `currentContainer.lengthPrefixOffset + lengthPrefixPreallocation`
 
         if (lengthPrefixed) {
             buffer.writeByte(OpCodes.LENGTH_PREFIXED_MACRO_INVOCATION)
@@ -606,7 +601,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 currentContainer.metadataOffset += buffer.writeFlexUInt(id)
             }
         }
-        println("LengthPrefixOffset = ${currentContainer.metadataOffset}")
 
         val presenceBits = presenceBitmapStack.push { it.initialize(macro.signature) }
         if (presenceBits.byteSize > 0) {
@@ -628,12 +622,16 @@ class IonRawBinaryWriter_1_1 internal constructor(
         currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), delimited, metadataOffset = 0) }
         currentContainer.primitiveType = encoding.primitiveType
 
-        if (!delimited || encoding.primitiveType != null) {
-            // Delimited tagless groups also need a length, but it's the number of values rather than the number of bytes.
+        if (encoding.primitiveType != null) {
+            // Tagless groups always need a length (although it is actually the count of expressions in the group)
             buffer.reserve(maxOf(1, lengthPrefixPreallocation))
-        } else {
+        } else if (delimited) {
             // At the start of a tagged expression group, signals that it is delimited.
-            currentContainer.length += buffer.writeFlexUInt(0)
+            buffer.writeByte(FlexInt.ZERO)
+            currentContainer.length++
+        } else {
+            // Reserve length prefix for a tagged expression group
+            buffer.reserve(maxOf(1, lengthPrefixPreallocation))
         }
         // No need to clear any of the annotation fields because we already asserted that there are no annotations
     }
@@ -653,7 +651,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
             var thisContainerTotalLength = currentContainer.length
             thisContainerTotalLength += writeCurrentContainerLength(
                 lengthPrefixPreallocation,
-                relativePosition = 0,
                 lengthToWrite = currentContainer.numChildren.toLong(),
             )
             currentContainer.reset(EXPR_GROUP, buffer.position(), isDelimited = true, metadataOffset = 0)
@@ -727,40 +724,39 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 }
             }
             EXPR_GROUP -> {
-                // Elide empty containers if we're going to be writing a presence bitmap
+                val isTagless = currentContainer.primitiveType != null
                 // TODO: Consider whether we can rewrite groups that have only one expression as a single expression
+
+                // Elide empty containers if we're going to be writing a presence bitmap
                 if (currentContainer.length == 0L && presenceBitmapStack.peek().byteSize > 0) {
-                    // TODO: This can break if `continueExpressionGroup()` is called.
+                    // NOTE: This check is safe after calling `continueExpressionGroup` because that function
+                    //       only resets the number of children, not the container length.
 
                     // It is not always safe to truncate like this without clearing the patch points for the
                     // truncated part of the buffer. However, it is safe to do so here because we can only get to
                     // this particular branch if this expression group is empty, ergo it contains no patch points.
                     buffer.truncate(currentContainer.position)
                     thisContainerTotalLength = 0
-                } else if (currentContainer.numChildren == 0 && currentContainer.primitiveType != null) {
-                    // If we've called `continueExpressionGroup` and the `stepOut` without adding any more items.
+                } else if (isTagless && currentContainer.numChildren == 0) {
+                    // If we've called `continueExpressionGroup` and then `stepOut` without adding any more items...
                     buffer.truncate(currentContainer.position)
-                    thisContainerTotalLength += buffer.writeFlexUInt(0)
+                    buffer.writeByte(FlexInt.ZERO)
+                    thisContainerTotalLength++
+                } else if (isTagless) {
+                    // End tagless group -- write the number of expressions, end with FlexUInt 0
+                    thisContainerTotalLength += writeCurrentContainerLength(
+                        lengthPrefixPreallocation,
+                        lengthToWrite = currentContainer.numChildren.toLong(),
+                    )
+                    buffer.writeByte(FlexInt.ZERO)
+                    thisContainerTotalLength++
+                } else if (currentContainer.isDelimited) {
+                    // Delimited, tagged -- start with `01` end with `F0`
+                    buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
+                    thisContainerTotalLength++
                 } else {
-                    // Cases:
-                    //   - Delimited, tagged -- start with `01` end with `F0`
-                    //   - Length-prefixed tagged -- write the number of bytes
-                    //   - Tagless -- write the number of expressions, end with FlexUInt 0
-                    val isTagless = currentContainer.primitiveType != null
-                    if (isTagless) {
-                        thisContainerTotalLength += writeCurrentContainerLength(
-                            lengthPrefixPreallocation,
-                            relativePosition = 0,
-                            lengthToWrite = currentContainer.numChildren.toLong(),
-                        )
-                        buffer.writeFlexUInt(0)
-                        thisContainerTotalLength++
-                    } else if (currentContainer.isDelimited) {
-                        buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
-                        thisContainerTotalLength++
-                    } else {
-                        thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
-                    }
+                    // Length-prefixed, tagged -- write the number of bytes
+                    thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                 }
             }
             ANNOTATIONS -> TODO("Unreachable.")
@@ -790,14 +786,10 @@ class IonRawBinaryWriter_1_1 internal constructor(
      *
      * @param numPreAllocatedLengthPrefixBytes the number of bytes that were pre-allocated for the length prefix of the
      *                                         current container.
-     * @param relativePosition the position to write the length relative to the start of the current container (which
-     *                         includes the opcode, if any).
+     * @param lengthToWrite the value to write as the length. Defaults to [ContainerInfo.length] of [currentContainer].
      */
-    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int, relativePosition: Int = currentContainer.metadataOffset, lengthToWrite: Long = currentContainer.length): Int {
-        val e = Exception().apply { fillInStackTrace() }.stackTrace.first { "writeCurrentContainerLength" !in it.toString() }
-
-        val lengthPosition = currentContainer.position + relativePosition
-        println("Writing length $lengthToWrite at position $lengthPosition\n    called from $e")
+    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int, lengthToWrite: Long = currentContainer.length): Int {
+        val lengthPosition = currentContainer.position + currentContainer.metadataOffset
         val lengthPrefixBytesRequired = FlexInt.flexUIntLength(lengthToWrite)
         if (lengthPrefixBytesRequired == numPreAllocatedLengthPrefixBytes) {
             // We have enough space, so write in the correct length.

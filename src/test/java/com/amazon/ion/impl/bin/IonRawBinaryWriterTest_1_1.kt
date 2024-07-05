@@ -1083,54 +1083,6 @@ class IonRawBinaryWriterTest_1_1 {
         }
     }
 
-    @ParameterizedTest
-    @CsvSource(
-        //       Macro Id; Op Address  Length=0
-        "               0, F5 01             01",
-        "              64, F5 81             01",
-        "              65, F5 83             01",
-        "             127, F5 FF             01",
-        "             128, F5 02 02          01",
-        "             729, F5 66 0B          01",
-        "           16383, F5 FE FF          01",
-        "           16384, F5 04 00 02       01",
-        "         1052736, F5 04 82 80       01",
-        "         2097151, F5 FC FF FF       01",
-        "         2097152, F5 08 00 00 02    01",
-        "${Int.MAX_VALUE}, F5 F0 FF FF FF 0F 01",
-    )
-    fun `write a length-prefixed e-expression with no args`(id: Int, expectedBytes: String) {
-        // This test ensures that the macro address is written correctly
-        assertWriterOutputEquals(expectedBytes) {
-            stepInEExp(id, lengthPrefixed = true, dummyMacro(nArgs = 0))
-            stepOut()
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-        //       Macro Id; Op Address  Length=0
-        "               0, F5 01             01",
-        "              64, F5 81             01",
-        "              65, F5 83             01",
-        "             127, F5 FF             01",
-        "             128, F5 02 02          01",
-        "             729, F5 66 0B          01",
-        "           16383, F5 FE FF          01",
-        "           16384, F5 04 00 02       01",
-        "         1052736, F5 04 82 80       01",
-        "         2097151, F5 FC FF FF       01",
-        "         2097152, F5 08 00 00 02    01",
-        "${Int.MAX_VALUE}, F5 F0 FF FF FF 0F 01",
-    )
-    fun `write a length-prefixed e-expression with many args`(id: Int, expectedBytes: String) {
-        // This test ensures that the macro length is written correctly
-        assertWriterOutputEquals(expectedBytes) {
-            stepInEExp(id, lengthPrefixed = true, dummyMacro(nArgs = 0))
-            stepOut()
-        }
-    }
-
     @Test
     fun `write a delimited e-expression that requires a presence bitmap`() {
         assertWriterOutputEquals(
@@ -1162,6 +1114,40 @@ class IonRawBinaryWriterTest_1_1 {
         ) {
             stepInEExp(63, lengthPrefixed = false, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
             // Don't write any trailing void args (which is all of them in this case)
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        //       Macro Id; Op Address  Length=0
+        "               0, F5 01             01",
+        "              64, F5 81             01",
+        "              65, F5 83             01",
+        "             127, F5 FF             01",
+        "             128, F5 02 02          01",
+        "             729, F5 66 0B          01",
+        "           16383, F5 FE FF          01",
+        "           16384, F5 04 00 02       01",
+        "         1052736, F5 04 82 80       01",
+        "         2097151, F5 FC FF FF       01",
+        "         2097152, F5 08 00 00 02    01",
+        "${Int.MAX_VALUE}, F5 F0 FF FF FF 0F 01",
+    )
+    fun `write a length-prefixed e-expression with no args`(id: Int, expectedBytes: String) {
+        // This test ensures that the macro address is written correctly
+        assertWriterOutputEquals(expectedBytes) {
+            stepInEExp(id, lengthPrefixed = true, dummyMacro(nArgs = 0))
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a length-prefixed e-expression with many args`() {
+        // This test ensures that the macro length is written correctly
+        assertWriterOutputEquals("F5 03 15 60 60 60 60 60 60 60 60 60 60") {
+            stepInEExp(1, lengthPrefixed = true, dummyMacro(nArgs = 10))
+            repeat(10) { writeInt(0L) }
             stepOut()
         }
     }
@@ -1441,7 +1427,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a tagless expression group with zero values`() {
         // Empty expression group is elided to be void, so we just have `00` presence bitmap
         assertWriterOutputEquals("3D 00") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
             stepOut()
             stepOut()
@@ -1451,7 +1437,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a tagless expression group with one value`() {
         assertWriterOutputEquals("3D 02 03 1A 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
             writeInt(0x1A)
             stepOut()
@@ -1462,7 +1448,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a tagless expression group with multiple values`() {
         assertWriterOutputEquals("3D 02 07 1A 2B 3C 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
             writeInt(0x1A)
             writeInt(0x2B)
@@ -1482,7 +1468,7 @@ class IonRawBinaryWriterTest_1_1 {
             01           | End of expression group
         """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
             writeInt(0x1A)
             writeInt(0x2B)
@@ -1504,7 +1490,7 @@ class IonRawBinaryWriterTest_1_1 {
             01           | End of expression group
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
             writeInt(0x1A)
             writeInt(0x2B)
@@ -1525,7 +1511,7 @@ class IonRawBinaryWriterTest_1_1 {
             01        | End of expression group
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
             repeat(10) { continueExpressionGroup() }
             writeInt(0x1A)
@@ -1544,7 +1530,7 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterThrows { writeSExp { continueExpressionGroup() } }
         assertWriterThrows { writeStruct { continueExpressionGroup() } }
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             continueExpressionGroup()
         }
     }
@@ -1656,7 +1642,7 @@ class IonRawBinaryWriterTest_1_1 {
     @ParameterizedTest
     @CsvSource(
         // These tests are intentionally limited. Full testing of float logic is in `IonEncoder_1_1Test`
-        // TODO: Float16 cases
+        // TODO: Float16 cases, once Float16 is supported
         "Float32,       0.0, 00 00 00 00",
         "Float32,       1.0, 00 00 80 3F",
         "Float32,       NaN, 00 00 C0 7F",
@@ -1770,7 +1756,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `attempting to write a tagless value with annotations should throw exception`() {
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, TAGLESS_VARIADIC_PARAM))
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             writeAnnotations("foo")
             writeInt(0)
             stepOut()
@@ -1908,15 +1894,8 @@ class IonRawBinaryWriterTest_1_1 {
     /**
      * Helper function that creates a dummy macro with the given number of arguments.
      */
-    private fun dummyMacro(nArgs: Int, param: Macro.Parameter = Macro.Parameter("arg", ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)) =
+    private fun dummyMacro(nArgs: Int, param: Parameter = Parameter("arg", ParameterEncoding.Tagged, ParameterCardinality.ExactlyOne)) =
         TemplateMacro(List(nArgs) { param.copy("arg_$it") }, listOf())
 
-    private fun variadicParam(encoding: ParameterEncoding) = Macro.Parameter("arg", encoding, Macro.ParameterCardinality.ZeroOrMore)
-
-    companion object {
-        val TAGGED_REQUIRED_PARAM = Macro.Parameter("arg", ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
-        val TAGGED_VARIADIC_PARAM = Macro.Parameter("arg", ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)
-        val TAGLESS_REQUIRED_PARAM = Macro.Parameter("arg", ParameterEncoding.Int8, Macro.ParameterCardinality.ExactlyOne)
-        val TAGLESS_VARIADIC_PARAM = Macro.Parameter("arg", ParameterEncoding.Int8, Macro.ParameterCardinality.ZeroOrMore)
-    }
+    private fun variadicParam(encoding: ParameterEncoding) = Parameter("arg", encoding, ParameterCardinality.ZeroOrMore)
 }
