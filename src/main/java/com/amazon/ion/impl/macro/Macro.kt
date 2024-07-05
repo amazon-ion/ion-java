@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
+import com.amazon.ion.impl.*
+
 /**
  * A [Macro] is either a [SystemMacro] or a [TemplateMacro].
  */
@@ -12,14 +14,47 @@ sealed interface Macro {
         override fun toString() = "$type::$variableName${cardinality.sigil}"
     }
 
-    enum class ParameterEncoding(val ionTextName: String, val isTagless: Boolean = false) {
-        Tagged("any"),
-        uint8("uint8", isTagless = true),
-        // TODO: List all of the possible tagless encodings
+    // TODO: See if we can DRY up ParameterEncoding and PrimitiveType
+    enum class ParameterEncoding(val ionTextName: String, @JvmField val primitiveType: PrimitiveType? = null) {
         // TODO: Update this to support macro shapes
+        Tagged("any"),
+        Uint8("uint8", PrimitiveType.UINT8),
+        Uint16("uint16", PrimitiveType.UINT16),
+        Uint32("uint32", PrimitiveType.UINT32),
+        Uint64("uint64", PrimitiveType.UINT64),
+        CompactUInt("int64", PrimitiveType.FLEX_UINT),
+        Int8("int8", PrimitiveType.INT8),
+        Int16("int16", PrimitiveType.INT16),
+        Int32("int32", PrimitiveType.INT32),
+        Int64("int64", PrimitiveType.INT64),
+        CompactInt("int64", PrimitiveType.FLEX_INT),
+        Float16("float16", PrimitiveType.FLOAT16),
+        Float32("float32", PrimitiveType.FLOAT32),
+        Float64("float64", PrimitiveType.FLOAT64),
+        CompactSymbol("compact_symbol", PrimitiveType.COMPACT_SYMBOL),
+        ;
+        companion object {
+            @JvmStatic
+            fun fromPrimitiveType(primitiveType: PrimitiveType) = when (primitiveType) {
+                PrimitiveType.UINT8 -> Uint8
+                PrimitiveType.UINT16 -> Uint16
+                PrimitiveType.UINT32 -> Uint32
+                PrimitiveType.UINT64 -> Uint64
+                PrimitiveType.FLEX_UINT -> CompactUInt
+                PrimitiveType.INT8 -> Int8
+                PrimitiveType.INT16 -> Int16
+                PrimitiveType.INT32 -> Int32
+                PrimitiveType.INT64 -> Int64
+                PrimitiveType.FLEX_INT -> CompactInt
+                PrimitiveType.FLOAT16 -> Float16
+                PrimitiveType.FLOAT32 -> Float32
+                PrimitiveType.FLOAT64 -> Float64
+                PrimitiveType.COMPACT_SYMBOL -> CompactSymbol
+            }
+        }
     }
 
-    enum class ParameterCardinality(val sigil: Char) {
+    enum class ParameterCardinality(@JvmField val sigil: Char) {
         ZeroOrOne('?'),
         ExactlyOne('!'),
         OneOrMore('+'),
