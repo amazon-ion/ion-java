@@ -19,14 +19,14 @@ import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.TestUtils.withIvm;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.FLEX_INT;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.FLEX_UINT;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT16;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT32;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT64;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT32;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT64;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT8;
+import static com.amazon.ion.impl.PrimitiveType.FLEX_INT;
+import static com.amazon.ion.impl.PrimitiveType.FLEX_UINT;
+import static com.amazon.ion.impl.PrimitiveType.INT16;
+import static com.amazon.ion.impl.PrimitiveType.INT32;
+import static com.amazon.ion.impl.PrimitiveType.INT64;
+import static com.amazon.ion.impl.PrimitiveType.UINT32;
+import static com.amazon.ion.impl.PrimitiveType.UINT64;
+import static com.amazon.ion.impl.PrimitiveType.UINT8;
 import static com.amazon.ion.impl.IonCursorBinaryTest.nextMacroInvocation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
@@ -691,7 +691,7 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it has
      * the given attributes.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> fillNextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> fillNextTaglessValue(PrimitiveType primitiveType, IonType expectedType) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless %s", primitiveType.name()),
             reader -> {
@@ -706,7 +706,7 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
      * an integer that fits in a Java int with the expected value.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessIntValue(IonCursorBinary.PrimitiveType primitiveType, int expectedValue) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessIntValue(PrimitiveType primitiveType, int expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless int from %s", primitiveType.name()),
             reader -> {
@@ -723,7 +723,7 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
      * an integer that fits in a Java long with the expected value.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessLongValue(IonCursorBinary.PrimitiveType primitiveType, long expectedValue) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessLongValue(PrimitiveType primitiveType, long expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless long from %s", primitiveType.name()),
             reader -> {
@@ -740,7 +740,7 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
      * an integer that fits in a BigInteger with the expected value.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessBigIntegerValue(IonCursorBinary.PrimitiveType primitiveType, BigInteger expectedValue) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessBigIntegerValue(PrimitiveType primitiveType, BigInteger expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless BigInteger from %s", primitiveType.name()),
             reader -> {
@@ -925,11 +925,11 @@ public class IonReaderContinuableCoreBinaryTest {
             assertSequence(
                 reader,
                 nextMacroInvocation(0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT16, IonType.FLOAT),
+                fillNextTaglessValue(PrimitiveType.FLOAT16, IonType.FLOAT),
                 doubleValue(1.0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT),
+                fillNextTaglessValue(PrimitiveType.FLOAT32, IonType.FLOAT),
                 doubleValue(1.0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT64, IonType.FLOAT),
+                fillNextTaglessValue(PrimitiveType.FLOAT64, IonType.FLOAT),
                 doubleValue(1.0),
                 endStream()
             );
@@ -969,11 +969,11 @@ public class IonReaderContinuableCoreBinaryTest {
             assertSequence(
                 reader,
                 nextMacroInvocation(0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
                 symbolValue("name"),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
                 symbolValue(4),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
                 symbolValue(""),
                 endStream()
             );

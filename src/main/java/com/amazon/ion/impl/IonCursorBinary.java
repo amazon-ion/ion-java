@@ -3006,35 +3006,6 @@ class IonCursorBinary implements IonCursor {
         return slowOverflowableNextToken();
     }
 
-
-    /**
-     * The tagless primitive types supported by Ion 1.1+.
-     */
-    enum PrimitiveType {
-        UINT8(IonTypeID.TYPE_IDS_1_1[0x61], true),
-        UINT16(IonTypeID.TYPE_IDS_1_1[0x62], true),
-        UINT32(IonTypeID.TYPE_IDS_1_1[0x64], true),
-        UINT64(IonTypeID.TYPE_IDS_1_1[0x68], true),
-        FLEX_UINT(IonTypeID.TYPE_IDS_1_1[0xF6], true),
-        INT8(IonTypeID.TYPE_IDS_1_1[0x61], false),
-        INT16(IonTypeID.TYPE_IDS_1_1[0x62], false),
-        INT32(IonTypeID.TYPE_IDS_1_1[0x64], false),
-        INT64(IonTypeID.TYPE_IDS_1_1[0x68], false),
-        FLEX_INT(IonTypeID.TYPE_IDS_1_1[0xF6], false),
-        FLOAT16(IonTypeID.TYPE_IDS_1_1[0x6B], false),
-        FLOAT32(IonTypeID.TYPE_IDS_1_1[0x6C], false),
-        FLOAT64(IonTypeID.TYPE_IDS_1_1[0x6D], false),
-        COMPACT_SYMBOL(IonTypeID.TYPE_IDS_1_1[0xFA], false);
-
-        final IonTypeID typeID;
-        final boolean isUnsigned;
-
-        PrimitiveType(IonTypeID typeID, boolean isUnsigned) {
-            this.typeID = typeID;
-            this.isUnsigned = isUnsigned;
-        }
-    }
-
     /**
      * Skips any bytes remaining in the previous value, positioning the cursor on the next token.
      * @return true if not enough data was available in the stream to skip the previous value; otherwise, false.
