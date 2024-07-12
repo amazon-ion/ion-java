@@ -1466,7 +1466,7 @@ class IonRawBinaryWriterTest_1_1 {
             07 1A 2B 3C  | 3 ints
             05 4D 5E     | 2 more ints
             01           | End of expression group
-        """
+            """
         ) {
             stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             stepInExpressionGroup(true)
