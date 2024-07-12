@@ -22,14 +22,22 @@ import com.amazon.ionelement.api.ionInt
 import com.amazon.ionelement.api.ionSexpOf
 import com.amazon.ionelement.api.ionSymbol
 import java.io.ByteArrayOutputStream
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /** Helper function for creating ivm fragments for the `ion_1_*` keywords */
 fun ivm(sexp: SeqElement, major: Int, minor: Int): SeqElement {
     return ionSexpOf(listOf(ionSymbol("ivm"), ionInt(major.toLong()), ionInt(minor.toLong())), metas = sexp.metas)
 }
 
+@OptIn(ExperimentalContracts::class)
+fun AnyElement.isFragment(): Boolean {
+    contract { returns(true) implies (this@isFragment is SeqElement) }
+    return this is SeqElement && this.head in FRAGMENT_KEYWORDS
+}
+
 // All known fragment keywords
-val FRAGMENT_KEYWORDS = setOf("ivm", "text", "bytes", "toplevel", "encoding", "mactab")
+private val FRAGMENT_KEYWORDS = setOf("ivm", "text", "bytes", "toplevel", "encoding", "mactab")
 // Insert this between every fragment when transcoding to text
 val SERIALIZED_TEXT_FRAGMENT_SEPARATOR = "\n".toByteArray(Charsets.UTF_8)
 
