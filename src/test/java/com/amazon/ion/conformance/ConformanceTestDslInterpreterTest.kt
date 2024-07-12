@@ -70,8 +70,10 @@ object ConformanceTestDslInterpreterTest {
                        (text " { ")
                        (text " [ ")
                        (text " ( ")
+                       "invalid timestamp"
+                       (text "2022-99-99T")
                        (signals "something bad")))
-        """ to 3,
+        """ to 4,
         """
         (ion_1_x "a test using 'ion_1_x' to create more than one test case"
                  (text " 1 ")
