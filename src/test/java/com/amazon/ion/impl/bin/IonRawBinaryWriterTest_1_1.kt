@@ -62,7 +62,7 @@ class IonRawBinaryWriterTest_1_1 {
         if (expectedLength > 0xF) {
             // Rather than try to parse the flexuint in the output, we'll just compare them as flexuint hex strings
             // If this fails, it could be confusing. It's possible that if the length is underreported as being less
-            // than 16, that the "actualLengthBytes" could be an empty string.
+            // than 16, then the "actualLengthBytes" could be an empty string.
             val flexUIntLen = FlexInt.flexUIntLength(expectedLength.toLong())
             val flexUIntBytes = ByteArray(flexUIntLen)
             FlexInt.writeFlexIntOrUIntInto(flexUIntBytes, 0, expectedLength.toLong(), flexUIntLen)
