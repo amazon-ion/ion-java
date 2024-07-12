@@ -61,19 +61,19 @@ fun ConformanceTestBuilder.readTest(element: AnyElement): DynamicNode {
     return when (sexp.head) {
         "document" ->
             parserState.readDescription()
-                .readFragments { updateState { plusFragments(it) } }
+                .readFragmentSequence()
                 .readContinuation()
 
         "ion_1_0" ->
             parserState.updateState { plusFragment(ivm(sexp, 1, 0)) }
                 .readDescription()
-                .readFragments { updateState { plusFragments(it) } }
+                .readFragmentSequence()
                 .readContinuation()
 
         "ion_1_1" ->
             parserState.updateState { plusFragment(ivm(sexp, 1, 1)) }
                 .readDescription()
-                .readFragments { updateState { plusFragments(it) } }
+                .readFragmentSequence()
                 .readContinuation()
 
         "ion_1_x" -> {
@@ -83,10 +83,10 @@ fun ConformanceTestBuilder.readTest(element: AnyElement): DynamicNode {
                     val ion11Branch = p.updateState { plus("In Ion 1.1", ivm(sexp, 1, 1)) }
                     p.builder.buildContainer(
                         ion10Branch
-                            .readFragments { updateState { plusFragments(it) } }
+                            .readFragmentSequence()
                             .readContinuation(),
                         ion11Branch
-                            .readFragments { updateState { plusFragments(it) } }
+                            .readFragmentSequence()
                             .readContinuation(),
                     )
                 }
@@ -100,10 +100,10 @@ fun ConformanceTestBuilder.readTest(element: AnyElement): DynamicNode {
  * given in [ParserState]. Returns a [ParserState] with an updated position
  * and a list of any fragment expressions that were found.
  */
-private fun <T> ParserState.readFragments(useFragments: ParserState.(List<SeqElement>) -> T): T {
+private fun ParserState.readFragmentSequence(): ParserState {
     val fragments = sexp.tailFrom(pos)
-        .takeWhile { it is SeqElement && it.head in FRAGMENT_KEYWORDS } as List<SeqElement>
-    return this.updateState(pos = pos + fragments.size).useFragments(fragments)
+        .takeWhile { it.isFragment() } as List<SeqElement>
+    return this.updateState(pos = pos + fragments.size) { plusFragments(fragments) }
 }
 
 /**
@@ -124,20 +124,29 @@ private fun ParserState.readDescription(): ParserState {
 /** Reads a `then` clause, starting _after_ the `then` keyword. */
 private fun ParserState.readThen(): List<DynamicNode> {
     return readDescription()
-        .readFragments { frags -> updateState { plusFragments(frags) } }
+        .readFragmentSequence()
         .readContinuation()
         .let(::listOf)
 }
 
 /** Reads an `each` clause, starting _after_ the `each` keyword. */
 private fun ParserState.readEach(): List<DynamicNode> {
-    // TODO: Handle case where 0 fragments
-    return readDescription()
-        .readFragments {
-            it.mapIndexed { i, frag ->
-                updateState { plus(name = "[$i]", frag) }.readContinuation()
-            }
+    // TODO: Handle case where 0 fragments, if such a case ever gets introduced to the conformance suite
+    var currentDescription = "«${sexp.head}»"
+    var continuationPosition = pos
+    val nameFragmentPairs = mutableListOf<Pair<String, SeqElement>>()
+    for (element in sexp.tailFrom(pos)) {
+        when {
+            element is StringElement -> currentDescription = element.textValueOrNull ?: currentDescription
+            element.isFragment() -> nameFragmentPairs.add(currentDescription to element)
+            else -> break
         }
+        continuationPosition++
+    }
+
+    return nameFragmentPairs.mapIndexed { i, (name, frag) ->
+        updateState(continuationPosition) { plus(name = "$name [$i]", frag) }.readContinuation()
+    }
 }
 
 /** Reads an extension, returning a list of test case nodes constructed from those extensions. */
