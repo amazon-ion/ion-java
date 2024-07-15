@@ -1624,6 +1624,50 @@ class IonRawBinaryWriterTest_1_1 {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource(
+        "      Uint8,  ${UByte.MIN_VALUE}",
+        "      Uint8,  ${UByte.MAX_VALUE}",
+        "     Uint16, ${UShort.MIN_VALUE}",
+        "     Uint16, ${UShort.MAX_VALUE}",
+        "     Uint32,   ${UInt.MIN_VALUE}",
+        "     Uint32,   ${UInt.MAX_VALUE}",
+        "     Uint64,  ${ULong.MIN_VALUE}",
+        "     Uint64,  ${ULong.MAX_VALUE}",
+        "       Int8,   ${Byte.MIN_VALUE}",
+        "       Int8,   ${Byte.MAX_VALUE}",
+        "      Int16,  ${Short.MIN_VALUE}",
+        "      Int16,  ${Short.MAX_VALUE}",
+        "      Int32,    ${Int.MIN_VALUE}",
+        "      Int32,    ${Int.MAX_VALUE}",
+        "      Int64,   ${Long.MIN_VALUE}",
+        "      Int64,   ${Long.MAX_VALUE}",
+        "CompactUInt,                   0",
+        // There is no upper bound for CompactUInt, and no bounds at all for CompactInt
+    )
+    fun `attempting to write a tagless int that is out of bounds for its encoding primitive should throw exception`(
+        encoding: ParameterEncoding,
+        // The min or max value of that particular parameter encoding.
+        goodValue: BigInteger,
+    ) {
+        val badValue = if (goodValue > BigInteger.ZERO) goodValue + BigInteger.ONE else goodValue - BigInteger.ONE
+        val macro = dummyMacro(nArgs = 2, variadicParam(encoding))
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(badValue)
+            stepOut()
+        }
+
+        if (badValue.bitLength() < Long.SIZE_BITS) {
+            // If this bad value fits in a long, test it on the long API as well.
+            assertWriterThrows {
+                stepInEExp(0x3D, lengthPrefixed = false, macro)
+                writeInt(badValue.longValueExact())
+                stepOut()
+            }
+        }
+    }
+
     @Test
     fun `attempting to write an int when another tagless type is expected should throw exception`() {
         val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Float64))

@@ -427,15 +427,38 @@ class IonRawBinaryWriter_1_1 internal constructor(
         ifTagged = { writeIntValue(buffer, value) },
         ifTagless = { primitiveType ->
             when (primitiveType) {
-                // TODO: Do we need to check bounds?
-                PrimitiveType.UINT8 -> buffer.writeFixedIntOrUInt(value, 1)
-                PrimitiveType.UINT16 -> buffer.writeFixedIntOrUInt(value, 2)
-                PrimitiveType.UINT32 -> buffer.writeFixedIntOrUInt(value, 4)
-                PrimitiveType.UINT64 -> buffer.writeFixedIntOrUInt(value, 8)
-                PrimitiveType.FLEX_UINT -> buffer.writeFlexUInt(value)
-                PrimitiveType.INT8 -> buffer.writeFixedIntOrUInt(value, 1)
-                PrimitiveType.INT16 -> buffer.writeFixedIntOrUInt(value, 2)
-                PrimitiveType.INT32 -> buffer.writeFixedIntOrUInt(value, 4)
+                PrimitiveType.UINT8 -> {
+                    confirm((value and 0xFF) == value) { "value $value is not a valid uint8" }
+                    buffer.writeFixedIntOrUInt(value, 1)
+                }
+                PrimitiveType.UINT16 -> {
+                    confirm((value and 0xFFFF) == value) { "value $value is not a valid uint16" }
+                    buffer.writeFixedIntOrUInt(value, 2)
+                }
+                PrimitiveType.UINT32 -> {
+                    confirm((value and 0xFFFFFFFF) == value) { "value $value is not a valid uint32" }
+                    buffer.writeFixedIntOrUInt(value, 4)
+                }
+                PrimitiveType.UINT64 -> {
+                    confirm(value >= 0) { "value $value is not a valid uint64" }
+                    buffer.writeFixedIntOrUInt(value, 8)
+                }
+                PrimitiveType.FLEX_UINT -> {
+                    confirm(value >= 0) { "value $value is not a valid compact_uint" }
+                    buffer.writeFlexUInt(value)
+                }
+                PrimitiveType.INT8 -> {
+                    confirm(value.toByte().toLong() == value) { "value $value is not a value int8" }
+                    buffer.writeFixedIntOrUInt(value, 1)
+                }
+                PrimitiveType.INT16 -> {
+                    confirm(value.toShort().toLong() == value) { "value $value is not a value int16" }
+                    buffer.writeFixedIntOrUInt(value, 2)
+                }
+                PrimitiveType.INT32 -> {
+                    confirm(value.toInt().toLong() == value) { "value $value is not a value int32" }
+                    buffer.writeFixedIntOrUInt(value, 4)
+                }
                 PrimitiveType.INT64 -> buffer.writeFixedIntOrUInt(value, 8)
                 PrimitiveType.FLEX_INT -> buffer.writeFlexInt(value)
                 else -> throw IonException("Cannot write an int when the macro signature requires $primitiveType.")
@@ -447,16 +470,42 @@ class IonRawBinaryWriter_1_1 internal constructor(
         ifTagged = { writeIntValue(buffer, value) },
         ifTagless = { primitiveType ->
             when (primitiveType) {
-                // TODO: Do we need to check bounds?
-                PrimitiveType.UINT8 -> buffer.writeFixedIntOrUInt(value.toLong(), 1)
-                PrimitiveType.UINT16 -> buffer.writeFixedIntOrUInt(value.toLong(), 2)
-                PrimitiveType.UINT32 -> buffer.writeFixedIntOrUInt(value.toLong(), 4)
-                PrimitiveType.UINT64 -> buffer.writeFixedIntOrUInt(value.toLong(), 8)
-                PrimitiveType.FLEX_UINT -> buffer.writeFlexUInt(value)
-                PrimitiveType.INT8 -> buffer.writeFixedIntOrUInt(value.toLong(), 1)
-                PrimitiveType.INT16 -> buffer.writeFixedIntOrUInt(value.toLong(), 2)
-                PrimitiveType.INT32 -> buffer.writeFixedIntOrUInt(value.toLong(), 4)
-                PrimitiveType.INT64 -> buffer.writeFixedIntOrUInt(value.toLong(), 8)
+                PrimitiveType.UINT8 -> {
+                    confirm(value.signum() >= 0 && value.bitLength() <= 8) { "value $value is not a value uint8" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 1)
+                }
+                PrimitiveType.UINT16 -> {
+                    confirm(value.signum() >= 0 && value.bitLength() <= 16) { "value $value is not a value uint16" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 2)
+                }
+                PrimitiveType.UINT32 -> {
+                    confirm(value.signum() >= 0 && value.bitLength() <= 32) { "value $value is not a value uint32" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 4)
+                }
+                PrimitiveType.UINT64 -> {
+                    confirm(value.signum() >= 0 && value.bitLength() <= 64) { "value $value is not a value uint64" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 8)
+                }
+                PrimitiveType.FLEX_UINT -> {
+                    confirm(value.signum() >= 0) { "value $value is not a value compact_uint" }
+                    buffer.writeFlexUInt(value)
+                }
+                PrimitiveType.INT8 -> {
+                    confirm(value.bitLength() < 8) { "value $value is not a value int8" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 1)
+                }
+                PrimitiveType.INT16 -> {
+                    confirm(value.bitLength() < 16) { "value $value is not a value int16" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 2)
+                }
+                PrimitiveType.INT32 -> {
+                    confirm(value.bitLength() < 32) { "value $value is not a value int32" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 4)
+                }
+                PrimitiveType.INT64 -> {
+                    confirm(value.bitLength() < 64) { "value $value is not a value int64" }
+                    buffer.writeFixedIntOrUInt(value.toLong(), 8)
+                }
                 PrimitiveType.FLEX_INT -> buffer.writeFlexInt(value)
                 else -> throw IonException("Cannot write an int when the macro signature requires $primitiveType.")
             }
@@ -480,6 +529,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
         ifTagless = { primitiveType ->
             when (primitiveType) {
                 PrimitiveType.FLOAT16 -> TODO("Writing FLOAT16 not supported yet")
+                // Bounds check for Double->Float would be surprising to some users since floating point numbers
+                // normally just accept loss of precision for amy operations instead of throwing and Exception.
                 PrimitiveType.FLOAT32 -> buffer.writeFixedIntOrUInt(floatToIntBits(value.toFloat()).toLong(), 4)
                 PrimitiveType.FLOAT64 -> buffer.writeFixedIntOrUInt(doubleToRawLongBits(value), 8)
                 else -> throw IonException("Cannot write a float when the macro signature requires $primitiveType.")
