@@ -1862,7 +1862,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
     boolean uncheckedSkipRemainingDelimitedContainerElements_1_1() {
-        // TODO this needs to be updated ot handle the case where the container contains non-prefixed macro invocations,
+        // TODO this needs to be updated to handle the case where the container contains non-prefixed macro invocations,
         //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
         while (event != Event.END_CONTAINER) {
             event = Event.NEEDS_DATA;
