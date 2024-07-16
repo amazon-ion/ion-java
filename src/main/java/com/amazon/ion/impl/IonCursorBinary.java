@@ -177,6 +177,32 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Marks an argument group.
+     */
+    private static class ArgumentGroupMarker {
+
+        /**
+         * Marks the start index of the current page in the argument group.
+         */
+        long pageStartIndex = -1;
+
+        /**
+         * Marks the end index of the current page in the argument group. If -1, this indicates that the argument
+         * group is delimited and the end of the page has not yet been found.
+         */
+        long pageEndIndex = -1;
+
+        /**
+         * For tagless groups, the primitive type of the tagless values in the group; otherwise, null. When null,
+         * there is always a single page of values in the group, and the end is reached either when an end delimiter
+         * is found (for delimited groups), or when the cursor's `peekIndex` reaches `pageEndIndex`. When non-null,
+         * there may be multiple pages of tagless values in the group; whenever the cursor reaches `pageEndIndex`, it
+         * must read a FlexUInt at that position to calculate the end index of the next page.
+         */
+        PrimitiveType primitiveType = null;
+    }
+
+    /**
      * Dummy state that indicates the cursor has been terminated and that additional API calls will have no effect.
      */
     private static final RefillableState TERMINATED_STATE = new RefillableState(null, -1, -1, State.TERMINATED);
@@ -195,6 +221,9 @@ class IonCursorBinary implements IonCursor {
      * The Marker representing the parent container of the current value.
      */
     Marker parent = null;
+
+    ArgumentGroupMarker[] argumentGroupStack = new ArgumentGroupMarker[CONTAINER_STACK_INITIAL_CAPACITY];
+    int argumentGroupIndex = -1;
 
     /**
      * The start offset into the user-provided byte array, or 0 if the user provided an InputStream.
@@ -388,6 +417,10 @@ class IonCursorBinary implements IonCursor {
             containerStack[i] = new Marker(-1, -1);
         }
 
+        for (int i = 0; i < CONTAINER_STACK_INITIAL_CAPACITY; i++) {
+            argumentGroupStack[i] = new ArgumentGroupMarker();
+        }
+
         this.buffer = buffer;
         this.startOffset = offset;
         this.offset = offset;
@@ -518,6 +551,10 @@ class IonCursorBinary implements IonCursor {
 
         for (int i = 0; i < CONTAINER_STACK_INITIAL_CAPACITY; i++) {
             containerStack[i] = new Marker(-1, -1);
+        }
+
+        for (int i = 0; i < CONTAINER_STACK_INITIAL_CAPACITY; i++) {
+            argumentGroupStack[i] = new ArgumentGroupMarker();
         }
 
         this.buffer = new byte[configuration.getInitialBufferSize()];
@@ -1824,7 +1861,9 @@ class IonCursorBinary implements IonCursor {
      * Skips past the remaining elements of the current delimited container.
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
-    boolean skipRemainingDelimitedContainerElements_1_1() {
+    boolean uncheckedSkipRemainingDelimitedContainerElements_1_1() {
+        // TODO this needs to be updated to handle the case where the container contains non-prefixed macro invocations,
+        //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
         while (event != Event.END_CONTAINER) {
             event = Event.NEEDS_DATA;
             while (uncheckedNextToken());
@@ -1841,6 +1880,8 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
     private boolean slowSkipRemainingDelimitedContainerElements_1_1() {
+        // TODO this needs to be updated ot handle the case where the container contains non-prefixed macro invocations,
+        //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
         while (event != Event.END_CONTAINER) {
             slowNextToken();
             if (event == Event.START_CONTAINER && valueMarker.endIndex == DELIMITED_MARKER) {
@@ -2523,6 +2564,30 @@ class IonCursorBinary implements IonCursor {
         parent = containerStack[containerIndex];
     }
 
+
+    /**
+     * Doubles the size of the cursor's argument group stack.
+     */
+    private void growArgumentGroupStack() {
+        ArgumentGroupMarker[] newStack = new ArgumentGroupMarker[argumentGroupStack.length * 2];
+        System.arraycopy(argumentGroupStack, 0, newStack, 0, argumentGroupStack.length);
+        for (int i = argumentGroupStack.length; i < newStack.length; i++) {
+            newStack[i] = new ArgumentGroupMarker();
+        }
+        argumentGroupStack = newStack;
+    }
+
+    /**
+     * Push a Marker representing the current argument group onto the stack.
+     * @return the marker at the new top of the stack.
+     */
+    private ArgumentGroupMarker pushArgumentGroup() {
+        if (++argumentGroupIndex >= argumentGroupStack.length) {
+            growArgumentGroupStack();
+        }
+        return argumentGroupStack[argumentGroupIndex];
+    }
+
     /**
      * Step into the current container.
      */
@@ -2608,7 +2673,7 @@ class IonCursorBinary implements IonCursor {
         }
         // Seek past the remaining bytes at this depth and pop from the stack.
         if (parent.endIndex == DELIMITED_MARKER) {
-            if (skipRemainingDelimitedContainerElements_1_1()) {
+            if (uncheckedSkipRemainingDelimitedContainerElements_1_1()) {
                 return event;
             }
         } else {
@@ -2840,6 +2905,8 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream; otherwise, false.
      */
     private boolean slowSkipRemainingValueBytes() {
+        // TODO this needs to be updated ot handle the case where the value is a non-prefixed macro invocation,
+        //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
         if (valueMarker.endIndex == DELIMITED_MARKER && valueTid != null && valueTid.isDelimited) {
             seekPastDelimitedContainer_1_1();
             if (event == Event.NEEDS_DATA) {
@@ -3035,20 +3102,14 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Advances the cursor to the next value, assuming that it is tagless with the given type, skipping the current
-     * value (if any). This method may return:
-     * <ul>
-     *     <li>NEEDS_DATA, if not enough data is available in the stream</li>
-     *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
-     * </ul>
-     * @param primitiveType the {@link PrimitiveType} of the tagless value on which to position the cursor.
-     * @return an Event conveying the result of the operation.
+     * Skips any bytes remaining in the current token, positioning the cursor on the first byte of the next token.
+     * @return true if not enough data was available in the stream to skip the previous value; otherwise, false.
      */
-    public Event nextTaglessValue(PrimitiveType primitiveType) {
+    private boolean skipToNextToken() {
         event = Event.NEEDS_DATA;
         if (isSlowMode) {
             if (slowSkipToNextToken()) {
-                return event;
+                return true;
             }
         } else {
             if (peekIndex < valueMarker.endIndex) {
@@ -3061,6 +3122,23 @@ class IonCursorBinary implements IonCursor {
             reportConsumedData();
         }
         reset();
+        return false;
+    }
+
+    /**
+     * Advances the cursor to the next value, assuming that it is tagless with the given type, skipping the current
+     * value (if any). This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream</li>
+     *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
+     * </ul>
+     * @param primitiveType the {@link PrimitiveType} of the tagless value on which to position the cursor.
+     * @return an Event conveying the result of the operation.
+     */
+    public Event nextTaglessValue(PrimitiveType primitiveType) {
+        if (skipToNextToken()) {
+            return event;
+        }
         taglessType = primitiveType;
         valueTid = primitiveType.typeID;
         valueMarker.typeId = valueTid;
@@ -3102,6 +3180,317 @@ class IonCursorBinary implements IonCursor {
         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
         event = Event.NEEDS_INSTRUCTION;
         return event;
+    }
+
+    /**
+     * Reads the group continuation FlexUInt on which the cursor is currently positioned.
+     * @return the value of the continuation, or -1 if the end of the stream was reached.
+     */
+    private long readGroupContinuation() {
+        long groupContinuation;
+        if (isSlowMode) {
+            groupContinuation = slowReadFlexUInt_1_1();
+            if (groupContinuation < 0) {
+                return -1;
+            }
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+        } else {
+            groupContinuation = uncheckedReadFlexUInt_1_1();
+        }
+        return groupContinuation;
+    }
+
+    /**
+     * Positions the cursor after the previous token, then enters the tagged argument group that occurs at that
+     * position. It is up to the caller to ensure that a group actually exists at that location. This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream to complete the operation.</li>
+     *     <li>NEEDS_INSTRUCTION, if the cursor successfully entered the argument group. Subsequently, the user must
+     *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
+     * </ul>
+     * @return an Event conveying the result of the operation.
+     */
+    public Event enterTaggedArgumentGroup() {
+        if (skipToNextToken()) {
+            return event;
+        }
+        long groupContinuation = readGroupContinuation();
+        if (groupContinuation < 0) {
+            return event;
+        }
+        ArgumentGroupMarker group = pushArgumentGroup();
+        group.pageStartIndex = peekIndex;
+        if (groupContinuation == 0) {
+            // Delimited argument group.
+            group.pageEndIndex = -1;
+        } else {
+            group.pageEndIndex = peekIndex + groupContinuation;
+        }
+        group.primitiveType = null;
+        valueMarker.endIndex = peekIndex;
+        event = Event.NEEDS_INSTRUCTION;
+        return event;
+    }
+
+    /**
+     * Positions the cursor after the previous token, then enters the tagless argument group that occurs at that
+     * position. It is up to the caller to ensure that a group actually exists at that location. This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream to complete the operation.</li>
+     *     <li>NEEDS_INSTRUCTION, if the cursor successfully entered the argument group. Subsequently, the user must
+     *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
+     * </ul>
+     * @param primitiveType the primitive type of the values in the group.
+     * @return an Event conveying the result of the operation.
+     */
+    public Event enterTaglessArgumentGroup(PrimitiveType primitiveType) {
+        if (skipToNextToken()) {
+            return event;
+        }
+        long indexBeforeFirstContinuation = peekIndex;
+        long groupContinuation = readGroupContinuation();
+        if (groupContinuation < 0) {
+            return event;
+        }
+        if (groupContinuation == 0) {
+            // This is an empty group. Rather than storing extra state to track this rare special case, simply
+            // rewind and cause the continuation to be read again during nextGroupedValue().
+            peekIndex = indexBeforeFirstContinuation;
+        }
+        ArgumentGroupMarker group = pushArgumentGroup();;
+        group.pageStartIndex = peekIndex;
+        group.pageEndIndex = peekIndex + groupContinuation;
+        group.primitiveType = primitiveType;
+        valueMarker.endIndex = peekIndex;
+        event = Event.NEEDS_INSTRUCTION;
+        return event;
+    }
+
+    /**
+     * Attempts to fill the current page of the current argument group. This should only be called when it has been
+     * determined that the page is not already buffered in its entirety.
+     * @param group the group containing the page to fill.
+     * @return true if not enough data was available to fill the page; otherwise, false.
+     * @throws IonException if the cursor is not in 'slow' mode, indicating unexpected EOF.
+     */
+    private boolean fillArgumentGroupPage(ArgumentGroupMarker group) {
+        if (isSlowMode) {
+            // Fill the entire page.
+            if (!fillAt(group.pageStartIndex, group.pageEndIndex - group.pageStartIndex)) {
+                event = Event.NEEDS_DATA;
+                return true;
+            }
+            // TODO performance: exit slow mode until the page is finished.
+        } else {
+            throw new IonException("Unexpected EOF: argument group extended beyond the end of the buffer.");
+        }
+        return false;
+    }
+
+    /**
+     * Positions the cursor on the next value in the tagged group. Upon return, the value will be filled and
+     * `valueMarker` set to the value's start and end indices.
+     * @param group the group to which the value belongs.
+     * @return an Event conveying the result of the operation.
+     */
+    private Event nextGroupedTaggedValue(ArgumentGroupMarker group) {
+        boolean isUserValue; // if false, the header represents no-op padding
+        if (group.pageEndIndex < 0) {
+            // Delimited.
+            int b;
+            if (isSlowMode) {
+                b = slowReadByte();
+                if (b < 0) {
+                    event = Event.NEEDS_DATA;
+                    return event;
+                }
+                if (b == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
+                    group.pageEndIndex = peekIndex;
+                    setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+                    event = Event.NEEDS_INSTRUCTION;
+                    return event;
+                }
+                isUserValue = slowReadHeader(b, false, valueMarker);
+            } else {
+                b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
+                if (b == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
+                    group.pageEndIndex = peekIndex;
+                    event = Event.NEEDS_INSTRUCTION;
+                    return event;
+                }
+                isUserValue = uncheckedReadHeader(b, false, valueMarker);
+            }
+        } else {
+            if (peekIndex == group.pageEndIndex) {
+                // End of the group
+                event = Event.NEEDS_INSTRUCTION;
+                return event;
+            }
+            if (group.pageEndIndex > limit && fillArgumentGroupPage(group)) {
+                return event;
+            }
+            isUserValue = uncheckedReadHeader(buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK, false, valueMarker);
+        }
+        valueTid = valueMarker.typeId;
+        if (!isUserValue) {
+            throw new IonException("No-op padding is not currently supported in argument groups.");
+        }
+        return event;
+    }
+
+    /**
+     * Positions the cursor on the next value in the tagless group. Upon return, the value will be filled and
+     * `valueMarker` set to the value's start and end indices.
+     * @param group the group to which the value belongs.
+     * @return an Event conveying the result of the operation.
+     */
+    private Event nextGroupedTaglessValue(ArgumentGroupMarker group) {
+        if (peekIndex == group.pageEndIndex) {
+            // End of the page.
+            long continuation = readGroupContinuation();
+            if (continuation == 0) {
+                // End of the group
+                event = Event.NEEDS_INSTRUCTION;
+                return event;
+            }
+            group.pageEndIndex = peekIndex + continuation;
+        }
+        if (group.pageEndIndex > limit && fillArgumentGroupPage(group)) {
+            return event;
+        }
+        // TODO performance: for fixed-width tagless types, the following could be skipped after the first value.
+        nextTaglessValue(group.primitiveType);
+        return event;
+    }
+
+    /**
+     * Positions the cursor on the next value in the group. Upon return, the value will be filled and `valueMarker` set
+     * to the value's start and end indices. This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream</li>
+     *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
+     *     <li>START_CONTAINER, if the reader is now positioned on a container value</li>
+     *     <li>NEEDS_INSTRUCTION, if the cursor reached the end of the argument group. Subsequently, the caller must
+     *     call {@link #exitArgumentGroup()}.</li>
+     * </ul>
+     * @return an Event conveying the result of the operation.
+     */
+    public Event nextGroupedValue() {
+        ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
+        if (peekIndex < valueMarker.endIndex) {
+            peekIndex = valueMarker.endIndex;
+        }
+        if (group.primitiveType == null) {
+            return nextGroupedTaggedValue(group);
+        }
+        return nextGroupedTaglessValue(group);
+    }
+
+    /**
+     * Seeks the cursor to the end of the current page of the argument group.
+     * @param group the group in which to seek.
+     * @return true if there was not enough data to complete the seek; otherwise, false.
+     */
+    private boolean seekToEndOfArgumentGroupPage(ArgumentGroupMarker group) {
+        if (isSlowMode) {
+            if (slowSeek(group.pageEndIndex - offset)) {
+                return true;
+            }
+            peekIndex = offset;
+        } else {
+            peekIndex = group.pageEndIndex;
+        }
+        return false;
+    }
+
+    // Dummy delimited container to be used when seeking forward to a delimited end marker of a synthetic container,
+    // like an argument group.
+    private static final IonTypeID DUMMY_DELIMITED_CONTAINER = TYPE_IDS_1_1[OpCodes.DELIMITED_SEXP & SINGLE_BYTE_MASK];
+
+    /**
+     * Seeks to the end of the current delimited argument group.
+     * @return true if not enough data was available to complete the seek; otherwise, false.
+     */
+    private boolean seekToEndOfDelimitedArgumentGroup() {
+        // Push a dummy delimited container onto the stack, preparing the cursor to seek forward to the delimited end
+        // marker applicable at the current depth.
+        pushContainer();
+        parent.endIndex = -1;
+        parent.typeId = DUMMY_DELIMITED_CONTAINER;
+        boolean isEof;
+        if (isSlowMode) {
+            isEof = slowSkipRemainingDelimitedContainerElements_1_1();
+        } else {
+            isEof = uncheckedSkipRemainingDelimitedContainerElements_1_1();
+        }
+        // Pop the dummy delimited container from the stack.
+        if (--containerIndex >= 0) {
+            parent = containerStack[containerIndex];
+        } else {
+            parent = null;
+            containerIndex = -1;
+        }
+        return isEof;
+    }
+
+    /**
+     * Exits the cursor's current tagged argument group.
+     * @param group the group to exit.
+     * @return an Event conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
+     */
+    private Event exitTaggedArgumentGroup(ArgumentGroupMarker group) {
+        if (group.pageEndIndex < 0) {
+            if (seekToEndOfDelimitedArgumentGroup()) {
+                return event;
+            }
+        } else if (seekToEndOfArgumentGroupPage(group)) {
+            return event;
+        }
+        event = Event.NEEDS_INSTRUCTION;
+        return event;
+    }
+
+    /**
+     * Exits the cursor's current tagless argument group.
+     * @param group the group to exit.
+     * @return an Event conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
+     */
+    private Event exitTaglessArgumentGroup(ArgumentGroupMarker group) {
+        long continuation = -1;
+        while (continuation != 0) {
+            if (seekToEndOfArgumentGroupPage(group)) {
+                return event;
+            }
+            continuation = readGroupContinuation();
+            if (continuation < 0) {
+                return event;
+            }
+            group.pageEndIndex = peekIndex + continuation;
+        }
+        event = Event.NEEDS_INSTRUCTION;
+        return event;
+    }
+
+    /**
+     * Exits the cursor's current argument group. This method may return:
+     * <ul>
+     *     <li>NEEDS_DATA, if not enough data is available in the stream to exit the group.</li>
+     *     <li>NEEDS_INSTRUCTION, if the cursor successfully exited the argument group. Subsequently, the user must
+     *     invoke a method on the cursor to position it on the next value.</li>
+     * </ul>
+     * @return an Event conveying the result of the operation.
+     */
+    public Event exitArgumentGroup() {
+        ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
+        if (group.pageEndIndex >= 0 && peekIndex >= group.pageEndIndex) {
+            event = Event.NEEDS_INSTRUCTION;
+            return event;
+        }
+        event = Event.NEEDS_DATA;
+        if (group.primitiveType == null) {
+            return exitTaggedArgumentGroup(group);
+        }
+        return exitTaglessArgumentGroup(group);
     }
 
     @Override
@@ -3282,6 +3671,7 @@ class IonCursorBinary implements IonCursor {
         }
         buffer = null;
         containerStack = null;
+        argumentGroupStack = null;
         byteBuffer = null;
         terminate();
     }
