@@ -1605,20 +1605,45 @@ class IonRawBinaryWriterTest_1_1 {
             writeInt(value)
             stepOut()
         }
+        // ...and again using writeInt(BigInteger)
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(value.toBigInteger())
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        // These tests are intentionally limited. Full testing of int logic is in `IonEncoder_1_1Test` and `WriteBufferTest`
+        // Primitive, Ints to write, expression group bytes
+        "      Uint8, 0 1,        05 00 01 01",
+        "     Uint16, 0 1,        09 00 00 01 00 01",
+        "     Uint32, 0 1,        11 00 00 00 00 01 00 00 00 01",
+        "     Uint64, 0 1,        21 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01",
+        "CompactUInt, 0 1 256,    09 01 03 02 04 01",
+        "       Int8, -1 0 1,     07 FF 00 01 01",
+        "      Int16, -1 0 1,     0D FF FF 00 00 01 00 01",
+        "      Int32, -1 0 1,     19 FF FF FF FF 00 00 00 00 01 00 00 00 01",
+        "      Int64, -1 0 1,     31 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01",
+        " CompactInt, -1 0 1 256, 0B FF 01 03 02 04 01",
+    )
+    fun `write a tagless int in an expression group`(encoding: ParameterEncoding, values: String, expressionGroupBytes: String) {
+        val longValues = values.split(" ").map { it.toLong() }
+        val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
         // Write the value in expression group
-        assertWriterOutputEquals("3D 02 05 $expectedBytes $expectedBytes 01") {
+        assertWriterOutputEquals("3D 02 $expressionGroupBytes") {
             stepInEExp(0x3D, lengthPrefixed = false, macro)
             stepInExpressionGroup(true)
-            writeInt(value)
-            writeInt(value)
+            longValues.forEach { writeInt(it) }
             stepOut()
             stepOut()
         }
-        // Convert to BigInteger before writing the value
-        assertWriterOutputEquals("3D 02 03 $expectedBytes 01") {
+        // ...and again using writeInt(BigInteger)
+        assertWriterOutputEquals("3D 02 $expressionGroupBytes") {
             stepInEExp(0x3D, lengthPrefixed = false, macro)
             stepInExpressionGroup(true)
-            writeInt(value.toBigInteger())
+            longValues.forEach { writeInt(it.toBigInteger()) }
             stepOut()
             stepOut()
         }
@@ -1706,8 +1731,42 @@ class IonRawBinaryWriterTest_1_1 {
             writeFloat(value)
             stepOut()
         }
+        // ...and again using writeFloat(Double)
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeFloat(value.toDouble())
+            stepOut()
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @ParameterizedTest
+    @CsvSource(
+        // These tests are intentionally limited. Full testing of float logic is in `IonEncoder_1_1Test`
+        // TODO: Float16 cases, once Float16 is supported
+        "Float32,       0.0, 00 00 00 00",
+        "Float32,       1.0, 00 00 80 3F",
+        "Float32,       NaN, 00 00 C0 7F",
+        "Float32,  Infinity, 00 00 80 7F",
+        "Float32, -Infinity, 00 00 80 FF",
+        "Float64,       0.0, 00 00 00 00 00 00 00 00",
+        "Float64,       1.0, 00 00 00 00 00 00 F0 3F",
+        "Float64,       NaN, 00 00 00 00 00 00 F8 7F",
+        "Float64,  Infinity, 00 00 00 00 00 00 F0 7F",
+        "Float64, -Infinity, 00 00 00 00 00 00 F0 FF",
+    )
+    fun `write a tagless float in an expression group`(encoding: ParameterEncoding, value: Float, expectedBytes: String) {
+        val taglessTypeByteSize = when (encoding) {
+            ParameterEncoding.Float16 -> 2
+            ParameterEncoding.Float32 -> 4
+            ParameterEncoding.Float64 -> 8
+            else -> TODO("Other types not supported in this test.")
+        }
+        val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
+        // For small numbers, we can use x*2+1 to calculate the FlexUInt encoding
+        val lengthByte = ((taglessTypeByteSize + taglessTypeByteSize) * 2 + 1).toByte().toHexString(HexFormat.UpperCase)
         // Write the value twice in expression group
-        assertWriterOutputEquals("3D 02 05 $expectedBytes $expectedBytes 01") {
+        assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
             stepInEExp(0x3D, lengthPrefixed = false, macro)
             stepInExpressionGroup(true)
             writeFloat(value)
@@ -1715,10 +1774,11 @@ class IonRawBinaryWriterTest_1_1 {
             stepOut()
             stepOut()
         }
-        // Convert to double before writing the value
-        assertWriterOutputEquals("3D 02 03 $expectedBytes 01") {
+        // ...and again using writeFloat(Double)
+        assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
             stepInEExp(0x3D, lengthPrefixed = false, macro)
             stepInExpressionGroup(true)
+            writeFloat(value.toDouble())
             writeFloat(value.toDouble())
             stepOut()
             stepOut()
@@ -1740,6 +1800,7 @@ class IonRawBinaryWriterTest_1_1 {
         }
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     @ParameterizedTest
     @CsvSource(
         // SID
@@ -1764,18 +1825,14 @@ class IonRawBinaryWriterTest_1_1 {
             stepOut()
         }
         // Write the value twice in expression group
-        assertWriterOutputEquals("3D 02 05 $expectedBytes $expectedBytes 01") {
+        // For small numbers, we can use x*2+1 to calculate the FlexUInt encoding
+        // Also, it conveniently happens that once the white-space is removed, the number of characters is
+        // equal to the number of bytes to write the values twice.
+        val lengthByte = ((expectedBytes.replace(" ", "").length) * 2 + 1).toByte().toHexString(HexFormat.UpperCase)
+        assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
             stepInEExp(0x3D, lengthPrefixed = false, macro)
             stepInExpressionGroup(true)
             writeTheValue()
-            writeTheValue()
-            stepOut()
-            stepOut()
-        }
-        // Convert to double before writing the value
-        assertWriterOutputEquals("3D 02 03 $expectedBytes 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
-            stepInExpressionGroup(true)
             writeTheValue()
             stepOut()
             stepOut()

@@ -698,16 +698,16 @@ class IonRawBinaryWriter_1_1 internal constructor(
     fun continueExpressionGroup() {
         confirm(currentContainer.type == EXPR_GROUP) { "Can only call this method when directly in an expression group." }
         val primitiveType = currentContainer.primitiveType
-        if (currentContainer.isDelimited && primitiveType != null && currentContainer.numChildren > 0) {
+        if (currentContainer.isDelimited && primitiveType != null && currentContainer.length > 0) {
             var thisContainerTotalLength = currentContainer.length
-            thisContainerTotalLength += writeCurrentContainerLength(
-                lengthPrefixPreallocation,
-                lengthToWrite = currentContainer.numChildren.toLong(),
-            )
-            currentContainer.reset(EXPR_GROUP, buffer.position(), isDelimited = true, metadataOffset = 0)
+            val thisContainerNumChildren = currentContainer.numChildren
+            thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
+            containerStack.pop()
+            containerStack.peek().length += thisContainerTotalLength
+            currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), isDelimited = true, metadataOffset = 0) }
             currentContainer.primitiveType = primitiveType
-            // Carry over the length into the next segment (but not numChildren)
-            currentContainer.length = thisContainerTotalLength
+            // Carry over numChildren into the next segment (but not length)
+            currentContainer.numChildren = thisContainerNumChildren
             // Reserve for the next pre-allocation
             buffer.reserve(1)
         }
@@ -779,26 +779,23 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 // TODO: Consider whether we can rewrite groups that have only one expression as a single expression
 
                 // Elide empty containers if we're going to be writing a presence bitmap
-                if (currentContainer.length == 0L && presenceBitmapStack.peek().byteSize > 0) {
+                if (currentContainer.numChildren == 0 && presenceBitmapStack.peek().byteSize > 0) {
                     // NOTE: This check is safe after calling `continueExpressionGroup` because that function
-                    //       only resets the number of children, not the container length.
+                    //       only resets the container length, not the number of children.
 
                     // It is not always safe to truncate like this without clearing the patch points for the
                     // truncated part of the buffer. However, it is safe to do so here because we can only get to
                     // this particular branch if this expression group is empty, ergo it contains no patch points.
                     buffer.truncate(currentContainer.position)
                     thisContainerTotalLength = 0
-                } else if (isTagless && currentContainer.numChildren == 0) {
+                } else if (isTagless && currentContainer.length == 0L) {
                     // If we've called `continueExpressionGroup` and then `stepOut` without adding any more items...
                     buffer.truncate(currentContainer.position)
                     buffer.writeByte(FlexInt.ZERO)
                     thisContainerTotalLength++
                 } else if (isTagless) {
                     // End tagless group -- write the number of expressions, end with FlexUInt 0
-                    thisContainerTotalLength += writeCurrentContainerLength(
-                        lengthPrefixPreallocation,
-                        lengthToWrite = currentContainer.numChildren.toLong(),
-                    )
+                    thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     buffer.writeByte(FlexInt.ZERO)
                     thisContainerTotalLength++
                 } else if (currentContainer.isDelimited) {
@@ -837,9 +834,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
      *
      * @param numPreAllocatedLengthPrefixBytes the number of bytes that were pre-allocated for the length prefix of the
      *                                         current container.
-     * @param lengthToWrite the value to write as the length. Defaults to [ContainerInfo.length] of [currentContainer].
      */
-    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int, lengthToWrite: Long = currentContainer.length): Int {
+    private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int): Int {
+        val lengthToWrite = currentContainer.length
         val lengthPosition = currentContainer.position + currentContainer.metadataOffset
         val lengthPrefixBytesRequired = FlexInt.flexUIntLength(lengthToWrite)
         if (lengthPrefixBytesRequired == numPreAllocatedLengthPrefixBytes) {
