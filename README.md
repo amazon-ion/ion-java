@@ -1,9 +1,9 @@
-# Amazon Ion Java
-A Java implementation of the [Ion data notation](https://amazon-ion.github.io/ion-docs).
-
 ![Build Status](https://github.com/amazon-ion/ion-java/actions/workflows/main.yml/badge.svg)
 ![Maven Central Version](https://img.shields.io/maven-central/v/com.amazon.ion/ion-java)
 [![Javadoc](https://javadoc.io/badge2/com.amazon.ion/ion-java/javadoc.svg)](https://javadoc.io/doc/com.amazon.ion/ion-java) 
+
+# Amazon Ion Java
+A Java implementation of the [Ion data notation](https://amazon-ion.github.io/ion-docs).
 
 ## Setup
 This repository contains a [git submodule](https://git-scm.com/docs/git-submodule)
