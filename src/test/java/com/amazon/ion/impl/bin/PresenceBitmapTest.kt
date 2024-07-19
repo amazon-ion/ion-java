@@ -19,10 +19,10 @@ class PresenceBitmapTest {
         val taggedExactlyOne = Parameter("b", ParameterEncoding.Tagged, ParameterCardinality.ExactlyOne)
         val taggedZeroOrOne = Parameter("c", ParameterEncoding.Tagged, ParameterCardinality.ZeroOrOne)
         val taggedOneToMany = Parameter("d", ParameterEncoding.Tagged, ParameterCardinality.OneOrMore)
-        val taglessZeroToMany = Parameter("e", ParameterEncoding.uint8, ParameterCardinality.ZeroOrMore)
-        val taglessExactlyOne = Parameter("f", ParameterEncoding.uint8, ParameterCardinality.ExactlyOne)
-        val taglessZeroOrOne = Parameter("g", ParameterEncoding.uint8, ParameterCardinality.ZeroOrOne)
-        val taglessOneToMany = Parameter("h", ParameterEncoding.uint8, ParameterCardinality.OneOrMore)
+        val taglessZeroToMany = Parameter("e", ParameterEncoding.Uint8, ParameterCardinality.ZeroOrMore)
+        val taglessExactlyOne = Parameter("f", ParameterEncoding.Uint8, ParameterCardinality.ExactlyOne)
+        val taglessZeroOrOne = Parameter("g", ParameterEncoding.Uint8, ParameterCardinality.ZeroOrOne)
+        val taglessOneToMany = Parameter("h", ParameterEncoding.Uint8, ParameterCardinality.OneOrMore)
     }
 
     @Test
@@ -100,7 +100,7 @@ class PresenceBitmapTest {
         "OneOrMore, 3, false",
     )
     fun `validate() correctly throws exception when presence bits are invalid for signature`(cardinality: ParameterCardinality, presenceValue: Long, isValid: Boolean) {
-        val signature = listOf(Parameter("a", ParameterEncoding.uint8, cardinality))
+        val signature = listOf(Parameter("a", ParameterEncoding.Uint8, cardinality))
         with(PresenceBitmap()) {
             initialize(signature)
             set(0, presenceValue)

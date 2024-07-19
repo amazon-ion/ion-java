@@ -5,6 +5,8 @@ package com.amazon.ion.impl.bin
 import com.amazon.ion.*
 import com.amazon.ion.TestUtils.*
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl.macro.*
+import com.amazon.ion.impl.macro.Macro.*
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -40,8 +42,38 @@ class IonRawBinaryWriterTest_1_1 {
      *                 The string may contain multiple lines. Anything after a `|` character on a line is ignored, so
      *                 you can use `|` to add comments.
      */
+    @OptIn(ExperimentalStdlibApi::class)
     private inline fun assertWriterOutputEquals(hexBytes: String, autoClose: Boolean = true, block: IonRawBinaryWriter_1_1.() -> Unit) {
+        val cleanedHexBytes = cleanCommentedHexBytes(hexBytes)
         assertEquals(cleanCommentedHexBytes(hexBytes), writeAsHexString(autoClose, block))
+
+        // Also check to see that the correct number of bytes are being reported to an enclosing container
+        val expectedLength = if (cleanedHexBytes.isBlank()) 0 else cleanedHexBytes.split(' ').size
+        val actualByteString = writeAsHexString(autoClose) {
+            try {
+                stepInList(delimited = false)
+                block()
+                stepOut()
+            } catch (t: Throwable) {
+                // It's illegal to wrap `block()` in a list, so we'll just skip this check.
+                return
+            }
+        }
+        if (expectedLength > 0xF) {
+            // Rather than try to parse the flexuint in the output, we'll just compare them as flexuint hex strings
+            // If this fails, it could be confusing. It's possible that if the length is underreported as being less
+            // than 16, then the "actualLengthBytes" could be an empty string.
+            val flexUIntLen = FlexInt.flexUIntLength(expectedLength.toLong())
+            val flexUIntBytes = ByteArray(flexUIntLen)
+            FlexInt.writeFlexIntOrUIntInto(flexUIntBytes, 0, expectedLength.toLong(), flexUIntLen)
+            val byteString = flexUIntBytes.joinToString(" ") { it.toHexString(HexFormat.UpperCase) }
+            val actualLengthBytes = actualByteString.drop(3).dropLast(expectedLength * 3)
+            assertEquals(byteString, actualLengthBytes)
+        } else {
+            // Take the length from the opcode and compare with the length we calculated
+            val actualLen = "${actualByteString[1]}".toInt(radix = 0x10) // Fun fact! Every radix is 10 unless you write it in another base.
+            assertEquals(expectedLength, actualLen)
+        }
     }
 
     private inline fun assertWriterThrows(block: IonRawBinaryWriter_1_1.() -> Unit) {
@@ -704,6 +736,16 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
+    fun `attempting to write negative SID annotations should throw exception`() {
+        assertWriterThrows { writeAnnotations(-1) }
+        assertWriterThrows { writeAnnotations(-1, 2) }
+        assertWriterThrows { writeAnnotations(1, -2) }
+        assertWriterThrows { writeAnnotations(intArrayOf(-1, 2, 3)) }
+        assertWriterThrows { writeAnnotations(intArrayOf(1, -2, 3)) }
+        assertWriterThrows { writeAnnotations(intArrayOf(1, 2, -3)) }
+    }
+
+    @Test
     fun `write one inline annotation`() {
         val expectedBytes = "E7 FB 66 6F 6F 6F"
         assertWriterOutputEquals(expectedBytes) {
@@ -811,6 +853,23 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
+    fun `write enough annotations for one value to require resizing the internal annotation buffers`() {
+        val expectedBytes = """
+            E9
+            3D
+            07 07 07 07 07 07 07 07 07 07 | 10x SID 3
+            FF 20 FF 20 FF 20 FF 20 FF 20 |  5x " "
+            FF 20 FF 20 FF 20 FF 20 FF 20 |  5x " "
+            6E
+            """
+        assertWriterOutputEquals(expectedBytes) {
+            repeat(10) { writeAnnotations(3) }
+            repeat(10) { writeAnnotations(" ") }
+            writeBool(true)
+        }
+    }
+
+    @Test
     fun `_private_hasFirstAnnotation() should return false when there are no annotations`() {
         val rawWriter = ionWriter()
         assertFalse(rawWriter._private_hasFirstAnnotation(SystemSymbols.ION_SID, SystemSymbols.ION))
@@ -838,6 +897,54 @@ class IonRawBinaryWriterTest_1_1 {
         rawWriter.writeAnnotations(SystemSymbols.ION_SID)
         // Matches the second and third annotations, but not the first one.
         assertFalse(rawWriter._private_hasFirstAnnotation(SystemSymbols.ION_SID, SystemSymbols.ION))
+    }
+
+    @Test
+    fun `_private_clearAnnotations() should clear text annotations`() {
+        assertWriterOutputEquals(""" 6E """) {
+            repeat(5) { writeAnnotations(" ") }
+            _private_clearAnnotations()
+            assertFalse(_private_hasFirstAnnotation(-1, " "))
+            writeBool(true)
+        }
+        assertWriterOutputEquals(""" E4 07 6E """) {
+            repeat(5) { writeAnnotations(" ") }
+            _private_clearAnnotations()
+            writeAnnotations(3)
+            assertFalse(_private_hasFirstAnnotation(-1, " "))
+            writeBool(true)
+        }
+        assertWriterOutputEquals(""" E5 07 09 6E """) {
+            repeat(5) { writeAnnotations("a") }
+            _private_clearAnnotations()
+            writeAnnotations(3)
+            writeAnnotations(4)
+            writeBool(true)
+        }
+    }
+
+    @Test
+    fun `_private_clearAnnotations() should clear sid annotations`() {
+        assertWriterOutputEquals(""" 6E """) {
+            repeat(5) { writeAnnotations(3) }
+            _private_clearAnnotations()
+            assertFalse(_private_hasFirstAnnotation(3, null))
+            writeBool(true)
+        }
+        assertWriterOutputEquals(""" E7 FF 20 6E """) {
+            repeat(5) { writeAnnotations(3) }
+            _private_clearAnnotations()
+            writeAnnotations(" ")
+            assertFalse(_private_hasFirstAnnotation(3, null))
+            writeBool(true)
+        }
+        assertWriterOutputEquals(""" E8 FF 61 FF 62 6E """) {
+            repeat(5) { writeAnnotations(3) }
+            _private_clearAnnotations()
+            writeAnnotations("a")
+            writeAnnotations("b")
+            writeBool(true)
+        }
     }
 
     @Test
@@ -912,6 +1019,13 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
+    fun `attempting to write a negative SID should throw exception`() {
+        assertWriterThrows {
+            writeSymbol(-1)
+        }
+    }
+
+    @Test
     fun `write string`() {
         assertWriterOutputEquals("93 66 6F 6F") {
             writeString("foo")
@@ -933,13 +1047,13 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
-    fun `write an e-expression`() {
+    fun `write a delimited e-expression`() {
         assertWriterOutputEquals("00") {
-            stepInEExp(0)
+            stepInEExp(0, false, dummyMacro(nArgs = 0))
             stepOut()
         }
         assertWriterOutputEquals("3F") {
-            stepInEExp(63)
+            stepInEExp(63, false, dummyMacro(nArgs = 0))
             stepOut()
         }
     }
@@ -962,9 +1076,144 @@ class IonRawBinaryWriterTest_1_1 {
         "         1052736, EE 04 82 80",
         "${Int.MAX_VALUE}, EE F0 FF FF FF 0F"
     )
-    fun `write an e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
+    fun `write a delimited e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
         assertWriterOutputEquals(expectedBytes) {
-            stepInEExp(id)
+            stepInEExp(id, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a delimited e-expression that requires a presence bitmap`() {
+        assertWriterOutputEquals(
+            """
+            3F     | Opcode/MacroID 63
+            55     | PresenceBitmap (4 single expressions)
+            61 01  | Int 1
+            61 02  | Int 2
+            61 03  | Int 3
+            61 04  | Int 4
+        """
+        ) {
+            stepInEExp(63, lengthPrefixed = false, dummyMacro(nArgs = 4, variadicParam(ParameterEncoding.Tagged)))
+            writeInt(1)
+            writeInt(2)
+            writeInt(3)
+            writeInt(4)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a delimited e-expression with presence bitmap where many args are implicitly void`() {
+        assertWriterOutputEquals(
+            """
+            3F           | MacroID 63
+            00 00 00 00  | PresenceBitmap (16 void)
+        """
+        ) {
+            stepInEExp(63, lengthPrefixed = false, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
+            // Don't write any trailing void args (which is all of them in this case)
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        //       Macro Id; Op Address  Length=0
+        "               0, F5 01             01",
+        "              64, F5 81             01",
+        "              65, F5 83             01",
+        "             127, F5 FF             01",
+        "             128, F5 02 02          01",
+        "             729, F5 66 0B          01",
+        "           16383, F5 FE FF          01",
+        "           16384, F5 04 00 02       01",
+        "         1052736, F5 04 82 80       01",
+        "         2097151, F5 FC FF FF       01",
+        "         2097152, F5 08 00 00 02    01",
+        "${Int.MAX_VALUE}, F5 F0 FF FF FF 0F 01",
+    )
+    fun `write a length-prefixed e-expression with no args`(id: Int, expectedBytes: String) {
+        // This test ensures that the macro address is written correctly
+        assertWriterOutputEquals(expectedBytes) {
+            stepInEExp(id, lengthPrefixed = true, dummyMacro(nArgs = 0))
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a length-prefixed e-expression with many args`() {
+        // This test ensures that the macro length is written correctly
+        assertWriterOutputEquals("F5 03 15 60 60 60 60 60 60 60 60 60 60") {
+            stepInEExp(1, lengthPrefixed = true, dummyMacro(nArgs = 10))
+            repeat(10) { writeInt(0L) }
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a length-prefixed e-expression that requires a presence bitmap`() {
+        assertWriterOutputEquals(
+            """
+            F5     | Length-prefixed macro
+            81     | MacroID 64
+            13     | Length = 9
+            55     | PresenceBitmap (4 single expressions)
+            61 01  | Int 1
+            61 02  | Int 2
+            61 03  | Int 3
+            61 04  | Int 4
+        """
+        ) {
+            stepInEExp(64, lengthPrefixed = true, dummyMacro(nArgs = 4, variadicParam(ParameterEncoding.Tagged)))
+            writeInt(1)
+            writeInt(2)
+            writeInt(3)
+            writeInt(4)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a length-prefixed e-expression that requires a multi-byte presence bitmap`() {
+        assertWriterOutputEquals(
+            """
+            F5     | Length-prefixed macro
+            81     | MacroID 64
+            1D     | Length = 14
+            55 05  | PresenceBitmap (6 single expressions)
+            61 01  | Int 1
+            61 02  | Int 2
+            61 03  | Int 3
+            61 04  | Int 4
+            61 05  | Int 5
+            61 06  | Int 6
+        """
+        ) {
+            stepInEExp(64, lengthPrefixed = true, dummyMacro(nArgs = 6, variadicParam(ParameterEncoding.Tagged)))
+            writeInt(1)
+            writeInt(2)
+            writeInt(3)
+            writeInt(4)
+            writeInt(5)
+            writeInt(6)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a length-prefixed e-expression with presence bitmap where many args are implicitly void`() {
+        assertWriterOutputEquals(
+            """
+            F5           | Length-prefixed macro
+            81           | MacroID 64
+            09           | Length = 4
+            00 00 00 00  | PresenceBitmap (16 void)
+        """
+        ) {
+            stepInEExp(64, lengthPrefixed = true, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
+            // Don't write any trailing void args (which is all of them in this case)
             stepOut()
         }
     }
@@ -986,13 +1235,13 @@ class IonRawBinaryWriterTest_1_1 {
             """
         ) {
             stepInList(false)
-            stepInEExp(31)
+            stepInEExp(31, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInList(false)
-            stepInEExp(64)
+            stepInEExp(64, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInList(false)
-            stepInEExp(83)
+            stepInEExp(83, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInList(false)
-            stepInEExp(4160)
+            stepInEExp(4160, lengthPrefixed = false, dummyMacro(nArgs = 0))
             repeat(8) { stepOut() }
         }
     }
@@ -1015,9 +1264,9 @@ class IonRawBinaryWriterTest_1_1 {
             stepInStruct(false)
             writeFieldName(10)
             writeBool(true)
-            stepInEExp(31)
+            stepInEExp(31, lengthPrefixed = false, dummyMacro(nArgs = 0))
             stepOut()
-            stepInEExp(64)
+            stepInEExp(64, lengthPrefixed = false, dummyMacro(nArgs = 0))
             stepOut()
             stepOut()
         }
@@ -1035,7 +1284,7 @@ class IonRawBinaryWriterTest_1_1 {
             """
         ) {
             stepInStruct(true)
-            stepInEExp(31)
+            stepInEExp(31, lengthPrefixed = false, dummyMacro(nArgs = 0))
             stepOut()
             stepOut()
         }
@@ -1052,7 +1301,7 @@ class IonRawBinaryWriterTest_1_1 {
         ) {
             stepInStruct(false)
             writeFieldName(1)
-            stepInEExp(1)
+            stepInEExp(1, lengthPrefixed = false, dummyMacro(nArgs = 0))
             stepOut()
             stepOut()
         }
@@ -1071,38 +1320,30 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling stepInEExp with an annotation should throw IonException`() {
         assertWriterThrows {
             writeAnnotations("foo")
-            stepInEExp(1)
+            stepInEExp(1, lengthPrefixed = false, dummyMacro(nArgs = 0))
         }
     }
 
     @Test
-    fun `write a delimited expression group`() {
-        assertWriterOutputEquals(
-            """
-            00      | Macro 0
-            01      | FlexUInt 0 (delimited expression group)
-            6E      | true
-            F0      | End of Expression Group
-            """
-        ) {
-            stepInEExp(0)
-            stepInExpressionGroup(true)
-            writeBool(true)
+    fun `write a prefixed, tagged expression group with zero values`() {
+        assertWriterOutputEquals(""" 3D 01 """) {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(false)
             stepOut()
             stepOut()
         }
     }
 
     @Test
-    fun `write a prefixed expression group`() {
+    fun `write a prefixed, tagged expression group with one value`() {
         assertWriterOutputEquals(
             """
-            00      | Macro 0
+            3D      | Macro 61
             03      | Expression Group, Length = 1
             6E      | true
             """
         ) {
-            stepInEExp(0)
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInExpressionGroup(false)
             writeBool(true)
             stepOut()
@@ -1111,15 +1352,35 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
-    fun `write a prefixed expression group so long that it requires a patch point`() {
+    fun `write a prefixed, tagged expression group with multiple values`() {
         assertWriterOutputEquals(
             """
-            00      | Macro 0
+            3D              | Macro 77
+            0B              | Expression Group, Length = 5
+            60 61 01 61 02  | Ints 0, 1, 2
+            """
+        ) {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(false)
+            writeInt(0)
+            writeInt(1)
+            continueExpressionGroup() // Should have no effect
+            writeInt(2)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a prefixed, tagged expression group so long that it requires a patch point`() {
+        assertWriterOutputEquals(
+            """
+            3D      | Macro 0
             FE 03   | Expression Group, Length = 255
             ${"6E ".repeat(255)}
             """
         ) {
-            stepInEExp(0)
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInExpressionGroup(false)
             repeat(255) { writeBool(true) }
             stepOut()
@@ -1128,21 +1389,9 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
-    fun `write an empty prefixed expression group`() {
-        // Regardless of whether we step in to a delimited or prefixed expression group, the empty expression group
-        // is always represented as a delimited expression group.
-        assertWriterOutputEquals("00 01 F0") {
-            stepInEExp(0)
-            stepInExpressionGroup(false)
-            stepOut()
-            stepOut()
-        }
-    }
-
-    @Test
-    fun `write an empty delimited expression group`() {
-        assertWriterOutputEquals("00 01 F0") {
-            stepInEExp(0)
+    fun `write a delimited, tagged expression group with zero values`() {
+        assertWriterOutputEquals("3D 01 F0") {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInExpressionGroup(true)
             stepOut()
             stepOut()
@@ -1150,9 +1399,146 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
+    fun `write a delimited, tagged expression group with one value`() {
+        assertWriterOutputEquals("3D 01 60 F0") {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(true)
+            writeInt(0)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a delimited, tagged expression group with multiple values`() {
+        assertWriterOutputEquals("3D 01 60 61 01 61 02 F0") {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(true)
+            writeInt(0)
+            writeInt(1)
+            continueExpressionGroup() // Should have no effect
+            writeInt(2)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a tagless expression group with zero values`() {
+        // Empty expression group is elided to be void, so we just have `00` presence bitmap
+        assertWriterOutputEquals("3D 00") {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(true)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a tagless expression group with one value`() {
+        assertWriterOutputEquals("3D 02 03 1A 01") {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(true)
+            writeInt(0x1A)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a tagless expression group with multiple values`() {
+        assertWriterOutputEquals("3D 02 07 1A 2B 3C 01") {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(true)
+            writeInt(0x1A)
+            writeInt(0x2B)
+            writeInt(0x3C)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a tagless expression group with multiple segments using continueExpressionGroup()`() {
+        assertWriterOutputEquals(
+            """
+            3D 02
+            07 1A 2B 3C  | 3 ints
+            05 4D 5E     | 2 more ints
+            01           | End of expression group
+            """
+        ) {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(true)
+            writeInt(0x1A)
+            writeInt(0x2B)
+            writeInt(0x3C)
+            continueExpressionGroup()
+            writeInt(0x4D)
+            writeInt(0x5E)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling stepOut() immediately after continueExpressionGroup() should be handled correctly`() {
+        assertWriterOutputEquals(
+            """
+            3D 02
+            07 1A 2B 3C  | 3 ints
+            01           | End of expression group
+            """
+        ) {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(true)
+            writeInt(0x1A)
+            writeInt(0x2B)
+            writeInt(0x3C)
+            continueExpressionGroup()
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling continueExpressionGroup() has no effect when there are no expressions in the current segment`() {
+        assertWriterOutputEquals(
+            """
+            3D 02
+            05 1A 2B  | 2 ints
+            03 3C     | 1 int
+            01        | End of expression group
+            """
+        ) {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(true)
+            repeat(10) { continueExpressionGroup() }
+            writeInt(0x1A)
+            writeInt(0x2B)
+            repeat(10) { continueExpressionGroup() }
+            writeInt(0x3C)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `calling continueExpressionGroup() throws an exception if not in an expression group`() {
+        assertWriterThrows { continueExpressionGroup() }
+        assertWriterThrows { writeList { continueExpressionGroup() } }
+        assertWriterThrows { writeSExp { continueExpressionGroup() } }
+        assertWriterThrows { writeStruct { continueExpressionGroup() } }
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            continueExpressionGroup()
+        }
+    }
+
+    @Test
     fun `calling stepInExpressionGroup with an annotation should throw IonException`() {
         assertWriterThrows {
-            stepInEExp(1)
+            stepInEExp(1, lengthPrefixed = false, dummyMacro(nArgs = 1))
             writeAnnotations("foo")
             stepInExpressionGroup(false)
         }
@@ -1176,9 +1562,305 @@ class IonRawBinaryWriterTest_1_1 {
             stepInExpressionGroup(false)
         }
         assertWriterThrows {
-            stepInEExp(123)
+            stepInEExp(123, lengthPrefixed = false, dummyMacro(nArgs = 1))
             stepInExpressionGroup(false)
             stepInExpressionGroup(false)
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        // These tests are intentionally limited. Full testing of int logic is in `IonEncoder_1_1Test` and `WriteBufferTest`
+        "      Uint8,   0, 00",
+        "      Uint8,   1, 01",
+        "     Uint16,   0, 00 00",
+        "     Uint16,   1, 01 00",
+        "     Uint32,   0, 00 00 00 00",
+        "     Uint32,   1, 01 00 00 00",
+        "     Uint64,   0, 00 00 00 00 00 00 00 00",
+        "     Uint64,   1, 01 00 00 00 00 00 00 00",
+        "CompactUInt,   0, 01",
+        "CompactUInt,   1, 03",
+        "       Int8,   0, 00",
+        "       Int8,   1, 01",
+        "       Int8,  -1, FF",
+        "      Int16,   0, 00 00",
+        "      Int16,   1, 01 00",
+        "      Int16,  -1, FF FF",
+        "      Int32,   0, 00 00 00 00",
+        "      Int32,   1, 01 00 00 00",
+        "      Int32,  -1, FF FF FF FF",
+        "      Int64,   0, 00 00 00 00 00 00 00 00",
+        "      Int64,   1, 01 00 00 00 00 00 00 00",
+        "      Int64,  -1, FF FF FF FF FF FF FF FF",
+        " CompactInt,   0, 01",
+        " CompactInt,   1, 03",
+        " CompactInt,  -1, FF",
+    )
+    fun `write a tagless int`(encoding: ParameterEncoding, value: Long, expectedBytes: String) {
+        val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
+        // Write the value as single expression
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(value)
+            stepOut()
+        }
+        // ...and again using writeInt(BigInteger)
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(value.toBigInteger())
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        // These tests are intentionally limited. Full testing of int logic is in `IonEncoder_1_1Test` and `WriteBufferTest`
+        // Primitive, Ints to write, expression group bytes
+        "      Uint8, 0 1,        05 00 01 01",
+        "     Uint16, 0 1,        09 00 00 01 00 01",
+        "     Uint32, 0 1,        11 00 00 00 00 01 00 00 00 01",
+        "     Uint64, 0 1,        21 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01",
+        "CompactUInt, 0 1 256,    09 01 03 02 04 01",
+        "       Int8, -1 0 1,     07 FF 00 01 01",
+        "      Int16, -1 0 1,     0D FF FF 00 00 01 00 01",
+        "      Int32, -1 0 1,     19 FF FF FF FF 00 00 00 00 01 00 00 00 01",
+        "      Int64, -1 0 1,     31 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01",
+        " CompactInt, -1 0 1 256, 0B FF 01 03 02 04 01",
+    )
+    fun `write a tagless int in an expression group`(encoding: ParameterEncoding, values: String, expressionGroupBytes: String) {
+        val longValues = values.split(" ").map { it.toLong() }
+        val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
+        // Write the value in expression group
+        assertWriterOutputEquals("3D 02 $expressionGroupBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInExpressionGroup(true)
+            longValues.forEach { writeInt(it) }
+            stepOut()
+            stepOut()
+        }
+        // ...and again using writeInt(BigInteger)
+        assertWriterOutputEquals("3D 02 $expressionGroupBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInExpressionGroup(true)
+            longValues.forEach { writeInt(it.toBigInteger()) }
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "      Uint8,  ${UByte.MIN_VALUE}",
+        "      Uint8,  ${UByte.MAX_VALUE}",
+        "     Uint16, ${UShort.MIN_VALUE}",
+        "     Uint16, ${UShort.MAX_VALUE}",
+        "     Uint32,   ${UInt.MIN_VALUE}",
+        "     Uint32,   ${UInt.MAX_VALUE}",
+        "     Uint64,  ${ULong.MIN_VALUE}",
+        "     Uint64,  ${ULong.MAX_VALUE}",
+        "       Int8,   ${Byte.MIN_VALUE}",
+        "       Int8,   ${Byte.MAX_VALUE}",
+        "      Int16,  ${Short.MIN_VALUE}",
+        "      Int16,  ${Short.MAX_VALUE}",
+        "      Int32,    ${Int.MIN_VALUE}",
+        "      Int32,    ${Int.MAX_VALUE}",
+        "      Int64,   ${Long.MIN_VALUE}",
+        "      Int64,   ${Long.MAX_VALUE}",
+        "CompactUInt,                   0",
+        // There is no upper bound for CompactUInt, and no bounds at all for CompactInt
+    )
+    fun `attempting to write a tagless int that is out of bounds for its encoding primitive should throw exception`(
+        encoding: ParameterEncoding,
+        // The min or max value of that particular parameter encoding.
+        goodValue: BigInteger,
+    ) {
+        val badValue = if (goodValue > BigInteger.ZERO) goodValue + BigInteger.ONE else goodValue - BigInteger.ONE
+        val macro = dummyMacro(nArgs = 2, variadicParam(encoding))
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(badValue)
+            stepOut()
+        }
+
+        if (badValue.bitLength() < Long.SIZE_BITS) {
+            // If this bad value fits in a long, test it on the long API as well.
+            assertWriterThrows {
+                stepInEExp(0x3D, lengthPrefixed = false, macro)
+                writeInt(badValue.longValueExact())
+                stepOut()
+            }
+        }
+    }
+
+    @Test
+    fun `attempting to write an int when another tagless type is expected should throw exception`() {
+        val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Float64))
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(0L)
+            stepOut()
+        }
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeInt(0.toBigInteger())
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        // These tests are intentionally limited. Full testing of float logic is in `IonEncoder_1_1Test`
+        // TODO: Float16 cases, once Float16 is supported
+        "Float32,       0.0, 00 00 00 00",
+        "Float32,       1.0, 00 00 80 3F",
+        "Float32,       NaN, 00 00 C0 7F",
+        "Float32,  Infinity, 00 00 80 7F",
+        "Float32, -Infinity, 00 00 80 FF",
+        "Float64,       0.0, 00 00 00 00 00 00 00 00",
+        "Float64,       1.0, 00 00 00 00 00 00 F0 3F",
+        "Float64,       NaN, 00 00 00 00 00 00 F8 7F",
+        "Float64,  Infinity, 00 00 00 00 00 00 F0 7F",
+        "Float64, -Infinity, 00 00 00 00 00 00 F0 FF",
+    )
+    fun `write a tagless float`(encoding: ParameterEncoding, value: Float, expectedBytes: String) {
+        val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
+        // Write the value as single expression
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeFloat(value)
+            stepOut()
+        }
+        // ...and again using writeFloat(Double)
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeFloat(value.toDouble())
+            stepOut()
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @ParameterizedTest
+    @CsvSource(
+        // These tests are intentionally limited. Full testing of float logic is in `IonEncoder_1_1Test`
+        // TODO: Float16 cases, once Float16 is supported
+        "Float32,       0.0, 00 00 00 00",
+        "Float32,       1.0, 00 00 80 3F",
+        "Float32,       NaN, 00 00 C0 7F",
+        "Float32,  Infinity, 00 00 80 7F",
+        "Float32, -Infinity, 00 00 80 FF",
+        "Float64,       0.0, 00 00 00 00 00 00 00 00",
+        "Float64,       1.0, 00 00 00 00 00 00 F0 3F",
+        "Float64,       NaN, 00 00 00 00 00 00 F8 7F",
+        "Float64,  Infinity, 00 00 00 00 00 00 F0 7F",
+        "Float64, -Infinity, 00 00 00 00 00 00 F0 FF",
+    )
+    fun `write a tagless float in an expression group`(encoding: ParameterEncoding, value: Float, expectedBytes: String) {
+        val taglessTypeByteSize = when (encoding) {
+            ParameterEncoding.Float16 -> 2
+            ParameterEncoding.Float32 -> 4
+            ParameterEncoding.Float64 -> 8
+            else -> TODO("Other types not supported in this test.")
+        }
+        val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
+        // For small numbers, we can use x*2+1 to calculate the FlexUInt encoding
+        val lengthByte = ((taglessTypeByteSize + taglessTypeByteSize) * 2 + 1).toByte().toHexString(HexFormat.UpperCase)
+        // Write the value twice in expression group
+        assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInExpressionGroup(true)
+            writeFloat(value)
+            writeFloat(value)
+            stepOut()
+            stepOut()
+        }
+        // ...and again using writeFloat(Double)
+        assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInExpressionGroup(true)
+            writeFloat(value.toDouble())
+            writeFloat(value.toDouble())
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `attempting to write a float when another tagless type is expected should throw exception`() {
+        val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8))
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeFloat(0.0) // double
+            stepOut()
+        }
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeFloat(0.0f) // float
+            stepOut()
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @ParameterizedTest
+    @CsvSource(
+        // SID
+        "    0, 01 A0",
+        "    4, 09",
+        "  246, DA 03",
+        // Text
+        "    a, FF 61",
+        "  abc, FB 61 62 63",
+        "   '', 01 90",
+    )
+    fun `write a tagless symbol`(value: String, expectedBytes: String) {
+        val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.CompactSymbol))
+        // If it's an int, write as SID, else write as text
+        val writeTheValue: IonRawBinaryWriter_1_1.() -> Unit = value.toIntOrNull()
+            ?.let { { writeSymbol(it) } }
+            ?: { writeSymbol(value) }
+        // Write the value as single expression
+        assertWriterOutputEquals("3D 01 $expectedBytes") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeTheValue()
+            stepOut()
+        }
+        // Write the value twice in expression group
+        // For small numbers, we can use x*2+1 to calculate the FlexUInt encoding
+        // Also, it conveniently happens that once the white-space is removed, the number of characters is
+        // equal to the number of bytes to write the values twice.
+        val lengthByte = ((expectedBytes.replace(" ", "").length) * 2 + 1).toByte().toHexString(HexFormat.UpperCase)
+        assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInExpressionGroup(true)
+            writeTheValue()
+            writeTheValue()
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `attempting to write a symbol when another tagless type is expected should throw exception`() {
+        val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8))
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeSymbol(4)
+            stepOut()
+        }
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            writeSymbol("foo")
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `attempting to write a tagless value with annotations should throw exception`() {
+        assertWriterThrows {
+            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            writeAnnotations("foo")
+            writeInt(0)
+            stepOut()
         }
     }
 
@@ -1297,4 +1979,24 @@ class IonRawBinaryWriterTest_1_1 {
         block()
         stepOut()
     }
+
+    /**
+     * Helper function that steps into a sexp, applies the contents of [block] to
+     * the writer, and then steps out of the sexp.
+     * Using this function makes it easy for the indentation of the writer code to
+     * match the indentation of the equivalent pretty-printed Ion.
+     */
+    private inline fun IonRawWriter_1_1.writeSExp(block: IonRawWriter_1_1.() -> Unit) {
+        stepInSExp(false)
+        block()
+        stepOut()
+    }
+
+    /**
+     * Helper function that creates a dummy macro with the given number of arguments.
+     */
+    private fun dummyMacro(nArgs: Int, param: Parameter = Parameter("arg", ParameterEncoding.Tagged, ParameterCardinality.ExactlyOne)) =
+        TemplateMacro(List(nArgs) { param.copy("arg_$it") }, listOf())
+
+    private fun variadicParam(encoding: ParameterEncoding) = Parameter("arg", encoding, ParameterCardinality.ZeroOrMore)
 }

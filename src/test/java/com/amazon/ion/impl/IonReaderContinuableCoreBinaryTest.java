@@ -19,14 +19,14 @@ import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.IonCursor.Event.START_SCALAR;
 import static com.amazon.ion.IonCursor.Event.VALUE_READY;
 import static com.amazon.ion.TestUtils.withIvm;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.FLEX_INT;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.FLEX_UINT;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT16;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT32;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.INT64;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT32;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT64;
-import static com.amazon.ion.impl.IonCursorBinary.PrimitiveType.UINT8;
+import static com.amazon.ion.impl.TaglessEncoding.FLEX_INT;
+import static com.amazon.ion.impl.TaglessEncoding.FLEX_UINT;
+import static com.amazon.ion.impl.TaglessEncoding.INT16;
+import static com.amazon.ion.impl.TaglessEncoding.INT32;
+import static com.amazon.ion.impl.TaglessEncoding.INT64;
+import static com.amazon.ion.impl.TaglessEncoding.UINT32;
+import static com.amazon.ion.impl.TaglessEncoding.UINT64;
+import static com.amazon.ion.impl.TaglessEncoding.UINT8;
 import static com.amazon.ion.impl.IonCursorBinaryTest.nextMacroInvocation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
@@ -691,11 +691,11 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it has
      * the given attributes.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> fillNextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> fillNextTaglessValue(TaglessEncoding taglessEncoding, IonType expectedType) {
         return consumer -> consumer.accept(new Expectation<>(
-            String.format("fill tagless %s", primitiveType.name()),
+            String.format("fill tagless %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
                 assertEquals(VALUE_READY, reader.fillValue());
                 assertEquals(expectedType, reader.getType());
             }
@@ -706,11 +706,11 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
      * an integer that fits in a Java int with the expected value.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessIntValue(IonCursorBinary.PrimitiveType primitiveType, int expectedValue) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessIntValue(TaglessEncoding taglessEncoding, int expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
-            String.format("fill tagless int from %s", primitiveType.name()),
+            String.format("fill tagless int from %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
                 assertEquals(VALUE_READY, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(IntegerSize.INT, reader.getIntegerSize());
@@ -723,11 +723,11 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
      * an integer that fits in a Java long with the expected value.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessLongValue(IonCursorBinary.PrimitiveType primitiveType, long expectedValue) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessLongValue(TaglessEncoding taglessEncoding, long expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
-            String.format("fill tagless long from %s", primitiveType.name()),
+            String.format("fill tagless long from %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
                 assertEquals(VALUE_READY, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(IntegerSize.LONG, reader.getIntegerSize());
@@ -740,11 +740,11 @@ public class IonReaderContinuableCoreBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it is
      * an integer that fits in a BigInteger with the expected value.
      */
-    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessBigIntegerValue(IonCursorBinary.PrimitiveType primitiveType, BigInteger expectedValue) {
+    private static ExpectationProvider<IonReaderContinuableCoreBinary> nextTaglessBigIntegerValue(TaglessEncoding taglessEncoding, BigInteger expectedValue) {
         return consumer -> consumer.accept(new Expectation<>(
-            String.format("fill tagless BigInteger from %s", primitiveType.name()),
+            String.format("fill tagless BigInteger from %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(primitiveType));
+                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
                 assertEquals(VALUE_READY, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(IntegerSize.BIG_INTEGER, reader.getIntegerSize());
@@ -925,11 +925,11 @@ public class IonReaderContinuableCoreBinaryTest {
             assertSequence(
                 reader,
                 nextMacroInvocation(0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT16, IonType.FLOAT),
+                fillNextTaglessValue(TaglessEncoding.FLOAT16, IonType.FLOAT),
                 doubleValue(1.0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT),
+                fillNextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT),
                 doubleValue(1.0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT64, IonType.FLOAT),
+                fillNextTaglessValue(TaglessEncoding.FLOAT64, IonType.FLOAT),
                 doubleValue(1.0),
                 endStream()
             );
@@ -969,11 +969,11 @@ public class IonReaderContinuableCoreBinaryTest {
             assertSequence(
                 reader,
                 nextMacroInvocation(0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL),
                 symbolValue("name"),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL),
                 symbolValue(4),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL),
                 symbolValue(""),
                 endStream()
             );

@@ -893,11 +893,11 @@ public class IonCursorBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value and verify that it has the given
      * attributes.
      */
-    private static ExpectationProvider<IonCursorBinary> nextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+    private static ExpectationProvider<IonCursorBinary> nextTaglessValue(TaglessEncoding taglessEncoding, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
         return consumer -> consumer.accept(new Expectation<>(
-            String.format("next tagless %s", primitiveType.name()),
+            String.format("next tagless %s", taglessEncoding.name()),
             cursor -> {
-                assertEquals(START_SCALAR, cursor.nextTaglessValue(primitiveType));
+                assertEquals(START_SCALAR, cursor.nextTaglessValue(taglessEncoding));
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
             }
         ));
@@ -921,11 +921,11 @@ public class IonCursorBinaryTest {
      * Provides Expectations that advance the reader to the next tagless value, fill the value, and verify that it has
      * the given attributes.
      */
-    private static ExpectationProvider<IonCursorBinary> fillNextTaglessValue(IonCursorBinary.PrimitiveType primitiveType, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
+    private static ExpectationProvider<IonCursorBinary> fillNextTaglessValue(TaglessEncoding taglessEncoding, IonType expectedType, int expectedStartIndex, int expectedEndIndex) {
         return consumer -> consumer.accept(new Expectation<>(
-            String.format("fill tagless %s", primitiveType.name()),
+            String.format("fill tagless %s", taglessEncoding.name()),
             cursor -> {
-                assertEquals(START_SCALAR, cursor.nextTaglessValue(primitiveType));
+                assertEquals(START_SCALAR, cursor.nextTaglessValue(taglessEncoding));
                 assertEquals(VALUE_READY, cursor.fillValue());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
             }
@@ -1003,12 +1003,12 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8, IonType.INT, 5, 6),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.INT16, IonType.INT, 6, 8),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.UINT32, IonType.INT, 8, 12),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.INT64, IonType.INT, 12, 20),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.FLEX_UINT, IonType.INT, 20, 23),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.FLEX_INT, IonType.INT, 23, 26),
+                nextTaglessValue(TaglessEncoding.UINT8, IonType.INT, 5, 6),
+                nextTaglessValue(TaglessEncoding.INT16, IonType.INT, 6, 8),
+                nextTaglessValue(TaglessEncoding.UINT32, IonType.INT, 8, 12),
+                nextTaglessValue(TaglessEncoding.INT64, IonType.INT, 12, 20),
+                nextTaglessValue(TaglessEncoding.FLEX_UINT, IonType.INT, 20, 23),
+                nextTaglessValue(TaglessEncoding.FLEX_INT, IonType.INT, 23, 26),
                 endStream()
             );
         }
@@ -1027,9 +1027,9 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT16, IonType.FLOAT, 5, 7),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT64, IonType.FLOAT, 11, 19),
+                nextTaglessValue(TaglessEncoding.FLOAT16, IonType.FLOAT, 5, 7),
+                nextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
+                nextTaglessValue(TaglessEncoding.FLOAT64, IonType.FLOAT, 11, 19),
                 endStream()
             );
         }
@@ -1048,9 +1048,9 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 6, 10),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 10, 11),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 13, 13),
+                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 6, 10),
+                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 10, 11),
+                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 13, 13),
                 endStream()
             );
         }
@@ -1076,11 +1076,11 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8, IonType.INT, 5, 6),
+                nextTaglessValue(TaglessEncoding.UINT8, IonType.INT, 5, 6),
                 nextTaggedValue(IonType.INT, 7, 7),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
+                nextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 nextTaggedValue(IonType.FLOAT, 12, 16),
-                nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
+                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
                 nextTaggedValue(IonType.SYMBOL, 22, 26),
                 endStream()
             );
@@ -1095,11 +1095,11 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.UINT8, IonType.INT, 5, 6),
+                fillNextTaglessValue(TaglessEncoding.UINT8, IonType.INT, 5, 6),
                 fillScalar(7, 7), type(IonType.INT),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32, IonType.FLOAT, 7, 11),
+                fillNextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 fillScalar(12, 16), type(IonType.FLOAT),
-                fillNextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
+                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
                 fillScalar(22, 26), type(IonType.SYMBOL),
                 endStream()
             );
@@ -1179,7 +1179,7 @@ public class IonCursorBinaryTest {
         List<Instruction> instructions = Arrays.asList(
             instruction(IonCursorBinary::nextValue, macroInvocation(0)),
             instruction(
-                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.UINT8),
                 valueMarker(IonType.INT, 5, 6)
             ),
             instruction(
@@ -1195,7 +1195,7 @@ public class IonCursorBinaryTest {
                 valueReady(IonType.INT, 7, 7)
             ),
             instruction(
-                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.FLOAT32),
                 valueMarker(IonType.FLOAT, 7, 11)
             ),
             instruction(
@@ -1211,7 +1211,7 @@ public class IonCursorBinaryTest {
                 valueReady(IonType.FLOAT, 12, 16)
             ),
             instruction(
-                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL),
                 valueMarker(IonType.SYMBOL, 17, 21)
             ),
             instruction(
@@ -1238,7 +1238,7 @@ public class IonCursorBinaryTest {
         List<Instruction> instructions = Arrays.asList(
             instruction(IonCursorBinary::nextValue, macroInvocation(0)),
             instruction(
-                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.UINT8),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.UINT8),
                 // 0xFF is skipped.
                 valueMarker(IonType.INT, 5, 6)
             ),
@@ -1248,7 +1248,7 @@ public class IonCursorBinaryTest {
                 valueMarker(IonType.INT,6, 6)
             ),
             instruction(
-                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.FLOAT32),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.FLOAT32),
                 // All four bytes are skipped.
                 valueMarker(IonType.FLOAT, 6, 10)
             ),
@@ -1258,7 +1258,7 @@ public class IonCursorBinaryTest {
                 valueMarker(IonType.FLOAT, 7, 11)
             ),
             instruction(
-                cursor -> cursor.nextTaglessValue(IonCursorBinary.PrimitiveType.COMPACT_SYMBOL),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL),
                 // All four bytes are skipped.
                 valueMarker(IonType.SYMBOL, 8, 12)
             ),
@@ -1374,7 +1374,7 @@ public class IonCursorBinaryTest {
     }
 
 
-    private static ExpectationProvider<IonCursorBinary> enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType type) {
+    private static ExpectationProvider<IonCursorBinary> enterTaglessArgumentGroup(TaglessEncoding type) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("enter tagless %s group", type.name()),
             cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.enterTaglessArgumentGroup(type))
@@ -1433,7 +1433,7 @@ public class IonCursorBinaryTest {
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
                 fillArgumentEncodingBitmap(1, 5, 6),
-                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 nextGroupedValue(IonType.INT, 7, 8),
                 nextGroupedValue(IonType.INT, 9, 10),
                 endOfGroup(),
@@ -1540,7 +1540,7 @@ public class IonCursorBinaryTest {
                 enterTaggedArgumentGroup(),
                 endOfGroup(),
                 exitArgumentGroup(),
-                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 endOfGroup(),
                 exitArgumentGroup(),
                 endStream()
@@ -1589,7 +1589,7 @@ public class IonCursorBinaryTest {
                 stepOutOfContainer(),
                 endOfGroup(),
                 exitArgumentGroup(),
-                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 nextGroupedValue(IonType.INT, 14, 15),
                 nextGroupedValue(IonType.INT, 16, 17),
                 endOfGroup(),
@@ -1641,7 +1641,7 @@ public class IonCursorBinaryTest {
                 },
                 event(NEEDS_INSTRUCTION)
             ),
-            instruction(cursor -> cursor.enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8), event(NEEDS_INSTRUCTION)),
+            instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 13, 14)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 15, 16)),
             instruction(
@@ -1691,7 +1691,7 @@ public class IonCursorBinaryTest {
                 enterTaggedArgumentGroup(),
                 nextGroupedValue(IonType.INT, 8, 8),
                 exitArgumentGroup(), // Early exit
-                enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8),
+                enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 exitArgumentGroup(), // Skip over group
                 container(
                     scalar(), valueMarker(IonType.INT, 20, 20)
@@ -1711,7 +1711,7 @@ public class IonCursorBinaryTest {
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
             // Skip the list argument
             instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
-            instruction(cursor -> cursor.enterTaglessArgumentGroup(IonCursorBinary.PrimitiveType.UINT8), event(NEEDS_INSTRUCTION)),
+            instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION)),
             // Skip all arguments in the group
             instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
             instruction(IonCursorBinary::nextValue, valueMarker(IonType.LIST, 16, 17)),

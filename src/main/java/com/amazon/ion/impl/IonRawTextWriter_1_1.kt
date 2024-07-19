@@ -4,10 +4,10 @@ package com.amazon.ion.impl
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.IonRawTextWriter_1_1.ContainerType.*
+import com.amazon.ion.impl.macro.*
 import com.amazon.ion.util.*
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.time.Instant
 
 /**
  * A raw writer for Ion 1.1 text. This should be combined with managed writer to handle concerns such as macros and
@@ -15,7 +15,6 @@ import java.time.Instant
  *
  * Notes:
  *  - Never writes using "long string" syntax in order to simplify the writer.
- *  - Uses `[: ... ]` for expression groups.
  *  - Does not try to resolve symbol tokens. That is the concern of the managed writer.
  *  - To make it easier to concatenate streams, this eagerly emits a top-level separator after each top-level syntax item.
  */
@@ -32,7 +31,7 @@ class IonRawTextWriter_1_1 internal constructor(
         List,
         SExp,
         Struct,
-        Macro,
+        EExpression,
         ExpressionGroup,
         Top,
     }
@@ -60,9 +59,8 @@ class IonRawTextWriter_1_1 internal constructor(
         }
         val separatorCharacter = when (currentContainer) {
             List, Struct -> ","
-            Macro, SExp -> " "
+            EExpression, SExp, ExpressionGroup -> " "
             Top -> options.topLevelSeparator()
-            ExpressionGroup -> ","
         }
 
         if (options.isPrettyPrintOn) {
@@ -281,13 +279,6 @@ class IonRawTextWriter_1_1 internal constructor(
         )
     }
 
-    override fun writeTimestamp(value: Instant) = writeScalar {
-        writeTimestampHelper(
-            toMillis = { value.toEpochMilli() },
-            toString = { value.toString() },
-        )
-    }
-
     private inline fun writeTimestampHelper(toMillis: () -> Long, toString: () -> String) {
         if (options._timestamp_as_millis) {
             output.appendAscii("${toMillis()}")
@@ -351,31 +342,32 @@ class IonRawTextWriter_1_1 internal constructor(
             output.printSymbol(name)
         }
         ancestorContainersStack.add(currentContainer)
-        currentContainer = Macro
+        currentContainer = EExpression
         currentContainerHasValues = false
         isPendingSeparator = true // Treat the macro name as if it is a value that needs a separator.
     }
 
-    override fun stepInEExp(id: Int) {
+    override fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro) {
         confirm(numAnnotations == 0) { "Cannot annotate a macro invocation" }
         openValue {
             output.appendAscii("(:")
             output.printInt(id.toLong())
         }
         ancestorContainersStack.add(currentContainer)
-        currentContainer = Macro
+        currentContainer = EExpression
         currentContainerHasValues = false
         isPendingSeparator = true // Treat the macro id as if it is a value that needs a separator.
     }
 
     override fun stepInExpressionGroup(delimited: Boolean) {
         confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
-        confirm(currentContainer == Macro) { "Can only create an expression group in a macro invocation" }
-        openValue { output.appendAscii("[:") }
+        confirm(currentContainer == EExpression) { "Can only create an expression group in a macro invocation" }
+        openValue { output.appendAscii("(:") }
         ancestorContainersStack.add(currentContainer)
         currentContainer = ExpressionGroup
         currentContainerHasValues = false
         isPendingLeadingWhitespace = true
+        isPendingSeparator = true
     }
 
     override fun stepOut() {
@@ -383,8 +375,8 @@ class IonRawTextWriter_1_1 internal constructor(
         confirm(!hasFieldName) { "Cannot step out with a dangling field name" }
         val endChar = when (currentContainer) {
             Struct -> '}'
-            SExp, Macro -> ')'
-            List, ExpressionGroup -> ']'
+            SExp, EExpression, ExpressionGroup -> ')'
+            List -> ']'
             Top -> throw IonException("Nothing to step out of.")
         }
 
