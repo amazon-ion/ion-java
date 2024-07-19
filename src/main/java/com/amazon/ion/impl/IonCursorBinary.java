@@ -199,7 +199,7 @@ class IonCursorBinary implements IonCursor {
          * there may be multiple pages of tagless values in the group; whenever the cursor reaches `pageEndIndex`, it
          * must read a FlexUInt at that position to calculate the end index of the next page.
          */
-        PrimitiveType primitiveType = null;
+        TaglessEncoding taglessEncoding = null;
     }
 
     /**
@@ -382,7 +382,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * The type of the current value, if tagless. Otherwise, null.
      */
-    PrimitiveType taglessType = null;
+    TaglessEncoding taglessType = null;
 
     /**
      * @return the given configuration's DataHandler, or null if that DataHandler is a no-op.
@@ -3047,15 +3047,15 @@ class IonCursorBinary implements IonCursor {
     /**
      * Calculates the length and type of variable-length primitive value, ensuring enough bytes are available in the
      * stream.
-     * @param primitiveType the variable-length primitive type of the tagless value that starts at `peekIndex`.
+     * @param taglessEncoding the variable-length primitive type of the tagless value that starts at `peekIndex`.
      * @return the length of the value, or -1 if not enough bytes are available in the stream to determine the length.
      */
-    private long calculateTaglessLengthAndType(PrimitiveType primitiveType) {
+    private long calculateTaglessLengthAndType(TaglessEncoding taglessEncoding) {
         // TODO length calculation for these types could be deferred until they are consumed to avoid duplicate
         //  work. This would trade some added complexity for a potential performance gain that would need to be
         //  quantified.
         long length;
-        switch (primitiveType) {
+        switch (taglessEncoding) {
             case FLEX_UINT:
             case FLEX_INT:
                 length = isSlowMode ? slowReadLengthOfFlexUInt_1_1(peekIndex) : uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
@@ -3103,20 +3103,33 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_DATA, if not enough data is available in the stream</li>
      *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
      * </ul>
-     * @param primitiveType the {@link PrimitiveType} of the tagless value on which to position the cursor.
+     * @param taglessEncoding the {@link TaglessEncoding} of the tagless value on which to position the cursor.
      * @return an Event conveying the result of the operation.
      */
-    public Event nextTaglessValue(PrimitiveType primitiveType) {
-        if (skipToNextToken()) {
-            return event;
+    public Event nextTaglessValue(TaglessEncoding taglessEncoding) {
+        event = Event.NEEDS_DATA;
+        if (isSlowMode) {
+            if (slowSkipToNextToken()) {
+                return event;
+            }
+        } else {
+            if (peekIndex < valueMarker.endIndex) {
+                peekIndex = valueMarker.endIndex;
+            } else if (valueTid != null && valueTid.isDelimited) {
+                seekPastDelimitedContainer_1_1();
+            }
         }
-        taglessType = primitiveType;
-        valueTid = primitiveType.typeID;
+        if (dataHandler != null) {
+            reportConsumedData();
+        }
+        reset();
+        taglessType = taglessEncoding;
+        valueTid = taglessEncoding.typeID;
         valueMarker.typeId = valueTid;
         valueMarker.startIndex = peekIndex;
         valuePreHeaderIndex = peekIndex;
         if (valueTid.variableLength) {
-            if (calculateTaglessLengthAndType(primitiveType) < 0) {
+            if (calculateTaglessLengthAndType(taglessEncoding) < 0) {
                 return event;
             }
         } else {
@@ -3197,7 +3210,7 @@ class IonCursorBinary implements IonCursor {
         } else {
             group.pageEndIndex = peekIndex + groupContinuation;
         }
-        group.primitiveType = null;
+        group.taglessEncoding = null;
         valueMarker.endIndex = peekIndex;
         event = Event.NEEDS_INSTRUCTION;
         return event;
@@ -3211,10 +3224,10 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor successfully entered the argument group. Subsequently, the user must
      *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
      * </ul>
-     * @param primitiveType the primitive type of the values in the group.
+     * @param taglessEncoding the primitive type of the values in the group.
      * @return an Event conveying the result of the operation.
      */
-    public Event enterTaglessArgumentGroup(PrimitiveType primitiveType) {
+    public Event enterTaglessArgumentGroup(TaglessEncoding taglessEncoding) {
         if (skipToNextToken()) {
             return event;
         }
@@ -3231,7 +3244,7 @@ class IonCursorBinary implements IonCursor {
         ArgumentGroupMarker group = pushArgumentGroup();;
         group.pageStartIndex = peekIndex;
         group.pageEndIndex = peekIndex + groupContinuation;
-        group.primitiveType = primitiveType;
+        group.taglessEncoding = taglessEncoding;
         valueMarker.endIndex = peekIndex;
         event = Event.NEEDS_INSTRUCTION;
         return event;
@@ -3330,7 +3343,7 @@ class IonCursorBinary implements IonCursor {
             return event;
         }
         // TODO performance: for fixed-width tagless types, the following could be skipped after the first value.
-        nextTaglessValue(group.primitiveType);
+        nextTaglessValue(group.taglessEncoding);
         return event;
     }
 
@@ -3351,7 +3364,7 @@ class IonCursorBinary implements IonCursor {
         if (peekIndex < valueMarker.endIndex) {
             peekIndex = valueMarker.endIndex;
         }
-        if (group.primitiveType == null) {
+        if (group.taglessEncoding == null) {
             return nextGroupedTaggedValue(group);
         }
         return nextGroupedTaglessValue(group);
@@ -3458,7 +3471,7 @@ class IonCursorBinary implements IonCursor {
             return event;
         }
         event = Event.NEEDS_DATA;
-        if (group.primitiveType == null) {
+        if (group.taglessEncoding == null) {
             return exitTaggedArgumentGroup(group);
         }
         return exitTaglessArgumentGroup(group);

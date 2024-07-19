@@ -3,13 +3,13 @@
 package com.amazon.ion.impl
 
 /**
- * The tagless primitive types supported by Ion 1.1+.
+ * The tagless encodings supported by Ion 1.1+.
  *
  * TODO:
  *   - Consider moving to [com.amazon.ion.impl.macro].
  *   - Try to make this `internal` or `package-private`
  */
-enum class PrimitiveType(@JvmField internal val typeID: IonTypeID, @JvmField val isUnsigned: Boolean) {
+enum class TaglessEncoding(@JvmField internal val typeID: IonTypeID, @JvmField val isUnsigned: Boolean) {
     UINT8(IonTypeID.TYPE_IDS_1_1[0x61], true),
     UINT16(IonTypeID.TYPE_IDS_1_1[0x62], true),
     UINT32(IonTypeID.TYPE_IDS_1_1[0x64], true),

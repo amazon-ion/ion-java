@@ -97,7 +97,7 @@ internal class PresenceBitmap {
         // TODO – performance: consider calculating this once for a macro when it is compiled
         // Calculate the actual number of presence bits that will be encoded for the given signature.
         val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
-        val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.primitiveType != null }
+        val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.taglessEncodingKind != null }
         size = if (usePresenceBits) nonRequiredParametersCount else 0
     }
 

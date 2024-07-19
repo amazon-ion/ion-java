@@ -66,9 +66,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
          */
         var numChildren: Int = 0,
         /**
-         * The primitive type to use if this is a tagless expression group.
+         * The kind of tagless encoding to use if this is a tagless expression group.
          */
-        var primitiveType: PrimitiveType? = null
+        var taglessEncodingKind: TaglessEncoding? = null
     ) {
         /**
          * Clears this [ContainerInfo] of old data and initializes it with the given new data.
@@ -367,12 +367,12 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * @param ifTagless should be a function that writes the scalar value to the buffer _without an opcode_ and returns the number of bytes that were written.
      */
     private inline fun writeTaggedOrTaglessScalar(
-        ifTagged: () -> Int,
-        ifTagless: (PrimitiveType) -> Int,
+        taggedEncoder: () -> Int,
+        taglessEncoder: (TaglessEncoding) -> Int,
     ) {
         val primitiveType = when (currentContainer.type) {
-            EEXP -> presenceBitmapStack.peek().signature[currentContainer.numChildren].type.primitiveType
-            EXPR_GROUP -> currentContainer.primitiveType
+            EEXP -> presenceBitmapStack.peek().signature[currentContainer.numChildren].type.taglessEncodingKind
+            EXPR_GROUP -> currentContainer.taglessEncodingKind
             else -> null
         }
         if (primitiveType != null) {
@@ -380,11 +380,11 @@ class IonRawBinaryWriter_1_1 internal constructor(
             if (currentContainer.type == EEXP) {
                 presenceBitmapStack.peek()[currentContainer.numChildren] = PresenceBitmap.EXPRESSION
             }
-            val numBytesWritten = ifTagless(primitiveType)
+            val numBytesWritten = taglessEncoder(primitiveType)
             currentContainer.length += numBytesWritten
             currentContainer.numChildren++
         } else {
-            writeScalar { ifTagged() }
+            writeScalar { taggedEncoder() }
         }
     }
 
@@ -424,115 +424,115 @@ class IonRawBinaryWriter_1_1 internal constructor(
     override fun writeBool(value: Boolean) = writeScalar { writeBoolValue(buffer, value) }
 
     override fun writeInt(value: Long) = writeTaggedOrTaglessScalar(
-        ifTagged = { writeIntValue(buffer, value) },
-        ifTagless = { primitiveType ->
+        taggedEncoder = { writeIntValue(buffer, value) },
+        taglessEncoder = { primitiveType ->
             when (primitiveType) {
-                PrimitiveType.UINT8 -> {
+                TaglessEncoding.UINT8 -> {
                     confirm((value and 0xFF) == value) { "value $value is not a valid uint8" }
                     buffer.writeFixedIntOrUInt(value, 1)
                 }
-                PrimitiveType.UINT16 -> {
+                TaglessEncoding.UINT16 -> {
                     confirm((value and 0xFFFF) == value) { "value $value is not a valid uint16" }
                     buffer.writeFixedIntOrUInt(value, 2)
                 }
-                PrimitiveType.UINT32 -> {
+                TaglessEncoding.UINT32 -> {
                     confirm((value and 0xFFFFFFFF) == value) { "value $value is not a valid uint32" }
                     buffer.writeFixedIntOrUInt(value, 4)
                 }
-                PrimitiveType.UINT64 -> {
+                TaglessEncoding.UINT64 -> {
                     confirm(value >= 0) { "value $value is not a valid uint64" }
                     buffer.writeFixedIntOrUInt(value, 8)
                 }
-                PrimitiveType.FLEX_UINT -> {
+                TaglessEncoding.FLEX_UINT -> {
                     confirm(value >= 0) { "value $value is not a valid compact_uint" }
                     buffer.writeFlexUInt(value)
                 }
-                PrimitiveType.INT8 -> {
+                TaglessEncoding.INT8 -> {
                     confirm(value.toByte().toLong() == value) { "value $value is not a value int8" }
                     buffer.writeFixedIntOrUInt(value, 1)
                 }
-                PrimitiveType.INT16 -> {
+                TaglessEncoding.INT16 -> {
                     confirm(value.toShort().toLong() == value) { "value $value is not a value int16" }
                     buffer.writeFixedIntOrUInt(value, 2)
                 }
-                PrimitiveType.INT32 -> {
+                TaglessEncoding.INT32 -> {
                     confirm(value.toInt().toLong() == value) { "value $value is not a value int32" }
                     buffer.writeFixedIntOrUInt(value, 4)
                 }
-                PrimitiveType.INT64 -> buffer.writeFixedIntOrUInt(value, 8)
-                PrimitiveType.FLEX_INT -> buffer.writeFlexInt(value)
+                TaglessEncoding.INT64 -> buffer.writeFixedIntOrUInt(value, 8)
+                TaglessEncoding.FLEX_INT -> buffer.writeFlexInt(value)
                 else -> throw IonException("Cannot write an int when the macro signature requires $primitiveType.")
             }
         }
     )
 
     override fun writeInt(value: BigInteger) = writeTaggedOrTaglessScalar(
-        ifTagged = { writeIntValue(buffer, value) },
-        ifTagless = { primitiveType ->
+        taggedEncoder = { writeIntValue(buffer, value) },
+        taglessEncoder = { primitiveType ->
             when (primitiveType) {
-                PrimitiveType.UINT8 -> {
+                TaglessEncoding.UINT8 -> {
                     confirm(value.signum() >= 0 && value.bitLength() <= 8) { "value $value is not a value uint8" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 1)
                 }
-                PrimitiveType.UINT16 -> {
+                TaglessEncoding.UINT16 -> {
                     confirm(value.signum() >= 0 && value.bitLength() <= 16) { "value $value is not a value uint16" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 2)
                 }
-                PrimitiveType.UINT32 -> {
+                TaglessEncoding.UINT32 -> {
                     confirm(value.signum() >= 0 && value.bitLength() <= 32) { "value $value is not a value uint32" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 4)
                 }
-                PrimitiveType.UINT64 -> {
+                TaglessEncoding.UINT64 -> {
                     confirm(value.signum() >= 0 && value.bitLength() <= 64) { "value $value is not a value uint64" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 8)
                 }
-                PrimitiveType.FLEX_UINT -> {
+                TaglessEncoding.FLEX_UINT -> {
                     confirm(value.signum() >= 0) { "value $value is not a value compact_uint" }
                     buffer.writeFlexUInt(value)
                 }
-                PrimitiveType.INT8 -> {
+                TaglessEncoding.INT8 -> {
                     confirm(value.bitLength() < 8) { "value $value is not a value int8" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 1)
                 }
-                PrimitiveType.INT16 -> {
+                TaglessEncoding.INT16 -> {
                     confirm(value.bitLength() < 16) { "value $value is not a value int16" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 2)
                 }
-                PrimitiveType.INT32 -> {
+                TaglessEncoding.INT32 -> {
                     confirm(value.bitLength() < 32) { "value $value is not a value int32" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 4)
                 }
-                PrimitiveType.INT64 -> {
+                TaglessEncoding.INT64 -> {
                     confirm(value.bitLength() < 64) { "value $value is not a value int64" }
                     buffer.writeFixedIntOrUInt(value.toLong(), 8)
                 }
-                PrimitiveType.FLEX_INT -> buffer.writeFlexInt(value)
+                TaglessEncoding.FLEX_INT -> buffer.writeFlexInt(value)
                 else -> throw IonException("Cannot write an int when the macro signature requires $primitiveType.")
             }
         }
     )
 
     override fun writeFloat(value: Float) = writeTaggedOrTaglessScalar(
-        ifTagged = { writeFloatValue(buffer, value) },
-        ifTagless = { primitiveType ->
+        taggedEncoder = { writeFloatValue(buffer, value) },
+        taglessEncoder = { primitiveType ->
             when (primitiveType) {
-                PrimitiveType.FLOAT16 -> TODO("Writing FLOAT16 not supported yet")
-                PrimitiveType.FLOAT32 -> buffer.writeFixedIntOrUInt(floatToIntBits(value).toLong(), 4)
-                PrimitiveType.FLOAT64 -> buffer.writeFixedIntOrUInt(doubleToRawLongBits(value.toDouble()), 8)
+                TaglessEncoding.FLOAT16 -> TODO("Writing FLOAT16 not supported yet")
+                TaglessEncoding.FLOAT32 -> buffer.writeFixedIntOrUInt(floatToIntBits(value).toLong(), 4)
+                TaglessEncoding.FLOAT64 -> buffer.writeFixedIntOrUInt(doubleToRawLongBits(value.toDouble()), 8)
                 else -> throw IonException("Cannot write a float when the macro signature requires $primitiveType.")
             }
         }
     )
 
     override fun writeFloat(value: Double) = writeTaggedOrTaglessScalar(
-        ifTagged = { writeFloatValue(buffer, value) },
-        ifTagless = { primitiveType ->
+        taggedEncoder = { writeFloatValue(buffer, value) },
+        taglessEncoder = { primitiveType ->
             when (primitiveType) {
-                PrimitiveType.FLOAT16 -> TODO("Writing FLOAT16 not supported yet")
+                TaglessEncoding.FLOAT16 -> TODO("Writing FLOAT16 not supported yet")
                 // Bounds check for Double->Float would be surprising to some users since floating point numbers
                 // normally just accept loss of precision for amy operations instead of throwing and Exception.
-                PrimitiveType.FLOAT32 -> buffer.writeFixedIntOrUInt(floatToIntBits(value.toFloat()).toLong(), 4)
-                PrimitiveType.FLOAT64 -> buffer.writeFixedIntOrUInt(doubleToRawLongBits(value), 8)
+                TaglessEncoding.FLOAT32 -> buffer.writeFixedIntOrUInt(floatToIntBits(value.toFloat()).toLong(), 4)
+                TaglessEncoding.FLOAT64 -> buffer.writeFixedIntOrUInt(doubleToRawLongBits(value), 8)
                 else -> throw IonException("Cannot write a float when the macro signature requires $primitiveType.")
             }
         }
@@ -545,10 +545,10 @@ class IonRawBinaryWriter_1_1 internal constructor(
     override fun writeSymbol(id: Int) {
         confirm(id >= 0) { "Invalid SID: $id" }
         writeTaggedOrTaglessScalar(
-            ifTagged = { writeSymbolValue(buffer, id) },
-            ifTagless = { primitiveType ->
+            taggedEncoder = { writeSymbolValue(buffer, id) },
+            taglessEncoder = { primitiveType ->
                 when (primitiveType) {
-                    PrimitiveType.COMPACT_SYMBOL -> buffer.writeFlexSym(id)
+                    TaglessEncoding.COMPACT_SYMBOL -> buffer.writeFlexSym(id)
                     else -> throw IonException("Cannot write a symbol when the macro signature requires $primitiveType.")
                 }
             }
@@ -556,10 +556,10 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     override fun writeSymbol(text: CharSequence) = writeTaggedOrTaglessScalar(
-        ifTagged = { writeSymbolValue(buffer, utf8StringEncoder.encode(text.toString())) },
-        ifTagless = { primitiveType ->
+        taggedEncoder = { writeSymbolValue(buffer, utf8StringEncoder.encode(text.toString())) },
+        taglessEncoder = { primitiveType ->
             when (primitiveType) {
-                PrimitiveType.COMPACT_SYMBOL -> buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
+                TaglessEncoding.COMPACT_SYMBOL -> buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
                 else -> throw IonException("Cannot write a symbol when the macro signature requires $primitiveType.")
             }
         }
@@ -671,9 +671,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
         val encoding = presenceBitmapStack.peek().signature[currentContainer.numChildren].type
 
         currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), delimited, metadataOffset = 0) }
-        currentContainer.primitiveType = encoding.primitiveType
+        currentContainer.taglessEncodingKind = encoding.taglessEncodingKind
 
-        if (encoding.primitiveType != null) {
+        if (encoding.taglessEncodingKind != null) {
             // Tagless groups always need a length (although it is actually the count of expressions in the group)
             buffer.reserve(maxOf(1, lengthPrefixPreallocation))
         } else if (delimited) {
@@ -697,7 +697,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
      */
     fun continueExpressionGroup() {
         confirm(currentContainer.type == EXPR_GROUP) { "Can only call this method when directly in an expression group." }
-        val primitiveType = currentContainer.primitiveType
+        val primitiveType = currentContainer.taglessEncodingKind
         if (currentContainer.isDelimited && primitiveType != null && currentContainer.length > 0) {
             var thisContainerTotalLength = currentContainer.length
             val thisContainerNumChildren = currentContainer.numChildren
@@ -705,7 +705,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
             containerStack.pop()
             containerStack.peek().length += thisContainerTotalLength
             currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), isDelimited = true, metadataOffset = 0) }
-            currentContainer.primitiveType = primitiveType
+            currentContainer.taglessEncodingKind = primitiveType
             // Carry over numChildren into the next segment (but not length)
             currentContainer.numChildren = thisContainerNumChildren
             // Reserve for the next pre-allocation
@@ -775,7 +775,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 }
             }
             EXPR_GROUP -> {
-                val isTagless = currentContainer.primitiveType != null
+                val isTagless = currentContainer.taglessEncodingKind != null
                 // TODO: Consider whether we can rewrite groups that have only one expression as a single expression
 
                 // Elide empty containers if we're going to be writing a presence bitmap

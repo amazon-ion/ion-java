@@ -757,12 +757,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         //  using ByteBuffer, possibly more quickly than using the following methods, especially if several in a row
         //  can be read without requiring the cursor's state to be modified before each one.
         if (taglessType.isUnsigned) {
-            if (taglessType == PrimitiveType.FLEX_UINT) {
+            if (taglessType == TaglessEncoding.FLEX_UINT) {
                 return readFlexUInt_1_1();
             }
             return readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex);
         }
-        if (taglessType == PrimitiveType.FLEX_INT) {
+        if (taglessType == TaglessEncoding.FLEX_INT) {
             return readFlexInt_1_1();
         }
         return readFixedInt_1_1();
