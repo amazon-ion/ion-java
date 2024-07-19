@@ -3,6 +3,7 @@
 package com.amazon.ion.impl
 
 import com.amazon.ion.*
+import com.amazon.ion.impl.macro.*
 import com.amazon.ion.system.*
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -15,6 +16,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
 class IonRawTextWriterTest_1_1 {
+
+    private fun IonRawTextWriter_1_1.stepInEExp(id: Int) = stepInEExp(id, false, SystemMacro.Stream)
 
     private fun standardBuilder(): _Private_IonTextWriterBuilder_1_1 {
         return _Private_IonTextWriterBuilder_1_1.standard()
@@ -724,7 +727,7 @@ class IonRawTextWriterTest_1_1 {
 
     @Test
     fun `write an expression group`() {
-        assertWriterOutputEquals("(:foo [:true,true] [:false,false])") {
+        assertWriterOutputEquals("(:foo (: true true) (: false false))") {
             writeEExp("foo") {
                 writeExpressionGroup {
                     writeBool(true)
@@ -741,7 +744,7 @@ class IonRawTextWriterTest_1_1 {
 
     @Test
     fun `write an empty expression group`() {
-        assertWriterOutputEquals("(:foo [:])") {
+        assertWriterOutputEquals("(:foo (:))") {
             writeEExp("foo") {
                 stepInExpressionGroup(false)
                 stepOut()
@@ -1032,6 +1035,9 @@ class IonRawTextWriterTest_1_1 {
             (:1
               (:1)
             )
+            (:1
+              (:)
+            )
         """.trimIndent()
         assertWriterOutputEquals(
             text = expected,
@@ -1046,6 +1052,7 @@ class IonRawTextWriterTest_1_1 {
             writeSexp { writeSexp { } }
             writeEExp("foo") { writeEExp("foo") { } }
             writeEExp(1) { writeEExp(1) { } }
+            writeEExp(1) { writeExpressionGroup { } }
         }
     }
 
@@ -1080,7 +1087,7 @@ class IonRawTextWriterTest_1_1 {
         stepOut()
     }
 
-    private inline fun IonRawWriter_1_1.writeEExp(id: Int, block: IonRawWriter_1_1.() -> Unit) {
+    private inline fun IonRawTextWriter_1_1.writeEExp(id: Int, block: IonRawWriter_1_1.() -> Unit) {
         stepInEExp(id)
         block()
         stepOut()
