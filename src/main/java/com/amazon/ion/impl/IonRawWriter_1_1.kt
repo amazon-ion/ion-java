@@ -4,9 +4,9 @@ package com.amazon.ion.impl
 
 import com.amazon.ion.IonType
 import com.amazon.ion.Timestamp
+import com.amazon.ion.impl.macro.*
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.time.Instant
 
 /**
  * Writes Ion 1.1 data to an output source.
@@ -158,7 +158,7 @@ interface IonRawWriter_1_1 {
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(id: Int)
+    fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro)
 
     /**
      * Steps out of the current container.
@@ -192,9 +192,6 @@ interface IonRawWriter_1_1 {
      * ```
      */
     fun writeTimestamp(value: Timestamp)
-
-    /** Writes an Ion timestamp with 0 offset (UTC) and nanosecond precision. */
-    fun writeTimestamp(value: Instant)
 
     fun writeSymbol(id: Int)
     fun writeSymbol(text: CharSequence)

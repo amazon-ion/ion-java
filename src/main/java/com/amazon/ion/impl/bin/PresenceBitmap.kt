@@ -63,7 +63,8 @@ internal class PresenceBitmap {
         const val MAX_SUPPORTED_PARAMETERS = PB_SLOTS_PER_LONG * 4
     }
 
-    private var signature: List<Parameter> = emptyList()
+    var signature: List<Parameter> = emptyList()
+        private set
 
     /** The number of parameters for which presence bits must be written. */
     private var size: Int = 0
@@ -96,7 +97,7 @@ internal class PresenceBitmap {
         // TODO – performance: consider calculating this once for a macro when it is compiled
         // Calculate the actual number of presence bits that will be encoded for the given signature.
         val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
-        val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.isTagless }
+        val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.taglessEncodingKind != null }
         size = if (usePresenceBits) nonRequiredParametersCount else 0
     }
 
