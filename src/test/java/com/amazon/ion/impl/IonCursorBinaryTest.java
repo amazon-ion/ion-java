@@ -517,4 +517,35 @@ public class IonCursorBinaryTest {
             assertThrows(IonException.class, cursor::nextValue);
         }
     }
+
+    @Test
+    public void annotationWrapperLengthZeroAtStreamEndFailsCleanly() {
+        try (
+            IonCursorBinary cursor = initializeCursor(
+                // Note: a refillable reader would await more bytes before throwing. See the next test.
+                true,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xEE, // Annotation wrapper, variable length
+                0x80  // VarUInt 0 at stream end. This is an error because annotation wrappers must wrap a value.
+            )
+        ) {
+            assertThrows(IonException.class, cursor::nextValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationWrapperLengthZeroFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonCursorBinary cursor = initializeCursor(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xEE, // Annotation wrapper, variable length
+                0x80, // VarUInt 0. This is an error because annotation wrappers must wrap a value.
+                0x20, 0x20, 0x20 // Value bytes to pad the input. A refillable reader expects at least this many bytes to compose a valid annotation wrapper.
+            )
+        ) {
+            assertThrows(IonException.class, cursor::nextValue);
+        }
+    }
 }

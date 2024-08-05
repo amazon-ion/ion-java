@@ -803,6 +803,9 @@ class IonCursorBinary implements IonCursor {
             } else {
                 endIndex = uncheckedReadVarUInt_1_0(b);
             }
+            if (endIndex == 0) {
+                throw new IonException("Annotation wrapper must wrap a value.");
+            }
         } else {
             endIndex = valueTid.length;
         }
@@ -850,6 +853,9 @@ class IonCursorBinary implements IonCursor {
             valueLength = slowReadVarUInt_1_0();
             if (valueLength < 0) {
                 return true;
+            }
+            if (valueLength == 0) {
+                throw new IonException("Annotation wrapper must wrap a value.");
             }
         } else {
             // At this point the value must be at least 3 more bytes: 1 for the smallest-possible annotations
