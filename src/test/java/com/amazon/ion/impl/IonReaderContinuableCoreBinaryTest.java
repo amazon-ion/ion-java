@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCursor;
@@ -13,6 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.ByteArrayInputStream;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR;
 import static com.amazon.ion.impl.IonCursorTestUtilities.STANDARD_BUFFER_CONFIGURATION;
 import static com.amazon.ion.impl.IonCursorTestUtilities.Expectation;
 import static com.amazon.ion.impl.IonCursorTestUtilities.ExpectationProvider;
@@ -630,5 +630,38 @@ public class IonReaderContinuableCoreBinaryTest {
         // This is an unexpected EOF, so the reader should fail cleanly.
         assertThrows(IonException.class, reader::nextValue);
         reader.close();
+    }
+
+    @Test
+    public void timestampLengthZeroAtStreamEndFailsCleanly() {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                // Note: a refillable reader would await more bytes before throwing. See the next test.
+                true,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x6E, // Timestamp value, variable length.
+                0x80  // VarUInt 0 at stream end. This is an error because there is no length 0 timestamp.
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::timestampValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void timestampLengthZeroFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x6E, // Timestamp value, variable length.
+                0x80, // VarUInt 0 at stream end. This is an error because there is no length 0 timestamp.
+                0x20   // Value byte to pad the input. A refillable reader expects at least this many bytes to compose a valid timestamp.
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::timestampValue);
+        }
     }
 }

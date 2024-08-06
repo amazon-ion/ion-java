@@ -750,6 +750,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
         prepareScalar();
         peekIndex = valueMarker.startIndex;
+        if (peekIndex >= valueMarker.endIndex) {
+            throw new IonException("Timestamp value cannot have length 0.");
+        }
         return minorVersion == 0 ? readTimestamp_1_0() : readTimestamp_1_1();
     }
 
