@@ -44,6 +44,8 @@ plugins {
     // Without `apply false`, the plugin is automatically applied to the main "jar" task, which somehow interferes with
     // the "spotbugsMain" task, causing it to fail. Instead, we will create a separate task to generate the bundle info.
     id("biz.aQute.bnd.builder") version "6.4.0" apply false
+
+    id("me.champeau.jmh") version "0.7.2"
 }
 
 jacoco {
