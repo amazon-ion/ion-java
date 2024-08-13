@@ -83,7 +83,7 @@ final class IonTimestampLite
     }
 
     @Override
-    public IonType getType()
+    public IonType getTypeSlow()
     {
         return IonType.TIMESTAMP;
     }
