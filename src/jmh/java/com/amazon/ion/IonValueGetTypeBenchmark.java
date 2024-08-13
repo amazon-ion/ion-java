@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
 
@@ -5,7 +7,6 @@ import com.amazon.ion.system.IonSystemBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -16,11 +17,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -31,24 +28,24 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class IonValueGetTypeBenchmark {
 
-    private static final IonSystem system = IonSystemBuilder.standard().build();
+    private static final IonSystem SYSTEM = IonSystemBuilder.standard().build();
 
-    private final IonBool bool = system.newBool(false);
-    private final IonInt integer = system.newInt(123);
-    private final IonNull ionNull = system.newNull();
-    private final IonFloat ionFloat = system.newFloat(42);
-    private final IonDecimal ionDecimal = system.newDecimal(1.23);
-    private final IonString string = system.newString("abc");
-    private final IonSymbol symbol = system.newSymbol("def");
-    private final IonBlob blob = system.newBlob(new byte[]{});
-    private final IonClob clob = system.newClob(new byte[]{});
-    private final IonStruct struct = system.newEmptyStruct();
-    private final IonList list = system.newEmptyList();
-    private final IonSexp sexp = system.newEmptySexp();
-    private final IonDatagram dg = system.newDatagram();
+    private final IonBool bool = SYSTEM.newBool(false);
+    private final IonInt integer = SYSTEM.newInt(123);
+    private final IonNull ionNull = SYSTEM.newNull();
+    private final IonFloat ionFloat = SYSTEM.newFloat(42);
+    private final IonDecimal ionDecimal = SYSTEM.newDecimal(1.23);
+    private final IonString string = SYSTEM.newString("abc");
+    private final IonSymbol symbol = SYSTEM.newSymbol("def");
+    private final IonBlob blob = SYSTEM.newBlob(new byte[]{});
+    private final IonClob clob = SYSTEM.newClob(new byte[]{});
+    private final IonStruct struct = SYSTEM.newEmptyStruct();
+    private final IonList list = SYSTEM.newEmptyList();
+    private final IonSexp sexp = SYSTEM.newEmptySexp();
+    private final IonDatagram dg = SYSTEM.newDatagram();
 
     @Benchmark
-    public int testAddSuffixViaInstanceVariablePlus() {
+    public int ionValueGetType() {
         return integer.getType().ordinal() +
             bool.getType().ordinal() +
             ionNull.getType().ordinal() +
@@ -64,12 +61,12 @@ public class IonValueGetTypeBenchmark {
             dg.getType().ordinal();
     }
 
-    private final IonDatagram realWorld;
+    private final IonDatagram container;
     private Blackhole bh;
 
     public IonValueGetTypeBenchmark() {
         try {
-            realWorld = system.getLoader().load(Paths.get("/Users/greggt/Documents/StructuredLogging/kinesis/service_log_legacy.ion").toFile());
+            container = SYSTEM.getLoader().load(Paths.get("ion-tests/iontestdata/good/message2.ion").toFile());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -81,8 +78,8 @@ public class IonValueGetTypeBenchmark {
     }
 
     @Benchmark
-    public void getTypeReadWorld() {
-        getTypeRecursive(realWorld);
+    public void getTypeContainer() {
+        getTypeRecursive(container);
     }
 
     public void getTypeRecursive(IonContainer container) {
