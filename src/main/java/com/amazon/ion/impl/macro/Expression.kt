@@ -39,7 +39,7 @@ sealed interface Expression {
         val endExclusive: Int
     }
 
-    /** Marker interface representing E-Expressions. */
+    /** Marker interface representing expressions that can be present in E-Expressions. */
     sealed interface EncodingExpression : Expression
 
     /** Marker interface representing expressions in the body of a template. */
