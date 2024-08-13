@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class IonRawTextWriterTest_1_1 {
 
-    private fun IonRawTextWriter_1_1.stepInEExp(id: Int) = stepInEExp(id, false, SystemMacro.Stream)
+    private fun IonRawTextWriter_1_1.stepInEExp(id: Int) = stepInEExp(id, false, SystemMacro.Values)
 
     private fun standardBuilder(): _Private_IonTextWriterBuilder_1_1 {
         return _Private_IonTextWriterBuilder_1_1.standard()

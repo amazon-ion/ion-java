@@ -54,11 +54,11 @@ sealed interface Macro {
         }
     }
 
-    enum class ParameterCardinality(@JvmField val sigil: Char) {
-        ZeroOrOne('?'),
-        ExactlyOne('!'),
-        OneOrMore('+'),
-        ZeroOrMore('*');
+    enum class ParameterCardinality(@JvmField val sigil: Char, @JvmField val canBeVoid: Boolean, @JvmField val canBeMulti: Boolean) {
+        ZeroOrOne('?', true, false),
+        ExactlyOne('!', false, false),
+        OneOrMore('+', false, true),
+        ZeroOrMore('*', true, true);
 
         companion object {
             @JvmStatic
@@ -77,7 +77,12 @@ sealed interface Macro {
  * Represents a template macro. A template macro is defined by a signature, and a list of template expressions.
  * A template macro only gains a name and/or ID when it is added to a macro table.
  */
-data class TemplateMacro(override val signature: List<Macro.Parameter>, val body: List<TemplateBodyExpression>) : Macro {
+data class TemplateMacro(override val signature: List<Macro.Parameter>, val body: List<Expression.TemplateBodyExpression>) : Macro {
+    // TODO: Consider rewriting the body of the macro if we discover that there are any macros invoked using only
+    //       constants as arguments—either at compile time or lazily.
+    //       For example, the body of: (macro foo (x)  (values (make_string "foo" "bar") x))
+    //       could be rewritten as: (values "foobar" x)
+
     private val cachedHashCode by lazy { signature.hashCode() * 31 + body.hashCode() }
     override fun hashCode(): Int = cachedHashCode
 
@@ -96,9 +101,8 @@ data class TemplateMacro(override val signature: List<Macro.Parameter>, val body
  * Macros that are built in, rather than being defined by a template.
  */
 enum class SystemMacro(override val signature: List<Macro.Parameter>) : Macro {
-    // TODO: replace these placeholders
-    Stream(emptyList()), // A stream is technically not a macro, but we can implement it as a macro that is the identity function.
-    Annotate(emptyList()),
+    Values(listOf(Macro.Parameter("values", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore))),
     MakeString(listOf(Macro.Parameter("text", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore))),
     // TODO: Other system macros
+    ;
 }
