@@ -4,8 +4,8 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
-import com.amazon.ion.impl.macro.TemplateBodyExpression.*
-import com.amazon.ion.util.*
+import com.amazon.ion.impl.macro.Expression.*
+import com.amazon.ion.util.confirm
 
 /**
  * [MacroCompiler] wraps an [IonReader]. When directed to do so, it will take over advancing and getting values from the
@@ -125,7 +125,7 @@ class MacroCompiler(private val reader: IonReader) {
             IonType.INT -> expressions.add(
                 when (reader.integerSize!!) {
                     IntegerSize.INT,
-                    IntegerSize.LONG -> IntValue(annotations, reader.longValue())
+                    IntegerSize.LONG -> LongIntValue(annotations, reader.longValue())
                     IntegerSize.BIG_INTEGER -> BigIntValue(annotations, reader.bigIntegerValue())
                 }
             )
@@ -143,7 +143,7 @@ class MacroCompiler(private val reader: IonReader) {
                     reader.confirmNoAnnotations("on variable reference '$name'")
                     val index = signature.indexOfFirst { it.variableName == name }
                     confirm(index >= 0) { "variable '$name' is not recognized" }
-                    expressions.add(Variable(index))
+                    expressions.add(VariableRef(index))
                 }
             }
             IonType.LIST -> compileSequence(isQuoted) { start, end -> ListValue(annotations, start, end) }
@@ -180,7 +180,7 @@ class MacroCompiler(private val reader: IonReader) {
             }
             compileTemplateBodyExpression(isQuoted)
         }
-        val end = expressions.lastIndex
+        val end = expressions.size
         expressions[start] = StructValue(annotations, start, end, templateStructIndex)
     }
 
@@ -194,7 +194,7 @@ class MacroCompiler(private val reader: IonReader) {
         val seqStart = expressions.size
         expressions.add(Placeholder)
         reader.forEachInContainer { compileTemplateBodyExpression(isQuoted) }
-        val seqEnd = expressions.lastIndex
+        val seqEnd = expressions.size
         expressions[seqStart] = newTemplateBodySequence(seqStart, seqEnd)
     }
 
@@ -211,24 +211,36 @@ class MacroCompiler(private val reader: IonReader) {
                 val macroName = reader.stringValue()
                 // TODO: Once we have a macro table, validate name exists in current macro table.
                 // TODO: Come up with a consistent strategy for handling special forms.
-                if (macroName == "literal") null else MacroRef.ByName(macroName)
+                when (macroName) {
+                    "literal" -> {
+                        // It's the "literal" special form; skip compiling a macro invocation and just treat all contents as literals
+                        reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = true) }
+                        reader.stepOut()
+                        return
+                    }
+                    ";" -> {
+                        val macroStart = expressions.size
+                        expressions.add(Placeholder)
+                        reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
+                        val macroEnd = expressions.size
+                        expressions[macroStart] = ExpressionGroup(macroStart, macroEnd)
+                        reader.stepOut()
+                        return
+                    }
+                    else -> MacroRef.ByName(macroName)
+                }
             }
             // TODO: Once we have a macro table, validate that id exists in current macro table.
             IonType.INT -> MacroRef.ById(reader.longValue())
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${reader.type ?: "nothing"}\"")
         }
 
-        if (macroRef == null) {
-            // It's the "literal" special form; skip compiling a macro invocation and just treat all contents as literals
-            reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = true) }
-        } else {
-            val macroStart = expressions.size
-            expressions.add(Placeholder)
-            reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
-            val macroEnd = expressions.lastIndex
-            expressions[macroStart] =
-                MacroInvocation(macroRef, macroStart, macroEnd)
-        }
+        val macroStart = expressions.size
+        expressions.add(Placeholder)
+        reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
+        val macroEnd = expressions.size
+        expressions[macroStart] = MacroInvocation(macroRef, macroStart, macroEnd)
+
         reader.stepOut()
     }
 
