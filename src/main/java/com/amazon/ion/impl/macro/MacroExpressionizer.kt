@@ -25,7 +25,7 @@ class MacroExpressionizer(private val reader: IonReader) {
      *     1. Recurse/loop to 1 if an E-Expression is found in the arguments
      *
      */
-    fun readMacroExpression(encodingContext: EncodingContext): List<Expression.EncodingExpression> {
+    fun readEExpression(encodingContext: EncodingContext): List<Expression.EExpressionBodyExpression> {
         TODO()
     }
 }

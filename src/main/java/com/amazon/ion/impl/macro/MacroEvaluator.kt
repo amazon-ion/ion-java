@@ -4,7 +4,7 @@ import com.amazon.ion.*
 import com.amazon.ion.impl.macro.Expression.*
 
 /**
- * Evaluates an EExpression from a List of [EncodingExpression] and the [TemplateBodyExpression]s
+ * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
  * given in the macro table of the [EncodingContext].
  *
  * General Usage:
@@ -22,7 +22,7 @@ class MacroEvaluator(
     /**
      * Initialize the macro evaluator with an E-Expression.
      */
-    fun initExpansion(encodingExpressions: List<EncodingExpression>) {
+    fun initExpansion(encodingExpressions: List<EExpressionBodyExpression>) {
         TODO()
     }
 

@@ -40,7 +40,7 @@ sealed interface Expression {
     }
 
     /** Marker interface representing expressions that can be present in E-Expressions. */
-    sealed interface EncodingExpression : Expression
+    sealed interface EExpressionBodyExpression : Expression
 
     /** Marker interface representing expressions in the body of a template. */
     sealed interface TemplateBodyExpression : Expression
@@ -48,9 +48,9 @@ sealed interface Expression {
     /**
      * Marker interface for things that are part of the Ion data model.
      * These expressions are the only ones that may be the output from the macro evaluator.
-     * All [DataModelExpression]s are also valid to use as [TemplateBodyExpression]s and [EncodingExpression]s.
+     * All [DataModelExpression]s are also valid to use as [TemplateBodyExpression]s and [EExpressionBodyExpression]s.
      */
-    sealed interface DataModelExpression : Expression, EncodingExpression, TemplateBodyExpression
+    sealed interface DataModelExpression : Expression, EExpressionBodyExpression, TemplateBodyExpression
 
     /**
      * Interface for expressions that are _values_ in the Ion data model.
@@ -66,7 +66,7 @@ sealed interface Expression {
     /**
      * A temporary placeholder that is used only while a macro or e-expression is partially compiled.
      */
-    object Placeholder : TemplateBodyExpression, EncodingExpression
+    object Placeholder : TemplateBodyExpression, EExpressionBodyExpression
 
     /**
      * A group of expressions that form the argument for one macro parameter.
@@ -77,7 +77,7 @@ sealed interface Expression {
      * @property selfIndex the index of the first expression of the expression group (i.e. this instance)
      * @property endExclusive the index of the last expression contained in the expression group
      */
-    data class ExpressionGroup(override val selfIndex: Int, override val endExclusive: Int) : EncodingExpression, TemplateBodyExpression, HasStartAndEnd
+    data class ExpressionGroup(override val selfIndex: Int, override val endExclusive: Int) : EExpressionBodyExpression, TemplateBodyExpression, HasStartAndEnd
 
     // Scalars
     data class NullValue(override val annotations: List<SymbolToken> = emptyList(), override val type: IonType) : DataModelValue
@@ -211,5 +211,5 @@ sealed interface Expression {
         val address: MacroRef,
         override val selfIndex: Int,
         override val endExclusive: Int
-    ) : EncodingExpression, HasStartAndEnd
+    ) : EExpressionBodyExpression, HasStartAndEnd
 }
