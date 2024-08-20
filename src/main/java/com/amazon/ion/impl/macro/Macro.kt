@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl.macro.Macro.Parameter.Companion.zeroToManyTagged
 
 /**
  * A [Macro] is either a [SystemMacro] or a [TemplateMacro].
@@ -12,6 +13,11 @@ sealed interface Macro {
 
     data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
         override fun toString() = "$type::$variableName${cardinality.sigil}"
+
+        companion object {
+            @JvmStatic
+            fun zeroToManyTagged(name: String) = Parameter(name, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)
+        }
     }
 
     // TODO: See if we can DRY up ParameterEncoding and PrimitiveType
@@ -101,8 +107,8 @@ data class TemplateMacro(override val signature: List<Macro.Parameter>, val body
  * Macros that are built in, rather than being defined by a template.
  */
 enum class SystemMacro(override val signature: List<Macro.Parameter>) : Macro {
-    Values(listOf(Macro.Parameter("values", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore))),
-    MakeString(listOf(Macro.Parameter("text", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore))),
+    Values(listOf(zeroToManyTagged("values"))),
+    MakeString(listOf(zeroToManyTagged("text"))),
     // TODO: Other system macros
     ;
 }
