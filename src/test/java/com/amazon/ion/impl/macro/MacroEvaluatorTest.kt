@@ -180,6 +180,40 @@ class MacroEvaluatorTest {
     }
 
     @Test
+    fun `it should be possible to step out of a container before the end is reached`() {
+        // Given:
+        //   (macro ABCs () ["a", "b", "c"])
+        // When:
+        //   (:ABCs)
+        // Then:
+        //   [ "a", "b", "c" ]
+
+        val evaluator = evaluatorWithMacroTable(
+            "ABCs" to template(
+                "",
+                listOf(
+                    ListValue(emptyList(), 0, 4),
+                    StringValue(value = "a"),
+                    StringValue(value = "b"),
+                    StringValue(value = "c"),
+                )
+            )
+        )
+
+        evaluator.initExpansion(
+            listOf(
+                EExpression(MacroRef.ByName("ABCs"), 0, 1)
+            )
+        )
+
+        assertIsInstance<ListValue>(evaluator.expandNext())
+        evaluator.stepIn()
+        assertEquals(StringValue(value = "a"), evaluator.expandNext())
+        evaluator.stepOut()
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
     fun `a trivial variable substitution`() {
         // Given:
         //   (macro identity (x!) x)
