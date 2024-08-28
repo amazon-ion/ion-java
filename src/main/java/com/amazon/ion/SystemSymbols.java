@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
 /**
@@ -107,6 +94,21 @@ public final class SystemSymbols
      * The text of system symbol {@value}, as defined by Ion 1.0.
      */
     public static final String MAX_ID = "max_id";
+
+    /**
+     * The annotation that denotes an Ion encoding directive in Ion 1.1+.
+     */
+    public static final String ION_ENCODING = "$ion_encoding";
+
+    /**
+     * The name of the symbol table s-expression within an Ion encoding directive.
+     */
+    public static final String SYMBOL_TABLE = "symbol_table";
+
+    /**
+     * The name of the macro table s-expression within an Ion encoding directive.
+     */
+    public static final String MACRO_TABLE = "macro_table";
 
     /**
      * The ID of system symbol {@value #MAX_ID}, as defined by Ion 1.0.

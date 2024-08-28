@@ -8,6 +8,7 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
@@ -21,7 +22,10 @@ import java.util.function.Consumer;
  * IonCursor with the core IonReader interface methods. Useful for adapting an IonCursor implementation into a
  * system-level IonReader.
  */
-interface IonReaderContinuableCore extends IonCursor {
+// TODO this is currently public because it is used by MacroCompiler, which exists in a different Java package.
+//  consider ways of not exposing this interface, either by moving MacroCompiler into com.amazon.ion.impl, or using
+//  the _Private_ naming convention for this interface.
+public interface IonReaderContinuableCore extends IonCursor {
 
     /**
      * Returns the depth into the Ion value that this reader has traversed.
@@ -34,6 +38,12 @@ interface IonReaderContinuableCore extends IonCursor {
      * current value.
      */
     IonType getType();
+
+    /**
+     * Returns the type of the current value in the raw encoding, or
+     * null if there is no current value.
+     */
+    IonType getEncodingType();
 
     /**
      * Returns an {@link IntegerSize} representing the smallest-possible
@@ -95,6 +105,21 @@ interface IonReaderContinuableCore extends IonCursor {
      * @return the field name text.
      */
     String getFieldText();
+
+    /**
+     * Gets the current value's field name as a symbol token (text + ID).
+     * If the text of the token isn't known, the result's
+     * {@link SymbolToken#getText()} will be null.
+     * If the symbol ID of the token isn't known, the result's
+     * {@link SymbolToken#getSid()} will be
+     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
+     * At least one of the two fields will be defined.
+     *
+     * @return null if there is no current value or if the current value is
+     *  not a field of a struct.
+     *
+     */
+    SymbolToken getFieldNameSymbol();
 
     /**
      * Consumes SymbolTokens representing the annotations attached to the current value.
@@ -228,6 +253,16 @@ interface IonReaderContinuableCore extends IonCursor {
      * @return the symbol value text.
      */
     String getSymbolText();
+
+    /**
+     * Returns the current value as a symbol token (text + ID).
+     * This is only valid when {@link #getType()} returns
+     * {@link IonType#SYMBOL}.
+     *
+     * @return null if {@link #isNullValue()}
+     *
+     */
+    SymbolToken symbolValue();
 
     /**
      * Gets the size in bytes of the current lob value.
