@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.Decimal
@@ -87,7 +89,7 @@ class MacroEvaluatorAsIonReader(
         queuedValueExpression = null
     }
 
-    override fun close() { TODO("Not yet implemented") }
+    override fun close() { /* Nothing to do (yet) */ }
     override fun <T : Any?> asFacet(facetType: Class<T>?): Nothing = TODO("Not supported")
     override fun getDepth(): Int = containerStack.size()
     override fun getSymbolTable(): SymbolTable = TODO("Not implemented in this abstraction")

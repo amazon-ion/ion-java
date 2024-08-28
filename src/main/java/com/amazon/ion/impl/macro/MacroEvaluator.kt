@@ -18,7 +18,7 @@ import com.amazon.ion.impl.macro.Expression.*
  *  - Call [stepOut] to step out of the current container.
  */
 class MacroEvaluator(
-    private val encodingContext: EncodingContext,
+    val encodingContext: EncodingContext,
     // TODO: Add expansion limit
 ) {
 
