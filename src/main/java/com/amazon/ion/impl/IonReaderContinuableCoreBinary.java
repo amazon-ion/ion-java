@@ -7,6 +7,7 @@ import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion._private.SuppressFBWarnings;
@@ -14,20 +15,38 @@ import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
+import com.amazon.ion.impl.macro.EncodingContext;
+import com.amazon.ion.impl.macro.Macro;
+import com.amazon.ion.impl.macro.MacroCompiler;
+import com.amazon.ion.impl.macro.MacroEvaluator;
+import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
+import com.amazon.ion.impl.macro.MacroRef;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
+import static com.amazon.ion.SystemSymbols.ION_ENCODING;
+import static com.amazon.ion.SystemSymbols.MACRO_TABLE;
+import static com.amazon.ion.SystemSymbols.SYMBOL_TABLE;
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 
 /**
  * An IonCursor capable of raw parsing of binary Ion streams.
  */
 class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReaderContinuableCore {
+
+    // The UTF-8 bytes that represent the text "$ion_encoding" for quick byte-by-byte comparisons.
+    private static final byte[] ION_ENCODING_UTF8 = ION_ENCODING.getBytes(StandardCharsets.UTF_8);
 
     // Isolates the highest bit in a byte.
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -88,6 +107,25 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     // The symbol IDs for the annotations on the current value.
     private final IntList annotationSids;
+
+    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
+    private MacroEvaluatorAsIonReader macroEvaluatorIonReader = null;
+
+    // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
+    private MacroEvaluator macroEvaluator = null;
+
+    // Reads encoding directives from the stream.
+    private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
+
+    // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
+    // a particular index is null, that symbol has unknown text.
+    protected String[] symbols;
+
+    // The maximum offset into the 'symbols' array that points to a valid local symbol.
+    protected int localSymbolMaxOffset = -1;
+
+    // The maximum offset into the macro table that points to a valid local macro.
+    private int localMacroMaxOffset = -1;
 
     /**
      * Constructs a new reader from the given byte array.
@@ -1007,9 +1045,367 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return valueTid.lowerNibble == 0xE;
     }
 
+    /**
+     * Determines whether the bytes between [start, end) in 'buffer' match the target bytes.
+     * @param target the target bytes.
+     * @param buffer the bytes to match.
+     * @param start index of the first byte to match.
+     * @param end index of the first byte after the last byte to match.
+     * @return true if the bytes match; otherwise, false.
+     */
+    static boolean bytesMatch(byte[] target, byte[] buffer, int start, int end) {
+        // TODO if this ends up on a critical performance path, see if it's faster to copy the bytes into a
+        //  pre-allocated buffer and then perform a comparison. It's possible that a combination of System.arraycopy()
+        //  and Arrays.equals(byte[], byte[]) is faster because it can be more easily optimized with native code by the
+        //  JVM—both are annotated with @HotSpotIntrinsicCandidate.
+        int length = end - start;
+        if (length != target.length) {
+            return false;
+        }
+        for (int i = 0; i < target.length; i++) {
+            if (target[i] != buffer[start + i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @return true if current value has a sequence of annotations that begins with `$ion_encoding`; otherwise, false.
+     */
+    private boolean startsWithIonEncoding() {
+        Marker marker = annotationTokenMarkers.get(0);
+        if (marker.startIndex < 0) {
+            // TODO this is temporary until the Ion 1.1 system symbol table is finalized. At that point, we will
+            //  look up the symbol ID (held in `marker.endIndex`) in the system symbol table. Below, 10 is the
+            //  number of Ion 1.1 system symbols, providing the conversion from local symbol ID to `symbols` array
+            //  index.
+            return ION_ENCODING.equals(symbols[(int) (marker.endIndex) - 10]);
+        } else {
+            return bytesMatch(ION_ENCODING_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex);
+        }
+    }
+
+    /**
+     * @return true if the reader is positioned on an encoding directive; otherwise, false.
+     */
+    private boolean isPositionedOnEncodingDirective() {
+        return event == Event.START_CONTAINER
+            && hasAnnotations
+            && valueTid.type == IonType.SEXP
+            && parent == null
+            && startsWithIonEncoding();
+    }
+
+    /**
+     * Grows the `symbols` array to the next power of 2 that will fit the current need.
+     */
+    protected void growSymbolsArray(int shortfall) {
+        int newSize = nextPowerOfTwo(symbols.length + shortfall);
+        String[] resized = new String[newSize];
+        System.arraycopy(symbols, 0, resized, 0, localSymbolMaxOffset + 1);
+        symbols = resized;
+    }
+
+    private void resetSymbolTable() {
+        // The following line is not required for correctness, but it frees the references to the old symbols,
+        // potentially allowing them to be garbage collected.
+        Arrays.fill(symbols, 0, localSymbolMaxOffset + 1, null);
+        localSymbolMaxOffset = -1;
+    }
+
+    /**
+     * Installs the given symbols at the end of the `symbols` array.
+     * @param newSymbols the symbols to install.
+     */
+    protected void installSymbols(List<String> newSymbols) {
+        if (newSymbols != null) {
+            int numberOfNewSymbols = newSymbols.size();
+            int numberOfAvailableSlots = symbols.length - (localSymbolMaxOffset + 1);
+            int shortfall = numberOfNewSymbols - numberOfAvailableSlots;
+            if (shortfall > 0) {
+                growSymbolsArray(shortfall);
+            }
+            int i = localSymbolMaxOffset;
+            for (String newSymbol : newSymbols) {
+                symbols[++i] = newSymbol;
+            }
+            localSymbolMaxOffset += newSymbols.size();
+        }
+    }
+
+    /**
+     * @return the {@link EncodingContext} currently active, or {@code null}.
+     */
+    EncodingContext getEncodingContext() {
+        return macroEvaluator == null ? null : macroEvaluator.getEncodingContext();
+    }
+
+    /**
+     * Reads encoding directives from the stream. Capable of resuming if not enough data is currently available to
+     * complete the encoding directive.
+     */
+    private class EncodingDirectiveReader {
+
+        boolean isSymbolTableAppend = false;
+        List<String> newSymbols = new ArrayList<>(8);
+        Map<MacroRef, Macro> newMacros = new HashMap<>();
+        MacroCompiler macroCompiler = new MacroCompiler(IonReaderContinuableCoreBinary.this);
+
+        private boolean valueUnavailable() {
+            Event event = fillValue();
+            return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
+        }
+
+        private void classifySexpWithinEncodingDirective() {
+            String name = stringValue();
+            if (SYMBOL_TABLE.equals(name)) {
+                state = State.IN_SYMBOL_TABLE_SEXP;
+            } else if (MACRO_TABLE.equals(name)) {
+                state = State.IN_MACRO_TABLE_SEXP;
+            } else {
+                throw new IonException(String.format("$ion_encoding expressions %s not supported.", name));
+            }
+        }
+
+        private void classifySymbolTable() {
+            IonType type = valueTid.type;
+            if (IonType.isText(type)) {
+                if (ION_ENCODING.equals(stringValue()) && !isSymbolTableAppend) {
+                    state = State.IN_APPENDED_SYMBOL_TABLE;
+                } else {
+                    throw new IonException("symbol_table s-expression must begin with either $ion_encoding or a list.");
+                }
+            } else if (type == IonType.LIST) {
+                state = State.ON_SYMBOL_TABLE_LIST;
+            } else {
+                throw new IonException("symbol_table s-expression must begin with either $ion_encoding or a list.");
+            }
+        }
+
+        private void stepOutOfSexpWithinEncodingDirective() {
+            stepOutOfContainer();
+            state = State.IN_ION_ENCODING_SEXP;
+        }
+
+        /**
+         * Install `newMacros`, initializing a macro evaluator capable of evaluating them.
+         */
+        private void installMacros() {
+            macroEvaluator = new MacroEvaluator(new EncodingContext(newMacros));
+            macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
+        }
+
+        /**
+         * Install any new symbols and macros, step out of the encoding directive, and resume reading raw values.
+         */
+        private void finishEncodingDirective() {
+            resetSymbolTable(); // TODO handle appended symbols
+            installSymbols(newSymbols);
+            installMacros();
+            stepOutOfContainer();
+            state = State.READING_VALUE;
+        }
+
+        /**
+         * Read an encoding directive. If the stream ends before the encoding directive finishes, `event` will be
+         * `NEEDS_DATA` and this method can be called again when more data is available.
+         */
+        void readEncodingDirective() {
+            Event event;
+            while (true) {
+                switch (state) {
+                    case ON_ION_ENCODING_SEXP:
+                        if (Event.NEEDS_DATA == stepIntoContainer()) {
+                            return;
+                        }
+                        state = State.IN_ION_ENCODING_SEXP;
+                        break;
+                    case IN_ION_ENCODING_SEXP:
+                        event = IonReaderContinuableCoreBinary.super.nextValue();
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            finishEncodingDirective();
+                            return;
+                        }
+                        if (valueTid.type != IonType.SEXP) {
+                            throw new IonException("Ion encoding directives must contain only s-expressions.");
+                        }
+                        state = State.ON_SEXP_IN_ION_ENCODING;
+                        break;
+                    case ON_SEXP_IN_ION_ENCODING:
+                        if (Event.NEEDS_DATA == stepIntoContainer()) {
+                            return;
+                        }
+                        state = State.IN_SEXP_IN_ION_ENCODING;
+                        break;
+                    case IN_SEXP_IN_ION_ENCODING:
+                        if (Event.NEEDS_DATA == IonReaderContinuableCoreBinary.super.nextValue()) {
+                            return;
+                        }
+                        if (!IonType.isText(valueTid.type)) {
+                            throw new IonException("S-expressions within encoding directives must begin with a text token.");
+                        }
+                        state = State.CLASSIFYING_SEXP_IN_ION_ENCODING;
+                        break;
+                    case CLASSIFYING_SEXP_IN_ION_ENCODING:
+                        if (valueUnavailable()) {
+                            return;
+                        }
+                        classifySexpWithinEncodingDirective();
+                        break;
+                    case IN_SYMBOL_TABLE_SEXP:
+                        event = IonReaderContinuableCoreBinary.super.nextValue();
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            stepOutOfSexpWithinEncodingDirective();
+                            break;
+                        }
+                        classifySymbolTable();
+                        break;
+                    case IN_APPENDED_SYMBOL_TABLE:
+                        if (Event.NEEDS_DATA == IonReaderContinuableCoreBinary.super.nextValue()) {
+                            return;
+                        }
+                        if (valueTid.type != IonType.LIST) {
+                            throw new IonException("symbol_table s-expression must begin with a list.");
+                        }
+                        isSymbolTableAppend = true;
+                        state = State.ON_SYMBOL_TABLE_LIST;
+                        break;
+                    case ON_SYMBOL_TABLE_LIST:
+                        if (Event.NEEDS_DATA == stepIntoContainer()) {
+                            return;
+                        }
+                        state = State.IN_SYMBOL_TABLE_LIST;
+                        break;
+                    case IN_SYMBOL_TABLE_LIST:
+                        event = IonReaderContinuableCoreBinary.super.nextValue();
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            stepOutOfContainer();
+                            state = State.IN_SYMBOL_TABLE_SEXP;
+                            break;
+                        }
+                        if (!IonType.isText(valueTid.type)) {
+                            throw new IonException("The symbol_table must contain text.");
+                        }
+                        state = State.ON_SYMBOL;
+                        break;
+                    case ON_SYMBOL:
+                        if (valueUnavailable()) {
+                            return;
+                        }
+                        newSymbols.add(stringValue());
+                        state = State.IN_SYMBOL_TABLE_LIST;
+                        break;
+                    case IN_MACRO_TABLE_SEXP:
+                        event = IonReaderContinuableCoreBinary.super.nextValue();
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        if (event == Event.END_CONTAINER) {
+                            stepOutOfSexpWithinEncodingDirective();
+                            break;
+                        }
+                        if (valueTid.type != IonType.SEXP) {
+                            throw new IonException("macro_table s-expression must contain s-expressions.");
+                        }
+                        state = State.ON_MACRO_SEXP;
+                        break;
+                    case ON_MACRO_SEXP:
+                        if (valueUnavailable()) {
+                            return;
+                        }
+                        state = State.COMPILING_MACRO;
+                        Macro newMacro = macroCompiler.compileMacro();
+                        newMacros.put(MacroRef.byId(++localMacroMaxOffset), newMacro);
+                        state = State.IN_MACRO_TABLE_SEXP;
+                        break;
+                    case COMPILING_MACRO:
+                        // This state can only be reached during compilation of a macro. Do nothing, as the reader must
+                        // navigate normally while the macro is compiled.
+                        break;
+                    default:
+                        throw new IllegalStateException(state.toString());
+                }
+            }
+        }
+
+        void resetState() {
+            isSymbolTableAppend = false;
+            newSymbols.clear();
+        }
+    }
+
+    /**
+     * The reader's state. `READING_VALUE` indicates that the reader is reading a raw value; all other states
+     * indicate that the reader is in the middle of reading an encoding directive.
+     */
+    private enum State {
+        ON_ION_ENCODING_SEXP,
+        IN_ION_ENCODING_SEXP,
+        ON_SEXP_IN_ION_ENCODING,
+        IN_SEXP_IN_ION_ENCODING,
+        CLASSIFYING_SEXP_IN_ION_ENCODING,
+        IN_SYMBOL_TABLE_SEXP,
+        IN_APPENDED_SYMBOL_TABLE,
+        ON_SYMBOL_TABLE_LIST,
+        IN_SYMBOL_TABLE_LIST,
+        ON_SYMBOL,
+        IN_MACRO_TABLE_SEXP,
+        ON_MACRO_SEXP,
+        COMPILING_MACRO,
+        READING_VALUE,
+    }
+
+    // The current state.
+    private State state = State.READING_VALUE;
+
+    /**
+     * Navigates to the next raw Ion 1.1 value, consuming any encoding directives that occur between raw values.
+     * @return an event conveying the result of the operation.
+     */
+    private Event nextValue_1_1() {
+        if (parent == null || state != State.READING_VALUE) {
+            while (true) {
+                if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
+                    encodingDirectiveReader.readEncodingDirective();
+                    if (state != State.READING_VALUE) {
+                        event = Event.NEEDS_DATA;
+                        break;
+                    }
+                }
+                event = super.nextValue();
+                if (parent == null && isPositionedOnEncodingDirective()) {
+                    encodingDirectiveReader.resetState();
+                    state = State.ON_ION_ENCODING_SEXP;
+                    continue;
+                }
+                break;
+            }
+        } else {
+            event = super.nextValue();
+        }
+        if (valueTid != null && valueTid.isMacroInvocation) {
+            // TODO delegate to macroEvaluatorIonReader while this invocation is active.
+            throw new UnsupportedOperationException("Cannot yet invoke a macro.");
+        }
+        return event;
+    }
+
     @Override
     public Event nextValue() {
         lobBytesRead = 0;
+        if (minorVersion == 1) {
+            return nextValue_1_1();
+        }
         return super.nextValue();
     }
 
@@ -1588,6 +1984,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return annotationSids;
     }
 
+    /**
+     * Creates a SymbolToken representation of the given symbol ID.
+     * @param sid a symbol ID.
+     * @return a SymbolToken.
+     */
+    protected SymbolToken getSymbolToken(int sid) {
+        return new SymbolTokenImpl(sid);
+    }
+
     @Override
     public void consumeAnnotationTokens(Consumer<SymbolToken> consumer) {
         if (annotationSequenceMarker.startIndex >= 0) {
@@ -1596,7 +2001,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             } else {
                 getAnnotationSidList();
                 for (int i = 0; i < annotationSids.size(); i++) {
-                    consumer.accept(new SymbolTokenImpl(annotationSids.get(i)));
+                    consumer.accept(getSymbolToken(annotationSids.get(i)));
                 }
             }
         }
@@ -1604,7 +2009,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             Marker marker = annotationTokenMarkers.get(i);
             if (marker.startIndex < 0) {
                 // This means the endIndex represents the token's symbol ID.
-                consumer.accept(new SymbolTokenImpl((int) marker.endIndex));
+                consumer.accept(getSymbolToken((int) marker.endIndex));
             } else {
                 // The token is inline UTF-8 text.
                 ByteBuffer utf8InputBuffer = prepareByteBuffer(marker.startIndex, marker.endIndex);
@@ -1652,8 +2057,38 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     @Override
+    public SymbolToken getFieldNameSymbol() {
+        if (fieldTextMarker.startIndex > -1) {
+            return new SymbolTokenImpl(getFieldText(), -1);
+        }
+        if (fieldSid < 0) {
+            return null;
+        }
+        return getSymbolToken(fieldSid);
+    }
+
+    @Override
+    public SymbolToken symbolValue() {
+        if (valueTid.isInlineable) {
+            return new SymbolTokenImpl(stringValue(), SymbolTable.UNKNOWN_SYMBOL_ID);
+        }
+
+        int sid = symbolValueId();
+        if (sid < 0) {
+            // The raw reader uses this to denote null.symbol.
+            return null;
+        }
+        return getSymbolToken(sid);
+    }
+
+    @Override
     public boolean isInStruct() {
         return parent != null && parent.typeId.type == IonType.STRUCT;
+    }
+
+    @Override
+    public IonType getEncodingType() {
+        return valueTid == null ? null : valueTid.type;
     }
 
     @Override
@@ -1668,6 +2103,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public void close() {
+        if (macroEvaluatorIonReader != null) {
+            macroEvaluatorIonReader.close();
+        }
         utf8Decoder.close();
         super.close();
     }

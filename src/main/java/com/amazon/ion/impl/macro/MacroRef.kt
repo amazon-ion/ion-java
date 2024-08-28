@@ -10,4 +10,9 @@ sealed interface MacroRef {
     @JvmInline value class ByName(val name: String) : MacroRef
     @JvmInline value class ById(val id: Long) : MacroRef
     // TODO: Since system macros have an independent address space, do we need to have a `SystemById` variant?
+
+    companion object {
+        @JvmStatic
+        fun byId(id: Long): MacroRef = ById(id)
+    }
 }

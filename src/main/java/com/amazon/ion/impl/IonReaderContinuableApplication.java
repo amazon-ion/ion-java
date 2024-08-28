@@ -1,9 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.UnknownSymbolException;
@@ -69,29 +67,4 @@ interface IonReaderContinuableApplication extends IonReaderContinuableCore {
      *
      */
     SymbolToken[] getTypeAnnotationSymbols();
-
-    /**
-     * Gets the current value's field name as a symbol token (text + ID).
-     * If the text of the token isn't known, the result's
-     * {@link SymbolToken#getText()} will be null.
-     * If the symbol ID of the token isn't known, the result's
-     * {@link SymbolToken#getSid()} will be
-     * {@link SymbolTable#UNKNOWN_SYMBOL_ID}.
-     * At least one of the two fields will be defined.
-     *
-     * @return null if there is no current value or if the current value is
-     *  not a field of a struct.
-     *
-     */
-    SymbolToken getFieldNameSymbol();
-
-    /**
-     * Returns the current value as a symbol token (text + ID).
-     * This is only valid when {@link #getType()} returns
-     * {@link IonType#SYMBOL}.
-     *
-     * @return null if {@link #isNullValue()}
-     *
-     */
-    SymbolToken symbolValue();
 }

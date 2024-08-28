@@ -3,13 +3,16 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
+import com.amazon.ion.impl.IonReaderContinuableCore
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.Macro.*
 import com.amazon.ion.impl.macro.Macro.ParameterEncoding.*
 import com.amazon.ion.impl.macro.MacroRef.*
+import com.amazon.ion.system.IonReaderBuilder
 import com.amazon.ion.system.IonSystemBuilder
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -150,11 +153,16 @@ class MacroCompilerTest {
         )
     )
 
+    fun newReader(source: String): IonReader {
+        // TODO these tests should be parameterized to exercise both text and binary input.
+        return IonReaderBuilder.standard().build(TestUtils.ensureBinary(ion, source.toByteArray(StandardCharsets.UTF_8)))
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("testCases")
     fun assertMacroCompilation(source: String, signature: List<Parameter>, body: List<TemplateBodyExpression>) {
-        val reader = ion.newReader(source)
-        val compiler = MacroCompiler(reader)
+        val reader = newReader(source)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
         reader.next()
         val macroDef = compiler.compileMacro()
         val expectedDef = TemplateMacro(signature, body)
@@ -169,8 +177,8 @@ class MacroCompilerTest {
         val source = "[${testCases().joinToString(",") { it.source }}]"
         val templates = testCases().map { it.template }.iterator()
 
-        val reader = ion.newReader(source)
-        val compiler = MacroCompiler(reader)
+        val reader = newReader(source)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
         // Advance and step into list
         reader.next(); reader.stepIn()
         while (reader.next() != null) {
@@ -184,14 +192,14 @@ class MacroCompilerTest {
 
     @Test
     fun `macro compiler should return the correct name`() {
-        val reader = ion.newReader(
+        val reader = newReader(
             """
             (macro foo (x) 1)
             (macro bar (y) 2)
             (macro null (z) 3)
         """
         )
-        val compiler = MacroCompiler(reader)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
         assertNull(compiler.macroName)
         reader.next()
         compiler.compileMacro()
@@ -252,9 +260,9 @@ class MacroCompilerTest {
         ]
     )
     fun assertCompilationFails(source: String) {
-        val reader = ion.newReader(source)
+        val reader = newReader(source)
         reader.next()
-        val compiler = MacroCompiler(reader)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
         assertThrows<IonException> { compiler.compileMacro() }
     }
 }
