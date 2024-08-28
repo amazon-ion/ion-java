@@ -95,6 +95,14 @@ class IonRawBinaryWriter_1_1 internal constructor(
          * one byte for FlexSym annotations.
          */
         private const val ANNOTATIONS_LENGTH_PREFIX_ALLOCATION_SIZE = 1
+
+        /**
+         * Create a new instance for the given OutputStream with the given block size and length preallocation.
+         */
+        @JvmStatic
+        fun from(out: OutputStream, blockSize: Int, preallocation: Int): IonRawBinaryWriter_1_1 {
+            return IonRawBinaryWriter_1_1(out, WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(blockSize)) {}, preallocation)
+        }
     }
 
     private val utf8StringEncoder = Utf8StringEncoderPool.getInstance().getOrCreate()

@@ -61,13 +61,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private static final LocalSymbolTableImports ION_1_0_IMPORTS
         = new LocalSymbolTableImports(SharedSymbolTable.getSystemSymbolTable(1));
 
-    // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
-    // a particular index is null, that symbol has unknown text.
-    private String[] symbols;
-
-    // The maximum offset into the 'symbols' array that points to a valid local symbol.
-    private int localSymbolMaxOffset = -1;
-
     // The catalog used by the reader to resolve shared symbol table imports.
     private final IonCatalog catalog;
 
@@ -598,12 +591,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         return symbols[localSymbolOffset];
     }
 
-    /**
-     * Creates a SymbolToken representation of the given symbol ID.
-     * @param sid a symbol ID.
-     * @return a SymbolToken.
-     */
-    private SymbolToken getSymbolToken(int sid) {
+    @Override
+    protected SymbolToken getSymbolToken(int sid) {
         int symbolTableSize = localSymbolMaxOffset + firstLocalSymbolId + 1; // +1 because the max ID is 0-indexed.
         if (sid >= symbolTableSize) {
             throw new UnknownSymbolException(sid);
@@ -614,13 +603,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             sid = 0;
         }
         return new SymbolTokenImpl(text, sid);
-    }
-
-    private void growSymbolsArray(int shortfall) {
-        int newSize = nextPowerOfTwo(symbols.length + shortfall);
-        String[] resized = new String[newSize];
-        System.arraycopy(symbols, 0, resized, 0, localSymbolMaxOffset + 1);
-        symbols = resized;
     }
 
     /**
@@ -658,19 +640,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                 resetSymbolTable();
                 resetImports();
             }
-            if (newSymbols != null) {
-                int numberOfNewSymbols = newSymbols.size();
-                int numberOfAvailableSlots = symbols.length - (localSymbolMaxOffset + 1);
-                int shortfall = numberOfNewSymbols - numberOfAvailableSlots;
-                if (shortfall > 0) {
-                    growSymbolsArray(shortfall);
-                }
-                int i = localSymbolMaxOffset;
-                for (String newSymbol : newSymbols) {
-                    symbols[++i] = newSymbol;
-                }
-                localSymbolMaxOffset += newSymbols.size();
-            }
+            installSymbols(newSymbols);
             state = State.READING_VALUE;
         }
 
@@ -961,31 +931,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private State state = State.READING_VALUE;
 
     /**
-     * Determines whether the bytes between [start, end) in 'buffer' match the target bytes.
-     * @param target the target bytes.
-     * @param buffer the bytes to match.
-     * @param start index of the first byte to match.
-     * @param end index of the first byte after the last byte to match.
-     * @return true if the bytes match; otherwise, false.
-     */
-    private static boolean bytesMatch(byte[] target, byte[] buffer, int start, int end) {
-        // TODO if this ends up on a critical performance path, see if it's faster to copy the bytes into a
-        //  pre-allocated buffer and then perform a comparison. It's possible that a combination of System.arraycopy()
-        //  and Arrays.equals(byte[], byte[]) is faster because it can be more easily optimized with native code by the
-        //  JVM—both are annotated with @HotSpotIntrinsicCandidate.
-        int length = end - start;
-        if (length != target.length) {
-            return false;
-        }
-        for (int i = 0; i < target.length; i++) {
-            if (target[i] != buffer[start + i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
      * @return true if current value has a sequence of annotations that begins with `$ion_symbol_table`; otherwise,
      *  false.
      */
@@ -1079,20 +1024,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             throw new IllegalStateException("Invalid type requested.");
         }
         return value;
-    }
-
-    @Override
-    public SymbolToken symbolValue() {
-        if (valueTid.isInlineable) {
-            return new SymbolTokenImpl(stringValue(), SymbolTable.UNKNOWN_SYMBOL_ID);
-        }
-
-        int sid = symbolValueId();
-        if (sid < 0) {
-            // The raw reader uses this to denote null.symbol.
-            return null;
-        }
-        return getSymbolToken(sid);
     }
 
     @Override
@@ -1206,17 +1137,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             throw new UnknownSymbolException(fieldSid);
         }
         return fieldName;
-    }
-
-    @Override
-    public SymbolToken getFieldNameSymbol() {
-        if (fieldTextMarker.startIndex > -1) {
-            return new SymbolTokenImpl(getFieldText(), -1);
-        }
-        if (fieldSid < 0) {
-            return null;
-        }
-        return getSymbolToken(fieldSid);
     }
 
 }
