@@ -51,7 +51,7 @@ class IonRawBinaryWriterTest_1_1 {
         val expectedLength = if (cleanedHexBytes.isBlank()) 0 else cleanedHexBytes.split(' ').size
         val actualByteString = writeAsHexString(autoClose) {
             try {
-                stepInList(delimited = false)
+                stepInList(usingLengthPrefix = true)
                 block()
                 stepOut()
             } catch (t: Throwable) {
@@ -91,7 +91,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `calling close while in a container should throw IonException`() {
         assertWriterThrows {
-            stepInList(false)
+            stepInList(usingLengthPrefix = true)
             close()
         }
     }
@@ -99,7 +99,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `calling finish while in a container should throw IonException`() {
         assertWriterThrows {
-            stepInList(true)
+            stepInList(usingLengthPrefix = false)
             finish()
         }
     }
@@ -122,7 +122,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `calling stepOut with a dangling annotation should throw IonException`() {
         assertWriterThrows {
-            stepInList(true)
+            stepInList(usingLengthPrefix = false)
             writeAnnotations(10)
             stepOut()
         }
@@ -131,7 +131,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `calling writeIVM when in a container should throw IonException`() {
         assertWriterThrows {
-            stepInList(false)
+            stepInList(usingLengthPrefix = true)
             writeIVM()
         }
     }
@@ -227,7 +227,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a delimited list`() {
         assertWriterOutputEquals("F1 6E 6F F0") {
-            stepInList(true)
+            stepInList(usingLengthPrefix = false)
             writeBool(true)
             writeBool(false)
             stepOut()
@@ -237,7 +237,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a prefixed list`() {
         assertWriterOutputEquals("B2 6E 6F") {
-            stepInList(false)
+            stepInList(usingLengthPrefix = true)
             writeBool(true)
             writeBool(false)
             stepOut()
@@ -247,7 +247,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a variable-length prefixed list`() {
         assertWriterOutputEquals("FB 21 ${" 6E".repeat(16)}") {
-            stepInList(false)
+            stepInList(usingLengthPrefix = true)
             repeat(16) { writeBool(true) }
             stepOut()
             finish()
@@ -257,7 +257,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a prefixed list that is so long it requires patch points`() {
         assertWriterOutputEquals("FB 02 02 ${" 6E".repeat(128)}") {
-            stepInList(false)
+            stepInList(usingLengthPrefix = true)
             repeat(128) { writeBool(true) }
             stepOut()
         }
@@ -266,7 +266,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write multiple nested prefixed lists`() {
         assertWriterOutputEquals("B4 B3 B2 B1 B0") {
-            repeat(5) { stepInList(false) }
+            repeat(5) { stepInList(usingLengthPrefix = true) }
             repeat(5) { stepOut() }
         }
     }
@@ -274,7 +274,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write multiple nested delimited lists`() {
         assertWriterOutputEquals("F1 F1 F1 F1 F0 F0 F0 F0") {
-            repeat(4) { stepInList(true) }
+            repeat(4) { stepInList(usingLengthPrefix = false) }
             repeat(4) { stepOut() }
         }
     }
@@ -283,8 +283,8 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write multiple nested delimited and prefixed lists`() {
         assertWriterOutputEquals("F1 B9 F1 B6 F1 B3 F1 B0 F0 F0 F0 F0") {
             repeat(4) {
-                stepInList(true)
-                stepInList(false)
+                stepInList(usingLengthPrefix = false)
+                stepInList(usingLengthPrefix = true)
             }
             repeat(8) { stepOut() }
         }
@@ -293,7 +293,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a delimited sexp`() {
         assertWriterOutputEquals("F2 6E 6F F0") {
-            stepInSExp(true)
+            stepInSExp(usingLengthPrefix = false)
             writeBool(true)
             writeBool(false)
             stepOut()
@@ -303,7 +303,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a prefixed sexp`() {
         assertWriterOutputEquals("C2 6E 6F") {
-            stepInSExp(false)
+            stepInSExp(usingLengthPrefix = true)
             writeBool(true)
             writeBool(false)
             stepOut()
@@ -313,7 +313,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a variable-length prefixed sexp`() {
         assertWriterOutputEquals("FC 21 ${" 6E".repeat(16)}") {
-            stepInSExp(false)
+            stepInSExp(usingLengthPrefix = true)
             repeat(16) { writeBool(true) }
             stepOut()
             finish()
@@ -323,7 +323,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a prefixed sexp that is so long it requires patch points`() {
         assertWriterOutputEquals("FC 02 02 ${" 6E".repeat(128)}") {
-            stepInSExp(false)
+            stepInSExp(usingLengthPrefix = true)
             repeat(128) { writeBool(true) }
             stepOut()
         }
@@ -332,7 +332,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write multiple nested prefixed sexps`() {
         assertWriterOutputEquals("C4 C3 C2 C1 C0") {
-            repeat(5) { stepInSExp(false) }
+            repeat(5) { stepInSExp(usingLengthPrefix = true) }
             repeat(5) { stepOut() }
         }
     }
@@ -340,7 +340,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write multiple nested delimited sexps`() {
         assertWriterOutputEquals("F2 F2 F2 F2 F0 F0 F0 F0") {
-            repeat(4) { stepInSExp(true) }
+            repeat(4) { stepInSExp(usingLengthPrefix = false) }
             repeat(4) { stepOut() }
         }
     }
@@ -349,8 +349,8 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write multiple nested delimited and prefixed sexps`() {
         assertWriterOutputEquals("F2 C9 F2 C6 F2 C3 F2 C0 F0 F0 F0 F0") {
             repeat(4) {
-                stepInSExp(true)
-                stepInSExp(false)
+                stepInSExp(usingLengthPrefix = false)
+                stepInSExp(usingLengthPrefix = true)
             }
             repeat(8) { stepOut() }
         }
@@ -367,7 +367,7 @@ class IonRawBinaryWriterTest_1_1 {
             6F  | false
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(11)
             writeBool(true)
             writeFieldName(12)
@@ -385,7 +385,7 @@ class IonRawBinaryWriterTest_1_1 {
             ${"17 6E ".repeat(8)}
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             repeat(8) {
                 writeFieldName(11)
                 writeBool(true)
@@ -403,7 +403,7 @@ class IonRawBinaryWriterTest_1_1 {
             ${"17 6E ".repeat(64)}
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             repeat(64) {
                 writeFieldName(11)
                 writeBool(true)
@@ -427,10 +427,10 @@ class IonRawBinaryWriterTest_1_1 {
             D0  | Struct Length = 0
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             repeat(4) {
                 writeFieldName(11)
-                stepInStruct(false)
+                stepInStruct(usingLengthPrefix = true)
             }
             repeat(5) {
                 stepOut()
@@ -450,10 +450,10 @@ class IonRawBinaryWriterTest_1_1 {
             01 F0 01 F0 01 F0 01 F0 | etc.
             """
         ) {
-            stepInStruct(true)
+            stepInStruct(usingLengthPrefix = false)
             repeat(4) {
                 writeFieldName(11)
-                stepInStruct(true)
+                stepInStruct(usingLengthPrefix = false)
             }
             repeat(5) {
                 stepOut()
@@ -464,7 +464,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write empty prefixed struct`() {
         assertWriterOutputEquals("D0") {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             stepOut()
         }
     }
@@ -483,7 +483,7 @@ class IonRawBinaryWriterTest_1_1 {
             01 F0       | End delimited struct
             """
         ) {
-            stepInStruct(true)
+            stepInStruct(usingLengthPrefix = false)
             writeFieldName(11)
             writeBool(true)
             writeFieldName("foo")
@@ -502,7 +502,7 @@ class IonRawBinaryWriterTest_1_1 {
             01 F0       | End delimited struct
             """
         ) {
-            stepInStruct(true)
+            stepInStruct(usingLengthPrefix = false)
             stepOut()
         }
     }
@@ -518,7 +518,7 @@ class IonRawBinaryWriterTest_1_1 {
             6E          | true
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName("foo")
             writeBool(true)
             stepOut()
@@ -540,7 +540,7 @@ class IonRawBinaryWriterTest_1_1 {
             6E           | true
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName("foo")
             writeBool(true)
             writeFieldName("bar")
@@ -566,7 +566,7 @@ class IonRawBinaryWriterTest_1_1 {
             6E             | true
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(64)
             writeBool(true)
             writeFieldName("foo")
@@ -588,7 +588,7 @@ class IonRawBinaryWriterTest_1_1 {
             6E     | true
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(0)
             writeBool(true)
             stepOut()
@@ -612,7 +612,7 @@ class IonRawBinaryWriterTest_1_1 {
             6E      | true
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(1)
             writeBool(true)
             writeFieldName(0)
@@ -628,11 +628,11 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `writing a value in a struct with no field name should throw an exception`() {
         assertWriterThrows {
-            stepInStruct(true)
+            stepInStruct(usingLengthPrefix = false)
             writeBool(true)
         }
         assertWriterThrows {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeBool(true)
         }
     }
@@ -650,12 +650,12 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `calling stepOut with a dangling field name should throw an exception`() {
         assertWriterThrows {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(12)
             stepOut()
         }
         assertWriterThrows {
-            stepInStruct(true)
+            stepInStruct(usingLengthPrefix = false)
             writeFieldName("foo")
             stepOut()
         }
@@ -1078,7 +1078,7 @@ class IonRawBinaryWriterTest_1_1 {
     )
     fun `write a delimited e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
         assertWriterOutputEquals(expectedBytes) {
-            stepInEExp(id, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInEExp(id, usingLengthPrefix = false, dummyMacro(nArgs = 0))
             stepOut()
         }
     }
@@ -1095,7 +1095,7 @@ class IonRawBinaryWriterTest_1_1 {
             61 04  | Int 4
         """
         ) {
-            stepInEExp(63, lengthPrefixed = false, dummyMacro(nArgs = 4, variadicParam(ParameterEncoding.Tagged)))
+            stepInEExp(63, usingLengthPrefix = false, dummyMacro(nArgs = 4, variadicParam(ParameterEncoding.Tagged)))
             writeInt(1)
             writeInt(2)
             writeInt(3)
@@ -1112,7 +1112,7 @@ class IonRawBinaryWriterTest_1_1 {
             00 00 00 00  | PresenceBitmap (16 void)
         """
         ) {
-            stepInEExp(63, lengthPrefixed = false, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
+            stepInEExp(63, usingLengthPrefix = false, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
             // Don't write any trailing void args (which is all of them in this case)
             stepOut()
         }
@@ -1137,7 +1137,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a length-prefixed e-expression with no args`(id: Int, expectedBytes: String) {
         // This test ensures that the macro address is written correctly
         assertWriterOutputEquals(expectedBytes) {
-            stepInEExp(id, lengthPrefixed = true, dummyMacro(nArgs = 0))
+            stepInEExp(id, usingLengthPrefix = true, dummyMacro(nArgs = 0))
             stepOut()
         }
     }
@@ -1146,7 +1146,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a length-prefixed e-expression with many args`() {
         // This test ensures that the macro length is written correctly
         assertWriterOutputEquals("F5 03 15 60 60 60 60 60 60 60 60 60 60") {
-            stepInEExp(1, lengthPrefixed = true, dummyMacro(nArgs = 10))
+            stepInEExp(1, usingLengthPrefix = true, dummyMacro(nArgs = 10))
             repeat(10) { writeInt(0L) }
             stepOut()
         }
@@ -1166,7 +1166,7 @@ class IonRawBinaryWriterTest_1_1 {
             61 04  | Int 4
         """
         ) {
-            stepInEExp(64, lengthPrefixed = true, dummyMacro(nArgs = 4, variadicParam(ParameterEncoding.Tagged)))
+            stepInEExp(64, usingLengthPrefix = true, dummyMacro(nArgs = 4, variadicParam(ParameterEncoding.Tagged)))
             writeInt(1)
             writeInt(2)
             writeInt(3)
@@ -1191,7 +1191,7 @@ class IonRawBinaryWriterTest_1_1 {
             61 06  | Int 6
         """
         ) {
-            stepInEExp(64, lengthPrefixed = true, dummyMacro(nArgs = 6, variadicParam(ParameterEncoding.Tagged)))
+            stepInEExp(64, usingLengthPrefix = true, dummyMacro(nArgs = 6, variadicParam(ParameterEncoding.Tagged)))
             writeInt(1)
             writeInt(2)
             writeInt(3)
@@ -1212,7 +1212,7 @@ class IonRawBinaryWriterTest_1_1 {
             00 00 00 00  | PresenceBitmap (16 void)
         """
         ) {
-            stepInEExp(64, lengthPrefixed = true, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
+            stepInEExp(64, usingLengthPrefix = true, dummyMacro(nArgs = 16, variadicParam(ParameterEncoding.Tagged)))
             // Don't write any trailing void args (which is all of them in this case)
             stepOut()
         }
@@ -1234,14 +1234,14 @@ class IonRawBinaryWriterTest_1_1 {
             50 00 00   | Macro 4160
             """
         ) {
-            stepInList(false)
-            stepInEExp(31, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInList(false)
-            stepInEExp(64, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInList(false)
-            stepInEExp(83, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInList(false)
-            stepInEExp(4160, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInList(usingLengthPrefix = true)
+            stepInEExp(31, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInList(usingLengthPrefix = true)
+            stepInEExp(64, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInList(usingLengthPrefix = true)
+            stepInEExp(83, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInList(usingLengthPrefix = true)
+            stepInEExp(4160, usingLengthPrefix = false, dummyMacro(nArgs = 0))
             repeat(8) { stepOut() }
         }
     }
@@ -1261,12 +1261,12 @@ class IonRawBinaryWriterTest_1_1 {
             40 00   | Macro 64
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(10)
             writeBool(true)
-            stepInEExp(31, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInEExp(31, usingLengthPrefix = false, dummyMacro(nArgs = 0))
             stepOut()
-            stepInEExp(64, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInEExp(64, usingLengthPrefix = false, dummyMacro(nArgs = 0))
             stepOut()
             stepOut()
         }
@@ -1283,8 +1283,8 @@ class IonRawBinaryWriterTest_1_1 {
             F0      | End Delimiter
             """
         ) {
-            stepInStruct(true)
-            stepInEExp(31, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInStruct(usingLengthPrefix = false)
+            stepInEExp(31, usingLengthPrefix = false, dummyMacro(nArgs = 0))
             stepOut()
             stepOut()
         }
@@ -1299,9 +1299,9 @@ class IonRawBinaryWriterTest_1_1 {
             01      | Macro 1
             """
         ) {
-            stepInStruct(false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(1)
-            stepInEExp(1, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInEExp(1, usingLengthPrefix = false, dummyMacro(nArgs = 0))
             stepOut()
             stepOut()
         }
@@ -1320,15 +1320,15 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling stepInEExp with an annotation should throw IonException`() {
         assertWriterThrows {
             writeAnnotations("foo")
-            stepInEExp(1, lengthPrefixed = false, dummyMacro(nArgs = 0))
+            stepInEExp(1, usingLengthPrefix = false, dummyMacro(nArgs = 0))
         }
     }
 
     @Test
     fun `write a prefixed, tagged expression group with zero values`() {
         assertWriterOutputEquals(""" 3D 01 """) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(false)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = true)
             stepOut()
             stepOut()
         }
@@ -1343,8 +1343,8 @@ class IonRawBinaryWriterTest_1_1 {
             6E      | true
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(false)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = true)
             writeBool(true)
             stepOut()
             stepOut()
@@ -1360,8 +1360,8 @@ class IonRawBinaryWriterTest_1_1 {
             60 61 01 61 02  | Ints 0, 1, 2
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(false)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = true)
             writeInt(0)
             writeInt(1)
             continueExpressionGroup() // Should have no effect
@@ -1380,8 +1380,8 @@ class IonRawBinaryWriterTest_1_1 {
             ${"6E ".repeat(255)}
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(false)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = true)
             repeat(255) { writeBool(true) }
             stepOut()
             stepOut()
@@ -1391,8 +1391,8 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a delimited, tagged expression group with zero values`() {
         assertWriterOutputEquals("3D 01 F0") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = false)
             stepOut()
             stepOut()
         }
@@ -1401,8 +1401,8 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a delimited, tagged expression group with one value`() {
         assertWriterOutputEquals("3D 01 60 F0") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeInt(0)
             stepOut()
             stepOut()
@@ -1412,8 +1412,8 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a delimited, tagged expression group with multiple values`() {
         assertWriterOutputEquals("3D 01 60 61 01 61 02 F0") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeInt(0)
             writeInt(1)
             continueExpressionGroup() // Should have no effect
@@ -1427,8 +1427,8 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write a tagless expression group with zero values`() {
         // Empty expression group is elided to be void, so we just have `00` presence bitmap
         assertWriterOutputEquals("3D 00") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(usingLengthPrefix = false)
             stepOut()
             stepOut()
         }
@@ -1437,8 +1437,8 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a tagless expression group with one value`() {
         assertWriterOutputEquals("3D 02 03 1A 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeInt(0x1A)
             stepOut()
             stepOut()
@@ -1448,8 +1448,8 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write a tagless expression group with multiple values`() {
         assertWriterOutputEquals("3D 02 07 1A 2B 3C 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeInt(0x1A)
             writeInt(0x2B)
             writeInt(0x3C)
@@ -1468,8 +1468,8 @@ class IonRawBinaryWriterTest_1_1 {
             01           | End of expression group
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeInt(0x1A)
             writeInt(0x2B)
             writeInt(0x3C)
@@ -1490,8 +1490,8 @@ class IonRawBinaryWriterTest_1_1 {
             01           | End of expression group
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeInt(0x1A)
             writeInt(0x2B)
             writeInt(0x3C)
@@ -1511,8 +1511,8 @@ class IonRawBinaryWriterTest_1_1 {
             01        | End of expression group
             """
         ) {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInExpressionGroup(usingLengthPrefix = false)
             repeat(10) { continueExpressionGroup() }
             writeInt(0x1A)
             writeInt(0x2B)
@@ -1530,7 +1530,7 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterThrows { writeSExp { continueExpressionGroup() } }
         assertWriterThrows { writeStruct { continueExpressionGroup() } }
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             continueExpressionGroup()
         }
     }
@@ -1538,33 +1538,33 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `calling stepInExpressionGroup with an annotation should throw IonException`() {
         assertWriterThrows {
-            stepInEExp(1, lengthPrefixed = false, dummyMacro(nArgs = 1))
+            stepInEExp(1, usingLengthPrefix = false, dummyMacro(nArgs = 1))
             writeAnnotations("foo")
-            stepInExpressionGroup(false)
+            stepInExpressionGroup(usingLengthPrefix = true)
         }
     }
 
     @Test
     fun `calling stepInExpressionGroup while not directly in a Macro container should throw IonException`() {
         assertWriterThrows {
-            stepInExpressionGroup(false)
+            stepInExpressionGroup(usingLengthPrefix = true)
         }
         assertWriterThrows {
-            stepInList(false)
-            stepInExpressionGroup(false)
+            stepInList(usingLengthPrefix = true)
+            stepInExpressionGroup(usingLengthPrefix = true)
         }
         assertWriterThrows {
-            stepInSExp(false)
-            stepInExpressionGroup(false)
+            stepInSExp(usingLengthPrefix = true)
+            stepInExpressionGroup(usingLengthPrefix = true)
         }
         assertWriterThrows {
-            stepInStruct(false)
-            stepInExpressionGroup(false)
+            stepInStruct(usingLengthPrefix = true)
+            stepInExpressionGroup(usingLengthPrefix = true)
         }
         assertWriterThrows {
-            stepInEExp(123, lengthPrefixed = false, dummyMacro(nArgs = 1))
-            stepInExpressionGroup(false)
-            stepInExpressionGroup(false)
+            stepInEExp(123, usingLengthPrefix = false, dummyMacro(nArgs = 1))
+            stepInExpressionGroup(usingLengthPrefix = true)
+            stepInExpressionGroup(usingLengthPrefix = true)
         }
     }
 
@@ -1601,13 +1601,13 @@ class IonRawBinaryWriterTest_1_1 {
         val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
         // Write the value as single expression
         assertWriterOutputEquals("3D 01 $expectedBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeInt(value)
             stepOut()
         }
         // ...and again using writeInt(BigInteger)
         assertWriterOutputEquals("3D 01 $expectedBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeInt(value.toBigInteger())
             stepOut()
         }
@@ -1633,16 +1633,16 @@ class IonRawBinaryWriterTest_1_1 {
         val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
         // Write the value in expression group
         assertWriterOutputEquals("3D 02 $expressionGroupBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
+            stepInExpressionGroup(usingLengthPrefix = false)
             longValues.forEach { writeInt(it) }
             stepOut()
             stepOut()
         }
         // ...and again using writeInt(BigInteger)
         assertWriterOutputEquals("3D 02 $expressionGroupBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
+            stepInExpressionGroup(usingLengthPrefix = false)
             longValues.forEach { writeInt(it.toBigInteger()) }
             stepOut()
             stepOut()
@@ -1678,7 +1678,7 @@ class IonRawBinaryWriterTest_1_1 {
         val badValue = if (goodValue > BigInteger.ZERO) goodValue + BigInteger.ONE else goodValue - BigInteger.ONE
         val macro = dummyMacro(nArgs = 2, variadicParam(encoding))
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeInt(badValue)
             stepOut()
         }
@@ -1686,7 +1686,7 @@ class IonRawBinaryWriterTest_1_1 {
         if (badValue.bitLength() < Long.SIZE_BITS) {
             // If this bad value fits in a long, test it on the long API as well.
             assertWriterThrows {
-                stepInEExp(0x3D, lengthPrefixed = false, macro)
+                stepInEExp(0x3D, usingLengthPrefix = false, macro)
                 writeInt(badValue.longValueExact())
                 stepOut()
             }
@@ -1697,12 +1697,12 @@ class IonRawBinaryWriterTest_1_1 {
     fun `attempting to write an int when another tagless type is expected should throw exception`() {
         val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Float64))
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeInt(0L)
             stepOut()
         }
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeInt(0.toBigInteger())
             stepOut()
         }
@@ -1727,13 +1727,13 @@ class IonRawBinaryWriterTest_1_1 {
         val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
         // Write the value as single expression
         assertWriterOutputEquals("3D 01 $expectedBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeFloat(value)
             stepOut()
         }
         // ...and again using writeFloat(Double)
         assertWriterOutputEquals("3D 01 $expectedBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeFloat(value.toDouble())
             stepOut()
         }
@@ -1767,8 +1767,8 @@ class IonRawBinaryWriterTest_1_1 {
         val lengthByte = ((taglessTypeByteSize + taglessTypeByteSize) * 2 + 1).toByte().toHexString(HexFormat.UpperCase)
         // Write the value twice in expression group
         assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeFloat(value)
             writeFloat(value)
             stepOut()
@@ -1776,8 +1776,8 @@ class IonRawBinaryWriterTest_1_1 {
         }
         // ...and again using writeFloat(Double)
         assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeFloat(value.toDouble())
             writeFloat(value.toDouble())
             stepOut()
@@ -1789,12 +1789,12 @@ class IonRawBinaryWriterTest_1_1 {
     fun `attempting to write a float when another tagless type is expected should throw exception`() {
         val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8))
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeFloat(0.0) // double
             stepOut()
         }
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeFloat(0.0f) // float
             stepOut()
         }
@@ -1820,7 +1820,7 @@ class IonRawBinaryWriterTest_1_1 {
             ?: { writeSymbol(value) }
         // Write the value as single expression
         assertWriterOutputEquals("3D 01 $expectedBytes") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeTheValue()
             stepOut()
         }
@@ -1830,8 +1830,8 @@ class IonRawBinaryWriterTest_1_1 {
         // equal to the number of bytes to write the values twice.
         val lengthByte = ((expectedBytes.replace(" ", "").length) * 2 + 1).toByte().toHexString(HexFormat.UpperCase)
         assertWriterOutputEquals("3D 02 $lengthByte $expectedBytes $expectedBytes 01") {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
-            stepInExpressionGroup(true)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
+            stepInExpressionGroup(usingLengthPrefix = false)
             writeTheValue()
             writeTheValue()
             stepOut()
@@ -1843,12 +1843,12 @@ class IonRawBinaryWriterTest_1_1 {
     fun `attempting to write a symbol when another tagless type is expected should throw exception`() {
         val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8))
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeSymbol(4)
             stepOut()
         }
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, macro)
+            stepInEExp(0x3D, usingLengthPrefix = false, macro)
             writeSymbol("foo")
             stepOut()
         }
@@ -1857,7 +1857,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `attempting to write a tagless value with annotations should throw exception`() {
         assertWriterThrows {
-            stepInEExp(0x3D, lengthPrefixed = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
+            stepInEExp(0x3D, usingLengthPrefix = false, dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.Uint8)))
             writeAnnotations("foo")
             writeInt(0)
             stepOut()
@@ -1963,7 +1963,7 @@ class IonRawBinaryWriterTest_1_1 {
      * match the indentation of the equivalent pretty-printed Ion.
      */
     private inline fun IonRawWriter_1_1.writeStruct(block: IonRawWriter_1_1.() -> Unit) {
-        stepInStruct(false)
+        stepInStruct(usingLengthPrefix = true)
         block()
         stepOut()
     }
@@ -1975,7 +1975,7 @@ class IonRawBinaryWriterTest_1_1 {
      * match the indentation of the equivalent pretty-printed Ion.
      */
     private inline fun IonRawWriter_1_1.writeList(block: IonRawWriter_1_1.() -> Unit) {
-        stepInList(false)
+        stepInList(usingLengthPrefix = true)
         block()
         stepOut()
     }
@@ -1987,7 +1987,7 @@ class IonRawBinaryWriterTest_1_1 {
      * match the indentation of the equivalent pretty-printed Ion.
      */
     private inline fun IonRawWriter_1_1.writeSExp(block: IonRawWriter_1_1.() -> Unit) {
-        stepInSExp(false)
+        stepInSExp(usingLengthPrefix = true)
         block()
         stepOut()
     }
