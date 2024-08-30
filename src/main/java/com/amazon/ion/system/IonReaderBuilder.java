@@ -1,20 +1,8 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
+import com.amazon.ion.GZIPStreamInterceptor;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -23,11 +11,15 @@ import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.StreamInterceptor;
 import com.amazon.ion.impl._Private_IonReaderBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Build a new {@link IonReader} from the given {@link IonCatalog} and data
@@ -45,6 +37,7 @@ public abstract class IonReaderBuilder
     private IonCatalog catalog = null;
     private boolean isIncrementalReadingEnabled = false;
     private IonBufferConfiguration bufferConfiguration = IonBufferConfiguration.DEFAULT;
+    private List<StreamInterceptor> streamInterceptors = new ArrayList<>(Collections.singletonList(GZIPStreamInterceptor.INSTANCE));
 
     protected IonReaderBuilder()
     {
@@ -55,6 +48,7 @@ public abstract class IonReaderBuilder
         this.catalog = that.catalog;
         this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
         this.bufferConfiguration = that.bufferConfiguration;
+        this.streamInterceptors = new ArrayList<>(that.streamInterceptors);
     }
 
     /**
@@ -261,6 +255,30 @@ public abstract class IonReaderBuilder
      */
     public IonBufferConfiguration getBufferConfiguration() {
         return bufferConfiguration;
+    }
+
+    /**
+     * Adds a {@link StreamInterceptor} to the end of the list that the builder will apply
+     * in order to each stream before creating {@link IonReader} instances over that stream.
+     * {@link GZIPStreamInterceptor} is always consulted first, and need not be added.
+     *
+     * @param streamInterceptor the stream interceptor to add.
+     *
+     * @return this builder instance, if mutable;
+     * otherwise a mutable copy of this builder.
+     */
+    public IonReaderBuilder addStreamInterceptor(StreamInterceptor streamInterceptor) {
+        IonReaderBuilder b = mutable();
+        b.streamInterceptors.add(streamInterceptor);
+        return b;
+    }
+
+    /**
+     * @see #addStreamInterceptor(StreamInterceptor)
+     * @return an unmodifiable view of the stream interceptors currently configured.
+     */
+    public List<StreamInterceptor> getStreamInterceptors() {
+        return Collections.unmodifiableList(streamInterceptors);
     }
 
     /**
