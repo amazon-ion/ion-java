@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
 import static com.amazon.ion.TestUtils.gzippedBytes;
@@ -26,18 +13,21 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.amazon.ion.BitUtils;
+import com.amazon.ion.GZIPStreamInterceptor;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.StreamInterceptor;
 import com.amazon.ion.impl.ResizingPipedInputStream;
 import com.amazon.ion.impl._Private_IonBinaryWriterBuilder;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import com.amazon.ion.impl._Private_IonConstants;
@@ -232,6 +222,16 @@ public class IonReaderBuilderTest
         IonReader reader = IonReaderBuilder.standard().withIncrementalReadingEnabled(isIncremental).build(BitUtils.bytes(0xE0, 0x01, 0x00));
         assertThrows(IonException.class, reader::next);
         reader.close();
+    }
+
+    @Test
+    public void gzipInterceptorEnabledByDefault() {
+        IonReaderBuilder builder = IonReaderBuilder.standard();
+        List<StreamInterceptor> interceptors = builder.getStreamInterceptors();
+        assertEquals(1, interceptors.size());
+        assertEquals(GZIPStreamInterceptor.INSTANCE.formatName(), interceptors.get(0).formatName());
+        // The list returned from IonReaderBuilder.getStreamInterceptors() is unmodifiable.
+        assertThrows(UnsupportedOperationException.class, () -> interceptors.add(GZIPStreamInterceptor.INSTANCE));
     }
 
 }
