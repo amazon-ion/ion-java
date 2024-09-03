@@ -3,7 +3,8 @@
 package com.amazon.ion.system;
 
 import com.amazon.ion.IonWriter;
-import com.amazon.ion.impl.bin.DelimitedContainerStrategy;
+import com.amazon.ion.impl.bin.LengthPrefixStrategy;
+import com.amazon.ion.impl.bin.LengthPrefixStrategy;
 
 /**
  * The builder for creating {@link IonWriter}s emitting the 1.1 version of the Ion binary format.
@@ -57,42 +58,42 @@ public interface IonBinaryWriterBuilder_1_1 extends IonWriterBuilder_1_1<IonBina
     IonBinaryWriterBuilder_1_1 withBlockSize(int size);
 
     /**
-     * Gets the DelimitedContainerStrategy that will be used to determine which containers will use a delimited encoding
+     * Gets the LengthPrefixStrategy that will be used to determine which containers will use a delimited encoding
      * vs a length-prefixed encoding.
      *
-     * @return the DelimitedContainerStrategy currently configured
+     * @return the LengthPrefixStrategy currently configured
      *
-     * @see #setDelimitedContainerStrategy(DelimitedContainerStrategy)
-     * @see #withDelimitedContainerStrategy(DelimitedContainerStrategy)
+     * @see #setLengthPrefixStrategy(LengthPrefixStrategy)
+     * @see #withLengthPrefixStrategy(LengthPrefixStrategy)
      */
-    DelimitedContainerStrategy getDelimitedContainerStrategy();
+    LengthPrefixStrategy getLengthPrefixStrategy();
 
     /**
-     * Sets the DelimitedContainerStrategy that will be used to determine which containers will use a delimited encoding
+     * Sets the LengthPrefixStrategy that will be used to determine which containers will use a delimited encoding
      * vs a length-prefixed encoding.
      *
-     * @param delimitedContainerStrategy  If unset, the default strategy of {@link DelimitedContainerStrategy#ALWAYS_PREFIXED}
-     *                                    will be used.
+     * @param lengthPrefixStrategy  If unset, the default strategy of {@link LengthPrefixStrategy#ALWAYS_PREFIXED}
+     *                              will be used.
      *
-     * @see #getDelimitedContainerStrategy()
-     * @see #withDelimitedContainerStrategy(DelimitedContainerStrategy)
+     * @see #getLengthPrefixStrategy()
+     * @see #withLengthPrefixStrategy(LengthPrefixStrategy)
      */
-    void setDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy);
+    void setLengthPrefixStrategy(LengthPrefixStrategy lengthPrefixStrategy);
 
     /**
-     * Declares the DelimitedContainerStrategy that will be used to determine which containers will use a delimited
+     * Declares the LengthPrefixStrategy that will be used to determine which containers will use a delimited
      * encoding vs a length-prefixed encoding.
      *
-     * @param delimitedContainerStrategy  If unset, the default strategy of {@link DelimitedContainerStrategy#ALWAYS_PREFIXED}
-     *                                    will be used.
+     * @param lengthPrefixStrategy  If unset, the default strategy of {@link LengthPrefixStrategy#ALWAYS_PREFIXED}
+     *                              will be used.
      *
      * @return this instance, if mutable;
      * otherwise a mutable copy of this instance.
      *
-     * @see #getDelimitedContainerStrategy()
-     * @see #setDelimitedContainerStrategy(DelimitedContainerStrategy)
+     * @see #getLengthPrefixStrategy()
+     * @see #setLengthPrefixStrategy(LengthPrefixStrategy)
      */
-    IonBinaryWriterBuilder_1_1 withDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy);
+    IonBinaryWriterBuilder_1_1 withLengthPrefixStrategy(LengthPrefixStrategy lengthPrefixStrategy);
 
     // NOTE: Unlike in Ion 1.0, local symbol table append is always enabled in the Ion 1.1 writers.
     // NOTE: Unlike in Ion 1.0, writing float 32 is always enabled in the Ion 1.1 writers.

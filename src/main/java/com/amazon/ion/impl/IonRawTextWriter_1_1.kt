@@ -311,7 +311,7 @@ class IonRawTextWriter_1_1 internal constructor(
 
     override fun writeClob(value: ByteArray, start: Int, length: Int) = writeScalar { output.printClob(options, value, start, length) }
 
-    override fun stepInList(delimited: Boolean) {
+    override fun stepInList(usingLengthPrefix: Boolean) {
         openValue { output.appendAscii("[") }
         ancestorContainersStack.add(currentContainer)
         currentContainer = List
@@ -319,7 +319,7 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingLeadingWhitespace = true
     }
 
-    override fun stepInSExp(delimited: Boolean) {
+    override fun stepInSExp(usingLengthPrefix: Boolean) {
         openValue { output.appendAscii("(") }
         ancestorContainersStack.add(currentContainer)
         currentContainer = SExp
@@ -327,7 +327,7 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingLeadingWhitespace = true
     }
 
-    override fun stepInStruct(delimited: Boolean) {
+    override fun stepInStruct(usingLengthPrefix: Boolean) {
         openValue { output.appendAscii("{") }
         ancestorContainersStack.add(currentContainer)
         currentContainer = Struct
@@ -347,7 +347,7 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingSeparator = true // Treat the macro name as if it is a value that needs a separator.
     }
 
-    override fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro) {
+    override fun stepInEExp(id: Int, usingLengthPrefix: Boolean, macro: Macro) {
         confirm(numAnnotations == 0) { "Cannot annotate a macro invocation" }
         openValue {
             output.appendAscii("(:")
@@ -359,7 +359,7 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingSeparator = true // Treat the macro id as if it is a value that needs a separator.
     }
 
-    override fun stepInExpressionGroup(delimited: Boolean) {
+    override fun stepInExpressionGroup(usingLengthPrefix: Boolean) {
         confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
         confirm(currentContainer == EExpression) { "Can only create an expression group in a macro invocation" }
         openValue { output.appendAscii("(:") }
