@@ -121,32 +121,32 @@ interface IonRawWriter_1_1 {
     /**
      * Steps into a List.
      *
-     * The [delimited] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
+     * The [usingLengthPrefix] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
      * particular implementation. All implementations must document their specific behavior for this method.
      */
-    fun stepInList(delimited: Boolean)
+    fun stepInList(usingLengthPrefix: Boolean)
 
     /**
      * Steps into a SExp.
      *
-     * The [delimited] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
+     * The [usingLengthPrefix] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
      * particular implementation. All implementations must document their specific behavior for this method.
      */
-    fun stepInSExp(delimited: Boolean)
+    fun stepInSExp(usingLengthPrefix: Boolean)
 
     /**
      * Steps into a Struct.
      *
-     * The [delimited] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
+     * The [usingLengthPrefix] parameter is a suggestion. Implementations may ignore it if it is not relevant for that
      * particular implementation. All implementations must document their specific behavior for this method.
      */
-    fun stepInStruct(delimited: Boolean)
+    fun stepInStruct(usingLengthPrefix: Boolean)
 
     /**
      * Steps into an expression group.
      * An expression group is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInExpressionGroup(delimited: Boolean)
+    fun stepInExpressionGroup(usingLengthPrefix: Boolean)
 
     /**
      * Writes a macro invocation for the given macro name.
@@ -158,7 +158,7 @@ interface IonRawWriter_1_1 {
      * Writes a macro invocation for the given id corresponding to a macro in the macro table.
      * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
      */
-    fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro)
+    fun stepInEExp(id: Int, usingLengthPrefix: Boolean, macro: Macro)
 
     /**
      * Steps out of the current container.

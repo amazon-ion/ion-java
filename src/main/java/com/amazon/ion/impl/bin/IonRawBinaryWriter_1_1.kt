@@ -46,7 +46,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     private class ContainerInfo(
         var type: ContainerType? = null,
-        var isDelimited: Boolean = false,
+        var isLengthPrefixed: Boolean = true,
         var usesFlexSym: Boolean = false,
         var position: Long = -1,
         /**
@@ -73,9 +73,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
         /**
          * Clears this [ContainerInfo] of old data and initializes it with the given new data.
          */
-        fun reset(type: ContainerType, position: Long, isDelimited: Boolean = false, metadataOffset: Int = 1) {
+        fun reset(type: ContainerType, position: Long, isLengthPrefixed: Boolean = true, metadataOffset: Int = 1) {
             this.type = type
-            this.isDelimited = isDelimited
+            this.isLengthPrefixed = isLengthPrefixed
             this.position = position
             this.metadataOffset = metadataOffset
             usesFlexSym = false
@@ -571,39 +571,39 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun writeClob(value: ByteArray, start: Int, length: Int) = writeScalar { writeClobValue(buffer, value, start, length) }
 
-    override fun stepInList(delimited: Boolean) {
+    override fun stepInList(usingLengthPrefix: Boolean) {
         openValue {
-            currentContainer = containerStack.push { it.reset(LIST, buffer.position(), delimited) }
-            if (delimited) {
-                buffer.writeByte(OpCodes.DELIMITED_LIST)
-            } else {
+            currentContainer = containerStack.push { it.reset(LIST, buffer.position(), usingLengthPrefix) }
+            if (usingLengthPrefix) {
                 buffer.writeByte(OpCodes.VARIABLE_LENGTH_LIST)
                 buffer.reserve(lengthPrefixPreallocation)
+            } else {
+                buffer.writeByte(OpCodes.DELIMITED_LIST)
             }
         }
     }
 
-    override fun stepInSExp(delimited: Boolean) {
+    override fun stepInSExp(usingLengthPrefix: Boolean) {
         openValue {
-            currentContainer = containerStack.push { it.reset(SEXP, buffer.position(), delimited) }
-            if (delimited) {
-                buffer.writeByte(OpCodes.DELIMITED_SEXP)
-            } else {
+            currentContainer = containerStack.push { it.reset(SEXP, buffer.position(), usingLengthPrefix) }
+            if (usingLengthPrefix) {
                 buffer.writeByte(OpCodes.VARIABLE_LENGTH_SEXP)
                 buffer.reserve(lengthPrefixPreallocation)
+            } else {
+                buffer.writeByte(OpCodes.DELIMITED_SEXP)
             }
         }
     }
 
-    override fun stepInStruct(delimited: Boolean) {
+    override fun stepInStruct(usingLengthPrefix: Boolean) {
         openValue {
-            currentContainer = containerStack.push { it.reset(STRUCT, buffer.position(), delimited) }
-            if (delimited) {
-                buffer.writeByte(OpCodes.DELIMITED_STRUCT)
-                currentContainer.usesFlexSym = true
-            } else {
+            currentContainer = containerStack.push { it.reset(STRUCT, buffer.position(), usingLengthPrefix) }
+            if (usingLengthPrefix) {
                 buffer.writeByte(OpCodes.VARIABLE_LENGTH_STRUCT_WITH_SIDS)
                 buffer.reserve(lengthPrefixPreallocation)
+            } else {
+                buffer.writeByte(OpCodes.DELIMITED_STRUCT)
+                currentContainer.usesFlexSym = true
             }
         }
     }
@@ -613,7 +613,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     }
 
     // Void can be written as an empty expression group.
-    override fun stepInEExp(id: Int, lengthPrefixed: Boolean, macro: Macro) {
+    override fun stepInEExp(id: Int, usingLengthPrefix: Boolean, macro: Macro) {
         // Length-prefixed e-expression format:
         //     F5 <flexuint-address> <flexuint-length> <presence-bitmap> <args...>
         // Non-length-prefixed e-expression format:
@@ -626,9 +626,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
             currentContainer.length++
         }
 
-        currentContainer = containerStack.push { it.reset(EEXP, buffer.position(), !lengthPrefixed) }
+        currentContainer = containerStack.push { it.reset(EEXP, buffer.position(), usingLengthPrefix) }
 
-        if (lengthPrefixed) {
+        if (usingLengthPrefix) {
             buffer.writeByte(OpCodes.LENGTH_PREFIXED_MACRO_INVOCATION)
             currentContainer.metadataOffset += buffer.writeFlexUInt(id)
             buffer.reserve(lengthPrefixPreallocation)
@@ -664,25 +664,25 @@ class IonRawBinaryWriter_1_1 internal constructor(
         hasFieldName = false
     }
 
-    override fun stepInExpressionGroup(delimited: Boolean) {
+    override fun stepInExpressionGroup(usingLengthPrefix: Boolean) {
         confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
         confirm(currentContainer.type == EEXP) { "Can only create an expression group in a macro invocation" }
 
         val encoding = presenceBitmapStack.peek().signature[currentContainer.numChildren].type
 
-        currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), delimited, metadataOffset = 0) }
+        currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), usingLengthPrefix, metadataOffset = 0) }
         currentContainer.taglessEncodingKind = encoding.taglessEncodingKind
 
         if (encoding.taglessEncodingKind != null) {
             // Tagless groups always need a length (although it is actually the count of expressions in the group)
             buffer.reserve(maxOf(1, lengthPrefixPreallocation))
-        } else if (delimited) {
+        } else if (usingLengthPrefix) {
+            // Reserve length prefix for a tagged expression group
+            buffer.reserve(maxOf(1, lengthPrefixPreallocation))
+        } else {
             // At the start of a tagged expression group, signals that it is delimited.
             buffer.writeByte(FlexInt.ZERO)
             currentContainer.length++
-        } else {
-            // Reserve length prefix for a tagged expression group
-            buffer.reserve(maxOf(1, lengthPrefixPreallocation))
         }
         // No need to clear any of the annotation fields because we already asserted that there are no annotations
     }
@@ -698,13 +698,13 @@ class IonRawBinaryWriter_1_1 internal constructor(
     fun continueExpressionGroup() {
         confirm(currentContainer.type == EXPR_GROUP) { "Can only call this method when directly in an expression group." }
         val primitiveType = currentContainer.taglessEncodingKind
-        if (currentContainer.isDelimited && primitiveType != null && currentContainer.length > 0) {
+        if (!currentContainer.isLengthPrefixed && primitiveType != null && currentContainer.length > 0) {
             var thisContainerTotalLength = currentContainer.length
             val thisContainerNumChildren = currentContainer.numChildren
             thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
             containerStack.pop()
             containerStack.peek().length += thisContainerTotalLength
-            currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), isDelimited = true, metadataOffset = 0) }
+            currentContainer = containerStack.push { it.reset(EXPR_GROUP, buffer.position(), isLengthPrefixed = false, metadataOffset = 0) }
             currentContainer.taglessEncodingKind = primitiveType
             // Carry over numChildren into the next segment (but not length)
             currentContainer.numChildren = thisContainerNumChildren
@@ -728,15 +728,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 thisContainerTotalLength++
                 // Write closing delimiter if we're in a delimited container.
                 // Update length prefix if we're in a prefixed container.
-                if (currentContainer.isDelimited) {
-                    if (isInStruct()) {
-                        // Need a 0 FlexInt before the end delimiter
-                        buffer.writeByte(FlexInt.ZERO)
-                        thisContainerTotalLength += 1
-                    }
-                    thisContainerTotalLength += 1 // For the end marker
-                    buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
-                } else {
+                if (currentContainer.isLengthPrefixed) {
                     val contentLength = currentContainer.length
                     if (contentLength <= 0xF && !currentContainer.usesFlexSym) {
                         // TODO: Right now, this is skipped if we switch to FlexSym after starting a struct
@@ -754,6 +746,14 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     } else {
                         thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     }
+                } else {
+                    if (isInStruct()) {
+                        // Need a 0 FlexInt before the end delimiter
+                        buffer.writeByte(FlexInt.ZERO)
+                        thisContainerTotalLength += 1
+                    }
+                    thisContainerTotalLength += 1 // For the end marker
+                    buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
                 }
             }
             EEXP -> {
@@ -762,7 +762,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
                 val presenceBitmap = presenceBitmapStack.pop()
                 val requiresWritingPresenceBits = presenceBitmap.byteSize > 0
-                val presenceBitmapPosition = if (!currentContainer.isDelimited) {
+                val presenceBitmapPosition = if (currentContainer.isLengthPrefixed) {
                     // TODO: If the length is 0, see if we can go back and rewrite this as a non-length-prefixed e-exp
                     thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     currentContainer.position + currentContainer.metadataOffset + lengthPrefixPreallocation
@@ -798,13 +798,13 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                     buffer.writeByte(FlexInt.ZERO)
                     thisContainerTotalLength++
-                } else if (currentContainer.isDelimited) {
+                } else if (currentContainer.isLengthPrefixed) {
+                    // Length-prefixed, tagged -- write the number of bytes
+                    thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
+                } else {
                     // Delimited, tagged -- start with `01` end with `F0`
                     buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
                     thisContainerTotalLength++
-                } else {
-                    // Length-prefixed, tagged -- write the number of bytes
-                    thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
                 }
             }
             ANNOTATIONS -> TODO("Unreachable.")

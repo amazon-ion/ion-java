@@ -248,13 +248,13 @@ class IonRawTextWriterTest_1_1 {
     @Test
     fun `write a sexp`() {
         assertWriterOutputEquals("(true false)") {
-            stepInSExp(delimited = true)
+            stepInSExp(usingLengthPrefix = false)
             writeBool(true)
             writeBool(false)
             stepOut()
         }
         assertWriterOutputEquals("(true false)") {
-            stepInSExp(delimited = false)
+            stepInSExp(usingLengthPrefix = true)
             writeBool(true)
             writeBool(false)
             stepOut()
@@ -265,8 +265,8 @@ class IonRawTextWriterTest_1_1 {
     fun `write multiple nested sexps`() {
         assertWriterOutputEquals("(((((((())))))))") {
             repeat(4) {
-                stepInSExp(delimited = true)
-                stepInSExp(delimited = false)
+                stepInSExp(usingLengthPrefix = false)
+                stepInSExp(usingLengthPrefix = true)
             }
             repeat(8) { stepOut() }
         }
@@ -277,7 +277,7 @@ class IonRawTextWriterTest_1_1 {
         assertWriterOutputEquals(
             """{$11:true,$12:false}"""
         ) {
-            stepInStruct(delimited = false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(11)
             writeBool(true)
             writeFieldName(12)
@@ -287,7 +287,7 @@ class IonRawTextWriterTest_1_1 {
         assertWriterOutputEquals(
             """{$11:true,$12:false}"""
         ) {
-            stepInStruct(delimited = true)
+            stepInStruct(usingLengthPrefix = false)
             writeFieldName(11)
             writeBool(true)
             writeFieldName(12)
@@ -301,12 +301,12 @@ class IonRawTextWriterTest_1_1 {
         assertWriterOutputEquals(
             "{a:{b:{a:{b:{a:{b:{a:{b:{}}}}}}}}}"
         ) {
-            stepInStruct(delimited = false)
+            stepInStruct(usingLengthPrefix = true)
             repeat(4) {
                 writeFieldName("a")
-                stepInStruct(delimited = true)
+                stepInStruct(usingLengthPrefix = false)
                 writeFieldName("b")
-                stepInStruct(delimited = false)
+                stepInStruct(usingLengthPrefix = true)
             }
             repeat(9) {
                 stepOut()
@@ -317,11 +317,11 @@ class IonRawTextWriterTest_1_1 {
     @Test
     fun `write empty struct`() {
         assertWriterOutputEquals("{}") {
-            stepInStruct(delimited = false)
+            stepInStruct(usingLengthPrefix = true)
             stepOut()
         }
         assertWriterOutputEquals("{}") {
-            stepInStruct(delimited = true)
+            stepInStruct(usingLengthPrefix = false)
             stepOut()
         }
     }
@@ -343,7 +343,7 @@ class IonRawTextWriterTest_1_1 {
         assertWriterOutputEquals(
             "{\$0:true}"
         ) {
-            stepInStruct(delimited = false)
+            stepInStruct(usingLengthPrefix = true)
             writeFieldName(0)
             writeBool(true)
             stepOut()
@@ -351,7 +351,7 @@ class IonRawTextWriterTest_1_1 {
         assertWriterOutputEquals(
             "{\$0:true}"
         ) {
-            stepInStruct(delimited = true)
+            stepInStruct(usingLengthPrefix = false)
             writeFieldName(0)
             writeBool(true)
             stepOut()
@@ -733,8 +733,8 @@ class IonRawTextWriterTest_1_1 {
                     writeBool(true)
                     writeBool(true)
                 }
-                // Can't use writeExpressionGroup for this because it sets delimited = true
-                stepInExpressionGroup(delimited = false)
+                // Can't use writeExpressionGroup for this because it sets usingLengthPrefix = false
+                stepInExpressionGroup(usingLengthPrefix = true)
                 writeBool(false)
                 writeBool(false)
                 stepOut()

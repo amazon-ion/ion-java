@@ -5,12 +5,9 @@ package com.amazon.ion.impl.bin
 /**
  * TODO: Proper documentation.
  *
- * TODO: Consider renaming to "ContainerLengthPrefixStrategy" since EExps don't strictly have
- *       a delimited option like the other container types.
- *
  * See [SymbolInliningStrategy] for a similar strategy interface.
  */
-fun interface DelimitedContainerStrategy {
+fun interface LengthPrefixStrategy {
     /**
      * Indicates whether a container should be written using a length prefix.
      *
@@ -21,13 +18,13 @@ fun interface DelimitedContainerStrategy {
      * With more context, we could enable strategies like:
      *   - Write lists with annotation `X` as a delimited container.
      */
-    fun writeDelimited(containerType: ContainerType, depth: Int): Boolean
+    fun writeLengthPrefix(containerType: ContainerType, depth: Int): Boolean
 
     companion object {
         @JvmField
-        val ALWAYS_DELIMITED = DelimitedContainerStrategy { _, _ -> true }
+        val NEVER_PREFIXED = LengthPrefixStrategy { _, _ -> false }
         @JvmField
-        val ALWAYS_PREFIXED = DelimitedContainerStrategy { _, _ -> false }
+        val ALWAYS_PREFIXED = LengthPrefixStrategy { _, _ -> true }
     }
 
     enum class ContainerType {
@@ -36,8 +33,9 @@ fun interface DelimitedContainerStrategy {
         SEXP,
         /**
          * These are only containers at an encoding/syntax level.
-         * There isn't really a "delimited" option for these, but there is a length-prefix option.
+         * There isn't really a "delimited" option for macros, but there is a length-prefix option.
          */
         EEXP,
+        EXPRESSION_GROUP,
     }
 }

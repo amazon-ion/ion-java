@@ -14,14 +14,14 @@ data class ManagedWriterOptions_1_1(
      */
     val internEncodingDirectiveSymbols: Boolean,
     val symbolInliningStrategy: SymbolInliningStrategy,
-    val delimitedContainerStrategy: DelimitedContainerStrategy,
-) : SymbolInliningStrategy by symbolInliningStrategy, DelimitedContainerStrategy by delimitedContainerStrategy {
+    val lengthPrefixStrategy: LengthPrefixStrategy,
+) : SymbolInliningStrategy by symbolInliningStrategy, LengthPrefixStrategy by lengthPrefixStrategy {
     companion object {
         @JvmField
         val ION_BINARY_DEFAULT = ManagedWriterOptions_1_1(
             internEncodingDirectiveSymbols = true,
             symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
-            delimitedContainerStrategy = DelimitedContainerStrategy.ALWAYS_PREFIXED,
+            lengthPrefixStrategy = LengthPrefixStrategy.ALWAYS_PREFIXED,
         )
         @JvmField
         val ION_TEXT_DEFAULT = ManagedWriterOptions_1_1(
@@ -29,7 +29,7 @@ data class ManagedWriterOptions_1_1(
             internEncodingDirectiveSymbols = false,
             symbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
             // This doesn't actually have any effect for Ion Text since there are no length-prefixed containers.
-            delimitedContainerStrategy = DelimitedContainerStrategy.ALWAYS_DELIMITED,
+            lengthPrefixStrategy = LengthPrefixStrategy.NEVER_PREFIXED,
         )
     }
 }
