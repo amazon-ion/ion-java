@@ -442,19 +442,19 @@ abstract class Ion_1_1_RoundTripBase {
         @JvmStatic
         protected val WRITER_INTERNED_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
+            .withLengthPrefixStrategy(LengthPrefixStrategy.ALWAYS_PREFIXED)::build
         @JvmStatic
         protected val WRITER_INLINE_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_PREFIXED)::build
+            .withLengthPrefixStrategy(LengthPrefixStrategy.ALWAYS_PREFIXED)::build
         @JvmStatic
         protected val WRITER_INTERNED_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
+            .withLengthPrefixStrategy(LengthPrefixStrategy.NEVER_PREFIXED)::build
         @JvmStatic
         protected val WRITER_INLINE_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
-            .withDelimitedContainerStrategy(DelimitedContainerStrategy.ALWAYS_DELIMITED)::build
+            .withLengthPrefixStrategy(LengthPrefixStrategy.NEVER_PREFIXED)::build
 
         /**
          * Checks if this ByteArray contains Ion Binary.

@@ -6,7 +6,7 @@ import com.amazon.ion.*
 import com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl._Private_IonWriter.IntTransformer
-import com.amazon.ion.impl.bin.DelimitedContainerStrategy.*
+import com.amazon.ion.impl.bin.LengthPrefixStrategy.*
 import com.amazon.ion.impl.bin.SymbolInliningStrategy.*
 import com.amazon.ion.system.*
 import java.io.OutputStream
@@ -149,7 +149,7 @@ internal class IonManagedWriter_1_1(
 
             if (useSid) writeAnnotations(SystemSymbols.ION_SYMBOL_TABLE_SID) else writeAnnotations(SystemSymbols.ION_SYMBOL_TABLE)
 
-            systemData.stepInStruct(delimited = false)
+            systemData.stepInStruct(usingLengthPrefix = false)
             if (canAppendToLocalSymbolTable) {
                 // LST Append
                 if (useSid) writeFieldName(SystemSymbols.IMPORTS_SID) else writeFieldName(SystemSymbols.IMPORTS)
@@ -157,7 +157,7 @@ internal class IonManagedWriter_1_1(
             }
             // ... and write the new symbols
             if (useSid) writeFieldName(SystemSymbols.SYMBOLS_SID) else writeFieldName(SystemSymbols.SYMBOLS)
-            stepInList(delimited = false)
+            stepInList(usingLengthPrefix = false)
             newSymbols.forEach { (text, _) -> writeString(text) }
             stepOut()
             stepOut()
@@ -222,13 +222,13 @@ internal class IonManagedWriter_1_1(
     override fun stepIn(containerType: IonType?) {
         val newDepth = depth + 1
         when (containerType) {
-            IonType.LIST -> userData.stepInList(options.writeDelimited(ContainerType.LIST, newDepth))
-            IonType.SEXP -> userData.stepInSExp(options.writeDelimited(ContainerType.SEXP, newDepth))
+            IonType.LIST -> userData.stepInList(options.writeLengthPrefix(ContainerType.LIST, newDepth))
+            IonType.SEXP -> userData.stepInSExp(options.writeLengthPrefix(ContainerType.SEXP, newDepth))
             IonType.STRUCT -> {
                 if (depth == 0 && userData._private_hasFirstAnnotation(SystemSymbols.ION_SYMBOL_TABLE_SID, SystemSymbols.ION_SYMBOL_TABLE)) {
                     throw IonException("User-defined symbol tables not permitted by the Ion 1.1 managed writer.")
                 }
-                userData.stepInStruct(options.writeDelimited(ContainerType.STRUCT, newDepth))
+                userData.stepInStruct(options.writeLengthPrefix(ContainerType.STRUCT, newDepth))
             }
             else -> throw IllegalArgumentException("Not a container type: $containerType")
         }
@@ -445,15 +445,15 @@ internal class IonManagedWriter_1_1(
             IonType.BLOB -> userData.writeBlob(reader.newBytes())
             // TODO: See if we can preserve the encoding of containers (delimited vs length-prefixed)
             IonType.LIST -> {
-                userData.stepInList(options.writeDelimited(ContainerType.LIST, reader.depth))
+                userData.stepInList(options.writeLengthPrefix(ContainerType.LIST, reader.depth))
                 reader.stepIn()
             }
             IonType.SEXP -> {
-                userData.stepInSExp(options.writeDelimited(ContainerType.SEXP, reader.depth))
+                userData.stepInSExp(options.writeLengthPrefix(ContainerType.SEXP, reader.depth))
                 reader.stepIn()
             }
             IonType.STRUCT -> {
-                userData.stepInStruct(options.writeDelimited(ContainerType.STRUCT, reader.depth))
+                userData.stepInStruct(options.writeLengthPrefix(ContainerType.STRUCT, reader.depth))
                 reader.stepIn()
             }
             else -> TODO("NULL and DATAGRAM are unreachable.")

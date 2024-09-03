@@ -5,7 +5,7 @@ package com.amazon.ion.system;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl._Private_IonConstants;
-import com.amazon.ion.impl.bin.DelimitedContainerStrategy;
+import com.amazon.ion.impl.bin.LengthPrefixStrategy;
 import com.amazon.ion.impl.bin.IonManagedWriter_1_1;
 import com.amazon.ion.impl.bin.ManagedWriterOptions_1_1;
 import com.amazon.ion.impl.bin.SymbolInliningStrategy;
@@ -27,7 +27,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
     public static final int MAXIMUM_BLOCK_SIZE = _Private_IonConstants.ARRAY_MAXIMUM_SIZE;
 
     private int blockSize = DEFAULT_BLOCK_SIZE;
-    private DelimitedContainerStrategy delimitedContainerStrategy = DelimitedContainerStrategy.ALWAYS_PREFIXED;
+    private LengthPrefixStrategy lengthPrefixStrategy = LengthPrefixStrategy.ALWAYS_PREFIXED;
     private SymbolInliningStrategy symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE;
 
     /**
@@ -45,7 +45,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
     private _Private_IonBinaryWriterBuilder_1_1(_Private_IonBinaryWriterBuilder_1_1 that) {
         super(that);
         blockSize = that.blockSize;
-        delimitedContainerStrategy = that.delimitedContainerStrategy;
+        lengthPrefixStrategy = that.lengthPrefixStrategy;
         symbolInliningStrategy = that.symbolInliningStrategy;
     }
 
@@ -92,25 +92,25 @@ public class _Private_IonBinaryWriterBuilder_1_1
         return null;
     }
 
-    // DelimitedContainerStrategy is an interface. We have no way to make a defensive copy or ensure immutability.
+    // LengthPrefixStrategy is an interface. We have no way to make a defensive copy or ensure immutability.
     // It is unclear why SpotBugs flagged these methods and not the similar methods for SymbolInliningStrategy.
     @SuppressFBWarnings("EI_EXPOSE_REP")
     @Override
-    public DelimitedContainerStrategy getDelimitedContainerStrategy() {
-        return delimitedContainerStrategy;
+    public LengthPrefixStrategy getLengthPrefixStrategy() {
+        return lengthPrefixStrategy;
     }
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     @Override
-    public void setDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy) {
+    public void setLengthPrefixStrategy(LengthPrefixStrategy lengthPrefixStrategy) {
         mutationCheck();
-        this.delimitedContainerStrategy = Objects.requireNonNull(delimitedContainerStrategy);
+        this.lengthPrefixStrategy = Objects.requireNonNull(lengthPrefixStrategy);
     }
 
     @Override
-    public IonBinaryWriterBuilder_1_1 withDelimitedContainerStrategy(DelimitedContainerStrategy delimitedContainerStrategy) {
+    public IonBinaryWriterBuilder_1_1 withLengthPrefixStrategy(LengthPrefixStrategy lengthPrefixStrategy) {
         _Private_IonBinaryWriterBuilder_1_1 b = mutable();
-        b.setDelimitedContainerStrategy(delimitedContainerStrategy);
+        b.setLengthPrefixStrategy(lengthPrefixStrategy);
         return b;
     }
 
@@ -137,7 +137,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
         if (out == null) {
             throw new IllegalArgumentException("Cannot construct a writer with a null OutputStream.");
         }
-        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(true, symbolInliningStrategy, delimitedContainerStrategy);
+        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(true, symbolInliningStrategy, lengthPrefixStrategy);
         return IonManagedWriter_1_1.binaryWriter(out, options, this);
     }
 
