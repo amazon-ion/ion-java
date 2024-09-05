@@ -1126,7 +1126,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public String getFieldName() {
-        if (fieldTextMarker.startIndex > -1) {
+        if (fieldTextMarker.startIndex > -1 || isEvaluatingEExpression) {
             return getFieldText();
         }
         if (fieldSid < 0) {

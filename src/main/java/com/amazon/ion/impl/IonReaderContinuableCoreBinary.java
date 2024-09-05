@@ -13,9 +13,11 @@ import com.amazon.ion.Timestamp;
 import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.OpCodes;
+import com.amazon.ion.impl.bin.PresenceBitmap;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.impl.macro.EncodingContext;
+import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
 import com.amazon.ion.impl.macro.MacroEvaluator;
@@ -29,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -117,6 +120,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // Reads encoding directives from the stream.
     private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
 
+    // Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
+    private final ExpressionReader expressionReader = new ExpressionReader();
+
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
     protected String[] symbols;
@@ -126,6 +132,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     // The maximum offset into the macro table that points to a valid local macro.
     private int localMacroMaxOffset = -1;
+
+    // Indicates whether the reader is currently evaluating an e-expression.
+    protected boolean isEvaluatingEExpression = false;
 
     /**
      * Constructs a new reader from the given byte array.
@@ -1369,10 +1378,301 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private State state = State.READING_VALUE;
 
     /**
-     * Navigates to the next raw Ion 1.1 value, consuming any encoding directives that occur between raw values.
-     * @return an event conveying the result of the operation.
+     * Eagerly collects the annotations on the current value.
+     * @return the annotations, or an empty list if there are none.
      */
-    private Event nextValue_1_1() {
+    private List<SymbolToken> getAnnotations() {
+        if (!hasAnnotations) {
+            return Collections.emptyList();
+        }
+        List<SymbolToken> out = new ArrayList<>();
+        consumeAnnotationTokens(out::add);
+        return out;
+    }
+
+    /**
+     * Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
+     * TODO ideally this could be factored out of IonReaderContinuableCoreBinary.
+     *  See {@link com.amazon.ion.impl.macro.MacroExpressionizer}. Currently, this relies on class internals.
+     */
+    class ExpressionReader {
+
+        /**
+         * Reads a scalar value from the stream into an expression.
+         * @param type the type of scalar.
+         * @param annotations any annotations on the scalar.
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void readScalarValueAsExpression(
+            IonType type,
+            List<SymbolToken> annotations,
+            List<Expression.EExpressionBodyExpression> expressions
+        ) {
+            Expression.EExpressionBodyExpression expression;
+            if (isNullValue()) {
+                expression = new Expression.NullValue(annotations, type);
+            } else {
+                switch (type) {
+                    case BOOL:
+                        expression = new Expression.BoolValue(annotations, booleanValue());
+                        break;
+                    case INT:
+                        switch (getIntegerSize()) {
+                            case INT:
+                            case LONG:
+                                expression = new Expression.LongIntValue(annotations, longValue());
+                                break;
+                            case BIG_INTEGER:
+                                expression = new Expression.BigIntValue(annotations, bigIntegerValue());
+                                break;
+                            default:
+                                throw new IllegalStateException();
+                        }
+                        break;
+                    case FLOAT:
+                        expression = new Expression.FloatValue(annotations, doubleValue());
+                        break;
+                    case DECIMAL:
+                        expression = new Expression.DecimalValue(annotations, decimalValue());
+                        break;
+                    case TIMESTAMP:
+                        expression = new Expression.TimestampValue(annotations, timestampValue());
+                        break;
+                    case SYMBOL:
+                        expression = new Expression.SymbolValue(annotations, symbolValue());
+                        break;
+                    case STRING:
+                        expression = new Expression.StringValue(annotations, stringValue());
+                        break;
+                    case CLOB:
+                        expression = new Expression.ClobValue(annotations, newBytes());
+                        break;
+                    case BLOB:
+                        expression = new Expression.BlobValue(annotations, newBytes());
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                }
+            }
+            expressions.add(expression);
+        }
+
+        /**
+         * Reads a container value from the stream into expressions.
+         * @param type the type of container.
+         * @param annotations any annotations on the container.
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void readContainerValueAsExpression(
+            IonType type,
+            List<SymbolToken> annotations,
+            List<Expression.EExpressionBodyExpression> expressions
+        ) {
+            int startIndex = expressions.size();
+            expressions.add(Expression.Placeholder.INSTANCE);
+            stepIntoContainer();
+            while (nextValue() != Event.END_CONTAINER) {
+                if (type == IonType.STRUCT) {
+                    expressions.add(new Expression.FieldName(getFieldNameSymbol()));
+                }
+                readValueAsExpression(expressions); // TODO avoid recursion
+            }
+            stepOutOfContainer();
+            Expression.EExpressionBodyExpression expression;
+            switch (type) {
+                case LIST:
+                    expression = new Expression.ListValue(annotations, startIndex, expressions.size());
+                    break;
+                case SEXP:
+                    expression = new Expression.SExpValue(annotations, startIndex, expressions.size());
+                    break;
+                case STRUCT:
+                    // TODO consider whether templateStructIndex could be leveraged or should be removed
+                    expression = new Expression.StructValue(annotations, startIndex, expressions.size(), Collections.emptyMap());
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+            expressions.set(startIndex, expression);
+        }
+
+        /**
+         * Reads a value from the stream into expression(s).
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
+            if (valueTid.isMacroInvocation) {
+                if (isSystemInvocation()) {
+                    throw new UnsupportedOperationException("TODO: system macros");
+                }
+                collectMacroInvocationExpressions(expressions); // TODO avoid recursion
+                return;
+            }
+            IonType type = valueTid.type;
+            if (type == null) {
+                throw new IllegalStateException(); // TODO research if/why this could happen
+            }
+            List<SymbolToken> annotations = getAnnotations();
+            if (IonType.isContainer(type)) {
+                readContainerValueAsExpression(type, annotations, expressions);
+            } else {
+                readScalarValueAsExpression(type, annotations, expressions);
+            }
+        }
+
+        /**
+         * Reads a single (non-grouped) expression.
+         * @param encoding how the expression is encoded.
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void readSingleExpression(Macro.ParameterEncoding encoding, List<Expression.EExpressionBodyExpression> expressions) {
+            if (encoding == Macro.ParameterEncoding.Tagged) {
+                IonReaderContinuableCoreBinary.super.nextValue();
+            } else {
+                nextTaglessValue(encoding.taglessEncodingKind);
+            }
+            if (event == Event.NEEDS_DATA) {
+                throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
+            }
+            readValueAsExpression(expressions);
+        }
+
+        /**
+         * Reads a group expression.
+         * @param encoding how the group is encoded.
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void readGroupExpression(Macro.ParameterEncoding encoding, List<Expression.EExpressionBodyExpression> expressions) {
+            if (encoding == Macro.ParameterEncoding.Tagged) {
+                enterTaggedArgumentGroup();
+            } else {
+                enterTaglessArgumentGroup(encoding.taglessEncodingKind);
+            }
+            if (event == Event.NEEDS_DATA) {
+                throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
+            }
+            int startIndex = expressions.size();
+            expressions.add(Expression.Placeholder.INSTANCE);
+            while (nextGroupedValue() != Event.NEEDS_INSTRUCTION) {
+                readValueAsExpression(expressions);
+            }
+            if (exitArgumentGroup() == Event.NEEDS_DATA) {
+                throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
+            }
+            expressions.set(startIndex, new Expression.ExpressionGroup(startIndex, expressions.size()));
+        }
+
+        /**
+         * Reads a single parameter to a macro invocation.
+         * @param parameter information about the parameter from the macro signature.
+         * @param parameterPresence the presence bits dedicated to this parameter.
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions) {
+            Macro.ParameterEncoding encoding = parameter.getType();
+            switch (parameter.getCardinality()) {
+                case ZeroOrOne:
+                    if (parameterPresence == PresenceBitmap.EXPRESSION) {
+                        readSingleExpression(encoding, expressions);
+                    } else if (parameterPresence != PresenceBitmap.VOID) {
+                        throw new IllegalStateException();
+                    }
+                    break;
+                case ExactlyOne:
+                    readSingleExpression(encoding, expressions);
+                    break;
+                case OneOrMore:
+                    if (parameterPresence == PresenceBitmap.EXPRESSION) {
+                        readSingleExpression(encoding, expressions);
+                    }
+                    if (parameterPresence == PresenceBitmap.GROUP) {
+                        readGroupExpression(encoding, expressions);
+                    } else {
+                        throw new IllegalStateException();
+                    }
+                    break;
+                case ZeroOrMore:
+                    if (parameterPresence == PresenceBitmap.EXPRESSION) {
+                        readSingleExpression(encoding, expressions);
+                    } else if (parameterPresence == PresenceBitmap.GROUP) {
+                        readGroupExpression(encoding, expressions);
+                    } else if (parameterPresence != PresenceBitmap.VOID) {
+                        throw new IllegalStateException();
+                    }
+                    break;
+            }
+        }
+
+        /**
+         * Collects the expressions that compose the current macro invocation.
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void collectMacroInvocationExpressions(List<Expression.EExpressionBodyExpression> expressions) {
+            if (isSystemInvocation()) {
+                throw new UnsupportedOperationException("System macro invocations not yet supported.");
+            }
+            int invocationStartIndex = expressions.size();
+            long id = getMacroInvocationId();
+            MacroRef address = MacroRef.byId(id);
+            Macro macro = macroEvaluator.getEncodingContext().getMacroTable().get(address);
+            PresenceBitmap presenceBitmap = new PresenceBitmap();
+            List<Macro.Parameter> signature = macro.getSignature();
+            presenceBitmap.initialize(signature);
+            if (presenceBitmap.getByteSize() > 0) {
+                if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == Event.NEEDS_DATA) {
+                    throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
+                }
+                presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
+                presenceBitmap.validate();
+            }
+            expressions.add(Expression.Placeholder.INSTANCE);
+            int numberOfParameters = presenceBitmap.getTotalParameterCount();
+            for (int i = 0; i < numberOfParameters; i++) {
+                readParameter(signature.get(i), presenceBitmap.get(i), expressions);
+            }
+            expressions.set(invocationStartIndex, new Expression.EExpression(address, invocationStartIndex, expressions.size()));
+        }
+
+        /**
+         * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
+         * them to the macro evaluator.
+         */
+        private void beginEvaluatingMacroInvocation() {
+            List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
+            // TODO performance: avoid fully materializing all expressions up-front.
+            collectMacroInvocationExpressions(expressions);
+            macroEvaluator.initExpansion(expressions);
+            isEvaluatingEExpression = true;
+        }
+    }
+
+    /**
+     * Consumes the next value (if any) from the MacroEvaluator, setting `event` based on the result. If this call
+     * causes the evaluator to reach the end of the current invocation, positions the reader on the value that follows
+     * the invocation.
+     */
+    private void evaluateNext() {
+        IonType type = macroEvaluatorIonReader.next();
+        if (type == null) {
+            if (macroEvaluatorIonReader.getDepth() == 0) {
+                // Evaluation of this macro is complete. Resume reading from the stream.
+                isEvaluatingEExpression = false;
+                event = super.nextValue();
+            } else {
+                event = Event.END_CONTAINER;
+            }
+        } else {
+            if (IonType.isContainer(type)) {
+                event = Event.START_CONTAINER;
+            } else {
+                event = Event.START_SCALAR;
+            }
+        }
+    }
+
+    @Override
+    public Event nextValue() {
+        lobBytesRead = 0;
         if (parent == null || state != State.READING_VALUE) {
             while (true) {
                 if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
@@ -1382,31 +1682,56 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                         break;
                     }
                 }
-                event = super.nextValue();
-                if (parent == null && isPositionedOnEncodingDirective()) {
+                if (isEvaluatingEExpression) {
+                    evaluateNext();
+                } else {
+                    event = super.nextValue();
+                }
+                if (minorVersion == 1 && parent == null && isPositionedOnEncodingDirective()) {
                     encodingDirectiveReader.resetState();
                     state = State.ON_ION_ENCODING_SEXP;
                     continue;
                 }
                 break;
             }
+        } else if (isEvaluatingEExpression) {
+            evaluateNext();
         } else {
             event = super.nextValue();
         }
         if (valueTid != null && valueTid.isMacroInvocation) {
-            // TODO delegate to macroEvaluatorIonReader while this invocation is active.
-            throw new UnsupportedOperationException("Cannot yet invoke a macro.");
+            if (macroEvaluator == null) {
+                // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
+                // but allow the user to do a raw read of the parameters if this is a core-level reader.
+                if (this instanceof IonReaderContinuableApplicationBinary) {
+                    throw new IonException("The user-level binary reader encountered a macro invocation without an active macro table.");
+                }
+            } else {
+                expressionReader.beginEvaluatingMacroInvocation();
+                evaluateNext();
+            }
         }
         return event;
     }
 
     @Override
-    public Event nextValue() {
-        lobBytesRead = 0;
-        if (minorVersion == 1) {
-            return nextValue_1_1();
+    public Event stepIntoContainer() {
+        if (isEvaluatingEExpression) {
+            macroEvaluatorIonReader.stepIn();
+            event = Event.NEEDS_INSTRUCTION;
+            return event;
         }
-        return super.nextValue();
+        return super.stepIntoContainer();
+    }
+
+    @Override
+    public Event stepOutOfContainer() {
+        if (isEvaluatingEExpression) {
+            macroEvaluatorIonReader.stepOut();
+            event = Event.NEEDS_INSTRUCTION;
+            return event;
+        }
+        return super.stepOutOfContainer();
     }
 
     /**
@@ -1453,6 +1778,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public boolean isNullValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.isNullValue();
+        }
         return valueTid != null && valueTid.isNull;
     }
 
@@ -1572,6 +1900,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public IntegerSize getIntegerSize() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getIntegerSize();
+        }
         if (valueTid == null || valueTid.type != IonType.INT || valueTid.isNull) {
             return null;
         }
@@ -1608,6 +1939,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public int byteSize() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.byteSize();
+        }
         if (valueTid == null || !IonType.isLob(valueTid.type) || valueTid.isNull) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
@@ -1617,6 +1951,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public byte[] newBytes() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.newBytes();
+        }
         byte[] bytes = new byte[byteSize()];
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
@@ -1626,6 +1963,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public int getBytes(byte[] bytes, int offset, int len) {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getBytes(bytes, offset, len);
+        }
         int length = Math.min(len, byteSize() - lobBytesRead);
         // The correct number of bytes will be requested from the buffer, so the limit is set at the capacity to
         // avoid having to calculate a limit.
@@ -1649,6 +1989,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public BigDecimal bigDecimalValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.bigDecimalValue();
+        }
         BigDecimal value = null;
         if (valueTid.type == IonType.DECIMAL) {
             if (valueTid.isNull) {
@@ -1677,6 +2020,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public Decimal decimalValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.decimalValue();
+        }
         Decimal value = null;
         if (valueTid.type == IonType.DECIMAL) {
             if (valueTid.isNull) {
@@ -1705,6 +2051,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public long longValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.longValue();
+        }
         long value;
         if (valueTid.isNull) {
             throwDueToInvalidType(IonType.INT);
@@ -1735,6 +2084,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public BigInteger bigIntegerValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.bigIntegerValue();
+        }
         BigInteger value;
         if (valueTid.type == IonType.INT) {
             if (valueTid.isNull) {
@@ -1813,6 +2165,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public double doubleValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.doubleValue();
+        }
         double value;
         if (valueTid.isNull) {
             throwDueToInvalidType(IonType.FLOAT);
@@ -1854,6 +2209,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public Timestamp timestampValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.timestampValue();
+        }
         if (valueTid == null || IonType.TIMESTAMP != valueTid.type) {
             throwDueToInvalidType(IonType.TIMESTAMP);
         }
@@ -1876,6 +2234,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public boolean booleanValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.booleanValue();
+        }
         if (valueTid == null || IonType.BOOL != valueTid.type || valueTid.isNull) {
             throwDueToInvalidType(IonType.BOOL);
         }
@@ -1888,6 +2249,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     String readString() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.stringValue();
+        }
         if (valueTid.isNull) {
             return null;
         }
@@ -1898,6 +2262,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public String stringValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.stringValue();
+        }
         if (valueTid == null || IonType.STRING != valueTid.type) {
             throwDueToInvalidType(IonType.STRING);
         }
@@ -1906,6 +2273,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public boolean hasSymbolText() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getType() == IonType.SYMBOL && !macroEvaluatorIonReader.isNullValue();
+        }
         if (valueTid == null || IonType.SYMBOL != valueTid.type) {
             return false;
         }
@@ -1914,11 +2284,20 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public String getSymbolText() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.symbolValue().assumeText();
+        }
         return readString();
     }
 
     @Override
     public int symbolValueId() {
+        if (isEvaluatingEExpression) {
+            if (macroEvaluatorIonReader.getType() != IonType.SYMBOL || macroEvaluatorIonReader.isNullValue()) {
+                throwDueToInvalidType(IonType.SYMBOL);
+            }
+            return macroEvaluatorIonReader.symbolValue().getSid();
+        }
         if (valueTid == null || IonType.SYMBOL != valueTid.type) {
             throwDueToInvalidType(IonType.SYMBOL);
         }
@@ -2027,22 +2406,34 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public int getFieldId() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getFieldId();
+        }
         return fieldSid;
     }
 
     @Override
     public boolean hasFieldText() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getFieldName() != null;
+        }
         return fieldTextMarker.startIndex > -1;
     }
 
     @Override
     public String getFieldText() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getFieldName();
+        }
         ByteBuffer utf8InputBuffer = prepareByteBuffer(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
         return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
     }
 
     @Override
     public SymbolToken getFieldNameSymbol() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getFieldNameSymbol();
+        }
         if (fieldTextMarker.startIndex > -1) {
             return new SymbolTokenImpl(getFieldText(), -1);
         }
@@ -2054,6 +2445,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public SymbolToken symbolValue() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.symbolValue();
+        }
         if (valueTid.isInlineable) {
             return new SymbolTokenImpl(stringValue(), SymbolTable.UNKNOWN_SYMBOL_ID);
         }
@@ -2068,6 +2462,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public boolean isInStruct() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.isInStruct();
+        }
         return parent != null && parent.typeId.type == IonType.STRUCT;
     }
 
@@ -2078,11 +2475,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public IonType getType() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getType();
+        }
         return valueTid == null ? null : valueTid.type;
     }
 
     @Override
     public int getDepth() {
+        if (isEvaluatingEExpression) {
+            return containerIndex + 1 + macroEvaluatorIonReader.getDepth();
+        }
         return containerIndex + 1;
     }
 
