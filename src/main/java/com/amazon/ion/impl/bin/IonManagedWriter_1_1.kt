@@ -8,11 +8,15 @@ import com.amazon.ion.impl.*
 import com.amazon.ion.impl._Private_IonWriter.IntTransformer
 import com.amazon.ion.impl.bin.LengthPrefixStrategy.*
 import com.amazon.ion.impl.bin.SymbolInliningStrategy.*
+import com.amazon.ion.impl.macro.*
 import com.amazon.ion.system.*
 import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 
 /**
  * A managed writer for Ion 1.1 that is generic over whether the raw encoding is text or binary.
@@ -23,14 +27,15 @@ import java.util.*
  *  - Auto-flush (for binary and text)
  *
  * TODO: What package does this really belong in?
- *       See also [ManagedWriterOptions], [SymbolInliningStrategy], and [DelimitedContainerStrategy].
+ *
+ * See also [ManagedWriterOptions_1_1], [SymbolInliningStrategy], and [LengthPrefixStrategy].
  */
 internal class IonManagedWriter_1_1(
     private val userData: IonRawWriter_1_1,
     private val systemData: IonRawWriter_1_1,
     private val options: ManagedWriterOptions_1_1,
     private val onClose: () -> Unit,
-) : _Private_IonWriter {
+) : _Private_IonWriter, MacroAwareIonWriter {
 
     private val systemSymbolTableMap = hashMapOf<String, Int>()
 
@@ -112,14 +117,19 @@ internal class IonManagedWriter_1_1(
     // We take a slightly different approach here by handling the encoding context as a prior encoding context
     // plus a list of symbols added by the current encoding context.
 
-    /** TODO: Document what this is for... */
-    private var canAppendToLocalSymbolTable: Boolean = false
     /** The symbol table for the prior encoding context */
     private var symbolTable: HashMap<String, Int> = HashMap(systemSymbolTableMap)
-    /** Max symbol ID of the prior encoding context. */
-    private var priorMaxId: Int = symbolTable.size
     /** Symbols to be interned since the prior encoding context. */
     private var newSymbols: HashMap<String, Int> = LinkedHashMap() // Preserves insertion order.
+
+    /** The macro table of the prior encoding context. Map value is the user-space address. */
+    private var macroTable: HashMap<Macro, Int> = LinkedHashMap()
+    /** Macros to be added since the last encoding directive was flushed. Map value is the user-space address. */
+    private var newMacros: HashMap<Macro, Int> = LinkedHashMap()
+    /** Macro names by user-space address, including new macros. */
+    private var macroNames = ArrayList<String?>()
+    /** Macro definitions by user-space address, including new macros. */
+    private var macrosById = ArrayList<Macro>()
 
     /**
      * Transformer for symbol IDs encountered during writeValues. Can be used to upgrade Ion 1.0 symbol IDs to the
@@ -135,45 +145,299 @@ internal class IonManagedWriter_1_1(
         sid = newSymbols[text]
         if (sid != null) return sid
         // Add to the to-be-appended symbols
-        sid = priorMaxId + newSymbols.size + 1
+        sid = symbolTable.size + newSymbols.size + 1
         newSymbols[text] = sid
         return sid
     }
 
-    /** Writes a Local Symbol Table for the current encoding context, and updates the prior context. */
-    private fun writeSymbolTable() {
-        if (newSymbols.isEmpty()) return
-        val useSid = options.internEncodingDirectiveSymbols
-
-        with(systemData) {
-
-            if (useSid) writeAnnotations(SystemSymbols.ION_SYMBOL_TABLE_SID) else writeAnnotations(SystemSymbols.ION_SYMBOL_TABLE)
-
-            systemData.stepInStruct(usingLengthPrefix = false)
-            if (canAppendToLocalSymbolTable) {
-                // LST Append
-                if (useSid) writeFieldName(SystemSymbols.IMPORTS_SID) else writeFieldName(SystemSymbols.IMPORTS)
-                if (useSid) writeSymbol(SystemSymbols.ION_SYMBOL_TABLE_SID) else writeSymbol(SystemSymbols.ION_SYMBOL_TABLE)
-            }
-            // ... and write the new symbols
-            if (useSid) writeFieldName(SystemSymbols.SYMBOLS_SID) else writeFieldName(SystemSymbols.SYMBOLS)
-            stepInList(usingLengthPrefix = false)
-            newSymbols.forEach { (text, _) -> writeString(text) }
-            stepOut()
-            stepOut()
-        }
-
-        symbolTable.putAll(newSymbols)
-
-        newSymbols.clear()
-        canAppendToLocalSymbolTable = true
+    private fun internMacro(macro: Macro): Int {
+        // Check the current macro table
+        var id = macroTable[macro]
+        if (id != null) return id
+        // Check the to-be-appended macros
+        id = newMacros[macro]
+        if (id != null) return id
+        // Add to the to-be-appended symbols
+        id = macrosById.size
+        macrosById.add(macro)
+        macroNames.add(null)
+        newMacros[macro] = id
+        return id
     }
 
-    private fun resetLocalSymbolTable() {
+    /** Converts a named macro reference to an address */
+    private fun MacroRef.ByName.intoId(): MacroRef.ById = MacroRef.ById(macroNames.indexOf(name))
+
+    /** Converts a macro address to a macro name. If no name is found, returns the original address. */
+    private fun MacroRef.ById.intoNamed(): MacroRef = macroNames[id]?.let { MacroRef.ByName(it) } ?: this
+
+    private fun resetEncodingContext() {
         if (depth != 0) throw IllegalStateException("Cannot reset the encoding context while stepped in any value.")
         symbolTable = HashMap(systemSymbolTableMap)
-        priorMaxId = symbolTable.size
-        canAppendToLocalSymbolTable = false
+        macroNames.clear()
+        macrosById.clear()
+        macroTable.clear()
+        newMacros.clear()
+    }
+
+    /** Helper function for writing encoding directives */
+    private inline fun writeSystemSexp(content: IonRawWriter_1_1.() -> Unit) {
+        systemData.stepInSExp(usingLengthPrefix = false)
+        systemData.content()
+        systemData.stepOut()
+    }
+
+    /**
+     * Writes an encoding directive for the current encoding context, and updates internal state accordingly.
+     * This always appends to the current encoding context. If there is nothing to append, calling this function
+     * is a no-op.
+     */
+    private fun writeEncodingDirective() {
+        if (newSymbols.isEmpty() && newMacros.isEmpty()) return
+
+        systemData.writeAnnotations(SystemSymbols.ION_ENCODING)
+        writeSystemSexp {
+            writeSymbolTableClause()
+            writeMacroTableClause()
+        }
+
+        // NOTE: We don't update symbolTable until after the macro_table is written because
+        //       the new symbols aren't available until _after_ this encoding directive.
+        symbolTable.putAll(newSymbols)
+        newSymbols.clear()
+        macroTable.putAll(newMacros)
+        newMacros.clear()
+    }
+
+    /**
+     * Writes the `(symbol_table ...)` clause into the encoding expression.
+     * If the symbol table would be empty, writes nothing, which is equivalent
+     * to an empty symbol table.
+     */
+    private fun writeSymbolTableClause() {
+        val hasSymbolsToAdd = newSymbols.isNotEmpty()
+        val hasSymbolsToRetain = symbolTable.size > SystemSymbols.ION_1_0_MAX_ID
+        if (!hasSymbolsToAdd && !hasSymbolsToRetain) return
+
+        writeSystemSexp {
+            systemData.writeSymbol(SystemSymbols.SYMBOL_TABLE)
+            // Add previous symbol table
+            if (hasSymbolsToRetain) {
+                writeSymbol(SystemSymbols.ION_ENCODING)
+            }
+            // Add new symbols
+            if (hasSymbolsToAdd) {
+                stepInList(usingLengthPrefix = false)
+                newSymbols.forEach { (text, _) -> writeString(text) }
+                stepOut()
+            }
+        }
+    }
+
+    /**
+     * Writes the `(macro_table ...)` clause into the encoding expression.
+     * If the macro table would be empty, writes nothing, which is equivalent
+     * to an empty macro table.
+     */
+    private fun writeMacroTableClause() {
+        val hasMacrosToAdd = newMacros.isNotEmpty()
+        val hasMacrosToRetain = macroTable.isNotEmpty()
+        if (!hasMacrosToAdd && !hasMacrosToRetain) return
+
+        writeSystemSexp {
+            writeSymbol(SystemSymbols.MACRO_TABLE)
+            if (hasMacrosToRetain) {
+                writeSymbol(SystemSymbols.ION_ENCODING)
+            }
+            newMacros.forEach { (macro, address) ->
+                val name = macroNames[address]
+                when (macro) {
+                    is TemplateMacro -> writeMacroDefinition(name, macro)
+                    is SystemMacro -> exportSystemMacro(macro)
+                }
+            }
+        }
+    }
+
+    private fun exportSystemMacro(macro: SystemMacro) {
+        // TODO: Support for aliases
+        writeSystemSexp {
+            writeSymbol(SystemSymbols.EXPORT)
+            writeAnnotations(SystemSymbols.ION)
+            writeSymbol(macro.macroName)
+        }
+    }
+
+    private fun writeMacroDefinition(name: String?, macro: TemplateMacro) {
+        writeSystemSexp {
+            writeSymbol(SystemSymbols.MACRO)
+            if (name != null) writeSymbol(name) else writeNull()
+
+            // Signature
+            writeSystemSexp {
+                macro.signature.forEach { parameter ->
+                    if (parameter.type != Macro.ParameterEncoding.Tagged) {
+                        writeAnnotations(parameter.type.ionTextName)
+                    }
+                    writeSymbol(parameter.variableName)
+                    if (parameter.cardinality != Macro.ParameterCardinality.ExactlyOne) {
+                        // TODO: Consider adding a method to the raw writer that can write a single-character
+                        //       symbol without constructing a string. It might be a minor performance improvement.
+                        // TODO: See if we can write this without a space between the parameter name and the sigil.
+                        writeSymbol(parameter.cardinality.sigil.toString())
+                    }
+                }
+            }
+
+            // Template Body
+
+            // TODO: See if there's any benefit to using a smaller number type, if we can
+            //       memoize this in the macro definition, or replace it with a list of precomputed
+            //       step-out indices.
+            /** Tracks where and how many times to step out. */
+            val numberOfTimesToStepOut = IntArray(macro.body.size + 1)
+
+            macro.body.forEachIndexed { index, expression ->
+                if (numberOfTimesToStepOut[index] > 0) {
+                    repeat(numberOfTimesToStepOut[index]) { stepOut() }
+                }
+
+                when (expression) {
+                    is Expression.DataModelValue -> {
+                        // If we need to write a sexp, we must use the annotate macro.
+                        // If we're writing a symbol, we can put them inside the "literal" special form.
+                        if (expression.type != IonType.SEXP && expression.type != IonType.SYMBOL) {
+                            expression.annotations.forEach {
+                                if (it.text != null) {
+                                    // TODO: If it's already in the symbol table we could check the
+                                    //       symbol-inline strategy and possibly write a SID.
+                                    writeAnnotations(it.text)
+                                } else {
+                                    writeAnnotations(it.sid)
+                                }
+                            }
+                        }
+
+                        if (expression is Expression.NullValue) {
+                            writeNull(expression.type)
+                        } else when (expression.type) {
+                            IonType.NULL -> error("Unreachable")
+                            IonType.BOOL -> writeBool((expression as Expression.BoolValue).value)
+                            IonType.INT -> {
+                                if (expression is Expression.LongIntValue)
+                                    writeInt(expression.value)
+                                else
+                                    writeInt((expression as Expression.BigIntValue).value)
+                            }
+                            IonType.FLOAT -> writeFloat((expression as Expression.FloatValue).value)
+                            IonType.DECIMAL -> writeDecimal((expression as Expression.DecimalValue).value)
+                            IonType.TIMESTAMP -> writeTimestamp((expression as Expression.TimestampValue).value)
+                            IonType.SYMBOL -> {
+                                writeSystemSexp {
+                                    writeSymbol(SystemSymbols.LITERAL)
+                                    expression.annotations.forEach {
+                                        if (it.text != null) {
+                                            // TODO: If it's already in the symbol table we could check the
+                                            //       symbol-inline strategy and possibly write a SID.
+                                            writeAnnotations(it.text)
+                                        } else {
+                                            writeAnnotations(it.sid)
+                                        }
+                                    }
+                                    val symbolToken = (expression as Expression.SymbolValue).value
+                                    if (symbolToken.text != null) {
+                                        // TODO: If it's already in the symbol table we could check the
+                                        //       symbol-inline strategy and possibly write a SID.
+                                        writeSymbol(symbolToken.text)
+                                    } else {
+                                        writeSymbol(symbolToken.sid)
+                                    }
+                                }
+                            }
+                            IonType.STRING -> writeString((expression as Expression.StringValue).value)
+                            IonType.CLOB -> writeClob((expression as Expression.ClobValue).value)
+                            IonType.BLOB -> writeBlob((expression as Expression.BlobValue).value)
+                            IonType.LIST -> {
+                                expression as Expression.HasStartAndEnd
+                                stepInList(usingLengthPrefix = false)
+                                numberOfTimesToStepOut[expression.endExclusive]++
+                            }
+                            IonType.SEXP -> {
+                                expression as Expression.HasStartAndEnd
+                                if (expression.annotations.isNotEmpty()) {
+                                    stepInSExp(usingLengthPrefix = false)
+                                    numberOfTimesToStepOut[expression.endExclusive]++
+                                    writeSymbol(SystemSymbols.ANNOTATE)
+
+                                    // Write the annotations as symbols within an expression group
+                                    writeSystemSexp {
+                                        writeSymbol(SystemSymbols.TDL_EXPRESSION_GROUP)
+                                        expression.annotations.forEach {
+                                            if (it.text != null) {
+                                                // TODO: If it's already in the symbol table we could check the
+                                                //       symbol-inline strategy and possibly write a SID.
+
+                                                // Write the annotation as a string so that we don't have to use
+                                                // `literal` to prevent it from being interpreted as a variable
+                                                writeString(it.text)
+                                            } else {
+                                                // TODO: See if there is a less verbose way to use SIDs in TDL
+                                                writeSystemSexp {
+                                                    writeSymbol(SystemSymbols.LITERAL)
+                                                    writeSymbol(it.sid)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                // Start a `(make_sexp [ ...` invocation
+                                stepInSExp(usingLengthPrefix = false)
+                                numberOfTimesToStepOut[expression.endExclusive]++
+                                writeSymbol(SystemSymbols.MAKE_SEXP)
+
+                                if (expression.startInclusive != expression.endExclusive) {
+                                    stepInList(usingLengthPrefix = false)
+                                    numberOfTimesToStepOut[expression.endExclusive]++
+                                }
+                            }
+                            IonType.STRUCT -> {
+                                expression as Expression.HasStartAndEnd
+                                stepInStruct(usingLengthPrefix = false)
+                                numberOfTimesToStepOut[expression.endExclusive]++
+                            }
+                            IonType.DATAGRAM -> error("Unreachable")
+                        }
+                    }
+                    is Expression.FieldName -> {
+                        val text = expression.value.text
+                        if (text == null) {
+                            writeFieldName(expression.value.sid)
+                        } else {
+                            // TODO: If it's already in the symbol table we could check the symbol-inline strategy and possibly write a SID.
+                            writeFieldName(text)
+                        }
+                    }
+                    is Expression.ExpressionGroup -> {
+                        stepInSExp(usingLengthPrefix = false)
+                        numberOfTimesToStepOut[expression.endExclusive]++
+                        writeSymbol(SystemSymbols.TDL_EXPRESSION_GROUP)
+                    }
+                    is Expression.MacroInvocation -> {
+                        stepInSExp(usingLengthPrefix = false)
+                        when (expression.address) {
+                            is MacroRef.ById -> writeInt(expression.address.id.toLong())
+                            is MacroRef.ByName -> writeSymbol(expression.address.name)
+                        }
+                        numberOfTimesToStepOut[expression.endExclusive]++
+                    }
+                    is Expression.VariableRef -> writeSymbol(macro.signature[expression.signatureIndex].variableName)
+                    else -> error("Unreachable")
+                }
+            }
+
+            // Step out for anything where endExclusive is beyond the end of the expression list.
+            repeat(numberOfTimesToStepOut.last()) { stepOut() }
+        }
     }
 
     override fun getCatalog(): IonCatalog {
@@ -393,6 +657,10 @@ internal class IonManagedWriter_1_1(
         }
     }
 
+    override fun writeObject(obj: WriteAsIon) {
+        obj.writeToMacroAware(this)
+    }
+
     /**
      * Can only be called when the reader is positioned on a value. Having [currentType] in the
      * function signature helps to enforce that requirement because [currentType] is not allowed
@@ -478,13 +746,63 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun flush() {
-        writeSymbolTable()
+        writeEncodingDirective()
         systemData.flush()
         userData.flush()
     }
 
     override fun finish() {
         flush()
-        resetLocalSymbolTable()
+        resetEncodingContext()
+    }
+
+    override fun addMacro(macro: Macro): MacroRef {
+        val id = internMacro(macro)
+        return if (options.macroAddressStrategy == ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME) {
+            macroNames[id]
+                ?.let { MacroRef.ByName(it) }
+                ?: MacroRef.ById(id)
+        } else {
+            MacroRef.ById(id)
+        }
+    }
+
+    override fun addMacro(name: String, macro: Macro): MacroRef {
+        val id = internMacro(macro)
+        macroNames[id] = name
+        return if (options.macroAddressStrategy == ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME) {
+            MacroRef.ByName(name)
+        } else {
+            MacroRef.ById(id)
+        }
+    }
+
+    override fun startMacro(macroRef: MacroRef) {
+        val useNames = options.macroAddressStrategy == ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME
+        val ref = when (macroRef) {
+            is MacroRef.ById -> if (useNames) macroRef.intoNamed() else macroRef
+            is MacroRef.ByName -> if (useNames) macroRef else macroRef.intoId()
+        }
+        when (ref) {
+            is MacroRef.ById -> userData.stepInEExp(ref.id, options.writeLengthPrefix(ContainerType.EEXP, depth + 1), macrosById[ref.id])
+            is MacroRef.ByName -> userData.stepInEExp(ref.name)
+        }
+    }
+
+    override fun startMacro(macro: Macro) {
+        val id = addMacro(macro)
+        startMacro(id)
+    }
+
+    override fun startExpressionGroup() {
+        userData.stepInExpressionGroup(options.writeLengthPrefix(ContainerType.EXPRESSION_GROUP, depth + 1))
+    }
+
+    override fun endMacro() {
+        userData.stepOut()
+    }
+
+    override fun endExpressionGroup() {
+        userData.stepOut()
     }
 }
