@@ -758,7 +758,7 @@ internal class IonManagedWriter_1_1(
 
     override fun addMacro(macro: Macro): MacroRef {
         val id = internMacro(macro)
-        return if (options.macroAddressStrategy == ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME) {
+        return if (options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME) {
             macroNames[id]
                 ?.let { MacroRef.ByName(it) }
                 ?: MacroRef.ById(id)
@@ -770,7 +770,7 @@ internal class IonManagedWriter_1_1(
     override fun addMacro(name: String, macro: Macro): MacroRef {
         val id = internMacro(macro)
         macroNames[id] = name
-        return if (options.macroAddressStrategy == ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME) {
+        return if (options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME) {
             MacroRef.ByName(name)
         } else {
             MacroRef.ById(id)
@@ -778,7 +778,7 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun startMacro(macroRef: MacroRef) {
-        val useNames = options.macroAddressStrategy == ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME
+        val useNames = options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
         val ref = when (macroRef) {
             is MacroRef.ById -> if (useNames) macroRef.intoNamed() else macroRef
             is MacroRef.ByName -> if (useNames) macroRef else macroRef.intoId()

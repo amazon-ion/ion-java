@@ -152,7 +152,7 @@ public class _Private_IonTextWriterBuilder_1_1
             symbolInliningStrategy,
             LengthPrefixStrategy.NEVER_PREFIXED,
             // This could be made configurable.
-            ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME
+            ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
         );
         return IonManagedWriter_1_1.textWriter(out, options, b);
     }
@@ -169,7 +169,7 @@ public class _Private_IonTextWriterBuilder_1_1
             symbolInliningStrategy,
             LengthPrefixStrategy.NEVER_PREFIXED,
             // This could be made configurable.
-            ManagedWriterOptions_1_1.MacroAddressStrategy.BY_NAME
+            ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
         );
         return IonManagedWriter_1_1.textWriter(out, options, b);
     }

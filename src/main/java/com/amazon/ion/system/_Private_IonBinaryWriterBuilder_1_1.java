@@ -141,7 +141,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
             true,
             symbolInliningStrategy,
             lengthPrefixStrategy,
-            ManagedWriterOptions_1_1.MacroAddressStrategy.BY_ID
+            ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_ADDRESS
         );
         return IonManagedWriter_1_1.binaryWriter(out, options, this);
     }

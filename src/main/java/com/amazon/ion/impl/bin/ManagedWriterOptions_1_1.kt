@@ -19,7 +19,7 @@ data class ManagedWriterOptions_1_1(
     val internEncodingDirectiveSymbols: Boolean,
     val symbolInliningStrategy: SymbolInliningStrategy,
     val lengthPrefixStrategy: LengthPrefixStrategy,
-    val macroAddressStrategy: MacroAddressStrategy,
+    val eExpressionIdentifierStrategy: EExpressionIdentifierStrategy,
 ) : SymbolInliningStrategy by symbolInliningStrategy, LengthPrefixStrategy by lengthPrefixStrategy {
     companion object {
         @JvmField
@@ -27,21 +27,25 @@ data class ManagedWriterOptions_1_1(
             internEncodingDirectiveSymbols = true,
             symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
             lengthPrefixStrategy = LengthPrefixStrategy.ALWAYS_PREFIXED,
-            macroAddressStrategy = MacroAddressStrategy.BY_ID,
+            eExpressionIdentifierStrategy = EExpressionIdentifierStrategy.BY_ADDRESS,
         )
         @JvmField
         val ION_TEXT_DEFAULT = ManagedWriterOptions_1_1(
-            // It's a little easier to read this way
+            // Encoding directives are easier to read if we don't intern their keywords.
             internEncodingDirectiveSymbols = false,
             symbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
             // This doesn't actually have any effect for Ion Text since there are no length-prefixed containers.
             lengthPrefixStrategy = LengthPrefixStrategy.NEVER_PREFIXED,
-            macroAddressStrategy = MacroAddressStrategy.BY_NAME,
+            eExpressionIdentifierStrategy = EExpressionIdentifierStrategy.BY_NAME,
         )
     }
 
-    enum class MacroAddressStrategy {
+    /**
+     * Indicates whether e-expressions should be written using macro
+     * names or macro addresses (when a choice is available).
+     */
+    enum class EExpressionIdentifierStrategy {
         BY_NAME,
-        BY_ID,
+        BY_ADDRESS,
     }
 }
