@@ -32,6 +32,9 @@ internal class IonManagedWriter_1_1_Test {
         private val fooSymbolToken = FakeSymbolToken("foo", -1)
         private val barSymbolToken = FakeSymbolToken("bar", -1)
 
+        private val fooMacro = constantMacro { string("foo") }
+        private val barMacro = constantMacro { string("bar") }
+
         // Helper function that writes to a writer and returns the text Ion
         private fun write(
             topLevelValuesOnNewLines: Boolean = true,
@@ -154,7 +157,7 @@ internal class IonManagedWriter_1_1_Test {
         """.trimIndent()
 
         val actual = write {
-            addMacro(constantMacro { string("foo") })
+            getOrAssignMacroAddress(constantMacro { string("foo") })
         }
 
         assertEquals(expected, actual)
@@ -169,8 +172,7 @@ internal class IonManagedWriter_1_1_Test {
         """.trimIndent()
 
         val actual = write {
-            val macroRef = addMacro("a", constantMacro { string("foo") })
-            startMacro(macroRef)
+            startMacro("a", constantMacro { string("foo") })
             endMacro()
         }
 
@@ -186,8 +188,7 @@ internal class IonManagedWriter_1_1_Test {
         """.trimIndent()
 
         val actual = write {
-            val macroRef = addMacro(constantMacro { string("foo") })
-            startMacro(macroRef)
+            startMacro(constantMacro { string("foo") })
             endMacro()
         }
 
@@ -229,14 +230,14 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
-    fun `addMacro can add a system macro to the macro table`() {
+    fun `getOrAssignMacroAddress can add a system macro to the macro table`() {
         val expected = """
             $ion_1_1
             $ion_encoding::((macro_table (export $ion::make_string)))
         """.trimIndent()
 
         val actual = write {
-            addMacro(SystemMacro.MakeString)
+            getOrAssignMacroAddress(SystemMacro.MakeString)
         }
 
         assertEquals(expected, actual)
@@ -353,7 +354,7 @@ internal class IonManagedWriter_1_1_Test {
         val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
             writeSymbol("foo")
             flush()
-            addMacro(constantMacro { string("foo") })
+            getOrAssignMacroAddress(constantMacro { string("foo") })
         }
 
         assertEquals(expected, actual)
@@ -370,10 +371,11 @@ internal class IonManagedWriter_1_1_Test {
         """.trimIndent()
 
         val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
-            val theMacroRef = addMacro(constantMacro { string("foo") })
+            val theMacro = constantMacro { string("foo") }
+            getOrAssignMacroAddress(theMacro)
             flush()
             writeSymbol("foo")
-            startMacro(theMacroRef)
+            startMacro(theMacro)
             endMacro()
         }
 
@@ -514,8 +516,8 @@ internal class IonManagedWriter_1_1_Test {
                 ),
                 case(
                     "string",
-                    body = { string("foo") },
-                    expectedBody = "\"foo\""
+                    body = { string("abc") },
+                    expectedBody = "\"abc\""
                 ),
                 case(
                     "blob",
@@ -564,28 +566,28 @@ internal class IonManagedWriter_1_1_Test {
                 ),
                 case(
                     "macro invoked by id",
-                    body = { macro(1) {} },
+                    body = { macro(barMacro) {} },
                     expectedBody = "(1)"
                 ),
                 case(
                     "macro invoked by name",
-                    body = { macro("foo") {} },
+                    body = { macro(fooMacro) {} },
                     expectedBody = "(foo)"
                 ),
                 case(
                     "macro with an argument",
-                    body = { macro("foo") { int(1) } },
+                    body = { macro(fooMacro) { int(1) } },
                     expectedBody = "(foo 1)"
                 ),
                 case(
                     "macro with an empty argument group",
-                    body = { macro("foo") { expressionGroup { } } },
+                    body = { macro(fooMacro) { expressionGroup { } } },
                     expectedBody = "(foo (;))"
                 ),
                 case(
                     "macro with a non-empty argument group",
                     body = {
-                        macro("foo") {
+                        macro(fooMacro) {
                             expressionGroup {
                                 int(1)
                                 int(2)
@@ -640,10 +642,14 @@ internal class IonManagedWriter_1_1_Test {
     fun testWritingMacroDefinitions(description: String, macro: Macro, expectedSignatureAndBody: String) {
         val expected = """
             $ion_1_1
-            $ion_encoding::((macro_table (macro null $expectedSignatureAndBody)))
+            $ion_encoding::((macro_table (macro foo () "foo") (macro null () "bar") (macro null $expectedSignatureAndBody)))
         """.trimIndent()
 
-        val actual = write { addMacro(macro) }
+        val actual = write {
+            getOrAssignMacroAddressAndName("foo", fooMacro)
+            getOrAssignMacroAddress(barMacro)
+            getOrAssignMacroAddress(macro)
+        }
 
         assertEquals(expected, actual)
     }
@@ -702,8 +708,8 @@ internal class IonManagedWriter_1_1_Test {
     fun `writeObject() should write something with a macro representation`() {
         val expected = """
             $ion_1_1
-            $ion_encoding::((macro_table (macro com_amazon_ion_impl_bin_IonManagedWriter_1_1_Test_Point2D (x y) {x:x,y:y})))
-            (:com_amazon_ion_impl_bin_IonManagedWriter_1_1_Test_Point2D 2 4)
+            $ion_encoding::((macro_table (macro Point2D (x y) {x:x,y:y})))
+            (:Point2D 2 4)
         """.trimIndent()
 
         val actual = write {
@@ -733,11 +739,92 @@ internal class IonManagedWriter_1_1_Test {
         assertEquals(expected, actual)
     }
 
+    @Test
+    fun `writeObject() should write something with nested macro representation`() {
+        val expected = """
+            $ion_1_1
+            $ion_encoding::((macro_table (macro null (x*) x) (macro Polygon (vertices+ compact_symbol::fill?) {vertices:[vertices],fill:(0 fill)}) (macro Point2D (x y) {x:x,y:y})))
+            (:Polygon (: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) Blue)
+        """.trimIndent()
+
+        val data = Polygon(
+            listOf(
+                Point2D(0, 0),
+                Point2D(0, 1),
+                Point2D(1, 1),
+                Point2D(1, 0),
+            ),
+            Colors.Blue,
+        )
+
+        val actual = write {
+            writeObject(data)
+        }
+
+        assertEquals(expected, actual)
+    }
+
+    private data class Polygon(val vertices: List<Point2D>, val fill: Colors?) : WriteAsIon {
+        init { require(vertices.size >= 3) { "A polygon must have at least 3 edges and 3 vertices" } }
+
+        companion object {
+            // This is a very long macro name, but by using the qualified class name,
+            // there is almost no risk of having a name conflict with another macro.
+            private val MACRO_NAME = Polygon::class.simpleName!!.replace(".", "_")
+            private val IDENTITY = TemplateMacro(listOf(Parameter.zeroToManyTagged("x")), templateBody { variable(0) })
+            private val MACRO = TemplateMacro(
+                signature = listOf(
+                    // TODO: Change this to a macro shape when they are supported
+                    Parameter("vertices", ParameterEncoding.Tagged, ParameterCardinality.OneOrMore),
+                    Parameter("fill", ParameterEncoding.CompactSymbol, ParameterCardinality.ZeroOrOne),
+                ),
+                templateBody {
+                    struct {
+                        fieldName("vertices")
+                        list {
+                            variable(0)
+                        }
+                        fieldName("fill")
+                        macro(IDENTITY) {
+                            variable(1)
+                        }
+                    }
+                }
+            )
+        }
+
+        override fun writeTo(writer: IonWriter) {
+            with(writer) {
+                stepIn(IonType.STRUCT)
+                setFieldName("vertices")
+                stepIn(IonType.LIST)
+                vertices.forEach { writeObject(it) }
+                stepOut()
+                if (fill != null) {
+                    setFieldName("fill")
+                    writeObject(fill)
+                }
+                stepOut()
+            }
+        }
+
+        override fun writeToMacroAware(writer: MacroAwareIonWriter) {
+            with(writer) {
+                startMacro(MACRO_NAME, MACRO)
+                startExpressionGroup()
+                vertices.forEach { writer.writeObject(it) }
+                endExpressionGroup()
+                fill?.let { writeObject(it) }
+                endMacro()
+            }
+        }
+    }
+
     private data class Point2D(val x: Long, val y: Long) : WriteAsIon {
         companion object {
             // This is a very long macro name, but by using the qualified class name,
             // there is almost no risk of having a name conflict with another macro.
-            private val MACRO_NAME = Point2D::class.qualifiedName!!.replace(".", "_")
+            private val MACRO_NAME = Point2D::class.simpleName!!.replace(".", "_")
             private val MACRO = TemplateMacro(
                 signature = listOf(
                     Parameter.exactlyOneTagged("x"),
@@ -756,8 +843,7 @@ internal class IonManagedWriter_1_1_Test {
 
         override fun writeToMacroAware(writer: MacroAwareIonWriter) {
             with(writer) {
-                val ref = addMacro(MACRO_NAME, MACRO)
-                startMacro(ref)
+                startMacro(MACRO_NAME, MACRO)
                 writeInt(x)
                 writeInt(y)
                 endMacro()

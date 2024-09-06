@@ -8,18 +8,10 @@ import com.amazon.ion.impl.macro.*
  * Extension of the IonWriter interface that supports writing macros.
  *
  * TODO: Consider exposing this as a Facet.
+ *
+ * TODO: See if we can have some sort of safe reference to a macro.
  */
 interface MacroAwareIonWriter : IonWriter {
-
-    /**
-     * Adds a macro to the macro table, returning a MacroRef that can be used to invoke the macro.
-     */
-    fun addMacro(macro: Macro): MacroRef
-
-    /**
-     * Adds a macro to the macro table, returning a MacroRef that can be used to invoke the macro.
-     */
-    fun addMacro(name: String, macro: Macro): MacroRef
 
     /**
      * Starts writing a macro invocation, adding it to the macro table, if needed.
@@ -27,9 +19,9 @@ interface MacroAwareIonWriter : IonWriter {
     fun startMacro(macro: Macro)
 
     /**
-     * Starts writing a macro using the given [MacroRef].
+     * Starts writing a macro invocation, adding it to the macro table, if needed.
      */
-    fun startMacro(macro: MacroRef)
+    fun startMacro(name: String, macro: Macro)
 
     /**
      * Ends and steps out of the current macro invocation.

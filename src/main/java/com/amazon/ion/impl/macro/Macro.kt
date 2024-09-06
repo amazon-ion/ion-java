@@ -10,6 +10,7 @@ import com.amazon.ion.impl.macro.Macro.Parameter.Companion.zeroToManyTagged
  */
 sealed interface Macro {
     val signature: List<Parameter>
+    val dependencies: Iterable<Macro>
 
     data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
         override fun toString() = "$type::$variableName${cardinality.sigil}"
@@ -103,6 +104,12 @@ data class TemplateMacro(override val signature: List<Macro.Parameter>, val body
         if (body != other.body) return false
         return true
     }
+
+    override val dependencies: List<Macro> by lazy {
+        body.filterIsInstance<Expression.MacroInvocation>()
+            .map { it.macro }
+            .distinct()
+    }
 }
 
 /**
@@ -113,4 +120,7 @@ enum class SystemMacro(val macroName: String, override val signature: List<Macro
     MakeString("make_string", listOf(zeroToManyTagged("text"))),
     // TODO: Other system macros
     ;
+
+    override val dependencies: List<Macro>
+        get() = emptyList()
 }

@@ -201,7 +201,7 @@ sealed interface Expression {
      * A macro invocation that needs to be expanded.
      */
     data class MacroInvocation(
-        val address: MacroRef,
+        val macro: Macro,
         override val selfIndex: Int,
         override val endExclusive: Int
     ) : TemplateBodyExpression, HasStartAndEnd
@@ -210,7 +210,7 @@ sealed interface Expression {
      * An e-expression that needs to be expanded.
      */
     data class EExpression(
-        val address: MacroRef,
+        val macro: Macro,
         override val selfIndex: Int,
         override val endExclusive: Int
     ) : EExpressionBodyExpression, HasStartAndEnd

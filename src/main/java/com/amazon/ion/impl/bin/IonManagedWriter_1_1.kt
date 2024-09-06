@@ -3,9 +3,9 @@
 package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
-import com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID
+import com.amazon.ion.SymbolTable.*
 import com.amazon.ion.impl.*
-import com.amazon.ion.impl._Private_IonWriter.IntTransformer
+import com.amazon.ion.impl._Private_IonWriter.*
 import com.amazon.ion.impl.bin.LengthPrefixStrategy.*
 import com.amazon.ion.impl.bin.SymbolInliningStrategy.*
 import com.amazon.ion.impl.macro.*
@@ -14,9 +14,6 @@ import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.LinkedHashMap
 
 /**
  * A managed writer for Ion 1.1 that is generic over whether the raw encoding is text or binary.
@@ -158,26 +155,107 @@ internal class IonManagedWriter_1_1(
         return sid
     }
 
-    private fun internMacro(macro: Macro): Int {
-        // Check the current macro table
-        var id = macroTable[macro]
-        if (id != null) return id
-        // Check the to-be-appended macros
-        id = newMacros[macro]
-        if (id != null) return id
-        // Add to the to-be-appended symbols
-        id = macrosById.size
-        macrosById.add(macro)
-        macroNames.add(null)
-        newMacros[macro] = id
-        return id
+    /**
+     * Checks for macro invocations in the body of a TemplateMacro and ensure that those macros are added to the
+     * macro table.
+     *
+     * This is essentially a recursive, memoized, topological sort. Given a dependency graph, it runs in O(V + E) time.
+     * Memoization is done using the macro table, so the O(V + E) cost is only paid the first time a macro is added to
+     * the macro table.
+     */
+    private fun addMacroDependencies(macro: Macro) {
+        macro.dependencies.forEach {
+            if (it !in macroTable && it !in newMacros) {
+                addMacroDependencies(it)
+                assignMacroAddress(it)
+            }
+        }
     }
 
-    /** Converts a named macro reference to an address */
-    private fun MacroRef.ByName.intoId(): MacroRef.ById = MacroRef.ById(macroNames.indexOf(name))
+    /**
+     * Adds a named macro to the macro table
+     *
+     * Steps:
+     * - If the name is not already in use...
+     *    - And the macro is already in `newMacros`...
+     *      1. Get the address of the macro in `newMacros`
+     *      2. Add the name to `macroNames` for the that address
+     *      3. return the address
+     *    - Else...
+     *      1. Add a new entry for the macro to `newMacros` and get a new address
+     *      2. Add the name to `macroNames` for the new address
+     *      3. Return the new address
+     * - If the name is already in use...
+     *   - And it is associated with the same macro...
+     *      1. Return the address associated with the name
+     *   - And it is associated with a different macro...
+     *      - This is where the managed writer take an opinion. (Or be configurable.)
+     *        - It could mangle the name
+     *        - It could remove the name from a macro in macroTable, but then it would have to immediately flush to
+     *          make sure that any prior e-expressions are still valid. In addition, we would need to re-export all
+     *          the other macros from `$ion_encoding`.
+     *        - For now, we're just throwing an Exception.
+     *
+     * Visible for testing.
+     */
+    internal fun getOrAssignMacroAddressAndName(name: String, macro: Macro): Int {
+        // TODO: This is O(n), but could be O(1).
+        var existingAddress = macroNames.indexOf(name)
+        if (existingAddress < 0) {
+            // Name is not already in use
+            existingAddress = newMacros.getOrDefault(macro, -1)
 
-    /** Converts a macro address to a macro name. If no name is found, returns the original address. */
-    private fun MacroRef.ById.intoNamed(): MacroRef = macroNames[id]?.let { MacroRef.ByName(it) } ?: this
+            val address = if (existingAddress < 0) {
+                // Macro is not in newMacros
+
+                // If it's in macroTable, we can skip adding dependencies
+                if (macro !in macroTable) addMacroDependencies(macro)
+                // Add to newMacros and get a macro address
+                assignMacroAddress(macro)
+            } else {
+                // Macro already exists in newMacros, but doesn't have a name
+                existingAddress
+            }
+            // Set the name of the macro
+            macroNames[address] = name
+            return address
+        } else if (macrosById[existingAddress] == macro) {
+            // Macro already in table, and already using the same name
+            return existingAddress
+        } else {
+            // Name is already in use for a different macro.
+            // This macro may or may not be in the table under a different name, but that's
+            // not particularly relevant unless we want to try to fall back to a different name.
+            TODO("Name shadowing is not supported yet. Call finish() before attempting to shadow an existing macro.")
+        }
+    }
+
+    /**
+     * Steps for adding an anonymous macro to the macro table
+     *    1. Check macroTable, if found, return that address
+     *    2. Check newMacros, if found, return that address
+     *    3. Add to newMacros, return new address
+     *
+     *  Visible for testing
+     */
+    internal fun getOrAssignMacroAddress(macro: Macro): Int {
+        var address = macroTable.getOrDefault(macro, -1)
+        if (address >= 0) return address
+        address = newMacros.getOrDefault(macro, -1)
+        if (address >= 0) return address
+
+        addMacroDependencies(macro)
+        return assignMacroAddress(macro)
+    }
+
+    /** Unconditionally adds a macro to the macro table data structures and returns the new address. */
+    private fun assignMacroAddress(macro: Macro): Int {
+        val address = macrosById.size
+        macrosById.add(macro)
+        macroNames.add(null)
+        newMacros[macro] = address
+        return address
+    }
 
     // Only called by `finish()`
     private fun resetEncodingContext() {
@@ -453,11 +531,20 @@ internal class IonManagedWriter_1_1(
                     }
                     is Expression.MacroInvocation -> {
                         stepInSExp(usingLengthPrefix = false)
-                        when (expression.address) {
-                            is MacroRef.ById -> writeInt(expression.address.id.toLong())
-                            is MacroRef.ByName -> writeSymbol(expression.address.name)
-                        }
                         numberOfTimesToStepOut[expression.endExclusive]++
+
+                        val invokedAddress = macroTable[expression.macro]
+                            ?: newMacros[expression.macro]
+                            ?: throw IllegalStateException("A macro in the macro table is missing a dependency")
+
+                        if (options.invokeTdlMacrosByName) {
+                            val invokedName = macroNames[invokedAddress]
+                            if (invokedName != null) {
+                                writeSymbol(invokedName)
+                                return@forEachIndexed
+                            }
+                        }
+                        writeInt(invokedAddress.toLong())
                     }
                     is Expression.VariableRef -> writeSymbol(macro.signature[expression.signatureIndex].variableName)
                     else -> error("Unreachable")
@@ -480,15 +567,6 @@ internal class IonManagedWriter_1_1(
 
     override fun getSymbolTable(): SymbolTable {
         TODO("Why do we need to expose this to users in the first place?")
-    }
-
-    /**
-     * Extension function for [SymbolInliningStrategy] to accept [SymbolToken].
-     * Indicates whether a particular [SymbolToken] should be written inline (as opposed to writing as a SID).
-     * Symbols with unknown text must always be written as SIDs.
-     */
-    private fun SymbolInliningStrategy.shouldWriteInline(symbolKind: SymbolKind, symbol: SymbolToken): Boolean {
-        return symbol.text?.let { shouldWriteInline(symbolKind, it) } ?: false
     }
 
     override fun setFieldName(name: String) {
@@ -787,42 +865,24 @@ internal class IonManagedWriter_1_1(
         resetEncodingContext()
     }
 
-    override fun addMacro(macro: Macro): MacroRef {
-        val id = internMacro(macro)
-        return if (options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME) {
-            macroNames[id]
-                ?.let { MacroRef.ByName(it) }
-                ?: MacroRef.ById(id)
-        } else {
-            MacroRef.ById(id)
-        }
-    }
-
-    override fun addMacro(name: String, macro: Macro): MacroRef {
-        val id = internMacro(macro)
-        macroNames[id] = name
-        return if (options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME) {
-            MacroRef.ByName(name)
-        } else {
-            MacroRef.ById(id)
-        }
-    }
-
-    override fun startMacro(macroRef: MacroRef) {
-        val useNames = options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
-        val ref = when (macroRef) {
-            is MacroRef.ById -> if (useNames) macroRef.intoNamed() else macroRef
-            is MacroRef.ByName -> if (useNames) macroRef else macroRef.intoId()
-        }
-        when (ref) {
-            is MacroRef.ById -> userData.stepInEExp(ref.id, options.writeLengthPrefix(ContainerType.EEXP, depth + 1), macrosById[ref.id])
-            is MacroRef.ByName -> userData.stepInEExp(ref.name)
-        }
-    }
-
     override fun startMacro(macro: Macro) {
-        val id = addMacro(macro)
-        startMacro(id)
+        val address = getOrAssignMacroAddress(macro)
+        startMacro(null, address, macro)
+    }
+
+    override fun startMacro(name: String, macro: Macro) {
+        val address = getOrAssignMacroAddressAndName(name, macro)
+        startMacro(name, address, macro)
+    }
+
+    private fun startMacro(name: String?, address: Int, definition: Macro) {
+        val useNames = options.eExpressionIdentifierStrategy == ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
+        if (useNames && name != null) {
+            userData.stepInEExp(name)
+        } else {
+            val includeLengthPrefix = options.writeLengthPrefix(ContainerType.EEXP, depth + 1)
+            userData.stepInEExp(address, includeLengthPrefix, definition)
+        }
     }
 
     override fun startExpressionGroup() {
