@@ -1004,7 +1004,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     public String stringValue() {
         String value;
         IonType type = super.getType();
-        if (type == IonType.STRING) {
+        if (type == IonType.STRING || isEvaluatingEExpression) {
             value = readString();
         } else if (type == IonType.SYMBOL) {
             if (valueTid.isInlineable) {
@@ -1028,6 +1028,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public String[] getTypeAnnotations() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getTypeAnnotations();
+        }
         if (!hasAnnotations) {
             return _Private_Utils.EMPTY_STRING_ARRAY;
         }
@@ -1059,6 +1062,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public SymbolToken[] getTypeAnnotationSymbols() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.getTypeAnnotationSymbols();
+        }
         if (!hasAnnotations) {
             return SymbolToken.EMPTY_ARRAY;
         }
@@ -1104,6 +1110,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public Iterator<String> iterateTypeAnnotations() {
+        if (isEvaluatingEExpression) {
+            return macroEvaluatorIonReader.iterateTypeAnnotations();
+        }
         if (!hasAnnotations) {
             return EMPTY_ITERATOR;
         }

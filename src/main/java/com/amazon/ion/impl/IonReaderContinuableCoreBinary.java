@@ -112,7 +112,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private final IntList annotationSids;
 
     // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    private MacroEvaluatorAsIonReader macroEvaluatorIonReader = null;
+    protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = null;
 
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
     private MacroEvaluator macroEvaluator = null;
@@ -121,7 +121,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
 
     // Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
-    private final ExpressionReader expressionReader = new ExpressionReader();
+    private final EExpressionArgsReader expressionArgsReader = new EExpressionArgsReader();
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
@@ -1395,7 +1395,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * TODO ideally this could be factored out of IonReaderContinuableCoreBinary.
      *  See {@link com.amazon.ion.impl.macro.MacroExpressionizer}. Currently, this relies on class internals.
      */
-    class ExpressionReader {
+    class EExpressionArgsReader {
 
         /**
          * Reads a scalar value from the stream into an expression.
@@ -1458,7 +1458,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         /**
-         * Reads a container value from the stream into expressions.
+         * Reads a container value from the stream into a list of expressions that will eventually be passed to
+         * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
          * @param type the type of container.
          * @param annotations any annotations on the container.
          * @param expressions receives the expressions as they are materialized.
@@ -1470,14 +1471,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         ) {
             int startIndex = expressions.size();
             expressions.add(Expression.Placeholder.INSTANCE);
-            stepIntoContainer();
-            while (nextValue() != Event.END_CONTAINER) {
+            // Eagerly parse the container, "compiling" it into expressions to be evaluated later.
+            IonReaderContinuableCoreBinary.super.stepIntoContainer();
+            while (IonReaderContinuableCoreBinary.super.nextValue() != Event.END_CONTAINER) {
                 if (type == IonType.STRUCT) {
                     expressions.add(new Expression.FieldName(getFieldNameSymbol()));
                 }
                 readValueAsExpression(expressions); // TODO avoid recursion
             }
-            stepOutOfContainer();
+            IonReaderContinuableCoreBinary.super.stepOutOfContainer();
+            // Overwrite the placeholder with an expression representing the actual type of the container and the
+            // start and end indices of its expressions.
             Expression.EExpressionBodyExpression expression;
             switch (type) {
                 case LIST:
@@ -1497,7 +1501,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         /**
-         * Reads a value from the stream into expression(s).
+         * Reads a value from the stream into expression(s) that will eventually be passed to the MacroEvaluator
+         * responsible for evaluating the e-expression to which this value belongs.
          * @param expressions receives the expressions as they are materialized.
          */
         private void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
@@ -1505,7 +1510,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 if (isSystemInvocation()) {
                     throw new UnsupportedOperationException("TODO: system macros");
                 }
-                collectMacroInvocationExpressions(expressions); // TODO avoid recursion
+                collectEExpressionArgs(expressions); // TODO avoid recursion
                 return;
             }
             IonType type = valueTid.type;
@@ -1522,10 +1527,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         /**
          * Reads a single (non-grouped) expression.
-         * @param encoding how the expression is encoded.
+         * @param parameter the parameter.
          * @param expressions receives the expressions as they are materialized.
          */
-        private void readSingleExpression(Macro.ParameterEncoding encoding, List<Expression.EExpressionBodyExpression> expressions) {
+        private void readSingleExpression(Macro.Parameter parameter, List<Expression.EExpressionBodyExpression> expressions) {
+            Macro.ParameterEncoding encoding = parameter.getType();
             if (encoding == Macro.ParameterEncoding.Tagged) {
                 IonReaderContinuableCoreBinary.super.nextValue();
             } else {
@@ -1539,10 +1545,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         /**
          * Reads a group expression.
-         * @param encoding how the group is encoded.
+         * @param parameter the parameter.
          * @param expressions receives the expressions as they are materialized.
          */
-        private void readGroupExpression(Macro.ParameterEncoding encoding, List<Expression.EExpressionBodyExpression> expressions) {
+        private void readGroupExpression(Macro.Parameter parameter, List<Expression.EExpressionBodyExpression> expressions, boolean requireSingleton) {
+            Macro.ParameterEncoding encoding = parameter.getType();
             if (encoding == Macro.ParameterEncoding.Tagged) {
                 enterTaggedArgumentGroup();
             } else {
@@ -1553,13 +1560,31 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             int startIndex = expressions.size();
             expressions.add(Expression.Placeholder.INSTANCE);
+            boolean isSingleton = true;
             while (nextGroupedValue() != Event.NEEDS_INSTRUCTION) {
                 readValueAsExpression(expressions);
+                isSingleton = false;
+            }
+            if (requireSingleton && !isSingleton) {
+                throw new IonException(String.format(
+                    "Parameter %s with cardinality %s must not contain multiple expressions.",
+                    parameter.getVariableName(),
+                    parameter.getCardinality().name())
+                );
             }
             if (exitArgumentGroup() == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
             expressions.set(startIndex, new Expression.ExpressionGroup(startIndex, expressions.size()));
+        }
+
+        /**
+         * Adds an expression that conveys that the parameter was not present (void).
+         * @param expressions receives the expressions as they are materialized.
+         */
+        private void addVoidExpression(List<Expression.EExpressionBodyExpression> expressions) {
+            int startIndex = expressions.size();
+            expressions.add(new Expression.ExpressionGroup(startIndex, startIndex + 1));
         }
 
         /**
@@ -1569,35 +1594,44 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * @param expressions receives the expressions as they are materialized.
          */
         private void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions) {
-            Macro.ParameterEncoding encoding = parameter.getType();
             switch (parameter.getCardinality()) {
                 case ZeroOrOne:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
-                        readSingleExpression(encoding, expressions);
-                    } else if (parameterPresence != PresenceBitmap.VOID) {
-                        throw new IllegalStateException();
+                        readSingleExpression(parameter, expressions);
+                    } else if (parameterPresence == PresenceBitmap.VOID) {
+                        addVoidExpression(expressions);
+                    } else if (parameterPresence == PresenceBitmap.GROUP) {
+                        readGroupExpression(parameter, expressions, true);
+                    } else {
+                        throw new IllegalStateException("Unreachable: presence bitmap validated but reserved bits found.");
                     }
                     break;
                 case ExactlyOne:
-                    readSingleExpression(encoding, expressions);
+                    // TODO determine if a group with a single element is valid here.
+                    readSingleExpression(parameter, expressions);
                     break;
                 case OneOrMore:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
-                        readSingleExpression(encoding, expressions);
+                        readSingleExpression(parameter, expressions);
                     }
                     if (parameterPresence == PresenceBitmap.GROUP) {
-                        readGroupExpression(encoding, expressions);
+                        readGroupExpression(parameter, expressions, false);
                     } else {
-                        throw new IllegalStateException();
+                        throw new IonException(String.format(
+                            "Invalid void argument for non-voidable parameter: %s",
+                            parameter.getVariableName())
+                        );
                     }
                     break;
                 case ZeroOrMore:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
-                        readSingleExpression(encoding, expressions);
+                        readSingleExpression(parameter, expressions);
                     } else if (parameterPresence == PresenceBitmap.GROUP) {
-                        readGroupExpression(encoding, expressions);
-                    } else if (parameterPresence != PresenceBitmap.VOID) {
-                        throw new IllegalStateException();
+                        readGroupExpression(parameter, expressions, false);
+                    } else if (parameterPresence == PresenceBitmap.VOID) {
+                        addVoidExpression(expressions);
+                    } else {
+                        throw new IllegalStateException("Unreachable: presence bitmap validated but reserved bits found.");
                     }
                     break;
             }
@@ -1607,14 +1641,16 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Collects the expressions that compose the current macro invocation.
          * @param expressions receives the expressions as they are materialized.
          */
-        private void collectMacroInvocationExpressions(List<Expression.EExpressionBodyExpression> expressions) {
+        private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
             if (isSystemInvocation()) {
                 throw new UnsupportedOperationException("System macro invocations not yet supported.");
             }
-            int invocationStartIndex = expressions.size();
             long id = getMacroInvocationId();
             MacroRef address = MacroRef.byId(id);
             Macro macro = macroEvaluator.getEncodingContext().getMacroTable().get(address);
+            if (macro == null) {
+                throw new IonException(String.format("Encountered an unknown macro address: %d.", id));
+            }
             PresenceBitmap presenceBitmap = new PresenceBitmap();
             List<Macro.Parameter> signature = macro.getSignature();
             presenceBitmap.initialize(signature);
@@ -1625,11 +1661,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
                 presenceBitmap.validate();
             }
+            if (isInStruct()) {
+                expressions.add(new Expression.FieldName(getFieldNameSymbol()));
+            }
+            int invocationStartIndex = expressions.size();
             expressions.add(Expression.Placeholder.INSTANCE);
             int numberOfParameters = presenceBitmap.getTotalParameterCount();
+            stepIntoEExpression();
             for (int i = 0; i < numberOfParameters; i++) {
                 readParameter(signature.get(i), presenceBitmap.get(i), expressions);
             }
+            stepOutOfEExpression();
             expressions.set(invocationStartIndex, new Expression.EExpression(address, invocationStartIndex, expressions.size()));
         }
 
@@ -1638,9 +1680,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * them to the macro evaluator.
          */
         private void beginEvaluatingMacroInvocation() {
+            // TODO performance: use a pool of expression lists to avoid repetitive allocations.
             List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
             // TODO performance: avoid fully materializing all expressions up-front.
-            collectMacroInvocationExpressions(expressions);
+            collectEExpressionArgs(expressions);
             macroEvaluator.initExpansion(expressions);
             isEvaluatingEExpression = true;
         }
@@ -1703,11 +1746,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (macroEvaluator == null) {
                 // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
                 // but allow the user to do a raw read of the parameters if this is a core-level reader.
+                // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove
+                //  and refactor the tests.
                 if (this instanceof IonReaderContinuableApplicationBinary) {
                     throw new IonException("The user-level binary reader encountered a macro invocation without an active macro table.");
                 }
             } else {
-                expressionReader.beginEvaluatingMacroInvocation();
+                expressionArgsReader.beginEvaluatingMacroInvocation();
                 evaluateNext();
             }
         }
