@@ -137,7 +137,12 @@ public class _Private_IonBinaryWriterBuilder_1_1
         if (out == null) {
             throw new IllegalArgumentException("Cannot construct a writer with a null OutputStream.");
         }
-        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(true, symbolInliningStrategy, lengthPrefixStrategy);
+        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(
+            true,
+            symbolInliningStrategy,
+            lengthPrefixStrategy,
+            ManagedWriterOptions_1_1.MacroAddressStrategy.BY_ID
+        );
         return IonManagedWriter_1_1.binaryWriter(out, options, this);
     }
 

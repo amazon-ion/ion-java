@@ -5,6 +5,10 @@ package com.amazon.ion.impl.bin
 /**
  * Options that are specific to Ion 1.1 and handled in the managed writer.
  * These are (mostly) generalizable to both text and binary.
+ *
+ * TODO: data classes cannot be changed in a backward compatible way because of the auto-generated `copy` method.
+ *       See if we can get away with using a non-"data" class here, but if not then replace this with a public
+ *       interface, a public builder, and a private/internal implementation class.
  */
 data class ManagedWriterOptions_1_1(
     /**
@@ -15,6 +19,7 @@ data class ManagedWriterOptions_1_1(
     val internEncodingDirectiveSymbols: Boolean,
     val symbolInliningStrategy: SymbolInliningStrategy,
     val lengthPrefixStrategy: LengthPrefixStrategy,
+    val macroAddressStrategy: MacroAddressStrategy,
 ) : SymbolInliningStrategy by symbolInliningStrategy, LengthPrefixStrategy by lengthPrefixStrategy {
     companion object {
         @JvmField
@@ -22,6 +27,7 @@ data class ManagedWriterOptions_1_1(
             internEncodingDirectiveSymbols = true,
             symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
             lengthPrefixStrategy = LengthPrefixStrategy.ALWAYS_PREFIXED,
+            macroAddressStrategy = MacroAddressStrategy.BY_ID,
         )
         @JvmField
         val ION_TEXT_DEFAULT = ManagedWriterOptions_1_1(
@@ -30,6 +36,12 @@ data class ManagedWriterOptions_1_1(
             symbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
             // This doesn't actually have any effect for Ion Text since there are no length-prefixed containers.
             lengthPrefixStrategy = LengthPrefixStrategy.NEVER_PREFIXED,
+            macroAddressStrategy = MacroAddressStrategy.BY_NAME,
         )
+    }
+
+    enum class MacroAddressStrategy {
+        BY_NAME,
+        BY_ID,
     }
 }
