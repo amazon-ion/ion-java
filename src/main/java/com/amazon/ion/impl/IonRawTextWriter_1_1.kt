@@ -130,15 +130,16 @@ class IonRawTextWriter_1_1 internal constructor(
 
     override fun close() {
         if (closed) return
-        finish()
+        flush()
         output.close()
         closed = true
     }
 
-    override fun finish() {
+    override fun flush() {
         if (closed) return
         confirm(depth() == 0) { "Cannot call finish() while in a container" }
         confirm(numAnnotations == 0) { "Cannot call finish with dangling annotations" }
+        output.flush()
     }
 
     override fun writeIVM() {

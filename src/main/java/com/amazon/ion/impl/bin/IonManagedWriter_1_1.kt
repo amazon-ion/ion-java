@@ -479,9 +479,8 @@ internal class IonManagedWriter_1_1(
 
     override fun flush() {
         writeSymbolTable()
-        // TODO: This method on the raw writer should probably be called `flush()` instead of `finish()`.
-        systemData.finish()
-        userData.finish()
+        systemData.flush()
+        userData.flush()
     }
 
     override fun finish() {

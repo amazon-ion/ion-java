@@ -25,13 +25,13 @@ interface IonRawWriter_1_1 {
      * Implementations should allow the application to continue writing further top-level values following the semantics
      * for concatenating Ion data streams.
      */
-    fun finish()
+    fun flush()
 
     /**
      * Closes this stream and releases any system resources associated with it.
      * If the stream is already closed then invoking this method has no effect.
      *
-     * If the cursor is between top-level values, this method will [finish] before closing the underlying output stream.
+     * If the cursor is between top-level values, this method will [flush] before closing the underlying output stream.
      * If not, the resulting data may be incomplete and invalid Ion.
      */
     fun close()
