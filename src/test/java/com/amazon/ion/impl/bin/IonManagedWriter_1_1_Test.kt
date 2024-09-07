@@ -176,23 +176,6 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
-    fun `write an e-expression by name 2`() {
-        val expected = """
-            $ion_1_1
-            $ion_encoding::((macro_table (macro a () "foo")))
-            (:a)
-        """.trimIndent()
-
-        val actual = write {
-            val macroRef = addMacro("a", constantMacro { string("foo") })
-            startMacro(macroRef)
-            endMacro()
-        }
-
-        assertEquals(expected, actual)
-    }
-
-    @Test
     fun `write an e-expression by address`() {
         val expected = """
             $ion_1_1

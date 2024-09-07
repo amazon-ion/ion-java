@@ -1646,7 +1646,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 throw new UnsupportedOperationException("System macro invocations not yet supported.");
             }
             long id = getMacroInvocationId();
-            MacroRef address = MacroRef.byId(id);
+            if (id > Integer.MAX_VALUE) {
+                throw new IonException("Macro addresses larger than 2147483647 are not supported by this implementation.");
+            }
+            MacroRef address = MacroRef.byId((int) id);
             Macro macro = macroEvaluator.getEncodingContext().getMacroTable().get(address);
             if (macro == null) {
                 throw new IonException(String.format("Encountered an unknown macro address: %d.", id));

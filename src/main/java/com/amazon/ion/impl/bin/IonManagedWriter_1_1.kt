@@ -37,18 +37,21 @@ internal class IonManagedWriter_1_1(
     private val onClose: () -> Unit,
 ) : _Private_IonWriter, MacroAwareIonWriter {
 
-    private val systemSymbolTableMap = hashMapOf<String, Int>()
-
     init {
         // Since this is Ion 1.1, we must always start with the IVM.
         systemData.writeIVM()
-        var id = 1
-        Symbols.systemSymbolTable().iterateDeclaredSymbolNames().forEach {
-            systemSymbolTableMap[it] = id++
-        }
     }
 
     companion object {
+        private val SYSTEM_SYMBOL_TABLE_MAP = hashMapOf<String, Int>()
+
+        init {
+            var id = 1
+            Symbols.systemSymbolTable().iterateDeclaredSymbolNames().forEach {
+                SYSTEM_SYMBOL_TABLE_MAP[it] = id++
+            }
+        }
+
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_\\d+_\\d+$")
 
         @JvmStatic
@@ -118,7 +121,7 @@ internal class IonManagedWriter_1_1(
     // plus a list of symbols added by the current encoding context.
 
     /** The symbol table for the prior encoding context */
-    private var symbolTable: HashMap<String, Int> = HashMap(systemSymbolTableMap)
+    private var symbolTable: HashMap<String, Int> = HashMap(SYSTEM_SYMBOL_TABLE_MAP)
     /** Symbols to be interned since the prior encoding context. */
     private var newSymbols: HashMap<String, Int> = LinkedHashMap() // Preserves insertion order.
 
@@ -171,9 +174,14 @@ internal class IonManagedWriter_1_1(
     /** Converts a macro address to a macro name. If no name is found, returns the original address. */
     private fun MacroRef.ById.intoNamed(): MacroRef = macroNames[id]?.let { MacroRef.ByName(it) } ?: this
 
+    // Only called by `finish()`
     private fun resetEncodingContext() {
+        // TODO: Make sure that if a value is written after this method is called, we
+        //       emit an IVM or empty encoding directive before the next user value
+        //       in order to avoid writing a data stream with leaky context.
         if (depth != 0) throw IllegalStateException("Cannot reset the encoding context while stepped in any value.")
-        symbolTable = HashMap(systemSymbolTableMap)
+        symbolTable.clear()
+        symbolTable.putAll(SYSTEM_SYMBOL_TABLE_MAP)
         macroNames.clear()
         macrosById.clear()
         macroTable.clear()
