@@ -125,7 +125,7 @@ class PresenceBitmapTest {
     @Test
     fun `when all parameters are tagged and not exactly-one, should write expected number of presence bits`() {
         // Index of an element in this list is the number of parameters in the signature
-        listOf(0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3)
+        listOf(0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3)
             .forEachIndexed { numParameters, expectedByteSize ->
                 assertExpectedPresenceBitSizes(expectedByteSize, signature = List(numParameters) { taggedZeroToMany })
             }
