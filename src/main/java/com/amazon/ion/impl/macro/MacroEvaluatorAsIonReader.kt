@@ -56,7 +56,10 @@ class MacroEvaluatorAsIonReader(
     }
 
     override fun next(): IonType? {
-        if (!hasNext()) return null
+        if (!hasNext()) {
+            currentValueExpression = null
+            return null
+        }
         currentValueExpression = queuedValueExpression
         currentFieldName = queuedFieldName
         queuedValueExpression = null
@@ -65,7 +68,7 @@ class MacroEvaluatorAsIonReader(
 
     override fun stepIn() {
         // This is essentially a no-op for Lists and SExps
-        containerStack.peek().currentFieldName = this.currentFieldName
+        containerStack.peek()?.currentFieldName = this.currentFieldName
 
         val containerToStepInto = currentValueExpression
         evaluator.stepIn()
@@ -83,7 +86,7 @@ class MacroEvaluatorAsIonReader(
         evaluator.stepOut()
         containerStack.pop()
         // This is essentially a no-op for Lists and SExps
-        currentFieldName = containerStack.peek().currentFieldName
+        currentFieldName = containerStack.peek()?.currentFieldName
         currentValueExpression = null // Must call `next()` to get the next value
         queuedFieldName = null
         queuedValueExpression = null

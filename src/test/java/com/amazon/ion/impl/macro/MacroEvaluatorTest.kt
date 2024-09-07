@@ -530,7 +530,7 @@ class MacroEvaluatorTest {
         evaluator.initExpansion(
             listOf(
                 EExpression(MacroRef.ByName("foo_struct"), 0, 1),
-                ExpressionGroup(1, 1),
+                ExpressionGroup(1, 2),
             )
         )
 

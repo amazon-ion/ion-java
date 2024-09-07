@@ -2341,7 +2341,7 @@ class IonCursorBinary implements IonCursor {
                 isValueIncomplete = true;
             }
             if (minorVersion == 1 && valueTid.isNull && valueTid.length > 0) {
-                valueTid = IonTypeID.NULL_TYPE_IDS_1_1[buffer[(int)(peekIndex++) & SINGLE_BYTE_MASK]];
+                valueTid = IonTypeID.NULL_TYPE_IDS_1_1[buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK];
             }
         }
         markerToSet.typeId = valueTid;
@@ -2653,6 +2653,48 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Steps into an e-expression, treating it as a logical container.
+     */
+    void stepIntoEExpression() {
+        if (valueTid == null || !valueTid.isMacroInvocation) {
+            throw new IonException("Must be positioned on an e-expression.");
+        }
+        pushContainer();
+        parent.typeId = valueTid;
+        // TODO support length prefixed e-expressions.
+        parent.endIndex = DELIMITED_MARKER;
+        valueTid = null;
+        event = Event.NEEDS_INSTRUCTION;
+        reset();
+    }
+
+    /**
+     * Steps out of an e-expression, restoring the context of the parent container (if any).
+     */
+    void stepOutOfEExpression() {
+        if (parent == null) {
+            throw new IonException("Cannot step out at the top level.");
+        }
+        if (!parent.typeId.isMacroInvocation) {
+            throw new IonException("Not positioned within an e-expression.");
+        }
+        // TODO support early step-out when support for lazy parsing of e-expressions is added (including continuable
+        //  reading).
+        if (valueMarker.endIndex > peekIndex) {
+            peekIndex = valueMarker.endIndex;
+        }
+        setCheckpointBeforeUnannotatedTypeId();
+        if (--containerIndex >= 0) {
+            parent = containerStack[containerIndex];
+        } else {
+            parent = null;
+            containerIndex = -1;
+        }
+        valueTid = null;
+        event = Event.NEEDS_INSTRUCTION;
+    }
+
+    /**
      * Puts the cursor back in slow mode. Must not be called when the cursor is byte-backed.
      */
     private void resumeSlowMode() {
@@ -2819,7 +2861,11 @@ class IonCursorBinary implements IonCursor {
                 return true;
             }
         } else {
-            if (uncheckedNextContainedToken()) {
+            if (parent.typeId.isMacroInvocation) {
+                // When traversing a macro invocation, the cursor must visit each parameter; after visiting each one,
+                // peekIndex will point to the first byte in the next parameter or value.
+                valuePreHeaderIndex = peekIndex;
+            } else if (uncheckedNextContainedToken()) {
                 return false;
             }
             if (peekIndex >= limit) {

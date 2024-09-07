@@ -55,7 +55,7 @@ internal class PresenceBitmap {
         const val RESERVED = 0b11L
 
         private const val TWO_BIT_MASK = 0b11L
-        private const val PRESENCE_BITS_SIZE_THRESHOLD = 2
+        private const val PRESENCE_BITS_SIZE_THRESHOLD = 0
         private const val PB_SLOTS_PER_BYTE = 4
         private const val PB_SLOTS_PER_LONG = 32
         private const val PB_BITS_PER_SLOT = 2
