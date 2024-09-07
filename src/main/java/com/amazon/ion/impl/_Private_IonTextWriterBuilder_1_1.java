@@ -147,7 +147,13 @@ public class _Private_IonTextWriterBuilder_1_1
             throw new NullPointerException("Cannot construct a writer with a null Appendable.");
         }
         _Private_IonTextWriterBuilder_1_1 b = fillDefaults();
-        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(false, symbolInliningStrategy, LengthPrefixStrategy.NEVER_PREFIXED);
+        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(
+            false,
+            symbolInliningStrategy,
+            LengthPrefixStrategy.NEVER_PREFIXED,
+            // This could be made configurable.
+            ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
+        );
         return IonManagedWriter_1_1.textWriter(out, options, b);
     }
 
@@ -158,7 +164,13 @@ public class _Private_IonTextWriterBuilder_1_1
         }
 
         _Private_IonTextWriterBuilder_1_1 b = fillDefaults();
-        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(false, symbolInliningStrategy, LengthPrefixStrategy.NEVER_PREFIXED);
+        ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(
+            false,
+            symbolInliningStrategy,
+            LengthPrefixStrategy.NEVER_PREFIXED,
+            // This could be made configurable.
+            ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME
+        );
         return IonManagedWriter_1_1.textWriter(out, options, b);
     }
 

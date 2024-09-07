@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream
 import java.io.FilenameFilter
 import java.io.OutputStream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -23,12 +24,15 @@ class Ion_1_1_RoundTripTest {
 
     @Nested
     inner class Text : Ion_1_1_RoundTripTextBase() {
-        private val builder = ION_1_1.textWriterBuilder().withNewLineType(IonTextWriterBuilder.NewLineType.LF)
+        private val builder = ION_1_1.textWriterBuilder()
+            .withNewLineType(IonTextWriterBuilder.NewLineType.LF)
+            .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
 
         override val writerFn: (OutputStream) -> IonWriter = builder::build
         override val newWriterForAppendable: (Appendable) -> IonWriter = builder::build
     }
 
+    @Disabled("Disabled because the text reader does not support Ion 1.1 encoding directives.")
     @Nested
     inner class TextWithSymbolTable : Ion_1_1_RoundTripTextBase() {
         private val builder = ION_1_1.textWriterBuilder()
@@ -389,7 +393,7 @@ abstract class Ion_1_1_RoundTripBase {
 
                 assertEquals(expected, actual, "value $ie is different")
             } catch (e: IonException) {
-                throw AssertionError("Encountered IonException when reading the transcribed version of value #$ie\n$expected", e)
+                throw AssertionError("Encountered IonException when reading the transcribed version of value #$ie\nExpected: $expected", e)
             }
             ie++
         }

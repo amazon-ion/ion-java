@@ -4,7 +4,6 @@ package com.amazon.ion.system;
 
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.impl.bin.LengthPrefixStrategy;
-import com.amazon.ion.impl.bin.LengthPrefixStrategy;
 
 /**
  * The builder for creating {@link IonWriter}s emitting the 1.1 version of the Ion binary format.

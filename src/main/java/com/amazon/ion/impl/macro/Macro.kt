@@ -17,6 +17,8 @@ sealed interface Macro {
         companion object {
             @JvmStatic
             fun zeroToManyTagged(name: String) = Parameter(name, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)
+            @JvmStatic
+            fun exactlyOneTagged(name: String) = Parameter(name, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
         }
     }
 
@@ -106,9 +108,9 @@ data class TemplateMacro(override val signature: List<Macro.Parameter>, val body
 /**
  * Macros that are built in, rather than being defined by a template.
  */
-enum class SystemMacro(override val signature: List<Macro.Parameter>) : Macro {
-    Values(listOf(zeroToManyTagged("values"))),
-    MakeString(listOf(zeroToManyTagged("text"))),
+enum class SystemMacro(val macroName: String, override val signature: List<Macro.Parameter>) : Macro {
+    Values("values", listOf(zeroToManyTagged("values"))),
+    MakeString("make_string", listOf(zeroToManyTagged("text"))),
     // TODO: Other system macros
     ;
 }

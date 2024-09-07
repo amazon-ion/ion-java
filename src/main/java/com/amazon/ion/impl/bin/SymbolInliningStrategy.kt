@@ -41,12 +41,18 @@ fun interface SymbolInliningStrategy {
          * This is equivalent to the behavior of symbols in Ion 1.0.
          */
         @JvmField
-        val NEVER_INLINE = SymbolInliningStrategy { _, _ -> false }
+        val NEVER_INLINE = object : SymbolInliningStrategy {
+            override fun shouldWriteInline(symbolKind: SymbolKind, text: String): Boolean = false
+            override fun toString(): String = "NEVER_INLINE"
+        }
 
         /**
          * A [SymbolInliningStrategy] that causes all symbols with known text to have their text written inline.
          */
         @JvmField
-        val ALWAYS_INLINE = SymbolInliningStrategy { _, _ -> true }
+        val ALWAYS_INLINE = object : SymbolInliningStrategy {
+            override fun shouldWriteInline(symbolKind: SymbolKind, text: String): Boolean = true
+            override fun toString(): String = "ALWAYS_INLINE"
+        }
     }
 }

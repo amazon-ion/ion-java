@@ -96,21 +96,6 @@ public final class SystemSymbols
     public static final String MAX_ID = "max_id";
 
     /**
-     * The annotation that denotes an Ion encoding directive in Ion 1.1+.
-     */
-    public static final String ION_ENCODING = "$ion_encoding";
-
-    /**
-     * The name of the symbol table s-expression within an Ion encoding directive.
-     */
-    public static final String SYMBOL_TABLE = "symbol_table";
-
-    /**
-     * The name of the macro table s-expression within an Ion encoding directive.
-     */
-    public static final String MACRO_TABLE = "macro_table";
-
-    /**
      * The ID of system symbol {@value #MAX_ID}, as defined by Ion 1.0.
      */
     public static final int    MAX_ID_SID = 8;
@@ -132,4 +117,51 @@ public final class SystemSymbols
      * The maximum ID of the IDs of system symbols defined by Ion 1.0.
      */
     public static final int    ION_1_0_MAX_ID = 9;
+
+    // Ion 1.1 Symbols
+
+    /**
+     * The annotation that denotes an Ion encoding directive in Ion 1.1+.
+     */
+    public static final String ION_ENCODING = "$ion_encoding";
+
+    /**
+     * The name of the symbol table s-expression within an Ion encoding directive.
+     */
+    public static final String SYMBOL_TABLE = "symbol_table";
+
+    /**
+     * The name of the macro table s-expression within an Ion encoding directive.
+     */
+    public static final String MACRO_TABLE = "macro_table";
+
+    /**
+     * The name of the "annotate" system macro.
+     */
+    public static final String ANNOTATE = "annotate";
+
+    /**
+     * The name of the "literal" special form.
+     */
+    public static final String LITERAL = "literal";
+
+    /**
+     * The name of the "macro" s-expression in the macro table.
+     */
+    public static final String MACRO = "macro";
+
+    /**
+     * The name of the "export" s-expression in the macro table.
+     */
+    public static final String EXPORT = "export";
+
+    /**
+     * The name of the "make_sexp" system macro.
+     */
+    public static final String MAKE_SEXP = "make_sexp";
+
+    /**
+     * The sigil used to denote an expression group in TDL.
+     */
+    public static final String TDL_EXPRESSION_GROUP = ";";
 }

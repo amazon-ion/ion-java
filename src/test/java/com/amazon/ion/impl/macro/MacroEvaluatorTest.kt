@@ -578,7 +578,7 @@ class MacroEvaluatorTest {
                 EncodingContext(
                     idsToMacros.associate { (k, v) ->
                         when (k) {
-                            is Number -> MacroRef.ById(k.toLong())
+                            is Number -> MacroRef.ById(k.toInt())
                             is String -> MacroRef.ByName(k)
                             else -> throw IllegalArgumentException("Unsupported macro id $k")
                         } to v
