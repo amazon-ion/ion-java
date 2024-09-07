@@ -135,16 +135,9 @@ class MacroEvaluator(
      * Initialize the macro evaluator with an E-Expression.
      */
     fun initExpansion(encodingExpressions: List<EExpressionBodyExpression>) {
-        val eExp = encodingExpressions[0]
-        eExp as? EExpression ?: throw IllegalStateException("Attempted to initialize macro evaluator for an expression that is not an e-expression: $eExp")
-
-        pushMacro(
-            eExp.address,
-            eExp.startInclusive,
-            eExp.endExclusive,
-            Environment.EMPTY,
-            encodingExpressions,
-        )
+        // Pretend that the whole thing is a "values" expansion so that we don't have to care about what
+        // the first expression actually is.
+        pushExpansion(ExpansionKind.Values, 0, encodingExpressions.size, Environment.EMPTY, encodingExpressions)
     }
 
     /**
