@@ -235,7 +235,7 @@ class MacroCompiler(private val reader: IonReaderContinuableCore) {
                 }
             }
             // TODO: Once we have a macro table, validate that id exists in current macro table.
-            IonType.INT -> MacroRef.ById(reader.longValue())
+            IonType.INT -> MacroRef.ById(reader.intValue())
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${reader.encodingType ?: "nothing"}\"")
         }
 

@@ -74,7 +74,7 @@ class IonRawTextWriterTest_1_1 {
     fun `calling finish while in a container should throw IonException`() {
         ionWriter {
             stepInList(true)
-            assertThrows<IonException> { finish() }
+            assertThrows<IonException> { flush() }
         }
     }
 
@@ -82,7 +82,7 @@ class IonRawTextWriterTest_1_1 {
     fun `calling finish with a dangling annotation should throw IonException`() {
         ionWriter {
             writeAnnotations(10)
-            assertThrows<IonException> { finish() }
+            assertThrows<IonException> { flush() }
         }
     }
 
@@ -122,7 +122,7 @@ class IonRawTextWriterTest_1_1 {
     fun `calling finish should cause the buffered data to be written to the output stream`() {
         val actual = writeAsString(autoClose = false) {
             writeIVM()
-            finish()
+            flush()
         }
         // Just checking that data is written, not asserting the content.
         assertTrue(actual.isNotBlank())
@@ -131,7 +131,7 @@ class IonRawTextWriterTest_1_1 {
     @Test
     fun `after calling finish, it should still be possible to write more data`() {
         val actual = writeAsString {
-            finish()
+            flush()
             writeIVM()
         }
         // Just checking that data is written, not asserting the content.
@@ -152,11 +152,11 @@ class IonRawTextWriterTest_1_1 {
     fun `calling close or finish multiple times should not throw any exceptions`() {
         val actual = writeAsString {
             writeIVM()
-            finish()
+            flush()
             close()
-            finish()
+            flush()
             close()
-            finish()
+            flush()
         }
         // Just checking that data is written, not asserting the content.
         assertTrue(actual.isNotBlank())

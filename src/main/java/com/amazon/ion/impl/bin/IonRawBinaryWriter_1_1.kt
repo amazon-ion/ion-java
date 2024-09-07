@@ -13,6 +13,7 @@ import com.amazon.ion.util.*
 import java.io.OutputStream
 import java.lang.Double.doubleToRawLongBits
 import java.lang.Float.floatToIntBits
+import java.lang.IllegalArgumentException
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -127,7 +128,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     private var currentContainer: ContainerInfo = containerStack.push { it.reset(TOP, 0L) }
 
-    override fun finish() {
+    override fun flush() {
         if (closed) return
         confirm(depth() == 0) { "Cannot call finish() while in a container" }
         confirm(numAnnotations == 0) { "Cannot call finish with dangling annotations" }
@@ -173,7 +174,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun close() {
         if (closed) return
-        finish()
+        flush()
         buffer.close()
         closed = true
     }
@@ -379,7 +380,11 @@ class IonRawBinaryWriter_1_1 internal constructor(
         taglessEncoder: (TaglessEncoding) -> Int,
     ) {
         val primitiveType = when (currentContainer.type) {
-            EEXP -> presenceBitmapStack.peek().signature[currentContainer.numChildren].type.taglessEncodingKind
+            EEXP -> {
+                val signature = presenceBitmapStack.peek().signature
+                if (currentContainer.numChildren >= signature.size) throw IllegalArgumentException("Too many arguments for macro with signature $signature")
+                signature[currentContainer.numChildren].type.taglessEncodingKind
+            }
             EXPR_GROUP -> currentContainer.taglessEncodingKind
             else -> null
         }

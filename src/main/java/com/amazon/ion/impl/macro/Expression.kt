@@ -17,6 +17,8 @@ import java.math.BigInteger
  * Template bodies are compiled into a list of expressions, without nesting, for ease and efficiency of evaluating
  * e-expressions. Because of this, the container types do not have other values nested in them; rather they contain a
  * range that indicates which of the following expressions are part of that container.
+ *
+ * TODO: Consider creating an enum or integer-based expression type id so that we can `switch` efficiently on it.
  */
 sealed interface Expression {
 

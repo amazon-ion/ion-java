@@ -100,7 +100,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling finish while in a container should throw IonException`() {
         assertWriterThrows {
             stepInList(usingLengthPrefix = false)
-            finish()
+            flush()
         }
     }
 
@@ -108,7 +108,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling finish with a dangling annotation should throw IonException`() {
         assertWriterThrows {
             writeAnnotations(10)
-            finish()
+            flush()
         }
     }
 
@@ -148,7 +148,7 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling finish should cause the buffered data to be written to the output stream`() {
         val actual = writeAsHexString(autoClose = false) {
             writeIVM()
-            finish()
+            flush()
         }
         // Just checking that data is written, not asserting the content.
         assertTrue(actual.isNotBlank())
@@ -157,7 +157,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `after calling finish, it should still be possible to write more data`() {
         val actual = writeAsHexString {
-            finish()
+            flush()
             writeIVM()
         }
         // Just checking that data is written, not asserting the content.
@@ -178,11 +178,11 @@ class IonRawBinaryWriterTest_1_1 {
     fun `calling close or finish multiple times should not throw any exceptions`() {
         val actual = writeAsHexString {
             writeIVM()
-            finish()
+            flush()
             close()
-            finish()
+            flush()
             close()
-            finish()
+            flush()
         }
         // Just checking that data is written, not asserting the content.
         assertTrue(actual.isNotBlank())
@@ -250,7 +250,7 @@ class IonRawBinaryWriterTest_1_1 {
             stepInList(usingLengthPrefix = true)
             repeat(16) { writeBool(true) }
             stepOut()
-            finish()
+            flush()
         }
     }
 
@@ -316,7 +316,7 @@ class IonRawBinaryWriterTest_1_1 {
             stepInSExp(usingLengthPrefix = true)
             repeat(16) { writeBool(true) }
             stepOut()
-            finish()
+            flush()
         }
     }
 
