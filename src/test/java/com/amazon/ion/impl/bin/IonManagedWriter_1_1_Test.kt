@@ -36,6 +36,7 @@ internal class IonManagedWriter_1_1_Test {
         private fun write(
             topLevelValuesOnNewLines: Boolean = true,
             closeWriter: Boolean = true,
+            pretty: Boolean = false,
             symbolInliningStrategy: SymbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
             block: IonManagedWriter_1_1.() -> Unit
         ): String {
@@ -43,6 +44,7 @@ internal class IonManagedWriter_1_1_Test {
             val writer = ION_1_1.textWriterBuilder()
                 .withWriteTopLevelValuesOnNewLines(topLevelValuesOnNewLines)
                 .withSymbolInliningStrategy(symbolInliningStrategy)
+                .apply { if (pretty) withPrettyPrinting() }
                 .build(appendable) as IonManagedWriter_1_1
             writer.apply(block)
             if (closeWriter) writer.close()
@@ -204,7 +206,7 @@ internal class IonManagedWriter_1_1_Test {
 
         val expected = """
             $ion_1_1
-            $ion_encoding::((macro_table (macro null (a * b *) "foo")))
+            $ion_encoding::((macro_table (macro null (a* b*) "foo")))
             (:0 (:) (: 1 2 3))
         """.trimIndent()
 
@@ -409,17 +411,17 @@ internal class IonManagedWriter_1_1_Test {
                 case(
                     "optional parameter",
                     signature = listOf(Parameter("x", ParameterEncoding.Tagged, ParameterCardinality.ZeroOrOne)),
-                    expectedSignature = "(x ?)"
+                    expectedSignature = "(x?)"
                 ),
                 case(
                     "zero-to-many parameter",
                     signature = listOf(Parameter("x", ParameterEncoding.Tagged, ParameterCardinality.ZeroOrMore)),
-                    expectedSignature = "(x *)"
+                    expectedSignature = "(x*)"
                 ),
                 case(
                     "one-to-many parameter",
                     signature = listOf(Parameter("x", ParameterEncoding.Tagged, ParameterCardinality.OneOrMore)),
-                    expectedSignature = "(x +)"
+                    expectedSignature = "(x+)"
                 ),
                 case(
                     "tagless parameter",
@@ -434,7 +436,7 @@ internal class IonManagedWriter_1_1_Test {
                         Parameter("c", ParameterEncoding.CompactSymbol, ParameterCardinality.ZeroOrMore),
                         Parameter("d", ParameterEncoding.Float64, ParameterCardinality.ZeroOrOne),
                     ),
-                    expectedSignature = "(int32::a b + compact_symbol::c * float64::d ?)"
+                    expectedSignature = "(int32::a b+ compact_symbol::c* float64::d?)"
                 ),
                 case(
                     "null",
@@ -642,6 +644,56 @@ internal class IonManagedWriter_1_1_Test {
         """.trimIndent()
 
         val actual = write { addMacro(macro) }
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `when pretty printing, system s-expressions should have the clause name on the first line`() {
+        // ...and look reasonably pleasant.
+        // However, this should be held loosely.
+        val expected = """
+            $ion_1_1
+            $ion_encoding::(
+              (symbol_table ["foo","bar","baz"])
+              (macro_table
+                (macro null () "foo")
+                (macro null () "bar"))
+            )
+            $10
+            $11
+            $12
+            (:0)
+            (:1)
+            $ion_encoding::(
+              (symbol_table
+                $ion_encoding
+                ["a","b","c"])
+              (macro_table
+                $ion_encoding
+                (macro null () "abc"))
+            )
+            $13
+            $14
+            $15
+            (:2)
+        """.trimIndent()
+
+        val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE, pretty = true) {
+            writeSymbol("foo")
+            writeSymbol("bar")
+            writeSymbol("baz")
+            startMacro(constantMacro { string("foo") })
+            endMacro()
+            startMacro(constantMacro { string("bar") })
+            endMacro()
+            flush()
+            writeSymbol("a")
+            writeSymbol("b")
+            writeSymbol("c")
+            startMacro(constantMacro { string("abc") })
+            endMacro()
+        }
 
         assertEquals(expected, actual)
     }

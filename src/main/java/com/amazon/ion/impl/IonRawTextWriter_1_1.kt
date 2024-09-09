@@ -21,7 +21,7 @@ import java.math.BigInteger
 class IonRawTextWriter_1_1 internal constructor(
     private val options: _Private_IonTextWriterBuilder_1_1,
     private val output: _Private_IonTextAppender,
-) : IonRawWriter_1_1 {
+) : IonRawWriter_1_1, `PrivateIonRawWriter_1_1` {
 
     companion object {
         const val IVM = "\$ion_1_1"
@@ -63,7 +63,7 @@ class IonRawTextWriter_1_1 internal constructor(
             Top -> options.topLevelSeparator()
         }
 
-        if (options.isPrettyPrintOn) {
+        if (options.isPrettyPrintOn && !forceNoNewlines) {
             if (isPendingSeparator && !IonTextUtils.isAllWhitespace(separatorCharacter)) {
                 // Only bother if the separator is non-whitespace.
                 output.appendAscii(separatorCharacter)
@@ -384,11 +384,18 @@ class IonRawTextWriter_1_1 internal constructor(
         currentContainer = ancestorContainersStack.removeLast()
 
         closeValue {
-            if (options.isPrettyPrintOn && currentContainerHasValues) {
+            if (options.isPrettyPrintOn && currentContainerHasValues && !forceNoNewlines) {
                 output.appendAscii(options.lineSeparator())
                 output.appendAscii(" ".repeat(ancestorContainersStack.size * 2))
             }
             output.appendAscii(endChar)
         }
+    }
+
+    private var forceNoNewlines: Boolean = false
+    override fun forceNoNewlines(boolean: Boolean) { forceNoNewlines = boolean }
+
+    override fun writeMacroParameterCardinality(cardinality: Macro.ParameterCardinality) {
+        output.appendAscii(cardinality.sigil)
     }
 }
