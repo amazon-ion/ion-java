@@ -21,7 +21,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
     private val out: OutputStream,
     private val buffer: WriteBuffer,
     private val lengthPrefixPreallocation: Int,
-) : IonRawWriter_1_1 {
+) : IonRawWriter_1_1, PrivateIonRawWriter_1_1 {
 
     /**
      * Types of encoding containers.
@@ -888,5 +888,10 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 ancestor.patchPoint = patchPoints.pushAndGet { it.clear() }
             }
         }
+    }
+
+    override fun writeMacroParameterCardinality(cardinality: Macro.ParameterCardinality) {
+        // TODO: Write as a system symbol
+        writeSymbol(cardinality.sigil.toString())
     }
 }

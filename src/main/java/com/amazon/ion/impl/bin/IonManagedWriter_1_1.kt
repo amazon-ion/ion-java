@@ -32,7 +32,7 @@ import kotlin.collections.LinkedHashMap
  */
 internal class IonManagedWriter_1_1(
     private val userData: IonRawWriter_1_1,
-    private val systemData: IonRawWriter_1_1,
+    private val systemData: PrivateIonRawWriter_1_1,
     private val options: ManagedWriterOptions_1_1,
     private val onClose: () -> Unit,
 ) : _Private_IonWriter, MacroAwareIonWriter {
@@ -53,6 +53,11 @@ internal class IonManagedWriter_1_1(
         }
 
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_\\d+_\\d+$")
+
+        // These are chosen subjectively to be neither too big nor too small.
+        private const val MAX_PARAMETERS_IN_ONE_LINE_SIGNATURE = 4
+        private const val MAX_SYMBOLS_IN_SINGLE_LINE_SYMBOL_TABLE = 10
+        private const val MAX_EXPRESSIONS_IN_SINGLE_LINE_MACRO_BODY = 8
 
         @JvmStatic
         fun textWriter(output: OutputStream, managedWriterOptions: ManagedWriterOptions_1_1, textOptions: _Private_IonTextWriterBuilder_1_1): IonManagedWriter_1_1 {
@@ -189,7 +194,7 @@ internal class IonManagedWriter_1_1(
     }
 
     /** Helper function for writing encoding directives */
-    private inline fun writeSystemSexp(content: IonRawWriter_1_1.() -> Unit) {
+    private inline fun writeSystemSexp(content: PrivateIonRawWriter_1_1.() -> Unit) {
         systemData.stepInSExp(usingLengthPrefix = false)
         systemData.content()
         systemData.stepOut()
@@ -228,18 +233,25 @@ internal class IonManagedWriter_1_1(
         if (!hasSymbolsToAdd && !hasSymbolsToRetain) return
 
         writeSystemSexp {
+            forceNoNewlines(true)
             systemData.writeSymbol(SystemSymbols.SYMBOL_TABLE)
+
             // Add previous symbol table
             if (hasSymbolsToRetain) {
+                if (newSymbols.size > 0) forceNoNewlines(false)
                 writeSymbol(SystemSymbols.ION_ENCODING)
             }
+
             // Add new symbols
             if (hasSymbolsToAdd) {
                 stepInList(usingLengthPrefix = false)
+                if (newSymbols.size <= MAX_SYMBOLS_IN_SINGLE_LINE_SYMBOL_TABLE) forceNoNewlines(true)
                 newSymbols.forEach { (text, _) -> writeString(text) }
                 stepOut()
             }
+            forceNoNewlines(true)
         }
+        systemData.forceNoNewlines(false)
     }
 
     /**
@@ -253,10 +265,13 @@ internal class IonManagedWriter_1_1(
         if (!hasMacrosToAdd && !hasMacrosToRetain) return
 
         writeSystemSexp {
+            forceNoNewlines(true)
             writeSymbol(SystemSymbols.MACRO_TABLE)
+            if (newMacros.size > 0) forceNoNewlines(false)
             if (hasMacrosToRetain) {
                 writeSymbol(SystemSymbols.ION_ENCODING)
             }
+            forceNoNewlines(false)
             newMacros.forEach { (macro, address) ->
                 val name = macroNames[address]
                 when (macro) {
@@ -264,22 +279,29 @@ internal class IonManagedWriter_1_1(
                     is SystemMacro -> exportSystemMacro(macro)
                 }
             }
+            forceNoNewlines(true)
         }
+        systemData.forceNoNewlines(false)
     }
 
     private fun exportSystemMacro(macro: SystemMacro) {
         // TODO: Support for aliases
         writeSystemSexp {
+            forceNoNewlines(true)
             writeSymbol(SystemSymbols.EXPORT)
             writeAnnotations(SystemSymbols.ION)
             writeSymbol(macro.macroName)
         }
+        systemData.forceNoNewlines(false)
     }
 
     private fun writeMacroDefinition(name: String?, macro: TemplateMacro) {
         writeSystemSexp {
+            forceNoNewlines(true)
             writeSymbol(SystemSymbols.MACRO)
             if (name != null) writeSymbol(name) else writeNull()
+
+            if (macro.signature.size > MAX_PARAMETERS_IN_ONE_LINE_SIGNATURE) forceNoNewlines(false)
 
             // Signature
             writeSystemSexp {
@@ -289,13 +311,12 @@ internal class IonManagedWriter_1_1(
                     }
                     writeSymbol(parameter.variableName)
                     if (parameter.cardinality != Macro.ParameterCardinality.ExactlyOne) {
-                        // TODO: Consider adding a method to the raw writer that can write a single-character
-                        //       symbol without constructing a string. It might be a minor performance improvement.
-                        // TODO: See if we can write this without a space between the parameter name and the sigil.
-                        writeSymbol(parameter.cardinality.sigil.toString())
+                        writeMacroParameterCardinality(parameter.cardinality)
                     }
                 }
             }
+
+            if (macro.body.size > MAX_EXPRESSIONS_IN_SINGLE_LINE_MACRO_BODY) forceNoNewlines(false)
 
             // Template Body
 
@@ -445,7 +466,9 @@ internal class IonManagedWriter_1_1(
 
             // Step out for anything where endExclusive is beyond the end of the expression list.
             repeat(numberOfTimesToStepOut.last()) { stepOut() }
+            forceNoNewlines(true)
         }
+        systemData.forceNoNewlines(false)
     }
 
     override fun getCatalog(): IonCatalog {
