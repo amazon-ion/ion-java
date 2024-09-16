@@ -768,8 +768,8 @@ internal class IonManagedWriter_1_1_Test {
         init { require(vertices.size >= 3) { "A polygon must have at least 3 edges and 3 vertices" } }
 
         companion object {
-            // This is a very long macro name, but by using the qualified class name,
-            // there is almost no risk of having a name conflict with another macro.
+            // Using the qualified class name would be verbose, but may be safer for general
+            // use so that there is almost no risk of having a name conflict with another macro.
             private val MACRO_NAME = Polygon::class.simpleName!!.replace(".", "_")
             private val IDENTITY = TemplateMacro(listOf(Parameter.zeroToManyTagged("x")), templateBody { variable(0) })
             private val MACRO = TemplateMacro(
