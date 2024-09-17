@@ -117,6 +117,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
     private MacroEvaluator macroEvaluator = null;
 
+    // The encoding context (macro table) that is currently active.
+    private EncodingContext encodingContext = null;
+
     // Reads encoding directives from the stream.
     private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
 
@@ -1147,7 +1150,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the {@link EncodingContext} currently active, or {@code null}.
      */
     EncodingContext getEncodingContext() {
-        return macroEvaluator == null ? null : macroEvaluator.getEncodingContext();
+        return encodingContext;
     }
 
     /**
@@ -1159,7 +1162,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         boolean isSymbolTableAppend = false;
         List<String> newSymbols = new ArrayList<>(8);
         Map<MacroRef, Macro> newMacros = new HashMap<>();
-        MacroCompiler macroCompiler = new MacroCompiler(IonReaderContinuableCoreBinary.this);
+        MacroCompiler macroCompiler = new MacroCompiler(IonReaderContinuableCoreBinary.this, newMacros::get);
 
         private boolean valueUnavailable() {
             Event event = fillValue();
@@ -1201,7 +1204,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Install `newMacros`, initializing a macro evaluator capable of evaluating them.
          */
         private void installMacros() {
-            macroEvaluator = new MacroEvaluator(new EncodingContext(newMacros));
+            encodingContext = new EncodingContext(newMacros);
+            macroEvaluator = new MacroEvaluator();
             macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
         }
 
@@ -1650,7 +1654,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 throw new IonException("Macro addresses larger than 2147483647 are not supported by this implementation.");
             }
             MacroRef address = MacroRef.byId((int) id);
-            Macro macro = macroEvaluator.getEncodingContext().getMacroTable().get(address);
+            Macro macro = encodingContext.getMacroTable().get(address);
             if (macro == null) {
                 throw new IonException(String.format("Encountered an unknown macro address: %d.", id));
             }
@@ -1675,7 +1679,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 readParameter(signature.get(i), presenceBitmap.get(i), expressions);
             }
             stepOutOfEExpression();
-            expressions.set(invocationStartIndex, new Expression.EExpression(address, invocationStartIndex, expressions.size()));
+            expressions.set(invocationStartIndex, new Expression.EExpression(macro, invocationStartIndex, expressions.size()));
         }
 
         /**

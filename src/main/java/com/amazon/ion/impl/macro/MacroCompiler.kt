@@ -15,7 +15,10 @@ import com.amazon.ion.util.confirm
  * [IonReaderContinuableCore][com.amazon.ion.impl.IonReaderContinuableCore].
  */
 // TODO determine a strategy for generalizing or templatizing this for use in both text and binary
-class MacroCompiler(private val reader: IonReaderContinuableCore) {
+class MacroCompiler(
+    private val reader: IonReaderContinuableCore,
+    private val getMacro: (MacroRef) -> Macro?,
+) {
     // TODO: Make sure that we can throw exceptions if there's an over-sized value.
 
     /** The name of the macro that was read. Returns `null` if no macro name is available. */
@@ -213,7 +216,6 @@ class MacroCompiler(private val reader: IonReaderContinuableCore) {
         val macroRef = when (reader.encodingType) {
             IonType.SYMBOL -> {
                 val macroName = reader.stringValue()
-                // TODO: Once we have a macro table, validate name exists in current macro table.
                 // TODO: Come up with a consistent strategy for handling special forms.
                 when (macroName) {
                     "literal" -> {
@@ -234,16 +236,17 @@ class MacroCompiler(private val reader: IonReaderContinuableCore) {
                     else -> MacroRef.ByName(macroName)
                 }
             }
-            // TODO: Once we have a macro table, validate that id exists in current macro table.
             IonType.INT -> MacroRef.ById(reader.intValue())
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${reader.encodingType ?: "nothing"}\"")
         }
+
+        val macro = getMacro(macroRef) ?: throw IonException("Unrecognized macro: $macroRef")
 
         val macroStart = expressions.size
         expressions.add(Placeholder)
         reader.forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
         val macroEnd = expressions.size
-        expressions[macroStart] = MacroInvocation(macroRef, macroStart, macroEnd)
+        expressions[macroStart] = MacroInvocation(macro, macroStart, macroEnd)
 
         reader.stepOutOfContainer()
     }

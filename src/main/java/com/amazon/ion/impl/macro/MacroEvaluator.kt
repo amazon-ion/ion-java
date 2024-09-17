@@ -16,11 +16,10 @@ import com.amazon.ion.impl.macro.Expression.*
  *    if the end of the container or end of expansion has been reached.
  *  - Call [stepIn] when positioned on a container to step into that container.
  *  - Call [stepOut] to step out of the current container.
+ *
+ *  TODO: Add expansion limit
  */
-class MacroEvaluator(
-    val encodingContext: EncodingContext,
-    // TODO: Add expansion limit
-) {
+class MacroEvaluator {
 
     /**
      * Implementations must update [ExpansionInfo.i] in order for [ExpansionInfo.hasNext] to work properly.
@@ -265,7 +264,7 @@ class MacroEvaluator(
     private fun pushTdlMacroExpansion(expression: MacroInvocation) {
         val currentExpansion = expansionStack.peek()
         pushMacro(
-            address = expression.address,
+            macro = expression.macro,
             argsStartInclusive = expression.startInclusive,
             argsEndExclusive = expression.endExclusive,
             currentExpansion.environment!!,
@@ -280,7 +279,7 @@ class MacroEvaluator(
     private fun pushEExpressionExpansion(expression: EExpression) {
         val currentExpansion = expansionStack.peek()
         pushMacro(
-            address = expression.address,
+            macro = expression.macro,
             argsStartInclusive = expression.startInclusive,
             argsEndExclusive = expression.endExclusive,
             environment = Environment.EMPTY,
@@ -292,14 +291,12 @@ class MacroEvaluator(
      * Pushes a macro invocation to the expansionStack
      */
     private fun pushMacro(
-        address: MacroRef,
+        macro: Macro,
         argsStartInclusive: Int,
         argsEndExclusive: Int,
         environment: Environment,
         encodingExpressions: List<Expression>,
     ) {
-        val macro = encodingContext.macroTable[address] ?: throw IonException("No such macro: $address")
-
         val argIndices = calculateArgumentIndices(macro, encodingExpressions, argsStartInclusive, argsEndExclusive)
 
         when (macro) {

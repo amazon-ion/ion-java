@@ -5,29 +5,39 @@ package com.amazon.ion.impl.macro
 import com.amazon.ion.FakeSymbolToken
 import com.amazon.ion.IonType
 import com.amazon.ion.impl.macro.Expression.*
+import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.eExpBody
+import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
+import com.amazon.ion.impl.macro.SystemMacro.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class MacroEvaluatorTest {
 
-    // Helper object with macro table entries that can be used to make the tests more concise.
-    private object Macros {
-        val MAKE_STRING = "make_string" to SystemMacro.MakeString
-        val VALUES = "values" to SystemMacro.Values
-        val IDENTITY = "identity" to template("x!", listOf(VariableRef(0)))
-
-        val PI = "pi" to template("", listOf(FloatValue(emptyList(), 3.14159)))
-
-        val FOO_STRUCT = "foo_struct" to template(
-            "x*",
-            listOf(
-                StructValue(emptyList(), 0, 3, mapOf("foo" to listOf(2))),
-                FieldName(FakeSymbolToken("foo", -1)),
-                VariableRef(0),
-            )
-        )
+    val IDENTITY_MACRO = template("x!") {
+        variable(0)
     }
+
+    val PI_MACRO = template() {
+        float(3.14159)
+    }
+
+    val FOO_STRUCT_MACRO = template("x*") {
+        struct {
+            fieldName("foo")
+            variable(0)
+        }
+    }
+
+    val ABCs_MACRO = template() {
+        list {
+            string("a")
+            string("b")
+            string("c")
+        }
+    }
+
+    val evaluator = MacroEvaluator()
 
     @Test
     fun `a trivial constant macro evaluation`() {
@@ -38,13 +48,10 @@ class MacroEvaluatorTest {
         // Then:
         //   3.14159
 
-        val evaluator = evaluatorWithMacroTable(Macros.PI)
+        evaluator.initExpansion {
+            eexp(PI_MACRO) {}
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("pi"), 0, 1)
-            )
-        )
         assertEquals(FloatValue(emptyList(), 3.14159), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
     }
@@ -59,21 +66,14 @@ class MacroEvaluatorTest {
         // Then:
         //   3.14159
 
-        val evaluator = evaluatorWithMacroTable(
-            Macros.PI,
-            "special_number" to template(
-                "",
-                listOf(
-                    MacroInvocation(MacroRef.ByName("pi"), 0, 1)
-                )
-            ),
-        )
+        val specialNumberMacro = template() {
+            macro(PI_MACRO) {}
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("special_number"), 0, 1)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(specialNumberMacro) {}
+        }
+
         assertEquals(FloatValue(emptyList(), 3.14159), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
     }
@@ -87,20 +87,13 @@ class MacroEvaluatorTest {
         // Then:
         //   []
 
-        val evaluator = evaluatorWithMacroTable(
-            "foo" to template(
-                "",
-                listOf(
-                    ListValue(emptyList(), 0, 1)
-                )
-            )
-        )
+        val fooMacro = template() {
+            list { }
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("foo"), 0, 1)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(fooMacro) {}
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -118,21 +111,15 @@ class MacroEvaluatorTest {
         // Then:
         //   ["a"]
 
-        val evaluator = evaluatorWithMacroTable(
-            "foo" to template(
-                "",
-                listOf(
-                    ListValue(emptyList(), 0, 2),
-                    StringValue(value = "a"),
-                )
-            )
-        )
+        val fooMacro = template() {
+            list {
+                string("a")
+            }
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("foo"), 0, 1)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(fooMacro) {}
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -151,23 +138,9 @@ class MacroEvaluatorTest {
         // Then:
         //   [ "a", "b", "c" ]
 
-        val evaluator = evaluatorWithMacroTable(
-            "ABCs" to template(
-                "",
-                listOf(
-                    ListValue(emptyList(), 0, 4),
-                    StringValue(value = "a"),
-                    StringValue(value = "b"),
-                    StringValue(value = "c"),
-                )
-            )
-        )
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("ABCs"), 0, 1)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(ABCs_MACRO) {}
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -188,23 +161,9 @@ class MacroEvaluatorTest {
         // Then:
         //   [ "a", "b", "c" ]
 
-        val evaluator = evaluatorWithMacroTable(
-            "ABCs" to template(
-                "",
-                listOf(
-                    ListValue(emptyList(), 0, 4),
-                    StringValue(value = "a"),
-                    StringValue(value = "b"),
-                    StringValue(value = "c"),
-                )
-            )
-        )
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("ABCs"), 0, 1)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(ABCs_MACRO) {}
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -222,14 +181,11 @@ class MacroEvaluatorTest {
         // Then:
         //   true
 
-        val evaluator = evaluatorWithMacroTable(Macros.IDENTITY)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("identity"), 0, 2),
-                BoolValue(emptyList(), true)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(IDENTITY_MACRO) {
+                bool(true)
+            }
+        }
 
         assertEquals(BoolValue(emptyList(), true), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
@@ -244,14 +200,11 @@ class MacroEvaluatorTest {
         // Then:
         //   []
 
-        val evaluator = evaluatorWithMacroTable(Macros.IDENTITY)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("identity"), 0, 2),
-                ListValue(emptyList(), 1, 2)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(IDENTITY_MACRO) {
+                list { }
+            }
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -269,15 +222,13 @@ class MacroEvaluatorTest {
         // Then:
         //   ["a"]
 
-        val evaluator = evaluatorWithMacroTable(Macros.IDENTITY)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("identity"), 0, 3),
-                ListValue(emptyList(), 1, 3),
-                StringValue(value = "a"),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(IDENTITY_MACRO) {
+                list {
+                    string("a")
+                }
+            }
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -296,23 +247,16 @@ class MacroEvaluatorTest {
         // Then:
         //   ["a", "a"]
 
-        val evaluator = evaluatorWithMacroTable(
-            "double_identity" to template(
-                "x!",
-                listOf(
-                    ListValue(emptyList(), 0, 3),
-                    VariableRef(0),
-                    VariableRef(0),
-                )
-            )
-        )
+        val doubleIdentity = template("x!") {
+            list {
+                variable(0)
+                variable(0)
+            }
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("double_identity"), 0, 2),
-                StringValue(value = "a"),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(doubleIdentity) { string("a") }
+        }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -331,16 +275,14 @@ class MacroEvaluatorTest {
         // Then:
         //   1 "a"
 
-        val evaluator = evaluatorWithMacroTable(Macros.VALUES)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("values"), 0, 4),
-                ExpressionGroup(1, 4),
-                LongIntValue(emptyList(), 1),
-                StringValue(emptyList(), "a")
-            )
-        )
+        evaluator.initExpansion {
+            eexp(Values) {
+                expressionGroup {
+                    int(1)
+                    string("a")
+                }
+            }
+        }
 
         assertEquals(LongIntValue(emptyList(), 1), evaluator.expandNext())
         assertEquals(StringValue(emptyList(), "a"), evaluator.expandNext())
@@ -357,23 +299,17 @@ class MacroEvaluatorTest {
         // Then:
         //   true
 
-        val evaluator = evaluatorWithMacroTable(
-            Macros.IDENTITY,
-            "nested_identity" to template(
-                "x!",
-                listOf(
-                    MacroInvocation(MacroRef.ByName("identity"), 0, 2),
-                    VariableRef(0)
-                )
-            ),
-        )
+        val nestedIdentity = template("x!") {
+            macro(IDENTITY_MACRO) {
+                variable(0)
+            }
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("nested_identity"), 0, 2),
-                BoolValue(emptyList(), true)
-            )
-        )
+        evaluator.initExpansion {
+            eexp(nestedIdentity) {
+                bool(true)
+            }
+        }
 
         assertEquals(BoolValue(emptyList(), true), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
@@ -388,20 +324,13 @@ class MacroEvaluatorTest {
         // Then:
         //   <nothing>
 
-        val evaluator = evaluatorWithMacroTable(
-            "voidable_identity" to template(
-                "x?",
-                listOf(
-                    VariableRef(0)
-                )
-            )
-        )
+        val voidableIdentityMacro = template("x?") {
+            variable(0)
+        }
 
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("voidable_identity"), 0, 1),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(voidableIdentityMacro) {}
+        }
 
         assertEquals(null, evaluator.expandNext())
     }
@@ -414,17 +343,15 @@ class MacroEvaluatorTest {
         // Then:
         //   "abc"
 
-        val evaluator = evaluatorWithMacroTable(Macros.MAKE_STRING)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("make_string"), 0, 5),
-                ExpressionGroup(1, 5),
-                StringValue(emptyList(), "a"),
-                StringValue(emptyList(), "b"),
-                StringValue(emptyList(), "c"),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(MakeString) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                    string("c")
+                }
+            }
+        }
 
         assertEquals(StringValue(emptyList(), "abc"), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
@@ -438,20 +365,20 @@ class MacroEvaluatorTest {
         // Then:
         //   "abcd"
 
-        val evaluator = evaluatorWithMacroTable(Macros.MAKE_STRING)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("make_string"), 0, 8),
-                ExpressionGroup(1, 8),
-                StringValue(emptyList(), "a"),
-                EExpression(MacroRef.ByName("make_string"), 3, 8),
-                ExpressionGroup(4, 8),
-                StringValue(emptyList(), "b"),
-                StringValue(emptyList(), "c"),
-                StringValue(emptyList(), "d"),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(MakeString) {
+                expressionGroup {
+                    string("a")
+                    eexp(MakeString) {
+                        expressionGroup {
+                            string("b")
+                            string("c")
+                            string("d")
+                        }
+                    }
+                }
+            }
+        }
 
         assertEquals(StringValue(emptyList(), "abcd"), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
@@ -466,14 +393,11 @@ class MacroEvaluatorTest {
         // Then:
         //   {foo: bar}
 
-        val evaluator = evaluatorWithMacroTable(Macros.FOO_STRUCT)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("foo_struct"), 0, 2),
-                StringValue(value = "bar")
-            )
-        )
+        evaluator.initExpansion {
+            eexp(FOO_STRUCT_MACRO) {
+                string("bar")
+            }
+        }
 
         assertIsInstance<StructValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -493,16 +417,14 @@ class MacroEvaluatorTest {
         // Then:
         //   {foo: bar, foo: baz}
 
-        val evaluator = evaluatorWithMacroTable(Macros.FOO_STRUCT)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("foo_struct"), 0, 4),
-                ExpressionGroup(1, 4),
-                StringValue(value = "bar"),
-                StringValue(value = "baz")
-            )
-        )
+        evaluator.initExpansion {
+            eexp(FOO_STRUCT_MACRO) {
+                expressionGroup {
+                    string("bar")
+                    string("baz")
+                }
+            }
+        }
 
         assertIsInstance<StructValue>(evaluator.expandNext())
         evaluator.stepIn()
@@ -525,14 +447,11 @@ class MacroEvaluatorTest {
         // Then:
         //   {}
 
-        val evaluator = evaluatorWithMacroTable(Macros.FOO_STRUCT)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("foo_struct"), 0, 1),
-                ExpressionGroup(1, 2),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(FOO_STRUCT_MACRO) {
+                expressionGroup { }
+            }
+        }
 
         assertEquals(IonType.STRUCT, (evaluator.expandNext() as? DataModelValue)?.type)
         evaluator.stepIn()
@@ -554,14 +473,11 @@ class MacroEvaluatorTest {
         // Then:
         //   3.14159
 
-        val evaluator = evaluatorWithMacroTable(Macros.IDENTITY, Macros.PI)
-
-        evaluator.initExpansion(
-            listOf(
-                EExpression(MacroRef.ByName("identity"), 0, 2),
-                EExpression(MacroRef.ByName("pi"), 1, 2),
-            )
-        )
+        evaluator.initExpansion {
+            eexp(IDENTITY_MACRO) {
+                eexp(PI_MACRO) {}
+            }
+        }
 
         assertEquals(FloatValue(emptyList(), 3.14159), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
@@ -570,27 +486,8 @@ class MacroEvaluatorTest {
     companion object {
 
         /** Helper function to create template macros */
-        fun template(parameters: String, body: List<TemplateBodyExpression>) = TemplateMacro(signature(parameters), body)
-
-        /** Helper function to build a MacroEvaluator set up with a specific macro table */
-        private fun evaluatorWithMacroTable(vararg idsToMacros: Pair<Any, Macro>): MacroEvaluator {
-            return MacroEvaluator(
-                EncodingContext(
-                    idsToMacros.associate { (k, v) ->
-                        when (k) {
-                            is Number -> MacroRef.ById(k.toInt())
-                            is String -> MacroRef.ByName(k)
-                            else -> throw IllegalArgumentException("Unsupported macro id $k")
-                        } to v
-                    }
-                )
-            )
-        }
-
-        /** Helper function to turn a string into a signature. */
-        private fun signature(text: String): List<Macro.Parameter> {
-            if (text.isBlank()) return emptyList()
-            return text.split(Regex(" +")).map {
+        fun template(vararg parameters: String, body: TemplateDsl.() -> Unit): Macro {
+            val signature = parameters.map {
                 val cardinality = Macro.ParameterCardinality.fromSigil("${it.last()}")
                 if (cardinality == null) {
                     Macro.Parameter(it, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
@@ -598,7 +495,11 @@ class MacroEvaluatorTest {
                     Macro.Parameter(it.dropLast(1), Macro.ParameterEncoding.Tagged, cardinality)
                 }
             }
+            return TemplateMacro(signature, templateBody(body))
         }
+
+        /** Helper function to use Expression DSL for evaluator inputs */
+        fun MacroEvaluator.initExpansion(eExpression: EExpDsl.() -> Unit) = initExpansion(eExpBody(eExpression))
 
         private inline fun <reified T> assertIsInstance(value: Any?) {
             if (value !is T) {

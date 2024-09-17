@@ -17,6 +17,7 @@ data class ManagedWriterOptions_1_1(
      * more readable if it's false.
      */
     val internEncodingDirectiveSymbols: Boolean,
+    val invokeTdlMacrosByName: Boolean,
     val symbolInliningStrategy: SymbolInliningStrategy,
     val lengthPrefixStrategy: LengthPrefixStrategy,
     val eExpressionIdentifierStrategy: EExpressionIdentifierStrategy,
@@ -25,6 +26,7 @@ data class ManagedWriterOptions_1_1(
         @JvmField
         val ION_BINARY_DEFAULT = ManagedWriterOptions_1_1(
             internEncodingDirectiveSymbols = true,
+            invokeTdlMacrosByName = false,
             symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
             lengthPrefixStrategy = LengthPrefixStrategy.ALWAYS_PREFIXED,
             eExpressionIdentifierStrategy = EExpressionIdentifierStrategy.BY_ADDRESS,
@@ -33,6 +35,7 @@ data class ManagedWriterOptions_1_1(
         val ION_TEXT_DEFAULT = ManagedWriterOptions_1_1(
             // Encoding directives are easier to read if we don't intern their keywords.
             internEncodingDirectiveSymbols = false,
+            invokeTdlMacrosByName = true,
             symbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
             // This doesn't actually have any effect for Ion Text since there are no length-prefixed containers.
             lengthPrefixStrategy = LengthPrefixStrategy.NEVER_PREFIXED,
