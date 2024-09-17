@@ -28,6 +28,14 @@ class MacroCompilerTest {
 
     val ion = IonSystemBuilder.standard().build()
 
+    private val fakeMacroTable: (MacroRef) -> Macro? = {
+        when (it) {
+            ById(12) -> SystemMacro.Values
+            ByName("values") -> SystemMacro.Values
+            else -> null
+        }
+    }
+
     private data class MacroSourceAndTemplate(val source: String, val template: TemplateMacro) : Arguments {
         override fun get(): Array<Any> = arrayOf(source, template.signature, template.body)
     }
@@ -71,8 +79,8 @@ class MacroCompilerTest {
         """(macro literal_test (x) (values (values x) (literal (values x))))""" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             body = listOf(
-                MacroInvocation(ByName("values"), selfIndex = 0, endExclusive = 6),
-                MacroInvocation(ByName("values"), selfIndex = 1, endExclusive = 3),
+                MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 6),
+                MacroInvocation(SystemMacro.Values, selfIndex = 1, endExclusive = 3),
                 VariableRef(0),
                 SExpValue(emptyList(), selfIndex = 3, endExclusive = 6),
                 SymbolValue(emptyList(), FakeSymbolToken("values", -1)),
@@ -82,7 +90,7 @@ class MacroCompilerTest {
         "(macro each_type () (values null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" (literal bar) [] (literal ()) {} {{}} {{\"\"}} ))" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
-                MacroInvocation(ByName("values"), 0, 15),
+                MacroInvocation(SystemMacro.Values, 0, 15),
                 NullValue(emptyList(), IonType.NULL),
                 BoolValue(emptyList(), true),
                 LongIntValue(emptyList(), 1),
@@ -102,7 +110,7 @@ class MacroCompilerTest {
         """(macro foo () (values 42 "hello" false))""" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
-                MacroInvocation(ByName("values"), selfIndex = 0, endExclusive = 4),
+                MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 4),
                 LongIntValue(emptyList(), 42),
                 StringValue(emptyList(), "hello"),
                 BoolValue(emptyList(), false),
@@ -111,7 +119,7 @@ class MacroCompilerTest {
         """(macro using_expr_group () (values (; 42 "hello" false)))""" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
-                MacroInvocation(ByName("values"), selfIndex = 0, endExclusive = 5),
+                MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 5),
                 ExpressionGroup(selfIndex = 1, endExclusive = 5),
                 LongIntValue(emptyList(), 42),
                 StringValue(emptyList(), "hello"),
@@ -121,7 +129,7 @@ class MacroCompilerTest {
         """(macro invoke_by_id () (12 true false))""" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
-                MacroInvocation(ById(12), selfIndex = 0, endExclusive = 3),
+                MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 3),
                 BoolValue(emptyList(), true),
                 BoolValue(emptyList(), false),
             )
@@ -162,7 +170,7 @@ class MacroCompilerTest {
     @MethodSource("testCases")
     fun assertMacroCompilation(source: String, signature: List<Parameter>, body: List<TemplateBodyExpression>) {
         val reader = newReader(source)
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
         reader.next()
         val macroDef = compiler.compileMacro()
         val expectedDef = TemplateMacro(signature, body)
@@ -178,7 +186,7 @@ class MacroCompilerTest {
         val templates = testCases().map { it.template }.iterator()
 
         val reader = newReader(source)
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
         // Advance and step into list
         reader.next(); reader.stepIn()
         while (reader.next() != null) {
@@ -199,7 +207,7 @@ class MacroCompilerTest {
             (macro null (z) 3)
         """
         )
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
         assertNull(compiler.macroName)
         reader.next()
         compiler.compileMacro()
@@ -262,7 +270,7 @@ class MacroCompilerTest {
     fun assertCompilationFails(source: String) {
         val reader = newReader(source)
         reader.next()
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore)
+        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
         assertThrows<IonException> { compiler.compileMacro() }
     }
 }

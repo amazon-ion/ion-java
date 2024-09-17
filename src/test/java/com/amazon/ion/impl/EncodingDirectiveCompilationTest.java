@@ -749,10 +749,19 @@ public class EncodingDirectiveCompilationTest {
         endMacroTable(writer);
         endEncodingDirective(writer);
 
+        Macro simonSaysMacro = new TemplateMacro(
+            Collections.singletonList(
+                Macro.Parameter.exactlyOneTagged("anything")
+            ),
+            Collections.singletonList(
+                new Expression.VariableRef(0)
+            )
+        );
+
         Macro expectedMacro = new TemplateMacro(
             Collections.emptyList(),
             Arrays.asList(
-                new Expression.MacroInvocation(MacroRef.byId(0), 0, 2),
+                new Expression.MacroInvocation(simonSaysMacro, 0, 2),
                 new Expression.LongIntValue(Collections.emptyList(), 123)
             )
         );

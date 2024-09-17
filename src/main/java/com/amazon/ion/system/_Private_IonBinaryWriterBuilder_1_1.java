@@ -139,6 +139,7 @@ public class _Private_IonBinaryWriterBuilder_1_1
         }
         ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(
             true,
+            false,
             symbolInliningStrategy,
             lengthPrefixStrategy,
             ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_ADDRESS

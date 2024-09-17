@@ -47,9 +47,7 @@ interface DataModelDsl : ValuesDsl {
 /** DSL for building [TemplateBodyExpression] lists. */
 @ExpressionBuilderDslMarker
 interface TemplateDsl : ValuesDsl {
-    fun macro(macroRef: MacroRef, arguments: InvocationBody.() -> Unit)
-    fun macro(id: Int, arguments: InvocationBody.() -> Unit) = macro(MacroRef.ById(id), arguments)
-    fun macro(name: String, arguments: InvocationBody.() -> Unit) = macro(MacroRef.ByName(name), arguments)
+    fun macro(macro: Macro, arguments: InvocationBody.() -> Unit)
     fun variable(signatureIndex: Int)
     fun list(content: TemplateDsl.() -> Unit)
     fun sexp(content: TemplateDsl.() -> Unit)
@@ -67,9 +65,7 @@ interface TemplateDsl : ValuesDsl {
 /** DSL for building [EExpressionBodyExpression] lists. */
 @ExpressionBuilderDslMarker
 interface EExpDsl : ValuesDsl {
-    fun eexp(macroRef: MacroRef, arguments: InvocationBody.() -> Unit)
-    fun eexp(id: Int, arguments: InvocationBody.() -> Unit) = eexp(MacroRef.ById(id), arguments)
-    fun eexp(name: String, arguments: InvocationBody.() -> Unit) = eexp(MacroRef.ByName(name), arguments)
+    fun eexp(macro: Macro, arguments: InvocationBody.() -> Unit)
     fun list(content: EExpDsl.() -> Unit)
     fun sexp(content: EExpDsl.() -> Unit)
     fun struct(content: Fields.() -> Unit)
@@ -173,7 +169,7 @@ internal sealed class ExpressionBuilderDsl : ValuesDsl, ValuesDsl.Fields {
         override fun sexp(content: EExpDsl.() -> Unit) = containerWithAnnotations(content, ::SExpValue)
         override fun list(content: EExpDsl.() -> Unit) = containerWithAnnotations(content, ::ListValue)
         override fun struct(content: EExpDsl.Fields.() -> Unit) = containerWithAnnotations(content, ::newStruct)
-        override fun eexp(macroRef: MacroRef, arguments: EExpDsl.InvocationBody.() -> Unit) = container(arguments) { start, end -> EExpression(macroRef, start, end) }
+        override fun eexp(macro: Macro, arguments: EExpDsl.InvocationBody.() -> Unit) = container(arguments) { start, end -> EExpression(macro, start, end) }
         override fun expressionGroup(content: EExpDsl.() -> Unit) = container(content, ::ExpressionGroup)
     }
 
@@ -182,7 +178,7 @@ internal sealed class ExpressionBuilderDsl : ValuesDsl, ValuesDsl.Fields {
         override fun sexp(content: TemplateDsl.() -> Unit) = containerWithAnnotations(content, ::SExpValue)
         override fun struct(content: TemplateDsl.Fields.() -> Unit) = containerWithAnnotations(content, ::newStruct)
         override fun variable(signatureIndex: Int) { expressions.add(VariableRef(signatureIndex)) }
-        override fun macro(macroRef: MacroRef, arguments: TemplateDsl.InvocationBody.() -> Unit) = container(arguments) { start, end -> MacroInvocation(macroRef, start, end) }
+        override fun macro(macro: Macro, arguments: TemplateDsl.InvocationBody.() -> Unit) = container(arguments) { start, end -> MacroInvocation(macro, start, end) }
         override fun expressionGroup(content: TemplateDsl.() -> Unit) = container(content, ::ExpressionGroup)
     }
 }

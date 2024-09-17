@@ -149,6 +149,7 @@ public class _Private_IonTextWriterBuilder_1_1
         _Private_IonTextWriterBuilder_1_1 b = fillDefaults();
         ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(
             false,
+            true,
             symbolInliningStrategy,
             LengthPrefixStrategy.NEVER_PREFIXED,
             // This could be made configurable.
@@ -166,6 +167,7 @@ public class _Private_IonTextWriterBuilder_1_1
         _Private_IonTextWriterBuilder_1_1 b = fillDefaults();
         ManagedWriterOptions_1_1 options = new ManagedWriterOptions_1_1(
             false,
+            true,
             symbolInliningStrategy,
             LengthPrefixStrategy.NEVER_PREFIXED,
             // This could be made configurable.
