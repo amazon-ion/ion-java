@@ -1778,7 +1778,7 @@ public class WriteBufferTest
 
     @ParameterizedTest
     @CsvSource({
-            " 0, 00000001 10100000",
+            " 0, 00000001 01100000",
             " 1, 00000011",
             " 2, 00000101",
             "63, 01111111",
@@ -1793,7 +1793,7 @@ public class WriteBufferTest
 
     @ParameterizedTest
     @CsvSource({
-            "'', 00000001 10010000",
+            "'', 00000001 01110101", // 01110101 == SystemSymbols_1_1.THE_EMPTY_SYMBOL.getId() converted to binary
             "a, 11111111 01100001",
             "abc, 11111011 01100001 01100010 01100011",
             "this is a very very very very very long symbol, " +
