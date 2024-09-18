@@ -192,7 +192,6 @@ final class IonTypeID {
             id == 0x69
             || id == (byte) 0xD1
             || id == (byte) 0xE0
-            || id == (byte) 0xF4
         );
     }
 
@@ -286,8 +285,10 @@ final class IonTypeID {
                     macroId = id;
                     length = 0;
                 } else {
-                    if (upperNibble == 0xF) {
-                        // FlexUInt length-prefixed macro invocation.
+                    if (id == E_EXPRESSION_FLEX_UINT) {
+                        variableLength = false;
+                        length = 1;
+                    } else if (id == LENGTH_PREFIXED_MACRO_INVOCATION) {
                         variableLength = true;
                     } else {
                         // System invocation; ID follows as a 1-byte FixedInt.
@@ -355,6 +356,9 @@ final class IonTypeID {
                             isNopPad = true;
                             type = null;
                             length = variableLength ? -1 : 0;
+                        } else if (id == SYSTEM_SYMBOL) {
+                            type = IonType.SYMBOL;
+                            length = 1;
                         } else { // 0xF
                             // System macro invocation.
                             type = null;
@@ -383,8 +387,8 @@ final class IonTypeID {
                             type = IonType.LIST;
                         } else if  (id == DELIMITED_SEXP || id == VARIABLE_LENGTH_SEXP) {
                             type = IonType.SEXP;
-                        } else { // 0x4
-                            // Variable length macro invocation
+                        } else { // 0x4, 0x5
+                            // E-Expression with FlexUInt Address or E-Expression with FlexUInt Length
                             type = null;
                         }
                     }
