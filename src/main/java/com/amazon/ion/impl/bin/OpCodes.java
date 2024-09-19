@@ -74,7 +74,7 @@ public class OpCodes {
     public static final byte DELIMITED_LIST = (byte) 0xF1;
     public static final byte DELIMITED_SEXP = (byte) 0xF2;
     public static final byte DELIMITED_STRUCT = (byte) 0xF3;
-    public static final byte E_EXPRESSION_FLEX_UINT = (byte) 0xF4;
+    public static final byte E_EXPRESSION_WITH_FLEX_UINT_ADDRESS = (byte) 0xF4;
     public static final byte LENGTH_PREFIXED_MACRO_INVOCATION = (byte) 0xF5;
     public static final byte VARIABLE_LENGTH_INTEGER = (byte) 0xF6;
     public static final byte VARIABLE_LENGTH_DECIMAL = (byte) 0xF7;

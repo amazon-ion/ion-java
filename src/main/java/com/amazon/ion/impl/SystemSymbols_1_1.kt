@@ -5,6 +5,7 @@ package com.amazon.ion.impl
 import java.util.*
 
 enum class SystemSymbols_1_1(val id: Int, val text: String) {
+    // System SID 0 is reserved.
     ION( /*                     */ 1, "\$ion"),
     ION_1_0( /*                 */ 2, "\$ion_1_0"),
     ION_SYMBOL_TABLE( /*        */ 3, "\$ion_symbol_table"),
@@ -71,9 +72,12 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
 
     companion object {
         private val ALL_VALUES: Array<SystemSymbols_1_1> = entries.toTypedArray().apply {
+            // Put all system symbol enum values into an array, and ensure that they are sorted by ID in that array.
+            // This allows us to have O(1) lookup, but it doesn't rely on the enum's ordinal value, which could change.
             Arrays.sort(this) { o1, o2 -> o1.id.compareTo(o2.id) }
         }
         init {
+            // Initialization checks to make sure that the system symbols are not misconfigured.
             ALL_VALUES
                 .map { it.id }
                 .zipWithNext { a, b ->

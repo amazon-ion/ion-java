@@ -192,6 +192,9 @@ final class IonTypeID {
             id == 0x69
             || id == (byte) 0xD1
             || id == (byte) 0xE0
+            || id == (byte) 0x8D
+            || id == (byte) 0x8E
+            || id == (byte) 0x8F
         );
     }
 
@@ -262,7 +265,7 @@ final class IonTypeID {
             // just to identify this byte.
             lowerNibble = (id == DELIMITED_END_MARKER) ? DELIMITED_END_MARKER : (byte) (id & LOW_NIBBLE_BITMASK);
             isNegativeInt = false; // Not applicable for Ion 1.1; sign is conveyed by the representation.
-            isMacroInvocation = (id >= 0x00 && id <= 0x5F)  || id == E_EXPRESSION_FLEX_UINT
+            isMacroInvocation = (id >= 0x00 && id <= 0x5F)  || id == E_EXPRESSION_WITH_FLEX_UINT_ADDRESS
                     || id == SYSTEM_MACRO_INVOCATION || id == LENGTH_PREFIXED_MACRO_INVOCATION;
             boolean isNopPad = false;
             boolean isNull = false;
@@ -285,7 +288,7 @@ final class IonTypeID {
                     macroId = id;
                     length = 0;
                 } else {
-                    if (id == E_EXPRESSION_FLEX_UINT) {
+                    if (id == E_EXPRESSION_WITH_FLEX_UINT_ADDRESS) {
                         variableLength = false;
                         length = 1;
                     } else if (id == LENGTH_PREFIXED_MACRO_INVOCATION) {
