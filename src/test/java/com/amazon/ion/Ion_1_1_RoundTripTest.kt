@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream
 import java.io.FilenameFilter
 import java.io.OutputStream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.params.ParameterizedTest
@@ -361,7 +362,14 @@ abstract class Ion_1_1_RoundTripBase {
 
     private fun roundTripToByteArray(block: _Private_IonSystem.(IonWriter) -> Unit): ByteArray {
         // Create a new copy of the data in Ion 1.1
-        val baos = ByteArrayOutputStream()
+        val baos = object : ByteArrayOutputStream() {
+            var closed = false
+            override fun close() {
+                assertFalse(closed)
+                closed = true
+                super.close()
+            }
+        }
         val writer = writerFn(baos)
         block(ION, writer)
         writer.close()

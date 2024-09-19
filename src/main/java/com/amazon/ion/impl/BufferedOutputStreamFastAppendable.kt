@@ -62,7 +62,6 @@ internal class BufferedOutputStreamFastAppendable(
         } finally {
             blocks.onEach { it.close() }.clear()
             index = Int.MIN_VALUE
-            out.close()
         }
     }
 
