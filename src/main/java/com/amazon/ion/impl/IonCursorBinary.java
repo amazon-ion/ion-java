@@ -2284,8 +2284,8 @@ class IonCursorBinary implements IonCursor {
      */
     private void uncheckedReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet) {
         if (valueTid.macroId < 0) {
-            if (valueTid.lowerNibble == 0xE) {
-                // Opcode 0xEE: Read the macro ID as a FlexUInt.
+            if (valueTid.lowerNibble == 0x4) {
+                // Opcode 0xF4: Read the macro ID as a FlexUInt.
                 macroInvocationId = uncheckedReadFlexUInt_1_1();
             } else if (valueTid.variableLength) {
                 // Opcode 0xF5: Read the macro ID as a FlexUInt, then read the length as a FlexUInt.
@@ -2438,8 +2438,8 @@ class IonCursorBinary implements IonCursor {
      */
      private boolean slowReadMacroInvocationHeader(IonTypeID valueTid, Marker markerToSet, long macroId) {
          if (valueTid.macroId < 0) {
-             if (valueTid.lowerNibble == 0xE) {
-                 // Opcode 0xEE: Read the macro ID as a FlexUInt.
+             if (valueTid.lowerNibble == 0x4) {
+                 // Opcode 0xF4: Read the macro ID as a FlexUInt.
                  macroInvocationId = slowReadFlexUInt_1_1();
                  if (macroInvocationId < 0) {
                      return true;
