@@ -661,7 +661,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 buffer.writeByte((OpCodes.BIASED_E_EXPRESSION_TWO_BYTE_FIXED_INT + lowNibble).toByte())
                 currentContainer.metadataOffset += buffer.writeFixedIntOrUInt(adjustedId, 2)
             } else {
-                buffer.writeByte(OpCodes.E_EXPRESSION_FLEX_UINT)
+                buffer.writeByte(OpCodes.E_EXPRESSION_WITH_FLEX_UINT_ADDRESS)
                 currentContainer.metadataOffset += buffer.writeFlexUInt(id)
             }
         }

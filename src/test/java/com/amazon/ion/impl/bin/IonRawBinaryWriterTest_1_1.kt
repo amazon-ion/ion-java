@@ -1073,8 +1073,8 @@ class IonRawBinaryWriterTest_1_1 {
         "           69695, 50 FF FF",
         "           69696, 51 00 00",
         "         1052735, 5F FF FF",
-        "         1052736, EE 04 82 80",
-        "${Int.MAX_VALUE}, EE F0 FF FF FF 0F"
+        "         1052736, F4 04 82 80",
+        "${Int.MAX_VALUE}, F4 F0 FF FF FF 0F"
     )
     fun `write a delimited e-expression with a multi-byte biased id`(id: Int, expectedBytes: String) {
         assertWriterOutputEquals(expectedBytes) {
