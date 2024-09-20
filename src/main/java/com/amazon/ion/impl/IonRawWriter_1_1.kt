@@ -69,6 +69,12 @@ interface IonRawWriter_1_1 {
      * Writes one annotation for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
+    fun writeAnnotations(annotation0: SystemSymbols_1_1)
+
+    /**
+     * Writes one annotation for the next value.
+     * [writeAnnotations] may be called more than once to build up a list of annotations.
+     */
     fun writeAnnotations(annotation0: Int)
 
     /**
@@ -105,6 +111,12 @@ interface IonRawWriter_1_1 {
      * TODO: Consider making this a public method. It's probably safe to do so.
      */
     fun _private_hasFieldName(): Boolean
+
+    /**
+     * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
+     * @throws com.amazon.ion.IonException if annotations are already written for the value or if not in a struct.
+     */
+    fun writeFieldName(symbol: SystemSymbols_1_1)
 
     /**
      * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
@@ -195,6 +207,7 @@ interface IonRawWriter_1_1 {
 
     fun writeSymbol(id: Int)
     fun writeSymbol(text: CharSequence)
+    fun writeSymbol(symbol: SystemSymbols_1_1)
 
     fun writeString(value: CharSequence)
 

@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -134,6 +135,7 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
+    @Disabled("IonCursorBinary has not been updated to read system symbols in FlexSyms")
     fun `use writeValues to transform symbol IDS`() {
         `transform symbol IDS` { reader ->
             writeValues(reader) { sid -> sid + 32 }
@@ -141,6 +143,7 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
+    @Disabled("IonCursorBinary has not been updated to read system symbols in FlexSyms")
     fun `use writeValue to transform symbol IDS`() {
         `transform symbol IDS` { reader ->
             while (reader.next() != null) {
@@ -248,7 +251,7 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((symbol_table ["foo"]))
-            $10
+            $1
         """.trimIndent()
 
         val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
@@ -288,9 +291,9 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((symbol_table ["foo"]))
-            $10
+            $1
             $ion_encoding::((symbol_table $ion_encoding ["bar"]))
-            $11
+            $2
         """.trimIndent()
 
         val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
@@ -328,9 +331,9 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((symbol_table ["foo"]))
-            $10
+            $1
             $ion_encoding::((symbol_table ["bar"]))
-            $10
+            $1
         """.trimIndent()
 
         val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
@@ -347,7 +350,7 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((symbol_table ["foo"]))
-            $10
+            $1
             $ion_encoding::((symbol_table $ion_encoding) (macro_table (macro null () "foo")))
         """.trimIndent()
 
@@ -366,7 +369,7 @@ internal class IonManagedWriter_1_1_Test {
             $ion_1_1
             $ion_encoding::((macro_table (macro null () "foo")))
             $ion_encoding::((symbol_table ["foo"]) (macro_table $ion_encoding))
-            $10
+            $1
             (:0)
         """.trimIndent()
 
@@ -666,9 +669,9 @@ internal class IonManagedWriter_1_1_Test {
                 (macro null () "foo")
                 (macro null () "bar"))
             )
-            $10
-            $11
-            $12
+            $1
+            $2
+            $3
             (:0)
             (:1)
             $ion_encoding::(
@@ -679,9 +682,9 @@ internal class IonManagedWriter_1_1_Test {
                 $ion_encoding
                 (macro null () "abc"))
             )
-            $13
-            $14
-            $15
+            $4
+            $5
+            $6
             (:2)
         """.trimIndent()
 
