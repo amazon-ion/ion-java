@@ -11,6 +11,10 @@ import com.amazon.ion._private.SuppressFBWarnings;
 public class Ion_1_1_Constants {
     private Ion_1_1_Constants() {}
 
+    // When writing system symbols (or $0) in a flex sym, the SID must be offset to
+    // avoid clashing with E-Expression op codes.
+    public static final int FLEX_SYM_SYSTEM_SYMBOL_OFFSET = 0x60;
+
     static final int FIRST_2_BYTE_SYMBOL_ADDRESS = 256;
     static final int FIRST_MANY_BYTE_SYMBOL_ADDRESS = 65792;
 

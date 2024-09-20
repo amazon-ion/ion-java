@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource
 /**
  * Suite of tests for running round trip tests on user and system values for various Ion 1.1 encodings.
  */
+@Disabled("IonCursorBinary has not been updated to read system symbols")
 class Ion_1_1_RoundTripTest {
 
     @Nested

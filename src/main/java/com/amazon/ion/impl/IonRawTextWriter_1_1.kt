@@ -188,6 +188,8 @@ class IonRawTextWriter_1_1 internal constructor(
         numAnnotations += annotations.size
     }
 
+    override fun writeAnnotations(annotation0: SystemSymbols_1_1) = writeAnnotations(annotation0.text)
+
     override fun writeAnnotations(annotation0: CharSequence) {
         ensureAnnotationSpace(numAnnotations + 1)
         annotationsTextBuffer[numAnnotations++] = annotation0
@@ -236,6 +238,8 @@ class IonRawTextWriter_1_1 internal constructor(
         fieldNameText = text
         hasFieldName = true
     }
+
+    override fun writeFieldName(symbol: SystemSymbols_1_1) = writeFieldName(symbol.text)
 
     override fun writeNull() = writeScalar {
         output.appendAscii("null")
@@ -305,6 +309,8 @@ class IonRawTextWriter_1_1 internal constructor(
             IonTextUtils.SymbolVariant.QUOTED -> output.printQuotedSymbol(text)
         }
     }
+
+    override fun writeSymbol(symbol: SystemSymbols_1_1) = writeSymbol(symbol.text)
 
     override fun writeString(value: CharSequence) = writeScalar { output.printString(value) }
 

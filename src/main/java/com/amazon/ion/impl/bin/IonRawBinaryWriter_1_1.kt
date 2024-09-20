@@ -108,7 +108,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     private val utf8StringEncoder = Utf8StringEncoderPool.getInstance().getOrCreate()
 
-    private var annotationsTextBuffer = arrayOfNulls<CharSequence>(8)
+    private var annotationsFlexSymBuffer = arrayOfNulls<Any>(8)
     private var annotationsIdBuffer = IntArray(8)
     private var numAnnotations = 0
     /**
@@ -195,14 +195,20 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * are being added one by one.
      */
     private inline fun ensureAnnotationSpace(n: Int) {
-        if (annotationsIdBuffer.size < n || annotationsTextBuffer.size < n) {
+        if (annotationsIdBuffer.size < n || annotationsFlexSymBuffer.size < n) {
             val oldIds = annotationsIdBuffer
             annotationsIdBuffer = IntArray(n + 8)
             oldIds.copyInto(annotationsIdBuffer)
-            val oldText = annotationsTextBuffer
-            annotationsTextBuffer = arrayOfNulls(n + 8)
-            oldText.copyInto(annotationsTextBuffer)
+            val oldText = annotationsFlexSymBuffer
+            annotationsFlexSymBuffer = arrayOfNulls(n + 8)
+            oldText.copyInto(annotationsFlexSymBuffer)
         }
+    }
+
+    override fun writeAnnotations(annotation0: SystemSymbols_1_1) {
+        ensureAnnotationSpace(numAnnotations + 1)
+        annotationsFlexSymBuffer[numAnnotations++] = annotation0
+        annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
 
     override fun writeAnnotations(annotation0: Int) {
@@ -227,21 +233,21 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun writeAnnotations(annotation0: CharSequence) {
         ensureAnnotationSpace(numAnnotations + 1)
-        annotationsTextBuffer[numAnnotations++] = annotation0
+        annotationsFlexSymBuffer[numAnnotations++] = annotation0
         annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
 
     override fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence) {
         ensureAnnotationSpace(numAnnotations + 2)
-        annotationsTextBuffer[numAnnotations++] = annotation0
-        annotationsTextBuffer[numAnnotations++] = annotation1
+        annotationsFlexSymBuffer[numAnnotations++] = annotation0
+        annotationsFlexSymBuffer[numAnnotations++] = annotation1
         annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
 
     override fun writeAnnotations(annotations: Array<CharSequence>) {
         if (annotations.isEmpty()) return
         ensureAnnotationSpace(numAnnotations + annotations.size)
-        annotations.copyInto(annotationsTextBuffer, numAnnotations)
+        annotations.copyInto(annotationsFlexSymBuffer, numAnnotations)
         numAnnotations += annotations.size
         annotationFlexSymFlag = FLEX_SYMS_REQUIRED
     }
@@ -251,7 +257,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         annotationFlexSymFlag = 0
         // erase the first entries to ensure old values don't leak into `_private_hasFirstAnnotation()`
         annotationsIdBuffer[0] = -1
-        annotationsTextBuffer[0] = null
+        annotationsFlexSymBuffer[0] = null
     }
 
     override fun _private_hasFirstAnnotation(sid: Int, text: String?): Boolean {
@@ -259,7 +265,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         if (sid >= 0 && annotationsIdBuffer[0] == sid) {
             return true
         }
-        if (text != null && annotationsTextBuffer[0] == text) {
+        if (text != null && annotationsFlexSymBuffer[0] == text) {
             return true
         }
         return false
@@ -296,8 +302,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 // If there's only one annotation, and we know that at least one has text, we don't need to check
                 // whether this is SID.
                 buffer.writeByte(OpCodes.ANNOTATIONS_1_FLEX_SYM)
-                annotationsTotalLength += buffer.writeFlexSym(utf8StringEncoder.encode(annotationsTextBuffer[0].toString()))
-                annotationsTextBuffer[0] = null
+                annotationsTotalLength += writeFlexSymFromAnnotationsBuffer(0)
+                annotationsFlexSymBuffer[0] = null
             }
             -3 -> {
                 buffer.writeByte(OpCodes.ANNOTATIONS_2_FLEX_SYM)
@@ -318,10 +324,14 @@ class IonRawBinaryWriter_1_1 internal constructor(
      * Writes a FlexSym annotation for the specified position in the annotations buffers.
      */
     private fun writeFlexSymFromAnnotationsBuffer(i: Int): Int {
-        val annotationText = annotationsTextBuffer[i]
+        val annotationText = annotationsFlexSymBuffer[i]
         return if (annotationText != null) {
-            annotationsTextBuffer[i] = null
-            buffer.writeFlexSym(utf8StringEncoder.encode(annotationText.toString()))
+            annotationsFlexSymBuffer[i] = null
+            if (annotationText is SystemSymbols_1_1) {
+                buffer.writeFlexSym(annotationText)
+            } else {
+                buffer.writeFlexSym(utf8StringEncoder.encode(annotationText.toString()))
+            }
         } else {
             buffer.writeFlexSym(annotationsIdBuffer[i])
         }
@@ -418,6 +428,13 @@ class IonRawBinaryWriter_1_1 internal constructor(
         if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
 
         currentContainer.length += buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
+        hasFieldName = true
+    }
+
+    override fun writeFieldName(symbol: SystemSymbols_1_1) {
+        confirm(currentContainer.type == STRUCT) { "Can only write a field name inside of a struct." }
+        if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
+        currentContainer.length += buffer.writeFlexSym(symbol)
         hasFieldName = true
     }
 
@@ -577,6 +594,12 @@ class IonRawBinaryWriter_1_1 internal constructor(
             }
         }
     )
+
+    override fun writeSymbol(symbol: SystemSymbols_1_1) = writeScalar {
+        buffer.writeByte(OpCodes.SYSTEM_SYMBOL)
+        buffer.writeByte(symbol.id.toByte())
+        2
+    }
 
     override fun writeString(value: CharSequence) = writeScalar { writeStringValue(buffer, utf8StringEncoder.encode(value.toString())) }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.impl.SystemSymbols_1_1;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 
 import java.io.Closeable;
@@ -10,6 +11,8 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.amazon.ion.impl.bin.Ion_1_1_Constants.FLEX_SYM_SYSTEM_SYMBOL_OFFSET;
 
 /**
  * A facade over {@link Block} management and low-level Ion encoding concerns for the {@link IonRawBinaryWriter}.
@@ -1523,8 +1526,7 @@ import java.util.List;
             return writeFlexInt(sid);
         } else {
             writeByte(FlexInt.ZERO);
-            // The INLINE_SYMBOL_ZERO_LENGTH opcode is used for $0 in FlexSyms
-            writeByte(OpCodes.INLINE_SYMBOL_ZERO_LENGTH);
+            writeByte((byte) FLEX_SYM_SYSTEM_SYMBOL_OFFSET);
             return 2;
         }
     }
@@ -1533,17 +1535,23 @@ import java.util.List;
      * Writes a FlexSym with inline text.
      */
     public int writeFlexSym(Utf8StringEncoder.Result text) {
-    if (text.getEncodedLength() == 0) {
-        writeByte(FlexInt.ZERO);
-        // The STRING_ZERO_LENGTH opcode is used for '' in FlexSyms
-        writeByte(OpCodes.STRING_ZERO_LENGTH);
-        return 2;
-    } else {
-        int numLengthBytes = writeFlexInt(-text.getEncodedLength());
-        writeBytes(text.getBuffer(), 0, text.getEncodedLength());
-        return numLengthBytes + text.getEncodedLength();
+        if (text.getEncodedLength() == 0) {
+            return writeFlexSym(SystemSymbols_1_1.THE_EMPTY_SYMBOL);
+        } else {
+            int numLengthBytes = writeFlexInt(-text.getEncodedLength());
+            writeBytes(text.getBuffer(), 0, text.getEncodedLength());
+            return numLengthBytes + text.getEncodedLength();
+        }
     }
-}
+
+    /**
+     * Writes a FlexSym with inline text.
+     */
+    public int writeFlexSym(SystemSymbols_1_1 symbol) {
+        writeByte(FlexInt.ZERO);
+        writeByte((byte) (symbol.getId() + FLEX_SYM_SYSTEM_SYMBOL_OFFSET));
+        return 2;
+    }
 
     /** Write the entire buffer to output stream. */
     public void writeTo(final OutputStream out) throws IOException
