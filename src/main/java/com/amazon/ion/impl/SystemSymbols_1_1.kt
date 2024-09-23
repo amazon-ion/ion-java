@@ -87,6 +87,16 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
                 }
         }
 
+        @JvmStatic
+        fun size() = ALL_VALUES.size
+
+        // Private to avoid potential clashes with enum member names.
+        @JvmStatic
+        private val ALL_SYMBOL_TEXTS = ALL_VALUES.map { it.text }
+
+        @JvmStatic
+        fun allSymbolTexts() = ALL_SYMBOL_TEXTS
+
         /**
          * Returns true if the [id] is a valid system symbol ID.
          */

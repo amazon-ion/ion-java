@@ -3,6 +3,7 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonType;
+import com.amazon.ion.impl.bin.OpCodes;
 
 import static com.amazon.ion.impl.bin.OpCodes.*;
 
@@ -86,6 +87,7 @@ final class IonTypeID {
     static final IonTypeID STRUCT_WITH_FLEX_SYMS_ID;
     static final IonTypeID DELIMITED_END_ID;
     static final IonTypeID SYSTEM_SYMBOL_VALUE;
+    static final IonTypeID SYSTEM_MACRO_INVOCATION_ID;
     static {
         TYPE_IDS_NO_IVM = new IonTypeID[NUMBER_OF_BYTES];
         TYPE_IDS_1_0 = new IonTypeID[NUMBER_OF_BYTES];
@@ -135,8 +137,9 @@ final class IonTypeID {
         // This is used as a dummy ID when a delimited container reaches its end. The key here is that the type ID's
         // lower nibble is OpCodes.DELIMITED_END_MARKER.
         DELIMITED_END_ID = TYPE_IDS_1_1[DELIMITED_END_MARKER & 0xFF];
-        // This is used as a dummy ID when a system symbol value is encoded using the 0xEF opcode in Ion 1.1.
-        SYSTEM_SYMBOL_VALUE = TYPE_IDS_1_1[SYMBOL_ADDRESS_1_BYTE & 0xFF];
+
+        SYSTEM_SYMBOL_VALUE = TYPE_IDS_1_1[SYSTEM_SYMBOL & 0xFF];
+        SYSTEM_MACRO_INVOCATION_ID = TYPE_IDS_1_1[OpCodes.SYSTEM_MACRO_INVOCATION & 0xFF];
     }
 
     final IonType type;
@@ -153,6 +156,7 @@ final class IonTypeID {
     // For structs, denotes whether field names are FlexSyms. For symbols, denotes whether the text is inline.
     // For annotation wrappers, denotes whether tokens are FlexSyms.
     final boolean isInlineable;
+    final int theByte;
 
     /**
      * Determines whether the Ion 1.0 spec allows this particular upperNibble/lowerNibble pair.
@@ -225,9 +229,11 @@ final class IonTypeID {
         this.macroId = macroId;
         this.isDelimited = isDelimited;
         this.isInlineable = isInlineable;
+        theByte = -1;
     }
 
     private IonTypeID(byte id, int minorVersion) {
+        theByte = 0xFF & (int) id;
         if (minorVersion == 0) {
             byte upperNibble = (byte) ((id >> BITS_PER_NIBBLE) & LOW_NIBBLE_BITMASK);
             this.lowerNibble = (byte) (id & LOW_NIBBLE_BITMASK);
@@ -450,6 +456,6 @@ final class IonTypeID {
      */
     @Override
     public String toString() {
-        return String.format("%s(%s)", type, length);
+        return String.format("%02X(%s,%s)>", theByte, type, length);
     }
 }

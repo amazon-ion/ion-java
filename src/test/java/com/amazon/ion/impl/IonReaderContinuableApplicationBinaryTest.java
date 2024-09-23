@@ -102,6 +102,22 @@ public class IonReaderContinuableApplicationBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void basicSystemSymbols_1_1(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xEE, 0x04, // Symbol value SID 4 ("name")
+            0xEE, 0x05 // Symbol value SID 5 ("version")
+        );
+        assertSequence(
+            reader,
+            scalar(), fillSymbolValue("name"),
+            scalar(), fillSymbolValue("version")
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void basicLocalSymbols(boolean constructFromBytes) {
         IonReaderContinuableApplicationBinary reader = initializeReader(
             constructFromBytes,

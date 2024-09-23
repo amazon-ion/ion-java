@@ -5,9 +5,11 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolToken;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -311,6 +313,32 @@ public class IonCursorTestUtilities {
                 consumer.accept((Expectation<IonReaderContinuableCoreBinary>) STEP_OUT);
             }
         };
+    }
+
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> fieldName(String expectedValue) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("fieldName(%s)", expectedValue),
+            reader -> {
+                assertEquals(expectedValue, reader.getFieldText());
+            }
+        ));
+    }
+
+    static <T extends IonReaderContinuableCoreBinary> ExpectationProvider<T> annotations(String... expectedAnnotations) {
+        return consumer -> consumer.accept(new Expectation<>(
+            String.format("annotations(%s)", Arrays.toString(expectedAnnotations)),
+            reader -> {
+                reader.nextValue();
+                assertTrue(reader.hasAnnotations(), "Expected there to be annotations");
+                List<SymbolToken> tokens = new ArrayList<>();
+                reader.consumeAnnotationTokens(tokens::add);
+                for (int i = 0; i < Math.min(tokens.size(), expectedAnnotations.length); i++) {
+                    assertEquals(expectedAnnotations[i], tokens.get(i).getText());
+                }
+                assertEquals(expectedAnnotations.length, tokens.size());
+            }
+        ));
     }
 
     /**

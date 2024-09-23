@@ -55,7 +55,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private static final IonCatalog EMPTY_CATALOG = new SimpleCatalog();
 
     // Initial capacity of the ArrayList used to hold the text in the current symbol table.
-    private static final int SYMBOLS_LIST_INITIAL_CAPACITY = 128;
+    static final int SYMBOLS_LIST_INITIAL_CAPACITY = 128;
 
     // The imports for Ion 1.0 data with no shared user imports.
     private static final LocalSymbolTableImports ION_1_0_IMPORTS
@@ -70,7 +70,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     // The shared symbol tables imported by the local symbol table that is currently in scope.
     private LocalSymbolTableImports imports = ION_1_0_IMPORTS;
 
-    // The first lowest local symbol ID in the symbol table.
+    // The first (lowest) local symbol ID in the symbol table.
     private int firstLocalSymbolId = imports.getMaxId() + 1;
 
     // The cached SymbolTable representation of the current local symbol table. Invalidated whenever a local
@@ -92,14 +92,16 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     IonReaderContinuableApplicationBinary(IonReaderBuilder builder, byte[] bytes, int offset, int length) {
         super(builder.getBufferConfiguration(), bytes, offset, length);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
-        symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
         symbolTableReader = new SymbolTableReader();
-        resetImports();
+        resetImports(getIonMajorVersion(), getIonMinorVersion());
         registerIvmNotificationConsumer((x, y) -> {
             // Note: for Ion 1.1 support, use the versions to set the proper system symbol table and local symbol table
             // processing logic.
             resetSymbolTable();
-            resetImports();
+            resetImports(x, y);
+            if (y == 1) {
+                installSymbols(SystemSymbols_1_1.allSymbolTexts());
+            }
         });
     }
 
@@ -113,14 +115,16 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     IonReaderContinuableApplicationBinary(final IonReaderBuilder builder, final InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen) {
         super(builder.getBufferConfiguration(), inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
-        symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
         symbolTableReader = new SymbolTableReader();
-        resetImports();
+        resetImports(getIonMajorVersion(), getIonMinorVersion());
         registerIvmNotificationConsumer((x, y) -> {
             // Note: for Ion 1.1 support, use the versions to set the proper system symbol table and local symbol table
             // processing logic.
             resetSymbolTable();
-            resetImports();
+            resetImports(x, y);
+            if (y == 1) {
+                installSymbols(SystemSymbols_1_1.allSymbolTexts());
+            }
         });
         registerOversizedValueHandler(
             () -> {
@@ -192,8 +196,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
             Marker marker = annotationTokenMarkers.get((int) nextAnnotationPeekIndex++);
             if (marker.startIndex < 0) {
-                // This means the endIndex represents the token's symbol ID.
-                return convertToString((int) marker.endIndex);
+                if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+                    return SystemSymbols_1_1.get((int) marker.endIndex);
+                } else {
+                    // This means the endIndex represents the token's symbol ID.
+                    return convertToString((int) marker.endIndex);
+                }
             }
             // The token is inline UTF-8 text.
             java.nio.ByteBuffer utf8InputBuffer = prepareByteBuffer(marker.startIndex, marker.endIndex);
@@ -210,6 +218,13 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                 return getSymbolToken(sid);
             }
             Marker marker = annotationTokenMarkers.get((int) nextAnnotationPeekIndex++);
+            if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+                if (marker.startIndex < 0) {
+                    return new SymbolTokenImpl(SystemSymbols_1_1.get((int) marker.endIndex), -1);
+                } else {
+                    throw new IllegalStateException("This should be unreachable.");
+                }
+            }
             if (marker.startIndex < 0) {
                 // This means the endIndex represents the token's symbol ID.
                 return getSymbolToken((int) marker.endIndex);
@@ -485,10 +500,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     /**
      * Reset the list of imported shared symbol tables.
      */
-    private void resetImports() {
-        // Note: when support for the next version of Ion is added, conditionals on 'majorVersion' and 'minorVersion'
-        // must be added here.
-        imports = ION_1_0_IMPORTS;
+    private void resetImports(int major, int minor) {
+        if (minor == 0) {
+            imports = ION_1_0_IMPORTS;
+        } else {
+            imports = LocalSymbolTableImports.EMPTY;
+        }
         firstLocalSymbolId = imports.getMaxId() + 1;
     }
 
@@ -516,7 +533,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             // Note: this will only happen when `symbolTable` is the system symbol table.
             resetSymbolTable();
             cachedReadOnlySymbolTable = symbolTable;
-            resetImports();
+            // FIXME: This should take into account the version at the point in the stream.
+            resetImports(1, 0);
             localSymbolMaxOffset = -1;
         }
     }
@@ -638,7 +656,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             stepOutOfContainer();
             if (!hasSeenImports) {
                 resetSymbolTable();
-                resetImports();
+                resetImports(getIonMajorVersion(), getIonMinorVersion());
             }
             installSymbols(newSymbols);
             state = State.READING_VALUE;
@@ -674,8 +692,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         private void readSymbolTableStructField() {
-            if (minorVersion > 0 && fieldSid < 0) {
-                fieldSid = mapInlineTextToSystemSid(fieldTextMarker);
+            if (minorVersion > 0) {
+                readSymbolTableStructField_1_1();
+                return;
             }
             if (fieldSid == SYMBOLS_SID) {
                 state = State.ON_SYMBOL_TABLE_SYMBOLS;
@@ -692,22 +711,42 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
         }
 
+        private void readSymbolTableStructField_1_1() {
+            if (matchesSystemSymbol_1_1(fieldTextMarker, SystemSymbols_1_1.SYMBOLS)) {
+                state = State.ON_SYMBOL_TABLE_SYMBOLS;
+                if (hasSeenSymbols) {
+                    throw new IonException("Symbol table contained multiple symbols fields.");
+                }
+                hasSeenSymbols = true;
+            } else if (matchesSystemSymbol_1_1(fieldTextMarker, SystemSymbols_1_1.IMPORTS)) {
+                state = State.ON_SYMBOL_TABLE_IMPORTS;
+                if (hasSeenImports) {
+                    throw new IonException("Symbol table contained multiple imports fields.");
+                }
+                hasSeenImports = true;
+            }
+        }
+
         private void startReadingImportsList() {
-            resetImports();
+            resetImports(getIonMajorVersion(), getIonMinorVersion());
             resetSymbolTable();
             newImports = new ArrayList<>(3);
-            newImports.add(getSystemSymbolTable());
+            if (minorVersion == 0) {
+                newImports.add(getSystemSymbolTable());
+            }
             state = State.READING_SYMBOL_TABLE_IMPORTS_LIST;
         }
 
         private void preparePossibleAppend() {
-            if (minorVersion > 0 && hasSymbolText()) {
+            if (minorVersion > 0) {
                 prepareScalar();
-                if (!bytesMatch(ION_SYMBOL_TABLE_UTF8, buffer, (int) valueMarker.startIndex, (int) valueMarker.endIndex)) {
+                if (!matchesSystemSymbol_1_1(valueMarker, SystemSymbols_1_1.ION_SYMBOL_TABLE)) {
                     resetSymbolTable();
                 }
-            } else if (symbolValueId() != ION_SYMBOL_TABLE_SID) {
-                resetSymbolTable();
+            } else {
+                if (symbolValueId() != ION_SYMBOL_TABLE_SID) {
+                    resetSymbolTable();
+                }
             }
             state = State.ON_SYMBOL_TABLE_FIELD;
         }
@@ -941,13 +980,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             int sid = readVarUInt_1_0();
             peekIndex = savedPeekIndex;
             return ION_SYMBOL_TABLE_SID == sid;
-        } else if (minorVersion > 0) {
+        } else if (minorVersion == 1) {
             Marker marker = annotationTokenMarkers.get(0);
-            if (marker.startIndex < 0) {
-                return marker.endIndex == ION_SYMBOL_TABLE_SID;
-            } else {
-                return bytesMatch(ION_SYMBOL_TABLE_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex);
-            }
+            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION_SYMBOL_TABLE);
         }
         return false;
     }
@@ -1009,6 +1044,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         } else if (type == IonType.SYMBOL) {
             if (valueTid.isInlineable) {
                 value = readString();
+            } else if (valueTid == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+                value = getSymbolText();
             } else {
                 int sid = symbolValueId();
                 if (sid < 0) {
@@ -1135,7 +1172,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
     @Override
     public String getFieldName() {
-        if (fieldTextMarker.startIndex > -1 || isEvaluatingEExpression) {
+        if (fieldTextMarker.startIndex > -1 || isEvaluatingEExpression || fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
             return getFieldText();
         }
         if (fieldSid < 0) {
