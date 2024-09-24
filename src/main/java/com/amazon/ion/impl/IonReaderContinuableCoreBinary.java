@@ -20,6 +20,7 @@ import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
+import com.amazon.ion.impl.macro.MacroCompilerContinuable;
 import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
@@ -1162,7 +1163,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         boolean isSymbolTableAppend = false;
         List<String> newSymbols = new ArrayList<>(8);
         Map<MacroRef, Macro> newMacros = new HashMap<>();
-        MacroCompiler macroCompiler = new MacroCompiler(IonReaderContinuableCoreBinary.this, newMacros::get);
+        MacroCompiler macroCompiler = new MacroCompilerContinuable(IonReaderContinuableCoreBinary.this, newMacros::get);
 
         private boolean valueUnavailable() {
             Event event = fillValue();
