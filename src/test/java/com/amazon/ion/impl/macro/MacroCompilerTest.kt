@@ -15,18 +15,17 @@ import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
-import org.junit.jupiter.params.provider.ValueSource
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MacroCompilerTest {
 
-    val ion = IonSystemBuilder.standard().build()
+    val ion: IonSystem = IonSystemBuilder.standard().build()
 
     private val fakeMacroTable: (MacroRef) -> Macro? = {
         when (it) {
@@ -161,24 +160,50 @@ class MacroCompilerTest {
         )
     )
 
-    fun newReader(source: String): IonReader {
+    enum class ReaderType {
+        ION_READER {
+            override fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler {
+                return MacroCompilerIonReader(reader, macros)
+            }
+        },
+        CONTINUABLE {
+            override fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler {
+                return MacroCompilerContinuable(reader as IonReaderContinuableCore, macros)
+            }
+        };
+
+        abstract fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler
+    }
+
+    private fun newReader(source: String): IonReader {
         // TODO these tests should be parameterized to exercise both text and binary input.
         return IonReaderBuilder.standard().build(TestUtils.ensureBinary(ion, source.toByteArray(StandardCharsets.UTF_8)))
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testCases")
-    fun assertMacroCompilation(source: String, signature: List<Parameter>, body: List<TemplateBodyExpression>) {
+    private fun assertMacroCompilation(readerType: ReaderType, source: String, signature: List<Parameter>, body: List<TemplateBodyExpression>) {
         val reader = newReader(source)
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
+        val compiler = readerType.newMacroCompiler(reader, fakeMacroTable)
         reader.next()
         val macroDef = compiler.compileMacro()
         val expectedDef = TemplateMacro(signature, body)
         assertEquals(expectedDef, macroDef)
     }
 
-    @Test
-    fun `test reading a list of macros`() {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("testCases")
+    fun assertMacroCompilationContinuable(source: String, signature: List<Parameter>, body: List<TemplateBodyExpression>) {
+        assertMacroCompilation(ReaderType.CONTINUABLE, source, signature, body)
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("testCases")
+    fun assertMacroCompilationIonReader(source: String, signature: List<Parameter>, body: List<TemplateBodyExpression>) {
+        assertMacroCompilation(ReaderType.ION_READER, source, signature, body)
+    }
+
+    @ParameterizedTest
+    @EnumSource(ReaderType::class)
+    fun `test reading a list of macros`(readerType: ReaderType) {
         // This test case is essentially the same as the last one, except that it puts all the macro definitions into
         // one Ion list, and then compiles them sequentially from that list.
         // If this test fails, do not bother trying to fix it until all cases in the parameterized test are passing.
@@ -186,7 +211,7 @@ class MacroCompilerTest {
         val templates = testCases().map { it.template }.iterator()
 
         val reader = newReader(source)
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
+        val compiler = readerType.newMacroCompiler(reader, fakeMacroTable)
         // Advance and step into list
         reader.next(); reader.stepIn()
         while (reader.next() != null) {
@@ -198,8 +223,9 @@ class MacroCompilerTest {
         reader.close()
     }
 
-    @Test
-    fun `macro compiler should return the correct name`() {
+    @ParameterizedTest
+    @EnumSource(ReaderType::class)
+    fun `macro compiler should return the correct name`(readerType: ReaderType) {
         val reader = newReader(
             """
             (macro foo (x) 1)
@@ -207,7 +233,7 @@ class MacroCompilerTest {
             (macro null (z) 3)
         """
         )
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
+        val compiler = readerType.newMacroCompiler(reader, fakeMacroTable)
         assertNull(compiler.macroName)
         reader.next()
         compiler.compileMacro()
@@ -226,51 +252,61 @@ class MacroCompilerTest {
     // macro has invalid name
     // macro has annotations
 
-    @ParameterizedTest
-    @ValueSource(
-        strings = [
-            // There should be exactly one thing wrong in each of these samples.
+    private fun badMacros() = listOf(
+        // There should be exactly one thing wrong in each of these samples.
 
-            // Problems up to and including the macro name
-            "[macro, pi, (), 3.141592653589793]", // Macro def must be a sexp
-            "foo::(macro pi () 3.141592653589793)", // Macros cannot be annotated
-            """("macro" pi () 3.141592653589793)""", // 'macro' must be a symbol
-            "(pi () 3.141592653589793)", // doesn't start with 'macro'
-            "(macaroon pi () 3.141592653589793)", // doesn't start with 'macro'
-            "(macroeconomics pi () 3.141592653589793)", // will the demand for digits of pi ever match the supply?
-            "(macro pi::pi () 3.141592653589793)", // Illegal annotation on macro name
-            "(macro () 3.141592653589793)", // No macro name
-            "(macro 2.5 () 3.141592653589793)", // Macro name is not a symbol
-            """(macro "pi"() 3.141592653589793)""", // Macro name is not a symbol
-            "(macro \$0 () 3.141592653589793)", // Macro name must have known text
-            "(macro + () 123)", // Macro name cannot be an operator symbol
-            "(macro 'a.b' () 123)", // Macro name must be a symbol that can be unquoted (i.e. an identifier symbol)
-            "(macro 'false' () 123)", // Macro name must be a symbol that can be unquoted (i.e. an identifier symbol)
+        // Problems up to and including the macro name
+        "[macro, pi, (), 3.141592653589793]", // Macro def must be a sexp
+        "foo::(macro pi () 3.141592653589793)", // Macros cannot be annotated
+        """("macro" pi () 3.141592653589793)""", // 'macro' must be a symbol
+        "(pi () 3.141592653589793)", // doesn't start with 'macro'
+        "(macaroon pi () 3.141592653589793)", // doesn't start with 'macro'
+        "(macroeconomics pi () 3.141592653589793)", // will the demand for digits of pi ever match the supply?
+        "(macro pi::pi () 3.141592653589793)", // Illegal annotation on macro name
+        "(macro () 3.141592653589793)", // No macro name
+        "(macro 2.5 () 3.141592653589793)", // Macro name is not a symbol
+        """(macro "pi"() 3.141592653589793)""", // Macro name is not a symbol
+        "(macro \$0 () 3.141592653589793)", // Macro name must have known text
+        "(macro + () 123)", // Macro name cannot be an operator symbol
+        "(macro 'a.b' () 123)", // Macro name must be a symbol that can be unquoted (i.e. an identifier symbol)
+        "(macro 'false' () 123)", // Macro name must be a symbol that can be unquoted (i.e. an identifier symbol)
 
-            // Problems in the signature
-            "(macro identity x x)", // Missing sexp around signature
-            "(macro identity [x] x)", // Using list instead of sexp for signature
-            "(macro identity any::(x) x)", // Signature sexp should not be annotated
-            "(macro identity (foo::x) x)", // Unknown type in signature
-            "(macro identity (x any::*) x)", // Annotation should be on parameter name, not the cardinality
-            "(macro identity (x! !) x)", // Dangling cardinality modifier
-            "(macro identity (x%) x)", // Not a real cardinality sigil
-            "(macro identity (x x) x)", // Repeated parameter name
-            """(macro identity ("x") x)""", // Parameter name must be a symbol, not a string
+        // Problems in the signature
+        "(macro identity x x)", // Missing sexp around signature
+        "(macro identity [x] x)", // Using list instead of sexp for signature
+        "(macro identity any::(x) x)", // Signature sexp should not be annotated
+        "(macro identity (foo::x) x)", // Unknown type in signature
+        "(macro identity (x any::*) x)", // Annotation should be on parameter name, not the cardinality
+        "(macro identity (x! !) x)", // Dangling cardinality modifier
+        "(macro identity (x%) x)", // Not a real cardinality sigil
+        "(macro identity (x x) x)", // Repeated parameter name
+        """(macro identity ("x") x)""", // Parameter name must be a symbol, not a string
 
-            // Problems in the body
-            "(macro empty ())", // No body expression
-            "(macro transform (x) y)", // Unknown variable
-            "(macro transform (x) foo::x)", // VariableReference cannot be annotated
-            "(macro transform (x) foo::(literal x))", // Macro invocation cannot be annotated
-            """(macro transform (x) ("literal" x))""", // Macro invocation must start with a symbol or integer id
-            "(macro transform (x) 1 2)", // Template body must be one expression
-        ]
+        // Problems in the body
+        "(macro empty ())", // No body expression
+        "(macro transform (x) y)", // Unknown variable
+        "(macro transform (x) foo::x)", // VariableReference cannot be annotated
+        "(macro transform (x) foo::(literal x))", // Macro invocation cannot be annotated
+        """(macro transform (x) ("literal" x))""", // Macro invocation must start with a symbol or integer id
+        "(macro transform (x) 1 2)", // Template body must be one expression
     )
-    fun assertCompilationFails(source: String) {
+
+    @ParameterizedTest
+    @MethodSource("badMacros")
+    fun assertCompilationFailsContinuable(source: String) {
+        assertCompilationFails(ReaderType.CONTINUABLE, source)
+    }
+
+    @ParameterizedTest
+    @MethodSource("badMacros")
+    fun assertCompilationFailsIonReader(source: String) {
+        assertCompilationFails(ReaderType.ION_READER, source)
+    }
+
+    private fun assertCompilationFails(readerType: ReaderType, source: String) {
         val reader = newReader(source)
         reader.next()
-        val compiler = MacroCompiler(reader as IonReaderContinuableCore, fakeMacroTable)
+        val compiler = readerType.newMacroCompiler(reader, fakeMacroTable)
         assertThrows<IonException> { compiler.compileMacro() }
     }
 }
