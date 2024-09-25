@@ -593,11 +593,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         return localSymbols[sid - (importedSymbols.getMaxId() + 1)];
     }
 
-    /**
-     * Retrieves the String text for the given symbol ID.
-     * @param sid a symbol ID.
-     * @return a String.
-     */
+    @Override
     String getSymbol(int sid) {
         if (sid < firstLocalSymbolId) {
             return imports.findKnownSymbol(sid);

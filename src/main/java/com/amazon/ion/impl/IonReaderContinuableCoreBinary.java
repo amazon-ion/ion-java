@@ -1095,16 +1095,29 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
+     * Retrieves the String text for the given symbol ID, if the text is available.
+     * @param sid a symbol ID.
+     * @return a String.
+     */
+    String getSymbol(int sid) {
+        return null; // Symbol IDs are not resolved by the core reader.
+    }
+
+    /**
      * Returns true if the symbol at `marker`...
      * <p> * is a system symbol with the same ID as the expected System Symbol
      * <p> * is an inline symbol with the same utf8 bytes as the expected System Symbol
+     * <p> * is a user symbol that maps to the same text as the expected System Symbol
      * <p>
-     * TODO: Also check if it is an interned user-symbol with the same text as the expected System Symbol.
      */
     boolean matchesSystemSymbol_1_1(Marker marker, SystemSymbols_1_1 systemSymbol) {
         if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
             return marker.endIndex == systemSymbol.getId();
+        } else if (marker.startIndex < 0) {
+            // This is a local symbol whose ID is stored in marker.endIndex.
+            return systemSymbol.getText().equals(getSymbol((int) marker.endIndex));
         } else {
+            // This is an inline symbol with UTF-8 bytes bounded by the marker.
             return bytesMatch(systemSymbol.getUtf8Bytes(), buffer, (int) marker.startIndex, (int) marker.endIndex);
         }
     }
