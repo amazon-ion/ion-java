@@ -197,7 +197,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             Marker marker = annotationTokenMarkers.get((int) nextAnnotationPeekIndex++);
             if (marker.startIndex < 0) {
                 if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
-                    return SystemSymbols_1_1.get((int) marker.endIndex);
+                    return SystemSymbols_1_1.get((int) marker.endIndex).getText();
                 } else {
                     // This means the endIndex represents the token's symbol ID.
                     return convertToString((int) marker.endIndex);
@@ -220,7 +220,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             Marker marker = annotationTokenMarkers.get((int) nextAnnotationPeekIndex++);
             if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
                 if (marker.startIndex < 0) {
-                    return new SymbolTokenImpl(SystemSymbols_1_1.get((int) marker.endIndex), -1);
+                    return SystemSymbols_1_1.get((int) marker.endIndex).getToken();
                 } else {
                     throw new IllegalStateException("This should be unreachable.");
                 }
