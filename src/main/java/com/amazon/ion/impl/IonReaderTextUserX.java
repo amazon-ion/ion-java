@@ -134,13 +134,13 @@ class IonReaderTextUserX
                         String version = symbolValue().getText();
                         if (isIonVersionMarker(version))
                         {
-                            // TODO: Determine if Ion 1.0 and 1.1 need separate branches here.
                             if (ION_1_0.equals(version) || "$ion_1_1".equals(version))
                             {
+                                setMinorVersion(version.charAt(version.length() - 1) - '0');
                                 if (_value_keyword != IonTokenConstsX.KEYWORD_sid)
                                 {
                                     symbol_table_reset();
-                                    push_symbol_table(_system_symtab);
+                                    push_symbol_table(_system_symtab); // TODO install the correct system symbol table for the active Ion version.
                                 }
                                 _has_next_called = false;
                             }

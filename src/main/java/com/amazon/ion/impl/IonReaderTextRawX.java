@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
@@ -30,7 +17,6 @@ import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import com.amazon.ion.impl._Private_ScalarConversions.ValueVariant;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.Iterator;
 
 /**
@@ -72,7 +58,6 @@ import java.util.Iterator;
 abstract class IonReaderTextRawX
     implements IonTextReader
 {
-    public abstract BigInteger bigIntegerValue();
 
 //              static final boolean _object_parser           = false;
               static final boolean _debug                   = false;
@@ -126,7 +111,10 @@ abstract class IonReaderTextRawX
     static final int ACTION_FINISH_LOB           = 13;
     static final int ACTION_FINISH_DATAGRAM      = 14;
     static final int ACTION_EOF                  = 15;
-    static final int ACTION_count                = 16;
+
+    static final int ACTION_START_E_EXPRESSION = 16;
+    static final int ACTION_START_EXPRESSION_GROUP = 17;
+
     @SuppressWarnings("unused")
     private final String get_action_name(int action) {
         switch(action) {
@@ -144,6 +132,8 @@ abstract class IonReaderTextRawX
         case ACTION_FINISH_CONTAINER:   return "ACTION_FINISH_CONTAINER";
         case ACTION_FINISH_LOB:         return "ACTION_FINISH_LOB";
         case ACTION_FINISH_DATAGRAM:    return "ACTION_FINISH_DATAGRAM";
+        case ACTION_START_E_EXPRESSION: return "ACTION_START_E_EXPRESSION";
+        case ACTION_START_EXPRESSION_GROUP: return "ACTION_START_EXPRESSION_GROUP";
         case ACTION_EOF:                return "ACTION_EOF";
         default:                        return "<unrecognized action: "+Integer.toString(action)+">";
         }
@@ -190,6 +180,8 @@ abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_EOF]                 = 0;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_SYMBOL_OPERATOR]     = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_DOT]                 = ACTION_LOAD_SCALAR;
+        actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_COLON]               = ACTION_START_E_EXPRESSION;
+        actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_DOUBLE_COLON]        = ACTION_START_EXPRESSION_GROUP;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_PAREN]         = ACTION_FINISH_CONTAINER;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_BRACE]         = ACTION_FINISH_CONTAINER;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_SQUARE]        = ACTION_FINISH_CONTAINER;
@@ -252,6 +244,45 @@ abstract class IonReaderTextRawX
         return a;
     }
 
+    private class ContainerState {
+        IonType type;
+        boolean isEExpression;
+        boolean isExpressionGroup;
+
+        private void setFlags() {
+            switch (type) {
+                case LIST:
+                    _container_is_struct = false;
+                    _container_prohibits_commas = false;
+                    break;
+                case DATAGRAM:
+                case SEXP:
+                    _container_is_struct = false;
+                    _container_prohibits_commas = true;
+                    break;
+                case STRUCT:
+                    _container_is_struct = true;
+                    _container_prohibits_commas = false;
+                    break;
+                default:
+                    throw new IllegalStateException("type must be a container, not a " + type);
+            }
+        }
+
+        void init(IonType type) {
+            this.type = type;
+            this.isEExpression = _container_is_e_expression;
+            this.isExpressionGroup = _container_is_expression_group;
+            setFlags();
+        }
+
+        void restore() {
+            _container_is_e_expression = isEExpression;
+            _container_is_expression_group = isExpressionGroup;
+            setFlags();
+        }
+    }
+
     //
     //  actual class members (preceding values are just parsing
     //  control constants).
@@ -262,10 +293,13 @@ abstract class IonReaderTextRawX
     boolean             _eof;
     int                 _state;
 
-    IonType[]           _container_state_stack = new IonType[DEFAULT_STACK_DEPTH];
+    ContainerState[]    _container_state_stack = new ContainerState[DEFAULT_STACK_DEPTH];
     int                 _container_state_top;
     boolean             _container_is_struct;           // helper bool's set on push and pop and used
     boolean             _container_prohibits_commas;    // frequently during state transitions actions
+    boolean             _container_is_e_expression;
+    boolean             _container_is_expression_group;
+    boolean             _is_expression_syntax_allowed;
 
     boolean             _has_next_called;
     IonType             _value_type;
@@ -295,13 +329,25 @@ abstract class IonReaderTextRawX
     LOB_STATE           _lob_loaded;
     byte[]              _lob_bytes;
     int                 _lob_actual_len;
+    int                 minorVersion = 0;
 
 
     protected IonReaderTextRawX() {
         super();
         _nesting_parent = null;
+        for (int i = 0; i < _container_state_stack.length; i++) {
+            _container_state_stack[i] = new ContainerState();
+        }
     }
 
+    /**
+     * Sets the Ion minor version.
+     * @param minorVersion the version.
+     */
+    void setMinorVersion(int minorVersion) {
+        this.minorVersion = minorVersion;
+        _is_expression_syntax_allowed = false;
+    }
 
     /**
      * @return This implementation always returns null.
@@ -350,6 +396,9 @@ abstract class IonReaderTextRawX
         _container_state_top = 0;
         _container_is_struct = false;
         _container_prohibits_commas = false;
+        _container_is_e_expression = false;
+        _container_is_expression_group = false;
+        _is_expression_syntax_allowed = false;
         _has_next_called = false;
         _value_type = null;
         _value_keyword = 0;
@@ -463,6 +512,8 @@ abstract class IonReaderTextRawX
                 finish_value(null);
                 clear_value();
                 parse_to_next_value();
+                // Any expression syntax for the current container must have already occurred.
+                _is_expression_syntax_allowed = false;
             }
             catch (IOException e) {
                 throw new IonException(e);
@@ -547,29 +598,6 @@ abstract class IonReaderTextRawX
         _value_start_offset = -1;
     }
 
-    private final void set_container_flags(IonType t) {
-        switch (t) {
-        case LIST:
-            _container_is_struct = false;
-            _container_prohibits_commas = false;
-            break;
-        case SEXP:
-            _container_is_struct = false;
-            _container_prohibits_commas = true;
-            break;
-        case STRUCT:
-            _container_is_struct = true;
-            _container_prohibits_commas = false;
-            break;
-        case DATAGRAM:
-            _container_is_struct = false;
-            _container_prohibits_commas = true;
-            break;
-        default:
-            throw new IllegalArgumentException("type must be a container, not a "+t.toString());
-        }
-    }
-
     private int get_state_after_value()
     {
         int state_after_scalar;
@@ -599,7 +627,7 @@ abstract class IonReaderTextRawX
         int state_after_annotation;
         switch(get_state_int()) {
         case STATE_AFTER_VALUE_CONTENTS:
-            IonType container = top_state();
+            IonType container = top_state().type;
             switch(container) {
             case STRUCT:
             case LIST:
@@ -633,13 +661,13 @@ abstract class IonReaderTextRawX
     }
 
     private final int get_state_after_container() {
-        IonType container = top_state();
+        IonType container = top_state().type;
         int new_state = get_state_after_container(container);
         return new_state;
     }
 
     private final int get_state_after_container(int token) {
-        IonType container = top_state();
+        IonType container = top_state().type;
 
         switch(container) {
             case STRUCT:
@@ -771,7 +799,6 @@ abstract class IonReaderTextRawX
 
         return new SymbolTokenImpl(text, sid);
     }
-
 
     protected final void parse_to_next_value() throws IOException
     {
@@ -1061,6 +1088,25 @@ abstract class IonReaderTextRawX
                 set_state(STATE_EOF);
                 _eof = true;
                 return;
+            case ACTION_START_E_EXPRESSION:
+            case ACTION_START_EXPRESSION_GROUP:
+                _container_is_e_expression = action == ACTION_START_E_EXPRESSION;
+                _container_is_expression_group = action == ACTION_START_EXPRESSION_GROUP;
+                if (!_is_expression_syntax_allowed) {
+                    parse_error(String.format("unexpected token encountered: %s", IonTokenConstsX.getTokenName(t)));
+                }
+                ContainerState top = top_state();
+                top.isEExpression = _container_is_e_expression;
+                top.isExpressionGroup = _container_is_expression_group;
+                set_state(STATE_BEFORE_ANNOTATION_SEXP);
+                _scanner.tokenIsFinished();
+                // Reset the current value start used to define a span, since the ::
+                // isn't part of the span when it's hoisted.
+                _value_start_offset = _scanner.getStartingOffset();
+                // Since expression syntax was already found, it is not allowed again.
+                _is_expression_syntax_allowed = false;
+                t = _scanner.nextToken();
+                break;
             default: parse_error("unexpected token encountered: "+IonTokenConstsX.getTokenName(t));
             }
         }
@@ -1200,17 +1246,19 @@ abstract class IonReaderTextRawX
         int oldlen = _container_state_stack.length;
         if (_container_state_top >= oldlen) {
             int newlen = oldlen * 2;
-            IonType[] temp = new IonType[newlen];
+            ContainerState[] temp = new ContainerState[newlen];
             System.arraycopy(_container_state_stack, 0, temp, 0, oldlen);
+            for (int i = oldlen; i < temp.length; i++) {
+                temp[i] = new ContainerState();
+            }
             _container_state_stack = temp;
         }
-        set_container_flags(newContainer);
-        _container_state_stack[_container_state_top++] = newContainer;
+        _container_state_stack[_container_state_top++].init(newContainer);
     }
 
     private final void pop_container_state() {
         _container_state_top--;
-        set_container_flags(top_state());
+        top_state().restore();
         _eof = false;
         _has_next_called = false;
 
@@ -1218,10 +1266,8 @@ abstract class IonReaderTextRawX
         set_state(new_state);
     }
 
-    private final IonType top_state() {
-        int top = _container_state_top - 1;
-        IonType top_container = _container_state_stack[top];
-        return top_container;
+    private final ContainerState top_state() {
+        return _container_state_stack[_container_state_top - 1];
     }
 
     public IonType getType()
@@ -1260,14 +1306,14 @@ abstract class IonReaderTextRawX
     public IonType getContainerType()
     {
         if (_container_state_top == 0) return IonType.DATAGRAM;
-        return _container_state_stack[_container_state_top - 1];
+        return _container_state_stack[_container_state_top - 1].type;
     }
     public int getDepth()
     {
         int depth = _container_state_top;
         if (depth > 0) {
 int debugging_depth = depth;
-            IonType top_type = _container_state_stack[0];
+            IonType top_type = _container_state_stack[0].type;
             if (_nesting_parent == null) {
                 if (IonType.DATAGRAM.equals(top_type)) {
                     depth--;
@@ -1336,7 +1382,9 @@ if (depth == debugging_depth) {
         switch (_value_type) {
         case STRUCT:
         case LIST:
+            break;
         case SEXP:
+            _is_expression_syntax_allowed = minorVersion > 0;
             break;
         default:
             throw new IllegalStateException("Unexpected value type: " + _value_type);
