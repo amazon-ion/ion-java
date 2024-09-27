@@ -649,6 +649,8 @@ internal class IonManagedWriter_1_1(
             if (sid == UNKNOWN_SYMBOL_ID) {
                 // No (known) SID either.
                 throw UnknownSymbolException("Cannot write a symbol token with unknown text and unknown SID.")
+            } else if (sid == 0) {
+                rawWriter.write(kind, 0)
             } else {
                 rawWriter.write(kind, sidTransformer?.transform(sid) ?: sid)
             }

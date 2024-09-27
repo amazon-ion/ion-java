@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl
 
+import com.amazon.ion.*
+import com.amazon.ion.SymbolTable.*
 import java.util.*
 
 enum class SystemSymbols_1_1(val id: Int, val text: String) {
@@ -70,6 +72,8 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
 
     val utf8Bytes = text.encodeToByteArray()
 
+    val token: SymbolToken = SymbolTokenImpl(text, UNKNOWN_SYMBOL_ID)
+
     companion object {
         private val ALL_VALUES: Array<SystemSymbols_1_1> = entries.toTypedArray().apply {
             // Put all system symbol enum values into an array, and ensure that they are sorted by ID in that array.
@@ -87,6 +91,16 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
                 }
         }
 
+        @JvmStatic
+        fun size() = ALL_VALUES.size
+
+        // Private to avoid potential clashes with enum member names.
+        @JvmStatic
+        private val ALL_SYMBOL_TEXTS = ALL_VALUES.map { it.text }
+
+        @JvmStatic
+        fun allSymbolTexts() = ALL_SYMBOL_TEXTS
+
         /**
          * Returns true if the [id] is a valid system symbol ID.
          */
@@ -99,8 +113,8 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
          * Returns the text of the given system symbol ID, or null if not a valid system symbol ID.
          */
         @JvmStatic
-        operator fun get(id: Int): String {
-            return SystemSymbols_1_1.ALL_VALUES[id - 1].text
+        operator fun get(id: Int): SystemSymbols_1_1 {
+            return SystemSymbols_1_1.ALL_VALUES[id - 1]
         }
     }
 }

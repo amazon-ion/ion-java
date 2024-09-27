@@ -22,10 +22,13 @@ import java.nio.ByteOrder;
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_SID_LOWER_NIBBLE_1_1;
+import static com.amazon.ion.impl.IonTypeID.SYSTEM_MACRO_INVOCATION_ID;
 import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_FLEX_SYMS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TWO_ANNOTATION_SIDS_LOWER_NIBBLE_1_1;
 import static com.amazon.ion.impl.IonTypeID.TYPE_IDS_1_1;
+import static com.amazon.ion.impl.bin.Ion_1_1_Constants.FLEX_SYM_MAX_SYSTEM_SYMBOL;
+import static com.amazon.ion.impl.bin.Ion_1_1_Constants.FLEX_SYM_SYSTEM_SYMBOL_OFFSET;
 import static com.amazon.ion.util.IonStreamUtils.throwAsIonException;
 
 /**
@@ -306,7 +309,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * The major version of the Ion encoding currently being read.
      */
-    private int majorVersion = -1;
+    private int majorVersion = 1;
 
     /**
      * The minor version of the Ion encoding currently being read.
@@ -1490,24 +1493,17 @@ class IonCursorBinary implements IonCursor {
      * Marker's endIndex is set to the symbol ID value and its startIndex is set to -1. When this FlexSym wraps a
      * delimited end marker, neither the Marker's startIndex nor its endIndex is set.
      * @param markerToSet the marker to populate.
-     * @return the symbol ID value if one was present, otherwise -1.
+     * @return the user-space symbol ID value if one was present, otherwise -1.
      */
     private long uncheckedReadFlexSym_1_1(Marker markerToSet) {
         long result = uncheckedReadFlexInt_1_1();
         if (result == 0) {
             int nextByte = buffer[(int)(peekIndex++)];
-            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
-                // Symbol zero.
-                markerToSet.endIndex = 0;
-                return 0;
-            }
-            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
-                // Inline symbol with zero length.
-                markerToSet.startIndex = peekIndex;
-                markerToSet.endIndex = peekIndex;
+            if (isFlexSymSystemSymbolOrSid0(nextByte & SINGLE_BYTE_MASK)) {
+                setSystemSymbolMarker(markerToSet, (byte)(nextByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET));
                 return -1;
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
-                throw new IonException("FlexSym 0 may only precede symbol zero, empty string, or delimited end.");
+                throw new IonException("FlexSym 0 may only precede symbol zero, system symbol, or delimited end.");
             }
             markerToSet.typeId = IonTypeID.DELIMITED_END_ID;
             return -1;
@@ -1521,6 +1517,16 @@ class IonCursorBinary implements IonCursor {
             markerToSet.endIndex = result;
         }
         return result;
+    }
+
+    /*
+     * Determines whether a byte (specifically, the byte following a FlexSym escape byte) represents a system symbol.
+     *
+     * @param byteAfterEscapeCode The unsigned value of the byte after the FlexSym escape byte
+     * @return true if the byte is in the reserved range for system symbols or $0.
+     */
+    private static boolean isFlexSymSystemSymbolOrSid0(int byteAfterEscapeCode) {
+        return byteAfterEscapeCode >= FLEX_SYM_SYSTEM_SYMBOL_OFFSET && byteAfterEscapeCode <= FLEX_SYM_MAX_SYSTEM_SYMBOL;
     }
 
     /**
@@ -1589,15 +1595,8 @@ class IonCursorBinary implements IonCursor {
             if (nextByte < 0) {
                 return true;
             }
-            if ((byte) nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
-                // Symbol zero.
-                markerToSet.endIndex = 0;
-                return false;
-            }
-            if ((byte) nextByte == OpCodes.STRING_ZERO_LENGTH) {
-                // Inline symbol with zero length.
-                markerToSet.startIndex = peekIndex;
-                markerToSet.endIndex = peekIndex;
+            if (isFlexSymSystemSymbolOrSid0(nextByte)) {
+                setSystemSymbolMarker(markerToSet, nextByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET);
                 return false;
             } else if ((byte) nextByte != OpCodes.DELIMITED_END_MARKER) {
                 throw new IonException("FlexSyms may only wrap symbol zero, empty string, or delimited end.");
@@ -1645,6 +1644,12 @@ class IonCursorBinary implements IonCursor {
                 return TYPE_IDS_1_1[OpCodes.SYMBOL_ADDRESS_MANY_BYTES & SINGLE_BYTE_MASK];
             }
         },
+        SYSTEM_SYMBOL_ID {
+            @Override
+            IonTypeID typeIdFor(int length) {
+                return SYSTEM_SYMBOL_VALUE;
+            }
+        },
         STRUCT_END {
             @Override
             IonTypeID typeIdFor(int length) {
@@ -1661,11 +1666,8 @@ class IonCursorBinary implements IonCursor {
             if (specialByte < 0) {
                 return FlexSymType.INCOMPLETE;
             }
-            if ((byte) specialByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
-                return FlexSymType.SYMBOL_ID;
-            }
-            if ((byte) specialByte == OpCodes.STRING_ZERO_LENGTH) {
-                return FlexSymType.INLINE_TEXT;
+            if (isFlexSymSystemSymbolOrSid0(specialByte)) {
+                return FlexSymType.SYSTEM_SYMBOL_ID;
             }
             if ((byte) specialByte == OpCodes.DELIMITED_END_MARKER) {
                 return FlexSymType.STRUCT_END;
@@ -1692,7 +1694,12 @@ class IonCursorBinary implements IonCursor {
         if (result == 0) {
             markerToSet.startIndex = peekIndex + 1;
             markerToSet.endIndex = markerToSet.startIndex;
-            return FlexSymType.classifySpecialFlexSym(buffer[(int) peekIndex++] & SINGLE_BYTE_MASK);
+            int specialByte = buffer[(int) peekIndex++] & SINGLE_BYTE_MASK;
+            FlexSymType type = FlexSymType.classifySpecialFlexSym(specialByte);
+            if (type == FlexSymType.SYSTEM_SYMBOL_ID) {
+                setSystemSymbolMarker(markerToSet, (byte)(specialByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET));
+            }
+            return type;
         } else if (result < 0) {
             markerToSet.startIndex = peekIndex;
             markerToSet.endIndex = peekIndex - result;
@@ -1720,10 +1727,18 @@ class IonCursorBinary implements IonCursor {
             result |= ~(-1 >>> Long.numberOfLeadingZeros(result));
         }
         if (result == 0) {
-            FlexSymType flexSymType = FlexSymType.classifySpecialFlexSym(slowReadByte());
+            int specialByte = slowReadByte();
+            FlexSymType flexSymType = FlexSymType.classifySpecialFlexSym(specialByte);
             if (markerToSet != null && flexSymType != FlexSymType.INCOMPLETE) {
                 markerToSet.startIndex = peekIndex;
                 markerToSet.endIndex = peekIndex;
+            }
+            if (markerToSet != null && flexSymType == FlexSymType.SYSTEM_SYMBOL_ID) {
+                // FIXME: See if we can set the SID in the endIndex here without causing the slow reader to get confused
+                //   about where the end of the value is for tagless symbols.
+                //   I.e. use setSystemSymbolMarker(markerToSet, (byte)(specialByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET));
+                markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
+                markerToSet.startIndex = peekIndex - 1;
             }
             return flexSymType;
         } else if (result < 0) {
@@ -2229,26 +2244,28 @@ class IonCursorBinary implements IonCursor {
         }
     }
 
-    /**
-     * Sets the given marker to represent the current system token (system macro invocation or system symbol value).
-     * Before calling this method, `macroInvocationId` must be set from the one-byte FixedInt that represents the ID;
-     * positive values indicate a macro address, while negative values indicate a system symbol ID.
-     * @param valueTid the type ID of the system token.
+    /*
+     * The given Marker's endIndex is set to the system symbol ID value and its startIndex is set to -1
      * @param markerToSet the marker to set.
      */
-    private void setSystemTokenMarker(IonTypeID valueTid, Marker markerToSet) {
+    private void setSystemSymbolMarker(Marker markerToSet, int systemSid) {
+        event = Event.START_SCALAR;
+        markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
+        markerToSet.startIndex = -1;
+        markerToSet.endIndex = systemSid;
+    }
+
+    /**
+     * Sets the given marker to represent the current system macro invocation.
+     * Before calling this method, `macroInvocationId` must be set from the one-byte FixedUInt that represents the ID.
+     * @param markerToSet the marker to set.
+     */
+    private void setSystemMacroInvocationMarker(Marker markerToSet) {
         isSystemInvocation = true;
+        event = Event.NEEDS_INSTRUCTION;
+        markerToSet.typeId = SYSTEM_MACRO_INVOCATION_ID;
         markerToSet.startIndex = peekIndex;
-        if (macroInvocationId < 0) {
-            // This is a system symbol value.
-            event = Event.START_SCALAR;
-            markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
-            markerToSet.endIndex = peekIndex;
-        } else {
-            event = Event.NEEDS_INSTRUCTION;
-            markerToSet.typeId = valueTid;
-            markerToSet.endIndex = -1;
-        }
+        markerToSet.endIndex = -1;
     }
 
     /**
@@ -2293,9 +2310,9 @@ class IonCursorBinary implements IonCursor {
                 setUserMacroInvocationMarker(valueTid, markerToSet, uncheckedReadFlexUInt_1_1());
                 return;
             } else {
-                // Opcode 0xEF: system macro invocation or system symbol value.
+                // Opcode 0xEF: system macro invocation
                 macroInvocationId = buffer[(int) peekIndex++];
-                setSystemTokenMarker(valueTid, markerToSet);
+                setSystemMacroInvocationMarker(markerToSet);
                 return;
             }
         } else if (valueTid.length > 0) {
@@ -2461,7 +2478,7 @@ class IonCursorBinary implements IonCursor {
                  }
                  // The downcast to byte then upcast to long results in sign extension, treating the byte as a FixedInt.
                  macroInvocationId = (byte) truncatedId;
-                 setSystemTokenMarker(valueTid, markerToSet);
+                 setSystemMacroInvocationMarker(markerToSet);
                  return false;
              }
          } else if (valueTid.length > 0) {
@@ -3122,6 +3139,9 @@ class IonCursorBinary implements IonCursor {
                 break;
             default:
                 throw new IllegalStateException("Length is built into the primitive type's IonTypeID.");
+        }
+        if (valueTid == SYSTEM_SYMBOL_VALUE) {
+            return 1;
         }
         if (length >= 0) {
             valueMarker.endIndex = peekIndex + length;

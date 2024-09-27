@@ -3290,6 +3290,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void systemSymbolAnnotations(boolean constructFromBytes) throws Exception {
+        reader = readerFor(constructFromBytes,0xE0, 0x01, 0x01, 0xEA, 0xE7, 0x01, 0x61, 0x60);
+        assertSequence(
+            next(IonType.INT), annotationSymbols("$ion")
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void symbolTableWithOpenContentImportsListField(boolean constructFromBytes) throws Exception {
         reader = readerFor(
             (writer, out) -> {
@@ -4965,7 +4974,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @ValueSource(ints={5, 6, 7, 8, 9, 10})
     public void readTwoAnnotationFlexSymsThatForceBufferShift_1_1(int initialBufferSize) throws Exception {
-        byte[] data = withIvm(1, hexStringToByteArray("E8 F1 61 62 63 64 65 66 67 68 3C 00 00 60"));
+        byte[] data = withIvm(1, hexStringToByteArray("E8 F1 61 62 63 64 65 66 67 68 01 67 60"));
         Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> annotationExpectation = () -> annotations("abcdefgh", "symbols");
         Supplier<ExpectationProvider<IonReaderContinuableTopLevelBinary>> valueExpectation = () -> intValue(0);
         readAnnotationsThatForceBufferShift_1_1(true, data, initialBufferSize, annotationExpectation, IonType.INT, valueExpectation);
@@ -4991,7 +5000,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @ValueSource(ints={5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
     public void readTwoAnnotationFlexSymsThatForceBufferShiftInDelimitedStruct_1_1(int initialBufferSize) throws Exception {
-        byte[] data = withIvm(1, hexStringToByteArray("F3 FD 61 62 E8 F1 61 62 63 64 65 66 67 68 3C 00 00 60 01 F0"));
+        byte[] data = withIvm(1, hexStringToByteArray("F3 FD 61 62 E8 F1 61 62 63 64 65 66 67 68 01 67 60 01 F0"));
         readAnnotationsThatForceBufferShiftInDelimitedStruct_1_1(true, data, initialBufferSize);
         readAnnotationsThatForceBufferShiftInDelimitedStruct_1_1(false, data, initialBufferSize);
     }
@@ -5053,15 +5062,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @ValueSource(strings = {
         // Minimal representations
-        "E7 01 90 60            | One empty-text annotation; value int 0 \n" +
-        "E7 01 A0 60            | One SID 0 annotation; value int 0 \n" +
-        "E8 01 90 01 A0 60      | Two annotations: empty text, SID 0; value int 0 \n" +
-        "E9 09 01 A0 01 90 60   | Variable length = 4 annotations: SID 0, empty text; value int 0 \n",
+        "E7 01 75 60            | One empty-text annotation; value int 0 \n" +
+        "E7 01 60 60            | One SID 0 annotation; value int 0 \n" +
+        "E8 01 75 01 60 60      | Two annotations: empty text, SID 0; value int 0 \n" +
+        "E9 09 01 60 01 75 60   | Variable length = 4 annotations: SID 0, empty text; value int 0 \n",
         // Overpadded representations
-        "E7 02 00 90 60                    | One overpadded empty-text annotation; value int 0 \n" +
-        "E7 04 00 00 A0 60                 | One overpadded SID 0 annotation; value int 0 \n" +
-        "E8 08 00 00 00 90 02 00 A0 60     | Two overpadded annotations: empty text, SID 0; value int 0 \n" +
-        "E9 90 00 00 00 00 01 A0 01 90 60  | Variable overpadded length = 4 annotations: SID 0, empty text; value int 0 \n"
+        "E7 02 00 75 60                    | One overpadded empty-text annotation; value int 0 \n" +
+        "E7 04 00 00 60 60                 | One overpadded SID 0 annotation; value int 0 \n" +
+        "E8 08 00 00 00 75 02 00 60 60     | Two overpadded annotations: empty text, SID 0; value int 0 \n" +
+        "E9 90 00 00 00 00 01 60 01 75 60  | Variable overpadded length = 4 annotations: SID 0, empty text; value int 0 \n"
     })
     public void readAnnotationsWithSpecialFlexSyms_1_1(String inputBytes) throws Exception {
         readAnnotationsWithSpecialFlexSyms_1_1(true, inputBytes);
@@ -5071,7 +5080,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void getAnnotationsAsStringFailsWhenTextIsUndefined(boolean constructFromBytes) throws Exception {
-        reader = readerForIon11(hexStringToByteArray("E7 01 A0 60"), constructFromBytes);
+        reader = readerForIon11(hexStringToByteArray("E7 01 60 60"), constructFromBytes);
         assertSequence(next(IonType.INT), intValue(0));
         assertThrows(IonException.class, () -> reader.getTypeAnnotations());
         assertThrows(IonException.class, () -> reader.iterateTypeAnnotations().next());
@@ -5214,35 +5223,35 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // SID 0 in fixed-length SID struct
         "DC      | Struct Length = 12 \n" +
         "01      | Switch to FlexSyms \n" +
-        "01 A0   | FlexSym 0 \n" +
+        "01 60   | FlexSym 0 \n" +
         "6E      | true \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true \n" +
         "09      | FlexSym SID 4 (name) \n" +
         "6E      | true \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true",
         // SID 0 in variable-length SID to FlexSyms
         "FD      | Variable length SID struct \n" +
         "19      | Length = FlexUInt 12 \n" +
         "01      | Switch to FlexSyms \n" +
-        "01 A0   | SID 0 \n" +
+        "01 60   | SID 0 \n" +
         "6E      | true \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true \n" +
         "09      | FlexSym SID 4 (name) \n" +
         "6E      | true \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true",
         // SID 0 in delimited struct
         "F3      | Delimited struct \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true \n" +
         "09      | FlexSym SID 4 (name) \n" +
         "6E      | true \n" +
-        "01 A0   | FlexSym SID 0 \n" +
+        "01 60   | FlexSym SID 0 \n" +
         "6E      | true \n" +
         "01 F0   | End delimited struct"
     })
@@ -5299,17 +5308,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Empty field name in fixed-length SID struct
         "D4      | Struct Length = 4 \n" +
         "01      | switch to FlexSym encoding \n" +
-        "01 90   | FlexSym empty text \n" +
+        "01 75   | FlexSym empty text \n" +
         "6F      | false",
         // Empty field name in variable-length SID struct
         "FD      | Variable length SID struct \n" +
         "09      | Length = 4 \n" +
         "01      | switch to FlexSym encoding \n" +
-        "01 90   | FlexSym empty text \n" +
+        "01 75   | FlexSym empty text \n" +
         "6F      | false",
         // Empty field name in delimited struct
         "F3      | Delimited struct \n" +
-        "01 90   | FlexSym empty text \n" +
+        "01 75   | FlexSym empty text \n" +
         "6F      | false \n" +
         "01 F0   | End delimited struct"
     })
@@ -5705,14 +5714,14 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     private byte[] delimitedSymbolTable() throws Exception {
         byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
-            "E4 07                | Annotation symbol ID 3 ($ion_symbol_table)\n" +
+            "E7 01 63             | Annotation System SID 3 ($ion_symbol_table)\n" +
             "F3                   | Delimited struct\n" +
-            "0F                   | FlexSym SID 7 (symbols)\n" +
+            "01 67                | FlexSym System SID 7 (symbols)\n" +
             "F1                   | Delimited list\n" +
             "96 66 6F 6F 62 61 72 | string foobar\n" +
             "F0                   | End delimited list\n" +
             "01 F0                | End delimited struct\n" +
-            "E1 0A                | Symbol ID 10"
+            "E1 01                | Symbol ID 1"
         )));
         totalBytesInStream = input.length;
         return input;
@@ -5724,8 +5733,6 @@ public class IonReaderContinuableTopLevelBinaryTest {
         for (int initialBufferSize = 5; initialBufferSize <= 20; initialBufferSize++) {
             reader = boundedReaderFor(constructFromBytes, delimitedSymbolTable(), initialBufferSize, Integer.MAX_VALUE, byteCountingHandler);
             assertSequence(
-                // Note: this will fail if the Ion 1.1 system symbol table changes because SID 10 will point to something
-                // else. If that happens, change the input data to point to the first Ion 1.1 local symbol ID.
                 next(IonType.SYMBOL), symbolValue("foobar"),
                 next(null)
             );

@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
@@ -20,6 +7,7 @@ import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,6 +21,8 @@ import java.util.List;
 //      there are zero or one imported non-system shared symtab(s).
 final class LocalSymbolTableImports
 {
+    public static final LocalSymbolTableImports EMPTY = new LocalSymbolTableImports(Collections.emptyList());
+
     /**
      * The symtabs imported by a local symtab, never null or empty. The first
      * symtab must be a system symtab, the rest must be non-system shared
@@ -139,10 +129,11 @@ final class LocalSymbolTableImports
      */
     private static int prepBaseSids(int[] baseSids, SymbolTable[] imports)
     {
-        SymbolTable firstImport = imports[0];
+        if (imports.length == 0) {
+            return 0;
+        }
 
-        assert firstImport.isSystemTable()
-            : "first symtab must be a system symtab";
+        SymbolTable firstImport = imports[0];
 
         baseSids[0] = 0;
         int total = firstImport.getMaxId();
@@ -170,7 +161,7 @@ final class LocalSymbolTableImports
     {
         String name = null;
 
-        if (sid <= myMaxId)
+        if (sid > 0 && sid <= myMaxId)
         {
             int i, previousBaseSid = 0;
             for (i = 1; i < myImports.length; i++)

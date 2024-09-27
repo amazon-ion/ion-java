@@ -33,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class EncodingDirectiveCompilationTest {
 
+    private static final int FIRST_LOCAL_SYMBOL_ID = 1;
+
     private static void assertMacroTablesEqual(IonReader reader, Map<MacroRef, Macro> expected) {
         Map<MacroRef, Macro> actual = ((IonReaderContinuableCoreBinary) reader).getEncodingContext().getMacroTable();
         assertEquals(expected, actual);
@@ -47,36 +49,8 @@ public class EncodingDirectiveCompilationTest {
         return macroTable;
     }
 
-    // Note: this may go away once the Ion 1.1 system symbol table is finalized and implemented, or if we were to
-    // make use of inline symbols in the encoding directive.
-    private static Map<String, Integer> initializeSymbolTable(IonRawWriter_1_1 writer, String... userSymbols) {
-        Map<String, Integer> symbols = new HashMap<>();
-        int localSymbolId = SystemSymbols.ION_1_0_MAX_ID;
-        writer.writeAnnotations(SystemSymbols.ION_SYMBOL_TABLE_SID);
-        writer.stepInStruct(false);
-        writer.writeFieldName(SystemSymbols.SYMBOLS);
-        writer.stepInList(false);
-        writer.writeString(SystemSymbols.ION_ENCODING);
-        symbols.put(SystemSymbols.ION_ENCODING, ++localSymbolId);
-        writer.writeString(SystemSymbols.SYMBOL_TABLE);
-        symbols.put(SystemSymbols.SYMBOL_TABLE, ++localSymbolId);
-        writer.writeString(SystemSymbols.MACRO_TABLE);
-        symbols.put(SystemSymbols.MACRO_TABLE, ++localSymbolId);
-        writer.writeString("macro");
-        symbols.put("macro", ++localSymbolId);
-        writer.writeString("?");
-        symbols.put("?", ++localSymbolId);
-        for (String userSymbol : userSymbols) {
-            writer.writeString(userSymbol);
-            symbols.put(userSymbol, ++localSymbolId);
-        }
-        writer.stepOut();
-        writer.stepOut();
-        return symbols;
-    }
-
-    private static void startEncodingDirective(IonRawWriter_1_1 writer, Map<String, Integer> symbols) {
-        writer.writeAnnotations(symbols.get(SystemSymbols.ION_ENCODING));
+    private static void startEncodingDirective(IonRawWriter_1_1 writer) {
+        writer.writeAnnotations(SystemSymbols_1_1.ION_ENCODING);
         writer.stepInSExp(false);
     }
 
@@ -84,9 +58,9 @@ public class EncodingDirectiveCompilationTest {
         writer.stepOut();
     }
 
-    private static void writeEncodingDirectiveSymbolTable(IonRawWriter_1_1 writer, Map<String, Integer> symbols, String... userSymbols) {
+    private static void writeEncodingDirectiveSymbolTable(IonRawWriter_1_1 writer, String... userSymbols) {
         writer.stepInSExp(false);
-        writer.writeSymbol(symbols.get(SystemSymbols.SYMBOL_TABLE));
+        writer.writeSymbol(SystemSymbols.SYMBOL_TABLE);
         writer.stepInList(false);
         for (String userSymbol : userSymbols) {
             writer.writeString(userSymbol);
@@ -95,9 +69,21 @@ public class EncodingDirectiveCompilationTest {
         writer.stepOut();
     }
 
-    private static void startMacroTable(IonRawWriter_1_1 writer, Map<String, Integer> symbols) {
+    private static Map<String, Integer> initializeSymbolTable(IonRawWriter_1_1 writer, String... userSymbols) {
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, userSymbols);
+        endEncodingDirective(writer);
+        Map<String, Integer> symbols = new HashMap<>();
+        int localSymbolId = FIRST_LOCAL_SYMBOL_ID;
+        for (String userSymbol : userSymbols) {
+            symbols.put(userSymbol, localSymbolId++);
+        }
+        return symbols;
+    }
+
+    private static void startMacroTable(IonRawWriter_1_1 writer) {
         writer.stepInSExp(false);
-        writer.writeSymbol(symbols.get(SystemSymbols.MACRO_TABLE));
+        writer.writeSymbol(SystemSymbols_1_1.MACRO_TABLE);
     }
 
     private static void endMacroTable(IonRawWriter_1_1 writer) {
@@ -106,7 +92,7 @@ public class EncodingDirectiveCompilationTest {
 
     private static void startMacro(IonRawWriter_1_1 writer, Map<String, Integer> symbols, String name) {
         writer.stepInSExp(false);
-        writer.writeSymbol(symbols.get("macro"));
+        writer.writeSymbol(SystemSymbols_1_1.MACRO);
         writer.writeSymbol(symbols.get(name));
     }
 
@@ -137,9 +123,9 @@ public class EncodingDirectiveCompilationTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = IonRawBinaryWriter_1_1.from(out, 256, 0);
         writer.writeIVM();
-        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald");
-        startEncodingDirective(writer, symbols);
-        startMacroTable(writer, symbols);
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startEncodingDirective(writer);
+        startMacroTable(writer);
         startMacro(writer, symbols, "People");
         writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
         // The macro body
@@ -187,17 +173,16 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = IonRawBinaryWriter_1_1.from(out, 256, 0);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "Pi");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "Pi");
         writeMacroSignature(writer, symbols); // Empty signature
         writer.writeDecimal(new BigDecimal("3.14159")); // The body: a constant
         endMacro(writer);
         endMacroTable(writer);
         endEncodingDirective(writer);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeSymbol(10); // foo
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID); // foo
         byte[] data = getBytes(writer, out);
 
         Macro expectedMacro = new TemplateMacro(
@@ -217,9 +202,9 @@ public class EncodingDirectiveCompilationTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = IonRawBinaryWriter_1_1.from(out, 256, 0);
         writer.writeIVM();
-        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald");
-        startEncodingDirective(writer, symbols);
-        startMacroTable(writer, symbols);
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startEncodingDirective(writer);
+        startMacroTable(writer);
         startMacro(writer, symbols, "People");
         writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
         // The macro body
@@ -306,10 +291,10 @@ public class EncodingDirectiveCompilationTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = IonRawBinaryWriter_1_1.from(out, 256, 0);
         writer.writeIVM();
-        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "People");
         writeMacroSignature(writer, symbols, "$ID", "$Name", "?", "$Bald", "?");
         // The macro body
@@ -344,11 +329,9 @@ public class EncodingDirectiveCompilationTest {
         );
 
         writer.stepInStruct(true);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeFieldName(10);
+        writer.writeFieldName(FIRST_LOCAL_SYMBOL_ID);
         writer.stepInEExp(0, false, expectedMacro);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeSymbol(10);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
         // Two trailing optionals are elided.
         writer.stepOut();
         writer.stepOut();
@@ -380,10 +363,10 @@ public class EncodingDirectiveCompilationTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = IonRawBinaryWriter_1_1.from(out, 256, 0);
         writer.writeIVM();
-        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "People");
         writeMacroSignature(writer, symbols, "$ID", "$Name", "?", "$Bald", "?");
         // The macro body
@@ -418,11 +401,9 @@ public class EncodingDirectiveCompilationTest {
         );
 
         writer.stepInStruct(true);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeFieldName(10);
+        writer.writeFieldName(FIRST_LOCAL_SYMBOL_ID);
         writer.stepInEExp(0, false, expectedMacro);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeSymbol(10);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
         // Explicitly elide the optional "Name"
         writer.stepInExpressionGroup(false);
         writer.stepOut();
@@ -459,9 +440,9 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = IonRawBinaryWriter_1_1.from(out, 256, 0);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "Pi");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "Pi");
         writeMacroSignature(writer, symbols); // Empty signature
         writer.writeDecimal(new BigDecimal("3.14159")); // The body: a constant
@@ -489,9 +470,9 @@ public class EncodingDirectiveCompilationTest {
     private Macro writeSimonSaysMacro(IonRawWriter_1_1 writer) {
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "SimonSays", "anything");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "SimonSays");
         writeMacroSignature(writer, symbols, "anything");
         writer.writeSymbol(symbols.get("anything")); // The body: a variable
@@ -513,8 +494,7 @@ public class EncodingDirectiveCompilationTest {
 
         writer.stepInEExp(0, false, expectedMacro);
         writer.stepInStruct(true);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeFieldName(10);
+        writer.writeFieldName(FIRST_LOCAL_SYMBOL_ID);
         writer.writeInt(123);
         writer.stepOut();
         writer.stepOut();
@@ -591,8 +571,7 @@ public class EncodingDirectiveCompilationTest {
         writer.stepInList(true);
         writer.stepInEExp(0, false, expectedMacro);
         writer.stepInStruct(true);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeFieldName(10);
+        writer.writeFieldName(FIRST_LOCAL_SYMBOL_ID);
         writer.writeFloat(1.23);
         writer.stepOut();
         writer.stepOut();
@@ -635,8 +614,7 @@ public class EncodingDirectiveCompilationTest {
         Macro expectedMacro = writeSimonSaysMacro(writer);
 
         writer.stepInEExp(0, false, expectedMacro);
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeAnnotations(10);
+        writer.writeAnnotations(FIRST_LOCAL_SYMBOL_ID);
         writer.writeNull(IonType.TIMESTAMP);
         writer.stepOut();
 
@@ -659,9 +637,9 @@ public class EncodingDirectiveCompilationTest {
 
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "Groups", "these", "those", "*", "+");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "Groups");
         writeMacroSignature(writer, symbols, "these", "*", "those", "+");
         writer.stepInList(true);
@@ -691,8 +669,7 @@ public class EncodingDirectiveCompilationTest {
 
         writer.stepInEExp(0, false, expectedMacro);
         writer.stepInExpressionGroup(false); // TODO add a test for length-prefixed argument groups
-        // Note: this will change when the system symbol table is implemented. This is the first local symbol ID.
-        writer.writeSymbol(10);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
         writer.writeString("bar");
         writer.stepOut();
         writer.stepInExpressionGroup(false);
@@ -732,9 +709,9 @@ public class EncodingDirectiveCompilationTest {
 
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "SimonSays", "anything", "Echo");
-        startEncodingDirective(writer, symbols);
-        writeEncodingDirectiveSymbolTable(writer, symbols, "foo");
-        startMacroTable(writer, symbols);
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
         startMacro(writer, symbols, "SimonSays");
         writeMacroSignature(writer, symbols, "anything");
         writer.writeSymbol(symbols.get("anything")); // The body: a variable

@@ -102,6 +102,22 @@ public class IonReaderContinuableApplicationBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void basicSystemSymbols_1_1(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xEE, 0x04, // Symbol value SID 4 ("name")
+            0xEE, 0x05 // Symbol value SID 5 ("version")
+        );
+        assertSequence(
+            reader,
+            scalar(), fillSymbolValue("name"),
+            scalar(), fillSymbolValue("version")
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void basicLocalSymbols(boolean constructFromBytes) {
         IonReaderContinuableApplicationBinary reader = initializeReader(
             constructFromBytes,
@@ -175,6 +191,31 @@ public class IonReaderContinuableApplicationBinaryTest {
             container(
                 scalar()
             ),
+            endStream()
+        );
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void systemSymbolsEncodedUsingUserIdsAndInlineText_1_1(boolean constructFromBytes) {
+        IonReaderContinuableApplicationBinary reader = initializeReader(
+            constructFromBytes,
+            0xE0, 0x01, 0x01, 0xEA,
+            0xE7, 0xE7, '$', 'i', 'o', 'n', '_', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', // $ion_encoding::
+            0xFC, 0x27, // s-expression, length 19
+            0xFC, 0x23, // s-expression, length 17
+            0xEE, 0x0F, // 'symbol_table' (encoded as system symbol ID 15)
+            0xBE, 0x9D, '$', 'i', 'o', 'n', '_', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', // ["$ion_encoding"]
+            0xE4, 0x03, // $1::, where $1 is a local SID that points to the text "$ion_encoding"
+            0xC6, // s-expression, length 6
+            0xC5, // s-expression, length 5
+            0xEE, 0x0F, // 'symbol_table' (encoded as system symbol ID 15)
+            0xB2, 0x91, 'a', // ["a"]
+            0xE1, 0x01 // $1, which now points to "a"
+        );
+        assertSequence(
+            reader,
+            scalar(), fillSymbolValue("a"),
             endStream()
         );
     }

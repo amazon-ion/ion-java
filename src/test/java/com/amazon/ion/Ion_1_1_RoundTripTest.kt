@@ -5,6 +5,7 @@ package com.amazon.ion
 import com.amazon.ion.IonEncodingVersion.*
 import com.amazon.ion.TestUtils.*
 import com.amazon.ion.impl._Private_IonSystem
+import com.amazon.ion.impl._Private_IonWriter
 import com.amazon.ion.impl.bin.*
 import com.amazon.ion.system.*
 import java.io.ByteArrayInputStream
@@ -21,7 +22,6 @@ import org.junit.jupiter.params.provider.MethodSource
 /**
  * Suite of tests for running round trip tests on user and system values for various Ion 1.1 encodings.
  */
-@Disabled("IonCursorBinary has not been updated to read system symbols")
 class Ion_1_1_RoundTripTest {
 
     @Nested
@@ -330,10 +330,14 @@ abstract class Ion_1_1_RoundTripBase {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
+    @Disabled("Re-interpreting system directives is not supported yet.")
     open fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
 
         // Read and compare the data.
-        val actual = roundTripToByteArray { w -> w.writeValues(newSystemReader(ion)) }
+        val actual = roundTripToByteArray { w ->
+            w as _Private_IonWriter
+            w.writeValues(newSystemReader(ion)) { x -> x - 9 }
+        }
 
         printDebugInfo(ion, actual)
 
@@ -346,10 +350,14 @@ abstract class Ion_1_1_RoundTripBase {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
+    @Disabled("Re-interpreting system directives is not supported yet.")
     open fun testSystemValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
 
         // Read and compare the data.
-        val actual = roundTripToByteArray { w -> w.writeValues(newSystemReader(ion)) }
+        val actual = roundTripToByteArray { w ->
+            w as _Private_IonWriter
+            w.writeValues(newSystemReader(ion)) { x -> x - 9 }
+        }
 
         printDebugInfo(ion, actual)
 

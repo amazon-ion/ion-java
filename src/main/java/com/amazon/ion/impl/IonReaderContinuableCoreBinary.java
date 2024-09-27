@@ -40,8 +40,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.amazon.ion.SystemSymbols.ION_ENCODING;
-import static com.amazon.ion.SystemSymbols.MACRO_TABLE;
-import static com.amazon.ion.SystemSymbols.SYMBOL_TABLE;
+import static com.amazon.ion.impl.IonReaderContinuableApplicationBinary.SYMBOLS_LIST_INITIAL_CAPACITY;
+import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 
 /**
@@ -129,7 +129,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
-    protected String[] symbols;
+    protected String[] symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
 
     // The maximum offset into the 'symbols' array that points to a valid local symbol.
     protected int localSymbolMaxOffset = -1;
@@ -607,17 +607,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         long result = readFlexInt_1_1();
         if (result == 0) {
             int nextByte = buffer[(int)(peekIndex++)];
-            if (nextByte == OpCodes.INLINE_SYMBOL_ZERO_LENGTH) {
-                // Symbol zero.
-                markerToSet.endIndex = 0;
-                return 0;
-            }
-            if (nextByte == OpCodes.STRING_ZERO_LENGTH) {
-                // Inline symbol with zero length.
-                markerToSet.startIndex = peekIndex;
-                markerToSet.endIndex = peekIndex;
+            // We pretend $0 is a system symbol to reduce the number of branches here.
+            if (nextByte >= FLEX_SYM_SYSTEM_SYMBOL_OFFSET || nextByte <= (byte) (FLEX_SYM_SYSTEM_SYMBOL_OFFSET + Byte.MAX_VALUE)) {
+                markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
+                markerToSet.startIndex = -1;
+                markerToSet.endIndex = (byte)(nextByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET);
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
-                throw new IonException("FlexSym 0 may only precede symbol zero, empty string, or delimited end.");
+                throw new IonException("FlexSym 0 may only precede symbol zero, system symbol, or delimited end.");
             }
             return -1;
         } else if (result < 0) {
@@ -1086,16 +1082,39 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     /**
      * @return true if current value has a sequence of annotations that begins with `$ion_encoding`; otherwise, false.
      */
-    private boolean startsWithIonEncoding() {
-        Marker marker = annotationTokenMarkers.get(0);
-        if (marker.startIndex < 0) {
-            // TODO this is temporary until the Ion 1.1 system symbol table is finalized. At that point, we will
-            //  look up the symbol ID (held in `marker.endIndex`) in the system symbol table. Below, 10 is the
-            //  number of Ion 1.1 system symbols, providing the conversion from local symbol ID to `symbols` array
-            //  index.
-            return ION_ENCODING.equals(symbols[(int) (marker.endIndex) - 10]);
+    boolean startsWithIonEncoding() {
+        if (minorVersion > 0) {
+            Marker marker = annotationTokenMarkers.get(0);
+            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION_ENCODING);
+        }
+        return false;
+    }
+
+    /**
+     * Retrieves the String text for the given symbol ID, if the text is available.
+     * @param sid a symbol ID.
+     * @return a String.
+     */
+    String getSymbol(int sid) {
+        return null; // Symbol IDs are not resolved by the core reader.
+    }
+
+    /**
+     * Returns true if the symbol at `marker`...
+     * <p> * is a system symbol with the same ID as the expected System Symbol
+     * <p> * is an inline symbol with the same utf8 bytes as the expected System Symbol
+     * <p> * is a user symbol that maps to the same text as the expected System Symbol
+     * <p>
+     */
+    boolean matchesSystemSymbol_1_1(Marker marker, SystemSymbols_1_1 systemSymbol) {
+        if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+            return marker.endIndex == systemSymbol.getId();
+        } else if (marker.startIndex < 0) {
+            // This is a local symbol whose ID is stored in marker.endIndex.
+            return systemSymbol.getText().equals(getSymbol((int) marker.endIndex));
         } else {
-            return bytesMatch(ION_ENCODING_UTF8, buffer, (int) marker.startIndex, (int) marker.endIndex);
+            // This is an inline symbol with UTF-8 bytes bounded by the marker.
+            return bytesMatch(systemSymbol.getUtf8Bytes(), buffer, (int) marker.startIndex, (int) marker.endIndex);
         }
     }
 
@@ -1171,13 +1190,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         private void classifySexpWithinEncodingDirective() {
-            String name = stringValue();
-            if (SYMBOL_TABLE.equals(name)) {
+            String name = getSymbolText();
+            if (SystemSymbols_1_1.SYMBOL_TABLE.getText().equals(name)) {
                 state = State.IN_SYMBOL_TABLE_SEXP;
-            } else if (MACRO_TABLE.equals(name)) {
+            } else if (SystemSymbols_1_1.MACRO_TABLE.getText().equals(name)) {
                 state = State.IN_MACRO_TABLE_SEXP;
             } else {
-                throw new IonException(String.format("$ion_encoding expressions %s not supported.", name));
+                throw new IonException(String.format("$ion_encoding expressions '%s' not supported.", name));
             }
         }
 
@@ -2347,13 +2366,16 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (valueTid == null || IonType.SYMBOL != valueTid.type) {
             return false;
         }
-        return valueTid.isInlineable;
+        return valueTid.isInlineable || valueTid == IonTypeID.SYSTEM_SYMBOL_VALUE;
     }
 
     @Override
     public String getSymbolText() {
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.symbolValue().assumeText();
+        }
+        if (valueMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+            return getSystemSymbolToken(valueMarker).getText();
         }
         return readString();
     }
@@ -2425,6 +2447,32 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return new SymbolTokenImpl(sid);
     }
 
+    protected final SymbolToken getSystemSymbolToken(Marker marker) {
+        long id;
+        if (marker.startIndex == -1) {
+            id = marker.endIndex;
+        } else {
+            id = readFixedUInt_1_1(marker.startIndex, marker.endIndex);
+
+            // FIXME: This is a hack that works as long as our system symbol table doesn't grow to
+            //  more than ~95 symbols. We need this hack because when we have to read the FixedInt,
+            //  we don't know whether it's a tagless FlexSym or a Regular value.
+            //  Possible solutions include:
+            //     * changing the spec so that FlexSym System SIDs line up with the regular System SIDs
+            //     * Introducing a dummy IonTypeID that indicates that we need to add the bias
+            //     * Update IonCursorBinary.slowSkipFlexSym_1_1() to put the id into valueMarker.endIndex,
+            //       though that seems to have its own problems.
+            if (id >= FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
+                id = id - FLEX_SYM_SYSTEM_SYMBOL_OFFSET;
+            }
+        }
+        // In some cases, we pretend that $0 is a system symbol, so we must handle it here.
+        if (id == 0) {
+            return _Private_Utils.SYMBOL_0;
+        }
+        return SystemSymbols_1_1.get((int) id).getToken();
+    }
+
     @Override
     public void consumeAnnotationTokens(Consumer<SymbolToken> consumer) {
         if (annotationSequenceMarker.startIndex >= 0) {
@@ -2441,7 +2489,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             Marker marker = annotationTokenMarkers.get(i);
             if (marker.startIndex < 0) {
                 // This means the endIndex represents the token's symbol ID.
-                consumer.accept(getSymbolToken((int) marker.endIndex));
+                if (minorVersion == 1 && marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+                    consumer.accept(getSystemSymbolToken(marker));
+                } else {
+                    consumer.accept(getSymbolToken((int) marker.endIndex));
+                }
             } else {
                 // The token is inline UTF-8 text.
                 ByteBuffer utf8InputBuffer = prepareByteBuffer(marker.startIndex, marker.endIndex);
@@ -2485,13 +2537,16 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.getFieldName() != null;
         }
-        return fieldTextMarker.startIndex > -1;
+        return fieldTextMarker.startIndex > -1 || fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE;
     }
 
     @Override
     public String getFieldText() {
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.getFieldName();
+        }
+        if (fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+            return getSystemSymbolToken(fieldTextMarker).getText();
         }
         ByteBuffer utf8InputBuffer = prepareByteBuffer(fieldTextMarker.startIndex, fieldTextMarker.endIndex);
         return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
@@ -2503,7 +2558,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return macroEvaluatorIonReader.getFieldNameSymbol();
         }
         if (fieldTextMarker.startIndex > -1) {
-            return new SymbolTokenImpl(getFieldText(), -1);
+            return new SymbolTokenImpl(getFieldText(), SymbolTable.UNKNOWN_SYMBOL_ID);
+        }
+        if (fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+            return getSystemSymbolToken(fieldTextMarker);
         }
         if (fieldSid < 0) {
             return null;
@@ -2516,8 +2574,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.symbolValue();
         }
+        if (valueTid == SYSTEM_SYMBOL_VALUE) {
+            return getSystemSymbolToken(valueMarker);
+        }
         if (valueTid.isInlineable) {
-            return new SymbolTokenImpl(stringValue(), SymbolTable.UNKNOWN_SYMBOL_ID);
+            return new SymbolTokenImpl(getSymbolText(), SymbolTable.UNKNOWN_SYMBOL_ID);
         }
 
         int sid = symbolValueId();
