@@ -13,7 +13,6 @@ import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -135,7 +134,6 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
-    @Disabled("IonCursorBinary has not been updated to read system symbols in FlexSyms")
     fun `use writeValues to transform symbol IDS`() {
         `transform symbol IDS` { reader ->
             writeValues(reader) { sid -> sid + 32 }
@@ -143,7 +141,6 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
-    @Disabled("IonCursorBinary has not been updated to read system symbols in FlexSyms")
     fun `use writeValue to transform symbol IDS`() {
         `transform symbol IDS` { reader ->
             while (reader.next() != null) {

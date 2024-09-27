@@ -4,6 +4,7 @@ package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.Timestamp;
 import com.amazon.ion._private.SuppressFBWarnings;
+import com.amazon.ion.impl.SystemSymbols_1_1;
 
 /**
  * Contains constants (other than OpCodes) which are generally applicable to both reading and writing binary Ion 1.1
@@ -14,6 +15,7 @@ public class Ion_1_1_Constants {
     // When writing system symbols (or $0) in a flex sym, the SID must be offset to
     // avoid clashing with E-Expression op codes.
     public static final int FLEX_SYM_SYSTEM_SYMBOL_OFFSET = 0x60;
+    public static final int FLEX_SYM_MAX_SYSTEM_SYMBOL = 0x60 + SystemSymbols_1_1.size();
 
     static final int FIRST_2_BYTE_SYMBOL_ADDRESS = 256;
     static final int FIRST_MANY_BYTE_SYMBOL_ADDRESS = 65792;

@@ -134,34 +134,4 @@ public final class SystemSymbols
      * The name of the macro table s-expression within an Ion encoding directive.
      */
     public static final String MACRO_TABLE = "macro_table";
-
-    /**
-     * The name of the "annotate" system macro.
-     */
-    public static final String ANNOTATE = "annotate";
-
-    /**
-     * The name of the "literal" special form.
-     */
-    public static final String LITERAL = "literal";
-
-    /**
-     * The name of the "macro" s-expression in the macro table.
-     */
-    public static final String MACRO = "macro";
-
-    /**
-     * The name of the "export" s-expression in the macro table.
-     */
-    public static final String EXPORT = "export";
-
-    /**
-     * The name of the "make_sexp" system macro.
-     */
-    public static final String MAKE_SEXP = "make_sexp";
-
-    /**
-     * The sigil used to denote an expression group in TDL.
-     */
-    public static final String TDL_EXPRESSION_GROUP = ";";
 }
