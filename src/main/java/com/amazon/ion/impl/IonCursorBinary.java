@@ -1499,13 +1499,7 @@ class IonCursorBinary implements IonCursor {
         long result = uncheckedReadFlexInt_1_1();
         if (result == 0) {
             int nextByte = buffer[(int)(peekIndex++)];
-            // TODO: We could pretend $0 is a system symbol and consolidate some of the branches here. Is it worth it?
-            if (nextByte == FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
-                // Symbol zero.
-                markerToSet.endIndex = 0;
-                return 0;
-            }
-            if (isFlexSymSystemSymbol(nextByte & 0xFF)) {
+            if (isFlexSymSystemSymbolOrSid0(nextByte & SINGLE_BYTE_MASK)) {
                 setSystemSymbolMarker(markerToSet, (byte)(nextByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET));
                 return -1;
             } else if (nextByte != OpCodes.DELIMITED_END_MARKER) {
@@ -1529,11 +1523,10 @@ class IonCursorBinary implements IonCursor {
      * Determines whether a byte (specifically, the byte following a FlexSym escape byte) represents a system symbol.
      *
      * @param byteAfterEscapeCode The unsigned value of the byte after the FlexSym escape byte
-     * @return true if the byte is in the reserved range for system symbols.
+     * @return true if the byte is in the reserved range for system symbols or $0.
      */
-    private static boolean isFlexSymSystemSymbol(int byteAfterEscapeCode) {
-        // TODO: We could pretend $0 is a system symbol and consolidate some of the branches elsewhere. Is it worth it?
-        return byteAfterEscapeCode > FLEX_SYM_SYSTEM_SYMBOL_OFFSET && byteAfterEscapeCode <= FLEX_SYM_MAX_SYSTEM_SYMBOL;
+    private static boolean isFlexSymSystemSymbolOrSid0(int byteAfterEscapeCode) {
+        return byteAfterEscapeCode >= FLEX_SYM_SYSTEM_SYMBOL_OFFSET && byteAfterEscapeCode <= FLEX_SYM_MAX_SYSTEM_SYMBOL;
     }
 
     /**
@@ -1602,13 +1595,7 @@ class IonCursorBinary implements IonCursor {
             if (nextByte < 0) {
                 return true;
             }
-            // TODO: We could pretend $0 is a system symbol and consolidate some of the branches here. Is it worth it?
-            if ((byte) nextByte == FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
-                // Symbol zero.
-                markerToSet.endIndex = 0;
-                return false;
-            }
-            if (isFlexSymSystemSymbol(nextByte)) {
+            if (isFlexSymSystemSymbolOrSid0(nextByte)) {
                 setSystemSymbolMarker(markerToSet, nextByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET);
                 return false;
             } else if ((byte) nextByte != OpCodes.DELIMITED_END_MARKER) {
@@ -1660,7 +1647,6 @@ class IonCursorBinary implements IonCursor {
         SYSTEM_SYMBOL_ID {
             @Override
             IonTypeID typeIdFor(int length) {
-                // if (length > 1) throw new IllegalStateException("System Symbols always have a length of 1");
                 return SYSTEM_SYMBOL_VALUE;
             }
         },
@@ -1680,11 +1666,7 @@ class IonCursorBinary implements IonCursor {
             if (specialByte < 0) {
                 return FlexSymType.INCOMPLETE;
             }
-            // TODO: We could pretend $0 is a system symbol and consolidate some of the branches here. Is it worth it?
-            if ((byte) specialByte == FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
-                return FlexSymType.SYMBOL_ID;
-            }
-            if (isFlexSymSystemSymbol(specialByte)) {
+            if (isFlexSymSystemSymbolOrSid0(specialByte)) {
                 return FlexSymType.SYSTEM_SYMBOL_ID;
             }
             if ((byte) specialByte == OpCodes.DELIMITED_END_MARKER) {

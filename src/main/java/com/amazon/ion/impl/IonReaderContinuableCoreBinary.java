@@ -606,13 +606,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         long result = readFlexInt_1_1();
         if (result == 0) {
             int nextByte = buffer[(int)(peekIndex++)];
-            // TODO: We could pretend $0 is a system symbol and consolidate some of the branches here. Is it worth it?
-            if (nextByte == FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
-                // Symbol zero.
-                markerToSet.endIndex = 0;
-                return 0;
-            }
-            if (nextByte > FLEX_SYM_SYSTEM_SYMBOL_OFFSET || nextByte <= (byte) (FLEX_SYM_SYSTEM_SYMBOL_OFFSET + Byte.MAX_VALUE)) {
+            // We pretend $0 is a system symbol to reduce the number of branches here.
+            if (nextByte >= FLEX_SYM_SYSTEM_SYMBOL_OFFSET || nextByte <= (byte) (FLEX_SYM_SYSTEM_SYMBOL_OFFSET + Byte.MAX_VALUE)) {
                 markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
                 markerToSet.startIndex = -1;
                 markerToSet.endIndex = (byte)(nextByte - FLEX_SYM_SYSTEM_SYMBOL_OFFSET);
@@ -2466,9 +2461,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             //     * Introducing a dummy IonTypeID that indicates that we need to add the bias
             //     * Update IonCursorBinary.slowSkipFlexSym_1_1() to put the id into valueMarker.endIndex,
             //       though that seems to have its own problems.
-            if (id > FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
+            if (id >= FLEX_SYM_SYSTEM_SYMBOL_OFFSET) {
                 id = id - FLEX_SYM_SYSTEM_SYMBOL_OFFSET;
             }
+        }
+        // In some cases, we pretend that $0 is a system symbol, so we must handle it here.
+        if (id == 0) {
+            return _Private_Utils.SYMBOL_0;
         }
         return SystemSymbols_1_1.get((int) id).getToken();
     }
