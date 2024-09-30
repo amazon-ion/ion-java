@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ion-data-generator
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           repository: amazon-ion/ion-data-generator
           ref: main
@@ -78,27 +78,27 @@ jobs:
 
     steps:
       - name: Set up JDK 17
-        uses: actions/setup-java@v4.3.0
+        uses: actions/setup-java@v4.4.0
         with:
           distribution: 'corretto'
           java-version: 17
 
       - name: Checkout ion-java-benchmark-cli
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           repository: amazon-ion/ion-java-benchmark-cli
           ref: master
           path: ion-java-benchmark-cli
 
       - name: Checkout ion-java from the previous commit
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           ref: ${{ github.base_ref }}
           submodules: recursive
           path: baseline
 
       - name: Checkout ion-java from the new commit.
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
