@@ -1233,7 +1233,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Install any new symbols and macros, step out of the encoding directive, and resume reading raw values.
          */
         private void finishEncodingDirective() {
-            resetSymbolTable(); // TODO handle appended symbols
+            if (!isSymbolTableAppend) {
+                resetSymbolTable();
+            }
             installSymbols(newSymbols);
             installMacros();
             stepOutOfContainer();
@@ -1360,10 +1362,6 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                         Macro newMacro = macroCompiler.compileMacro();
                         newMacros.put(MacroRef.byId(++localMacroMaxOffset), newMacro);
                         state = State.IN_MACRO_TABLE_SEXP;
-                        break;
-                    case COMPILING_MACRO:
-                        // This state can only be reached during compilation of a macro. Do nothing, as the reader must
-                        // navigate normally while the macro is compiled.
                         break;
                     default:
                         throw new IllegalStateException(state.toString());
