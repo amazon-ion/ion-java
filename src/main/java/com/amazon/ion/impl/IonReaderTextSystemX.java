@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_ScalarConversions.getValueTypeName;
@@ -38,11 +25,17 @@ import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
+import com.amazon.ion.impl.macro.EncodingContext;
+import com.amazon.ion.impl.macro.EncodingDirectiveReader;
+import com.amazon.ion.impl.macro.MacroEvaluator;
+import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Collections;
 import java.util.Date;
-import java.lang.Character;
+import java.util.List;
 
 /**
  * This reader calls the {@link IonReaderTextRawX} for low level events.
@@ -61,6 +54,18 @@ class IonReaderTextSystemX
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
     SymbolTable _system_symtab;
+
+    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
+    protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = null;
+
+    // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
+    private MacroEvaluator macroEvaluator = null;
+
+    // The encoding context (macro table) that is currently active.
+    private EncodingContext encodingContext = null;
+
+    // Reads encoding directives from the stream.
+    private EncodingDirectiveReader encodingDirectiveReader = null;
 
     protected IonReaderTextSystemX(UnifiedInputStreamX iis)
     {
@@ -1008,5 +1013,101 @@ class IonReaderTextSystemX
     public SymbolTable pop_passed_symbol_table()
     {
         return null;
+    }
+
+    /**
+     * Sets the active symbol table.
+     * @param symbolTable the symbol table to make active.
+     */
+    protected void setSymbolTable(SymbolTable symbolTable) {
+        // System readers don't handle symbol tables.
+    }
+
+    /**
+     * While reading an encoding directive, the reader allows itself to be controlled by the MacroCompiler during
+     * compilation of a macro. While this is happening, the reader should never attempt to read another encoding
+     * directive.
+     * @return true if the reader is not in the process of compiling a macro; false if it is.
+     */
+    private boolean macroCompilationNotInProgress() {
+        return encodingDirectiveReader == null || !encodingDirectiveReader.isMacroCompilationInProgress();
+    }
+
+    /**
+     * @return true if current value has a sequence of annotations that begins with `$ion_encoding`; otherwise, false.
+     */
+    boolean startsWithIonEncoding() {
+        // TODO also resolve symbol identifiers and compare against text that looks like $ion_encoding
+        return SystemSymbols_1_1.ION_ENCODING.getText().equals(_annotations[0].getText());
+    }
+
+    /**
+     * @return true if the reader is positioned on an encoding directive; otherwise, false.
+     */
+    private boolean isPositionedOnEncodingDirective() {
+        return _annotation_count > 0
+            && _value_type == IonType.SEXP
+            && !isNullValue()
+            && macroCompilationNotInProgress()
+            && startsWithIonEncoding();
+    }
+
+    /**
+     * Reads an encoding directive and installs any symbols and/or macros found within. Upon calling this method,
+     * the reader must be positioned on an s-expression annotated with `$ion_encoding`.
+     */
+    private void readEncodingDirective() {
+        if (encodingDirectiveReader == null) {
+            encodingDirectiveReader = new EncodingDirectiveReader(this);
+        }
+        encodingDirectiveReader.reset();
+        encodingDirectiveReader.readEncodingDirective();
+        List<String> newSymbols = encodingDirectiveReader.getNewSymbols();
+        if (encodingDirectiveReader.isSymbolTableAppend()) {
+            LocalSymbolTable current = ((LocalSymbolTable) getSymbolTable());
+            for (String appendedSymbol : newSymbols) {
+                current.putSymbol(appendedSymbol);
+            }
+        } else {
+            setSymbolTable(new LocalSymbolTable(
+                // TODO handle shared symbol table imports declared in the encoding directive
+                LocalSymbolTableImports.EMPTY,
+                newSymbols
+            ));
+        }
+        encodingContext = new EncodingContext(encodingDirectiveReader.getNewMacros());
+        macroEvaluator = new MacroEvaluator();
+        macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
+    }
+
+    /**
+     * Advances the reader, if necessary and possible, to the next value, reading any Ion 1.1+ encoding directives
+     * found along the way.
+     * @return true if the reader is positioned on a value; otherwise, false.
+     */
+    protected final boolean has_next_system_value() {
+        while (!_has_next_called && !_eof) {
+            has_next_raw_value();
+            if (minorVersion > 0 && _value_type != null && IonType.DATAGRAM.equals(getContainerType()) && isPositionedOnEncodingDirective()) {
+                readEncodingDirective();
+                _has_next_called = false;
+                continue;
+            }
+            break;
+        }
+        return !_eof;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+        return has_next_system_value();
+    }
+
+    /**
+     * @return the {@link EncodingContext} currently active, or {@code null}.
+     */
+    EncodingContext getEncodingContext() {
+        return encodingContext;
     }
 }

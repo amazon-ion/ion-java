@@ -4,8 +4,12 @@ package com.amazon.ion.impl
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.IonRawTextWriter_1_1.ContainerType.*
+import com.amazon.ion.impl.IonRawTextWriter_1_1.ContainerType.List
+import com.amazon.ion.impl.bin.*
 import com.amazon.ion.impl.macro.*
+import com.amazon.ion.system.*
 import com.amazon.ion.util.*
+import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -25,6 +29,18 @@ class IonRawTextWriter_1_1 internal constructor(
 
     companion object {
         const val IVM = "\$ion_1_1"
+
+        @JvmStatic
+        fun from(output: OutputStream, blockSize: Int, options: IonTextWriterBuilder_1_1): IonRawTextWriter_1_1 {
+            val bufferedOutput = BufferedOutputStreamFastAppendable(
+                output,
+                BlockAllocatorProviders.basicProvider().vendAllocator(blockSize)
+            )
+            return IonRawTextWriter_1_1(
+                options as _Private_IonTextWriterBuilder_1_1,
+                _Private_IonTextAppender.forFastAppendable(bufferedOutput, Charsets.UTF_8)
+            )
+        }
     }
 
     enum class ContainerType {
