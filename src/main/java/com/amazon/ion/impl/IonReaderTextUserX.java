@@ -65,7 +65,7 @@ class IonReaderTextUserX
                                  int physicalStartOffset)
     {
         super(uis);
-        _symbols = _system_symtab;
+        setSymbolTable(_system_symtab);
         _physical_start_offset = physicalStartOffset;
         _catalog = catalog;
         _lstFactory = lstFactory;
@@ -75,6 +75,11 @@ class IonReaderTextUserX
                                  _Private_LocalSymbolTableFactory lstFactory,
                                  UnifiedInputStreamX uis) {
         this(catalog, lstFactory, uis, 0);
+    }
+
+    @Override
+    protected void setSymbolTable(SymbolTable symbolTable) {
+        _symbols = symbolTable;
     }
 
     /**
@@ -109,7 +114,7 @@ class IonReaderTextUserX
         {
             // first move to the next value regardless of whether
             // it's a system value or a user value
-            has_next_raw_value();
+            has_next_system_value();
 
             // system values are only at the datagram level
             // we don't care about them if they're buried
@@ -120,9 +125,9 @@ class IonReaderTextUserX
                 switch (_value_type) {
                 case STRUCT:
                     if (_annotation_count > 0 && (ION_SYMBOL_TABLE.equals(_annotations[0].getText()) || ION_SYMBOL_TABLE_SID == _annotations[0].getSid())) {
-                        _symbols = _lstFactory.newLocalSymtab(_catalog,
+                        setSymbolTable(_lstFactory.newLocalSymtab(_catalog,
                                                               this,
-                                                              true);
+                                                              true));
                         push_symbol_table(_symbols);
                         _has_next_called = false;
                     }
@@ -168,7 +173,7 @@ class IonReaderTextUserX
     {
         IonType t = next();
         assert( IonType.SYMBOL.equals(t) );
-        _symbols = _system_symtab;
+        setSymbolTable(_system_symtab);
         return;
     }
 
