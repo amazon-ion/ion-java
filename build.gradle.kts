@@ -94,7 +94,7 @@ val githubRepositoryUrl = "https://github.com/amazon-ion/ion-java/"
 val isReleaseVersion: Boolean = !version.toString().endsWith("SNAPSHOT")
 // Workflows triggered by a new release always have a tag ref.
 val isReleaseWorkflow: Boolean = (System.getenv("GITHUB_REF") ?: "").startsWith("refs/tags/")
-val generatedResourcesDir = "${layout.buildDirectory}/generated/main/resources"
+val generatedResourcesDir = layout.buildDirectory.dir("generated/main/resources")
 
 sourceSets {
     main {
@@ -107,7 +107,7 @@ licenseReport {
     // though ion-java does not depend on ion-java-cli. By default, the license report generator includes
     // the current project (ion-java) and all its subprojects.
     projects = arrayOf(project)
-    outputDir = "${layout.buildDirectory}/reports/licenses"
+    outputDir = layout.buildDirectory.dir("reports/licenses").get().asFile.path
     renderers = arrayOf(InventoryMarkdownReportRenderer(), TextReportRenderer())
     // Dependencies use inconsistent titles for Apache-2.0, so we need to specify mappings
     filters = arrayOf(
@@ -466,7 +466,7 @@ tasks {
      * for why this is done with a properties file rather than the Jar manifest.
      */
     val generateJarInfo by creating<Task> {
-        val propertiesFile = File("$generatedResourcesDir/${project.name}.properties")
+        val propertiesFile = generatedResourcesDir.get().file("${project.name}.properties").asFile
         doLast {
             propertiesFile.parentFile.mkdirs()
             val properties = Properties()
