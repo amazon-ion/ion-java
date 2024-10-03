@@ -26,14 +26,11 @@ import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.impl.macro.EncodingContext;
-import com.amazon.ion.impl.macro.EncodingDirectiveReader;
 import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 

@@ -23,6 +23,8 @@ final class LocalSymbolTableImports
 {
     public static final LocalSymbolTableImports EMPTY = new LocalSymbolTableImports(Collections.emptyList());
 
+    private static final SymbolTable[] EMPTY_SYMBOL_TABLE_ARRAY = new SymbolTable[0];
+
     /**
      * The symtabs imported by a local symtab, never null or empty. The first
      * symtab must be a system symtab, the rest must be non-system shared
@@ -244,7 +246,7 @@ final class LocalSymbolTableImports
     {
         // We have only the system symbol table, or we have none.
         // None implies an empty system symbol table, as in Ion 1.1.
-        if (myImports.length == 1 || myImports.length == 0) return new SymbolTable[0];
+        if (myImports.length == 1 || myImports.length == 0) return EMPTY_SYMBOL_TABLE_ARRAY;
 
         int nonSystemTables = myImports.length - 1; // we don't include system symtab
 
