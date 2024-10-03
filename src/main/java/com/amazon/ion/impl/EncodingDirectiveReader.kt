@@ -1,13 +1,21 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-package com.amazon.ion.impl.macro
+package com.amazon.ion.impl
 
 import com.amazon.ion.*
-import com.amazon.ion.impl.*
+import com.amazon.ion.impl.macro.Macro
+import com.amazon.ion.impl.macro.MacroCompiler
+import com.amazon.ion.impl.macro.MacroCompilerIonReader
+import com.amazon.ion.impl.macro.MacroRef
 import com.amazon.ion.impl.macro.MacroRef.Companion.byId
 
 /**
- * Reads encoding directives from the given [IonReader].
+ * Reads encoding directives from the given [IonReader]. This performs a similar function to
+ * IonReaderContinuableCoreBinary.EncodingDirectiveReader, though that one requires more logic to handle continuable
+ * input. The two could be unified at the expense of higher complexity than is needed by the non-continuable text
+ * implementation. If the text reader is replaced with a continuable implementation in the future,
+ * IonReaderContinuableCoreBinary.EncodingDirectiveReader should be moved to the top level and shared by both readers.
+ * If that were to happen, this class would no longer be needed.
  */
 class EncodingDirectiveReader(private val reader: IonReader) {
 

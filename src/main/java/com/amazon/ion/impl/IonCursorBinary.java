@@ -2497,6 +2497,7 @@ class IonCursorBinary implements IonCursor {
              macroInvocationId = valueTid.macroId;
          }
          setUserMacroInvocationMarker(valueTid, markerToSet, -1);
+         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
          return false;
      }
 
