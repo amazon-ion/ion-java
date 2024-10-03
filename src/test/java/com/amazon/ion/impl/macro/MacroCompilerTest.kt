@@ -44,11 +44,11 @@ class MacroCompilerTest {
     private infix fun String.shouldCompileTo(macro: TemplateMacro) = MacroSourceAndTemplate(this, macro)
 
     private fun testCases() = listOf(
-        "(macro identity (x) x)" shouldCompileTo TemplateMacro(
+        "(macro identity (x) (%x))" shouldCompileTo TemplateMacro(
             listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             listOf(VariableRef(0)),
         ),
-        "(macro identity (any::x) x)" shouldCompileTo TemplateMacro(
+        "(macro identity (any::x) (%x))" shouldCompileTo TemplateMacro(
             listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             listOf(VariableRef(0)),
         ),
@@ -56,26 +56,26 @@ class MacroCompilerTest {
             signature = emptyList(),
             body = listOf(DecimalValue(emptyList(), BigDecimal("3.141592653589793")))
         ),
-        "(macro cardinality_test (x?) x)" shouldCompileTo TemplateMacro(
+        "(macro cardinality_test (x?) (%x))" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, ParameterCardinality.ZeroOrOne)),
             body = listOf(VariableRef(0))
         ),
-        "(macro cardinality_test (x!) x)" shouldCompileTo TemplateMacro(
+        "(macro cardinality_test (x!) (%x))" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             body = listOf(VariableRef(0))
         ),
-        "(macro cardinality_test (x+) x)" shouldCompileTo TemplateMacro(
+        "(macro cardinality_test (x+) (%x))" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, ParameterCardinality.OneOrMore)),
             body = listOf(VariableRef(0))
         ),
-        "(macro cardinality_test (x*) x)" shouldCompileTo TemplateMacro(
+        "(macro cardinality_test (x*) (%x))" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, ParameterCardinality.ZeroOrMore)),
             body = listOf(VariableRef(0))
         ),
-        // Outer 'values' call allows multiple expressions in the body
-        // The second `values` is a macro call that has a single argument: the variable `x`
-        // The `literal` call causes the third (inner) `(values x)` to be an uninterpreted s-expression.
-        """(macro literal_test (x) (values (values x) (literal (values x))))""" shouldCompileTo TemplateMacro(
+        // Outer '.values' call allows multiple expressions in the body
+        // The second `.values` is a macro call that has a single argument: the variable `x`
+        // The third `(values x)` is an uninterpreted s-expression.
+        """(macro literal_test (x) (.values (.values (%x)) (values x)))""" shouldCompileTo TemplateMacro(
             signature = listOf(Parameter("x", Tagged, ParameterCardinality.ExactlyOne)),
             body = listOf(
                 MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 6),
@@ -86,7 +86,7 @@ class MacroCompilerTest {
                 SymbolValue(emptyList(), FakeSymbolToken("x", -1)),
             ),
         ),
-        "(macro each_type () (values null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" (literal bar) [] (literal ()) {} {{}} {{\"\"}} ))" shouldCompileTo TemplateMacro(
+        "(macro each_type () (.values null true 1 ${"9".repeat(50)} 1e0 1d0 2024-01-16T \"foo\" bar [] () {} {{}} {{\"\"}} ))" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
                 MacroInvocation(SystemMacro.Values, 0, 15),
@@ -106,7 +106,7 @@ class MacroCompilerTest {
                 ClobValue(emptyList(), ByteArray(0))
             )
         ),
-        """(macro foo () (values 42 "hello" false))""" shouldCompileTo TemplateMacro(
+        """(macro foo () (.values 42 "hello" false))""" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
                 MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 4),
@@ -115,7 +115,7 @@ class MacroCompilerTest {
                 BoolValue(emptyList(), false),
             )
         ),
-        """(macro using_expr_group () (values (; 42 "hello" false)))""" shouldCompileTo TemplateMacro(
+        """(macro using_expr_group () (.values (.. 42 "hello" false)))""" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
                 MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 5),
@@ -125,7 +125,7 @@ class MacroCompilerTest {
                 BoolValue(emptyList(), false),
             )
         ),
-        """(macro invoke_by_id () (12 true false))""" shouldCompileTo TemplateMacro(
+        """(macro invoke_by_id () (.12 true false))""" shouldCompileTo TemplateMacro(
             signature = emptyList(),
             body = listOf(
                 MacroInvocation(SystemMacro.Values, selfIndex = 0, endExclusive = 3),
@@ -137,7 +137,7 @@ class MacroCompilerTest {
             signature = emptyList(),
             body = listOf(StringValue(emptyList(), "abc"))
         ),
-        "(macro foo (x y z) [100, [200, a::b::300], x, {y: [true, false, z]}])" shouldCompileTo TemplateMacro(
+        "(macro foo (x y z) [100, [200, a::b::300], (%x), {y: [true, false, (%z)]}])" shouldCompileTo TemplateMacro(
             signature = listOf(
                 Parameter("x", Tagged, ParameterCardinality.ExactlyOne),
                 Parameter("y", Tagged, ParameterCardinality.ExactlyOne),
@@ -284,10 +284,16 @@ class MacroCompilerTest {
 
         // Problems in the body
         "(macro empty ())", // No body expression
-        "(macro transform (x) y)", // Unknown variable
-        "(macro transform (x) foo::x)", // VariableReference cannot be annotated
-        "(macro transform (x) foo::(literal x))", // Macro invocation cannot be annotated
-        """(macro transform (x) ("literal" x))""", // Macro invocation must start with a symbol or integer id
+        "(macro transform (x) (%y))", // Unknown variable
+        "(macro transform (x) foo::(%x))", // Variable expansion cannot be annotated
+        "(macro transform (x) (foo::%x))", // Variable expansion operator cannot be annotated
+        "(macro transform (x) (%foo::x))", // Variable name cannot be annotated
+        "(macro transform (x) foo::(.values x))", // Macro invocation cannot be annotated
+        "(macro transform (x) (foo::.values x))", // Macro invocation operator cannot be annotated
+        "(macro transform (x) (.))", // Macro invocation operator must be followed by macro reference
+        """(macro transform (x) (."values" x))""", // Macro invocation must start with a symbol or integer id
+        """(macro transform (x) (.values foo::(..)))""", // Expression group may not be annotated
+        """(macro transform (x) (.values (foo::..)))""", // Expression group operator may not be annotated
         "(macro transform (x) 1 2)", // Template body must be one expression
     )
 

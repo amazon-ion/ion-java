@@ -917,4 +917,29 @@ class IonRawBinaryWriter_1_1 internal constructor(
         // TODO: Write as a system symbol
         writeSymbol(cardinality.sigil.toString())
     }
+
+    override fun stepInTdlMacroInvocation(macroRef: Int) {
+        stepInSExp(usingLengthPrefix = false)
+        writeSymbol(".")
+        writeInt(macroRef.toLong())
+    }
+
+    override fun stepInTdlMacroInvocation(macroRef: String) {
+        stepInSExp(usingLengthPrefix = false)
+        writeSymbol(".")
+        writeSymbol(macroRef)
+    }
+
+    override fun writeTdlVariableExpansion(variableName: String) {
+        stepInSExp(usingLengthPrefix = false)
+        writeSymbol("%")
+        writeSymbol(variableName)
+        stepOut()
+    }
+
+    override fun stepInTdlExpressionGroup() {
+        stepInSExp(usingLengthPrefix = false)
+        // TODO: Write as a system symbol
+        writeSymbol("..")
+    }
 }

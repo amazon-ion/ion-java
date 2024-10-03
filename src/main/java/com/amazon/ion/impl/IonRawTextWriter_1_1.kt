@@ -327,7 +327,11 @@ class IonRawTextWriter_1_1 internal constructor(
     }
 
     override fun stepInSExp(usingLengthPrefix: Boolean) {
-        openValue { output.appendAscii("(") }
+        startSexp { output.appendAscii("(") }
+    }
+
+    private inline fun startSexp(openingTokens: () -> Unit) {
+        openValue(openingTokens)
         ancestorContainersStack.add(currentContainer)
         currentContainer = SExp
         currentContainerHasValues = false
@@ -403,5 +407,34 @@ class IonRawTextWriter_1_1 internal constructor(
 
     override fun writeMacroParameterCardinality(cardinality: Macro.ParameterCardinality) {
         output.appendAscii(cardinality.sigil)
+    }
+
+    override fun stepInTdlExpressionGroup() {
+        startSexp { output.appendAscii("(..") }
+        isPendingSeparator = true
+    }
+
+    override fun stepInTdlMacroInvocation(macroRef: Int) {
+        startSexp {
+            output.appendAscii("(.")
+            output.printInt(macroRef.toLong())
+        }
+        isPendingSeparator = true
+    }
+
+    override fun stepInTdlMacroInvocation(macroRef: String) {
+        startSexp {
+            output.appendAscii("(.")
+            output.appendAscii(macroRef)
+        }
+        isPendingSeparator = true
+    }
+
+    override fun writeTdlVariableExpansion(variableName: String) {
+        writeScalar {
+            output.appendAscii("(%")
+            output.appendAscii(variableName)
+            output.appendAscii(")")
+        }
     }
 }
