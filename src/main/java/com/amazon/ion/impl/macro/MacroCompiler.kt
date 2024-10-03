@@ -4,6 +4,7 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.util.confirm
 import java.math.BigDecimal
@@ -48,7 +49,7 @@ abstract class MacroCompiler(
             confirmNoAnnotations("macro signature")
             readSignature()
             confirm(nextValue()) { "Macro definition is missing a template body expression." }
-            compileTemplateBodyExpression(isQuoted = false)
+            compileTemplateBodyExpression()
             confirm(!nextValue()) { "Unexpected ${encodingType()} after template body expression." }
         }
         return TemplateMacro(signature.toList(), expressions.toList())
@@ -112,7 +113,7 @@ abstract class MacroCompiler(
      *
      * If called when the reader is not positioned on any value, throws [IllegalStateException].
      */
-    private fun compileTemplateBodyExpression(isQuoted: Boolean) {
+    private fun compileTemplateBodyExpression() {
         // NOTE: `toList()` does not allocate for an empty list.
         val annotations: List<SymbolToken> = getTypeAnnotationSymbols()
 
@@ -133,27 +134,10 @@ abstract class MacroCompiler(
             IonType.STRING -> expressions.add(StringValue(annotations, stringValue()))
             IonType.BLOB -> expressions.add(BlobValue(annotations, newBytes()))
             IonType.CLOB -> expressions.add(ClobValue(annotations, newBytes()))
-            IonType.SYMBOL -> {
-                if (isQuoted) {
-                    expressions.add(SymbolValue(annotations, symbolValue()))
-                } else {
-                    val name = stringValue()
-                    confirmNoAnnotations("on variable reference '$name'")
-                    val index = signature.indexOfFirst { it.variableName == name }
-                    confirm(index >= 0) { "variable '$name' is not recognized" }
-                    expressions.add(VariableRef(index))
-                }
-            }
-            IonType.LIST -> compileSequence(isQuoted) { start, end -> ListValue(annotations, start, end) }
-            IonType.SEXP -> {
-                if (isQuoted) {
-                    compileSequence(isQuoted = true) { start, end -> SExpValue(annotations, start, end) }
-                } else {
-                    confirmNoAnnotations(location = "a macro invocation")
-                    compileMacroInvocation()
-                }
-            }
-            IonType.STRUCT -> compileStruct(annotations, isQuoted)
+            IonType.SYMBOL -> expressions.add(SymbolValue(annotations, symbolValue()))
+            IonType.LIST -> compileList(annotations)
+            IonType.SEXP -> compileSExpression(annotations)
+            IonType.STRUCT -> compileStruct(annotations)
             // IonType.NULL, IonType.DATAGRAM, null
             else -> throw IllegalStateException("Found ${encodingType()}; this should be unreachable.")
         }
@@ -165,7 +149,7 @@ abstract class MacroCompiler(
      * If this function returns normally, it will be stepped out of the struct.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun compileStruct(annotations: List<SymbolToken>, isQuoted: Boolean) {
+    private fun compileStruct(annotations: List<SymbolToken>) {
         val start = expressions.size
         expressions.add(Placeholder)
         val templateStructIndex = mutableMapOf<String, ArrayList<Int>>()
@@ -177,7 +161,7 @@ abstract class MacroCompiler(
                 // Default is an array list with capacity of 1, since the most common case is that a field name occurs once.
                 templateStructIndex.getOrPut(it) { ArrayList(1) } += valueIndex
             }
-            compileTemplateBodyExpression(isQuoted)
+            compileTemplateBodyExpression()
         }
         val end = expressions.size
         expressions[start] = StructValue(annotations, start, end, templateStructIndex)
@@ -189,58 +173,89 @@ abstract class MacroCompiler(
      * If this function returns normally, it will be stepped out of the sequence.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private inline fun compileSequence(isQuoted: Boolean, newTemplateBodySequence: (Int, Int) -> TemplateBodyExpression) {
-        val seqStart = expressions.size
+    private fun compileList(annotations: List<SymbolToken>) {
+        val start = expressions.size
+        stepIntoContainer()
         expressions.add(Placeholder)
-        forEachInContainer { compileTemplateBodyExpression(isQuoted) }
-        val seqEnd = expressions.size
-        expressions[seqStart] = newTemplateBodySequence(seqStart, seqEnd)
+        compileExpressionTail(start) { end -> ListValue(annotations, start, end) }
     }
 
     /**
-     * Compiles a macro invocation in a macro template.
+     * Compiles an unclassified S-Expression in a template body expression.
      * When calling, the reader should be positioned at the sexp, but not stepped into it.
      * If this function returns normally, it will be stepped out of the sexp.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun compileMacroInvocation() {
+    private fun compileSExpression(sexpAnnotations: List<SymbolToken>) {
+        val start = expressions.size
         stepIntoContainer()
-        nextValue()
+        expressions.add(Placeholder)
+        if (nextValue()) {
+            if (encodingType() == IonType.SYMBOL) {
+                when (stringValue()) {
+                    TDL_VARIABLE_EXPANSION_SIGIL -> {
+                        confirm(sexpAnnotations.isEmpty()) { "Variable expansion may not be annotated" }
+                        confirmNoAnnotations("Variable expansion operator")
+                        compileVariableExpansion(start)
+                        return
+                    }
+
+                    TDL_EXPRESSION_GROUP_SIGIL -> {
+                        confirm(sexpAnnotations.isEmpty()) { "Expression group may not be annotated" }
+                        confirmNoAnnotations("Expression group operator")
+                        compileExpressionTail(start) { end -> ExpressionGroup(start, end) }
+                        return
+                    }
+
+                    TDL_MACRO_INVOCATION_SIGIL -> {
+                        confirm(sexpAnnotations.isEmpty()) { "Macro invocation may not be annotated" }
+                        confirmNoAnnotations("Macro invocation operator")
+                        nextValue()
+                        val macro = readMacroReference()
+                        compileExpressionTail(start) { end -> MacroInvocation(macro, start, end) }
+                        return
+                    }
+                }
+            }
+            // Compile the value we're already positioned on before compiling the rest of the s-expression
+            compileTemplateBodyExpression()
+        }
+        compileExpressionTail(start) { end -> SExpValue(sexpAnnotations, start, end) }
+    }
+
+    /**
+     * Must be positioned on the (expected) macro reference.
+     */
+    private fun readMacroReference(): Macro {
         val macroRef = when (encodingType()) {
             IonType.SYMBOL -> {
                 val macroName = stringValue()
                 // TODO: Come up with a consistent strategy for handling special forms.
-                when (macroName) {
-                    "literal" -> {
-                        // It's the "literal" special form; skip compiling a macro invocation and just treat all contents as literals
-                        forEachRemaining { compileTemplateBodyExpression(isQuoted = true) }
-                        stepOutOfContainer()
-                        return
-                    }
-                    ";" -> {
-                        val macroStart = expressions.size
-                        expressions.add(Placeholder)
-                        forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
-                        val macroEnd = expressions.size
-                        expressions[macroStart] = ExpressionGroup(macroStart, macroEnd)
-                        stepOutOfContainer()
-                        return
-                    }
-                    else -> MacroRef.ByName(macroName)
-                }
+                MacroRef.ByName(macroName)
             }
+
             IonType.INT -> MacroRef.ById(intValue())
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${encodingType() ?: "nothing"}\"")
         }
+        return getMacro(macroRef) ?: throw IonException("Unrecognized macro: $macroRef")
+    }
 
-        val macro = getMacro(macroRef) ?: throw IonException("Unrecognized macro: $macroRef")
+    private fun compileVariableExpansion(placeholderIndex: Int) {
+        nextValue()
+        confirm(encodingType() == IonType.SYMBOL) { "Variable names must be symbols" }
+        val name = stringValue()
+        confirmNoAnnotations("on variable reference '$name'")
+        val index = signature.indexOfFirst { it.variableName == name }
+        confirm(index >= 0) { "variable '$name' is not recognized" }
+        expressions[placeholderIndex] = VariableRef(index)
+        confirm(!nextValue()) { "Variable expansion should contain only the variable name." }
+        stepOutOfContainer()
+    }
 
-        val macroStart = expressions.size
-        expressions.add(Placeholder)
-        forEachRemaining { compileTemplateBodyExpression(isQuoted = false) }
-        val macroEnd = expressions.size
-        expressions[macroStart] = MacroInvocation(macro, macroStart, macroEnd)
-
+    private inline fun compileExpressionTail(seqStart: Int, constructor: (Int) -> TemplateBodyExpression) {
+        forEachRemaining { compileTemplateBodyExpression() }
+        val seqEnd = expressions.size
+        expressions[seqStart] = constructor(seqEnd)
         stepOutOfContainer()
     }
 

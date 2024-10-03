@@ -18,6 +18,26 @@ internal interface PrivateIonRawWriter_1_1 : IonRawWriter_1_1 {
     fun writeMacroParameterCardinality(cardinality: Macro.ParameterCardinality)
 
     /**
+     * Steps into a TDL Macro Invocation—an s-expression, followed by `.` and then the macro address
+     */
+    fun stepInTdlMacroInvocation(macroRef: Int)
+
+    /**
+     * Steps into a TDL Macro Invocation—an s-expression, followed by `.` and then the macro name
+     */
+    fun stepInTdlMacroInvocation(macroRef: String)
+
+    /**
+     * Steps in s-expression, writes `%` symbol, variable name, and then closes the s-expression.
+     */
+    fun writeTdlVariableExpansion(variableName: String)
+
+    /**
+     * Steps in s-expression and writes `..` symbol.
+     */
+    fun stepInTdlExpressionGroup()
+
+    /**
      * Sets a flag that can override the newlines that are normally inserted by a pretty printer.
      *
      * Ignored by binary implementations.

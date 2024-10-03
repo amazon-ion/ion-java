@@ -42,8 +42,6 @@ internal class IonManagedWriter_1_1(
     companion object {
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_\\d+_\\d+$")
 
-        private const val TDL_EXPRESSION_GROUP_START = ";"
-
         // These are chosen subjectively to be neither too big nor too small.
         private const val MAX_PARAMETERS_IN_ONE_LINE_SIGNATURE = 4
         private const val MAX_SYMBOLS_IN_SINGLE_LINE_SYMBOL_TABLE = 10
@@ -403,17 +401,13 @@ internal class IonManagedWriter_1_1(
 
                 when (expression) {
                     is Expression.DataModelValue -> {
-                        // If we need to write a sexp, we must use the annotate macro.
-                        // If we're writing a symbol, we can put them inside the "literal" special form.
-                        if (expression.type != IonType.SEXP && expression.type != IonType.SYMBOL) {
-                            expression.annotations.forEach {
-                                if (it.text != null) {
-                                    // TODO: If it's already in the symbol table we could check the
-                                    //       symbol-inline strategy and possibly write a SID.
-                                    writeAnnotations(it.text)
-                                } else {
-                                    writeAnnotations(it.sid)
-                                }
+                        expression.annotations.forEach {
+                            if (it.text != null) {
+                                // TODO: If it's already in the symbol table we could check the
+                                //       symbol-inline strategy and possibly write a SID.
+                                writeAnnotations(it.text)
+                            } else {
+                                writeAnnotations(it.sid)
                             }
                         }
 
@@ -432,25 +426,13 @@ internal class IonManagedWriter_1_1(
                             IonType.DECIMAL -> writeDecimal((expression as Expression.DecimalValue).value)
                             IonType.TIMESTAMP -> writeTimestamp((expression as Expression.TimestampValue).value)
                             IonType.SYMBOL -> {
-                                writeSystemSexp {
-                                    writeSymbol(SystemSymbols_1_1.LITERAL)
-                                    expression.annotations.forEach {
-                                        if (it.text != null) {
-                                            // TODO: If it's already in the symbol table we could check the
-                                            //       symbol-inline strategy and possibly write a SID.
-                                            writeAnnotations(it.text)
-                                        } else {
-                                            writeAnnotations(it.sid)
-                                        }
-                                    }
-                                    val symbolToken = (expression as Expression.SymbolValue).value
-                                    if (symbolToken.text != null) {
-                                        // TODO: If it's already in the symbol table we could check the
-                                        //       symbol-inline strategy and possibly write a SID.
-                                        writeSymbol(symbolToken.text)
-                                    } else {
-                                        writeSymbol(symbolToken.sid)
-                                    }
+                                val symbolToken = (expression as Expression.SymbolValue).value
+                                if (symbolToken.text != null) {
+                                    // TODO: If it's already in the symbol table we could check the
+                                    //       symbol-inline strategy and possibly write a SID.
+                                    writeSymbol(symbolToken.text)
+                                } else {
+                                    writeSymbol(symbolToken.sid)
                                 }
                             }
                             IonType.STRING -> writeString((expression as Expression.StringValue).value)
@@ -463,41 +445,8 @@ internal class IonManagedWriter_1_1(
                             }
                             IonType.SEXP -> {
                                 expression as Expression.HasStartAndEnd
-                                if (expression.annotations.isNotEmpty()) {
-                                    stepInSExp(usingLengthPrefix = false)
-                                    numberOfTimesToStepOut[expression.endExclusive]++
-                                    writeSymbol(SystemSymbols_1_1.ANNOTATE)
-
-                                    // Write the annotations as symbols within an expression group
-                                    writeSystemSexp {
-                                        writeSymbol(TDL_EXPRESSION_GROUP_START)
-                                        expression.annotations.forEach {
-                                            if (it.text != null) {
-                                                // TODO: If it's already in the symbol table we could check the
-                                                //       symbol-inline strategy and possibly write a SID.
-
-                                                // Write the annotation as a string so that we don't have to use
-                                                // `literal` to prevent it from being interpreted as a variable
-                                                writeString(it.text)
-                                            } else {
-                                                // TODO: See if there is a less verbose way to use SIDs in TDL
-                                                writeSystemSexp {
-                                                    writeSymbol(SystemSymbols_1_1.LITERAL)
-                                                    writeSymbol(it.sid)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                // Start a `(make_sexp [ ...` invocation
                                 stepInSExp(usingLengthPrefix = false)
                                 numberOfTimesToStepOut[expression.endExclusive]++
-                                writeSymbol(SystemSymbols_1_1.MAKE_SEXP)
-
-                                if (expression.startInclusive != expression.endExclusive) {
-                                    stepInList(usingLengthPrefix = false)
-                                    numberOfTimesToStepOut[expression.endExclusive]++
-                                }
                             }
                             IonType.STRUCT -> {
                                 expression as Expression.HasStartAndEnd
@@ -517,28 +466,22 @@ internal class IonManagedWriter_1_1(
                         }
                     }
                     is Expression.ExpressionGroup -> {
-                        stepInSExp(usingLengthPrefix = false)
+                        stepInTdlExpressionGroup()
                         numberOfTimesToStepOut[expression.endExclusive]++
-                        writeSymbol(TDL_EXPRESSION_GROUP_START)
                     }
                     is Expression.MacroInvocation -> {
-                        stepInSExp(usingLengthPrefix = false)
-                        numberOfTimesToStepOut[expression.endExclusive]++
-
                         val invokedAddress = macroTable[expression.macro]
                             ?: newMacros[expression.macro]
                             ?: throw IllegalStateException("A macro in the macro table is missing a dependency")
-
-                        if (options.invokeTdlMacrosByName) {
-                            val invokedName = macroNames[invokedAddress]
-                            if (invokedName != null) {
-                                writeSymbol(invokedName)
-                                return@forEachIndexed
-                            }
+                        val invokedName = macroNames[invokedAddress]
+                        if (options.invokeTdlMacrosByName && invokedName != null) {
+                            stepInTdlMacroInvocation(invokedName)
+                        } else {
+                            stepInTdlMacroInvocation(invokedAddress)
                         }
-                        writeInt(invokedAddress.toLong())
+                        numberOfTimesToStepOut[expression.endExclusive]++
                     }
-                    is Expression.VariableRef -> writeSymbol(macro.signature[expression.signatureIndex].variableName)
+                    is Expression.VariableRef -> writeTdlVariableExpansion(macro.signature[expression.signatureIndex].variableName)
                     else -> error("Unreachable")
                 }
             }
