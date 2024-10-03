@@ -657,7 +657,7 @@ class MacroEvaluatorTest {
     }
 
     @Test
-    fun `annotate an TDL macro invocation result`() {
+    fun `annotate a TDL macro invocation result`() {
         // Given:
         //   (macro pi () 3.14159)
         //   (macro annotate_pi (x) (.annotate (..x) (.pi)))
