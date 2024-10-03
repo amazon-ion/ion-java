@@ -493,26 +493,26 @@ internal class IonManagedWriter_1_1_Test {
                 case(
                     "symbol",
                     body = { symbol(FakeSymbolToken("foo", -1)) },
-                    expectedBody = "(literal foo)"
+                    expectedBody = "foo"
                 ),
                 case(
                     "unknown symbol",
                     body = { symbol(FakeSymbolToken(null, 0)) },
-                    expectedBody = "(literal $0)"
+                    expectedBody = "$0"
                 ),
                 case(
                     "annotated symbol",
                     body = {
                         annotated(listOf(fooSymbolToken), ::symbol, barSymbolToken)
                     },
-                    expectedBody = "(literal foo::bar)"
+                    expectedBody = "foo::bar"
                 ),
                 case(
                     "symbol annotated with $0",
                     body = {
                         annotated(listOf(FakeSymbolToken(null, 0)), ::symbol, barSymbolToken)
                     },
-                    expectedBody = "(literal $0::bar)"
+                    expectedBody = "$0::bar"
                 ),
                 case(
                     "string",
@@ -537,22 +537,22 @@ internal class IonManagedWriter_1_1_Test {
                 case(
                     "sexp",
                     body = { sexp { int(1) } },
-                    expectedBody = "(make_sexp [1])"
+                    expectedBody = "(1)"
                 ),
                 case(
                     "empty sexp",
                     body = { sexp { } },
-                    expectedBody = "(make_sexp)"
+                    expectedBody = "()"
                 ),
                 case(
                     "annotated sexp",
                     body = { annotated(listOf(fooSymbolToken), ::sexp) { int(1) } },
-                    expectedBody = "(annotate (; \"foo\") (make_sexp [1]))"
+                    expectedBody = "foo::(1)"
                 ),
                 case(
                     "sexp with $0 annotation",
                     body = { annotated(listOf(FakeSymbolToken(null, 0)), ::sexp) { int(1) } },
-                    expectedBody = "(annotate (; (literal $0)) (make_sexp [1]))"
+                    expectedBody = "$0::(1)"
                 ),
                 case(
                     "struct",
@@ -567,22 +567,22 @@ internal class IonManagedWriter_1_1_Test {
                 case(
                     "macro invoked by id",
                     body = { macro(barMacro) {} },
-                    expectedBody = "(1)"
+                    expectedBody = "(.1)"
                 ),
                 case(
                     "macro invoked by name",
                     body = { macro(fooMacro) {} },
-                    expectedBody = "(foo)"
+                    expectedBody = "(.foo)"
                 ),
                 case(
                     "macro with an argument",
                     body = { macro(fooMacro) { int(1) } },
-                    expectedBody = "(foo 1)"
+                    expectedBody = "(.foo 1)"
                 ),
                 case(
                     "macro with an empty argument group",
                     body = { macro(fooMacro) { expressionGroup { } } },
-                    expectedBody = "(foo (;))"
+                    expectedBody = "(.foo (..))"
                 ),
                 case(
                     "macro with a non-empty argument group",
@@ -595,7 +595,7 @@ internal class IonManagedWriter_1_1_Test {
                             }
                         }
                     },
-                    expectedBody = "(foo (; 1 2 3))"
+                    expectedBody = "(.foo (.. 1 2 3))"
                 ),
                 case(
                     "variable",
@@ -604,7 +604,7 @@ internal class IonManagedWriter_1_1_Test {
                     body = {
                         variable(0)
                     },
-                    expectedBody = "x"
+                    expectedBody = "(%x)"
                 ),
                 case(
                     "multiple variables",
@@ -617,7 +617,7 @@ internal class IonManagedWriter_1_1_Test {
                             variable(2)
                         }
                     },
-                    expectedBody = "[x,y,z]"
+                    expectedBody = "[(%x),(%y),(%z)]"
                 ),
                 case(
                     "nested expressions in body",
@@ -630,7 +630,7 @@ internal class IonManagedWriter_1_1_Test {
                             }
                         }
                     },
-                    expectedBody = "[(make_sexp [1]),{foo:2}]"
+                    expectedBody = "[(1),{foo:2}]"
                 ),
 
             )
@@ -664,7 +664,7 @@ internal class IonManagedWriter_1_1_Test {
               (symbol_table ["foo","bar","baz"])
               (macro_table
                 (macro null () "foo")
-                (macro null () "bar"))
+                (macro null (x) (.0 (%x) "bar" (..) (.. "baz"))))
             )
             $1
             $2
@@ -685,13 +685,29 @@ internal class IonManagedWriter_1_1_Test {
             (:2)
         """.trimIndent()
 
+        val fooMacro = constantMacro { string("foo") }
+
         val actual = write(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE, pretty = true) {
             writeSymbol("foo")
             writeSymbol("bar")
             writeSymbol("baz")
-            startMacro(constantMacro { string("foo") })
+            startMacro(fooMacro)
             endMacro()
-            startMacro(constantMacro { string("bar") })
+            startMacro(
+                TemplateMacro(
+                    listOf(Parameter.exactlyOneTagged("x")),
+                    templateBody {
+                        macro(fooMacro) {
+                            variable(0)
+                            string("bar")
+                            expressionGroup { }
+                            expressionGroup {
+                                string("baz")
+                            }
+                        }
+                    }
+                )
+            )
             endMacro()
             flush()
             writeSymbol("a")
@@ -708,7 +724,7 @@ internal class IonManagedWriter_1_1_Test {
     fun `writeObject() should write something with a macro representation`() {
         val expected = """
             $ion_1_1
-            $ion_encoding::((macro_table (macro Point2D (x y) {x:x,y:y})))
+            $ion_encoding::((macro_table (macro Point2D (x y) {x:(%x),y:(%y)})))
             (:Point2D 2 4)
         """.trimIndent()
 
@@ -743,7 +759,7 @@ internal class IonManagedWriter_1_1_Test {
     fun `writeObject() should write something with nested macro representation`() {
         val expected = """
             $ion_1_1
-            $ion_encoding::((macro_table (macro null (x*) x) (macro Polygon (vertices+ compact_symbol::fill?) {vertices:[vertices],fill:(0 fill)}) (macro Point2D (x y) {x:x,y:y})))
+            $ion_encoding::((macro_table (macro null (x*) (%x)) (macro Polygon (vertices+ compact_symbol::fill?) {vertices:[(%vertices)],fill:(.0 (%fill))}) (macro Point2D (x y) {x:(%x),y:(%y)})))
             (:Polygon (: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) Blue)
         """.trimIndent()
 

@@ -12,6 +12,10 @@ import com.amazon.ion.impl.SystemSymbols_1_1;
 public class Ion_1_1_Constants {
     private Ion_1_1_Constants() {}
 
+    public static final String TDL_MACRO_INVOCATION_SIGIL = ".";
+    public static final String TDL_EXPRESSION_GROUP_SIGIL = "..";
+    public static final String TDL_VARIABLE_EXPANSION_SIGIL = "%";
+
     // When writing system symbols (or $0) in a flex sym, the SID must be offset to
     // avoid clashing with E-Expression op codes.
     public static final int FLEX_SYM_SYSTEM_SYMBOL_OFFSET = 0x60;

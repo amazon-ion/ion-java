@@ -108,9 +108,22 @@ public class EncodingDirectiveCompilationTest {
         writer.stepOut();
     }
 
+    private static void writeVariableExpansion(IonRawWriter_1_1 writer, Integer variableNameSid) {
+        writer.stepInSExp(false);
+        writer.writeSymbol("%");
+        writer.writeSymbol(variableNameSid);
+        writer.stepOut();
+    }
+
+    private static void stepInTdlMacroInvocation(IonRawWriter_1_1 writer, Integer macroAddress) {
+        writer.stepInSExp(false);
+        writer.writeSymbol(".");
+        writer.writeInt(macroAddress);
+    }
+
     private static void writeVariableField(IonRawWriter_1_1 writer, Map<String, Integer> symbols, String fieldName, String variableName) {
         writer.writeFieldName(symbols.get(fieldName));
-        writer.writeSymbol(symbols.get(variableName));
+        writeVariableExpansion(writer, symbols.get(variableName));
     }
 
     private static byte[] getBytes(IonRawWriter_1_1 writer, ByteArrayOutputStream out) {
@@ -475,7 +488,8 @@ public class EncodingDirectiveCompilationTest {
         startMacroTable(writer);
         startMacro(writer, symbols, "SimonSays");
         writeMacroSignature(writer, symbols, "anything");
-        writer.writeSymbol(symbols.get("anything")); // The body: a variable
+        // The body
+        writeVariableExpansion(writer, symbols.get("anything"));
         endMacro(writer);
         endMacroTable(writer);
         endEncodingDirective(writer);
@@ -644,10 +658,10 @@ public class EncodingDirectiveCompilationTest {
         writeMacroSignature(writer, symbols, "these", "*", "those", "+");
         writer.stepInList(true);
         writer.stepInList(true);
-        writer.writeSymbol(symbols.get("those")); // The body: a variable
+        writeVariableExpansion(writer, symbols.get("those"));
         writer.stepOut();
         writer.stepInList(true);
-        writer.writeSymbol(symbols.get("these"));
+        writeVariableExpansion(writer, symbols.get("these"));
         writer.stepOut();
         writer.stepOut();
         endMacro(writer);
@@ -714,12 +728,11 @@ public class EncodingDirectiveCompilationTest {
         startMacroTable(writer);
         startMacro(writer, symbols, "SimonSays");
         writeMacroSignature(writer, symbols, "anything");
-        writer.writeSymbol(symbols.get("anything")); // The body: a variable
+        writeVariableExpansion(writer, symbols.get("anything")); // The body: a variable
         endMacro(writer);
         startMacro(writer, symbols, "Echo");
         writeMacroSignature(writer, symbols); // empty signature
-        writer.stepInSExp(true); // A macro invocation in TDL
-        writer.writeInt(0); // Macro ID 0 ("SimonSays")
+        stepInTdlMacroInvocation(writer, 0); // Macro ID 0 ("SimonSays")
         writer.writeInt(123); // The argument to SimonSays
         writer.stepOut();
         endMacro(writer);
