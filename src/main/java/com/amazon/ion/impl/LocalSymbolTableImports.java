@@ -242,13 +242,15 @@ final class LocalSymbolTableImports
      */
     SymbolTable[] getImportedTables()
     {
-        int count = myImports.length - 1; // we don't include system symtab
-        SymbolTable[] imports = new SymbolTable[count];
-        if (count > 0)
-        {
-            // defensive copy
-            System.arraycopy(myImports, 1, imports, 0, count);
-        }
+        // We have only the system symbol table, or we have none.
+        // None implies an empty system symbol table, as in Ion 1.1.
+        if (myImports.length == 1 || myImports.length == 0) return new SymbolTable[0];
+
+        int nonSystemTables = myImports.length - 1; // we don't include system symtab
+
+        SymbolTable[] imports = new SymbolTable[nonSystemTables];
+        // defensive copy
+        System.arraycopy(myImports, 1, imports, 0, nonSystemTables);
         return imports;
     }
 
