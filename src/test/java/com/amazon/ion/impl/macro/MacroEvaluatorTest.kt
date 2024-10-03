@@ -4,10 +4,12 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.FakeSymbolToken
 import com.amazon.ion.IonType
+import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.eExpBody
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
 import com.amazon.ion.impl.macro.SystemMacro.*
+import com.amazon.ion.impl.newSymbolToken
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.contracts.ExperimentalContracts
@@ -527,6 +529,31 @@ class MacroEvaluatorTest {
                     string("c")
                 }
                 int(1)
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<LongIntValue>(expr)
+        assertEquals(listOf("a", "b", "c"), expr.annotations.map { it.text })
+        assertEquals(1, expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `annotate a value that already has some annotations`() {
+        // Given: <system macros>
+        // When:
+        //   (:annotate (:: "a" "b") c::1)
+        // Then:
+        //   a::b::c::1
+
+        evaluator.initExpansion {
+            eexp(Annotate) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                }
+                annotated(listOf(newSymbolToken("c")), ::int, 1)
             }
         }
 

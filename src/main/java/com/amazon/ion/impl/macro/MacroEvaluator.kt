@@ -32,8 +32,8 @@ class MacroEvaluator {
          * Read the expanded values from one argument, returning exactly one value.
          * Throws an exception if there is not exactly one expanded value.
          */
-        fun readExactlyOneArgumentValue(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression {
-            return readZeroOrOneArgumentValues(expansionInfo, macroEvaluator, argName)
+        fun readExactlyOneExpandedArgumentValue(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression {
+            return readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, argName)
                 ?: throw IonException("Argument $argName expanded to nothing.")
         }
 
@@ -41,9 +41,9 @@ class MacroEvaluator {
          * Read the expanded values from one argument, returning zero or one values.
          * Throws an exception if there is more than one expanded value.
          */
-        fun readZeroOrOneArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression? {
+        fun readZeroOrOneExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression? {
             var value: DataModelExpression? = null
-            readArgumentValues(expansionInfo, macroEvaluator) {
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
                 if (value == null) {
                     value = it
                 } else {
@@ -56,7 +56,7 @@ class MacroEvaluator {
         /**
          * Reads the expanded values from one argument.
          */
-        fun readArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, callback: (DataModelExpression) -> Unit) {
+        fun readExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, callback: (DataModelExpression) -> Unit) {
             val i = expansionInfo.i
             expansionInfo.nextSourceExpression()
 
@@ -90,7 +90,7 @@ class MacroEvaluator {
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
             val annotations = mutableListOf<SymbolToken>()
 
-            readArgumentValues(expansionInfo, macroEvaluator) {
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
                 when (it) {
                     is StringValue -> annotations.add(newSymbolToken(it.value))
                     is SymbolValue -> annotations.add(it.value)
@@ -99,7 +99,7 @@ class MacroEvaluator {
                 }
             }
 
-            val valueToAnnotate = readExactlyOneArgumentValue(expansionInfo, macroEvaluator, SystemMacro.Annotate.signature[1].variableName)
+            val valueToAnnotate = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.Annotate.signature[1].variableName)
 
             // It cannot be a FieldName expression because we haven't stepped into a struct, so it must be DataModelValue
             valueToAnnotate as DataModelValue
@@ -112,7 +112,7 @@ class MacroEvaluator {
     private object MakeStringExpander : Expander {
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
             val sb = StringBuilder()
-            readArgumentValues(expansionInfo, macroEvaluator) {
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
                 when (it) {
                     is StringValue -> sb.append(it.value)
                     is SymbolValue -> sb.append(it.value.assumeText())
@@ -128,7 +128,7 @@ class MacroEvaluator {
     private object MakeSymbolExpander : Expander {
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
             val sb = StringBuilder()
-            readArgumentValues(expansionInfo, macroEvaluator) {
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
                 when (it) {
                     is StringValue -> sb.append(it.value)
                     is SymbolValue -> sb.append(it.value.assumeText())
@@ -143,11 +143,11 @@ class MacroEvaluator {
 
     private object MakeDecimalExpander : Expander {
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val coefficient = readExactlyOneArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[0].variableName)
+            val coefficient = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[0].variableName)
                 .let { it as? IntValue }
                 ?.bigIntegerValue
                 ?: throw IonException("Coefficient must be an integer")
-            val exponent = readExactlyOneArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[1].variableName)
+            val exponent = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[1].variableName)
                 .let { it as? IntValue }
                 ?.bigIntegerValue
                 ?: throw IonException("Exponent must be an integer")
