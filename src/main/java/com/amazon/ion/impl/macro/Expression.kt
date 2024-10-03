@@ -60,6 +60,8 @@ sealed interface Expression {
     sealed interface DataModelValue : DataModelExpression {
         val annotations: List<SymbolToken>
         val type: IonType
+
+        fun withAnnotations(annotations: List<SymbolToken>): DataModelValue
     }
 
     /** Expressions that represent Ion container types */
@@ -82,32 +84,44 @@ sealed interface Expression {
     data class ExpressionGroup(override val selfIndex: Int, override val endExclusive: Int) : EExpressionBodyExpression, TemplateBodyExpression, HasStartAndEnd
 
     // Scalars
-    data class NullValue(override val annotations: List<SymbolToken> = emptyList(), override val type: IonType) : DataModelValue
+    data class NullValue(override val annotations: List<SymbolToken> = emptyList(), override val type: IonType) : DataModelValue {
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
+    }
 
     data class BoolValue(override val annotations: List<SymbolToken> = emptyList(), val value: Boolean) : DataModelValue {
         override val type: IonType get() = IonType.BOOL
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
-    sealed interface IntValue : DataModelValue
+    sealed interface IntValue : DataModelValue {
+        val bigIntegerValue: BigInteger
+    }
 
     data class LongIntValue(override val annotations: List<SymbolToken> = emptyList(), val value: Long) : IntValue {
         override val type: IonType get() = IonType.INT
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
+        override val bigIntegerValue: BigInteger get() = BigInteger.valueOf(value)
     }
 
     data class BigIntValue(override val annotations: List<SymbolToken> = emptyList(), val value: BigInteger) : IntValue {
         override val type: IonType get() = IonType.INT
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
+        override val bigIntegerValue: BigInteger get() = value
     }
 
     data class FloatValue(override val annotations: List<SymbolToken> = emptyList(), val value: Double) : DataModelValue {
         override val type: IonType get() = IonType.FLOAT
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     data class DecimalValue(override val annotations: List<SymbolToken> = emptyList(), val value: BigDecimal) : DataModelValue {
         override val type: IonType get() = IonType.DECIMAL
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     data class TimestampValue(override val annotations: List<SymbolToken> = emptyList(), val value: Timestamp) : DataModelValue {
         override val type: IonType get() = IonType.TIMESTAMP
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     sealed interface TextValue : DataModelValue {
@@ -117,11 +131,13 @@ sealed interface Expression {
     data class StringValue(override val annotations: List<SymbolToken> = emptyList(), val value: String) : TextValue {
         override val type: IonType get() = IonType.STRING
         override val stringValue: String get() = value
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     data class SymbolValue(override val annotations: List<SymbolToken> = emptyList(), val value: SymbolToken) : TextValue {
         override val type: IonType get() = IonType.SYMBOL
         override val stringValue: String get() = value.assumeText()
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     sealed interface LobValue : DataModelValue {
@@ -133,6 +149,7 @@ sealed interface Expression {
     // We must override hashcode and equals in the lob types because `value` is a `byte[]`
     data class BlobValue(override val annotations: List<SymbolToken> = emptyList(), override val value: ByteArray) : LobValue {
         override val type: IonType get() = IonType.BLOB
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
         override fun hashCode(): Int = annotations.hashCode() * 31 + value.contentHashCode()
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -144,6 +161,7 @@ sealed interface Expression {
 
     data class ClobValue(override val annotations: List<SymbolToken> = emptyList(), override val value: ByteArray) : LobValue {
         override val type: IonType get() = IonType.CLOB
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
         override fun hashCode(): Int = annotations.hashCode() * 31 + value.contentHashCode()
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -165,6 +183,7 @@ sealed interface Expression {
         override val endExclusive: Int
     ) : DataModelContainer {
         override val type: IonType get() = IonType.LIST
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     /**
@@ -176,6 +195,7 @@ sealed interface Expression {
         override val endExclusive: Int
     ) : DataModelContainer {
         override val type: IonType get() = IonType.SEXP
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     /**
@@ -188,6 +208,7 @@ sealed interface Expression {
         val templateStructIndex: Map<String, List<Int>>
     ) : DataModelContainer {
         override val type: IonType get() = IonType.STRUCT
+        override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
     }
 
     data class FieldName(val value: SymbolToken) : DataModelExpression
