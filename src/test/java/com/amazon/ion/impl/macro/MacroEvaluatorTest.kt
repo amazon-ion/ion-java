@@ -4,12 +4,11 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.FakeSymbolToken
 import com.amazon.ion.IonType
-import com.amazon.ion.impl.*
+import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.eExpBody
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
 import com.amazon.ion.impl.macro.SystemMacro.*
-import com.amazon.ion.impl.newSymbolToken
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.contracts.ExperimentalContracts

@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.*
-import com.amazon.ion.impl.*
-import com.amazon.ion.impl._Private_Utils.*
+import com.amazon.ion.IonException
+import com.amazon.ion.SymbolToken
+import com.amazon.ion.impl._Private_RecyclingStack
+import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
 import java.math.BigDecimal
 
