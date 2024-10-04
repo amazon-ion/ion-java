@@ -186,7 +186,6 @@ class MacroEvaluator {
                 if (maxExclusive < 0) n < minInclusive else n < maxExclusive
             }
             val isConditionTrue = n >= minInclusive && (maxExclusive < 0 || n < maxExclusive)
-            println(isConditionTrue)
             // Save the current expansion index. This is the index of the "true" expression
             val trueExpressionPosition = expansionInfo.i
             // Now we are positioned on the "false" expression
