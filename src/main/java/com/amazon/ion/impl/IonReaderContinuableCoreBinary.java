@@ -24,6 +24,7 @@ import com.amazon.ion.impl.macro.MacroCompilerContinuable;
 import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
+import com.amazon.ion.impl.macro.SystemMacro;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -112,11 +113,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // The symbol IDs for the annotations on the current value.
     private final IntList annotationSids;
 
-    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = null;
-
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    private MacroEvaluator macroEvaluator = null;
+    private final MacroEvaluator macroEvaluator = new MacroEvaluator();
+
+    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
+    protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
     private EncodingContext encodingContext = null;
@@ -1225,8 +1226,6 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          */
         private void installMacros() {
             encodingContext = new EncodingContext(newMacros);
-            macroEvaluator = new MacroEvaluator();
-            macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
         }
 
         /**
@@ -1529,9 +1528,6 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          */
         private void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
             if (valueTid.isMacroInvocation) {
-                if (isSystemInvocation()) {
-                    throw new UnsupportedOperationException("TODO: system macros");
-                }
                 collectEExpressionArgs(expressions); // TODO avoid recursion
                 return;
             }
@@ -1664,17 +1660,24 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * @param expressions receives the expressions as they are materialized.
          */
         private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
-            if (isSystemInvocation()) {
-                throw new UnsupportedOperationException("System macro invocations not yet supported.");
-            }
+            Macro macro;
             long id = getMacroInvocationId();
-            if (id > Integer.MAX_VALUE) {
-                throw new IonException("Macro addresses larger than 2147483647 are not supported by this implementation.");
-            }
-            MacroRef address = MacroRef.byId((int) id);
-            Macro macro = encodingContext.getMacroTable().get(address);
-            if (macro == null) {
-                throw new IonException(String.format("Encountered an unknown macro address: %d.", id));
+            if (isSystemInvocation()) {
+                macro = SystemMacro.get((int) id);
+                if (macro == null) {
+                    throw new UnsupportedOperationException("System macro " + id + " not yet supported.");
+                }
+            } else {
+                if (id > Integer.MAX_VALUE) {
+                    throw new IonException("Macro addresses larger than 2147483647 are not supported by this implementation.");
+                }
+                MacroRef address = MacroRef.byId((int) id);
+                Map<MacroRef, Macro> macroTable = encodingContext.getMacroTable();
+                macro = macroTable.get(address);
+
+                if (macro == null) {
+                    throw new IonException(String.format("Encountered an unknown macro address: %d.", id));
+                }
             }
             PresenceBitmap presenceBitmap = new PresenceBitmap();
             List<Macro.Parameter> signature = macro.getSignature();
@@ -1768,7 +1771,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             event = super.nextValue();
         }
         if (valueTid != null && valueTid.isMacroInvocation) {
-            if (macroEvaluator == null) {
+            if (encodingContext == null && !isSystemInvocation()) {
                 // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
                 // but allow the user to do a raw read of the parameters if this is a core-level reader.
                 // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove
