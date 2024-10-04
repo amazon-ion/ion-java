@@ -51,14 +51,17 @@ class MacroEvaluator {
                 } else {
                     throw IonException("Too many values for argument $argName")
                 }
+                true // Continue expansion
             }
             return value
         }
 
         /**
          * Reads the expanded values from one argument.
+         *
+         * The callback should return true to continue the expansion or false to abandon the expansion early.
          */
-        fun readExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, callback: (DataModelExpression) -> Unit) {
+        fun readExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, callback: (DataModelExpression) -> Boolean) {
             val i = expansionInfo.i
             expansionInfo.nextSourceExpression()
 
@@ -74,9 +77,15 @@ class MacroEvaluator {
 
             val depth = macroEvaluator.expansionStack.size()
             var expr = macroEvaluator.expandNext(depth)
+            var continueExpansion: Boolean
             while (expr != null) {
-                callback(expr)
+                continueExpansion = callback(expr)
+                if (!continueExpansion) break
                 expr = macroEvaluator.expandNext(depth)
+            }
+            // Step back out to the original depth (in case we exited the expansion early)
+            while (macroEvaluator.expansionStack.size() > depth) {
+                macroEvaluator.expansionStack.pop()
             }
         }
     }
@@ -122,6 +131,7 @@ class MacroEvaluator {
                     is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${it.type}")
                     is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
                 }
+                true // continue expansion
             }
             return StringValue(value = sb.toString())
         }
@@ -138,6 +148,7 @@ class MacroEvaluator {
                     is DataModelValue -> throw IonException("Invalid argument type for 'make_symbol': ${it.type}")
                     is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
                 }
+                true // continue expansion
             }
             return SymbolValue(value = newSymbolToken(sb.toString()))
         }
@@ -158,6 +169,38 @@ class MacroEvaluator {
         }
     }
 
+    private enum class IfExpander(private val minInclusive: Int, private val maxExclusive: Int) : Expander {
+        IF_NONE(0, 1),
+        IF_SOME(1, -1),
+        IF_SINGLE(1, 2),
+        IF_MULTI(2, -1),
+        ;
+
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            var n = 0
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                n++
+                println(n)
+                // If there's no max, then we'll only continue the expansion if we haven't yet reached the min
+                // If there is a max, then we'll continue the expansion until we reach the max
+                if (maxExclusive < 0) n < minInclusive else n < maxExclusive
+            }
+            val isConditionTrue = n >= minInclusive && (maxExclusive < 0 || n < maxExclusive)
+            println(isConditionTrue)
+            // Save the current expansion index. This is the index of the "true" expression
+            val trueExpressionPosition = expansionInfo.i
+            // Now we are positioned on the "false" expression
+            expansionInfo.nextSourceExpression()
+            if (isConditionTrue) {
+                // If the condition is true, we can set the EXCLUSIVE END of this expansion to the position of the
+                // "false" expression, and then we reset the current index to the position of the "true" expression.
+                expansionInfo.endExclusive = expansionInfo.i
+                expansionInfo.i = trueExpressionPosition
+            }
+            return expansionInfo.nextSourceExpression()
+        }
+    }
+
     private enum class ExpansionKind(val expander: Expander) {
         Container(SimpleExpander),
         TemplateBody(SimpleExpander),
@@ -166,6 +209,10 @@ class MacroEvaluator {
         MakeString(MakeStringExpander),
         MakeSymbol(MakeSymbolExpander),
         MakeDecimal(MakeDecimalExpander),
+        IfNone(IfExpander.IF_NONE),
+        IfSome(IfExpander.IF_SOME),
+        IfSingle(IfExpander.IF_SINGLE),
+        IfMulti(IfExpander.IF_MULTI),
         ;
 
         companion object {
@@ -178,6 +225,10 @@ class MacroEvaluator {
                     SystemMacro.MakeString -> MakeString
                     SystemMacro.MakeSymbol -> MakeSymbol
                     SystemMacro.MakeDecimal -> MakeDecimal
+                    SystemMacro.IfNone -> IfNone
+                    SystemMacro.IfSome -> IfSome
+                    SystemMacro.IfSingle -> IfSingle
+                    SystemMacro.IfMulti -> IfMulti
                 }
             }
         }
