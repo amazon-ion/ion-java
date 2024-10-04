@@ -180,7 +180,6 @@ class MacroEvaluator {
             var n = 0
             readExpandedArgumentValues(expansionInfo, macroEvaluator) {
                 n++
-                println(n)
                 // If there's no max, then we'll only continue the expansion if we haven't yet reached the min
                 // If there is a max, then we'll continue the expansion until we reach the max
                 if (maxExclusive < 0) n < minInclusive else n < maxExclusive
