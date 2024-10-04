@@ -180,6 +180,14 @@ public final class _Private_Utils
         return new SymbolTokenImpl(text, sid);
     }
 
+    /**
+     * @return not null
+     */
+    public static SymbolToken newSymbolToken(String text)
+    {
+        return new SymbolTokenImpl(text, UNKNOWN_SYMBOL_ID);
+    }
+
     /** Cached copy of $0 */
     public static final SymbolTokenImpl SYMBOL_0 = newSymbolToken((String) null, 0);
 

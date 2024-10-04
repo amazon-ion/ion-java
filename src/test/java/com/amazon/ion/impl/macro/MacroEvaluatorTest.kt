@@ -4,12 +4,18 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.FakeSymbolToken
 import com.amazon.ion.IonType
+import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.eExpBody
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
 import com.amazon.ion.impl.macro.SystemMacro.*
+import java.math.BigDecimal
+import java.math.BigInteger
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class MacroEvaluatorTest {
@@ -38,6 +44,47 @@ class MacroEvaluatorTest {
     }
 
     val evaluator = MacroEvaluator()
+
+    @Test
+    fun `the 'none' system macro`() {
+        // Given: <system macros>
+        // When:
+        //   (:none)
+        // Then:
+        //   <nothing>
+
+        evaluator.initExpansion {
+            eexp(None) {}
+        }
+
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `the 'none' system macro, invoked in TDL`() {
+        // Given:
+        //   (macro blackhole (any*) (.none))
+        // When:
+        //   (:blackhole "abc" 123 true)
+        // Then:
+        //   <nothing>
+
+        val blackholeMacro = template("any*") {
+            macro(None) {}
+        }
+
+        evaluator.initExpansion {
+            eexp(blackholeMacro) {
+                expressionGroup {
+                    string("abc")
+                    int(123)
+                    bool(true)
+                }
+            }
+        }
+
+        assertEquals(null, evaluator.expandNext())
+    }
 
     @Test
     fun `a trivial constant macro evaluation`() {
@@ -385,6 +432,262 @@ class MacroEvaluatorTest {
     }
 
     @Test
+    fun `simple make_symbol`() {
+        // Given: <system macros>
+        // When:
+        //   (:make_symbol "a" "b" "c")
+        // Then:
+        //   abc
+
+        evaluator.initExpansion {
+            eexp(MakeSymbol) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                    string("c")
+                }
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<SymbolValue>(expr)
+        assertEquals("abc", expr.value.text)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `simple make_decimal`() {
+        // Given: <system macros>
+        // When:
+        //   (:make_decimal 2 4)
+        // Then:
+        //   2d4
+
+        evaluator.initExpansion {
+            eexp(MakeDecimal) {
+                int(2)
+                int(4)
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<DecimalValue>(expr)
+        assertTrue(BigDecimal.valueOf(20000).compareTo(expr.value) == 0)
+        assertEquals(BigInteger.valueOf(2), expr.value.unscaledValue())
+        assertEquals(-4, expr.value.scale())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `make_decimal from nested expressions`() {
+        // Given:
+        //   (macro fixed_point (x) (.make_decimal x (.values -2)))
+        // When:
+        //   (:fixed_point (:identity 123))
+        // Then:
+        //   1.23
+
+        val fixedPointMacro = template("x") {
+            macro(MakeDecimal) {
+                variable(0)
+                macro(Values) {
+                    expressionGroup {
+                        int(-2)
+                    }
+                }
+            }
+        }
+
+        evaluator.initExpansion {
+            eexp(fixedPointMacro) {
+                eexp(IDENTITY_MACRO) {
+                    int(123)
+                }
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<DecimalValue>(expr)
+        assertEquals(BigDecimal.valueOf(123, 2), expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `simple annotate`() {
+        // Given: <system macros>
+        // When:
+        //   (:annotate (:: "a" "b" "c") 1)
+        // Then:
+        //   a::b::c::1
+
+        evaluator.initExpansion {
+            eexp(Annotate) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                    string("c")
+                }
+                int(1)
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<LongIntValue>(expr)
+        assertEquals(listOf("a", "b", "c"), expr.annotations.map { it.text })
+        assertEquals(1, expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `annotate a value that already has some annotations`() {
+        // Given: <system macros>
+        // When:
+        //   (:annotate (:: "a" "b") c::1)
+        // Then:
+        //   a::b::c::1
+
+        evaluator.initExpansion {
+            eexp(Annotate) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                }
+                annotated(listOf(newSymbolToken("c")), ::int, 1)
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<LongIntValue>(expr)
+        assertEquals(listOf("a", "b", "c"), expr.annotations.map { it.text })
+        assertEquals(1, expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `annotate a container`() {
+        // Given: <system macros>
+        // When:
+        //   (:annotate (:: "a" "b" "c") [1])
+        // Then:
+        //   a::b::c::[1]
+
+        evaluator.initExpansion {
+            eexp(Annotate) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                    string("c")
+                }
+                list {
+                    int(1)
+                }
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<ListValue>(expr)
+        assertEquals(listOf("a", "b", "c"), expr.annotations.map { it.text })
+        evaluator.stepIn()
+        assertEquals(LongIntValue(emptyList(), 1), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+        evaluator.stepOut()
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `annotate with nested make_string`() {
+        // Given: <system macros>
+        // When:
+        //   (:annotate (:make_string (:: "a" "b" "c")) 1)
+        // Then:
+        //   abc::1
+
+        evaluator.initExpansion {
+            eexp(Annotate) {
+                eexp(MakeString) {
+                    expressionGroup {
+                        string("a")
+                        string("b")
+                        string("c")
+                    }
+                }
+                int(1)
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<LongIntValue>(expr)
+        assertEquals(listOf("abc"), expr.annotations.map { it.text })
+        assertEquals(1, expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `annotate an e-expression result`() {
+        // Given: <system macros>
+        // When:
+        //   (:annotate (:: "a" "b" "c") (:make_string "d" "e" "f"))
+        // Then:
+        //   a::b::c::"def"
+
+        evaluator.initExpansion {
+            eexp(Annotate) {
+                expressionGroup {
+                    string("a")
+                    string("b")
+                    string("c")
+                }
+
+                eexp(MakeString) {
+                    expressionGroup {
+                        string("d")
+                        string("e")
+                        string("f")
+                    }
+                }
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<StringValue>(expr)
+        assertEquals(listOf("a", "b", "c"), expr.annotations.map { it.text })
+        assertEquals("def", expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `annotate a TDL macro invocation result`() {
+        // Given:
+        //   (macro pi () 3.14159)
+        //   (macro annotate_pi (x) (.annotate (..x) (.pi)))
+        // When:
+        //   (:annotate_pi "foo")
+        // Then:
+        //   foo::3.14159
+
+        val annotatePi = template("x") {
+            macro(Annotate) {
+                expressionGroup {
+                    variable(0)
+                }
+                macro(PI_MACRO) {}
+            }
+        }
+
+        evaluator.initExpansion {
+            eexp(annotatePi) {
+                string("foo")
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<FloatValue>(expr)
+        assertEquals(listOf("foo"), expr.annotations.map { it.text })
+        assertEquals(3.14159, expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
     fun `macro with a variable substitution in struct field position`() {
         // Given:
         //   (macro foo_struct (x*) {foo: x})
@@ -501,7 +804,9 @@ class MacroEvaluatorTest {
         /** Helper function to use Expression DSL for evaluator inputs */
         fun MacroEvaluator.initExpansion(eExpression: EExpDsl.() -> Unit) = initExpansion(eExpBody(eExpression))
 
+        @OptIn(ExperimentalContracts::class)
         private inline fun <reified T> assertIsInstance(value: Any?) {
+            contract { returns() implies (value is T) }
             if (value !is T) {
                 val message = if (value == null) {
                     "Expected instance of ${T::class.qualifiedName}; was null"
