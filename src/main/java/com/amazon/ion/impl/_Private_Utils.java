@@ -183,7 +183,7 @@ public final class _Private_Utils
     /**
      * @return not null
      */
-    public static SymbolTokenImpl newSymbolToken(String text)
+    public static SymbolToken newSymbolToken(String text)
     {
         return new SymbolTokenImpl(text, UNKNOWN_SYMBOL_ID);
     }

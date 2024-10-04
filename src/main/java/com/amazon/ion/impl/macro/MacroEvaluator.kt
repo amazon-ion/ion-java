@@ -4,6 +4,7 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl._Private_Utils.*
 import com.amazon.ion.impl.macro.Expression.*
 import java.math.BigDecimal
 
