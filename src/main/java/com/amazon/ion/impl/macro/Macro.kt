@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl.macro.Macro.Parameter.Companion.exactlyOneTagged
 import com.amazon.ion.impl.macro.Macro.Parameter.Companion.zeroToManyTagged
 
 /**
@@ -116,8 +117,19 @@ data class TemplateMacro(override val signature: List<Macro.Parameter>, val body
  * Macros that are built in, rather than being defined by a template.
  */
 enum class SystemMacro(val macroName: String, override val signature: List<Macro.Parameter>) : Macro {
+    None("none", emptyList()),
     Values("values", listOf(zeroToManyTagged("values"))),
+    Annotate("annotate", listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
     MakeString("make_string", listOf(zeroToManyTagged("text"))),
+    MakeSymbol("make_symbol", listOf(zeroToManyTagged("text"))),
+    MakeDecimal(
+        "make_decimal",
+        listOf(
+            Macro.Parameter("coefficient", Macro.ParameterEncoding.CompactInt, Macro.ParameterCardinality.ExactlyOne),
+            Macro.Parameter("exponent", Macro.ParameterEncoding.CompactInt, Macro.ParameterCardinality.ExactlyOne),
+        )
+    ),
+
     // TODO: Other system macros
     ;
 

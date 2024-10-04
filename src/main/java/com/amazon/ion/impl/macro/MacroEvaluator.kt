@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.*
-import com.amazon.ion.impl.*
+import com.amazon.ion.IonException
+import com.amazon.ion.SymbolToken
+import com.amazon.ion.impl._Private_RecyclingStack
+import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
+import java.math.BigDecimal
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -26,6 +29,56 @@ class MacroEvaluator {
      */
     private fun interface Expander {
         fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression
+
+        /**
+         * Read the expanded values from one argument, returning exactly one value.
+         * Throws an exception if there is not exactly one expanded value.
+         */
+        fun readExactlyOneExpandedArgumentValue(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression {
+            return readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, argName)
+                ?: throw IonException("Argument $argName expanded to nothing.")
+        }
+
+        /**
+         * Read the expanded values from one argument, returning zero or one values.
+         * Throws an exception if there is more than one expanded value.
+         */
+        fun readZeroOrOneExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression? {
+            var value: DataModelExpression? = null
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                if (value == null) {
+                    value = it
+                } else {
+                    throw IonException("Too many values for argument $argName")
+                }
+            }
+            return value
+        }
+
+        /**
+         * Reads the expanded values from one argument.
+         */
+        fun readExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, callback: (DataModelExpression) -> Unit) {
+            val i = expansionInfo.i
+            expansionInfo.nextSourceExpression()
+
+            macroEvaluator.pushExpansion(
+                expansionKind = ExpansionKind.Values,
+                argsStartInclusive = i,
+                // There can only be one top-level expression for an argument (it's either a value, macro, or
+                // expression group) so we can set the end to one more than the start.
+                argsEndExclusive = i + 1,
+                environment = expansionInfo.environment ?: Environment.EMPTY,
+                expressions = expansionInfo.expressions!!,
+            )
+
+            val depth = macroEvaluator.expansionStack.size()
+            var expr = macroEvaluator.expandNext(depth)
+            while (expr != null) {
+                callback(expr)
+                expr = macroEvaluator.expandNext(depth)
+            }
+        }
     }
 
     private object SimpleExpander : Expander {
@@ -34,20 +87,39 @@ class MacroEvaluator {
         }
     }
 
+    private object AnnotateExpander : Expander {
+        // TODO: Handle edge cases mentioned in https://github.com/amazon-ion/ion-docs/issues/347
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            val annotations = mutableListOf<SymbolToken>()
+
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                when (it) {
+                    is StringValue -> annotations.add(newSymbolToken(it.value))
+                    is SymbolValue -> annotations.add(it.value)
+                    is DataModelValue -> throw IonException("Annotation arguments must be string or symbol; found: ${it.type}")
+                    is FieldName -> TODO("Unreachable. Must encounter a StructValue first.")
+                }
+            }
+
+            val valueToAnnotate = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.Annotate.signature[1].variableName)
+
+            // It cannot be a FieldName expression because we haven't stepped into a struct, so it must be DataModelValue
+            valueToAnnotate as DataModelValue
+            // Combine the annotations
+            annotations.addAll(valueToAnnotate.annotations)
+            return valueToAnnotate.withAnnotations(annotations)
+        }
+    }
+
     private object MakeStringExpander : Expander {
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            // Tell the macro evaluator to treat this as a values expansion...
-            macroEvaluator.expansionStack.peek().expansionKind = ExpansionKind.Values
-            val minDepth = macroEvaluator.expansionStack.size()
-            // ...But capture the output and turn it into a String
             val sb = StringBuilder()
-            while (true) {
-                when (val expr: DataModelExpression? = macroEvaluator.expandNext(minDepth)) {
-                    is StringValue -> sb.append(expr.value)
-                    is SymbolValue -> sb.append(expr.value.assumeText())
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                when (it) {
+                    is StringValue -> sb.append(it.value)
+                    is SymbolValue -> sb.append(it.value.assumeText())
                     is NullValue -> {}
-                    null -> break
-                    is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${expr.type}")
+                    is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${it.type}")
                     is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
                 }
             }
@@ -55,19 +127,57 @@ class MacroEvaluator {
         }
     }
 
+    private object MakeSymbolExpander : Expander {
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            val sb = StringBuilder()
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                when (it) {
+                    is StringValue -> sb.append(it.value)
+                    is SymbolValue -> sb.append(it.value.assumeText())
+                    is NullValue -> {}
+                    is DataModelValue -> throw IonException("Invalid argument type for 'make_symbol': ${it.type}")
+                    is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
+                }
+            }
+            return SymbolValue(value = newSymbolToken(sb.toString()))
+        }
+    }
+
+    private object MakeDecimalExpander : Expander {
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            val coefficient = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[0].variableName)
+                .let { it as? IntValue }
+                ?.bigIntegerValue
+                ?: throw IonException("Coefficient must be an integer")
+            val exponent = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[1].variableName)
+                .let { it as? IntValue }
+                ?.bigIntegerValue
+                ?: throw IonException("Exponent must be an integer")
+
+            return DecimalValue(value = BigDecimal(coefficient, -1 * exponent.intValueExact()))
+        }
+    }
+
     private enum class ExpansionKind(val expander: Expander) {
         Container(SimpleExpander),
         TemplateBody(SimpleExpander),
         Values(SimpleExpander),
+        Annotate(AnnotateExpander),
         MakeString(MakeStringExpander),
+        MakeSymbol(MakeSymbolExpander),
+        MakeDecimal(MakeDecimalExpander),
         ;
 
         companion object {
             @JvmStatic
             fun forSystemMacro(macro: SystemMacro): ExpansionKind {
                 return when (macro) {
+                    SystemMacro.None -> Values // "none" takes no args, so we can treat it as an empty "values" expansion
                     SystemMacro.Values -> Values
+                    SystemMacro.Annotate -> Annotate
                     SystemMacro.MakeString -> MakeString
+                    SystemMacro.MakeSymbol -> MakeSymbol
+                    SystemMacro.MakeDecimal -> MakeDecimal
                 }
             }
         }
