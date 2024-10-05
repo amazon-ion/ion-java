@@ -8,6 +8,8 @@ import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
 import com.amazon.ion.impl.macro.Macro.*
+import com.amazon.ion.impl.macro.ParameterFactory.exactlyOneTagged
+import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
 import com.amazon.ion.system.*
 import java.io.ByteArrayOutputStream
 import java.math.BigInteger
@@ -199,8 +201,8 @@ internal class IonManagedWriter_1_1_Test {
     fun `write an e-expression with a expression group argument`() {
         val macro = TemplateMacro(
             signature = listOf(
-                Parameter.zeroToManyTagged("a"),
-                Parameter.zeroToManyTagged("b"),
+                zeroToManyTagged("a"),
+                zeroToManyTagged("b"),
             ),
             body = templateBody { string("foo") }
         )
@@ -399,14 +401,14 @@ internal class IonManagedWriter_1_1_Test {
             return listOf(
                 case(
                     "single required parameter",
-                    signature = listOf(Parameter.exactlyOneTagged("x")),
+                    signature = listOf(exactlyOneTagged("x")),
                     expectedSignature = "(x)"
                 ),
                 case(
                     "multiple required parameters",
                     signature = listOf(
-                        Parameter.exactlyOneTagged("x"),
-                        Parameter.exactlyOneTagged("y")
+                        exactlyOneTagged("x"),
+                        exactlyOneTagged("y")
                     ),
                     expectedSignature = "(x y)"
                 ),
@@ -599,7 +601,7 @@ internal class IonManagedWriter_1_1_Test {
                 ),
                 case(
                     "variable",
-                    signature = listOf(Parameter.exactlyOneTagged("x")),
+                    signature = listOf(exactlyOneTagged("x")),
                     expectedSignature = "(x)",
                     body = {
                         variable(0)
@@ -608,7 +610,7 @@ internal class IonManagedWriter_1_1_Test {
                 ),
                 case(
                     "multiple variables",
-                    signature = listOf("x", "y", "z").map(Parameter::exactlyOneTagged),
+                    signature = listOf("x", "y", "z").map(::exactlyOneTagged),
                     expectedSignature = "(x y z)",
                     body = {
                         list {
@@ -695,7 +697,7 @@ internal class IonManagedWriter_1_1_Test {
             endMacro()
             startMacro(
                 TemplateMacro(
-                    listOf(Parameter.exactlyOneTagged("x")),
+                    listOf(exactlyOneTagged("x")),
                     templateBody {
                         macro(fooMacro) {
                             variable(0)
@@ -787,7 +789,7 @@ internal class IonManagedWriter_1_1_Test {
             // Using the qualified class name would be verbose, but may be safer for general
             // use so that there is almost no risk of having a name conflict with another macro.
             private val MACRO_NAME = Polygon::class.simpleName!!.replace(".", "_")
-            private val IDENTITY = TemplateMacro(listOf(Parameter.zeroToManyTagged("x")), templateBody { variable(0) })
+            private val IDENTITY = TemplateMacro(listOf(zeroToManyTagged("x")), templateBody { variable(0) })
             private val MACRO = TemplateMacro(
                 signature = listOf(
                     // TODO: Change this to a macro shape when they are supported
@@ -843,8 +845,8 @@ internal class IonManagedWriter_1_1_Test {
             private val MACRO_NAME = Point2D::class.simpleName!!.replace(".", "_")
             private val MACRO = TemplateMacro(
                 signature = listOf(
-                    Parameter.exactlyOneTagged("x"),
-                    Parameter.exactlyOneTagged("y"),
+                    exactlyOneTagged("x"),
+                    exactlyOneTagged("y"),
                 ),
                 templateBody {
                     struct {

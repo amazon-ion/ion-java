@@ -13,6 +13,7 @@ import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroRef;
+import com.amazon.ion.impl.macro.ParameterFactory;
 import com.amazon.ion.impl.macro.TemplateMacro;
 import com.amazon.ion.system.IonReaderBuilder;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -906,7 +907,7 @@ public class EncodingDirectiveCompilationTest {
 
         Macro simonSaysMacro = new TemplateMacro(
             Collections.singletonList(
-                Macro.Parameter.exactlyOneTagged("anything")
+                ParameterFactory.exactlyOneTagged("anything")
             ),
             Collections.singletonList(
                 new Expression.VariableRef(0)
