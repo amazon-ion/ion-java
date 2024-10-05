@@ -791,12 +791,18 @@ class MacroEvaluatorTest {
 
     object IfExpanderTestParameters {
         val SINGLE_VALUE = template { int(1) }
-        val MULTI_VALUE_STREAM = template {
+        val SINGLE_VALUE_STREAM = template {
+            macro(Values) {
+                expressionGroup {
+                    int(2)
+                }
+            }
+        }
+        val TWO_VALUE_STREAM = template {
             macro(Values) {
                 expressionGroup {
                     int(3)
                     int(4)
-                    int(5)
                 }
             }
         }
@@ -805,19 +811,23 @@ class MacroEvaluatorTest {
         fun parameters() = listOf(
             arguments(IfNone, None, true),
             arguments(IfNone, SINGLE_VALUE, false),
-            arguments(IfNone, MULTI_VALUE_STREAM, false),
+            arguments(IfNone, SINGLE_VALUE_STREAM, false),
+            arguments(IfNone, TWO_VALUE_STREAM, false),
 
             arguments(IfSome, None, false),
             arguments(IfSome, SINGLE_VALUE, true),
-            arguments(IfSome, MULTI_VALUE_STREAM, true),
+            arguments(IfSome, SINGLE_VALUE_STREAM, true),
+            arguments(IfSome, TWO_VALUE_STREAM, true),
 
             arguments(IfSingle, None, false),
             arguments(IfSingle, SINGLE_VALUE, true),
-            arguments(IfSingle, MULTI_VALUE_STREAM, false),
+            arguments(IfSingle, SINGLE_VALUE_STREAM, true),
+            arguments(IfSingle, TWO_VALUE_STREAM, false),
 
             arguments(IfMulti, None, false),
             arguments(IfMulti, SINGLE_VALUE, false),
-            arguments(IfMulti, MULTI_VALUE_STREAM, true),
+            arguments(IfMulti, SINGLE_VALUE_STREAM, false),
+            arguments(IfMulti, TWO_VALUE_STREAM, true),
         )
     }
 
