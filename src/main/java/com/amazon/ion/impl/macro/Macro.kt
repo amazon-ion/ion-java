@@ -131,6 +131,12 @@ enum class SystemMacro(val macroName: String, override val signature: List<Macro
     ),
 
     // TODO: Other system macros
+
+    // Technically not system macros, but special forms. However, it's easier to model them as if they are macros in TDL.
+    IfNone("IfNone", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfSome("IfSome", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfSingle("IfSingle", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfMulti("IfMulti", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
     ;
 
     override val dependencies: List<Macro>
