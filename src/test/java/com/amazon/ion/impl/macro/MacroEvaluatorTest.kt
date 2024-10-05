@@ -17,6 +17,9 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.MethodSource
 
 class MacroEvaluatorTest {
 
@@ -35,7 +38,7 @@ class MacroEvaluatorTest {
         }
     }
 
-    val ABCs_MACRO = template() {
+    val ABCs_LIST_MACRO = template {
         list {
             string("a")
             string("b")
@@ -186,7 +189,7 @@ class MacroEvaluatorTest {
         //   [ "a", "b", "c" ]
 
         evaluator.initExpansion {
-            eexp(ABCs_MACRO) {}
+            eexp(ABCs_LIST_MACRO) {}
         }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
@@ -209,7 +212,7 @@ class MacroEvaluatorTest {
         //   [ "a", "b", "c" ]
 
         evaluator.initExpansion {
-            eexp(ABCs_MACRO) {}
+            eexp(ABCs_LIST_MACRO) {}
         }
 
         assertIsInstance<ListValue>(evaluator.expandNext())
@@ -786,8 +789,74 @@ class MacroEvaluatorTest {
         assertEquals(null, evaluator.expandNext())
     }
 
-    companion object {
+    object IfExpanderTestParameters {
+        val SINGLE_VALUE = template { int(1) }
+        val SINGLE_VALUE_STREAM = template {
+            macro(Values) {
+                expressionGroup {
+                    int(2)
+                }
+            }
+        }
+        val TWO_VALUE_STREAM = template {
+            macro(Values) {
+                expressionGroup {
+                    int(3)
+                    int(4)
+                }
+            }
+        }
 
+        @JvmStatic
+        fun parameters() = listOf(
+            arguments(IfNone, None, true),
+            arguments(IfNone, SINGLE_VALUE, false),
+            arguments(IfNone, SINGLE_VALUE_STREAM, false),
+            arguments(IfNone, TWO_VALUE_STREAM, false),
+
+            arguments(IfSome, None, false),
+            arguments(IfSome, SINGLE_VALUE, true),
+            arguments(IfSome, SINGLE_VALUE_STREAM, true),
+            arguments(IfSome, TWO_VALUE_STREAM, true),
+
+            arguments(IfSingle, None, false),
+            arguments(IfSingle, SINGLE_VALUE, true),
+            arguments(IfSingle, SINGLE_VALUE_STREAM, true),
+            arguments(IfSingle, TWO_VALUE_STREAM, false),
+
+            arguments(IfMulti, None, false),
+            arguments(IfMulti, SINGLE_VALUE, false),
+            arguments(IfMulti, SINGLE_VALUE_STREAM, false),
+            arguments(IfMulti, TWO_VALUE_STREAM, true),
+        )
+    }
+
+    @ParameterizedTest
+    @MethodSource("com.amazon.ion.impl.macro.MacroEvaluatorTest\$IfExpanderTestParameters#parameters")
+    fun `check 'if' expansion logic`(ifSpecialForm: SystemMacro, expressionToTest: Macro, expectMatches: Boolean) {
+        // Given:
+        //   (macro test_if (x*) (<ifSpecialForm> (%x) "a" "b"))
+        // When:
+        //   (:test_if <expressionToTest>)
+        // Then:
+        //   "a" or "b" depending on whether we expect it to match.
+
+        val theMacro = template("x*") {
+            macro(ifSpecialForm) {
+                variable(0)
+                string("a")
+                string("b")
+            }
+        }
+
+        evaluator.initExpansion { eexp(theMacro) { eexp(expressionToTest) {} } }
+
+        val expectedString = if (expectMatches) "a" else "b"
+        assertEquals(StringValue(value = expectedString), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    companion object {
         /** Helper function to create template macros */
         fun template(vararg parameters: String, body: TemplateDsl.() -> Unit): Macro {
             val signature = parameters.map {
