@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.impl.*
-import com.amazon.ion.impl.macro.Macro.Parameter.Companion.exactlyOneTagged
-import com.amazon.ion.impl.macro.Macro.Parameter.Companion.zeroToManyTagged
+import com.amazon.ion.impl.TaglessEncoding
 
 /**
  * A [Macro] is either a [SystemMacro] or a [TemplateMacro].
@@ -15,13 +13,6 @@ sealed interface Macro {
 
     data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
         override fun toString() = "$type::$variableName${cardinality.sigil}"
-
-        companion object {
-            @JvmStatic
-            fun zeroToManyTagged(name: String) = Parameter(name, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)
-            @JvmStatic
-            fun exactlyOneTagged(name: String) = Parameter(name, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
-        }
     }
 
     // TODO: See if we can DRY up ParameterEncoding and PrimitiveType
@@ -81,64 +72,4 @@ sealed interface Macro {
             }
         }
     }
-}
-
-/**
- * Represents a template macro. A template macro is defined by a signature, and a list of template expressions.
- * A template macro only gains a name and/or ID when it is added to a macro table.
- */
-data class TemplateMacro(override val signature: List<Macro.Parameter>, val body: List<Expression.TemplateBodyExpression>) : Macro {
-    // TODO: Consider rewriting the body of the macro if we discover that there are any macros invoked using only
-    //       constants as arguments—either at compile time or lazily.
-    //       For example, the body of: (macro foo (x)  (values (make_string "foo" "bar") x))
-    //       could be rewritten as: (values "foobar" x)
-
-    private val cachedHashCode by lazy { signature.hashCode() * 31 + body.hashCode() }
-    override fun hashCode(): Int = cachedHashCode
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TemplateMacro) return false
-        // Check the hashCode as a quick check before we dive into the actual data.
-        if (cachedHashCode != other.cachedHashCode) return false
-        if (signature != other.signature) return false
-        if (body != other.body) return false
-        return true
-    }
-
-    override val dependencies: List<Macro> by lazy {
-        body.filterIsInstance<Expression.MacroInvocation>()
-            .map { it.macro }
-            .distinct()
-    }
-}
-
-/**
- * Macros that are built in, rather than being defined by a template.
- */
-enum class SystemMacro(val macroName: String, override val signature: List<Macro.Parameter>) : Macro {
-    None("none", emptyList()),
-    Values("values", listOf(zeroToManyTagged("values"))),
-    Annotate("annotate", listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
-    MakeString("make_string", listOf(zeroToManyTagged("text"))),
-    MakeSymbol("make_symbol", listOf(zeroToManyTagged("text"))),
-    MakeDecimal(
-        "make_decimal",
-        listOf(
-            Macro.Parameter("coefficient", Macro.ParameterEncoding.CompactInt, Macro.ParameterCardinality.ExactlyOne),
-            Macro.Parameter("exponent", Macro.ParameterEncoding.CompactInt, Macro.ParameterCardinality.ExactlyOne),
-        )
-    ),
-
-    // TODO: Other system macros
-
-    // Technically not system macros, but special forms. However, it's easier to model them as if they are macros in TDL.
-    IfNone("IfNone", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfSome("IfSome", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfSingle("IfSingle", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfMulti("IfMulti", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    ;
-
-    override val dependencies: List<Macro>
-        get() = emptyList()
 }
