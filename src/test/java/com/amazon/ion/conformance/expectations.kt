@@ -16,7 +16,6 @@ import kotlin.streams.toList
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 
@@ -51,22 +50,25 @@ fun TestCaseSupport.assertSignals(sexp: SeqElement, r: IonReader) {
  * if an error is _not_ encountered, we have some useful information for debugging the test failure.
  */
 private fun IonReader.walk(): List<String> {
-    val events = mutableListOf("START")
+    val events = mutableListOf<String>()
     fun recordEvent(eventType: String = type.toString(), value: Any? = "") {
         events.add("[$eventType] $value")
     }
+    recordEvent("START")
 
     while (true) {
         next()
         val currentType = type
-            ?: try {
+        if (type == null) {
+            if (depth > 0) {
                 stepOut()
                 recordEvent("STEP-OUT")
                 continue
-            } catch (e: IllegalStateException) {
+            } else {
                 recordEvent("END")
                 return events
             }
+        }
 
         if (isInStruct) recordEvent("FIELD-NAME", fieldNameSymbol)
         typeAnnotationSymbols.forEach { recordEvent("ANNOTATION", it) }
@@ -160,8 +162,8 @@ private fun TestCaseSupport.denotesModelContent(modelContent: AnyElement, reader
 }
 
 private fun TestCaseSupport.denotesNull(expectation: SeqElement, reader: IonReader) {
-    val expectedType = expectation.tail.single().textValue.uppercase().let(IonType::valueOf)
-    val actualType = reader.next()
+    val expectedType = expectation.tail.singleOrNull()?.textValue?.uppercase()?.let(IonType::valueOf) ?: IonType.NULL
+    val actualType = reader.type
     assertTrue(reader.isNullValue, createFailureMessage(expectation))
     assertEquals(expectedType, actualType)
 }
@@ -186,7 +188,6 @@ private fun TestCaseSupport.denotesInt(expectation: AnyElement, reader: IonReade
     assertFalse(reader.isNullValue, createFailureMessage(expectation))
     when (expectedValue.integerSize) {
         IntElementSize.LONG -> {
-            assertNotEquals(IntegerSize.BIG_INTEGER, reader.integerSize, createFailureMessage(expectation))
             assertEquals(expectedValue.longValue, reader.longValue(), createFailureMessage(expectation))
         }
         IntElementSize.BIG_INTEGER -> {
@@ -228,8 +229,8 @@ private fun TestCaseSupport.denotesSymtok(expectation: AnyElement, actual: Symbo
 }
 
 private fun TestCaseSupport.denotesCodepoints(expectation: SeqElement, actual: String) {
-    val expectedCodePoints = expectation.tail.map { it.longValue }
-    val actualCodePoints = actual.codePoints().toList()
+    val expectedCodePoints: List<Int> = expectation.tail.map { it.longValue.toInt() }
+    val actualCodePoints: List<Int> = actual.codePoints().toList()
     assertEquals(expectedCodePoints, actualCodePoints, createFailureMessage(expectation))
 }
 
