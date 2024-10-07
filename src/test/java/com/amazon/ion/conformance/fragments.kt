@@ -154,10 +154,17 @@ private fun TestCaseSupport.readFragment(fragment: SeqElement, encoding: Encodin
 
 /** Reads an `IVM` fragment and returns a byte array with an IVM for the given [encoding]. */
 private fun TestCaseSupport.readIvmFragment(fragment: SeqElement, encoding: Encoding): Pair<ByteArray, Encoding> {
-    require(fragment.values[1].longValue == 1L)
+    val major = fragment.values[1].longValue
     val minor = fragment.values[2].longValue
-    val newEncodingVersion = encoding.getEncodingVersion(minor.toInt())
-    return newEncodingVersion.ivmBytes to newEncodingVersion
+    val ivmBytes = if (encoding is Text) {
+        "\$ion_${major}_$minor".toByteArray()
+    } else {
+        byteArrayOf(0xE0.toByte(), major.toByte(), minor.toByte(), 0xEA.toByte())
+    }
+    // If the IVM is for an unknown version, then the ivmBytes will not match the returned Encoding.
+    // This is generally fine because the test should be expecting the invalid IVM. If there's something
+    // wrong with the test framework, it could manifest in strange ways.
+    return ivmBytes to encoding.getEncodingVersion(minor.toInt())
 }
 
 /**
@@ -165,7 +172,9 @@ private fun TestCaseSupport.readIvmFragment(fragment: SeqElement, encoding: Enco
  * and returns the text as a UTF-8 [ByteArray] along with the current encoding version at the end of the fragment.
  */
 private fun TestCaseSupport.readTextFragment(fragment: SeqElement, encoding: Encoding): Pair<ByteArray, Encoding> {
-    require(encoding is Text)
+    if (encoding !is Text) {
+        TODO("Changing between binary and text is not supported.")
+    }
     val text = fragment.tail.joinToString("\n") {
         // TODO: Detect and update the encoding if there's an IVM midstream
         (it as? StringElement)?.textValue
