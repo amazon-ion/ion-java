@@ -5944,6 +5944,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // (:values) 0 (:values) 1
         "EF 01 00 60 EF 01 00 61 01",
         // TODO: Determine why the state isn't being properly set after invoking a macro that produces nothing
+        //       See https://github.com/amazon-ion/ion-java/issues/962
         // (:values) (:values 0) 1
         // "EF 01 00 EF 01 01 60 61 01",
     })
@@ -5969,6 +5970,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         invokeValuesUsingSystemMacroOpcodeHelper(true, bytes);
         // TODO: Determine why the checkpoint in the cursor isn't being set correctly before calling slowFillValue()
         //       specifically while reading from a length-prefixed expression group
+        //       See https://github.com/amazon-ion/ion-java/issues/963
         // invokeValuesUsingSystemMacroOpcodeHelper(false, bytes);
     }
 
