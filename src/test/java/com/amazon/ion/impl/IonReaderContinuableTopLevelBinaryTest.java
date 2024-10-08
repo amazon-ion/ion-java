@@ -5934,5 +5934,56 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @CsvSource({
+        // (:values 0) (:values 1)
+        "EF 01 01 60 EF 01 01 61 01",
+        // (:values (: values 0)) 1
+        "EF 01 01 EF 01 01 60 61 01",
+        // (:values) 0 (:values) 1
+        "EF 01 00 60 EF 01 00 61 01",
+        // TODO: Determine why the state isn't being properly set after invoking a macro that produces nothing
+        //       See https://github.com/amazon-ion/ion-java/issues/962
+        // (:values) (:values 0) 1
+        // "EF 01 00 EF 01 01 60 61 01",
+    })
+    public void invokeValuesUsingSystemMacroOpcode(String bytes) throws Exception {
+        invokeValuesUsingSystemMacroOpcodeHelper(true, bytes);
+        invokeValuesUsingSystemMacroOpcodeHelper(false, bytes);
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @CsvSource({
+        // (:values (:: ) ) 0 1
+        "EF 01 02 01 F0 60 61 01",
+        // (:values 0 1) // using length-prefixed expression group
+        "EF 01 02 07 60 61 01",
+        // (:values 0 1) // using delimited expression group
+        "EF 01 02 01 60 61 01 F0",
+        // (:values (:: 0) (:values (:: 1))
+        "EF 01 02 03 60 EF 01 02 05 61 01",
+        // (:values (:values 0 1))
+        "EF 01 01 EF 01 02 07 60 61 01",
+    })
+    public void invokeValuesWithExpressionGroupsUsingSystemMacroOpcode(String bytes) throws Exception {
+        invokeValuesUsingSystemMacroOpcodeHelper(true, bytes);
+        // TODO: Determine why the checkpoint in the cursor isn't being set correctly before calling slowFillValue()
+        //       specifically while reading from a length-prefixed expression group
+        //       See https://github.com/amazon-ion/ion-java/issues/963
+        // invokeValuesUsingSystemMacroOpcodeHelper(false, bytes);
+    }
+
+    private void invokeValuesUsingSystemMacroOpcodeHelper(boolean constructFromBytes, String bytes) throws Exception {
+        byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(bytes)));
+        readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
+        reader = readerFor(readerBuilder, constructFromBytes, input);
+        assertSequence(
+            next(IonType.INT), intValue(0),
+            next(IonType.INT), intValue(1),
+            next(null)
+        );
+    }
+
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)
 }
