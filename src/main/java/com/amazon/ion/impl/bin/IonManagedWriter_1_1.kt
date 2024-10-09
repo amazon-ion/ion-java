@@ -133,7 +133,14 @@ internal class IonManagedWriter_1_1(
      */
     private var sidTransformer: IntTransformer? = null
 
-    private fun intern(text: String): Int {
+    /**
+     * Adds a new symbol to the table for this writer, or finds an existing definition of it. This writer does not
+     * implement [IonWriter.getSymbolTable], so this method supplies some of that functionality.
+     *
+     * @return an SID for the given symbol text
+     * @see SymbolTable.intern
+     */
+    fun intern(text: String): Int {
         // Check the current symbol table
         var sid = symbolTable[text]
         if (sid != null) return sid
