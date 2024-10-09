@@ -737,7 +737,7 @@ class IonRawTextWriterTest_1_1 {
 
     @Test
     fun `write an expression group`() {
-        assertWriterOutputEquals("(:foo (: true true) (: false false))") {
+        assertWriterOutputEquals("(:foo (:: true true) (:: false false))") {
             writeEExp("foo") {
                 writeExpressionGroup {
                     writeBool(true)
@@ -754,7 +754,7 @@ class IonRawTextWriterTest_1_1 {
 
     @Test
     fun `write an empty expression group`() {
-        assertWriterOutputEquals("(:foo (:))") {
+        assertWriterOutputEquals("(:foo (::))") {
             writeEExp("foo") {
                 stepInExpressionGroup(false)
                 stepOut()
@@ -1046,7 +1046,7 @@ class IonRawTextWriterTest_1_1 {
               (:1)
             )
             (:1
-              (:)
+              (::)
             )
         """.trimIndent()
         assertWriterOutputEquals(

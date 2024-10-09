@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonException;
@@ -81,8 +68,11 @@ final class IonTokenConstsX
 
     public static final int TOKEN_BINARY                = 26;
 
-    public static final int TOKEN_MAX                   = 26;
-    public static final int TOKEN_count                 = 27;
+    public static final int TOKEN_OPEN_PAREN_COLON      = 27;
+    public static final int TOKEN_OPEN_PAREN_DOUBLE_COLON = 28;
+
+    public static final int TOKEN_MAX                   = 28;
+    public static final int TOKEN_count                 = 29;
 
     public static final int KEYWORD_unrecognized = -1;
     public static final int KEYWORD_none         =  0;
@@ -138,6 +128,9 @@ final class IonTokenConstsX
 
         case TOKEN_OPEN_DOUBLE_BRACE:  return "TOKEN_OPEN_DOUBLE_BRACE";
         case TOKEN_CLOSE_DOUBLE_BRACE: return "TOKEN_CLOSE_DOUBLE_BRACE";
+
+        case TOKEN_OPEN_PAREN_COLON: return "TOKEN_OPEN_PAREN_COLON";
+        case TOKEN_OPEN_PAREN_DOUBLE_COLON: return "TOKEN_OPEN_PAREN_DOUBLE_COLON";
 
         default: return "<invalid token "+t+">";
         }

@@ -401,7 +401,7 @@ class IonRawTextWriter_1_1 internal constructor(
     override fun stepInExpressionGroup(usingLengthPrefix: Boolean) {
         confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
         confirm(currentContainer == EExpression) { "Can only create an expression group in a macro invocation" }
-        openValue { output.appendAscii("(:") }
+        openValue { output.appendAscii("(::") }
         ancestorContainersStack.add(currentContainer)
         currentContainer = ExpressionGroup
         currentContainerHasValues = false
