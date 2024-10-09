@@ -816,7 +816,7 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun startMacro(macro: Macro) {
-        if (macro is SystemMacro && macroTable[macro] == null && newMacros[macro] == null) {
+        if (macro is SystemMacro) {
             startSystemMacro(macro)
         } else {
             val address = getOrAssignMacroAddress(macro)

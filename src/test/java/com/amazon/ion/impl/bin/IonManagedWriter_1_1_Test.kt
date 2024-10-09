@@ -251,7 +251,7 @@ internal class IonManagedWriter_1_1_Test {
             $ion_1_1
             $ion_encoding::((macro_table (macro make_string () "make")))
             (:make_string)
-            (:$${"ion::make_string"} (: "a" b))
+            (:$ion::make_string (: "a" b))
         """.trimIndent()
 
         // Makes the word "make" as a string
@@ -281,7 +281,7 @@ internal class IonManagedWriter_1_1_Test {
             (:make_string (: "a" b))
         """.trimIndent()
 
-        val actual = write {
+        var actual = write {
             startMacro(SystemMacro.MakeString)
             startExpressionGroup()
             writeString("a")
@@ -289,7 +289,36 @@ internal class IonManagedWriter_1_1_Test {
             endExpressionGroup()
             endMacro()
         }
+        assertEquals(expected, actual)
 
+        // And again, but with using the function that accepts the name of the macro
+        actual = write {
+            startMacro("make_string", SystemMacro.MakeString)
+            startExpressionGroup()
+            writeString("a")
+            writeSymbol("b")
+            endExpressionGroup()
+            endMacro()
+        }
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `it is possible to invoke a system macro using an alias`() {
+        val expected = """
+            $ion_1_1
+            $ion_encoding::((macro_table (export $ion::make_string foo)))
+            (:foo (: "a" b))
+        """.trimIndent()
+
+        val actual = write {
+            startMacro("foo", SystemMacro.MakeString)
+            startExpressionGroup()
+            writeString("a")
+            writeSymbol("b")
+            endExpressionGroup()
+            endMacro()
+        }
         assertEquals(expected, actual)
     }
 

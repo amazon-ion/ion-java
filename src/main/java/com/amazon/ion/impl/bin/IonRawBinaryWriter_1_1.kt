@@ -704,6 +704,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
         confirm(numAnnotations == 0) { "Cannot annotate an E-Expression" }
 
         if (currentContainer.type == STRUCT && !hasFieldName) {
+            // This allows the e-expression to be written in field-name position.
+            // TODO: Confirm that this is still in the spec.
             if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
             buffer.writeByte(FlexInt.ZERO)
             currentContainer.length++
