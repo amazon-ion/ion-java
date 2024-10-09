@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.EnumSource
 
 class IonRawBinaryWriterTest_1_1 {
 
@@ -1116,6 +1117,22 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write clob`() {
         assertWriterOutputEquals("FF 07 04 05 06") {
             writeClob(byteArrayOf(4, 5, 6), 0, 3)
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SystemMacro::class)
+    fun `write a system macro e-expression`(systemMacro: SystemMacro) {
+        val numVariadicParameters = systemMacro.signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
+        val signatureBytes = when (numVariadicParameters) {
+            0 -> ""
+            1, 2, 3, 4 -> "00"
+            5, 6, 7, 8 -> "00 00"
+            else -> TODO("There are definitely no system macros with more than 8 variadic parameters")
+        }
+        assertWriterOutputEquals(String.format("EF %02X $signatureBytes", systemMacro.id)) {
+            stepInEExp(systemMacro)
+            stepOut()
         }
     }
 

@@ -173,6 +173,14 @@ interface IonRawWriter_1_1 {
     fun stepInEExp(id: Int, usingLengthPrefix: Boolean, macro: Macro)
 
     /**
+     * Writes a system macro invocation for the given system macro.
+     * A macro is not a container in the Ion data model, but it is a container from an encoding perspective.
+     *
+     * TODO: Consider adding `usingLengthPrefix: Boolean`.
+     */
+    fun stepInEExp(systemMacro: SystemMacro)
+
+    /**
      * Steps out of the current container.
      */
     fun stepOut()

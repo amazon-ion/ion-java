@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.EnumSource
 
 class IonRawTextWriterTest_1_1 {
 
@@ -704,6 +705,15 @@ class IonRawTextWriterTest_1_1 {
         }
         assertWriterOutputEquals("(:'1A')") {
             stepInEExp("1A")
+            stepOut()
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SystemMacro::class)
+    fun `write system macro E-expression by name`(systemMacro: SystemMacro) {
+        assertWriterOutputEquals("(:\$ion::${systemMacro.macroName})") {
+            stepInEExp(systemMacro)
             stepOut()
         }
     }
