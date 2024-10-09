@@ -700,6 +700,34 @@ class IonRawBinaryWriter_1_1 internal constructor(
         hasFieldName = false
     }
 
+    override fun stepInEExp(systemMacro: SystemMacro) {
+        confirm(numAnnotations == 0) { "Cannot annotate an E-Expression" }
+
+        if (currentContainer.type == STRUCT && !hasFieldName) {
+            // This allows the e-expression to be written in field-name position.
+            // TODO: Confirm that this is still in the spec.
+            if (!currentContainer.usesFlexSym) switchCurrentStructToFlexSym()
+            buffer.writeByte(FlexInt.ZERO)
+            currentContainer.length++
+        }
+
+        currentContainer = containerStack.push { it.reset(EEXP, buffer.position(), isLengthPrefixed = false) }
+
+        buffer.writeByte(OpCodes.SYSTEM_MACRO_INVOCATION)
+        buffer.writeByte(systemMacro.id)
+        currentContainer.metadataOffset += 1 // to account for the macro ID.
+
+        val presenceBits = presenceBitmapStack.push { it.initialize(systemMacro.signature) }
+        if (presenceBits.byteSize > 0) {
+            // Reserve for presence bits
+            buffer.reserve(presenceBits.byteSize)
+            currentContainer.length += presenceBits.byteSize
+        }
+
+        // No need to clear any of the annotation fields because we already asserted that there are no annotations
+        hasFieldName = false
+    }
+
     override fun stepInExpressionGroup(usingLengthPrefix: Boolean) {
         confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
         confirm(currentContainer.type == EEXP) { "Can only create an expression group in a macro invocation" }
