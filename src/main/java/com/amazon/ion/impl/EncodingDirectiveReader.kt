@@ -8,6 +8,7 @@ import com.amazon.ion.impl.macro.MacroCompiler
 import com.amazon.ion.impl.macro.MacroCompilerIonReader
 import com.amazon.ion.impl.macro.MacroRef
 import com.amazon.ion.impl.macro.MacroRef.Companion.byId
+import com.amazon.ion.impl.macro.MacroRef.Companion.byName
 
 /**
  * Reads encoding directives from the given [IonReader]. This performs a similar function to
@@ -124,6 +125,9 @@ class EncodingDirectiveReader(private val reader: IonReader) {
                     state = State.COMPILING_MACRO
                     val newMacro: Macro = macroCompiler.compileMacro()
                     newMacros[byId(++localMacroMaxOffset)] = newMacro
+                    if (macroCompiler.macroName != null) {
+                        newMacros[byName(macroCompiler.macroName!!)] = newMacro
+                    }
                     state = State.IN_MACRO_TABLE_SEXP
                 }
 

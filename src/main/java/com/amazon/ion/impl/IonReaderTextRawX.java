@@ -159,6 +159,8 @@ abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER]  = ACTION_LOAD_ANNOTATION;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_SYMBOL_QUOTED]      = ACTION_LOAD_ANNOTATION;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_PAREN]         = ACTION_START_SEXP;
+        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_PAREN_COLON]   = ACTION_START_E_EXPRESSION;
+        actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_PAREN_DOUBLE_COLON] = ACTION_START_EXPRESSION_GROUP;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_BRACE]         = ACTION_START_STRUCT;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_SQUARE]        = ACTION_START_LIST;
         actions[STATE_BEFORE_ANNOTATION_DATAGRAM][IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE]  = ACTION_START_LOB;
@@ -180,8 +182,6 @@ abstract class IonReaderTextRawX
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_EOF]                 = 0;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_SYMBOL_OPERATOR]     = ACTION_LOAD_SCALAR;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_DOT]                 = ACTION_LOAD_SCALAR;
-        actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_COLON]               = ACTION_START_E_EXPRESSION;
-        actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_DOUBLE_COLON]        = ACTION_START_EXPRESSION_GROUP;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_PAREN]         = ACTION_FINISH_CONTAINER;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_BRACE]         = ACTION_FINISH_CONTAINER;
         actions[STATE_BEFORE_ANNOTATION_SEXP][IonTokenConstsX.TOKEN_CLOSE_SQUARE]        = ACTION_FINISH_CONTAINER;
@@ -346,6 +346,7 @@ abstract class IonReaderTextRawX
      */
     void setMinorVersion(int minorVersion) {
         this.minorVersion = minorVersion;
+        _scanner.setMinorVersion(minorVersion);
         _is_expression_syntax_allowed = false;
     }
 
@@ -524,6 +525,34 @@ abstract class IonReaderTextRawX
     }
 
     /**
+     * Loads the raw value on which the reader is currently positioned.
+     */
+    private void loadValueRaw() {
+        if (_value_type == null && _scanner.isUnfinishedToken()) {
+            try {
+                token_contents_load(_scanner.getToken());
+            }
+            catch (IOException e) {
+                throw new IonException(e);
+            }
+        }
+    }
+
+    /**
+     * Returns the type of the next raw value in the stream. Does not delegate any responsibilities to
+     * superclasses, ensuring that this method does not consume system values.
+     * @return the type of the next raw value, or null if there is none.
+     */
+    protected final IonType nextRaw() {
+        if (!has_next_raw_value()) {
+            return null;
+        }
+        loadValueRaw();
+        _has_next_called = false;
+        return _value_type;
+    }
+
+    /**
      * returns the type of the next value in the stream.
      * it calls hasNext to assure that the value has been properly
      * started, since hasNext prepares a value as a side effect of
@@ -538,14 +567,7 @@ abstract class IonReaderTextRawX
         if (!hasNext()) {
             return null;
         }
-        if (_value_type == null && _scanner.isUnfinishedToken()) {
-            try {
-                token_contents_load(_scanner.getToken());
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
-        }
+        loadValueRaw();
         _has_next_called = false;
         return _value_type;
     }
@@ -596,6 +618,8 @@ abstract class IonReaderTextRawX
         clear_fieldname();
         _v.clear();
         _value_start_offset = -1;
+        _container_is_e_expression = false;
+        _container_is_expression_group = false;
     }
 
     private int get_state_after_value()
@@ -1092,21 +1116,11 @@ abstract class IonReaderTextRawX
             case ACTION_START_EXPRESSION_GROUP:
                 _container_is_e_expression = action == ACTION_START_E_EXPRESSION;
                 _container_is_expression_group = action == ACTION_START_EXPRESSION_GROUP;
-                if (!_is_expression_syntax_allowed) {
-                    parse_error(String.format("unexpected token encountered: %s", IonTokenConstsX.getTokenName(t)));
-                }
-                ContainerState top = top_state();
-                top.isEExpression = _container_is_e_expression;
-                top.isExpressionGroup = _container_is_expression_group;
-                set_state(STATE_BEFORE_ANNOTATION_SEXP);
-                _scanner.tokenIsFinished();
-                // Reset the current value start used to define a span, since the ::
-                // isn't part of the span when it's hoisted.
-                _value_start_offset = _scanner.getStartingOffset();
-                // Since expression syntax was already found, it is not allowed again.
+                _value_type = IonType.SEXP;
+                temp_state = STATE_BEFORE_ANNOTATION_SEXP;
+                set_state(temp_state);
                 _is_expression_syntax_allowed = false;
-                t = _scanner.nextToken();
-                break;
+                return;
             default: parse_error("unexpected token encountered: "+IonTokenConstsX.getTokenName(t));
             }
         }
@@ -1411,6 +1425,24 @@ if (depth == debugging_depth) {
 
         if (_debug) System.out.println("stepInto() new depth: "+getDepth());
     }
+
+    /**
+     * Forces the end of a container, assuming that the reader is already positioned after the container's end
+     * delimiter.
+     */
+    protected final void endContainerRaw() {
+        pop_container_state();
+        _scanner.tokenIsFinished();
+        try {
+            finish_value(null);
+        }
+        catch (IOException e) {
+            throw new IonException(e);
+        }
+
+        clear_value();
+    }
+
     public void stepOut()
     {
         if (getDepth() < 1) {
@@ -1437,16 +1469,7 @@ if (depth == debugging_depth) {
         catch (IOException e) {
             throw new IonException(e);
         }
-        pop_container_state();
-        _scanner.tokenIsFinished();
-        try {
-            finish_value(null);
-        }
-        catch (IOException e) {
-            throw new IonException(e);
-        }
-
-        clear_value();
+        endContainerRaw();
 
         if (_debug) System.out.println("stepOUT() new depth: "+getDepth());
     }

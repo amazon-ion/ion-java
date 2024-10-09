@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,8 +21,7 @@ public class IonRawTextReaderTest_1_1 {
         EXPRESSION_GROUP,
         NONE;
 
-        void verifyExpressionType(IonReader reader) {
-            IonReaderTextRawX rawReader = (IonReaderTextRawX) reader;
+        void verifyExpressionType(IonReaderTextRawX rawReader) {
             switch (this) {
                 case E_EXPRESSION:
                     assertTrue(rawReader._container_is_e_expression);
@@ -43,26 +41,25 @@ public class IonRawTextReaderTest_1_1 {
 
     static Arguments[] validSyntax() {
         return new Arguments[] {
-            Arguments.of("$ion_1_1 (:foo)", "foo", null, ExpressionType.E_EXPRESSION),
-            Arguments.of("$ion_1_1 (:foo bar)", "foo", "bar", ExpressionType.E_EXPRESSION),
-            Arguments.of("$ion_1_1 (::foo)", "foo", null, ExpressionType.EXPRESSION_GROUP), // TODO do we want to require whitespace after ::?
-            Arguments.of("$ion_1_1 (:: foo bar)", "foo", "bar", ExpressionType.EXPRESSION_GROUP),
-            Arguments.of("$ion_1_1 (:: foo::bar)", "bar", null, ExpressionType.EXPRESSION_GROUP),
-            Arguments.of("$ion_1_1 (:)", null, null, ExpressionType.E_EXPRESSION),
-            Arguments.of("$ion_1_1 (::)", null, null, ExpressionType.EXPRESSION_GROUP),
-            Arguments.of("$ion_1_1 (.foo)", ".", "foo", ExpressionType.NONE),
-            Arguments.of("$ion_1_1 (.. foo)", "..", "foo", ExpressionType.NONE),
-            Arguments.of("$ion_1_1 (.+ foo)", ".+", "foo", ExpressionType.NONE),
-            Arguments.of("$ion_1_1 (..+ foo)", "..+", "foo", ExpressionType.NONE),
-            Arguments.of("$ion_1_1 (.+ foo)", ".+", "foo", ExpressionType.NONE),
-            Arguments.of("$ion_1_1 (..+ foo)", "..+", "foo", ExpressionType.NONE),
-            Arguments.of("$ion_1_0 { foo: bar }", "bar", null, ExpressionType.NONE),
-            Arguments.of("$ion_1_1 { foo: bar }", "bar", null, ExpressionType.NONE),
-            Arguments.of("$ion_1_1 (foo::bar)", "bar", null, ExpressionType.NONE),
+            Arguments.of(1, "(:foo)", "foo", null, ExpressionType.E_EXPRESSION),
+            Arguments.of(1, "(:foo bar)", "foo", "bar", ExpressionType.E_EXPRESSION),
+            Arguments.of(1, "(::foo)", "foo", null, ExpressionType.EXPRESSION_GROUP), // TODO do we want to require whitespace after ::?
+            Arguments.of(1, "(:: foo bar)", "foo", "bar", ExpressionType.EXPRESSION_GROUP),
+            Arguments.of(1, "(:: foo::bar)", "bar", null, ExpressionType.EXPRESSION_GROUP),
+            Arguments.of(1, "(::)", null, null, ExpressionType.EXPRESSION_GROUP),
+            Arguments.of(1, "(.foo)", ".", "foo", ExpressionType.NONE),
+            Arguments.of(1, "(.. foo)", "..", "foo", ExpressionType.NONE),
+            Arguments.of(1, "(.+ foo)", ".+", "foo", ExpressionType.NONE),
+            Arguments.of(1, "(..+ foo)", "..+", "foo", ExpressionType.NONE),
+            Arguments.of(1, "(.+ foo)", ".+", "foo", ExpressionType.NONE),
+            Arguments.of(1, "(..+ foo)", "..+", "foo", ExpressionType.NONE),
+            Arguments.of(0, "{ foo: bar }", "bar", null, ExpressionType.NONE),
+            Arguments.of(1, "{ foo: bar }", "bar", null, ExpressionType.NONE),
+            Arguments.of(1, "(foo::bar)", "bar", null, ExpressionType.NONE),
         };
     }
 
-    private static IonReader newTextReader(String input) {
+    private static IonReaderTextRawX newTextReader(String input) {
         return new IonReaderTextUserX(
             new SimpleCatalog(),
             LocalSymbolTable.DEFAULT_LST_FACTORY,
@@ -70,61 +67,63 @@ public class IonRawTextReaderTest_1_1 {
         );
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "v={0}:{1}")
     @MethodSource("validSyntax")
-    public void validExpressionSyntax(String input, String firstSymbol, String secondSymbol, ExpressionType expressionType) throws Exception {
-        try (IonReader reader = newTextReader(input)) {
-            reader.next();
+    public void validExpressionSyntax(int minorVersion, String input, String firstSymbol, String secondSymbol, ExpressionType expressionType) throws Exception {
+        try (IonReaderTextRawX reader = newTextReader(input)) {
+            reader.setMinorVersion(minorVersion);
+            reader.nextRaw();
+            expressionType.verifyExpressionType(reader);
             reader.stepIn();
             if (firstSymbol == null) {
-                assertNull(reader.next());
+                assertNull(reader.nextRaw());
             } else {
-                assertEquals(IonType.SYMBOL, reader.next());
+                assertEquals(IonType.SYMBOL, reader.nextRaw());
                 assertEquals(firstSymbol, reader.stringValue());
             }
-            expressionType.verifyExpressionType(reader);
             if (secondSymbol == null) {
-                assertNull(reader.next());
+                assertNull(reader.nextRaw());
             } else {
-                assertEquals(IonType.SYMBOL, reader.next());
+                assertEquals(IonType.SYMBOL, reader.nextRaw());
                 assertEquals(secondSymbol, reader.stringValue());
-                assertNull(reader.next());
+                assertNull(reader.nextRaw());
             }
             reader.stepOut();
-            assertNull(reader.next());
+            assertNull(reader.nextRaw());
         }
     }
 
     static Arguments[] invalidSyntax() {
         return new Arguments[] {
             // Colon is not a valid operator in Ion 1.0.
-            Arguments.of("$ion_1_0 (:foo)", null),
-            Arguments.of("$ion_1_0 (::foo)", null),
+            Arguments.of(0, "(:foo)", null),
+            Arguments.of(0, "(::foo)", null),
             // Colon is not a valid operator in Ion 1.1 except at the beginning of an s-expression.
-            Arguments.of("$ion_1_1 (:foo :)", "foo"),
+            Arguments.of(1, "(:foo :)", "foo"),
             // The following fails on the first next() because the second double-colon does not have a value to follow.
-            Arguments.of("$ion_1_1 (::foo ::)", null),
+            Arguments.of(1, "(::foo ::)", null),
             // The following fails on the first next() because the double-colon does not have a value to follow.
-            Arguments.of("$ion_1_1 (foo ::)", null),
-            Arguments.of("$ion_1_1 (foo :)", "foo"),
-            Arguments.of("$ion_1_1 {:foo}", null),
-            Arguments.of("$ion_1_1 {::foo}", null),
-            Arguments.of("$ion_1_1 [:foo]", null),
-            Arguments.of("$ion_1_1 [::foo]", null),
+            Arguments.of(1, "(foo ::)", null),
+            Arguments.of(1, "(foo :)", "foo"),
+            Arguments.of(1, "{:foo}", null),
+            Arguments.of(1, "{::foo}", null),
+            Arguments.of(1, "[:foo]", null),
+            Arguments.of(1, "[::foo]", null),
         };
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "v={0}:{1}")
     @MethodSource("invalidSyntax")
-    public void invalidExpressionSyntax(String input, String firstSymbol) throws Exception {
-        try (IonReader reader = newTextReader(input)) {
-            reader.next();
+    public void invalidExpressionSyntax(int minorVersion, String input, String firstSymbol) throws Exception {
+        try (IonReaderTextRawX reader = newTextReader(input)) {
+            reader.setMinorVersion(minorVersion);
+            reader.nextRaw();
             reader.stepIn();
             if (firstSymbol != null) {
-                assertEquals(IonType.SYMBOL, reader.next());
+                assertEquals(IonType.SYMBOL, reader.nextRaw());
                 assertEquals(firstSymbol, reader.stringValue());
             }
-            assertThrows(IonReaderTextRawX.IonReaderTextParsingException.class, reader::next);
+            assertThrows(IonReaderTextRawX.IonReaderTextParsingException.class, reader::nextRaw);
         }
     }
 }

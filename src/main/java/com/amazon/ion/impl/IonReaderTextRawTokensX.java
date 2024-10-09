@@ -100,6 +100,17 @@ final class IonReaderTextRawTokensX
     // Used for tracking terminator characters when skipping a container
     private final ArrayList<Integer> containerSkipTerminatorStack = new ArrayList<>(CONTAINER_STACK_INITIAL_CAPACITY);
 
+    // The Ion encoding minor version currently active.
+    private int minorVersion;
+
+    /**
+     * Sets the Ion minor version.
+     * @param minorVersion the version.
+     */
+    void setMinorVersion(int minorVersion) {
+        this.minorVersion = minorVersion;
+    }
+
     /**
      * IonTokenReader constructor requires a UnifiedInputStream
      * as the source of bytes/chars that serve as the basic input
@@ -547,6 +558,8 @@ final class IonReaderTextRawTokensX
             skip_over_struct();
             c = read_char();
             break;
+        case IonTokenConstsX.TOKEN_OPEN_PAREN_COLON:
+        case IonTokenConstsX.TOKEN_OPEN_PAREN_DOUBLE_COLON:
         case IonTokenConstsX.TOKEN_OPEN_PAREN:
             skip_over_sexp(); // you can't save point a scanned sexp (right now anyway)
             c = read_char();
@@ -633,6 +646,18 @@ final class IonReaderTextRawTokensX
         case ']':
             return next_token_finish(IonTokenConstsX.TOKEN_CLOSE_SQUARE, false);
         case '(':
+            if (minorVersion > 0) {
+                c2 = read_char();
+                if (c2 == ':') {
+                    c2 = read_char();
+                    if (c2 == ':') {
+                        return next_token_finish(IonTokenConstsX.TOKEN_OPEN_PAREN_DOUBLE_COLON, true);
+                    }
+                    unread_char(c2);
+                    return next_token_finish(IonTokenConstsX.TOKEN_OPEN_PAREN_COLON, true);
+                }
+                unread_char(c2);
+            }
             return next_token_finish(IonTokenConstsX.TOKEN_OPEN_PAREN, true); // CAS: 9 nov 2009
         case ')':
             return next_token_finish(IonTokenConstsX.TOKEN_CLOSE_PAREN, false);

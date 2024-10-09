@@ -15,5 +15,8 @@ sealed interface MacroRef {
     companion object {
         @JvmStatic
         fun byId(id: Int): MacroRef = ById(id)
+
+        @JvmStatic
+        fun byName(name: String): MacroRef = ByName(name)
     }
 }
