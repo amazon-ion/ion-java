@@ -25,7 +25,7 @@ import java.math.BigInteger
 class IonRawTextWriter_1_1 internal constructor(
     private val options: _Private_IonTextWriterBuilder_1_1,
     private val output: _Private_IonTextAppender,
-) : IonRawWriter_1_1, `PrivateIonRawWriter_1_1` {
+) : IonRawWriter_1_1, PrivateIonRawWriter_1_1 {
 
     companion object {
         const val IVM = "\$ion_1_1"
