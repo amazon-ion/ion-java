@@ -26,11 +26,18 @@ import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
 import com.amazon.ion.impl._Private_ScalarConversions.CantConvertException;
 import com.amazon.ion.impl.macro.EncodingContext;
+import com.amazon.ion.impl.macro.Expression;
+import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
+import com.amazon.ion.impl.macro.MacroRef;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -64,6 +71,9 @@ class IonReaderTextSystemX
     // Reads encoding directives from the stream.
     private EncodingDirectiveReader encodingDirectiveReader = null;
 
+    // Indicates whether the reader is currently evaluating an e-expression.
+    boolean isEvaluatingEExpression = false;
+
     protected IonReaderTextSystemX(UnifiedInputStreamX iis)
     {
         _system_symtab = _Private_Utils.systemSymtab(1); // TODO check IVM to determine version: amazon-ion/ion-java/issues/19
@@ -77,7 +87,7 @@ class IonReaderTextSystemX
     // into a base class (the *Value() methods also share a lot of similarity).
     public IntegerSize getIntegerSize()
     {
-        if (_value_type != IonType.INT || _v.isNull())
+        if (_value_type != IonType.INT || isNullValue())
         {
             return null;
         }
@@ -85,8 +95,62 @@ class IonReaderTextSystemX
         return _Private_ScalarConversions.getIntegerSize(_v.getAuthoritativeType());
     }
 
+    /**
+     * Loads a scalar value (except lob values) from the macro evaluator.
+     */
+    private void loadScalarValueFromMacro() {
+        switch (_value_type) {
+            case NULL:
+                _v.setValueToNull(_value_type);
+                break;
+            case BOOL:
+                _v.setValue(macroEvaluatorIonReader.booleanValue());
+                break;
+            case INT:
+                switch (macroEvaluatorIonReader.getIntegerSize()) {
+                    case INT:
+                        _v.setValue(macroEvaluatorIonReader.intValue());
+                        break;
+                    case LONG:
+                        _v.setValue(macroEvaluatorIonReader.longValue());
+                        break;
+                    case BIG_INTEGER:
+                        _v.setValue(macroEvaluatorIonReader.bigIntegerValue());
+                        break;
+                }
+                break;
+            case FLOAT:
+                _v.setValue(macroEvaluatorIonReader.doubleValue());
+                break;
+            case DECIMAL:
+                _v.setValue(macroEvaluatorIonReader.decimalValue());
+                break;
+            case TIMESTAMP:
+                _v.setValue(macroEvaluatorIonReader.timestampValue());
+                break;
+            case SYMBOL:
+                // TODO determine how to handle symbols with unknown text.
+                _v.setValue(macroEvaluatorIonReader.stringValue());
+                break;
+            case STRING:
+                _v.setValue(macroEvaluatorIonReader.stringValue());
+                break;
+            case CLOB: // see load_lob_contents
+            case BLOB: // see load_lob_contents
+            case LIST:
+            case SEXP:
+            case STRUCT:
+            case DATAGRAM:
+                throw new IllegalStateException(String.format("Type %s is not loaded by this method.", _value_type));
+        }
+    }
+
     private void load_once()
     {
+        if (isEvaluatingEExpression) {
+            loadScalarValueFromMacro();
+            return;
+        }
         if (_v.isEmpty()) {
             try {
                 load_scalar_value();
@@ -473,46 +537,64 @@ class IonReaderTextSystemX
         }
     }
 
+    /**
+     * Loads annotations, either from the stream or from a macro.
+     * @return the annotations.
+     */
+    private SymbolToken[] loadAnnotations() {
+        SymbolToken[] annotations;
+        if (isEvaluatingEExpression) {
+            annotations = macroEvaluatorIonReader.getTypeAnnotationSymbols();
+            _annotation_count = annotations == null ? 0 : annotations.length;
+        } else {
+            // The annotations are eagerly read from the stream into `_annotations`.
+            annotations = _annotations;
+        }
+        return annotations;
+    }
+
     //
     // public value routines
     //
 
     public SymbolToken[] getTypeAnnotationSymbols()
     {
+        SymbolToken[] annotations = loadAnnotations();
         final int count = _annotation_count;
         if (count == 0) return SymbolToken.EMPTY_ARRAY;
 
-        resolveAnnotationSymbols(count);
+        resolveAnnotationSymbols(annotations, count);
 
         SymbolToken[] result = new SymbolToken[count];
-        System.arraycopy(_annotations, 0, result, 0, count);
+        System.arraycopy(annotations, 0, result, 0, count);
 
         return result;
     }
 
     public String[] getTypeAnnotations()
     {
-        resolveAnnotationSymbols(_annotation_count);
-        return _Private_Utils.toStrings(_annotations, _annotation_count);
+        SymbolToken[] annotations = loadAnnotations();
+        resolveAnnotationSymbols(annotations, _annotation_count);
+        return _Private_Utils.toStrings(annotations, _annotation_count);
     }
 
     /**
      * Resolve annotations with the current symbol table.
      */
-    private void resolveAnnotationSymbols(int count) {
+    private void resolveAnnotationSymbols(SymbolToken[] annotations, int count) {
         SymbolTable symbols = getSymbolTable();
         for (int i = 0; i < count; i++) {
-            SymbolToken sym = _annotations[i];
+            SymbolToken sym = annotations[i];
             SymbolToken updated = _Private_Utils.localize(symbols, sym);
             if (updated != sym) {
-                _annotations[i] = updated;
+                annotations[i] = updated;
             }
         }
     }
 
     public boolean isNullValue()
     {
-        return _v.isNull();
+        return (isEvaluatingEExpression && macroEvaluatorIonReader.isNullValue()) || _v.isNull();
     }
 
     public boolean booleanValue()
@@ -603,7 +685,7 @@ class IonReaderTextSystemX
     public final String stringValue()
     {
         if (! IonType.isText(_value_type)) throw new IllegalStateException("Unexpected value type: " + _value_type);
-        if (_v.isNull()) return null;
+        if (isNullValue()) return null;
 
         load_or_cast_cached_value(AS_TYPE.string_value);
         String text = _v.getString();
@@ -634,8 +716,13 @@ class IonReaderTextSystemX
     @Override
     public final int getFieldId()
     {
-        // Superclass handles hoisting logic
-        int id = super.getFieldId();
+        int id;
+        if (isEvaluatingEExpression) {
+            id = getFieldNameSymbol().getSid();
+        } else {
+            // Superclass handles hoisting logic
+            id =super.getFieldId();
+        }
         if (id == SymbolTable.UNKNOWN_SYMBOL_ID)
         {
             String fieldname = getRawFieldName();
@@ -651,6 +738,9 @@ class IonReaderTextSystemX
     @Override
     public final String getFieldName()
     {
+        if (isEvaluatingEExpression) {
+            _field_name = macroEvaluatorIonReader.getFieldName();
+        }
         // Superclass handles hoisting logic
         String text = getRawFieldName();
         if (text == null)
@@ -672,7 +762,12 @@ class IonReaderTextSystemX
     @Override
     public SymbolToken getFieldNameSymbol()
     {
-        SymbolToken sym = super.getFieldNameSymbol();
+        SymbolToken sym;
+        if (isEvaluatingEExpression) {
+            sym = macroEvaluatorIonReader.getFieldNameSymbol();
+        } else {
+            sym = super.getFieldNameSymbol();
+        }
         if (sym != null)
         {
             sym = _Private_Utils.localize(getSymbolTable(), sym);
@@ -683,7 +778,7 @@ class IonReaderTextSystemX
     public SymbolToken symbolValue()
     {
         if (_value_type != IonType.SYMBOL) throw new IllegalStateException("Unexpected value type: " + _value_type);
-        if (_v.isNull()) return null;
+        if (isNullValue()) return null;
 
         load_or_cast_cached_value(AS_TYPE.string_value);
         if (! _v.hasValueOfType(AS_TYPE.int_value))
@@ -741,6 +836,13 @@ class IonReaderTextSystemX
     }
     private int load_lob_contents() throws IOException
     {
+        if (isEvaluatingEExpression) {
+            // TODO performance: reduce allocation / copying. Can getBytes() be used?
+            _lob_bytes = macroEvaluatorIonReader.newBytes();
+            _lob_actual_len = _lob_bytes.length;
+            _lob_loaded = LOB_STATE.FINISHED;
+            return _lob_actual_len;
+        }
         if (_lob_loaded == LOB_STATE.EMPTY) {
             load_lob_save_point();
         }
@@ -1078,16 +1180,249 @@ class IonReaderTextSystemX
     }
 
     /**
+     * Reads a scalar value from the stream into an expression.
+     * @param type the type of scalar.
+     * @param annotations any annotations on the scalar.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void readScalarValueAsExpression(
+        IonType type,
+        List<SymbolToken> annotations,
+        List<Expression.EExpressionBodyExpression> expressions
+    ) {
+        Expression.EExpressionBodyExpression expression;
+        if (isNullValue()) {
+            expression = new Expression.NullValue(annotations, type);
+        } else {
+            switch (type) {
+                case BOOL:
+                    expression = new Expression.BoolValue(annotations, booleanValue());
+                    break;
+                case INT:
+                    switch (getIntegerSize()) {
+                        case INT:
+                        case LONG:
+                            expression = new Expression.LongIntValue(annotations, longValue());
+                            break;
+                        case BIG_INTEGER:
+                            expression = new Expression.BigIntValue(annotations, bigIntegerValue());
+                            break;
+                        default:
+                            throw new IllegalStateException();
+                    }
+                    break;
+                case FLOAT:
+                    expression = new Expression.FloatValue(annotations, doubleValue());
+                    break;
+                case DECIMAL:
+                    expression = new Expression.DecimalValue(annotations, decimalValue());
+                    break;
+                case TIMESTAMP:
+                    expression = new Expression.TimestampValue(annotations, timestampValue());
+                    break;
+                case SYMBOL:
+                    expression = new Expression.SymbolValue(annotations, symbolValue());
+                    break;
+                case STRING:
+                    expression = new Expression.StringValue(annotations, stringValue());
+                    break;
+                case CLOB:
+                    expression = new Expression.ClobValue(annotations, newBytes());
+                    break;
+                case BLOB:
+                    expression = new Expression.BlobValue(annotations, newBytes());
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        }
+        expressions.add(expression);
+    }
+
+    /**
+     * Reads a container value from the stream into a list of expressions that will eventually be passed to
+     * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
+     * @param type the type of container.
+     * @param annotations any annotations on the container.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void readContainerValueAsExpression(
+        IonType type,
+        List<SymbolToken> annotations,
+        List<Expression.EExpressionBodyExpression> expressions
+    ) {
+        int startIndex = expressions.size();
+        expressions.add(Expression.Placeholder.INSTANCE);
+        boolean isExpressionGroup = _container_is_expression_group;
+        // Eagerly parse the container, "compiling" it into expressions to be evaluated later.
+        stepIn();
+        while (nextRaw() != null) {
+            if (type == IonType.STRUCT) {
+                expressions.add(new Expression.FieldName(getFieldNameSymbol()));
+            }
+            readValueAsExpression(expressions); // TODO avoid recursion
+        }
+        stepOut();
+
+        // Overwrite the placeholder with an expression representing the actual type of the container and the
+        // start and end indices of its expressions.
+        Expression.EExpressionBodyExpression expression;
+        if (isExpressionGroup) {
+            expression =  new Expression.ExpressionGroup(startIndex, expressions.size());
+        } else {
+            switch (type) {
+                case LIST:
+                    expression = new Expression.ListValue(annotations, startIndex, expressions.size());
+                    break;
+                case SEXP:
+                    expression = new Expression.SExpValue(annotations, startIndex, expressions.size());
+                    break;
+                case STRUCT:
+                    // TODO consider whether templateStructIndex could be leveraged or should be removed
+                    expression = new Expression.StructValue(annotations, startIndex, expressions.size(), Collections.emptyMap());
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        }
+        expressions.set(startIndex, expression);
+    }
+
+
+    /**
+     * Reads a value from the stream into expression(s) that will eventually be passed to the MacroEvaluator
+     * responsible for evaluating the e-expression to which this value belongs.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
+        if (_container_is_e_expression) {
+            collectEExpressionArgs(expressions); // TODO avoid recursion
+            return;
+        }
+        List<SymbolToken> annotations = _annotation_count == 0 ? Collections.emptyList() : Arrays.asList(getTypeAnnotationSymbols());
+        if (IonType.isContainer(_value_type)) {
+            readContainerValueAsExpression(_value_type, annotations, expressions);
+        } else {
+            readScalarValueAsExpression(_value_type, annotations, expressions);
+        }
+    }
+
+    /**
+     * Reads a single parameter to a macro invocation.
+     * @param parameter information about the parameter from the macro signature.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void readParameter(Macro.Parameter parameter, List<Expression.EExpressionBodyExpression> expressions) {
+        if (nextRaw() == null) {
+            return;
+        }
+        readValueAsExpression(expressions);
+    }
+
+    /**
+     * Loads a macro, assuming the reader is positioned on the macro address.
+     * @return the macro.
+     */
+    private Macro loadMacro() {
+        if (nextRaw() == null) {
+            throw new IonException("Macro invocation missing address.");
+        }
+        MacroRef address;
+        if (_value_type == IonType.SYMBOL) {
+            String name = stringValue();
+            if (name == null) {
+                throw new IonException("Macros invoked by name must have non-null name.");
+            }
+            address = MacroRef.byName(name);
+        } else if (_value_type == IonType.INT) {
+            long id = longValue();
+            if (id > Integer.MAX_VALUE) {
+                throw new IonException("Macro addresses larger than 2147483647 are not supported by this implementation.");
+            }
+            address = MacroRef.byId((int) id);
+        } else {
+            throw new IonException("E-expressions must begin with an address.");
+        }
+        Macro macro;
+        if (encodingContext == null || ((macro = encodingContext.getMacroTable().get(address)) == null)) {
+            throw new IonException(String.format("Encountered an unknown macro address: %s.", address));
+        }
+        return macro;
+    }
+
+    /**
+     * Collects the expressions that compose the current macro invocation.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
+        if (isInStruct()) {
+            expressions.add(new Expression.FieldName(getFieldNameSymbol()));
+        }
+        stepIn();
+        Macro macro = loadMacro();
+
+        List<Macro.Parameter> signature = macro.getSignature();
+
+        int invocationStartIndex = expressions.size();
+        expressions.add(Expression.Placeholder.INSTANCE);
+
+        for (Macro.Parameter parameter : signature) {
+            readParameter(parameter, expressions);
+        }
+
+        expressions.set(invocationStartIndex, new Expression.EExpression(macro, invocationStartIndex, expressions.size()));
+
+        stepOut();
+    }
+
+    /**
+     * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
+     * them to the macro evaluator.
+     */
+    private void beginEvaluatingMacroInvocation() {
+        // TODO performance: use a pool of expression lists to avoid repetitive allocations.
+        List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
+        // TODO performance: avoid fully materializing all expressions up-front.
+        collectEExpressionArgs(expressions);
+        macroEvaluator.initExpansion(expressions);
+        isEvaluatingEExpression = true;
+    }
+
+    /**
+     * Consumes the next value (if any) from the MacroEvaluator, setting `_value_type` based on the result.
+     * @return true if this call causes the evaluator to reach the end of the current invocation; otherwise, false.
+     */
+    private boolean evaluateNext() {
+        _value_type = macroEvaluatorIonReader.next();
+        if (_value_type == null && macroEvaluatorIonReader.getDepth() == 0) {
+            // Evaluation of this macro is complete. Resume reading from the stream.
+            isEvaluatingEExpression = false;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Advances the reader, if necessary and possible, to the next value, reading any Ion 1.1+ encoding directives
      * found along the way.
      * @return true if the reader is positioned on a value; otherwise, false.
      */
     protected final boolean has_next_system_value() {
         while (!_has_next_called && !_eof) {
-            has_next_raw_value();
+            if (isEvaluatingEExpression) {
+                if (evaluateNext()) {
+                    continue;
+                }
+                _has_next_called = true;
+            } else {
+                has_next_raw_value();
+            }
             if (minorVersion > 0 && _value_type != null && IonType.DATAGRAM.equals(getContainerType()) && isPositionedOnEncodingDirective()) {
                 readEncodingDirective();
-                _has_next_called = false;
+                continue;
+            }
+            if (_container_is_e_expression) {
+                beginEvaluatingMacroInvocation();
                 continue;
             }
             break;
@@ -1099,6 +1434,26 @@ class IonReaderTextSystemX
     public boolean hasNext()
     {
         return has_next_system_value();
+    }
+
+    @Override
+    public void stepIn() {
+        if (isEvaluatingEExpression) {
+            macroEvaluatorIonReader.stepIn();
+        }
+        super.stepIn();
+    }
+
+    @Override
+    public void stepOut() {
+        if (isEvaluatingEExpression) {
+            macroEvaluatorIonReader.stepOut();
+            // The reader is already positioned after the container. Simply pop the information about this container
+            // from the stack without seeking forward to find the delimiter.
+            endContainerRaw();
+            return;
+        }
+        super.stepOut();
     }
 
     /**

@@ -210,7 +210,7 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((macro_table (macro null (a* b*) "foo")))
-            (:0 (:) (: 1 2 3))
+            (:0 (::) (:: 1 2 3))
         """.trimIndent()
 
         val actual = write {
@@ -251,7 +251,7 @@ internal class IonManagedWriter_1_1_Test {
             $ion_1_1
             $ion_encoding::((macro_table (macro make_string () "make")))
             (:make_string)
-            (:$ion::make_string (: "a" b))
+            (:$ion::make_string (:: "a" b))
         """.trimIndent()
 
         // Makes the word "make" as a string
@@ -278,7 +278,7 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((macro_table (export $ion::make_string)))
-            (:make_string (: "a" b))
+            (:make_string (:: "a" b))
         """.trimIndent()
 
         var actual = write {
@@ -308,7 +308,7 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((macro_table (export $ion::make_string foo)))
-            (:foo (: "a" b))
+            (:foo (:: "a" b))
         """.trimIndent()
 
         val actual = write {
@@ -839,7 +839,7 @@ internal class IonManagedWriter_1_1_Test {
         val expected = """
             $ion_1_1
             $ion_encoding::((macro_table (macro null (x*) (%x)) (macro Polygon (vertices+ compact_symbol::fill?) {vertices:[(%vertices)],fill:(.0 (%fill))}) (macro Point2D (x y) {x:(%x),y:(%y)})))
-            (:Polygon (: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) Blue)
+            (:Polygon (:: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) Blue)
         """.trimIndent()
 
         val data = Polygon(
