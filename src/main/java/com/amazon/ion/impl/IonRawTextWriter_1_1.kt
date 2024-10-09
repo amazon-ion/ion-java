@@ -386,6 +386,18 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingSeparator = true // Treat the macro id as if it is a value that needs a separator.
     }
 
+    override fun stepInEExp(systemMacro: SystemMacro) {
+        confirm(numAnnotations == 0) { "Cannot annotate a macro invocation" }
+        openValue {
+            output.appendAscii("(:\$ion::")
+            output.printSymbol(systemMacro.macroName)
+        }
+        ancestorContainersStack.add(currentContainer)
+        currentContainer = EExpression
+        currentContainerHasValues = false
+        isPendingSeparator = true // Treat the macro name as if it is a value that needs a separator.
+    }
+
     override fun stepInExpressionGroup(usingLengthPrefix: Boolean) {
         confirm(numAnnotations == 0) { "Cannot annotate an expression group" }
         confirm(currentContainer == EExpression) { "Can only create an expression group in a macro invocation" }

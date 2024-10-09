@@ -351,7 +351,7 @@ internal class IonManagedWriter_1_1(
                 val name = macroNames[address]
                 when (macro) {
                     is TemplateMacro -> writeMacroDefinition(name, macro)
-                    is SystemMacro -> exportSystemMacro(macro)
+                    is SystemMacro -> exportSystemMacro(macro, name)
                 }
             }
             forceNoNewlines(true)
@@ -359,13 +359,15 @@ internal class IonManagedWriter_1_1(
         systemData.forceNoNewlines(false)
     }
 
-    private fun exportSystemMacro(macro: SystemMacro) {
-        // TODO: Support for aliases
+    private fun exportSystemMacro(macro: SystemMacro, alias: String?) {
         writeSystemSexp {
             forceNoNewlines(true)
             writeSymbol(SystemSymbols_1_1.EXPORT)
             writeAnnotations(SystemSymbols_1_1.ION)
             writeSymbol(macro.macroName)
+            if (alias != null && alias != macro.macroName) {
+                writeSymbol(alias)
+            }
         }
         systemData.forceNoNewlines(false)
     }
@@ -814,13 +816,21 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun startMacro(macro: Macro) {
-        val address = getOrAssignMacroAddress(macro)
-        startMacro(null, address, macro)
+        if (macro is SystemMacro) {
+            startSystemMacro(macro)
+        } else {
+            val address = getOrAssignMacroAddress(macro)
+            startMacro(null, address, macro)
+        }
     }
 
     override fun startMacro(name: String, macro: Macro) {
-        val address = getOrAssignMacroAddressAndName(name, macro)
-        startMacro(name, address, macro)
+        if (macro is SystemMacro && macro.macroName == name) {
+            startSystemMacro(macro)
+        } else {
+            val address = getOrAssignMacroAddressAndName(name, macro)
+            startMacro(name, address, macro)
+        }
     }
 
     private fun startMacro(name: String?, address: Int, definition: Macro) {
@@ -830,6 +840,24 @@ internal class IonManagedWriter_1_1(
         } else {
             val includeLengthPrefix = options.writeLengthPrefix(ContainerType.EEXP, depth + 1)
             userData.stepInEExp(address, includeLengthPrefix, definition)
+        }
+    }
+
+    private fun startSystemMacro(macro: SystemMacro) {
+        var macroName = macro.macroName
+        // TODO: Replace `indexOf` with something that is not O(n) time complexity.
+        var id = macroNames.indexOf(macroName)
+        if (id < 0) {
+            // If the name is not in use, put it into the user macro table
+            id = getOrAssignMacroAddressAndName(macroName, macro)
+        }
+        if (macrosById[id] == macro) {
+            // The name and id in the local table refers to the system macro we want to invoke,
+            // so invoke as a local symbol since it's almost always shorter.
+            startMacro(macroName, id, macro)
+        } else {
+            // The name is already being used by something else, so invoke using the system macro syntax.
+            userData.stepInEExp(macro)
         }
     }
 

@@ -246,6 +246,83 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
+    fun `when a system macro is shadowed, it should be written using the system e-exp syntax`() {
+        val expected = """
+            $ion_1_1
+            $ion_encoding::((macro_table (macro make_string () "make")))
+            (:make_string)
+            (:$ion::make_string (: "a" b))
+        """.trimIndent()
+
+        // Makes the word "make" as a string
+        val makeStringShadow = constantMacro {
+            string("make")
+        }
+
+        val actual = write {
+            startMacro("make_string", makeStringShadow)
+            endMacro()
+            startMacro(SystemMacro.MakeString)
+            startExpressionGroup()
+            writeString("a")
+            writeSymbol("b")
+            endExpressionGroup()
+            endMacro()
+        }
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `when a system macro is invoked, it should be added to the user table if there is no name conflict`() {
+        val expected = """
+            $ion_1_1
+            $ion_encoding::((macro_table (export $ion::make_string)))
+            (:make_string (: "a" b))
+        """.trimIndent()
+
+        var actual = write {
+            startMacro(SystemMacro.MakeString)
+            startExpressionGroup()
+            writeString("a")
+            writeSymbol("b")
+            endExpressionGroup()
+            endMacro()
+        }
+        assertEquals(expected, actual)
+
+        // And again, but with using the function that accepts the name of the macro
+        actual = write {
+            startMacro("make_string", SystemMacro.MakeString)
+            startExpressionGroup()
+            writeString("a")
+            writeSymbol("b")
+            endExpressionGroup()
+            endMacro()
+        }
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `it is possible to invoke a system macro using an alias`() {
+        val expected = """
+            $ion_1_1
+            $ion_encoding::((macro_table (export $ion::make_string foo)))
+            (:foo (: "a" b))
+        """.trimIndent()
+
+        val actual = write {
+            startMacro("foo", SystemMacro.MakeString)
+            startExpressionGroup()
+            writeString("a")
+            writeSymbol("b")
+            endExpressionGroup()
+            endMacro()
+        }
+        assertEquals(expected, actual)
+    }
+
+    @Test
     fun `write an encoding directive with a non-empty symbol table`() {
         val expected = """
             $ion_1_1
