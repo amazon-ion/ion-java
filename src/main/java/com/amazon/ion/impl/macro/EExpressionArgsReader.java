@@ -1,0 +1,262 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+package com.amazon.ion.impl.macro;
+
+import com.amazon.ion.IonType;
+import com.amazon.ion.SymbolToken;
+import com.amazon.ion.impl.bin.PresenceBitmap;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * An {@link EExpressionArgsReader} reads an E-Expression from a {@link ReaderAdapter}, constructs
+ * a list of {@link Expression}s representing the E-Expression and its arguments, and prepares a {@link MacroEvaluator}
+ * to evaluate these expressions.
+ * <p>
+ * There are two sources of expressions. The template macro definitions, and the macro arguments.
+ * The {@link MacroEvaluator} merges those.
+ * <p>
+ * The {@link Expression} model does not (yet) support lazily reading values, so for now, all macro arguments must
+ * be read eagerly.
+ */
+public abstract class EExpressionArgsReader {
+
+    private final ReaderAdapter reader;
+
+    /**
+     * Constructor.
+     * @param reader the {@link ReaderAdapter} from which to read {@link Expression}s.
+     * @see ReaderAdapterIonReader
+     * @see ReaderAdapterContinuable
+     */
+    public EExpressionArgsReader(ReaderAdapter reader) {
+        this.reader = reader;
+    }
+
+    /**
+     * @return true if the value upon which the reader is positioned represents a macro invocation; otherwise, false.
+     */
+    protected abstract boolean isMacroInvocation();
+
+    /**
+     * @return true if the container value on which the reader is positioned represents an expression group; otherwise,
+     *  false.
+     */
+    protected abstract boolean isContainerAnExpressionGroup();
+
+    /**
+     * Eagerly collects the annotations on the current value.
+     * @return the annotations, or an empty list if there are none.
+     */
+    protected abstract List<SymbolToken> getAnnotations();
+
+    /**
+     * Navigates the reader to the next raw value, without interpreting any system values.
+     * @return true if there is a next value; false if the end of the container was reached.
+     */
+    protected abstract boolean nextRaw();
+
+    /**
+     * Steps into a container on which the reader has been positioned by calling {@link #nextRaw()}.
+     */
+    protected abstract void stepInRaw();
+
+    /**
+     * Steps out of a container on which the reader had been positioned by calling {@link #nextRaw()}.
+     */
+    protected abstract void stepOutRaw();
+
+    /**
+     * Steps into an e-expression.
+     */
+    protected abstract void stepIntoEExpression();
+
+    /**
+     * Steps out of an e-expression.
+     */
+    protected abstract void stepOutOfEExpression();
+
+    /**
+     * Reads a single parameter to a macro invocation.
+     * @param parameter information about the parameter from the macro signature.
+     * @param parameterPresence the presence bits dedicated to this parameter (unused in text).
+     * @param expressions receives the expressions as they are materialized.
+     */
+    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions);
+
+    /**
+     * Reads the macro's address and attempts to resolve that address to a Macro from the macro table.
+     * @return the loaded macro.
+     */
+    protected abstract Macro loadMacro();
+
+    /**
+     * Reads the argument encoding bitmap into a PresenceBitmap. This is only applicable to binary.
+     * @param signature the macro signature.
+     * @return a PresenceBitmap created from the argument encoding bitmap, or null.
+     */
+    protected abstract PresenceBitmap loadPresenceBitmapIfNecessary(List<Macro.Parameter> signature);
+
+    /**
+     * Reads a scalar value from the stream into an expression.
+     * @param type the type of scalar.
+     * @param annotations any annotations on the scalar.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void readScalarValueAsExpression(
+        IonType type,
+        List<SymbolToken> annotations,
+        List<Expression.EExpressionBodyExpression> expressions
+    ) {
+        Expression.EExpressionBodyExpression expression;
+        if (reader.isNullValue()) {
+            expression = new Expression.NullValue(annotations, type);
+        } else {
+            switch (type) {
+                case BOOL:
+                    expression = new Expression.BoolValue(annotations, reader.booleanValue());
+                    break;
+                case INT:
+                    switch (reader.getIntegerSize()) {
+                        case INT:
+                        case LONG:
+                            expression = new Expression.LongIntValue(annotations, reader.longValue());
+                            break;
+                        case BIG_INTEGER:
+                            expression = new Expression.BigIntValue(annotations, reader.bigIntegerValue());
+                            break;
+                        default:
+                            throw new IllegalStateException();
+                    }
+                    break;
+                case FLOAT:
+                    expression = new Expression.FloatValue(annotations, reader.doubleValue());
+                    break;
+                case DECIMAL:
+                    expression = new Expression.DecimalValue(annotations, reader.decimalValue());
+                    break;
+                case TIMESTAMP:
+                    expression = new Expression.TimestampValue(annotations, reader.timestampValue());
+                    break;
+                case SYMBOL:
+                    expression = new Expression.SymbolValue(annotations, reader.symbolValue());
+                    break;
+                case STRING:
+                    expression = new Expression.StringValue(annotations, reader.stringValue());
+                    break;
+                case CLOB:
+                    expression = new Expression.ClobValue(annotations, reader.newBytes());
+                    break;
+                case BLOB:
+                    expression = new Expression.BlobValue(annotations, reader.newBytes());
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        }
+        expressions.add(expression);
+    }
+
+    /**
+     * Reads a container value from the stream into a list of expressions that will eventually be passed to
+     * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
+     * @param type the type of container.
+     * @param annotations any annotations on the container.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void readContainerValueAsExpression(
+        IonType type,
+        List<SymbolToken> annotations,
+        List<Expression.EExpressionBodyExpression> expressions
+    ) {
+        int startIndex = expressions.size();
+        expressions.add(Expression.Placeholder.INSTANCE);
+        boolean isExpressionGroup = isContainerAnExpressionGroup();
+        // Eagerly parse the container, "compiling" it into expressions to be evaluated later.
+        stepInRaw();
+        while (nextRaw()) {
+            if (type == IonType.STRUCT) {
+                expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
+            }
+            readValueAsExpression(expressions); // TODO avoid recursion
+        }
+        stepOutRaw();
+        // Overwrite the placeholder with an expression representing the actual type of the container and the
+        // start and end indices of its expressions.
+        Expression.EExpressionBodyExpression expression;
+        if (isExpressionGroup) {
+            expression =  new Expression.ExpressionGroup(startIndex, expressions.size());
+        } else {
+            switch (type) {
+                case LIST:
+                    expression = new Expression.ListValue(annotations, startIndex, expressions.size());
+                    break;
+                case SEXP:
+                    expression = new Expression.SExpValue(annotations, startIndex, expressions.size());
+                    break;
+                case STRUCT:
+                    // TODO consider whether templateStructIndex could be leveraged or should be removed
+                    expression = new Expression.StructValue(annotations, startIndex, expressions.size(), Collections.emptyMap());
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        }
+        expressions.set(startIndex, expression);
+    }
+
+    /**
+     * Reads a value from the stream into expression(s) that will eventually be passed to the MacroEvaluator
+     * responsible for evaluating the e-expression to which this value belongs.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    protected void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
+        if (isMacroInvocation()) {
+            collectEExpressionArgs(expressions); // TODO avoid recursion
+            return;
+        }
+        IonType type = reader.encodingType();
+        List<SymbolToken> annotations = getAnnotations();
+        if (IonType.isContainer(type)) {
+            readContainerValueAsExpression(type, annotations, expressions);
+        } else {
+            readScalarValueAsExpression(type, annotations, expressions);
+        }
+    }
+
+    /**
+     * Collects the expressions that compose the current macro invocation.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
+        if (reader.isInStruct()) {
+            expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
+        }
+        Macro macro = loadMacro();
+        List<Macro.Parameter> signature = macro.getSignature();
+        PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
+        int invocationStartIndex = expressions.size();
+        expressions.add(Expression.Placeholder.INSTANCE);
+        int numberOfParameters = signature.size();
+        stepIntoEExpression();
+        for (int i = 0; i < numberOfParameters; i++) {
+            readParameter(signature.get(i), presenceBitmap == null ? 0 : presenceBitmap.get(i), expressions);
+        }
+        stepOutOfEExpression();
+        expressions.set(invocationStartIndex, new Expression.EExpression(macro, invocationStartIndex, expressions.size()));
+    }
+
+    /**
+     * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
+     * them to the macro evaluator.
+     */
+    public void beginEvaluatingMacroInvocation(MacroEvaluator macroEvaluator) {
+        // TODO performance: use a pool of expression lists to avoid repetitive allocations.
+        List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
+        // TODO performance: avoid fully materializing all expressions up-front.
+        collectEExpressionArgs(expressions);
+        macroEvaluator.initExpansion(expressions);
+    }
+}

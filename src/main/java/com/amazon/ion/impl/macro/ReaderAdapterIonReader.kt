@@ -7,12 +7,9 @@ import java.math.BigDecimal
 import java.math.BigInteger
 
 /**
- * A [MacroCompiler] that wraps an [IonReader].
+ * A [ReaderAdapter] that wraps an [IonReader].
  */
-class MacroCompilerIonReader(
-    val reader: IonReader,
-    getMacro: (MacroRef) -> Macro?
-) : MacroCompiler(getMacro) {
+class ReaderAdapterIonReader(val reader: IonReader) : ReaderAdapter {
 
     // TODO performance: when there are annotations, this causes a redundant allocation if the allocations are
     //  later consumed.
@@ -53,4 +50,10 @@ class MacroCompilerIonReader(
     override fun newBytes(): ByteArray = reader.newBytes()
 
     override fun symbolValue(): SymbolToken = reader.symbolValue()
+
+    override fun getIntegerSize(): IntegerSize = reader.integerSize
+
+    override fun getFieldNameSymbol(): SymbolToken = reader.fieldNameSymbol
+
+    override fun isInStruct(): Boolean = reader.isInStruct
 }
