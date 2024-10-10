@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
@@ -18,9 +19,11 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.Expression;
+import com.amazon.ion.impl.macro.EExpressionArgsReader;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
-import com.amazon.ion.impl.macro.MacroCompilerContinuable;
+import com.amazon.ion.impl.macro.ReaderAdapter;
+import com.amazon.ion.impl.macro.ReaderAdapterContinuable;
 import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
@@ -122,11 +125,14 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // The encoding context (macro table) that is currently active.
     private EncodingContext encodingContext = null;
 
+    // Adapts this reader for use in code that supports multiple reader types.
+    private final ReaderAdapter readerAdapter = new ReaderAdapterContinuable(this);
+
     // Reads encoding directives from the stream.
     private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
 
     // Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
-    private final EExpressionArgsReader expressionArgsReader = new EExpressionArgsReader();
+    private final EExpressionArgsReader expressionArgsReader = new BinaryEExpressionArgsReader();
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
@@ -1183,7 +1189,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         boolean isSymbolTableAppend = false;
         List<String> newSymbols = new ArrayList<>(8);
         Map<MacroRef, Macro> newMacros = new HashMap<>();
-        MacroCompiler macroCompiler = new MacroCompilerContinuable(IonReaderContinuableCoreBinary.this, newMacros::get);
+        MacroCompiler macroCompiler = new MacroCompiler(newMacros::get, readerAdapter);
 
         private boolean valueUnavailable() {
             Event event = fillValue();
@@ -1399,148 +1405,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private State state = State.READING_VALUE;
 
     /**
-     * Eagerly collects the annotations on the current value.
-     * @return the annotations, or an empty list if there are none.
-     */
-    private List<SymbolToken> getAnnotations() {
-        if (!hasAnnotations) {
-            return Collections.emptyList();
-        }
-        List<SymbolToken> out = new ArrayList<>();
-        consumeAnnotationTokens(out::add);
-        return out;
-    }
-
-    /**
      * Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
-     * TODO ideally this could be factored out of IonReaderContinuableCoreBinary.
-     *  See {@link com.amazon.ion.impl.macro.MacroExpressionizer}. Currently, this relies on class internals.
      */
-    class EExpressionArgsReader {
+    private class BinaryEExpressionArgsReader extends EExpressionArgsReader {
 
-        /**
-         * Reads a scalar value from the stream into an expression.
-         * @param type the type of scalar.
-         * @param annotations any annotations on the scalar.
-         * @param expressions receives the expressions as they are materialized.
-         */
-        private void readScalarValueAsExpression(
-            IonType type,
-            List<SymbolToken> annotations,
-            List<Expression.EExpressionBodyExpression> expressions
-        ) {
-            Expression.EExpressionBodyExpression expression;
-            if (isNullValue()) {
-                expression = new Expression.NullValue(annotations, type);
-            } else {
-                switch (type) {
-                    case BOOL:
-                        expression = new Expression.BoolValue(annotations, booleanValue());
-                        break;
-                    case INT:
-                        switch (getIntegerSize()) {
-                            case INT:
-                            case LONG:
-                                expression = new Expression.LongIntValue(annotations, longValue());
-                                break;
-                            case BIG_INTEGER:
-                                expression = new Expression.BigIntValue(annotations, bigIntegerValue());
-                                break;
-                            default:
-                                throw new IllegalStateException();
-                        }
-                        break;
-                    case FLOAT:
-                        expression = new Expression.FloatValue(annotations, doubleValue());
-                        break;
-                    case DECIMAL:
-                        expression = new Expression.DecimalValue(annotations, decimalValue());
-                        break;
-                    case TIMESTAMP:
-                        expression = new Expression.TimestampValue(annotations, timestampValue());
-                        break;
-                    case SYMBOL:
-                        expression = new Expression.SymbolValue(annotations, symbolValue());
-                        break;
-                    case STRING:
-                        expression = new Expression.StringValue(annotations, stringValue());
-                        break;
-                    case CLOB:
-                        expression = new Expression.ClobValue(annotations, newBytes());
-                        break;
-                    case BLOB:
-                        expression = new Expression.BlobValue(annotations, newBytes());
-                        break;
-                    default:
-                        throw new IllegalStateException();
-                }
-            }
-            expressions.add(expression);
-        }
-
-        /**
-         * Reads a container value from the stream into a list of expressions that will eventually be passed to
-         * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
-         * @param type the type of container.
-         * @param annotations any annotations on the container.
-         * @param expressions receives the expressions as they are materialized.
-         */
-        private void readContainerValueAsExpression(
-            IonType type,
-            List<SymbolToken> annotations,
-            List<Expression.EExpressionBodyExpression> expressions
-        ) {
-            int startIndex = expressions.size();
-            expressions.add(Expression.Placeholder.INSTANCE);
-            // Eagerly parse the container, "compiling" it into expressions to be evaluated later.
-            IonReaderContinuableCoreBinary.super.stepIntoContainer();
-            while (IonReaderContinuableCoreBinary.super.nextValue() != Event.END_CONTAINER) {
-                if (type == IonType.STRUCT) {
-                    expressions.add(new Expression.FieldName(getFieldNameSymbol()));
-                }
-                readValueAsExpression(expressions); // TODO avoid recursion
-            }
-            IonReaderContinuableCoreBinary.super.stepOutOfContainer();
-            // Overwrite the placeholder with an expression representing the actual type of the container and the
-            // start and end indices of its expressions.
-            Expression.EExpressionBodyExpression expression;
-            switch (type) {
-                case LIST:
-                    expression = new Expression.ListValue(annotations, startIndex, expressions.size());
-                    break;
-                case SEXP:
-                    expression = new Expression.SExpValue(annotations, startIndex, expressions.size());
-                    break;
-                case STRUCT:
-                    // TODO consider whether templateStructIndex could be leveraged or should be removed
-                    expression = new Expression.StructValue(annotations, startIndex, expressions.size(), Collections.emptyMap());
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-            expressions.set(startIndex, expression);
-        }
-
-        /**
-         * Reads a value from the stream into expression(s) that will eventually be passed to the MacroEvaluator
-         * responsible for evaluating the e-expression to which this value belongs.
-         * @param expressions receives the expressions as they are materialized.
-         */
-        private void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
-            if (valueTid.isMacroInvocation) {
-                collectEExpressionArgs(expressions); // TODO avoid recursion
-                return;
-            }
-            IonType type = valueTid.type;
-            if (type == null) {
-                throw new IllegalStateException(); // TODO research if/why this could happen
-            }
-            List<SymbolToken> annotations = getAnnotations();
-            if (IonType.isContainer(type)) {
-                readContainerValueAsExpression(type, annotations, expressions);
-            } else {
-                readScalarValueAsExpression(type, annotations, expressions);
-            }
+        BinaryEExpressionArgsReader() {
+            super (readerAdapter);
         }
 
         /**
@@ -1605,13 +1475,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             expressions.add(new Expression.ExpressionGroup(startIndex, startIndex + 1));
         }
 
-        /**
-         * Reads a single parameter to a macro invocation.
-         * @param parameter information about the parameter from the macro signature.
-         * @param parameterPresence the presence bits dedicated to this parameter.
-         * @param expressions receives the expressions as they are materialized.
-         */
-        private void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions) {
+        @Override
+        protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions) {
             switch (parameter.getCardinality()) {
                 case ZeroOrOne:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
@@ -1655,11 +1520,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
         }
 
-        /**
-         * Collects the expressions that compose the current macro invocation.
-         * @param expressions receives the expressions as they are materialized.
-         */
-        private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
+        @Override
+        protected Macro loadMacro() {
             Macro macro;
             long id = getMacroInvocationId();
             if (isSystemInvocation()) {
@@ -1679,41 +1541,67 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     throw new IonException(String.format("Encountered an unknown macro address: %d.", id));
                 }
             }
+            return macro;
+        }
+
+        @Override
+        protected PresenceBitmap loadPresenceBitmapIfNecessary(List<Macro.Parameter> signature) {
             PresenceBitmap presenceBitmap = new PresenceBitmap();
-            List<Macro.Parameter> signature = macro.getSignature();
             presenceBitmap.initialize(signature);
             if (presenceBitmap.getByteSize() > 0) {
-                if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == Event.NEEDS_DATA) {
+                if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA) {
                     throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
                 }
                 presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
                 presenceBitmap.validate();
             }
-            if (isInStruct()) {
-                expressions.add(new Expression.FieldName(getFieldNameSymbol()));
-            }
-            int invocationStartIndex = expressions.size();
-            expressions.add(Expression.Placeholder.INSTANCE);
-            int numberOfParameters = presenceBitmap.getTotalParameterCount();
-            stepIntoEExpression();
-            for (int i = 0; i < numberOfParameters; i++) {
-                readParameter(signature.get(i), presenceBitmap.get(i), expressions);
-            }
-            stepOutOfEExpression();
-            expressions.set(invocationStartIndex, new Expression.EExpression(macro, invocationStartIndex, expressions.size()));
+            return presenceBitmap;
         }
 
-        /**
-         * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
-         * them to the macro evaluator.
-         */
-        private void beginEvaluatingMacroInvocation() {
-            // TODO performance: use a pool of expression lists to avoid repetitive allocations.
-            List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
-            // TODO performance: avoid fully materializing all expressions up-front.
-            collectEExpressionArgs(expressions);
-            macroEvaluator.initExpansion(expressions);
-            isEvaluatingEExpression = true;
+        @Override
+        protected boolean isMacroInvocation() {
+            return valueTid.isMacroInvocation;
+        }
+
+        @Override
+        protected boolean isContainerAnExpressionGroup() {
+            // In binary, expression groups denoted by the AEB, not using container syntax.
+            return false;
+        }
+
+        @Override
+        protected List<SymbolToken> getAnnotations() {
+            if (!hasAnnotations) {
+                return Collections.emptyList();
+            }
+            List<SymbolToken> out = new ArrayList<>();
+            consumeAnnotationTokens(out::add);
+            return out;
+        }
+
+        @Override
+        protected boolean nextRaw() {
+            return IonReaderContinuableCoreBinary.super.nextValue() != Event.END_CONTAINER;
+        }
+
+        @Override
+        protected void stepInRaw() {
+            IonReaderContinuableCoreBinary.super.stepIntoContainer();
+        }
+
+        @Override
+        protected void stepOutRaw() {
+            IonReaderContinuableCoreBinary.super.stepOutOfContainer();
+        }
+
+        @Override
+        protected void stepIntoEExpression() {
+            IonReaderContinuableCoreBinary.super.stepIntoEExpression();
+        }
+
+        @Override
+        protected void stepOutOfEExpression() {
+            IonReaderContinuableCoreBinary.super.stepOutOfEExpression();
         }
     }
 
@@ -1780,7 +1668,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     throw new IonException("The user-level binary reader encountered a macro invocation without an active macro table.");
                 }
             } else {
-                expressionArgsReader.beginEvaluatingMacroInvocation();
+                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
+                isEvaluatingEExpression = true;
                 evaluateNext();
             }
         }

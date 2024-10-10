@@ -3,7 +3,7 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
-import com.amazon.ion.impl.IonReaderContinuableCore
+import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.Macro.*
 import com.amazon.ion.impl.macro.Macro.ParameterEncoding.*
@@ -163,12 +163,12 @@ class MacroCompilerTest {
     enum class ReaderType {
         ION_READER {
             override fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler {
-                return MacroCompilerIonReader(reader, macros)
+                return MacroCompiler(macros, ReaderAdapterIonReader(reader))
             }
         },
         CONTINUABLE {
             override fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler {
-                return MacroCompilerContinuable(reader as IonReaderContinuableCore, macros)
+                return MacroCompiler(macros, ReaderAdapterContinuable(reader as IonReaderContinuableCore))
             }
         };
 

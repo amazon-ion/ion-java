@@ -3,10 +3,7 @@
 package com.amazon.ion.impl
 
 import com.amazon.ion.*
-import com.amazon.ion.impl.macro.Macro
-import com.amazon.ion.impl.macro.MacroCompiler
-import com.amazon.ion.impl.macro.MacroCompilerIonReader
-import com.amazon.ion.impl.macro.MacroRef
+import com.amazon.ion.impl.macro.*
 import com.amazon.ion.impl.macro.MacroRef.Companion.byId
 import com.amazon.ion.impl.macro.MacroRef.Companion.byName
 
@@ -18,9 +15,9 @@ import com.amazon.ion.impl.macro.MacroRef.Companion.byName
  * IonReaderContinuableCoreBinary.EncodingDirectiveReader should be moved to the top level and shared by both readers.
  * If that were to happen, this class would no longer be needed.
  */
-class EncodingDirectiveReader(private val reader: IonReader) {
+class EncodingDirectiveReader(private val reader: IonReader, readerAdapter: ReaderAdapter) {
 
-    private var macroCompiler: MacroCompiler = MacroCompilerIonReader(reader) { key: Any? -> newMacros[key] }
+    private var macroCompiler: MacroCompiler = MacroCompiler({ key: Any? -> newMacros[key] }, readerAdapter)
     private var localMacroMaxOffset: Int = -1
     private var state: State = State.READING_VALUE
 
