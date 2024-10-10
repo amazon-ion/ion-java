@@ -7,15 +7,14 @@ import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.util.confirm
-import java.math.BigDecimal
-import java.math.BigInteger
 
 /**
  * [MacroCompiler] wraps an Ion reader. When directed to do so, it will take over advancing and getting values from the
  * reader in order to read one [TemplateMacro].
  */
-abstract class MacroCompiler(
+class MacroCompiler(
     private val getMacro: (MacroRef) -> Macro?,
+    private val reader: ReaderAdapter
 ) {
 
     /** The name of the macro that was read. Returns `null` if no macro name is available. */
@@ -34,23 +33,23 @@ abstract class MacroCompiler(
         signature.clear()
         expressions.clear()
 
-        confirm(encodingType() == IonType.SEXP) { "macro compilation expects a sexp starting with the keyword `macro`" }
-        confirmNoAnnotations("a macro definition sexp")
-        readContainer {
-            nextValue()
-            confirm(encodingType() == IonType.SYMBOL && stringValue() == "macro") { "macro compilation expects a sexp starting with the keyword `macro`" }
+        confirm(reader.encodingType() == IonType.SEXP) { "macro compilation expects a sexp starting with the keyword `macro`" }
+        reader.confirmNoAnnotations("a macro definition sexp")
+        reader.readContainer {
+            reader.nextValue()
+            confirm(reader.encodingType() == IonType.SYMBOL && reader.stringValue() == "macro") { "macro compilation expects a sexp starting with the keyword `macro`" }
 
-            nextAndCheckType(IonType.SYMBOL, IonType.NULL, "macro name")
-            confirmNoAnnotations("macro name")
-            if (encodingType() != IonType.NULL) {
-                macroName = stringValue().also { confirm(isIdentifierSymbol(it)) { "invalid macro name: '$it'" } }
+            reader.nextAndCheckType(IonType.SYMBOL, IonType.NULL, "macro name")
+            reader.confirmNoAnnotations("macro name")
+            if (reader.encodingType() != IonType.NULL) {
+                macroName = reader.stringValue().also { confirm(isIdentifierSymbol(it)) { "invalid macro name: '$it'" } }
             }
-            nextAndCheckType(IonType.SEXP, "macro signature")
-            confirmNoAnnotations("macro signature")
-            readSignature()
-            confirm(nextValue()) { "Macro definition is missing a template body expression." }
-            compileTemplateBodyExpression()
-            confirm(!nextValue()) { "Unexpected ${encodingType()} after template body expression." }
+            reader.nextAndCheckType(IonType.SEXP, "macro signature")
+            reader.confirmNoAnnotations("macro signature")
+            reader.readSignature()
+            confirm(reader.nextValue()) { "Macro definition is missing a template body expression." }
+            reader.compileTemplateBodyExpression()
+            confirm(!reader.nextValue()) { "Unexpected ${reader.encodingType()} after template body expression." }
         }
         return TemplateMacro(signature.toList(), expressions.toList())
     }
@@ -59,7 +58,7 @@ abstract class MacroCompiler(
      * Reads the macro signature, populating parameters in [signature].
      * Caller is responsible for making sure that the reader is positioned on (but not stepped into) the signature sexp.
      */
-    private fun readSignature() {
+    private fun ReaderAdapter.readSignature() {
         var pendingParameter: Macro.Parameter? = null
 
         forEachInContainer {
@@ -113,7 +112,7 @@ abstract class MacroCompiler(
      *
      * If called when the reader is not positioned on any value, throws [IllegalStateException].
      */
-    private fun compileTemplateBodyExpression() {
+    private fun ReaderAdapter.compileTemplateBodyExpression() {
         // NOTE: `toList()` does not allocate for an empty list.
         val annotations: List<SymbolToken> = getTypeAnnotationSymbols()
 
@@ -149,7 +148,7 @@ abstract class MacroCompiler(
      * If this function returns normally, it will be stepped out of the struct.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun compileStruct(annotations: List<SymbolToken>) {
+    private fun ReaderAdapter.compileStruct(annotations: List<SymbolToken>) {
         val start = expressions.size
         expressions.add(Placeholder)
         val templateStructIndex = mutableMapOf<String, ArrayList<Int>>()
@@ -173,7 +172,7 @@ abstract class MacroCompiler(
      * If this function returns normally, it will be stepped out of the sequence.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun compileList(annotations: List<SymbolToken>) {
+    private fun ReaderAdapter.compileList(annotations: List<SymbolToken>) {
         val start = expressions.size
         stepIntoContainer()
         expressions.add(Placeholder)
@@ -186,7 +185,7 @@ abstract class MacroCompiler(
      * If this function returns normally, it will be stepped out of the sexp.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun compileSExpression(sexpAnnotations: List<SymbolToken>) {
+    private fun ReaderAdapter.compileSExpression(sexpAnnotations: List<SymbolToken>) {
         val start = expressions.size
         stepIntoContainer()
         expressions.add(Placeholder)
@@ -226,7 +225,7 @@ abstract class MacroCompiler(
     /**
      * Must be positioned on the (expected) macro reference.
      */
-    private fun readMacroReference(): Macro {
+    private fun ReaderAdapter.readMacroReference(): Macro {
         val macroRef = when (encodingType()) {
             IonType.SYMBOL -> {
                 val macroName = stringValue()
@@ -240,7 +239,7 @@ abstract class MacroCompiler(
         return getMacro(macroRef) ?: throw IonException("Unrecognized macro: $macroRef")
     }
 
-    private fun compileVariableExpansion(placeholderIndex: Int) {
+    private fun ReaderAdapter.compileVariableExpansion(placeholderIndex: Int) {
         nextValue()
         confirm(encodingType() == IonType.SYMBOL) { "Variable names must be symbols" }
         val name = stringValue()
@@ -252,7 +251,7 @@ abstract class MacroCompiler(
         stepOutOfContainer()
     }
 
-    private inline fun compileExpressionTail(seqStart: Int, constructor: (Int) -> TemplateBodyExpression) {
+    private inline fun ReaderAdapter.compileExpressionTail(seqStart: Int, constructor: (Int) -> TemplateBodyExpression) {
         forEachRemaining { compileTemplateBodyExpression() }
         val seqEnd = expressions.size
         expressions[seqStart] = constructor(seqEnd)
@@ -265,48 +264,26 @@ abstract class MacroCompiler(
     private fun List<SymbolToken>.isEmptyOr(text: String): Boolean = isEmpty() || (size == 1 && this[0].assumeText() == text)
 
     /** Throws [IonException] if any annotations are on the current value in this [IonReader]. */
-    private fun confirmNoAnnotations(location: String) {
+    private fun ReaderAdapter.confirmNoAnnotations(location: String) {
         confirm(!hasAnnotations()) { "found annotations on $location" }
     }
 
     /** Moves to the next type and throw [IonException] if it is not the `expected` [IonType]. */
-    private fun nextAndCheckType(expected: IonType, location: String) {
+    private fun ReaderAdapter.nextAndCheckType(expected: IonType, location: String) {
         confirm(nextValue() && encodingType() == expected) { "$location must be a $expected; found ${encodingType() ?: "nothing"}" }
     }
 
     /** Moves to the next type and throw [IonException] if it is not the `expected` [IonType]. */
-    private fun nextAndCheckType(expected0: IonType, expected1: IonType, location: String) {
+    private fun ReaderAdapter.nextAndCheckType(expected0: IonType, expected1: IonType, location: String) {
         confirm(nextValue() && (encodingType() == expected0 || encodingType() == expected1)) { "$location must be a $expected0 or $expected1; found ${encodingType() ?: "nothing"}" }
     }
 
     /** Steps into a container, executes [block], and steps out. */
-    private inline fun readContainer(block: () -> Unit) { stepIntoContainer(); block(); stepOutOfContainer() }
+    private inline fun ReaderAdapter.readContainer(block: () -> Unit) { stepIntoContainer(); block(); stepOutOfContainer() }
 
     /** Executes [block] for each remaining value at the current reader depth. */
-    private inline fun forEachRemaining(block: (IonType) -> Unit) { while (nextValue()) { block(encodingType()!!) } }
+    private inline fun ReaderAdapter.forEachRemaining(block: (IonType) -> Unit) { while (nextValue()) { block(encodingType()!!) } }
 
     /** Steps into a container, executes [block] for each value at that reader depth, and steps out. */
-    private inline fun forEachInContainer(block: (IonType) -> Unit) = readContainer { forEachRemaining(block) }
-
-    protected abstract fun hasAnnotations(): Boolean
-    protected abstract fun fieldNameSymbol(): SymbolToken
-    protected abstract fun encodingType(): IonType?
-
-    /** Returns true if positioned on a value; false if at container or stream end. */
-    protected abstract fun nextValue(): Boolean
-    protected abstract fun stringValue(): String
-    protected abstract fun intValue(): Int
-    protected abstract fun decimalValue(): BigDecimal
-    protected abstract fun doubleValue(): Double
-    protected abstract fun stepIntoContainer()
-    protected abstract fun stepOutOfContainer()
-    protected abstract fun getTypeAnnotationSymbols(): List<SymbolToken>
-    protected abstract fun integerSize(): IntegerSize?
-    protected abstract fun booleanValue(): Boolean
-    protected abstract fun isNullValue(): Boolean
-    protected abstract fun longValue(): Long
-    protected abstract fun bigIntegerValue(): BigInteger
-    protected abstract fun timestampValue(): Timestamp
-    protected abstract fun newBytes(): ByteArray
-    protected abstract fun symbolValue(): SymbolToken
+    private inline fun ReaderAdapter.forEachInContainer(block: (IonType) -> Unit) = readContainer { forEachRemaining(block) }
 }

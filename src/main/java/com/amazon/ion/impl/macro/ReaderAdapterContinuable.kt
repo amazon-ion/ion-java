@@ -3,17 +3,14 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
-import com.amazon.ion.impl.IonReaderContinuableCore
+import com.amazon.ion.impl.*
 import java.math.BigDecimal
 import java.math.BigInteger
 
 /**
- * A [MacroCompiler] that wraps an [IonReaderContinuableCore].
+ * A [ReaderAdapter] that wraps an [IonReaderContinuableCore].
  */
-class MacroCompilerContinuable(
-    val reader: IonReaderContinuableCore,
-    getMacro: (MacroRef) -> Macro?
-) : MacroCompiler(getMacro) {
+class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : ReaderAdapter {
 
     // TODO: Make sure that we can throw exceptions if there's an over-sized value.
 
@@ -54,6 +51,12 @@ class MacroCompilerContinuable(
     }
 
     override fun symbolValue(): SymbolToken = reader.symbolValue()
+
+    override fun getIntegerSize(): IntegerSize = reader.integerSize
+
+    override fun getFieldNameSymbol(): SymbolToken = reader.fieldNameSymbol
+
+    override fun isInStruct(): Boolean = reader.isInStruct
 
     override fun newBytes(): ByteArray = reader.newBytes()
 
