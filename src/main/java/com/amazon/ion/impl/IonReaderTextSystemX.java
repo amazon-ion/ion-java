@@ -35,6 +35,7 @@ import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
 import com.amazon.ion.impl.macro.ReaderAdapter;
 import com.amazon.ion.impl.macro.ReaderAdapterIonReader;
+import com.amazon.ion.impl.macro.SystemMacro;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -62,11 +63,11 @@ class IonReaderTextSystemX
 
     SymbolTable _system_symtab;
 
-    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = null;
-
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    private MacroEvaluator macroEvaluator = null;
+    private final MacroEvaluator macroEvaluator = new MacroEvaluator();
+
+    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
+    protected final MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
     private EncodingContext encodingContext = null;
@@ -1184,8 +1185,6 @@ class IonReaderTextSystemX
             ));
         }
         encodingContext = new EncodingContext(encodingDirectiveReader.getNewMacros());
-        macroEvaluator = new MacroEvaluator();
-        macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
     }
 
 
@@ -1199,11 +1198,11 @@ class IonReaderTextSystemX
         }
 
         @Override
-        protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions) {
+        protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions, boolean isTrailing) {
             if (IonReaderTextSystemX.this.nextRaw() == null) {
                 return;
             }
-            readValueAsExpression(expressions);
+            readValueAsExpression(isTrailing && parameter.getCardinality().canBeMulti, expressions);
         }
 
         @Override
@@ -1229,7 +1228,12 @@ class IonReaderTextSystemX
                 throw new IonException("E-expressions must begin with an address.");
             }
             Macro macro;
-            if (encodingContext == null || ((macro = encodingContext.getMacroTable().get(address)) == null)) {
+            if (encodingContext == null) {
+                macro = SystemMacro.get(address);
+                if (macro == null) {
+                    throw new IonException(String.format("Encountered an unknown macro address: %s.", address));
+                }
+            } else if ((macro = encodingContext.getMacroTable().get(address)) == null) {
                 throw new IonException(String.format("Encountered an unknown macro address: %s.", address));
             }
             return macro;
