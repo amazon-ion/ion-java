@@ -4,6 +4,7 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.impl.macro.ParameterFactory.exactlyOneFlexInt
 import com.amazon.ion.impl.macro.ParameterFactory.exactlyOneTagged
+import com.amazon.ion.impl.macro.ParameterFactory.oneToManyTagged
 import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
 
 /**
@@ -15,7 +16,17 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
     Annotate(2, "annotate", listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
     MakeString(3, "make_string", listOf(zeroToManyTagged("text"))),
     MakeSymbol(4, "make_symbol", listOf(zeroToManyTagged("text"))),
+    MakeBlob(5, "make_blob", listOf(zeroToManyTagged("bytes"))),
     MakeDecimal(6, "make_decimal", listOf(exactlyOneFlexInt("coefficient"), exactlyOneFlexInt("exponent"))),
+
+    Repeat(17, "repeat", listOf(exactlyOneTagged("n"), oneToManyTagged("value"))),
+
+    MakeField(
+        22, "make_field",
+        listOf(
+            Macro.Parameter("field_name", Macro.ParameterEncoding.CompactSymbol, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
+        )
+    ),
 
     // TODO: Other system macros
 

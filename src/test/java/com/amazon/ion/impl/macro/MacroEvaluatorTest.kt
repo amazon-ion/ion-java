@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.FakeSymbolToken
+import com.amazon.ion.IonException
 import com.amazon.ion.IonType
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
@@ -11,12 +12,15 @@ import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
 import com.amazon.ion.impl.macro.SystemMacro.*
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.Base64
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -225,7 +229,7 @@ class MacroEvaluatorTest {
     @Test
     fun `a trivial variable substitution`() {
         // Given:
-        //   (macro identity (x!) x)
+        //   (macro identity (x!) (%x))
         // When:
         //   (:identity true)
         // Then:
@@ -244,7 +248,7 @@ class MacroEvaluatorTest {
     @Test
     fun `a trivial variable substitution with empty list`() {
         // Given:
-        //   (macro identity (x!) x)
+        //   (macro identity (x!) (%x))
         // When:
         //   (:identity [])
         // Then:
@@ -266,7 +270,7 @@ class MacroEvaluatorTest {
     @Test
     fun `a trivial variable substitution with single element list`() {
         // Given:
-        //   (macro identity (x!) x)
+        //   (macro identity (x!) (%x))
         // When:
         //   (:identity ["a"])
         // Then:
@@ -291,7 +295,7 @@ class MacroEvaluatorTest {
     @Test
     fun `a variable that gets used twice`() {
         // Given:
-        //   (macro double_identity (x!) [x, x])
+        //   (macro double_identity (x!) [(%x), (%x)])
         // When:
         //   (:double_identity "a")
         // Then:
@@ -342,8 +346,8 @@ class MacroEvaluatorTest {
     @Test
     fun `a trivial nested variable substitution`() {
         // Given:
-        //   (macro identity (x!) x)
-        //   (macro nested_identity (x!) (identity x))
+        //   (macro identity (x!) (%x))
+        //   (macro nested_identity (x!) (identity (%x)))
         // When:
         //   (:nested_identity true)
         // Then:
@@ -368,7 +372,7 @@ class MacroEvaluatorTest {
     @Test
     fun `a trivial void variable substitution`() {
         // Given:
-        //   (macro voidable_identity (x?) x)
+        //   (macro voidable_identity (x?) (%x))
         // When:
         //   (:voidable_identity (:))
         // Then:
@@ -459,6 +463,29 @@ class MacroEvaluatorTest {
     }
 
     @Test
+    fun `simple make_blob`() {
+        // Given: <system macros>
+        // When:
+        //   (:make_symbol {{"abc"}} {{ 4AEB6g== }})
+        // Then:
+        //  {{ YWJj4AEB6g== }}
+
+        evaluator.initExpansion {
+            eexp(MakeBlob) {
+                expressionGroup {
+                    clob("abc".toByteArray())
+                    blob(Base64.getDecoder().decode("4AEB6g=="))
+                }
+            }
+        }
+
+        val expr = evaluator.expandNext()
+        assertIsInstance<BlobValue>(expr)
+        assertArrayEquals(Base64.getDecoder().decode("YWJj4AEB6g=="), expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
     fun `simple make_decimal`() {
         // Given: <system macros>
         // When:
@@ -484,7 +511,7 @@ class MacroEvaluatorTest {
     @Test
     fun `make_decimal from nested expressions`() {
         // Given:
-        //   (macro fixed_point (x) (.make_decimal x (.values -2)))
+        //   (macro fixed_point (x) (.make_decimal (%x) (.values -2)))
         // When:
         //   (:fixed_point (:identity 123))
         // Then:
@@ -512,6 +539,26 @@ class MacroEvaluatorTest {
         val expr = evaluator.expandNext()
         assertIsInstance<DecimalValue>(expr)
         assertEquals(BigDecimal.valueOf(123, 2), expr.value)
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `simple make_field`() {
+        // Given: <system macros>
+        // When:
+        //   (:make_field foo 1)
+        // Then:
+        //   { foo: 1 }
+
+        evaluator.initExpansion {
+            eexp(MakeField) {
+                symbol(newSymbolToken("foo"))
+                int(1)
+            }
+        }
+
+        assertEquals(FieldName(value = newSymbolToken("foo")), evaluator.expandNext())
+        assertEquals(LongIntValue(value = 1), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
     }
 
@@ -662,7 +709,7 @@ class MacroEvaluatorTest {
     fun `annotate a TDL macro invocation result`() {
         // Given:
         //   (macro pi () 3.14159)
-        //   (macro annotate_pi (x) (.annotate (..x) (.pi)))
+        //   (macro annotate_pi (x) (.annotate (..(%x)) (.pi)))
         // When:
         //   (:annotate_pi "foo")
         // Then:
@@ -693,7 +740,7 @@ class MacroEvaluatorTest {
     @Test
     fun `macro with a variable substitution in struct field position`() {
         // Given:
-        //   (macro foo_struct (x*) {foo: x})
+        //   (macro foo_struct (x*) {foo: (%x)})
         // When:
         //   (:foo_struct bar)
         // Then:
@@ -717,7 +764,7 @@ class MacroEvaluatorTest {
     @Test
     fun `macro with a variable substitution in struct field position with multiple arguments`() {
         // Given:
-        //   (macro foo_struct (x*) {foo: x})
+        //   (macro foo_struct (x*) {foo: (%x)})
         // When:
         //   (:foo_struct (: bar baz))
         // Then:
@@ -747,7 +794,7 @@ class MacroEvaluatorTest {
     @Test
     fun `macro with a variable substitution in struct field position with void argument`() {
         // Given:
-        //   (macro foo_struct (x*) {foo: x})
+        //   (macro foo_struct (x*) {foo: (%x)})
         // When:
         //   (:foo_struct (:))
         // Then:
@@ -773,7 +820,7 @@ class MacroEvaluatorTest {
     fun `e-expression with another e-expression as one of the arguments`() {
         // Given:
         //   (macro pi () 3.14159)
-        //   (macro identity (x) x)
+        //   (macro identity (x) (%x))
         // When:
         //   (:identity (:pi))
         // Then:
@@ -887,5 +934,159 @@ class MacroEvaluatorTest {
                 Assertions.fail<Nothing>(message)
             }
         }
+    }
+
+    @Test
+    fun `invoke repeat with n=1 and value is single expression`() {
+        // Given: <system macros>
+        // When:
+        //   (:repeat 1 0)
+        // Then:
+        //   0
+
+        evaluator.initExpansion {
+            eexp(Repeat) {
+                int(1)
+                int(0)
+            }
+        }
+
+        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `invoke repeat with n=1 and value is multiple expressions`() {
+        // Given: <system macros>
+        // When:
+        //   (:repeat 1 (:: "a" "b"))
+        // Then:
+        //   "a" "b"
+
+        evaluator.initExpansion {
+            eexp(Repeat) {
+                int(1)
+                expressionGroup {
+                    string("a")
+                    string("b")
+                }
+            }
+        }
+
+        assertEquals(StringValue(value = "a"), evaluator.expandNext())
+        assertEquals(StringValue(value = "b"), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `invoke repeat with n=2 and value is single expression`() {
+        // Given: <system macros>
+        // When:
+        //   (:repeat 2 0)
+        // Then:
+        //   0 0
+
+        evaluator.initExpansion {
+            eexp(Repeat) {
+                int(2)
+                int(0)
+            }
+        }
+
+        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
+        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `invoke repeat with n=2 and value is multiple expressions`() {
+        // Given: <system macros>
+        // When:
+        //   (:repeat 2 (:: "a" "b"))
+        // Then:
+        //   "a" "b" "a" "b"
+
+        evaluator.initExpansion {
+            eexp(Repeat) {
+                int(2)
+                expressionGroup {
+                    string("a")
+                    string("b")
+                }
+            }
+        }
+
+        assertEquals(StringValue(value = "a"), evaluator.expandNext())
+        assertEquals(StringValue(value = "b"), evaluator.expandNext())
+        assertEquals(StringValue(value = "a"), evaluator.expandNext())
+        assertEquals(StringValue(value = "b"), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `invoke repeat macro with a variable for n`() {
+        // Given:
+        //   (macro (x) (.make_string (.repeat (%x) "na ") "batman!"))
+        // When:
+        //   (:batman 16)
+        // Then:
+        //   "na na na na na na na na na na na na na na na na batman!"
+
+        val theMacro = template("x") {
+            macro(MakeString) {
+                expressionGroup {
+                    macro(Repeat) {
+                        int(16)
+                        string("na ")
+                    }
+                    string("batman!")
+                }
+            }
+        }
+
+        evaluator.initExpansion {
+            eexp(theMacro) { int(16) }
+        }
+
+        assertEquals(StringValue(value = "na na na na na na na na na na na na na na na na batman!"), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+    }
+
+    @Test
+    fun `invoke repeat with invalid 'n' argument`() {
+        // Given:
+        //   (macro (x) (.make_string (.repeat (%x) "na ") "batman!"))
+        // When:
+        //   (:repeat 0 "a")
+        // Then:
+        //   <IonException>
+
+        evaluator.initExpansion {
+            eexp(Repeat) {
+                int(0)
+                string("a")
+            }
+        }
+
+        assertThrows<IonException> { evaluator.expandNext() }
+    }
+
+    @Test
+    fun `invoke repeat with invalid 'value' argument`() {
+        // Given:
+        //   (macro (x) (.make_string (.repeat (%x) "na ") "batman!"))
+        // When:
+        //   (:repeat 3 (:values))
+        // Then:
+        //   <IonException>
+
+        evaluator.initExpansion {
+            eexp(Repeat) {
+                int(3)
+                eexp(Values) { expressionGroup { } }
+            }
+        }
+
+        assertThrows<IonException> { evaluator.expandNext() }
     }
 }

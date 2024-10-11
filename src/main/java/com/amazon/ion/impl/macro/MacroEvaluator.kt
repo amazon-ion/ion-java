@@ -7,6 +7,9 @@ import com.amazon.ion.SymbolToken
 import com.amazon.ion.impl._Private_RecyclingStack
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
+import com.amazon.ion.util.*
+import java.io.ByteArrayOutputStream
+import java.lang.IllegalStateException
 import java.math.BigDecimal
 
 /**
@@ -88,6 +91,30 @@ class MacroEvaluator {
                 macroEvaluator.expansionStack.pop()
             }
         }
+
+        /**
+         * Reads the first expanded value from one argument.
+         *
+         * Does not perform any sort of cardinality check, and leaves the evaluator stepped into the level of the
+         * returned expression. Returns null if the argument expansion produces no values.
+         */
+        fun readFirstExpandedArgumentValue(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): DataModelExpression? {
+            val i = expansionInfo.i
+            expansionInfo.nextSourceExpression()
+
+            macroEvaluator.pushExpansion(
+                expansionKind = ExpansionKind.Values,
+                argsStartInclusive = i,
+                // There can only be one top-level expression for an argument (it's either a value, macro, or
+                // expression group) so we can set the end to one more than the start.
+                argsEndExclusive = i + 1,
+                environment = expansionInfo.environment ?: Environment.EMPTY,
+                expressions = expansionInfo.expressions!!,
+            )
+
+            val depth = macroEvaluator.expansionStack.size()
+            return macroEvaluator.expandNext(depth)
+        }
     }
 
     private object SimpleExpander : Expander {
@@ -127,7 +154,6 @@ class MacroEvaluator {
                 when (it) {
                     is StringValue -> sb.append(it.value)
                     is SymbolValue -> sb.append(it.value.assumeText())
-                    is NullValue -> {}
                     is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${it.type}")
                     is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
                 }
@@ -144,13 +170,29 @@ class MacroEvaluator {
                 when (it) {
                     is StringValue -> sb.append(it.value)
                     is SymbolValue -> sb.append(it.value.assumeText())
-                    is NullValue -> {}
                     is DataModelValue -> throw IonException("Invalid argument type for 'make_symbol': ${it.type}")
                     is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
                 }
                 true // continue expansion
             }
             return SymbolValue(value = newSymbolToken(sb.toString()))
+        }
+    }
+
+    private object MakeBlobExpander : Expander {
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            // TODO: See if we can create a `ByteArrayView` or similar class based on the principles of a Persistent
+            //       Collection in order to minimize copying (and therefore allocation).
+            val baos = ByteArrayOutputStream()
+            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                when (it) {
+                    is LobValue -> baos.write(it.value)
+                    is DataModelValue -> throw IonException("Invalid argument type for 'make_blob': ${it.type}")
+                    is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
+                }
+                true // continue expansion
+            }
+            return BlobValue(value = baos.toByteArray())
         }
     }
 
@@ -199,6 +241,75 @@ class MacroEvaluator {
         }
     }
 
+    private object RepeatExpander : Expander {
+        /**
+         * Initializes the counter of the number of iterations remaining.
+         * [ExpansionInfo.additionalState] is the number of iterations remaining. Once initialized, it is always `Int`.
+         */
+        private fun init(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Int {
+            val nExpression = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "n")
+            var iterationsRemaining = when (nExpression) {
+                is LongIntValue -> nExpression.value.toInt()
+                is BigIntValue -> {
+                    if (nExpression.value.bitLength() >= Int.SIZE_BITS) {
+                        throw IonException("ion-java does not support repeats of more than ${Int.MAX_VALUE}")
+                    }
+                    nExpression.value.intValueExact()
+                }
+                else -> throw IonException("The first argument of repeat must be a positive integer")
+            }
+            if (iterationsRemaining <= 0) {
+                // TODO: Confirm https://github.com/amazon-ion/ion-docs/issues/350
+                throw IonException("The first argument of repeat must be a positive integer")
+            }
+            // Decrement because we're starting the first iteration right away.
+            iterationsRemaining--
+            expansionInfo.additionalState = iterationsRemaining
+            return iterationsRemaining
+        }
+
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            val repeatsRemaining = expansionInfo.additionalState as? Int
+                ?: init(expansionInfo, macroEvaluator)
+
+            val repeatedExpressionIndex = expansionInfo.i
+            val next = readFirstExpandedArgumentValue(expansionInfo, macroEvaluator)
+            next ?: throw IonException("repeat macro requires at least one value for value parameter")
+            if (repeatsRemaining > 0) {
+                expansionInfo.additionalState = repeatsRemaining - 1
+                expansionInfo.i = repeatedExpressionIndex
+            }
+            return next
+        }
+    }
+
+    private object MakeFieldExpander : Expander {
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            /**
+             * Uses [ExpansionInfo.additionalState] to track whether the expansion is on the field name or value.
+             * If unset, reads the field name. If set to 0, reads the field value.
+             */
+            return when (expansionInfo.additionalState) {
+                // First time, get the field name
+                null -> {
+                    val fieldName = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "field_name")
+                    val fieldNameExpression = when (fieldName) {
+                        is SymbolValue -> FieldName(fieldName.value)
+                        else -> throw IonException("the first argument of make_field must expand to exactly one symbol value")
+                    }
+                    expansionInfo.additionalState = 0
+                    fieldNameExpression
+                }
+                0 -> {
+                    val value = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "value")
+                    expansionInfo.additionalState = 1
+                    value
+                }
+                else -> throw IllegalStateException("Unreachable")
+            }
+        }
+    }
+
     private enum class ExpansionKind(val expander: Expander) {
         Container(SimpleExpander),
         TemplateBody(SimpleExpander),
@@ -206,11 +317,14 @@ class MacroEvaluator {
         Annotate(AnnotateExpander),
         MakeString(MakeStringExpander),
         MakeSymbol(MakeSymbolExpander),
+        MakeBlob(MakeBlobExpander),
         MakeDecimal(MakeDecimalExpander),
+        MakeField(MakeFieldExpander),
         IfNone(IfExpander.IF_NONE),
         IfSome(IfExpander.IF_SOME),
         IfSingle(IfExpander.IF_SINGLE),
         IfMulti(IfExpander.IF_MULTI),
+        Repeat(RepeatExpander),
         ;
 
         companion object {
@@ -222,11 +336,14 @@ class MacroEvaluator {
                     SystemMacro.Annotate -> Annotate
                     SystemMacro.MakeString -> MakeString
                     SystemMacro.MakeSymbol -> MakeSymbol
+                    SystemMacro.MakeBlob -> MakeBlob
                     SystemMacro.MakeDecimal -> MakeDecimal
                     SystemMacro.IfNone -> IfNone
                     SystemMacro.IfSome -> IfSome
                     SystemMacro.IfSingle -> IfSingle
                     SystemMacro.IfMulti -> IfMulti
+                    SystemMacro.Repeat -> Repeat
+                    SystemMacro.MakeField -> MakeField
                 }
             }
         }
@@ -252,6 +369,17 @@ class MacroEvaluator {
         @JvmField var endExclusive: Int = 0
         /** Current position within [expressions] of this expansion */
         @JvmField var i: Int = 0
+
+        /**
+         * Field for storing any additional state required in an expander.
+         *
+         * TODO: Once all system macros are implemented, see if we can make this an int instead
+         *
+         * There is currently some lost space in ExpansionInfo. We can add one more `additionalState` field without
+         * actually increasing the object size.
+         */
+        @JvmField
+        var additionalState: Any? = null
 
         /** Checks if this expansion can produce any more expressions */
         override fun hasNext(): Boolean = i < endExclusive
@@ -491,6 +619,7 @@ class MacroEvaluator {
             it.expressions = expressions
             it.i = argsStartInclusive
             it.endExclusive = argsEndExclusive
+            it.additionalState = null
         }
     }
 
