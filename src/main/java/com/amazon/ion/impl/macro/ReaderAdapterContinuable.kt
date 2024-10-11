@@ -10,7 +10,7 @@ import java.math.BigInteger
 /**
  * A [ReaderAdapter] that wraps an [IonReaderContinuableCore].
  */
-class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : ReaderAdapter {
+internal class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : ReaderAdapter {
 
     // TODO: Make sure that we can throw exceptions if there's an over-sized value.
 
