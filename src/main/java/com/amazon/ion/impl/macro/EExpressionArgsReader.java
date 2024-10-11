@@ -83,8 +83,9 @@ public abstract class EExpressionArgsReader {
      * @param parameter information about the parameter from the macro signature.
      * @param parameterPresence the presence bits dedicated to this parameter (unused in text).
      * @param expressions receives the expressions as they are materialized.
+     * @param isTrailing true if this parameter is the last one in the signature; otherwise, false (unused in binary).
      */
-    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions);
+    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions, boolean isTrailing);
 
     /**
      * Reads the macro's address and attempts to resolve that address to a Macro from the macro table.
@@ -180,7 +181,7 @@ public abstract class EExpressionArgsReader {
             if (type == IonType.STRUCT) {
                 expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
             }
-            readValueAsExpression(expressions); // TODO avoid recursion
+            readValueAsExpression(false, expressions); // TODO avoid recursion
         }
         stepOutRaw();
         // Overwrite the placeholder with an expression representing the actual type of the container and the
@@ -208,18 +209,37 @@ public abstract class EExpressionArgsReader {
     }
 
     /**
-     * Reads a value from the stream into expression(s) that will eventually be passed to the MacroEvaluator
-     * responsible for evaluating the e-expression to which this value belongs.
+     * Reads the rest of the stream into a single expression group.
      * @param expressions receives the expressions as they are materialized.
      */
-    protected void readValueAsExpression(List<Expression.EExpressionBodyExpression> expressions) {
+    private void readStreamAsExpressionGroup(
+        List<Expression.EExpressionBodyExpression> expressions
+    ) {
+        int startIndex = expressions.size();
+        expressions.add(Expression.Placeholder.INSTANCE);
+        do {
+            readValueAsExpression(false, expressions); // TODO avoid recursion
+        } while (nextRaw());
+        expressions.set(startIndex, new Expression.ExpressionGroup(startIndex, expressions.size()));
+    }
+
+    /**
+     * Reads a value from the stream into expression(s) that will eventually be passed to the MacroEvaluator
+     * responsible for evaluating the e-expression to which this value belongs.
+     * @param isImplicitRest true if this is the final parameter in the signature, it is variadic, and the format
+     *                       supports implicit rest parameters (text only); otherwise, false.
+     * @param expressions receives the expressions as they are materialized.
+     */
+    protected void readValueAsExpression(boolean isImplicitRest, List<Expression.EExpressionBodyExpression> expressions) {
         if (isMacroInvocation()) {
             collectEExpressionArgs(expressions); // TODO avoid recursion
             return;
         }
         IonType type = reader.encodingType();
         List<SymbolToken> annotations = getAnnotations();
-        if (IonType.isContainer(type)) {
+        if (isImplicitRest) {
+            readStreamAsExpressionGroup(expressions);
+        } else if (IonType.isContainer(type)) {
             readContainerValueAsExpression(type, annotations, expressions);
         } else {
             readScalarValueAsExpression(type, annotations, expressions);
@@ -242,7 +262,12 @@ public abstract class EExpressionArgsReader {
         int numberOfParameters = signature.size();
         stepIntoEExpression();
         for (int i = 0; i < numberOfParameters; i++) {
-            readParameter(signature.get(i), presenceBitmap == null ? 0 : presenceBitmap.get(i), expressions);
+            readParameter(
+                signature.get(i),
+                presenceBitmap == null ? 0 : presenceBitmap.get(i),
+                expressions,
+                i == (numberOfParameters - 1)
+            );
         }
         stepOutOfEExpression();
         expressions.set(invocationStartIndex, new Expression.EExpression(macro, invocationStartIndex, expressions.size()));

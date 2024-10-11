@@ -5961,7 +5961,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "EF 01 02 07 60 61 01",
         // (:values 0 1) // using delimited expression group
         "EF 01 02 01 60 61 01 F0",
-        // (:values (:: 0) (:values (:: 1))
+        // (:values (:: 0) (:values (:: 1)))
         "EF 01 02 03 60 EF 01 02 05 61 01",
         // (:values (:values 0 1))
         "EF 01 01 EF 01 02 07 60 61 01",

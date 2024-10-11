@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -124,6 +126,33 @@ public class IonRawTextReaderTest_1_1 {
                 assertEquals(firstSymbol, reader.stringValue());
             }
             assertThrows(IonReaderTextRawX.IonReaderTextParsingException.class, reader::nextRaw);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "(:values 0) (:values 1)",
+        "(:values (: values 0)) 1",
+        "(:values) 0 (:values) 1",
+        "(:values) (:values 0) 1",
+        "(:values) (:values) (:values 0) 1",
+        "(:values (:: ) ) 0 1",
+        "(:values (:: 0 1))",
+        "(:values 0 1)",
+        "(:values (:: (:: 0) (:values (:: 1))))",
+        "(:values (:: 0) (:values (:: 1)))",
+        "(:values (:values (:: 0 1)))",
+        "(:values (:values 0 1))",
+        "(:1 (:1 0 1))",
+        "(:1 (:: (:: 0) (:1 (:: 1))))"
+    })
+    public void validValuesInvocations(String text) throws Exception {
+        try (IonReader reader = newTextReader("$ion_1_1 " + text)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(0, reader.intValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
         }
     }
 }
