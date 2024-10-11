@@ -9,7 +9,7 @@ import java.math.BigInteger
 /**
  * A [ReaderAdapter] that wraps an [IonReader].
  */
-class ReaderAdapterIonReader(val reader: IonReader) : ReaderAdapter {
+internal class ReaderAdapterIonReader(val reader: IonReader) : ReaderAdapter {
 
     // TODO performance: when there are annotations, this causes a redundant allocation if the allocations are
     //  later consumed.

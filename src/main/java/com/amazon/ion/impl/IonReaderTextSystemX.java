@@ -730,7 +730,7 @@ class IonReaderTextSystemX
             id = getFieldNameSymbol().getSid();
         } else {
             // Superclass handles hoisting logic
-            id =super.getFieldId();
+            id = super.getFieldId();
         }
         if (id == SymbolTable.UNKNOWN_SYMBOL_ID)
         {

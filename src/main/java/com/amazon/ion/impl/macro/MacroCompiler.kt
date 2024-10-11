@@ -12,7 +12,7 @@ import com.amazon.ion.util.confirm
  * [MacroCompiler] wraps an Ion reader. When directed to do so, it will take over advancing and getting values from the
  * reader in order to read one [TemplateMacro].
  */
-class MacroCompiler(
+internal class MacroCompiler(
     private val getMacro: (MacroRef) -> Macro?,
     private val reader: ReaderAdapter
 ) {
