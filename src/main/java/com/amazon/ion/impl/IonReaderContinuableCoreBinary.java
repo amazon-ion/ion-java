@@ -1428,7 +1428,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (event == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            readValueAsExpression(expressions);
+            readValueAsExpression(false, expressions);
         }
 
         /**
@@ -1450,7 +1450,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             expressions.add(Expression.Placeholder.INSTANCE);
             boolean isSingleton = true;
             while (nextGroupedValue() != Event.NEEDS_INSTRUCTION) {
-                readValueAsExpression(expressions);
+                readValueAsExpression(false, expressions);
                 isSingleton = false;
             }
             if (requireSingleton && !isSingleton) {
@@ -1476,7 +1476,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         @Override
-        protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions) {
+        protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions, boolean isTrailing) {
             switch (parameter.getCardinality()) {
                 case ZeroOrOne:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
