@@ -5968,13 +5968,12 @@ public class IonReaderContinuableTopLevelBinaryTest {
     })
     public void invokeValuesWithExpressionGroupsUsingSystemMacroOpcode(String bytes) throws Exception {
         invokeValuesUsingSystemMacroOpcodeHelper(true, bytes);
-        // TODO: Determine why the checkpoint in the cursor isn't being set correctly before calling slowFillValue()
-        //       specifically while reading from a length-prefixed expression group
-        //       See https://github.com/amazon-ion/ion-java/issues/963
-        // invokeValuesUsingSystemMacroOpcodeHelper(false, bytes);
+        invokeValuesUsingSystemMacroOpcodeHelper(false, bytes);
     }
 
     private void invokeValuesUsingSystemMacroOpcodeHelper(boolean constructFromBytes, String bytes) throws Exception {
+        // Reset the byte counter between runs since this test utility method is called multiple times per test.
+        byteCounter.set(0);
         byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(bytes)));
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(readerBuilder, constructFromBytes, input);
@@ -5983,6 +5982,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
             next(IonType.INT), intValue(1),
             next(null)
         );
+        closeAndCount();
     }
 
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)

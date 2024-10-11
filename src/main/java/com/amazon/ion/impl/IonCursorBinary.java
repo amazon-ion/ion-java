@@ -3350,6 +3350,23 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Sets the checkpoint based on whether a scalar or container header has just been read. It is up to the caller
+     * to ensure that the cursor is positioned immediately after a value header.
+     */
+    private void setCheckpointAfterValueHeader() {
+        switch (event) {
+            case START_SCALAR:
+                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+                break;
+            case START_CONTAINER:
+                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
+                break;
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    /**
      * Positions the cursor on the next value in the tagged group. Upon return, the value will be filled and
      * `valueMarker` set to the value's start and end indices.
      * @param group the group to which the value belongs.
@@ -3381,6 +3398,7 @@ class IonCursorBinary implements IonCursor {
                     return event;
                 }
                 isUserValue = uncheckedReadHeader(b, false, valueMarker);
+                setCheckpointAfterValueHeader();
             }
         } else {
             if (peekIndex == group.pageEndIndex) {
@@ -3392,6 +3410,7 @@ class IonCursorBinary implements IonCursor {
                 return event;
             }
             isUserValue = uncheckedReadHeader(buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK, false, valueMarker);
+            setCheckpointAfterValueHeader();
         }
         valueTid = valueMarker.typeId;
         if (!isUserValue) {
