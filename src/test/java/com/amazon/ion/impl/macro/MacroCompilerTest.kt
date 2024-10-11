@@ -172,7 +172,7 @@ class MacroCompilerTest {
             }
         };
 
-        abstract fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler
+        internal abstract fun newMacroCompiler(reader: IonReader, macros: ((MacroRef) -> Macro?)): MacroCompiler
     }
 
     private fun newReader(source: String): IonReader {
