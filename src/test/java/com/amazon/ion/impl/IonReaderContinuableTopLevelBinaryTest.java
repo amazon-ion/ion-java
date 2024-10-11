@@ -5943,10 +5943,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
         "EF 01 01 EF 01 01 60 61 01",
         // (:values) 0 (:values) 1
         "EF 01 00 60 EF 01 00 61 01",
-        // TODO: Determine why the state isn't being properly set after invoking a macro that produces nothing
-        //       See https://github.com/amazon-ion/ion-java/issues/962
         // (:values) (:values 0) 1
-        // "EF 01 00 EF 01 01 60 61 01",
+        "EF 01 00 EF 01 01 60 61 01",
+        // (:values) (:values) (:values 0) 1
+        "EF 01 00 EF 01 00 EF 01 01 60 61 01",
     })
     public void invokeValuesUsingSystemMacroOpcode(String bytes) throws Exception {
         invokeValuesUsingSystemMacroOpcodeHelper(true, bytes);

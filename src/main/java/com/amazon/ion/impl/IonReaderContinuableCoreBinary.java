@@ -1606,17 +1606,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * Consumes the next value (if any) from the MacroEvaluator, setting `event` based on the result. If this call
-     * causes the evaluator to reach the end of the current invocation, positions the reader on the value that follows
-     * the invocation.
+     * Consumes the next value (if any) from the MacroEvaluator, setting `event` based on the result.
+     * @return true if evaluation of the current invocation has completed; otherwise, false.
      */
-    private void evaluateNext() {
+    private boolean evaluateNext() {
         IonType type = macroEvaluatorIonReader.next();
         if (type == null) {
             if (macroEvaluatorIonReader.getDepth() == 0) {
                 // Evaluation of this macro is complete. Resume reading from the stream.
                 isEvaluatingEExpression = false;
-                event = super.nextValue();
+                event = Event.NEEDS_INSTRUCTION;
+                return true;
             } else {
                 event = Event.END_CONTAINER;
             }
@@ -1627,13 +1627,14 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 event = Event.START_SCALAR;
             }
         }
+        return false;
     }
 
     @Override
     public Event nextValue() {
         lobBytesRead = 0;
-        if (parent == null || state != State.READING_VALUE) {
-            while (true) {
+        while (true) {
+            if (parent == null || state != State.READING_VALUE) {
                 if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
                     encodingDirectiveReader.readEncodingDirective();
                     if (state != State.READING_VALUE) {
@@ -1642,7 +1643,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     }
                 }
                 if (isEvaluatingEExpression) {
-                    evaluateNext();
+                    if (evaluateNext()) {
+                        continue;
+                    }
                 } else {
                     event = super.nextValue();
                 }
@@ -1651,27 +1654,31 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     state = State.ON_ION_ENCODING_SEXP;
                     continue;
                 }
-                break;
-            }
-        } else if (isEvaluatingEExpression) {
-            evaluateNext();
-        } else {
-            event = super.nextValue();
-        }
-        if (valueTid != null && valueTid.isMacroInvocation) {
-            if (encodingContext == null && !isSystemInvocation()) {
-                // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
-                // but allow the user to do a raw read of the parameters if this is a core-level reader.
-                // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove
-                //  and refactor the tests.
-                if (this instanceof IonReaderContinuableApplicationBinary) {
-                    throw new IonException("The user-level binary reader encountered a macro invocation without an active macro table.");
+            } else if (isEvaluatingEExpression) {
+                if (evaluateNext()) {
+                    continue;
                 }
             } else {
-                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
-                isEvaluatingEExpression = true;
-                evaluateNext();
+                event = super.nextValue();
             }
+            if (valueTid != null && valueTid.isMacroInvocation) {
+                if (encodingContext == null && !isSystemInvocation()) {
+                    // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
+                    // but allow the user to do a raw read of the parameters if this is a core-level reader.
+                    // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove
+                    //  and refactor the tests.
+                    if (this instanceof IonReaderContinuableApplicationBinary) {
+                        throw new IonException("The user-level binary reader encountered a macro invocation without an active macro table.");
+                    }
+                } else {
+                    expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
+                    isEvaluatingEExpression = true;
+                    if (evaluateNext()) {
+                        continue;
+                    }
+                }
+            }
+            break;
         }
         return event;
     }
