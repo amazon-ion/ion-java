@@ -9,7 +9,7 @@ import com.amazon.ion.impl.macro.MacroRef.Companion.byName
 
 /**
  * Reads encoding directives from the given [IonReader]. This performs a similar function to
- * IonReaderContinuableCoreBinary.EncodingDirectiveReader, though that one requires more logic to handle continuable
+ * [IonReaderContinuableCoreBinary.EncodingDirectiveReader], though that one requires more logic to handle continuable
  * input. The two could be unified at the expense of higher complexity than is needed by the non-continuable text
  * implementation. If the text reader is replaced with a continuable implementation in the future,
  * IonReaderContinuableCoreBinary.EncodingDirectiveReader should be moved to the top level and shared by both readers.
