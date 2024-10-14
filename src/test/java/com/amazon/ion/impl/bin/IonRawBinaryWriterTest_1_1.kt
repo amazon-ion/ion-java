@@ -1592,6 +1592,18 @@ class IonRawBinaryWriterTest_1_1 {
     }
 
     @Test
+    fun `calling stepOut() with too many parameters in a length-prefixed e-expression throws IllegalArgumentException`() {
+        val rawWriter = ionWriter()
+
+        assertThrows<IllegalArgumentException> {
+            rawWriter.stepInEExp(64, usingLengthPrefix = true, dummyMacro(nArgs = 0))
+            rawWriter.stepInEExp(SystemMacro.None)
+            rawWriter.stepOut()
+            rawWriter.stepOut()
+        }
+    }
+
+    @Test
     fun `calling continueExpressionGroup() has no effect when there are no expressions in the current segment`() {
         assertWriterOutputEquals(
             """

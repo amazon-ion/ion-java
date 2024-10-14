@@ -880,6 +880,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
         currentContainer = containerStack.peek()
 
         if (currentContainer.type == EEXP) {
+            val signature = presenceBitmapStack.peek().signature
+            if (currentContainer.numChildren >= signature.size) throw IllegalArgumentException("Too many arguments for macro with signature $signature")
             presenceBitmapStack.peek()[currentContainer.numChildren] = when (justExitedContainer.type) {
                 LIST, SEXP, STRUCT, EEXP -> PresenceBitmap.EXPRESSION
                 EXPR_GROUP -> if (thisContainerTotalLength == 0L) PresenceBitmap.VOID else PresenceBitmap.GROUP
