@@ -466,7 +466,7 @@ class MacroEvaluatorTest {
     fun `simple make_blob`() {
         // Given: <system macros>
         // When:
-        //   (:make_symbol {{"abc"}} {{ 4AEB6g== }})
+        //   (:make_blob {{"abc"}} {{ 4AEB6g== }})
         // Then:
         //  {{ YWJj4AEB6g== }}
 
