@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.FakeSymbolToken
-import com.amazon.ion.IonException
-import com.amazon.ion.IonType
+import com.amazon.ion.*
+import com.amazon.ion.impl.*
+import com.amazon.ion.impl.SystemSymbols_1_1.*
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
+import com.amazon.ion.impl.bin.IonManagedWriter_1_1_Test.Companion.ion_encoding
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.eExpBody
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
 import com.amazon.ion.impl.macro.SystemMacro.*
+import com.amazon.ion.system.IonSystemBuilder
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.Base64
@@ -18,6 +20,7 @@ import kotlin.contracts.contract
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -905,7 +908,7 @@ class MacroEvaluatorTest {
 
     companion object {
         /** Helper function to create template macros */
-        fun template(vararg parameters: String, body: TemplateDsl.() -> Unit): Macro {
+        internal fun template(vararg parameters: String, body: TemplateDsl.() -> Unit): Macro {
             val signature = parameters.map {
                 val cardinality = Macro.ParameterCardinality.fromSigil("${it.last()}")
                 if (cardinality == null) {
@@ -918,7 +921,7 @@ class MacroEvaluatorTest {
         }
 
         /** Helper function to use Expression DSL for evaluator inputs */
-        fun MacroEvaluator.initExpansion(eExpression: EExpDsl.() -> Unit) = initExpansion(eExpBody(eExpression))
+        internal fun MacroEvaluator.initExpansion(eExpression: EExpDsl.() -> Unit) = initExpansion(eExpBody(eExpression))
 
         @OptIn(ExperimentalContracts::class)
         private inline fun <reified T> assertIsInstance(value: Any?) {
@@ -933,6 +936,18 @@ class MacroEvaluatorTest {
                 }
                 Assertions.fail<Nothing>(message)
             }
+        }
+
+        /**
+         * Helper function for testing the output of macro invocations.
+         */
+        fun MacroEvaluator.assertExpansion(expectedOutput: String) {
+            val ion = IonSystemBuilder.standard().build() as _Private_IonSystem
+            val actual = mutableListOf<IonValue>()
+            ion.systemIterate(MacroEvaluatorAsIonReader(this)).forEachRemaining(actual::add)
+            val expected = mutableListOf<IonValue>()
+            ion.systemIterate(expectedOutput).forEachRemaining(expected::add)
+            assertEquals(expected, actual)
         }
     }
 
@@ -1088,5 +1103,163 @@ class MacroEvaluatorTest {
         }
 
         assertThrows<IonException> { evaluator.expandNext() }
+    }
+
+    @Test
+    fun `the comment macro expands to nothing`() {
+        // Given: <system macros>
+        // When:
+        //   (:comment 1 2 3)
+        // Then:
+        //   <nothing>
+
+        evaluator.initExpansion {
+            eexp(Comment) {
+                expressionGroup {
+                    int(1)
+                    int(2)
+                    int(3)
+                }
+            }
+        }
+
+        assertNull(evaluator.expandNext())
+    }
+
+    @Test
+    fun `set_symbols expands to an encoding directive that replaces the symbol table and preserves macros`() {
+        evaluator.initExpansion {
+            // (:set_symbols a b c)
+            eexp(SetSymbols) {
+                expressionGroup {
+                    symbol("a")
+                    symbol("b")
+                    symbol("c")
+                }
+            }
+        }
+        evaluator.assertExpansion(
+            """
+            $ion_encoding::(
+              (symbol_table [a, b, c])
+              (macro_table $ion_encoding)
+            )
+            """
+        )
+    }
+
+    @Test
+    fun `add_symbols expands to an encoding directive that appends to the symbol table and preserves macros`() {
+        evaluator.initExpansion {
+            // (:add_symbols a b c)
+            eexp(AddSymbols) {
+                expressionGroup {
+                    symbol("a")
+                    symbol("b")
+                    symbol("c")
+                }
+            }
+        }
+        evaluator.assertExpansion(
+            """
+            $ion_encoding::(
+              (symbol_table $ion_encoding [a, b, c])
+              (macro_table $ion_encoding)
+            )
+            """
+        )
+    }
+
+    @Test
+    fun `set_macros expands to an encoding directive that preserves symbols and replaces the macro table`() {
+        evaluator.initExpansion {
+            // (:set_macros (macro answer () 42))
+            eexp(SetMacros) {
+                expressionGroup {
+                    sexp {
+                        symbol(MACRO)
+                        symbol("answer")
+                        sexp { }
+                        int(42)
+                    }
+                }
+            }
+        }
+        evaluator.assertExpansion(
+            """
+            $ion_encoding::(
+              (symbol_table $ion_encoding)
+              (macro_table
+                (macro answer () 42))
+            )
+            """
+        )
+    }
+
+    @Test
+    fun `add_macros expands to an encoding directive that preserves symbols and appends to the macro table`() {
+        evaluator.initExpansion {
+            // (:add_macros (macro answer () 42))
+            eexp(AddMacros) {
+                expressionGroup {
+                    sexp {
+                        symbol(MACRO)
+                        symbol("answer")
+                        sexp { }
+                        int(42)
+                    }
+                }
+            }
+        }
+        evaluator.assertExpansion(
+            """
+            $ion_encoding::(
+              (symbol_table $ion_encoding)
+              (macro_table
+                $ion_encoding
+                (macro answer () 42))
+            )
+            """
+        )
+    }
+
+    @Test
+    fun `use expands to an encoding directive that imports a module and appends it to the symbol and macro tables`() {
+        evaluator.initExpansion {
+            // (:use "com.amazon.Foo" 2)
+            eexp(Use) {
+                string("com.amazon.Foo")
+                int(2)
+            }
+        }
+        evaluator.assertExpansion(
+            """
+            $ion_encoding::(
+              (import the_module "com.amazon.Foo" 2)
+              (symbol_table $ion_encoding the_module)
+              (macro_table $ion_encoding the_module)
+            )
+            """
+        )
+    }
+
+    @Test
+    fun `use defaults to version 1 if no version is provided`() {
+        evaluator.initExpansion {
+            // (:use "com.amazon.Foo")
+            eexp(Use) {
+                string("com.amazon.Foo")
+                expressionGroup { }
+            }
+        }
+        evaluator.assertExpansion(
+            """
+            $ion_encoding::(
+              (import the_module "com.amazon.Foo" 1)
+              (symbol_table $ion_encoding the_module)
+              (macro_table $ion_encoding the_module)
+            )
+            """
+        )
     }
 }

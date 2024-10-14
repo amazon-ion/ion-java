@@ -3,17 +3,24 @@
 package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
+import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.Expression.*
 import java.math.BigInteger
 import kotlin.reflect.KFunction1
 
+/**
+ * Nothing in this file should be made public because it would expose the shaded kotlin std library in our public API.
+ */
+
 /** A marker annotation for a [type-safe builder](https://kotlinlang.org/docs/type-safe-builders.html). */
 @DslMarker
-annotation class ExpressionBuilderDslMarker
+internal annotation class ExpressionBuilderDslMarker
 
 /** Base DSL; functions are common for [DataModelExpression], [TemplateBodyExpression], and [EExpressionBodyExpression]. */
-interface ValuesDsl {
+internal interface ValuesDsl {
     fun <T> annotated(annotations: List<SymbolToken>, valueFn: KFunction1<T, Unit>, value: T)
+    fun <T> annotated(annotation: SystemSymbols_1_1, valueFn: KFunction1<T, Unit>, value: T) =
+        annotated(listOf(annotation.token), valueFn, value)
     fun nullValue(value: IonType = IonType.NULL)
     fun bool(value: Boolean)
     fun int(value: Long)
@@ -22,6 +29,8 @@ interface ValuesDsl {
     fun decimal(value: Decimal)
     fun timestamp(value: Timestamp)
     fun symbol(value: SymbolToken)
+    fun symbol(value: String) = symbol(_Private_Utils.newSymbolToken(value))
+    fun symbol(value: SystemSymbols_1_1) = symbol(value.token)
     fun string(value: String)
     fun clob(value: ByteArray)
     fun blob(value: ByteArray)
@@ -29,13 +38,13 @@ interface ValuesDsl {
     /** Helper interface for use when building the content of a struct */
     interface Fields {
         fun fieldName(fieldName: SymbolToken)
-        fun fieldName(fieldName: String) = fieldName(FakeSymbolToken(fieldName, -1))
+        fun fieldName(fieldName: String) = fieldName(_Private_Utils.newSymbolToken(fieldName))
     }
 }
 
 /** DSL for building [DataModelExpression] lists. */
 @ExpressionBuilderDslMarker
-interface DataModelDsl : ValuesDsl {
+internal interface DataModelDsl : ValuesDsl {
     fun list(content: DataModelDsl.() -> Unit)
     fun sexp(content: DataModelDsl.() -> Unit)
     fun struct(content: Fields.() -> Unit)
@@ -46,7 +55,7 @@ interface DataModelDsl : ValuesDsl {
 
 /** DSL for building [TemplateBodyExpression] lists. */
 @ExpressionBuilderDslMarker
-interface TemplateDsl : ValuesDsl {
+internal interface TemplateDsl : ValuesDsl {
     fun macro(macro: Macro, arguments: InvocationBody.() -> Unit)
     fun variable(signatureIndex: Int)
     fun list(content: TemplateDsl.() -> Unit)
@@ -64,7 +73,7 @@ interface TemplateDsl : ValuesDsl {
 
 /** DSL for building [EExpressionBodyExpression] lists. */
 @ExpressionBuilderDslMarker
-interface EExpDsl : ValuesDsl {
+internal interface EExpDsl : ValuesDsl {
     fun eexp(macro: Macro, arguments: InvocationBody.() -> Unit)
     fun list(content: EExpDsl.() -> Unit)
     fun sexp(content: EExpDsl.() -> Unit)
