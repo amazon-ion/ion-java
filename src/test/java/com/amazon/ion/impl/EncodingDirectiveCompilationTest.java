@@ -84,16 +84,20 @@ public class EncodingDirectiveCompilationTest {
         writeEncodingDirectiveSymbolTable(writer, false, userSymbols);
     }
 
-    private static Map<String, Integer> initializeSymbolTable(IonRawWriter_1_1 writer, String... userSymbols) {
-        startEncodingDirective(writer);
-        writeEncodingDirectiveSymbolTable(writer, userSymbols);
-        endEncodingDirective(writer);
+    private static Map<String, Integer> makeSymbolsMap(int startId, String... userSymbols) {
         Map<String, Integer> symbols = new HashMap<>();
-        int localSymbolId = FIRST_LOCAL_SYMBOL_ID;
+        int localSymbolId = startId;
         for (String userSymbol : userSymbols) {
             symbols.put(userSymbol, localSymbolId++);
         }
         return symbols;
+    }
+
+    private static Map<String, Integer> initializeSymbolTable(IonRawWriter_1_1 writer, String... userSymbols) {
+        startEncodingDirective(writer);
+        writeEncodingDirectiveSymbolTable(writer, userSymbols);
+        endEncodingDirective(writer);
+        return makeSymbolsMap(FIRST_LOCAL_SYMBOL_ID, userSymbols);
     }
 
     private static void startMacroTable(IonRawWriter_1_1 writer) {
@@ -1141,9 +1145,184 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
+    private static void writeSymbolTableEExpression(boolean isAppend, IonRawWriter_1_1 writer, String... symbols) {
+        writer.stepInEExp(isAppend ? SystemMacro.AddSymbols : SystemMacro.SetSymbols);
+        writer.stepInExpressionGroup(false);
+        for (String symbol : symbols) {
+            writer.writeString(symbol);
+        }
+        writer.stepOut();
+        writer.stepOut();
+    }
+
+    private static Map<String, Integer> writeSymbolTableSetEExpression(IonRawWriter_1_1 writer, String... symbols) {
+        writeSymbolTableEExpression(false, writer, symbols);
+        return makeSymbolsMap(FIRST_LOCAL_SYMBOL_ID, symbols);
+    }
+
+    private static void writeSymbolTableAppendEExpression(IonRawWriter_1_1 writer, Map<String, Integer> existingSymbols, String... newSymbols) {
+        writeSymbolTableEExpression(true, writer, newSymbols);
+        int localSymbolId = FIRST_LOCAL_SYMBOL_ID + existingSymbols.size();
+        for (String newSymbol : newSymbols) {
+            existingSymbols.putIfAbsent(newSymbol, localSymbolId++);
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void macroInvocationsProduceEncodingDirectivesThatModifySymbolTable(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        Map<String, Integer> symbols = writeSymbolTableSetEExpression(writer, "foo", "bar");
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 1);
+
+        writeSymbolTableAppendEExpression(writer, symbols, "baz");
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 2);
+
+        writeSymbolTableSetEExpression(writer, "abc", "def");
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 1);
+
+        byte[] data = getBytes(writer, out);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("bar", reader.stringValue());
+            // Symbol "baz" added
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("baz", reader.stringValue());
+            // Symbol table replaced with "abc", "def"
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("abc", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("def", reader.stringValue());
+        }
+    }
+
+    private static Map<String, Integer> systemSymbols() {
+        return makeSymbolsMap(FIRST_LOCAL_SYMBOL_ID, SystemSymbols_1_1.allSymbolTexts().toArray(new String[0]));
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void macroInvocationsProduceEncodingDirectivesThatModifyMacroTable(InputType inputType, StreamType streamType) throws Exception {
+        BigDecimal pi = new BigDecimal("3.14159");
+        SortedMap<String, Macro> macroTable = new TreeMap<>();
+        macroTable.put("Pi", new TemplateMacro(
+            Collections.emptyList(),
+            Collections.singletonList(new Expression.DecimalValue(Collections.emptyList(), pi))
+        ));
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        Map<String, Integer> symbols = systemSymbols();
+        writeSymbolTableAppendEExpression(writer, symbols, "Pi"); // appends Pi after the system symbols.
+
+        writer.stepInEExp(SystemMacro.AddMacros);
+        startMacro(writer, symbols, "Pi");
+        writeMacroSignature(writer, symbols); // Empty signature
+        writer.writeDecimal(pi);
+        endMacro(writer);
+        writer.stepOut();
+
+        writer.writeSymbol(SystemSymbols_1_1.size() + FIRST_LOCAL_SYMBOL_ID); // Pi
+        streamType.startMacroInvocationByName(writer, "Pi", macroTable);
+        writer.stepOut();
+
+        symbols = writeSymbolTableSetEExpression(writer, "Pi", "foo");
+
+        macroTable.put("foo", new TemplateMacro(
+            Collections.emptyList(),
+            Collections.singletonList(new Expression.StringValue(Collections.emptyList(), "bar"))
+        ));
+
+        writer.stepInEExp(SystemMacro.AddMacros);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignature(writer, symbols); // Empty signature
+        writer.writeString("bar");
+        endMacro(writer);
+        writer.stepOut();
+
+        writer.stepInEExp(1, false, macroTable.get("foo")); // ID 1 because Pi (ID 0) is still in the table.
+        writer.stepOut();
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID); // Now "Pi" because SetSymbols was used, replacing the system symbols.
+
+        writer.stepInEExp(SystemMacro.SetMacros);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignature(writer, symbols); // Empty signature
+        writer.writeString("baz");
+        endMacro(writer);
+        writer.stepOut();
+
+        writer.stepInEExp(0, false, macroTable.get("foo")); // ID 0 now because SetMacros was used.
+        writer.stepOut();
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 1); // Still foo because AddMacros/SetMacros does not mutate the symbol table.
+
+        byte[] data = getBytes(writer, out);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Pi", reader.stringValue());
+            assertEquals(IonType.DECIMAL, reader.next());
+            assertEquals(pi, reader.bigDecimalValue());
+
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("bar", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Pi", reader.stringValue());
+
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("baz", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.stringValue());
+
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void multipleListsWithinSymbolTableDeclaration(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        startEncodingDirective(writer);
+        writer.stepInSExp(false);
+        writer.writeSymbol(SystemSymbols.SYMBOL_TABLE);
+        writer.stepInList(false);
+        writer.writeString("foo");
+        writer.stepOut();
+        writer.stepInList(true);
+        writer.writeString("bar");
+        writer.stepOut();
+        writer.stepOut();
+        endEncodingDirective(writer);
+
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 1);
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
+
+        byte[] data = getBytes(writer, out);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("bar", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.stringValue());
+
+            assertNull(reader.next());
+        }
+    }
+
     // TODO cover every Ion type
     // TODO annotations in macro definition (using 'annotate' system macro)
-    // TODO macro invocation that expands to a system value
     // TODO test error conditions
     // TODO support continuable and lazy evaluation
     // TODO early step-out of evaluation; skipping evaluation.

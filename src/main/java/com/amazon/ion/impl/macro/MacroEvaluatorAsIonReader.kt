@@ -99,10 +99,15 @@ class MacroEvaluatorAsIonReader(
 
     override fun getType(): IonType? = currentValueExpression?.type
 
+    fun hasAnnotations(): Boolean = currentValueExpression != null && currentValueExpression!!.annotations.isNotEmpty()
+
     override fun getTypeAnnotations(): Array<String>? = currentValueExpression?.annotations?.let { Array(it.size) { i -> it[i].assumeText() } }
     override fun getTypeAnnotationSymbols(): Array<SymbolToken>? = currentValueExpression?.annotations?.toTypedArray()
     // TODO: Make this into an iterator that unwraps the SymbolTokens as it goes instead of allocating a new list
-    override fun iterateTypeAnnotations(): MutableIterator<String>? = currentValueExpression?.annotations?.mapTo(mutableListOf()) { it.assumeText() }?.iterator()
+    override fun iterateTypeAnnotations(): MutableIterator<String> {
+        return currentValueExpression?.annotations?.mapTo(mutableListOf()) { it.assumeText() }?.iterator()
+            ?: return Collections.emptyIterator()
+    }
 
     override fun isInStruct(): Boolean = TODO("Not yet implemented")
 
