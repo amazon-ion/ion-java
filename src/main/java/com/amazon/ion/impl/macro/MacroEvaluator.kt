@@ -7,9 +7,7 @@ import com.amazon.ion.SymbolToken
 import com.amazon.ion.impl._Private_RecyclingStack
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
-import com.amazon.ion.util.*
 import java.io.ByteArrayOutputStream
-import java.lang.IllegalStateException
 import java.math.BigDecimal
 
 /**
@@ -330,7 +328,9 @@ class MacroEvaluator {
         companion object {
             @JvmStatic
             fun forSystemMacro(macro: SystemMacro): ExpansionKind {
-                return when (macro) {
+                return if (macro.body != null) {
+                    TemplateBody
+                } else when (macro) {
                     SystemMacro.None -> Values // "none" takes no args, so we can treat it as an empty "values" expansion
                     SystemMacro.Values -> Values
                     SystemMacro.Annotate -> Annotate
@@ -344,6 +344,7 @@ class MacroEvaluator {
                     SystemMacro.IfMulti -> IfMulti
                     SystemMacro.Repeat -> Repeat
                     SystemMacro.MakeField -> MakeField
+                    else -> throw IllegalStateException("Unreachable. All other macros have a template body.")
                 }
             }
         }
@@ -585,21 +586,20 @@ class MacroEvaluator {
         encodingExpressions: List<Expression>,
     ) {
         val argIndices = calculateArgumentIndices(macro, encodingExpressions, argsStartInclusive, argsEndExclusive)
-
-        when (macro) {
-            is TemplateMacro -> pushExpansion(
+        val templateBody = macro.body
+        if (templateBody == null) {
+            // If there's no template body, it must be a system macro.
+            macro as SystemMacro
+            val kind = ExpansionKind.forSystemMacro(macro)
+            pushExpansion(kind, argsStartInclusive, argsEndExclusive, environment, encodingExpressions)
+        } else {
+            pushExpansion(
                 ExpansionKind.TemplateBody,
                 argsStartInclusive = 0,
-                argsEndExclusive = macro.body.size,
-                expressions = macro.body,
+                argsEndExclusive = templateBody.size,
+                expressions = templateBody,
                 environment = environment.createChild(encodingExpressions, argIndices)
             )
-            // TODO: Values and MakeString have the same code in their blocks. As we get further along, see
-            //       if this is generally applicable for all system macros.
-            is SystemMacro -> {
-                val kind = ExpansionKind.forSystemMacro(macro)
-                pushExpansion(kind, argsStartInclusive, argsEndExclusive, environment, encodingExpressions,)
-            }
         }
     }
 
