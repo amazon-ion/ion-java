@@ -22,8 +22,11 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
     private var state: State = State.READING_VALUE
 
     var isSymbolTableAppend = false
+    var isMacroTableAppend = false
     var newSymbols: MutableList<String> = ArrayList(8)
     var newMacros: MutableMap<MacroRef, Macro> = HashMap()
+    var isSymbolTableAlreadyClassified = false
+    var isMacroTableAlreadyClassified = false
 
     private enum class State {
         IN_ION_ENCODING_SEXP,
@@ -45,14 +48,31 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
         }
     }
 
-    private fun classifySymbolTable() {
+    /**
+     * Classifies a symbol table as either 'set' or 'append'. The caller must ensure the reader is positioned within a
+     * symbol table (after the symbol 'symbol_table') before calling. Returns true if the end of the symbol table has
+     * been reached; otherwise, returns false with the reader positioned within a list in the symbol table.
+     */
+    private fun classifySymbolTable(): Boolean {
         val type: IonType = reader.type
+        if (isSymbolTableAlreadyClassified) {
+            if (type != IonType.LIST) { // TODO support module name imports
+                throw IonException("symbol_table s-expression must contain list(s) of symbols.")
+            }
+            reader.stepIn()
+            state = State.IN_SYMBOL_TABLE_LIST
+            return false
+        }
+        isSymbolTableAlreadyClassified = true
         if (IonType.isText(type)) {
             if (SystemSymbols.ION_ENCODING == reader.stringValue() && !isSymbolTableAppend) {
-                if (reader.next() == null || reader.type != IonType.LIST) {
+                isSymbolTableAppend = true
+                if (reader.next() == null) {
+                    return true
+                }
+                if (reader.type != IonType.LIST) {
                     throw IonException("symbol_table s-expression must begin with a list.")
                 }
-                isSymbolTableAppend = true
             } else {
                 throw IonException("symbol_table s-expression must begin with either \$ion_encoding or a list.")
             }
@@ -61,6 +81,41 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
         }
         reader.stepIn()
         state = State.IN_SYMBOL_TABLE_LIST
+        return false
+    }
+
+    /**
+     * Classifies a macro table as either 'set' or 'append'. The caller must ensure the reader is positioned within a
+     * macro table (after the symbol 'macro_table') before calling. Returns true if the end of the macro table has
+     * been reached; otherwise, returns false with the reader positioned on an s-expression in the macro table.
+     */
+    private fun classifyMacroTable(): Boolean {
+        val type: IonType = reader.type
+        if (isMacroTableAlreadyClassified) {
+            if (type != IonType.SEXP) {
+                throw IonException("macro_table s-expression must contain s-expressions.")
+            }
+            return false
+        }
+        isMacroTableAlreadyClassified = true
+        if (IonType.isText(type)) {
+            if (SystemSymbols.ION_ENCODING == reader.stringValue() && !isMacroTableAppend) {
+                isMacroTableAppend = true
+                if (reader.next() == null) {
+                    return true
+                }
+                if (reader.type != IonType.SEXP) {
+                    throw IonException("macro_table s-expression must begin with s-expression(s).")
+                }
+            } else {
+                throw IonException("macro_table s-expression must begin with either \$ion_encoding or s-expression(s).")
+            }
+        } else if (type == IonType.SEXP) {
+            localMacroMaxOffset = -1
+        } else {
+            throw IonException("macro_table s-expression must begin with either \$ion_encoding or s-expression(s).")
+        }
+        return false
     }
 
     /**
@@ -90,12 +145,11 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
                 }
 
                 State.IN_SYMBOL_TABLE_SEXP -> {
-                    if (reader.next() == null) {
+                    if (reader.next() == null || classifySymbolTable()) {
                         reader.stepOut()
                         state = State.IN_ION_ENCODING_SEXP
                         continue
                     }
-                    classifySymbolTable()
                 }
 
                 State.IN_SYMBOL_TABLE_LIST -> {
@@ -111,13 +165,10 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
                 }
 
                 State.IN_MACRO_TABLE_SEXP -> {
-                    if (reader.next() == null) {
+                    if (reader.next() == null || classifyMacroTable()) {
                         reader.stepOut()
                         state = State.IN_ION_ENCODING_SEXP
                         continue
-                    }
-                    if (reader.type != IonType.SEXP) {
-                        throw IonException("macro_table s-expression must contain s-expressions.")
                     }
                     state = State.COMPILING_MACRO
                     val newMacro: Macro = macroCompiler.compileMacro()
@@ -148,7 +199,10 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
      */
     fun reset() {
         isSymbolTableAppend = false
+        isSymbolTableAlreadyClassified = false
         newSymbols.clear()
+        isMacroTableAppend = false
         newMacros.clear()
+        isMacroTableAlreadyClassified = false
     }
 }

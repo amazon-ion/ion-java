@@ -1146,15 +1146,25 @@ class IonReaderTextSystemX
      * @return true if current value has a sequence of annotations that begins with `$ion_encoding`; otherwise, false.
      */
     boolean startsWithIonEncoding() {
+        if (isEvaluatingEExpression) {
+            return SystemSymbols_1_1.ION_ENCODING.getText().equals(macroEvaluatorIonReader.iterateTypeAnnotations().next());
+        }
         // TODO also resolve symbol identifiers and compare against text that looks like $ion_encoding
         return SystemSymbols_1_1.ION_ENCODING.getText().equals(_annotations[0].getText());
+    }
+
+    /**
+     * @return true if the current value has at least one annotation.
+     */
+    private boolean hasAnnotations() {
+        return _annotation_count > 0 || (isEvaluatingEExpression && macroEvaluatorIonReader.hasAnnotations());
     }
 
     /**
      * @return true if the reader is positioned on an encoding directive; otherwise, false.
      */
     private boolean isPositionedOnEncodingDirective() {
-        return _annotation_count > 0
+        return hasAnnotations()
             && _value_type == IonType.SEXP
             && !isNullValue()
             && macroCompilationNotInProgress()
@@ -1173,9 +1183,19 @@ class IonReaderTextSystemX
         encodingDirectiveReader.readEncodingDirective();
         List<String> newSymbols = encodingDirectiveReader.getNewSymbols();
         if (encodingDirectiveReader.isSymbolTableAppend()) {
-            LocalSymbolTable current = ((LocalSymbolTable) getSymbolTable());
-            for (String appendedSymbol : newSymbols) {
-                current.putSymbol(appendedSymbol);
+            SymbolTable current = getSymbolTable();
+            if (current.isSystemTable()) {
+                // TODO determine the best way to handle the Ion 1.1 system symbols.
+                newSymbols.addAll(0, SystemSymbols_1_1.allSymbolTexts());
+                setSymbolTable(new LocalSymbolTable(
+                    LocalSymbolTableImports.EMPTY,
+                    newSymbols
+                ));
+            } else {
+                LocalSymbolTable currentLocal = (LocalSymbolTable) current;
+                for (String appendedSymbol : newSymbols) {
+                    currentLocal.putSymbol(appendedSymbol);
+                }
             }
         } else {
             setSymbolTable(new LocalSymbolTable(
@@ -1184,7 +1204,11 @@ class IonReaderTextSystemX
                 newSymbols
             ));
         }
-        encodingContext = new EncodingContext(encodingDirectiveReader.getNewMacros());
+        if (encodingDirectiveReader.isMacroTableAppend() && encodingContext != null) {
+            encodingContext.getMacroTable().putAll(encodingDirectiveReader.getNewMacros());
+        } else {
+            encodingContext = new EncodingContext(encodingDirectiveReader.getNewMacros());
+        }
     }
 
 
