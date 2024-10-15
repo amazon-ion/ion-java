@@ -93,9 +93,9 @@ class MacroEvaluatorAsIonReader(
     }
 
     override fun close() { /* Nothing to do (yet) */ }
-    override fun <T : Any?> asFacet(facetType: Class<T>?): Nothing = TODO("Not supported")
+    override fun <T : Any?> asFacet(facetType: Class<T>?): Nothing? = null
     override fun getDepth(): Int = containerStack.size()
-    override fun getSymbolTable(): SymbolTable = TODO("Not implemented in this abstraction")
+    override fun getSymbolTable(): SymbolTable? = null
 
     override fun getType(): IonType? = currentValueExpression?.type
 
