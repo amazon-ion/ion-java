@@ -1211,6 +1211,8 @@ class IonReaderTextSystemX
             if (IonReaderTextSystemX.this.nextRaw() == null) {
                 throw new IonException("Macro invocation missing address.");
             }
+            List<SymbolToken> annotations = getAnnotations();
+            boolean isSystemMacro = !annotations.isEmpty() && SystemSymbols_1_1.ION.getText().equals(annotations.get(0).getText());
             MacroRef address;
             if (_value_type == IonType.SYMBOL) {
                 String name = stringValue();
@@ -1228,7 +1230,7 @@ class IonReaderTextSystemX
                 throw new IonException("E-expressions must begin with an address.");
             }
             Macro macro;
-            if (encodingContext == null) {
+            if (encodingContext == null || isSystemMacro) {
                 macro = SystemMacro.get(address);
                 if (macro == null) {
                     throw new IonException(String.format("Encountered an unknown macro address: %s.", address));

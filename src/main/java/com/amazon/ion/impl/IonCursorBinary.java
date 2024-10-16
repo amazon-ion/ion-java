@@ -3361,6 +3361,10 @@ class IonCursorBinary implements IonCursor {
             case START_CONTAINER:
                 setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
                 break;
+            case NEEDS_INSTRUCTION:
+                // A macro invocation header has just been read.
+                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+                break;
             default:
                 throw new IllegalStateException();
         }
