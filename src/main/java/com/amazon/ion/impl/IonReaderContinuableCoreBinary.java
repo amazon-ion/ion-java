@@ -1449,7 +1449,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             int startIndex = expressions.size();
             expressions.add(Expression.Placeholder.INSTANCE);
             boolean isSingleton = true;
-            while (nextGroupedValue() != Event.NEEDS_INSTRUCTION) {
+            while (nextGroupedValue() != Event.NEEDS_INSTRUCTION || isMacroInvocation()) {
                 readValueAsExpression(false, expressions);
                 isSingleton = false;
             }
@@ -1560,7 +1560,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         @Override
         protected boolean isMacroInvocation() {
-            return valueTid.isMacroInvocation;
+            return valueTid != null && valueTid.isMacroInvocation;
         }
 
         @Override

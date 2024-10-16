@@ -85,10 +85,23 @@ internal class MacroCompiler(
 
             // Read the next parameter name
             val annotations = getTypeAnnotationSymbols()
-            confirm(annotations.isEmptyOr(Macro.ParameterEncoding.Tagged.ionTextName)) { "unsupported parameter encoding $annotations" }
+            val parameterEncoding = when (annotations.size) {
+                0 -> Macro.ParameterEncoding.Tagged
+                1 -> {
+                    val encodingText = annotations[0].text
+                    val encoding = Macro.ParameterEncoding.entries.singleOrNull { it.ionTextName == encodingText }
+                    if (encoding == null) {
+                        // TODO: Check for macro-shaped parameter encodings, and only if it's still null, we throw.
+                        throw IonException("unsupported parameter encoding $annotations")
+                    }
+                    encoding
+                }
+                2 -> TODO("Qualified references for macro-shaped parameters")
+                else -> throw IonException("unsupported parameter encoding $annotations")
+            }
             confirm(isIdentifierSymbol(symbolText)) { "invalid parameter name: '$symbolText'" }
             confirm(signature.none { it.variableName == symbolText }) { "redeclaration of parameter '$symbolText'" }
-            pendingParameter = Macro.Parameter(symbolText, Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
+            pendingParameter = Macro.Parameter(symbolText, parameterEncoding, Macro.ParameterCardinality.ExactlyOne)
         }
         // If we have a pending parameter than hasn't been added to the signature, add it here.
         if (pendingParameter != null) signature.add(pendingParameter!!)

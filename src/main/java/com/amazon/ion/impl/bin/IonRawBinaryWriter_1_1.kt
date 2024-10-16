@@ -859,12 +859,12 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     thisContainerTotalLength++
                 } else if (isTagless) {
                     // End tagless group -- write the number of expressions, end with FlexUInt 0
-                    thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
+                    thisContainerTotalLength += writeCurrentContainerLength(maxOf(1, lengthPrefixPreallocation))
                     buffer.writeByte(FlexInt.ZERO)
                     thisContainerTotalLength++
                 } else if (currentContainer.isLengthPrefixed) {
                     // Length-prefixed, tagged -- write the number of bytes
-                    thisContainerTotalLength += writeCurrentContainerLength(lengthPrefixPreallocation)
+                    thisContainerTotalLength += writeCurrentContainerLength(maxOf(1, lengthPrefixPreallocation))
                 } else {
                     // Delimited, tagged -- start with `01` end with `F0`
                     buffer.writeByte(OpCodes.DELIMITED_END_MARKER)
