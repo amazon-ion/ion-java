@@ -4,8 +4,11 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IntegerSize;
+import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonEncodingVersion;
+import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonText;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1;
@@ -14,8 +17,10 @@ import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroRef;
 import com.amazon.ion.impl.macro.ParameterFactory;
+import com.amazon.ion.impl.macro.SystemMacro;
 import com.amazon.ion.impl.macro.TemplateMacro;
 import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -132,6 +137,30 @@ public class EncodingDirectiveCompilationTest {
         writer.stepInSExp(false);
         for (String parameter : signature) {
             writeSymbol(writer, symbols, parameter);
+        }
+        writer.stepOut();
+    }
+
+    private static void writeMacroSignatureFromDatagram(IonRawWriter_1_1 writer, Map<String, Integer> symbols, IonDatagram... signature) {
+        writer.stepInSExp(false);
+        for (IonDatagram parameter : signature) {
+            if (parameter.size() > 2) {
+                throw new IllegalStateException("Parameters can only have two components: a name and a cardinality.");
+            }
+            IonText name = (IonText) parameter.get(0);
+            String[] encoding = name.getTypeAnnotations();
+            if (encoding.length == 1) {
+                // The encoding, e.g. uint8
+                writer.writeAnnotations(encoding);
+            } else if (encoding.length > 1) {
+                throw new IllegalStateException("Only one encoding annotation is allowed.");
+            }
+            // The name
+            writeSymbol(writer, symbols, name.stringValue());
+            if (parameter.size() == 2) {
+                // The cardinality, e.g. *
+                writeSymbol(writer, symbols, ((IonText) parameter.get(1)).stringValue());
+            }
         }
         writer.stepOut();
     }
@@ -1031,8 +1060,88 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void macroInvocationInTaggedExpressionGroup(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "foo", "value");
+        startEncodingDirective(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignature(writer, symbols, "value", "*");
+        writeVariableExpansion(writer, symbols, "value");
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        Macro expectedMacro = new TemplateMacro(
+            Collections.singletonList(new Macro.Parameter("value", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)),
+            Collections.singletonList(new Expression.VariableRef(0))
+        );
+
+        writer.stepInEExp(0, false, expectedMacro); {
+            writer.stepInExpressionGroup(true); {
+                writer.stepInEExp(SystemMacro.Values); {
+                    writer.writeString("bar");
+                } writer.stepOut();
+            } writer.stepOut();
+        } writer.stepOut();
+
+        byte[] data = getBytes(writer, out);
+
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("bar", reader.stringValue());
+            assertNull(reader.next());
+        }
+    }
+
+    private static final IonLoader LOADER = IonSystemBuilder.standard().build().getLoader();
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void taglessExpressionGroup(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "foo", "value");
+        startEncodingDirective(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignatureFromDatagram(writer, symbols, LOADER.load("uint8::value '*'"));
+        writeVariableExpansion(writer, symbols, "value");
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        Macro expectedMacro = new TemplateMacro(
+            Collections.singletonList(new Macro.Parameter("value", Macro.ParameterEncoding.Uint8, Macro.ParameterCardinality.ZeroOrMore)),
+            Collections.singletonList(new Expression.VariableRef(0))
+        );
+
+        writer.stepInEExp(0, false, expectedMacro); {
+            writer.stepInExpressionGroup(true); {
+                writer.writeInt(1);
+                writer.writeInt(2);
+            } writer.stepOut();
+        } writer.stepOut();
+
+        byte[] data = getBytes(writer, out);
+
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(1, reader.intValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(2, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
     // TODO cover every Ion type
-    // TODO tagless values and tagless argument groups
     // TODO annotations in macro definition (using 'annotate' system macro)
     // TODO macro invocation that expands to a system value
     // TODO test error conditions
