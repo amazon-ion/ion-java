@@ -2417,6 +2417,7 @@ class IonCursorBinary implements IonCursor {
         }
         if (minorVersion == 1) {
             if (valueTid.isMacroInvocation) {
+                setCheckpointAfterValueHeader();
                 return true;
             }
             if (valueTid.isNull && valueTid.length > 0) {

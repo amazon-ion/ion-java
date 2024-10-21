@@ -1321,6 +1321,67 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void emptyMacroAppendToEmptyTable(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        startEncodingDirective(writer);
+        startMacroTable(writer);
+        writer.writeSymbol(SystemSymbols_1_1.ION_ENCODING);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        byte[] data = getBytes(writer, out);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void emptyMacroAppendToNonEmptyTable(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        SortedMap<String, Macro> macroTable = new TreeMap<>();
+        macroTable.put("foo", new TemplateMacro(
+            Collections.singletonList(new Macro.Parameter("foo", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)),
+            Collections.singletonList(new Expression.VariableRef(0))
+        ));
+        Map<String, Integer> symbols = Collections.emptyMap();
+
+        startEncodingDirective(writer); {
+            startMacroTable(writer); {
+                startMacro(writer, symbols, "foo"); {
+                    writeMacroSignature(writer, symbols, "x");
+                    writeVariableExpansion(writer, symbols, "x");
+                } endMacro(writer);
+            } endMacroTable(writer);
+        } endEncodingDirective(writer);
+
+
+        startEncodingDirective(writer); {
+            startMacroTable(writer); {
+                writer.writeSymbol(SystemSymbols_1_1.ION_ENCODING);
+            } endMacroTable(writer);
+            writeEncodingDirectiveSymbolTable(writer, true, "bar");
+        } endEncodingDirective(writer);
+
+        writer.stepInEExp(0, true, macroTable.get("foo")); {
+            writer.writeSymbol(1);
+        } writer.stepOut();
+
+        byte[] data = getBytes(writer, out);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("bar", reader.stringValue());
+        }
+    }
+
     // TODO cover every Ion type
     // TODO annotations in macro definition (using 'annotate' system macro)
     // TODO test error conditions
