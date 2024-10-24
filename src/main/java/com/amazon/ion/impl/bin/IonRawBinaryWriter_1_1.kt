@@ -960,6 +960,13 @@ class IonRawBinaryWriter_1_1 internal constructor(
         writeSymbol(macroRef)
     }
 
+    override fun stepInTdlSystemMacroInvocation(systemSymbol: SystemSymbols_1_1) {
+        stepInSExp(usingLengthPrefix = false)
+        writeSymbol(".")
+        writeAnnotations(SystemSymbols_1_1.ION)
+        writeSymbol(systemSymbol)
+    }
+
     override fun writeTdlVariableExpansion(variableName: String) {
         stepInSExp(usingLengthPrefix = false)
         writeSymbol("%")

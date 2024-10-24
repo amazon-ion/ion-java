@@ -458,6 +458,14 @@ class IonRawTextWriter_1_1 internal constructor(
         isPendingSeparator = true
     }
 
+    override fun stepInTdlSystemMacroInvocation(systemSymbol: SystemSymbols_1_1) {
+        startSexp {
+            output.appendAscii("(.\$ion::")
+            output.appendAscii(systemSymbol.text)
+        }
+        isPendingSeparator = true
+    }
+
     override fun writeTdlVariableExpansion(variableName: String) {
         writeScalar {
             output.appendAscii("(%")
