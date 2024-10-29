@@ -112,8 +112,7 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
         @JvmStatic
         fun allSymbolTexts() = ALL_SYMBOL_TEXTS
 
-        /**
-         * Returns true if the [id] is a valid system symbol ID.*/
+        /** Returns true if the [id] is a valid system symbol ID. */
         @JvmStatic
         operator fun contains(id: Int): Boolean {
             return id > 0 && id <= SystemSymbols_1_1.ALL_VALUES.size
