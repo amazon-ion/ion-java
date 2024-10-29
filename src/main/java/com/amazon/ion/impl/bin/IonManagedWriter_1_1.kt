@@ -163,7 +163,7 @@ internal class IonManagedWriter_1_1(
      */
     private fun addMacroDependencies(macro: Macro) {
         macro.dependencies.forEach {
-            if (it !in macroTable && it !in newMacros) {
+            if (it !is SystemMacro && it !in macroTable && it !in newMacros) {
                 addMacroDependencies(it)
                 assignMacroAddress(it)
             }
@@ -351,7 +351,12 @@ internal class IonManagedWriter_1_1(
                 val name = macroNames[address]
                 when (macro) {
                     is TemplateMacro -> writeMacroDefinition(name, macro)
-                    is SystemMacro -> exportSystemMacro(macro, name)
+                    is SystemMacro -> {
+                        if (name != macro.macroName) {
+                            exportSystemMacro(macro, name)
+                        }
+                        // Else, no need to export the macro since it's already known by the desired name
+                    }
                 }
             }
             forceNoNewlines(true)
@@ -479,8 +484,12 @@ internal class IonManagedWriter_1_1(
                         numberOfTimesToStepOut[expression.endExclusive]++
                     }
                     is Expression.MacroInvocation -> {
-                        val invokedAddress = macroTable[expression.macro]
-                            ?: newMacros[expression.macro]
+                        val invokedMacro = expression.macro
+                        if (invokedMacro is SystemMacro) {
+                            stepInTdlSystemMacroInvocation(invokedMacro.systemSymbol)
+                        }
+                        val invokedAddress = macroTable[invokedMacro]
+                            ?: newMacros[invokedMacro]
                             ?: throw IllegalStateException("A macro in the macro table is missing a dependency")
                         val invokedName = macroNames[invokedAddress]
                         if (options.invokeTdlMacrosByName && invokedName != null) {
@@ -843,23 +852,7 @@ internal class IonManagedWriter_1_1(
         }
     }
 
-    private fun startSystemMacro(macro: SystemMacro) {
-        var macroName = macro.macroName
-        // TODO: Replace `indexOf` with something that is not O(n) time complexity.
-        var id = macroNames.indexOf(macroName)
-        if (id < 0) {
-            // If the name is not in use, put it into the user macro table
-            id = getOrAssignMacroAddressAndName(macroName, macro)
-        }
-        if (macrosById[id] == macro) {
-            // The name and id in the local table refers to the system macro we want to invoke,
-            // so invoke as a local symbol since it's almost always shorter.
-            startMacro(macroName, id, macro)
-        } else {
-            // The name is already being used by something else, so invoke using the system macro syntax.
-            userData.stepInEExp(macro)
-        }
-    }
+    private fun startSystemMacro(macro: SystemMacro) = userData.stepInEExp(macro)
 
     override fun startExpressionGroup() {
         userData.stepInExpressionGroup(options.writeLengthPrefix(ContainerType.EXPRESSION_GROUP, depth + 1))

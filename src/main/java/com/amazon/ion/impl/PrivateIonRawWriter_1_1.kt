@@ -28,6 +28,11 @@ internal interface PrivateIonRawWriter_1_1 : IonRawWriter_1_1 {
     fun stepInTdlMacroInvocation(macroRef: String)
 
     /**
+     * Steps into a TDL System Macro Invocation—an s-expression, followed by `.` and then the qualified macro name
+     */
+    fun stepInTdlSystemMacroInvocation(systemSymbol: SystemSymbols_1_1)
+
+    /**
      * Steps in s-expression, writes `%` symbol, variable name, and then closes the s-expression.
      */
     fun writeTdlVariableExpansion(variableName: String)

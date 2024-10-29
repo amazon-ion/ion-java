@@ -14,22 +14,27 @@ import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
 /**
  * Macros that are built in, rather than being defined by a template.
  */
-enum class SystemMacro(val id: Byte, val macroName: String, override val signature: List<Macro.Parameter>, override val body: List<Expression.TemplateBodyExpression>? = null) : Macro {
+enum class SystemMacro(
+    val id: Byte,
+    val systemSymbol: SystemSymbols_1_1,
+    override val signature: List<Macro.Parameter>,
+    override val body: List<Expression.TemplateBodyExpression>? = null
+) : Macro {
     // Technically not system macros, but special forms. However, it's easier to model them as if they are macros in TDL.
     // We give them an ID of -1 to distinguish that they are not addressable outside TDL.
-    IfNone(-1, "if_none", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfSome(-1, "if_some", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfSingle(-1, "if_single", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfMulti(-1, "if_multi", listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfNone(-1, IF_NONE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfSome(-1, IF_SOME, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfSingle(-1, IF_SINGLE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfMulti(-1, IF_MULTI, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
 
     // The real macros
-    None(0, "none", emptyList()),
-    Values(1, "values", listOf(zeroToManyTagged("values"))),
-    Annotate(2, "annotate", listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
-    MakeString(3, "make_string", listOf(zeroToManyTagged("text"))),
-    MakeSymbol(4, "make_symbol", listOf(zeroToManyTagged("text"))),
-    MakeBlob(5, "make_blob", listOf(zeroToManyTagged("bytes"))),
-    MakeDecimal(6, "make_decimal", listOf(exactlyOneFlexInt("coefficient"), exactlyOneFlexInt("exponent"))),
+    None(0, NONE, emptyList()),
+    Values(1, VALUES, listOf(zeroToManyTagged("values"))),
+    Annotate(2, ANNOTATE, listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
+    MakeString(3, MAKE_STRING, listOf(zeroToManyTagged("text"))),
+    MakeSymbol(4, MAKE_SYMBOL, listOf(zeroToManyTagged("text"))),
+    MakeBlob(5, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
+    MakeDecimal(6, MAKE_DECIMAL, listOf(exactlyOneFlexInt("coefficient"), exactlyOneFlexInt("exponent"))),
 
     /**
      * ```ion
@@ -41,7 +46,7 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
      * ```
      */
     SetSymbols(
-        11, "set_symbols", listOf(zeroToManyTagged("symbols")),
+        11, SET_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
             annotated(ION_ENCODING, ::sexp) {
                 sexp {
@@ -66,7 +71,7 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
      * ```
      */
     AddSymbols(
-        12, "add_symbols", listOf(zeroToManyTagged("symbols")),
+        12, ADD_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
             annotated(ION_ENCODING, ::sexp) {
                 sexp {
@@ -92,7 +97,7 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
      * ```
      */
     SetMacros(
-        13, "set_macros", listOf(zeroToManyTagged("macros")),
+        13, SET_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
             annotated(ION_ENCODING, ::sexp) {
                 sexp {
@@ -117,7 +122,7 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
      * ```
      */
     AddMacros(
-        14, "add_macros", listOf(zeroToManyTagged("macros")),
+        14, ADD_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
             annotated(ION_ENCODING, ::sexp) {
                 sexp {
@@ -144,7 +149,7 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
      * ```
      */
     Use(
-        15, "use", listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
+        15, USE, listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
         templateBody {
             val theModule = _Private_Utils.newSymbolToken("the_module")
             annotated(ION_ENCODING, ::sexp) {
@@ -172,18 +177,31 @@ enum class SystemMacro(val id: Byte, val macroName: String, override val signatu
         }
     ),
 
-    Repeat(17, "repeat", listOf(exactlyOneTagged("n"), oneToManyTagged("value"))),
+    Repeat(17, REPEAT, listOf(exactlyOneTagged("n"), oneToManyTagged("value"))),
 
-    Comment(21, "comment", listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
+    Comment(21, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
     MakeField(
-        22, "make_field",
+        22, MAKE_FIELD,
         listOf(
             Macro.Parameter("field_name", Macro.ParameterEncoding.CompactSymbol, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
         )
     ),
 
+    Default(
+        23, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
+        templateBody {
+            macro(IfNone) {
+                variable(0)
+                variable(1)
+                variable(0)
+            }
+        }
+    ),
+
     // TODO: Other system macros
     ;
+
+    val macroName: String get() = this.systemSymbol.text
 
     override val dependencies: List<Macro>
         get() = body

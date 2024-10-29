@@ -6,7 +6,7 @@ import com.amazon.ion.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
 import com.amazon.ion.impl.macro.Expression.*
-import com.amazon.ion.util.confirm
+import com.amazon.ion.util.*
 
 /**
  * [MacroCompiler] wraps an Ion reader. When directed to do so, it will take over advancing and getting values from the
@@ -40,6 +40,7 @@ internal class MacroCompiler(
             confirm(reader.encodingType() == IonType.SYMBOL && reader.stringValue() == "macro") { "macro compilation expects a sexp starting with the keyword `macro`" }
 
             reader.nextAndCheckType(IonType.SYMBOL, IonType.NULL, "macro name")
+
             reader.confirmNoAnnotations("macro name")
             if (reader.encodingType() != IonType.NULL) {
                 macroName = reader.stringValue().also { confirm(isIdentifierSymbol(it)) { "invalid macro name: '$it'" } }
@@ -239,6 +240,10 @@ internal class MacroCompiler(
      * Must be positioned on the (expected) macro reference.
      */
     private fun ReaderAdapter.readMacroReference(): Macro {
+
+        val annotations = getTypeAnnotationSymbols()
+        val isSystemMacro = annotations.size == 1 && SystemSymbols_1_1.ION.text == annotations[0].getText()
+
         val macroRef = when (encodingType()) {
             IonType.SYMBOL -> {
                 val macroName = stringValue()
@@ -246,10 +251,15 @@ internal class MacroCompiler(
                 MacroRef.ByName(macroName)
             }
 
-            IonType.INT -> MacroRef.ById(intValue())
+            IonType.INT -> {
+                val sid = intValue()
+                if (sid < 0) throw IonException("Macro ID must be non-negative: $sid")
+                MacroRef.ById(intValue())
+            }
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${encodingType() ?: "nothing"}\"")
         }
-        return getMacro(macroRef) ?: throw IonException("Unrecognized macro: $macroRef")
+        val m = if (isSystemMacro) SystemMacro.get(macroRef) else getMacro(macroRef)
+        return m ?: throw IonException("Unrecognized macro: $macroRef")
     }
 
     private fun ReaderAdapter.compileVariableExpansion(placeholderIndex: Int) {
