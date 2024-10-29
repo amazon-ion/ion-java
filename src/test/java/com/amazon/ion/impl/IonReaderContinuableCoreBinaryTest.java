@@ -1079,4 +1079,22 @@ public class IonReaderContinuableCoreBinaryTest {
             );
         }
     }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void addSymbolsSystemMacro(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0xEF, 0x0C, // system macro add_symbols
+            0x02, // AEB: 0b------aa; a=10, expression group
+            0x01, // FlexInt 0, a delimited expression group
+            0x93, 0x61, 0x62, 0x63, // 3-byte string, utf-8 "abc"
+            0xF0, // delimited end...  of expression group
+            0xE1, // SID single byte
+            0x42  // SID $66
+        ));
+        try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertEquals(66, reader.symbolValueId());
+        }
+    }
 }
