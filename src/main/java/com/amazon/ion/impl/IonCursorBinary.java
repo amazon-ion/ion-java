@@ -2692,6 +2692,7 @@ class IonCursorBinary implements IonCursor {
         pushContainer();
         parent.typeId = valueTid;
         // TODO support length prefixed e-expressions.
+        // TODO when the length is known to be within the buffer, exit slow mode.
         parent.endIndex = DELIMITED_MARKER;
         valueTid = null;
         event = Event.NEEDS_INSTRUCTION;

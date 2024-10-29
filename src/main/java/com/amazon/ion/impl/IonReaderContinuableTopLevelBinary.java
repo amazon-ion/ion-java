@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonBufferConfiguration;
@@ -219,6 +218,9 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
                 if (event == Event.NEEDS_INSTRUCTION) {
                     throw new OversizedValueException();
                 }
+            } else {
+                super.prepareScalar();
+                return;
             }
         }
         throw new IonException("Unexpected EOF.");
