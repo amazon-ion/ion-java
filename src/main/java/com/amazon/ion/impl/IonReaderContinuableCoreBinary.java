@@ -2474,7 +2474,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return _Private_Utils.SYMBOL_0;
         }
         SystemSymbols_1_1 systemSymbol = SystemSymbols_1_1.get((int) id);
-        return (systemSymbol == null) ? new SymbolTokenImpl(-1) : systemSymbol.getToken();
+        if (systemSymbol == null) {
+            throw new IonException("Unknown system symbol ID: " + id);
+        }
+        return systemSymbol.getToken();
     }
 
     @Override
