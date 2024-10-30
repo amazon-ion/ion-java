@@ -6004,5 +6004,30 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
+    @Test
+    public void addSymbolsSystemMacroWhenNotEntirelyBuffered() throws Exception {
+        int[] data = new int[] {
+            /*  0 -  3 */  // 0xEA, 0x01, 0x01, 0xE0, // implicitly provided by BinaryIonAppender
+            /*  4 -  5 */  0xEF, 0x0C, // system macro add_symbols
+            /*  6 -  7 */  0x02,  0x01, // AEB: 0b------aa; a=10, FlexInt 0, a delimited expression group
+            /*  8 - 12 */  0x93, 0x66, 0x6F, 0x72, // "for"
+            /* 13 - 16 */  0x93, 0x66, 0x75, 0x72, // "fur"
+            /* 17 - 21 */  0x94, 0x66, 0x6F, 0x75, 0x72, // "four"
+            /* 22 - 22 */  0xF0, // delimited end...  of expression group
+            /* 23 - 24 */ 0xE1, 0x41 + 3, // SID single byte ${usid 1} => "four"
+        };
+        byte[] bytes = new TestUtils.BinaryIonAppender(1).append(data).toByteArray();
+        totalBytesInStream = bytes.length;
+        readerBuilder = IonReaderBuilder.standard().withIncrementalReadingEnabled(true);
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
+        reader = boundedReaderFor(inputStream, 16, Integer.MAX_VALUE, byteCountingHandler);
+        assertSequence(
+            next(IonType.SYMBOL),
+            stringValue("four"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)
 }

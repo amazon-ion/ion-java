@@ -1790,6 +1790,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     @Override
+    public Event fillValue() {
+        if (isEvaluatingEExpression) {
+            event = Event.VALUE_READY;
+            return event;
+        }
+        return super.fillValue();
+    }
+
+    @Override
     public Event stepIntoContainer() {
         if (isEvaluatingEExpression) {
             macroEvaluatorIonReader.stepIn();
