@@ -1171,7 +1171,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @param newSymbols the symbols to install.
      */
     protected void installSymbols(List<String> newSymbols) {
-        if (newSymbols != null) {
+        if (newSymbols != null && !newSymbols.isEmpty()) {
             int numberOfNewSymbols = newSymbols.size();
             int numberOfAvailableSlots = symbols.length - (localSymbolMaxOffset + 1);
             int shortfall = numberOfNewSymbols - numberOfAvailableSlots;

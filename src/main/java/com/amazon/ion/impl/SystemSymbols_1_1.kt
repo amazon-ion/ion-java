@@ -97,7 +97,7 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
         }
 
         @JvmStatic
-        private val BY_NAME = ALL_VALUES.fold(HashMap<String, SystemSymbols_1_1>(ALL_VALUES.size)) { map, s ->
+        private val BY_NAME: HashMap<String, SystemSymbols_1_1> = ALL_VALUES.fold(HashMap(ALL_VALUES.size)) { map, s ->
             check(map.put(s.text, s) == null) { "Duplicate system symbol text: ${s.id}=${s.text}" }
             map
         }
