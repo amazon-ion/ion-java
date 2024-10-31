@@ -313,7 +313,7 @@ internal class IonManagedWriter_1_1(
     private fun writeSymbolTableClause() {
         val hasSymbolsToAdd = newSymbols.isNotEmpty()
         val hasSymbolsToRetain = symbolTable.isNotEmpty()
-        if (!hasSymbolsToAdd && !hasSymbolsToRetain) return
+        if (!hasSymbolsToAdd) return
 
         val macro = if (!hasSymbolsToRetain) SystemMacro.SetSymbols else SystemMacro.AddSymbols
 
@@ -335,7 +335,7 @@ internal class IonManagedWriter_1_1(
     private fun writeMacroTableClause() {
         val hasMacrosToAdd = newMacros.isNotEmpty()
         val hasMacrosToRetain = macroTable.isNotEmpty()
-        if (!hasMacrosToAdd && !hasMacrosToRetain) return
+        if (!hasMacrosToAdd) return
 
         val macro = if (!hasMacrosToRetain) SystemMacro.SetMacros else SystemMacro.AddMacros
 
