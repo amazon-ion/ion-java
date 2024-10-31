@@ -259,9 +259,6 @@ internal class IonManagedWriter_1_1(
 
     // Only called by `finish()`
     private fun resetEncodingContext() {
-        // TODO: Make sure that if a value is written after this method is called, we
-        //       emit an IVM or empty encoding directive before the next user value
-        //       in order to avoid writing a data stream with leaky context.
         if (depth != 0) throw IllegalStateException("Cannot reset the encoding context while stepped in any value.")
         symbolTable.clear()
         macroNames.clear()
@@ -318,7 +315,7 @@ internal class IonManagedWriter_1_1(
         val macro = if (!hasSymbolsToRetain) SystemMacro.SetSymbols else SystemMacro.AddSymbols
 
         // Add new symbols
-        if (hasSymbolsToAdd) writeSystemMacro(macro) {
+        writeSystemMacro(macro) {
             stepInExpressionGroup(usingLengthPrefix = false)
             if (newSymbols.size <= MAX_SYMBOLS_IN_SINGLE_LINE_SYMBOL_TABLE) forceNoNewlines(true)
             newSymbols.forEach { (text, _) -> writeString(text) }
@@ -339,7 +336,7 @@ internal class IonManagedWriter_1_1(
 
         val macro = if (!hasMacrosToRetain) SystemMacro.SetMacros else SystemMacro.AddMacros
 
-        if (hasMacrosToAdd) writeSystemMacro(macro) {
+        writeSystemMacro(macro) {
             forceNoNewlines(false)
             stepInExpressionGroup(usingLengthPrefix = false)
             newMacros.forEach { (macro, address) ->
