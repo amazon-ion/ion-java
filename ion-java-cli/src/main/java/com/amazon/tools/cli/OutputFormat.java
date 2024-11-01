@@ -74,12 +74,12 @@ public enum OutputFormat {
         @Override
         public IonWriter createIonWriter(OutputStream outputStream) {
             NoOpOutputStream out = new NoOpOutputStream();
-            return IonTextWriterBuilder.pretty().build(out);
+            return IonTextWriterBuilder.standard().build(out);
         }
 
         @Override
         public IonWriter createIonWriterWithImports(OutputStream outputStream, SymbolTable[] imports) {
-            return IonTextWriterBuilder.pretty().withImports(imports).build(outputStream);
+            return IonTextWriterBuilder.standard().withImports(imports).build(outputStream);
         }
     };
 
