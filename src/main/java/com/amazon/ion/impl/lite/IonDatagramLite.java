@@ -323,7 +323,14 @@ final class IonDatagramLite
 
     @Override
     public IonValue set(int index, IonValue element){
-        throw new UnsupportedOperationException();
+        if (((IonValueLite) element)._context.getContextSymbolTable() != getContextForIndex(null, index).getContextSymbolTable()) {
+            // Note: this isn't impossible to support, but it requires care in the case where 'element' may depend
+            // on symbol table mappings unique to its own context. In order to sidestep this complexity until a use
+            // case is identified for it, only setting the element at an index that uses the same symbol table is
+            // currently supported.
+            throw new UnsupportedOperationException();
+        }
+        return super.set(index, element);
     }
 
     @Override
