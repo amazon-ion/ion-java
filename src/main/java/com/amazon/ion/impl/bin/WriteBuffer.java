@@ -21,7 +21,7 @@ import static com.amazon.ion.impl.bin.Ion_1_1_Constants.FLEX_SYM_SYSTEM_SYMBOL_O
  * in an IndexOutOfBoundsException. The number 10 is chosen because it is the maximum number of bytes required to write
  * a long value as a FlexInt or VarInt.
  */
-/*package*/ final class WriteBuffer implements Closeable
+public final class WriteBuffer implements Closeable
 {
     private final BlockAllocator allocator;
     private final List<Block> blocks;

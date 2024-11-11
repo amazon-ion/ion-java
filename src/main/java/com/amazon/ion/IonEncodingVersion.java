@@ -24,7 +24,7 @@ public abstract class IonEncodingVersion<BinaryWriterBuilder, TextWriterBuilder>
      * Ion 1.0, see the <a href="https://amazon-ion.github.io/ion-docs/docs/binary.html">binary</a> and
      * <a href="https://amazon-ion.github.io/ion-docs/docs/text.html">text</a> specification.
      */
-    public static IonEncodingVersion<IonBinaryWriterBuilder, IonTextWriterBuilder> ION_1_0 = new IonEncodingVersion<IonBinaryWriterBuilder, IonTextWriterBuilder>(0) {
+    public static final IonEncodingVersion<IonBinaryWriterBuilder, IonTextWriterBuilder> ION_1_0 = new IonEncodingVersion<IonBinaryWriterBuilder, IonTextWriterBuilder>(0) {
 
         @Override
         public IonBinaryWriterBuilder binaryWriterBuilder() {
@@ -40,7 +40,7 @@ public abstract class IonEncodingVersion<BinaryWriterBuilder, TextWriterBuilder>
     /**
      * Ion 1.1, TODO link to the finalized specification.
      */
-    public static IonEncodingVersion<IonBinaryWriterBuilder_1_1, IonTextWriterBuilder_1_1> ION_1_1 = new IonEncodingVersion<IonBinaryWriterBuilder_1_1, IonTextWriterBuilder_1_1>(1) {
+    public static final IonEncodingVersion<IonBinaryWriterBuilder_1_1, IonTextWriterBuilder_1_1> ION_1_1 = new IonEncodingVersion<IonBinaryWriterBuilder_1_1, IonTextWriterBuilder_1_1>(1) {
 
         @Override
         public IonBinaryWriterBuilder_1_1 binaryWriterBuilder() {
