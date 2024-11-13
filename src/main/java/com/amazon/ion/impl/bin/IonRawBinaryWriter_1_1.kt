@@ -474,7 +474,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     buffer.writeFixedIntOrUInt(value, 8)
                 }
                 TaglessEncoding.FLEX_UINT -> {
-                    confirm(value >= 0) { "value $value is not a valid compact_uint" }
+                    confirm(value >= 0) { "value $value is not a valid flex_uint" }
                     buffer.writeFlexUInt(value)
                 }
                 TaglessEncoding.INT8 -> {
@@ -517,7 +517,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
                     buffer.writeFixedIntOrUInt(value.toLong(), 8)
                 }
                 TaglessEncoding.FLEX_UINT -> {
-                    confirm(value.signum() >= 0) { "value $value is not a value compact_uint" }
+                    confirm(value.signum() >= 0) { "value $value is not a value flex_uint" }
                     buffer.writeFlexUInt(value)
                 }
                 TaglessEncoding.INT8 -> {
@@ -578,7 +578,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
             taggedEncoder = { writeSymbolValue(buffer, id) },
             taglessEncoder = { primitiveType ->
                 when (primitiveType) {
-                    TaglessEncoding.COMPACT_SYMBOL -> buffer.writeFlexSym(id)
+                    TaglessEncoding.FLEX_SYM -> buffer.writeFlexSym(id)
                     else -> throw IonException("Cannot write a symbol when the macro signature requires $primitiveType.")
                 }
             }
@@ -589,7 +589,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
         taggedEncoder = { writeSymbolValue(buffer, utf8StringEncoder.encode(text.toString())) },
         taglessEncoder = { primitiveType ->
             when (primitiveType) {
-                TaglessEncoding.COMPACT_SYMBOL -> buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
+                TaglessEncoding.FLEX_SYM -> buffer.writeFlexSym(utf8StringEncoder.encode(text.toString()))
                 else -> throw IonException("Cannot write a symbol when the macro signature requires $primitiveType.")
             }
         }

@@ -486,10 +486,10 @@ internal class IonManagedWriter_1_1_Test {
                     signature = listOf(
                         Parameter("a", ParameterEncoding.Int32, ParameterCardinality.ExactlyOne),
                         Parameter("b", ParameterEncoding.Tagged, ParameterCardinality.OneOrMore),
-                        Parameter("c", ParameterEncoding.CompactSymbol, ParameterCardinality.ZeroOrMore),
+                        Parameter("c", ParameterEncoding.FlexSym, ParameterCardinality.ZeroOrMore),
                         Parameter("d", ParameterEncoding.Float64, ParameterCardinality.ZeroOrOne),
                     ),
-                    expectedSignature = "(int32::a b+ compact_symbol::c* float64::d?)"
+                    expectedSignature = "(int32::a b+ flex_sym::c* float64::d?)"
                 ),
                 case(
                     "null",
@@ -811,7 +811,7 @@ internal class IonManagedWriter_1_1_Test {
     fun `writeObject() should write something with nested macro representation`() {
         val expected = """
             $ion_1_1
-            (:$ion::set_macros (:: (macro null (x*) (%x)) (macro Polygon (vertices+ compact_symbol::fill?) {vertices:[(%vertices)],fill:(.0 (%fill))}) (macro Point2D (x y) {x:(%x),y:(%y)})))
+            (:$ion::set_macros (:: (macro null (x*) (%x)) (macro Polygon (vertices+ flex_sym::fill?) {vertices:[(%vertices)],fill:(.0 (%fill))}) (macro Point2D (x y) {x:(%x),y:(%y)})))
             (:Polygon (:: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) Blue)
         """.trimIndent()
 
@@ -844,7 +844,7 @@ internal class IonManagedWriter_1_1_Test {
                 signature = listOf(
                     // TODO: Change this to a macro shape when they are supported
                     Parameter("vertices", ParameterEncoding.Tagged, ParameterCardinality.OneOrMore),
-                    Parameter("fill", ParameterEncoding.CompactSymbol, ParameterCardinality.ZeroOrOne),
+                    Parameter("fill", ParameterEncoding.FlexSym, ParameterCardinality.ZeroOrOne),
                 ),
                 templateBody {
                     struct {

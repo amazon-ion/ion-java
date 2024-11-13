@@ -183,7 +183,7 @@ enum class SystemMacro(
     MakeField(
         22, MAKE_FIELD,
         listOf(
-            Macro.Parameter("field_name", Macro.ParameterEncoding.CompactSymbol, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
+            Macro.Parameter("field_name", Macro.ParameterEncoding.FlexSym, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
         )
     ),
 
