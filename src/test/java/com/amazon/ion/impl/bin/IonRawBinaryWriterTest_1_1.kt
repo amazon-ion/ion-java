@@ -1681,8 +1681,8 @@ class IonRawBinaryWriterTest_1_1 {
         "     Uint32,   1, 01 00 00 00",
         "     Uint64,   0, 00 00 00 00 00 00 00 00",
         "     Uint64,   1, 01 00 00 00 00 00 00 00",
-        "CompactUInt,   0, 01",
-        "CompactUInt,   1, 03",
+        "   FlexUint,   0, 01",
+        "   FlexUint,   1, 03",
         "       Int8,   0, 00",
         "       Int8,   1, 01",
         "       Int8,  -1, FF",
@@ -1695,9 +1695,9 @@ class IonRawBinaryWriterTest_1_1 {
         "      Int64,   0, 00 00 00 00 00 00 00 00",
         "      Int64,   1, 01 00 00 00 00 00 00 00",
         "      Int64,  -1, FF FF FF FF FF FF FF FF",
-        " CompactInt,   0, 01",
-        " CompactInt,   1, 03",
-        " CompactInt,  -1, FF",
+        "    FlexInt,   0, 01",
+        "    FlexInt,   1, 03",
+        "    FlexInt,  -1, FF",
     )
     fun `write a tagless int`(encoding: ParameterEncoding, value: Long, expectedBytes: String) {
         val macro = dummyMacro(nArgs = 1, variadicParam(encoding))
@@ -1723,12 +1723,12 @@ class IonRawBinaryWriterTest_1_1 {
         "     Uint16, 0 1,        09 00 00 01 00 01",
         "     Uint32, 0 1,        11 00 00 00 00 01 00 00 00 01",
         "     Uint64, 0 1,        21 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01",
-        "CompactUInt, 0 1 256,    09 01 03 02 04 01",
+        "   FlexUint, 0 1 256,    09 01 03 02 04 01",
         "       Int8, -1 0 1,     07 FF 00 01 01",
         "      Int16, -1 0 1,     0D FF FF 00 00 01 00 01",
         "      Int32, -1 0 1,     19 FF FF FF FF 00 00 00 00 01 00 00 00 01",
         "      Int64, -1 0 1,     31 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01",
-        " CompactInt, -1 0 1 256, 0B FF 01 03 02 04 01",
+        "    FlexInt, -1 0 1 256, 0B FF 01 03 02 04 01",
     )
     fun `write a tagless int in an expression group`(encoding: ParameterEncoding, values: String, expressionGroupBytes: String) {
         val longValues = values.split(" ").map { it.toLong() }
@@ -1769,8 +1769,8 @@ class IonRawBinaryWriterTest_1_1 {
         "      Int32,    ${Int.MAX_VALUE}",
         "      Int64,   ${Long.MIN_VALUE}",
         "      Int64,   ${Long.MAX_VALUE}",
-        "CompactUInt,                   0",
-        // There is no upper bound for CompactUInt, and no bounds at all for CompactInt
+        "   FlexUint,                   0",
+        // There is no upper bound for FlexUInt, and no bounds at all for FlexInt
     )
     fun `attempting to write a tagless int that is out of bounds for its encoding primitive should throw exception`(
         encoding: ParameterEncoding,
@@ -1915,7 +1915,7 @@ class IonRawBinaryWriterTest_1_1 {
         "   '', 01 75",
     )
     fun `write a tagless symbol`(value: String, expectedBytes: String) {
-        val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.CompactSymbol))
+        val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.FlexSym))
         // If it's an int, write as SID, else write as text
         val writeTheValue: IonRawBinaryWriter_1_1.() -> Unit = value.toIntOrNull()
             ?.let { { writeSymbol(it) } }

@@ -1112,9 +1112,9 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
-                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 6, 10),
-                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 10, 11),
-                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 13, 13),
+                nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 6, 10),
+                nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 10, 11),
+                nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 13, 13),
                 endStream()
             );
         }
@@ -1144,7 +1144,7 @@ public class IonCursorBinaryTest {
                 nextTaggedValue(IonType.INT, 7, 7),
                 nextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 nextTaggedValue(IonType.FLOAT, 12, 16),
-                nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
+                nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 17, 21),
                 nextTaggedValue(IonType.SYMBOL, 22, 26),
                 endStream()
             );
@@ -1163,7 +1163,7 @@ public class IonCursorBinaryTest {
                 fillScalar(7, 7), type(IonType.INT),
                 fillNextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 fillScalar(12, 16), type(IonType.FLOAT),
-                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL, 17, 21),
+                fillNextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 17, 21),
                 fillScalar(22, 26), type(IonType.SYMBOL),
                 endStream()
             );
@@ -1275,7 +1275,7 @@ public class IonCursorBinaryTest {
                 valueReady(IonType.FLOAT, 12, 16)
             ),
             instruction(
-                cursor -> cursor.nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.FLEX_SYM),
                 valueMarker(IonType.SYMBOL, 17, 21)
             ),
             instruction(
@@ -1322,7 +1322,7 @@ public class IonCursorBinaryTest {
                 valueMarker(IonType.FLOAT, 7, 11)
             ),
             instruction(
-                cursor -> cursor.nextTaglessValue(TaglessEncoding.COMPACT_SYMBOL),
+                cursor -> cursor.nextTaglessValue(TaglessEncoding.FLEX_SYM),
                 // All four bytes are skipped.
                 valueMarker(IonType.SYMBOL, 8, 12)
             ),
