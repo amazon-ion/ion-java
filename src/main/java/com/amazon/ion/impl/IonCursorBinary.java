@@ -3137,7 +3137,7 @@ class IonCursorBinary implements IonCursor {
             case FLEX_INT:
                 length = isSlowMode ? slowReadLengthOfFlexUInt_1_1(peekIndex) : uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
                 break;
-            case COMPACT_SYMBOL:
+            case FLEX_SYM:
                 length = readFlexSymLengthAndType_1_1();
                 break;
             default:

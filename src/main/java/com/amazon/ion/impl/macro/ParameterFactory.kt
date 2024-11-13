@@ -17,5 +17,5 @@ object ParameterFactory {
     @JvmStatic
     fun exactlyOneTagged(name: String) = Parameter(name, ParameterEncoding.Tagged, ParameterCardinality.ExactlyOne)
     @JvmStatic
-    fun exactlyOneFlexInt(name: String) = Parameter(name, ParameterEncoding.CompactInt, ParameterCardinality.ExactlyOne)
+    fun exactlyOneFlexInt(name: String) = Parameter(name, ParameterEncoding.FlexInt, ParameterCardinality.ExactlyOne)
 }

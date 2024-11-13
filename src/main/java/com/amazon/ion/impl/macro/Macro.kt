@@ -24,16 +24,16 @@ sealed interface Macro {
         Uint16("uint16", TaglessEncoding.UINT16),
         Uint32("uint32", TaglessEncoding.UINT32),
         Uint64("uint64", TaglessEncoding.UINT64),
-        CompactUInt("compact_uint", TaglessEncoding.FLEX_UINT),
+        FlexUint("flex_uint", TaglessEncoding.FLEX_UINT),
         Int8("int8", TaglessEncoding.INT8),
         Int16("int16", TaglessEncoding.INT16),
         Int32("int32", TaglessEncoding.INT32),
         Int64("int64", TaglessEncoding.INT64),
-        CompactInt("compact_int", TaglessEncoding.FLEX_INT),
+        FlexInt("flex_int", TaglessEncoding.FLEX_INT),
         Float16("float16", TaglessEncoding.FLOAT16),
         Float32("float32", TaglessEncoding.FLOAT32),
         Float64("float64", TaglessEncoding.FLOAT64),
-        CompactSymbol("compact_symbol", TaglessEncoding.COMPACT_SYMBOL),
+        FlexSym("flex_sym", TaglessEncoding.FLEX_SYM),
         ;
         companion object {
             @JvmStatic
@@ -42,16 +42,16 @@ sealed interface Macro {
                 TaglessEncoding.UINT16 -> Uint16
                 TaglessEncoding.UINT32 -> Uint32
                 TaglessEncoding.UINT64 -> Uint64
-                TaglessEncoding.FLEX_UINT -> CompactUInt
+                TaglessEncoding.FLEX_UINT -> FlexUint
                 TaglessEncoding.INT8 -> Int8
                 TaglessEncoding.INT16 -> Int16
                 TaglessEncoding.INT32 -> Int32
                 TaglessEncoding.INT64 -> Int64
-                TaglessEncoding.FLEX_INT -> CompactInt
+                TaglessEncoding.FLEX_INT -> FlexInt
                 TaglessEncoding.FLOAT16 -> Float16
                 TaglessEncoding.FLOAT32 -> Float32
                 TaglessEncoding.FLOAT64 -> Float64
-                TaglessEncoding.COMPACT_SYMBOL -> CompactSymbol
+                TaglessEncoding.FLEX_SYM -> FlexSym
             }
         }
     }

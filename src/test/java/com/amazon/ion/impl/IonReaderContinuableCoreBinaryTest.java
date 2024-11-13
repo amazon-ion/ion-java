@@ -1069,11 +1069,11 @@ public class IonReaderContinuableCoreBinaryTest {
             assertSequence(
                 reader,
                 nextMacroInvocation(0),
-                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL),
                 symbolValue("name"),
-                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL),
                 symbolValue(4),
-                fillNextTaglessValue(TaglessEncoding.COMPACT_SYMBOL, IonType.SYMBOL),
+                fillNextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL),
                 symbolValue(""),
                 endStream()
             );
