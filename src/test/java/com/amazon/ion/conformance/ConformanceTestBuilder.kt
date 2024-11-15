@@ -19,7 +19,7 @@ data class ConformanceTestBuilder(
     /** File that the cases are bring created from. */
     val file: File,
     // Internal fields for building up state from which to create a test case
-    private val nameParts: List<String> = listOf(),
+    private val nameParts: List<String> = listOf("[${ION_CONFORMANCE_DIR.toPath().relativize(file.toPath())}]"),
     private val fragments: List<SeqElement> = listOf(),
 ) {
 
@@ -74,22 +74,18 @@ data class ConformanceTestBuilder(
     fun plus(name: String, newFragments: List<SeqElement>): ConformanceTestBuilder = copy(nameParts = nameParts + name, fragments = fragments + newFragments)
 
     fun build(executable: TestCaseSupport.() -> Unit): DynamicNode {
-        return config.readerBuilders.map { (readerName, readerBuilder) ->
-            val testName = "$fullName using $readerName"
-            val testCaseSupport = TestCaseSupport(this, readerBuilder)
-            dynamicTest(testName) {
-                if (!config.testFilter(file, testName)) throw TestAbortedException(testName)
-                debug { "Begin Test using $readerName" }
-                try {
-                    executable(testCaseSupport)
-                } catch (e: NotImplementedError) {
-                    if (config.failUnimplemented) throw e
-                    debug { "Ignored because ${e.message}" }
-                    throw TestAbortedException("$e")
-                }
+        val readerBuilder = config.readerBuilder
+        val testName = fullName
+        val testCaseSupport = TestCaseSupport(this, readerBuilder)
+        return dynamicTest(testName) {
+            if (!config.testFilter(file, testName)) throw TestAbortedException(testName)
+            try {
+                executable(testCaseSupport)
+            } catch (e: NotImplementedError) {
+                if (config.failUnimplemented) throw e
+                debug { "Ignored because ${e.message}" }
+                throw TestAbortedException("$e")
             }
-        }.let {
-            dynamicContainer(containerName, it)
         }
     }
 
