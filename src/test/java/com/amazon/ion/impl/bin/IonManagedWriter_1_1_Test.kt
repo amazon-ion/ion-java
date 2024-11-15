@@ -56,6 +56,21 @@ internal class IonManagedWriter_1_1_Test {
             return appendable.toString().trim()
         }
 
+        // Helper function that writes to a writer and returns the binary Ion
+        private fun writeBinary(
+            closeWriter: Boolean = true,
+            symbolInliningStrategy: SymbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
+            block: IonManagedWriter_1_1.() -> Unit
+        ): ByteArray {
+            val out = ByteArrayOutputStream()
+            val writer = ION_1_1.binaryWriterBuilder()
+                .withSymbolInliningStrategy(symbolInliningStrategy)
+                .build(out) as IonManagedWriter_1_1
+            writer.apply(block)
+            if (closeWriter) writer.close()
+            return out.toByteArray()
+        }
+
         /** Helper function to create a constant (zero arg) template macro */
         fun constantMacro(body: TemplateDsl.() -> Unit) = TemplateMacro(emptyList(), templateBody(body))
     }
@@ -101,6 +116,11 @@ internal class IonManagedWriter_1_1_Test {
         )
     }
 
+    private fun newSystemReader(input: ByteArray): IonReader {
+        val system = IonSystemBuilder.standard().build() as _Private_IonSystem
+        return system.newSystemReader(input)
+    }
+
     private fun `transform symbol IDS`(writeValuesFn: _Private_IonWriter.(IonReader) -> Unit) {
         // Craft the input data: {a: b::c}, encoded as {$10: $11::$12}
         val input = ByteArrayOutputStream()
@@ -112,15 +132,14 @@ internal class IonManagedWriter_1_1_Test {
             it.stepOut()
         }
         // Do a system-level transcode of the Ion 1.0 data to Ion 1.1, adding 32 to each local symbol ID.
-        val system = IonSystemBuilder.standard().build() as _Private_IonSystem
         val output = ByteArrayOutputStream()
-        system.newSystemReader(input.toByteArray()).use { reader ->
+        newSystemReader(input.toByteArray()).use { reader ->
             (ION_1_1.binaryWriterBuilder().build(output) as _Private_IonWriter).use {
                 it.writeValuesFn(reader)
             }
         }
         // Verify the transformed symbol IDs using another system read.
-        system.newSystemReader(output.toByteArray()).use {
+        newSystemReader(output.toByteArray()).use {
             while (it.next() == IonType.SYMBOL) {
                 assertEquals("\$ion_1_1", it.stringValue())
             }
@@ -149,6 +168,87 @@ internal class IonManagedWriter_1_1_Test {
                 writeValue(reader) { sid -> sid + 32 }
             }
         }
+    }
+
+    @Test
+    fun `write a symbol value using a system symbol ID in binary`() {
+        val actual = writeBinary(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
+            writeSymbol(SystemSymbols_1_1.SYMBOLS.text)
+        }
+        val reader = newSystemReader(actual)
+        assertEquals(IonType.SYMBOL, reader.next())
+        assertEquals(ion_1_1, reader.stringValue())
+        assertEquals(IonType.SYMBOL, reader.next())
+        assertEquals(SystemSymbols_1_1.SYMBOLS.text, reader.stringValue())
+        assertNull(reader.next())
+        reader.close()
+    }
+
+    @Test
+    fun `write an annotation using a system symbol ID in binary`() {
+        val actual = writeBinary(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
+            addTypeAnnotation(SystemSymbols_1_1.SYMBOLS.text)
+            writeInt(123)
+        }
+        val reader = newSystemReader(actual)
+        assertEquals(IonType.SYMBOL, reader.next())
+        assertEquals(ion_1_1, reader.stringValue())
+        assertEquals(IonType.INT, reader.next())
+        assertEquals(SystemSymbols_1_1.SYMBOLS.text, reader.typeAnnotations[0])
+        assertEquals(123, reader.intValue())
+        assertNull(reader.next())
+        reader.close()
+    }
+
+    @Test
+    fun `write a field name using a system symbol ID in binary`() {
+        val actual = writeBinary(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
+            stepIn(IonType.STRUCT)
+            setFieldName(SystemSymbols_1_1.SYMBOLS.text)
+            writeInt(123)
+            stepOut()
+        }
+        val reader = newSystemReader(actual)
+        assertEquals(IonType.SYMBOL, reader.next())
+        assertEquals(ion_1_1, reader.stringValue())
+        assertEquals(IonType.STRUCT, reader.next())
+        reader.stepIn()
+        assertEquals(IonType.INT, reader.next())
+        assertEquals(SystemSymbols_1_1.SYMBOLS.text, reader.fieldName)
+        assertEquals(123, reader.intValue())
+        assertNull(reader.next())
+        reader.stepOut()
+        reader.close()
+    }
+
+    @Test
+    fun `re-write a binary Ion 1-1 stream using a system reader`() {
+        val binary = TestUtils.hexStringToByteArray(
+            TestUtils.cleanCommentedHexBytes(
+                """
+            E0 01 01 EA | IVM
+            E7 01 6A    | $ion_encoding::
+            C6          | (
+            C5          |    (
+            EE 0F       |       symbol_table
+            B2 91 61    |       ["a"]
+                        |    )
+                        | )
+            E1 01       | Symbol value 1 = "a"
+                """.trimIndent()
+            )
+        )
+        val systemReader = newSystemReader(binary)
+        val actual = writeBinary(symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE) {
+            writeValues(systemReader)
+        }
+        systemReader.close()
+
+        val reader = IonReaderBuilder.standard().build(actual)
+        assertEquals(IonType.SYMBOL, reader.next())
+        assertEquals("a", reader.stringValue())
+        assertNull(reader.next())
+        reader.close()
     }
 
     @Test

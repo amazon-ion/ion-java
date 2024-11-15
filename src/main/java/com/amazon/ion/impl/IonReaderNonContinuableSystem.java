@@ -75,6 +75,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
             if (ivm == null) {
                 throw new IllegalStateException("The parser should have already thrown upon encountering this illegal IVM.");
             }
+            reader.resetEncodingContext();
             pendingIvms.add(ivm);
         });
     }
@@ -256,7 +257,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
                 value = reader.getSymbolText();
             } else {
                 int sid = reader.symbolValueId();
-                value = getSymbolTable().findKnownSymbol(sid);
+                value = getSymbolText(sid);
                 if (value == null) {
                     throw new UnknownSymbolException(sid);
                 }
@@ -265,6 +266,19 @@ final class IonReaderNonContinuableSystem implements IonReader {
             value = reader.stringValue();
         }
         return value;
+    }
+
+    /**
+     * Attempts to match the given symbol ID to text.
+     * @param sid the symbol ID.
+     * @return the matching symbol text, or null.
+     */
+    private String getSymbolText(int sid) {
+        if (reader.getIonMinorVersion() == 0) {
+            // In Ion 1.0, the system symbol table is always available.
+            return getSymbolTable().findKnownSymbol(sid);
+        }
+        return reader.getSymbol(sid);
     }
 
     @Override
@@ -292,7 +306,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
 
     @Override
     public SymbolTable getSymbolTable() {
-        // TODO generalize for Ion 1.1
+        // TODO generalize for Ion 1.1, whose system symbol table is not necessarily active.
         return SharedSymbolTable.getSystemSymbolTable(reader.getIonMajorVersion());
     }
 
@@ -304,12 +318,11 @@ final class IonReaderNonContinuableSystem implements IonReader {
         // Note: it is not expected that the system reader is used in performance-sensitive applications; hence,
         // no effort is made optimize the following.
         List<String> annotations = new ArrayList<>();
-        SymbolTable symbolTable = getSymbolTable();
         reader.consumeAnnotationTokens((token) -> {
             String text = token.getText();
             if (text == null) {
                 int sid = token.getSid();
-                text = symbolTable.findKnownSymbol(sid);
+                text = getSymbolText(sid);
                 if (text == null) {
                     throw new UnknownSymbolException(sid);
                 }
@@ -327,14 +340,13 @@ final class IonReaderNonContinuableSystem implements IonReader {
         // Note: it is not expected that the system reader is used in performance-sensitive applications; hence,
         // no effort is made optimize the following.
         List<SymbolToken> annotations = new ArrayList<>();
-        SymbolTable symbolTable = getSymbolTable();
         reader.consumeAnnotationTokens((token) -> {
             String text = token.getText();
             if (text != null) {
                 annotations.add(token);
             } else {
                 int sid = token.getSid();
-                annotations.add(new SymbolTokenImpl(symbolTable.findKnownSymbol(sid), sid));
+                annotations.add(new SymbolTokenImpl(getSymbolText(sid), sid));
             }
         });
         return annotations.toArray(SymbolToken.EMPTY_ARRAY);
@@ -362,7 +374,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
         if (sid < 0) {
             return null;
         }
-        String name = getSymbolTable().findKnownSymbol(sid);
+        String name = getSymbolText(sid);
         if (name == null) {
             throw new UnknownSymbolException(sid);
         }
@@ -380,7 +392,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
             if (sid < 0) {
                 return null;
             }
-            fieldText = getSymbolTable().findKnownSymbol(sid);
+            fieldText = getSymbolText(sid);
         }
         return new SymbolTokenImpl(fieldText, sid);
     }
@@ -397,7 +409,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
                 symbolText = reader.getSymbolText();
             } else {
                 sid = reader.symbolValueId();
-                symbolText = getSymbolTable().findKnownSymbol(sid);
+                symbolText = getSymbolText(sid);
             }
         }
         return new SymbolTokenImpl(symbolText, sid);

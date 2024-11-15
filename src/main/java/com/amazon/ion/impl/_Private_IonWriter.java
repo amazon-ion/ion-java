@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.SystemSymbols;
 
 import java.io.IOException;
 
@@ -72,9 +73,7 @@ public interface _Private_IonWriter
      * Transforms Ion 1.0 local symbol IDs to the equivalent Ion 1.1 local symbol ID. Note: system symbols do not
      * follow this path.
      */
-    // TODO change the following once the Ion 1.1 symbol table is finalized. Probably:
-    //   sid10 -> sid10 - SystemSymbols.ION_1_0_MAX_ID;
-    IntTransformer ION_1_0_SID_TO_ION_1_1_SID = IDENTITY_INT_TRANSFORMER;
+    IntTransformer ION_1_0_SID_TO_ION_1_1_SID = sid -> sid - SystemSymbols.ION_1_0_MAX_ID;
 
     /**
      * Works the same as {@link IonWriter#writeValues(IonReader)}, but transforms all symbol IDs that would otherwise

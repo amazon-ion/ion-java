@@ -320,4 +320,17 @@ public interface IonReaderContinuableCore extends IonCursor {
      */
     boolean hasAnnotations();
 
+    /**
+     * Resets the reader's encoding context back to the one applicable immediately
+     * after an Ion version marker.
+     */
+    void resetEncodingContext();
+
+    /**
+     * Retrieves the String text for the given symbol ID, if the text is available.
+     * @param sid a symbol ID.
+     * @return a String or null.
+     */
+    String getSymbol(int sid);
+
 }
