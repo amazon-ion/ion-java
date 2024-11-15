@@ -11,6 +11,7 @@ import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
+import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion._private.SuppressFBWarnings;
 import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.OpCodes;
@@ -1098,13 +1099,14 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return false;
     }
 
-    /**
-     * Retrieves the String text for the given symbol ID, if the text is available.
-     * @param sid a symbol ID.
-     * @return a String.
-     */
-    String getSymbol(int sid) {
-        return null; // Symbol IDs are not resolved by the core reader.
+    @Override
+    public String getSymbol(int sid) {
+        // Only symbol IDs declared in Ion 1.1 encoding directives (not Ion 1.0 symbol tables) are resolved by the
+        // core reader. In Ion 1.0, 'symbols' is never populated by the core reader.
+        if (sid - 1 <= localSymbolMaxOffset) {
+            return symbols[sid - 1];
+        }
+        return null;
     }
 
     /**
@@ -1116,7 +1118,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     boolean matchesSystemSymbol_1_1(Marker marker, SystemSymbols_1_1 systemSymbol) {
         if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
-            return marker.endIndex == systemSymbol.getId();
+            return systemSymbol.getText().equals(getSystemSymbolToken(marker).getText());
         } else if (marker.startIndex < 0) {
             // This is a local symbol whose ID is stored in marker.endIndex.
             return systemSymbol.getText().equals(getSymbol((int) marker.endIndex));
@@ -1159,11 +1161,22 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         symbols = resized;
     }
 
-    private void resetSymbolTable() {
+    /**
+     * Reset the local symbol table to the system symbol table.
+     */
+    protected void resetSymbolTable() {
         // The following line is not required for correctness, but it frees the references to the old symbols,
         // potentially allowing them to be garbage collected.
         Arrays.fill(symbols, 0, localSymbolMaxOffset + 1, null);
         localSymbolMaxOffset = -1;
+    }
+
+    /**
+     * Reset the list of imported shared symbol tables.
+     */
+    protected void resetImports(int major, int minor) {
+        // The core reader does not currently handle imports, though we may find this necessary as we add
+        // support for shared modules.
     }
 
     /**
@@ -2058,6 +2071,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         return length;
     }
 
+    @Override
+    public void resetEncodingContext() {
+        resetSymbolTable();
+        int minorVersion = getIonMinorVersion();
+        resetImports(getIonMajorVersion(), minorVersion);
+        if (minorVersion > 0) {
+            // TODO reset macro table
+            installSymbols(SystemSymbols_1_1.allSymbolTexts());
+        }
+    }
+
     /**
      * Loads the scalar converter with an integer value that fits the Ion int on which the reader is positioned.
      */
@@ -2361,13 +2385,30 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public String stringValue() {
-        if (isEvaluatingEExpression) {
-            return macroEvaluatorIonReader.stringValue();
+        String value;
+        IonType type = getEncodingType();
+        if (type == IonType.STRING || isEvaluatingEExpression) {
+            value = readString();
+        } else if (type == IonType.SYMBOL) {
+            if (valueTid.isInlineable) {
+                value = readString();
+            } else if (valueTid == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+                value = getSymbolText();
+            } else {
+                int sid = symbolValueId();
+                if (sid < 0) {
+                    // The raw reader uses this to denote null.symbol.
+                    return null;
+                }
+                value = getSymbol(sid);
+                if (value == null) {
+                    throw new UnknownSymbolException(sid);
+                }
+            }
+        } else {
+            throw new IllegalStateException("Invalid type requested.");
         }
-        if (valueTid == null || IonType.STRING != valueTid.type) {
-            throwDueToInvalidType(IonType.STRING);
-        }
-        return readString();
+        return value;
     }
 
     @Override
@@ -2464,6 +2505,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (marker.startIndex == -1) {
             id = marker.endIndex;
         } else {
+            prepareScalar();
             id = readFixedUInt_1_1(marker.startIndex, marker.endIndex);
 
             // FIXME: This is a hack that works as long as our system symbol table doesn't grow to

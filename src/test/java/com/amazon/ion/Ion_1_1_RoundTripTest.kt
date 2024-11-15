@@ -34,7 +34,6 @@ class Ion_1_1_RoundTripTest {
         override val newWriterForAppendable: (Appendable) -> IonWriter = builder::build
     }
 
-    @Disabled("Disabled because the text reader does not support Ion 1.1 encoding directives.")
     @Nested
     inner class TextWithSymbolTable : Ion_1_1_RoundTripTextBase() {
         private val builder = ION_1_1.textWriterBuilder()

@@ -5,6 +5,7 @@ package com.amazon.ion.impl;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.TestUtils;
 import org.junit.jupiter.api.Test;
@@ -1095,6 +1096,54 @@ public class IonReaderContinuableCoreBinaryTest {
         try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
             assertEquals(START_SCALAR, reader.nextValue());
             assertEquals(66, reader.symbolValueId());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void systemReaderWrapperReadsEncodingDirective(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0xE7, 0x01, 0x6A, // One FlexSym annotation, with opcode, opcode 6A = system symbol A = $ion_encoding
+            0xC6, // (
+            0xC5, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
+            0xB2, 0x91, 'a', // ["a"]
+            0xE1, 0x01 // $1 = a
+        ));
+        try (IonReader systemReader = new IonReaderNonContinuableSystem(initializeReader(constructFromBytes, data))) {
+            // Note: Ion 1.1 has a level below "system", which is invisible to IonReaderNonContinuableSystem. This is
+            // because IonReaderContinuableCore must interpret the encoding context so that it can evaluate macro
+            // invocations, which may expand to system values. Accordingly, IonReaderNonContinuableSystem does not
+            // surface Ion 1.1 encoding directives as it does Ion 1.0 symbol tables. Surfacing Ion 1.1 encoding
+            // directives will need to be done by a reader one level below IonReaderNonContinuableSystem.
+            assertEquals(IonType.SYMBOL, systemReader.next());
+            assertEquals("$ion_1_1", systemReader.stringValue());
+            assertEquals(IonType.SYMBOL, systemReader.next());
+            assertEquals(1, systemReader.symbolValue().getSid());
+            assertEquals("a", systemReader.symbolValue().assumeText());
+            assertEquals("a", systemReader.stringValue());
+            assertNull(systemReader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void systemReaderWrapperReadsEncodingDirectiveWithAppend(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0xE7, 0x01, 0x6A, // One FlexSym annotation, with opcode, opcode 6A = system symbol A = $ion_encoding
+            0xC8, // (
+            0xC7, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
+            0xEE, 0x0A, // System symbol value, ID 10 = $ion_encoding, denoting append
+            0xB2, 0x91, 'a', // ["a"]
+            0xE1, SystemSymbols_1_1.size() + 1 // first local symbol = a
+        ));
+        try (IonReader systemReader = new IonReaderNonContinuableSystem(initializeReader(constructFromBytes, data))) {
+            assertEquals(IonType.SYMBOL, systemReader.next());
+            assertEquals("$ion_1_1", systemReader.stringValue());
+            assertEquals(IonType.SYMBOL, systemReader.next());
+            assertEquals(SystemSymbols_1_1.size() + 1, systemReader.symbolValue().getSid());
+            assertEquals("a", systemReader.symbolValue().assumeText());
+            assertEquals("a", systemReader.stringValue());
+            assertNull(systemReader.next());
         }
     }
 }

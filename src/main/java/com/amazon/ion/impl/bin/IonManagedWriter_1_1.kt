@@ -34,11 +34,6 @@ internal class IonManagedWriter_1_1(
     private val onClose: () -> Unit,
 ) : _Private_IonWriter, MacroAwareIonWriter {
 
-    init {
-        // Since this is Ion 1.1, we must always start with the IVM.
-        systemData.writeIVM()
-    }
-
     companion object {
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_\\d+_\\d+$")
 
@@ -110,7 +105,8 @@ internal class IonManagedWriter_1_1(
         }
     }
 
-    private var needsIVM: Boolean = false
+    // Since this is Ion 1.1, we must always start with the IVM.
+    private var needsIVM: Boolean = true
 
     // We take a slightly different approach here by handling the encoding context as a prior encoding context
     // plus a list of symbols added by the current encoding context.
@@ -595,6 +591,12 @@ internal class IonManagedWriter_1_1(
         SymbolKind.ANNOTATION -> writeAnnotations(text)
     }
 
+    private inline fun IonRawWriter_1_1.write(kind: SymbolKind, symbol: SystemSymbols_1_1) = when (kind) {
+        SymbolKind.VALUE -> writeSymbol(symbol)
+        SymbolKind.FIELD_NAME -> writeFieldName(symbol)
+        SymbolKind.ANNOTATION -> writeAnnotations(symbol)
+    }
+
     /** Helper function that determines whether to write a symbol token as a SID or inline symbol */
     private inline fun handleSymbolToken(sid: Int, text: String?, kind: SymbolKind, rawWriter: IonRawWriter_1_1, preserveEncoding: Boolean = false) {
         if (text == null) {
@@ -611,6 +613,8 @@ internal class IonManagedWriter_1_1(
             rawWriter.write(kind, text)
         } else if (options.shouldWriteInline(kind, text)) {
             rawWriter.write(kind, text)
+        } else if (SystemSymbols_1_1.contains(text)) {
+            rawWriter.write(kind, SystemSymbols_1_1[text]!!)
         } else {
             rawWriter.write(kind, intern(text))
         }
@@ -761,7 +765,6 @@ internal class IonManagedWriter_1_1(
 
                     // Just in case—call finish to flush the current system values, then user values, and then write the IVM.
                     finish()
-                    userData.writeIVM()
                 } else {
                     val symbol = reader.symbolValue()
                     handleSymbolToken(symbol.sid, symbol.text, SymbolKind.VALUE, userData, preserveEncoding = true)

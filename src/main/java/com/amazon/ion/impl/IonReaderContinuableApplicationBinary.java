@@ -94,15 +94,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         symbolTableReader = new SymbolTableReader();
         resetImports(getIonMajorVersion(), getIonMinorVersion());
-        registerIvmNotificationConsumer((x, y) -> {
-            // Note: for Ion 1.1 support, use the versions to set the proper system symbol table and local symbol table
-            // processing logic.
-            resetSymbolTable();
-            resetImports(x, y);
-            if (y == 1) {
-                installSymbols(SystemSymbols_1_1.allSymbolTexts());
-            }
-        });
+        registerIvmNotificationConsumer((x, y) -> resetEncodingContext());
     }
 
     /**
@@ -117,15 +109,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         this.catalog = builder.getCatalog() == null ? EMPTY_CATALOG : builder.getCatalog();
         symbolTableReader = new SymbolTableReader();
         resetImports(getIonMajorVersion(), getIonMinorVersion());
-        registerIvmNotificationConsumer((x, y) -> {
-            // Note: for Ion 1.1 support, use the versions to set the proper system symbol table and local symbol table
-            // processing logic.
-            resetSymbolTable();
-            resetImports(x, y);
-            if (y == 1) {
-                installSymbols(SystemSymbols_1_1.allSymbolTexts());
-            }
-        });
+        registerIvmNotificationConsumer((x, y) -> resetEncodingContext());
         registerOversizedValueHandler(
             () -> {
                 boolean mightBeSymbolTable = true;
@@ -486,21 +470,15 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
     }
 
-    /**
-     * Reset the local symbol table to the system symbol table.
-     */
-    private void resetSymbolTable() {
-        // The following line is not required for correctness, but it frees the references to the old symbols,
-        // potentially allowing them to be garbage collected.
-        Arrays.fill(symbols, 0, localSymbolMaxOffset + 1, null);
-        localSymbolMaxOffset = -1;
+    @Override
+    protected void resetSymbolTable() {
+        super.resetSymbolTable();
         cachedReadOnlySymbolTable = null;
     }
 
-    /**
-     * Reset the list of imported shared symbol tables.
-     */
-    private void resetImports(int major, int minor) {
+
+    @Override
+    protected void resetImports(int major, int minor) {
         if (minor == 0) {
             imports = ION_1_0_IMPORTS;
         } else {
@@ -594,7 +572,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     }
 
     @Override
-    String getSymbol(int sid) {
+    public String getSymbol(int sid) {
         if (sid < firstLocalSymbolId) {
             return imports.findKnownSymbol(sid);
         }
@@ -1029,34 +1007,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
         }
         return cachedReadOnlySymbolTable;
-    }
-
-    @Override
-    public String stringValue() {
-        String value;
-        IonType type = super.getType();
-        if (type == IonType.STRING || isEvaluatingEExpression) {
-            value = readString();
-        } else if (type == IonType.SYMBOL) {
-            if (valueTid.isInlineable) {
-                value = readString();
-            } else if (valueTid == IonTypeID.SYSTEM_SYMBOL_VALUE) {
-                value = getSymbolText();
-            } else {
-                int sid = symbolValueId();
-                if (sid < 0) {
-                    // The raw reader uses this to denote null.symbol.
-                    return null;
-                }
-                value = getSymbol(sid);
-                if (value == null) {
-                    throw new UnknownSymbolException(sid);
-                }
-            }
-        } else {
-            throw new IllegalStateException("Invalid type requested.");
-        }
-        return value;
     }
 
     @Override

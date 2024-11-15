@@ -118,6 +118,12 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
             return id > 0 && id <= SystemSymbols_1_1.ALL_VALUES.size
         }
 
+        /** Returns true if the [text] is in the system symbol table. */
+        @JvmStatic
+        operator fun contains(text: String): Boolean {
+            return SystemSymbols_1_1.BY_NAME.containsKey(text)
+        }
+
         /**
          * Returns the system symbol corresponding to the given system symbol ID,
          * or `null` if not a valid system symbol ID.*/
