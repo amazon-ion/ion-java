@@ -6029,5 +6029,62 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readIon11SystemSymbolFromUserId(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(0xE1, 0x07), constructFromBytes);
+        assertSequence(
+            next(IonType.SYMBOL),
+            stringValue("symbols"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readIon11EncodingDirectiveUsingSystemSymbolAnnotation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(
+            bytes(
+            0xE7, 0x01, 0x6A, // One FlexSym annotation, with opcode, opcode 6A = system symbol A = $ion_encoding
+                0xC6, // (
+                0xC5, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
+                0xB2, 0x91, 'a', // ["a"]
+                0xE1, 0x01 // $1 = a
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.SYMBOL),
+            stringValue("a"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readIon11SymbolTableAppendUsingSystemSymbolValue(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(
+            bytes(
+                0xE7, 0x01, 0x63, // One FlexSym annotation, with opcode, opcode 63 = system symbol 3 = $ion_symbol_table
+                0xDA, // {
+                0x01, // Switch to FlexSym field names
+                0x01, 0x66, // FlexSym with opcode 66 = system symbol 6 = imports
+                0xEE, 0x03, // System symbol value 3 = $ion_symbol_table (denoting symbol table append)
+                0x01, 0x67, // FlexSym with opcode 67 = system symbol 7 = symbols
+                0xB2, 0x91, 'a', // ["a"]
+                0xE1, SystemSymbols_1_1.size() + 1 // first user symbol = a
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.SYMBOL),
+            stringValue("a"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)
 }
