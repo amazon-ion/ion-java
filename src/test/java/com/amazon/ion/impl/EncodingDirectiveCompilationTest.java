@@ -1382,6 +1382,49 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void invokeUnqualifiedSystemMacroInTDL(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        SortedMap<String, Macro> macroTable = new TreeMap<>();
+        macroTable.put("foo", new TemplateMacro(
+                Collections.singletonList(new Macro.Parameter("x", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)),
+                Arrays.asList(
+                        new Expression.MacroInvocation(SystemMacro.Default, 0, 1),
+                        new Expression.VariableRef(0),
+                        new Expression.StringValue(Collections.emptyList(), "hello world")
+                )
+        ));
+        Map<String, Integer> symbols = Collections.emptyMap();
+
+
+        startEncodingDirective(writer); {
+            startMacroTable(writer); {
+                // Define our macro (macro foo (x) (.default (%x) "hello world"))
+                startMacro(writer, symbols, "foo"); {
+                    writeMacroSignatureFromDatagram(writer, symbols, LOADER.load("x '*'"));
+                    stepInTdlMacroInvocation(writer, (int) SystemMacro.Default.getId()); {
+                        writeVariableExpansion(writer, symbols, "x");
+                        writer.writeString("hello world");
+                    } endMacro(writer); // (.default
+                } endMacro(writer); // (macro foo
+            } endMacroTable(writer);
+        } endEncodingDirective(writer);
+
+        // Invoke (:foo) with no parameter
+        writer.stepInEExp(0, true, macroTable.get("foo")); {
+        } writer.stepOut();
+
+        byte[] data = getBytes(writer, out);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("hello world", reader.stringValue());
+        }
+    }
+
     // TODO cover every Ion type
     // TODO annotations in macro definition (using 'annotate' system macro)
     // TODO test error conditions
