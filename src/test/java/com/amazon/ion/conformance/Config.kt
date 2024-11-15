@@ -14,7 +14,7 @@ data class Config(
     /** Use for a skip list, or for running only one or two tests. Return true to run the test. */
     val testFilter: (File, String) -> Boolean = { _, _ -> true },
     /** Named set of reader builders (i.e. different reader configurations) to use for all tests. */
-    val readerBuilders: Map<String, IonReaderBuilder>,
+    val readerBuilder: IonReaderBuilder,
 ) {
     fun newCaseBuilder(file: File) = ConformanceTestBuilder(this, file)
 }

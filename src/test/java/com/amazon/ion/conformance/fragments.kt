@@ -37,7 +37,9 @@ fun AnyElement.isFragment(): Boolean {
 }
 
 // All known fragment keywords
-private val FRAGMENT_KEYWORDS = setOf("ivm", "text", "bytes", "toplevel", "encoding", "mactab")
+// TODO: When we update the ion-tests commit to include https://github.com/amazon-ion/ion-tests/pull/129
+//       we need to remove "bytes" from this list
+private val FRAGMENT_KEYWORDS = setOf("ivm", "text", "binary", "bytes", "toplevel", "encoding", "mactab")
 // Insert this between every fragment when transcoding to text
 val SERIALIZED_TEXT_FRAGMENT_SEPARATOR = "\n".toByteArray(Charsets.UTF_8)
 
@@ -112,7 +114,9 @@ fun TestCaseSupport.readFragments(fragments: List<SeqElement>): ByteArray {
     // TODO: Detect versions and switch accordingly.
     val encodeToBinary = 0 < fragments.count {
         debug { "Inspecting (${it.head} ...) at ${locationOf(it)}" }
-        it.head == "bytes"
+        // TODO: When we update the ion-tests commit to include https://github.com/amazon-ion/ion-tests/pull/129
+        //       we need to remove "bytes" from this check
+        it.head == "bytes" || it.head == "binary"
     }
 
     val encoding: Encoding = if (encodeToBinary) Binary10 else Text10
@@ -144,6 +148,9 @@ private fun TestCaseSupport.readFragment(fragment: SeqElement, encoding: Encodin
     return when (fragment.head) {
         "ivm" -> readIvmFragment(fragment, encoding)
         "text" -> readTextFragment(fragment, encoding)
+        "binary" -> readBytesFragment(fragment, encoding)
+        // TODO: When we update the ion-tests commit to include https://github.com/amazon-ion/ion-tests/pull/129
+        //       we need to remove "bytes" from this when expression
         "bytes" -> readBytesFragment(fragment, encoding)
         "toplevel" -> readTopLevelFragment(fragment, encoding)
         "mactab" -> TODO("mactab")
@@ -202,7 +209,7 @@ fun TestCaseSupport.readBytes(sexp: SeqElement): ByteArray {
         when (it) {
             is StringElement -> hexStringToByteArray(cleanCommentedHexBytes(it.stringValue))
             is IntElement -> byteArrayOf(it.longValue.toByte())
-            else -> reportSyntaxError(it, "Not a valid element in a bytes clause")
+            else -> reportSyntaxError(it, "Not a valid element in a binary clause")
         }.let(bytes::add)
     }
     return bytes.joinToByteArray()
