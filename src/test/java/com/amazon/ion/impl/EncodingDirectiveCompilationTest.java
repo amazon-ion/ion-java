@@ -16,6 +16,7 @@ import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroRef;
+import com.amazon.ion.impl.macro.MacroTable;
 import com.amazon.ion.impl.macro.ParameterFactory;
 import com.amazon.ion.impl.macro.SystemMacro;
 import com.amazon.ion.impl.macro.TemplateMacro;
@@ -51,10 +52,12 @@ public class EncodingDirectiveCompilationTest {
 
     private static final int FIRST_LOCAL_SYMBOL_ID = 1;
 
-    private static void assertMacroTablesEqual(IonReader reader, StreamType streamType, SortedMap<String, Macro> expected) {
+    private static void assertMacroTablesContainsExpectedMappings(IonReader reader, StreamType streamType, SortedMap<String, Macro> expected) {
         Map<MacroRef, Macro> expectedByRef = streamType.newMacroTableByMacroRef(expected);
-        Map<MacroRef, Macro> actual = streamType.getEncodingContext(reader).getMacroTable();
-        assertEquals(expectedByRef, actual);
+
+        MacroTable actual = streamType.getEncodingContext(reader).getMacroTable();
+        // TODO: This assertion is weak, we don't know that the actual macro table contains *only* the expectations
+        expectedByRef.forEach((k,v) -> assertEquals(v, actual.get(k)));
     }
 
     private static void startEncodingDirective(IonRawWriter_1_1 writer) {
@@ -399,7 +402,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.INT, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
         }
     }
 
@@ -430,7 +433,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.SYMBOL, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             assertEquals("foo", reader.stringValue());
         }
     }
@@ -492,7 +495,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.STRUCT, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             reader.stepIn();
             assertEquals(1, reader.getDepth());
             assertEquals(IonType.INT, reader.next());
@@ -582,7 +585,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.STRUCT, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             reader.stepIn();
             assertEquals(IonType.STRUCT, reader.next());
             assertEquals("foo", reader.getFieldName());
@@ -659,7 +662,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.STRUCT, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             reader.stepIn();
             assertEquals(IonType.STRUCT, reader.next());
             assertEquals("foo", reader.getFieldName());
@@ -710,7 +713,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.DECIMAL, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             assertEquals(new BigDecimal("3.14159"), reader.decimalValue());
             assertEquals(IonType.DECIMAL, reader.next());
             assertEquals(new BigDecimal("3.14159"), reader.decimalValue());
@@ -757,7 +760,7 @@ public class EncodingDirectiveCompilationTest {
 
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.STRUCT, reader.next());
-            assertMacroTablesEqual(reader, streamType, expectedMacroTable);
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             reader.stepIn();
             assertEquals(IonType.INT, reader.next());
             assertEquals("foo", reader.getFieldName());

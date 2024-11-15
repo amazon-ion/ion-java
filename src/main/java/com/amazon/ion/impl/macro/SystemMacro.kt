@@ -241,5 +241,8 @@ enum class SystemMacro(
         /** Gets a [SystemMacro] by name, including those which are not in the system table (i.e. special forms) */
         @JvmStatic
         fun getMacroOrSpecialForm(name: String): SystemMacro? = MACROS_BY_NAME[name]
+
+        @JvmStatic
+        val SYSTEM_MACRO_TABLE = MacroTable { get(it) }
     }
 }

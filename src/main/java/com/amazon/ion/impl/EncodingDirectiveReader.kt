@@ -15,9 +15,8 @@ import com.amazon.ion.impl.macro.MacroRef.Companion.byName
  * IonReaderContinuableCoreBinary.EncodingDirectiveReader should be moved to the top level and shared by both readers.
  * If that were to happen, this class would no longer be needed.
  */
-internal class EncodingDirectiveReader(private val reader: IonReader, readerAdapter: ReaderAdapter) {
+internal class EncodingDirectiveReader(private val reader: IonReader, private val readerAdapter: ReaderAdapter) {
 
-    private var macroCompiler: MacroCompiler = MacroCompiler({ key: Any? -> newMacros[key] }, readerAdapter)
     private var localMacroMaxOffset: Int = -1
     private var state: State = State.READING_VALUE
 
@@ -122,7 +121,10 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
      * Reads an encoding directive. After this method returns, the caller should access this class's properties to
      * retrieve the symbols and macros declared within the directive.
      */
-    fun readEncodingDirective() {
+    fun readEncodingDirective(encodingContext: EncodingContext) {
+
+        val macroCompiler = MacroCompiler({ key -> resolveMacro(encodingContext, key) }, readerAdapter)
+
         reader.stepIn()
         state = State.IN_ION_ENCODING_SEXP
         while (true) {
@@ -186,6 +188,15 @@ internal class EncodingDirectiveReader(private val reader: IonReader, readerAdap
             }
         }
     }
+
+    private fun resolveMacro(context: EncodingContext, address: MacroRef) : Macro? {
+        var newMacro = newMacros[address]
+        if (newMacro == null) {
+            newMacro = context.macroTable.get(address)
+        }
+        return newMacro
+    }
+
 
     /**
      * @return true if the reader is currently being used by the [MacroCompiler].
