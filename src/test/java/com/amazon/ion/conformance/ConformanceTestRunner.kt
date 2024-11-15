@@ -7,15 +7,21 @@ import java.io.File
 import org.junit.jupiter.api.DynamicNode
 import org.junit.jupiter.api.TestFactory
 
-object ConformanceTestRunner {
-    val DEFAULT_READER_BUILDER_CONFIGURATIONS = mapOf(
-        "default reader" to IonReaderBuilder.standard()
-            .withCatalog(ION_CONFORMANCE_TEST_CATALOG),
-        "incremental reader" to IonReaderBuilder.standard()
-            .withCatalog(ION_CONFORMANCE_TEST_CATALOG)
-            .withIncrementalReadingEnabled(true),
-        // TODO: Other reader configurations
-    )
+object DefaultReaderConformanceTests : ConformanceTestRunner(
+    IonReaderBuilder.standard()
+        .withCatalog(ION_CONFORMANCE_TEST_CATALOG)
+)
+
+object IncrementalReaderConformanceTests : ConformanceTestRunner(
+    IonReaderBuilder.standard()
+        .withCatalog(ION_CONFORMANCE_TEST_CATALOG)
+        .withIncrementalReadingEnabled(true)
+)
+
+abstract class ConformanceTestRunner(
+    readerBuilder: IonReaderBuilder,
+    additionalSkipFilter: (File, String) -> Boolean = { _, _ -> true }
+) {
 
     private val DEFAULT_SKIP_FILTER: (File, String) -> Boolean = { file, completeTestName ->
         // `completeTestName` is the complete name of the test — that is all the test descriptions in a particular
@@ -62,8 +68,8 @@ object ConformanceTestRunner {
     private val CONFIG = Config(
         debugEnabled = true,
         failUnimplemented = false,
-        readerBuilders = DEFAULT_READER_BUILDER_CONFIGURATIONS,
-        testFilter = DEFAULT_SKIP_FILTER,
+        readerBuilder = readerBuilder,
+        testFilter = { file, name -> DEFAULT_SKIP_FILTER(file, name) && additionalSkipFilter(file, name) },
     )
 
     @TestFactory

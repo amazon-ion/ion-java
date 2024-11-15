@@ -18,7 +18,7 @@ object ConformanceTestDslInterpreterTest {
     private val CONFIG = Config(
         debugEnabled = true,
         failUnimplemented = false,
-        readerBuilders = mapOf("only reader" to IonReaderBuilder.standard()),
+        readerBuilder = IonReaderBuilder.standard(),
     )
 
     @JvmStatic
