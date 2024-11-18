@@ -12,6 +12,7 @@ import com.amazon.ionelement.api.SeqElement
 import com.amazon.ionelement.api.SexpElement
 import com.amazon.ionelement.api.StringElement
 import com.amazon.ionelement.api.TextElement
+import java.lang.AssertionError
 import kotlin.streams.toList
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -59,7 +60,7 @@ private fun IonReader.walk(): List<String> {
     while (true) {
         next()
         val currentType = type
-        if (type == null) {
+        if (currentType == null) {
             if (depth > 0) {
                 stepOut()
                 recordEvent("STEP-OUT")
@@ -141,20 +142,20 @@ private fun TestCaseSupport.denotesModelContent(modelContent: AnyElement, reader
             assertEquals(IonType.STRING, reader.type, failureContext)
             assertEquals(modelContent.stringValue, reader.stringValue(), failureContext)
         }
-        is SexpElement -> when (modelContent.head) {
+        is SeqElement -> when (modelContent.head) {
             "Null" -> denotesNull(modelContent, reader)
             "Bool" -> denotesBool(modelContent, reader)
             "Int" -> denotesInt(modelContent, reader)
-            "Float" -> TODO("denotes float")
-            "Decimal" -> TODO("denotes decimal")
-            "Timestamp" -> TODO("denotes timestamp")
+            "Float" -> denotesFloat(modelContent, reader)
+            "Decimal" -> denotesDecimal(modelContent, reader)
+            "Timestamp" -> denotesTimestamp(modelContent, reader)
             "Symbol" -> denotesSymtok(modelContent.tail.single(), reader.symbolValue())
             "String" -> denotesCodepoints(modelContent, reader.stringValue())
             "Blob" -> denotesLob(IonType.BLOB, modelContent, reader)
             "Clob" -> denotesLob(IonType.CLOB, modelContent, reader)
             "List" -> denotesSeq(IonType.LIST, modelContent, reader)
             "Sexp" -> denotesSeq(IonType.SEXP, modelContent, reader)
-            "Struct" -> TODO("denotes struct")
+            "Struct" -> denotesStruct(modelContent, reader)
             else -> reportSyntaxError(modelContent, "model-content")
         }
         else -> reportSyntaxError(modelContent, "model-content")
@@ -197,6 +198,98 @@ private fun TestCaseSupport.denotesInt(expectation: AnyElement, reader: IonReade
     assertEquals(expectedValue.bigIntegerValue, reader.bigIntegerValue(), createFailureMessage(expectation))
 }
 
+private fun TestCaseSupport.denotesFloat(expectation: SeqElement, reader: IonReader) {
+    assertFalse(reader.isNullValue, createFailureMessage(expectation))
+    assertEquals(IonType.FLOAT, reader.type, createFailureMessage(expectation))
+
+    val actualValue = reader.doubleValue()
+
+    when (val floatValueAsString = expectation.tail.single().asString().textValue) {
+        "nan" -> assertTrue(actualValue.isNaN(), "expected 'nan'; was $actualValue")
+        "+inf" -> assertEquals(Double.POSITIVE_INFINITY, actualValue)
+        "-inf" -> assertEquals(Double.NEGATIVE_INFINITY, actualValue)
+        else -> {
+            val expected = floatValueAsString.toDouble()
+            assertEquals(expected, actualValue, createFailureMessage(expectation))
+        }
+    }
+}
+
+private fun TestCaseSupport.denotesDecimal(expectation: SeqElement, reader: IonReader) {
+    assertFalse(reader.isNullValue, createFailureMessage(expectation))
+    assertEquals(IonType.DECIMAL, reader.type, createFailureMessage(expectation))
+    val actualValue = reader.decimalValue()
+
+    val exponent = expectation.values[2].bigIntegerValue
+    assertEquals(exponent, actualValue.scale() * -1, createFailureMessage(expectation, "exponent not equal"))
+    when (val coefficient = expectation.values[1]) {
+        is IntElement -> assertEquals(
+            coefficient.bigIntegerValue,
+            actualValue.bigDecimalValue().unscaledValue(),
+            createFailureMessage(expectation, "coefficient not equal")
+        )
+        is TextElement -> {
+            if (coefficient.textValue != "negative_0") reportSyntaxError(coefficient, "model-decimal")
+            assertTrue(actualValue.isNegativeZero, createFailureMessage(expectation, "coefficient expected to be negative 0"))
+        }
+    }
+}
+
+private fun TestCaseSupport.denotesTimestamp(expectation: SeqElement, reader: IonReader) {
+    assertFalse(reader.isNullValue, createFailureMessage(expectation))
+    assertEquals(IonType.TIMESTAMP, reader.type, createFailureMessage(expectation))
+    val actualValue = reader.timestampValue()
+
+    val modelTimestamp = expectation.tail
+    val precision = modelTimestamp.first().textValue
+
+    assertEquals(modelTimestamp[1].longValue, actualValue.year, createFailureMessage(expectation, "unexpected year"))
+    if (precision == "year") {
+        assertEquals(Timestamp.Precision.YEAR, actualValue.precision)
+        return
+    }
+
+    assertEquals(modelTimestamp[2].longValue, actualValue.month, createFailureMessage(expectation, "unexpected month"))
+    if (precision == "month") {
+        assertEquals(Timestamp.Precision.MONTH, actualValue.precision)
+        return
+    }
+
+    assertEquals(modelTimestamp[3].longValue, actualValue.day, createFailureMessage(expectation, "unexpected day"))
+    if (precision == "day") {
+        assertEquals(Timestamp.Precision.DAY, actualValue.precision)
+        return
+    }
+
+    val expectedOffsetMinutes = modelTimestamp[5].seqValues[1].longValueOrNull
+    assertEquals(expectedOffsetMinutes, actualValue.localOffset, createFailureMessage(expectation, "unexpected offset"))
+    assertEquals(modelTimestamp[5].longValue, actualValue.hour, createFailureMessage(expectation, "unexpected hour"))
+    assertEquals(modelTimestamp[6].longValue, actualValue.minute, createFailureMessage(expectation, "unexpected minute"))
+    if (precision == "minute") {
+        assertEquals(Timestamp.Precision.MINUTE, actualValue.precision, createFailureMessage(expectation))
+        return
+    }
+
+    val expectedSecond = modelTimestamp[7].longValue
+    assertEquals(expectedSecond, actualValue.second, createFailureMessage(expectation, "unexpected second"))
+    if (precision == "second") {
+        assertEquals(Timestamp.Precision.SECOND, actualValue.precision)
+        return
+    }
+
+    // Timestamps cannot have -0 as the fractional second coefficient.
+    val subsecondCoefficient = modelTimestamp[8].longValue
+    val subsecondScale = modelTimestamp[9].longValue.toInt() * -1
+
+    if (precision == "fraction") {
+        val expectedDecimalSecond = Decimal.valueOf(subsecondCoefficient, subsecondScale).add(Decimal.valueOf(expectedSecond))
+        assertEquals(expectedDecimalSecond, actualValue.decimalSecond, createFailureMessage(expectation, "unexpected seconds fraction"))
+        return
+    }
+
+    reportSyntaxError(expectation, "model-timestamp with unknown precision: $precision")
+}
+
 private fun TestCaseSupport.denotesSeq(type: IonType, expectation: SeqElement, reader: IonReader) {
     assertFalse(reader.isNullValue, createFailureMessage(expectation))
     assertEquals(type, reader.type, createFailureMessage(expectation))
@@ -206,7 +299,57 @@ private fun TestCaseSupport.denotesSeq(type: IonType, expectation: SeqElement, r
         denotesModelValue(it, reader)
     }
     // Assert no more elements in sequence
-    assertNull(reader.next(), "unexpected extra element(s) at end of $type")
+    assertNull(reader.next(), createFailureMessage(expectation, "unexpected extra element(s) at end of sequence"))
+    reader.stepOut()
+}
+
+private fun TestCaseSupport.denotesStruct(expectation: SeqElement, reader: IonReader) {
+    assertFalse(reader.isNullValue, createFailureMessage(expectation))
+    assertEquals(IonType.STRUCT, reader.type, createFailureMessage(expectation))
+    reader.stepIn()
+
+    val expectedFields = expectation.tail
+    val hasSeenField = BooleanArray(expectedFields.size)
+
+    // FIXME: For structs with repeated field names, this will break because we can't rewind and replay from the
+    //        reader, so we can't test the same nested stream multiple times from the reader. This issue is not
+    //        caused by using exceptions for control flow.
+    while (reader.next() != null) {
+        // This is a low-effort solution. If the performance of these tests becomes a problem, rewrite to not
+        // use exceptions for control flow.
+
+        // Find all field names that match
+        val matchingFieldNameIndices = expectedFields.mapIndexedNotNull { i, modelField ->
+            modelField as SeqElement
+            val modelFieldName = modelField.values[0]
+            try {
+                denotesSymtok(modelFieldName, reader.fieldNameSymbol)
+                i
+            } catch (e: AssertionError) {
+                null
+            }
+        }
+
+        // Now check the field value, if needed.
+        when (matchingFieldNameIndices.size) {
+            0 -> fail(expectation, "Found unexpected field name: ${reader.fieldNameSymbol}")
+            1 -> {
+                val modelFieldIndex = matchingFieldNameIndices.single()
+                if (hasSeenField[modelFieldIndex]) {
+                    fail(expectedFields[modelFieldIndex], "Found multiple matching fields")
+                }
+                val modelFieldValue = expectedFields[modelFieldIndex].seqValues[1]
+                denotesModelValue(modelFieldValue, reader)
+                hasSeenField[modelFieldIndex] = true
+            }
+            else -> TODO("Test runner implementation does not support repeated field names yet.")
+        }
+    }
+
+    val firstUnseenField = hasSeenField.indexOfFirst { !it }
+    if (firstUnseenField != -1) {
+        fail(expectation, "Missing at least one expected field, including ${expectedFields[firstUnseenField]}")
+    }
     reader.stepOut()
 }
 
@@ -225,6 +368,7 @@ private fun TestCaseSupport.denotesSymtok(expectation: AnyElement, actual: Symbo
                     ?: fail(expectation, "Expected known text; none present in $actual")
             else -> reportSyntaxError(expectation, "model-symtok")
         }
+        else -> reportSyntaxError(expectation, "model-symtok")
     }
 }
 
