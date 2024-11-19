@@ -1396,7 +1396,7 @@ public class EncodingDirectiveCompilationTest {
         macroTable.put("foo", new TemplateMacro(
                 Collections.singletonList(new Macro.Parameter("x", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrMore)),
                 Arrays.asList(
-                        new Expression.MacroInvocation(SystemMacro.Default, 0, 1),
+                        new Expression.MacroInvocation(SystemMacro.Default, 0, 3),
                         new Expression.VariableRef(0),
                         new Expression.StringValue(Collections.emptyList(), "hello world")
                 )

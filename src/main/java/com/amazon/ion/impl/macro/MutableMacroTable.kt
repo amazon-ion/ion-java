@@ -5,8 +5,8 @@ package com.amazon.ion.impl.macro
 class MutableMacroTable(private val antecedent: MacroTable) : MacroTable {
     private val macroTable = HashMap<MacroRef, Macro>()
 
-    override fun get(macroRef: MacroRef): Macro? {
-        return macroTable[macroRef] ?: antecedent.get(macroRef)
+    override fun get(address: MacroRef): Macro? {
+        return macroTable[address] ?: antecedent.get(address)
     }
     override fun putAll(mappings: Map<MacroRef, Macro>) = macroTable.putAll(mappings)
 }

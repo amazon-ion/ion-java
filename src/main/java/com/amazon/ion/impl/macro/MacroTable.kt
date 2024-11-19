@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-fun interface MacroTable {
-    fun get(macroRef: MacroRef): Macro?
+interface MacroTable {
+    fun get(address: MacroRef): Macro?
     fun putAll(mappings: Map<MacroRef, Macro>): Unit = throw UnsupportedOperationException()
 
     companion object {
         @JvmStatic
-        val EMPTY = MacroTable { null }
+        @get:JvmName("empty")
+        val EMPTY = object : MacroTable {
+            override fun get(address: MacroRef): Macro? = null
+        }
     }
 }

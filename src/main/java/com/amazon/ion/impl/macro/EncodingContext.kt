@@ -19,6 +19,7 @@ class EncodingContext {
 
     companion object {
         @JvmStatic
+        @get:JvmName("getDefault")
         val DEFAULT = EncodingContext(SystemMacro.SYSTEM_MACRO_TABLE, false)
     }
 }

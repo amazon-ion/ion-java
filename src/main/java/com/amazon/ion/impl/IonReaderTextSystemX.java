@@ -73,7 +73,7 @@ class IonReaderTextSystemX
     protected final MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
-    private EncodingContext encodingContext = EncodingContext.getDEFAULT();
+    private EncodingContext encodingContext = EncodingContext.getDefault();
 
     // Adapts this reader for use in code that supports multiple reader types.
     private final ReaderAdapter readerAdapter = new ReaderAdapterIonReader(this);
@@ -1207,8 +1207,6 @@ class IonReaderTextSystemX
                 newSymbols
             ));
         }
-
-
         installMacros();
     }
 
@@ -1219,7 +1217,7 @@ class IonReaderTextSystemX
         Map<MacroRef, Macro> newMacros = encodingDirectiveReader.getNewMacros();
 
         if (!isMacroTableAppend) {
-            encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.getEMPTY()), true);
+            encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.empty()), true);
         } else if (!encodingContext.isMutable() && !newMacros.isEmpty()){ // we need to append, but can't
             encodingContext = new EncodingContext(new MutableMacroTable(encodingContext.getMacroTable()), true);
         }

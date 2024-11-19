@@ -126,7 +126,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
-    private EncodingContext encodingContext = EncodingContext.getDEFAULT();
+    private EncodingContext encodingContext = EncodingContext.getDefault();
 
     // Adapts this reader for use in code that supports multiple reader types.
     private final ReaderAdapter readerAdapter = new ReaderAdapterContinuable(this);
@@ -1304,7 +1304,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          */
         private void installMacros() {
             if (!isMacroTableAppend) {
-                encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.getEMPTY()));
+                encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.empty()));
             } else if (!encodingContext.isMutable()) { // we need to append, but can't
                 encodingContext = new EncodingContext(new MutableMacroTable(encodingContext.getMacroTable()));
             }
@@ -1777,7 +1777,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 event = super.nextValue();
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
-                if (encodingContext == EncodingContext.getDEFAULT() && !isSystemInvocation()) {
+                if (encodingContext == EncodingContext.getDefault() && !isSystemInvocation()) {
                     // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
                     // but allow the user to do a raw read of the parameters if this is a core-level reader.
                     // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove

@@ -189,14 +189,13 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
         }
     }
 
-    private fun resolveMacro(context: EncodingContext, address: MacroRef) : Macro? {
+    private fun resolveMacro(context: EncodingContext, address: MacroRef): Macro? {
         var newMacro = newMacros[address]
         if (newMacro == null) {
             newMacro = context.macroTable.get(address)
         }
         return newMacro
     }
-
 
     /**
      * @return true if the reader is currently being used by the [MacroCompiler].
