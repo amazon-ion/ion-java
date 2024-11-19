@@ -261,7 +261,7 @@ private fun TestCaseSupport.denotesTimestamp(expectation: SeqElement, reader: Io
         return
     }
 
-    val expectedOffsetMinutes = modelTimestamp[5].seqValues[1].longValueOrNull
+    val expectedOffsetMinutes = modelTimestamp[4].seqValues[1].longValueOrNull
     assertEquals(expectedOffsetMinutes, actualValue.localOffset, createFailureMessage(expectation, "unexpected offset"))
     assertEquals(modelTimestamp[5].longValue, actualValue.hour, createFailureMessage(expectation, "unexpected hour"))
     assertEquals(modelTimestamp[6].longValue, actualValue.minute, createFailureMessage(expectation, "unexpected minute"))
