@@ -178,7 +178,6 @@ enum class SystemMacro(
     ),
 
     Repeat(17, REPEAT, listOf(exactlyOneTagged("n"), oneToManyTagged("value"))),
-
     Comment(21, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
     MakeField(
         22, MAKE_FIELD,
@@ -210,7 +209,7 @@ enum class SystemMacro(
             ?.distinct()
             ?: emptyList()
 
-    companion object {
+    companion object : MacroTable {
 
         private val MACROS_BY_NAME: Map<String, SystemMacro> = SystemMacro.entries.associateBy { it.macroName }
 
@@ -231,7 +230,7 @@ enum class SystemMacro(
         operator fun get(name: String): SystemMacro? = MACROS_BY_NAME[name]?.takeUnless { it.id < 0 }
 
         @JvmStatic
-        operator fun get(address: MacroRef): SystemMacro? {
+        override operator fun get(address: MacroRef): SystemMacro? {
             return when (address) {
                 is MacroRef.ById -> get(address.id)
                 is MacroRef.ByName -> get(address.name)
@@ -241,5 +240,8 @@ enum class SystemMacro(
         /** Gets a [SystemMacro] by name, including those which are not in the system table (i.e. special forms) */
         @JvmStatic
         fun getMacroOrSpecialForm(name: String): SystemMacro? = MACROS_BY_NAME[name]
+
+        @JvmStatic
+        val SYSTEM_MACRO_TABLE = this
     }
 }
